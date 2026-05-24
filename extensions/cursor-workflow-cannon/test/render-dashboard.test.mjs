@@ -14,7 +14,10 @@ import {
   renderPlanningInterviewWizardPanel,
   mergeReadyQueueRollupSummaries,
   renderDashboardQueueTaskRowsHtml,
-  lazyTerminalBucketListLimit
+  lazyTerminalBucketListLimit,
+  renderUpNextCardHtml,
+  dashboardRowPhaseKey,
+  pickNextTaskInCurrentPhase
 } from "../dist/views/dashboard/render-dashboard.js";
 import { buildPhaseCompleteReleaseChatPrompt } from "../dist/phase-complete-release-prompt.js";
 import { renderGuidanceAuthoringPanelInnerHtml } from "../dist/views/guidance/render-guidance-panel.js";
@@ -161,7 +164,7 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.match(statusPanel, /Agent Profile/);
   assert.match(statusPanel, /<span class="wc-status-kv-label">Role<\/span><span class="wc-status-kv-val">Adventurer<\/span>/);
   assert.match(statusPanel, /<span class="wc-status-kv-label">Temperament<\/span><span class="wc-status-kv-val">The Steady Adventurer<\/span>/);
-  assert.match(statusPanel, /Manage guidance policies via the CAE sidebar panel/);
+  assert.match(statusPanel, /Manage guidance policies in the Dashboard <b>CAE<\/b> tab/);
   assert.doesNotMatch(caePanel, /Active Guidance|aria-label="Agent guidance"/);
   assert.ok(statusPanel.indexOf('aria-label="Agent profile"') < statusPanel.indexOf('aria-label="Workspace identity"'));
   assert.ok(overviewPanel.indexOf("dash-agent-status-banner") < overviewPanel.indexOf("wc-cae-readiness"));
@@ -170,7 +173,7 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.match(overviewPanel, /wc-pill-human/);
   assert.match(overviewPanel, /wc-stat-num-human/);
   assert.match(overviewPanel, /wc-context-help/);
-  assert.match(overviewPanel, /data-wc-help-text="[^"]*Wait until readiness hits 100%/);
+  assert.match(overviewPanel, /data-wc-help-text="[^"]*Every check below must pass to reach 100%/);
   assert.doesNotMatch(taskEnginePanel, /dashboard-approvals/);
   assert.match(html, /Phase Readiness · Phase 14/);
   assert.match(html, /aria-label="Phase readiness · Phase 14"/);
@@ -307,7 +310,8 @@ test("renderDashboardRootInnerHtml renders phase roster deliverables inline edit
   assert.match(html, /Phase Roster/);
   assert.match(html, /dash-phase-roster-col-phase/);
   assert.match(html, /dash-phase-roster-col-status/);
-  assert.match(html, /dash-phase-roster-col-deliverables/);
+  assert.match(html, /dash-phase-roster-col-actions/);
+  assert.match(html, /data-wc-action="phase-roster-start"/);
   assert.match(html, /data-wc-action="phase-deliverables-edit"/);
   assert.match(html, /dash-phase-edit-anchor/);
   assert.match(html, /dash-phase-deliverables-input/);
@@ -613,6 +617,8 @@ test("embedded and standalone CAE surfaces avoid duplicate DOM ids", () => {
   const allIds = [...dashboardHtml.matchAll(/id="([^"]+)"/g)].map((m) => m[1]);
   const standaloneIds = [...standaloneHtml.matchAll(/id="([^"]+)"/g)].map((m) => m[1]);
   assert.ok(allIds.some((id) => id.startsWith("dash-cae-gp-")));
+  assert.doesNotMatch(dashboardHtml, /<script>[\s\S]*data-wc-cae-injected/);
+  assert.doesNotMatch(dashboardHtml, /wc-dash-cae-host[\s\S]*<script>/);
   for (const sid of standaloneIds) {
     assert.ok(!allIds.includes(sid), `expected embedded surface to namespace id ${sid}`);
   }
@@ -1234,7 +1240,7 @@ test("renderDashboardRootInnerHtml planning card shows resume CLI when session p
   assert.match(html, /through required questions/);
 });
 
-test("renderDashboardRootInnerHtml omits suggested-next section", () => {
+test("renderDashboardRootInnerHtml omits global suggested-next when no workspace current phase", () => {
   const html = renderDashboardRootInnerHtml({
     ok: true,
     data: {
@@ -1259,7 +1265,7 @@ test("renderDashboardRootInnerHtml omits suggested-next section", () => {
       suggestedNext: { id: "T999", title: "Would have been suggested" },
       planningSession: null,
       taskStoreLastUpdated: "2026-01-01T00:00:00.000Z",
-      workspaceStatus: { currentKitPhase: "1", nextKitPhase: "2", activeFocus: "Test" },
+      workspaceStatus: { nextKitPhase: "2", activeFocus: "Test" },
       blockingAnalysis: [],
       dependencyOverview: {
         schemaVersion: 1,
@@ -1275,8 +1281,8 @@ test("renderDashboardRootInnerHtml omits suggested-next section", () => {
       }
     }
   });
-  assert.doesNotMatch(html, /Suggested Next/i);
-  assert.doesNotMatch(html, /wc-rec-next/);
+  assert.match(html, /wc-rec-next-pick-phase/);
+  assert.match(html, /Start Phase 2/);
   assert.doesNotMatch(html, /T999/);
   assert.match(html, />No Items</);
   assert.doesNotMatch(html, /data-wc-action="planning-new-plan"/);
@@ -1310,6 +1316,20 @@ test("renderDashboardRootInnerHtml keeps dashboard copy compact", () => {
   assert.deepEqual(longMuted, []);
 });
 
+test("renderUpNextCardHtml recommends wishlist when in phase without delivery snapshot", () => {
+  const html = renderUpNextCardHtml({
+    ws: { currentKitPhase: "1", nextKitPhase: "2" },
+    phaseSnapshot: null,
+    suggestedNext: null,
+    readyTop: [],
+    readyCount: 0,
+    firstWishlistOpen: { id: "W-open-1", title: "Wishlist backlog item", taskId: "T-wl-1" },
+    humanGatesCount: 0
+  });
+  assert.match(html, /wc-rec-next-wishlist/);
+  assert.match(html, /Wishlist backlog item/);
+});
+
 test("renderDashboardRootInnerHtml recommends wishlist when execution ready queue is empty", () => {
   const html = renderDashboardRootInnerHtml({
     ok: true,
@@ -1340,6 +1360,28 @@ test("renderDashboardRootInnerHtml recommends wishlist when execution ready queu
       planningSession: null,
       taskStoreLastUpdated: "2026-01-01T00:00:00.000Z",
       workspaceStatus: { currentKitPhase: "1", nextKitPhase: "2", activeFocus: "Test" },
+      currentPhaseDelivery: {
+        schemaVersion: 2,
+        phaseKey: "1",
+        closeoutPassed: false,
+        released: false,
+        remainingCount: 2,
+        terminalCount: 0,
+        checkedTaskCount: 2,
+        queue: { ready: 0, proposed: 2, blocked: 0, inProgress: 0, research: 0 },
+        segments: {
+          completed: 0,
+          cancelled: 0,
+          inProgress: 0,
+          ready: 0,
+          proposed: 2,
+          blocked: 0,
+          research: 0
+        },
+        progressPercent: 0,
+        releaseReadyPercent: 0,
+        deliveryEvidenceViolationCount: 0
+      },
       blockingAnalysis: [],
       dependencyOverview: {
         schemaVersion: 1,
@@ -1355,11 +1397,9 @@ test("renderDashboardRootInnerHtml recommends wishlist when execution ready queu
       }
     }
   });
-  assert.match(html, /wc-rec-next-wishlist/);
-  assert.match(html, /Wishlist backlog item/);
-  assert.match(html, /data-wc-action="wishlist-chat"/);
-  assert.match(html, /data-wishlist-id="W-open-1"/);
-  assert.doesNotMatch(html, /No execution-queue ready work/);
+  assert.match(html, /wc-rec-next-phase-work/);
+  assert.match(html, /Continue Phase 1 delivery work/);
+  assert.doesNotMatch(html, /wc-rec-next-wishlist/);
 });
 
 test("renderDashboardRootInnerHtml prefers first ready task over wishlist when both exist", () => {
@@ -1401,7 +1441,29 @@ test("renderDashboardRootInnerHtml prefers first ready task over wishlist when b
       readyQueueCount: 0,
       planningSession: null,
       taskStoreLastUpdated: "2026-01-01T00:00:00.000Z",
-      workspaceStatus: { currentKitPhase: "1", nextKitPhase: "2", activeFocus: "Test" },
+      workspaceStatus: { currentKitPhase: "9", nextKitPhase: "10", activeFocus: "Test" },
+      currentPhaseDelivery: {
+        schemaVersion: 2,
+        phaseKey: "9",
+        closeoutPassed: false,
+        released: false,
+        remainingCount: 1,
+        terminalCount: 0,
+        checkedTaskCount: 1,
+        queue: { ready: 1, proposed: 0, blocked: 0, inProgress: 0, research: 0 },
+        segments: {
+          completed: 0,
+          cancelled: 0,
+          inProgress: 0,
+          ready: 1,
+          proposed: 0,
+          blocked: 0,
+          research: 0
+        },
+        progressPercent: 0,
+        releaseReadyPercent: 0,
+        deliveryEvidenceViolationCount: 0
+      },
       blockingAnalysis: [],
       dependencyOverview: {
         schemaVersion: 1,
@@ -1422,6 +1484,70 @@ test("renderDashboardRootInnerHtml prefers first ready task over wishlist when b
   assert.match(html, /Ready improvement task/);
   assert.match(html, /data-task-id="imp-1"/);
   assert.match(html, /Process wishlist first/);
+});
+
+const phaseSnapshotDrained = {
+  phaseKey: "108",
+  closeoutPassed: true,
+  released: false,
+  remainingCount: 0,
+  terminalCount: 3,
+  checkedTaskCount: 3,
+  queue: { ready: 0, proposed: 0, blocked: 0, inProgress: 0, research: 0 },
+  segments: {
+    completed: 3,
+    cancelled: 0,
+    inProgress: 0,
+    ready: 0,
+    proposed: 0,
+    blocked: 0,
+    research: 0
+  },
+  progressPercent: 100,
+  releaseReadyPercent: 100,
+  deliveryEvidenceViolationCount: 0
+};
+
+test("dashboardRowPhaseKey and pickNextTaskInCurrentPhase prefer current phase rows", () => {
+  assert.equal(dashboardRowPhaseKey({ phaseKey: "108" }), "108");
+  assert.equal(dashboardRowPhaseKey({ phase: "Phase 109" }), "109");
+  const picked = pickNextTaskInCurrentPhase(
+    [
+      { id: "T2", title: "Other", phaseKey: "109" },
+      { id: "T1", title: "Current", phaseKey: "108" }
+    ],
+    "108"
+  );
+  assert.equal((picked).id, "T1");
+});
+
+test("renderUpNextCardHtml surfaces phase closeout when delivery queue is drained", () => {
+  const html = renderUpNextCardHtml({
+    ws: { currentKitPhase: "108", nextKitPhase: "109" },
+    phaseSnapshot: phaseSnapshotDrained,
+    suggestedNext: { id: "T-other", title: "Later phase", phaseKey: "109" },
+    readyTop: [{ id: "T-other", title: "Later phase", phaseKey: "109" }],
+    readyCount: 1,
+    firstWishlistOpen: null,
+    humanGatesCount: 0
+  });
+  assert.match(html, /wc-rec-next-closeout/);
+  assert.match(html, /Complete &amp; Release/);
+  assert.doesNotMatch(html, /Later phase/);
+});
+
+test("renderUpNextCardHtml prompts to pick a phase when none is current", () => {
+  const html = renderUpNextCardHtml({
+    ws: { nextKitPhase: "109" },
+    phaseSnapshot: null,
+    suggestedNext: null,
+    readyTop: [],
+    readyCount: 0,
+    firstWishlistOpen: null,
+    humanGatesCount: 0
+  });
+  assert.match(html, /wc-rec-next-pick-phase/);
+  assert.match(html, /Start Phase 109/);
 });
 
 const deliverTestDepOverview = {
@@ -2059,6 +2185,7 @@ function phaseDeliveryFixture(overrides = {}) {
     },
     progressPercent: 100,
     releaseReadyPercent: 100,
+    deliveryEvidenceViolationCount: 0,
     ...overrides
   };
 }
@@ -2107,14 +2234,14 @@ function readinessDashboardPayload(dataOverrides = {}) {
   };
 }
 
-test("Phase Readiness shows phase-scoped runnable counts not workspace ready total", () => {
+test("Phase Readiness shows phase-scoped ready counts not workspace ready total", () => {
   const html = renderDashboardRootInnerHtml(readinessDashboardPayload());
-  assert.match(html, /Runnable work in phase/);
+  assert.match(html, /Tasks ready to pick up/);
   assert.match(html, /5 ready · 2 in progress/);
   assert.doesNotMatch(html, /71 ready/);
 });
 
-test("Phase Readiness passes runnable check when phase has completed delivery tasks only", () => {
+test("Phase Readiness score is 100% when phase delivery has started", () => {
   const html = renderDashboardRootInnerHtml(
     readinessDashboardPayload({
       currentPhaseDelivery: phaseDeliveryFixture({
@@ -2136,8 +2263,48 @@ test("Phase Readiness passes runnable check when phase has completed delivery ta
   );
   const readiness =
     html.match(/<section class="dash-card wc-cae-readiness[\s\S]*?<\/section>/)?.[0] ?? "";
-  assert.match(readiness, /3 completed \(no ready work right now\)/);
-  assert.match(readiness, /wc-cae-check-ok[\s\S]*Runnable work in phase/);
+  assert.match(readiness, /wc-cae-score-badge[\s\S]*>100<span>%<\/span>/);
+  assert.match(readiness, /Work in this phase has already started — readiness stays at 100%/);
+  assert.match(readiness, /3 done · work in progress/);
+  assert.match(readiness, /wc-cae-check-ok[\s\S]*Tasks ready to pick up/);
+});
+
+test("Phase Readiness score equals passed checks as equal shares before delivery starts", () => {
+  const html = renderDashboardRootInnerHtml(
+    readinessDashboardPayload({
+      workspaceStatus: {
+        currentKitPhase: "100",
+        nextKitPhase: "101",
+        blockers: [],
+        pendingDecisions: ["Pick release train"]
+      },
+      currentPhaseDelivery: phaseDeliveryFixture({
+        queue: { ready: 0, proposed: 2, blocked: 0, inProgress: 0, research: 0 },
+        segments: {
+          completed: 0,
+          cancelled: 0,
+          inProgress: 0,
+          ready: 0,
+          proposed: 2,
+          blocked: 0,
+          research: 0
+        },
+        terminalCount: 0,
+        checkedTaskCount: 2,
+        closeoutPassed: false,
+        progressPercent: 0,
+        releaseReadyPercent: 0
+      })
+    })
+  );
+  const readiness =
+    html.match(/<section class="dash-card wc-cae-readiness[\s\S]*?<\/section>/)?.[0] ?? "";
+  assert.match(readiness, /wc-cae-score-badge[\s\S]*>60<span>%<\/span>/);
+  assert.match(readiness, /wc-cae-check-warn[\s\S]*Tasks ready to pick up[\s\S]*wc-context-help/);
+  assert.match(readiness, /wc-cae-check-warn[\s\S]*No open decisions[\s\S]*wc-context-help/);
+  assert.match(readiness, /wc-cae-check-ok[\s\S]*No workspace blockers/);
+  assert.doesNotMatch(readiness, /Delivery work started/);
+  assert.doesNotMatch(readiness, /Proposed in phase manageable/);
 });
 
 test("Overview stat pills include Human gate count with yellow number class", () => {
@@ -2190,6 +2357,95 @@ test("Phase Progress badge percent matches segmented bar fill", () => {
   assert.match(progressSection, /aria-valuenow="80"/);
 });
 
+test("Phase Progress renders Mark Phase Complete centered in card footer", () => {
+  const overview = overviewPanelHtml(renderDashboardRootInnerHtml(readinessDashboardPayload()));
+  const progressSection =
+    overview.match(/<section class="dash-card wc-phase-progress[\s\S]*?<\/section>/)?.[0] ?? "";
+  assert.match(progressSection, /wc-phase-progress-footer/);
+  assert.match(progressSection, /data-wc-action="phase-mark-complete"/);
+  assert.match(progressSection, /Mark Phase Complete/);
+  assert.doesNotMatch(progressSection, /\bdash-phase-mark-complete-btn[\s\S]*\bdisabled\b/);
+});
+
+test("Phase Progress disables Mark Phase Complete until closeout passes", () => {
+  const html = renderDashboardRootInnerHtml(
+    readinessDashboardPayload({
+      currentPhaseDelivery: phaseDeliveryFixture({
+        closeoutPassed: false,
+        remainingCount: 3,
+        releaseReadyPercent: 70
+      })
+    })
+  );
+  const progressSection =
+    html.match(/<section class="dash-card wc-phase-progress[\s\S]*?<\/section>/)?.[0] ?? "";
+  assert.match(progressSection, /dash-phase-mark-complete-btn/);
+  assert.match(progressSection, /\bdash-phase-mark-complete-btn[\s\S]*\bdisabled\b/);
+});
+
+test("Phase Progress renders closeout gate checkmarks", () => {
+  const html = renderDashboardRootInnerHtml(readinessDashboardPayload());
+  assert.match(html, /wc-phase-progress-checks/);
+  assert.match(html, /Delivery work started/);
+  assert.match(html, /All delivery tasks finished/);
+  assert.match(html, /Delivery evidence recorded/);
+  assert.match(html, /Human gates clear/);
+  assert.match(html, /Phase released/);
+  assert.match(html, /Ready for publish closeout/);
+});
+
+test("Phase Readiness and Progress hidden when workspace has no current phase", () => {
+  const html = renderDashboardRootInnerHtml(
+    readinessDashboardPayload({
+      workspaceStatus: {
+        currentKitPhase: null,
+        nextKitPhase: "108",
+        blockers: [],
+        pendingDecisions: []
+      },
+      systemStatus: {
+        phase: {
+          currentKitPhase: null,
+          nextKitPhase: "108",
+          canonicalPhaseKey: null,
+          phaseCatalog: {
+            supported: true,
+            phases: [
+              { phaseKey: "107", shortDescription: "Shipped slice", inCatalog: true },
+              { phaseKey: "108", shortDescription: "Next up", inCatalog: true }
+            ]
+          }
+        }
+      },
+      currentPhaseDelivery: {
+        schemaVersion: 2,
+        phaseKey: null,
+        closeoutPassed: false,
+        released: false,
+        remainingCount: 0,
+        terminalCount: 0,
+        checkedTaskCount: 0,
+        queue: { ready: 0, proposed: 0, blocked: 0, inProgress: 0, research: 0 },
+        segments: {
+          completed: 0,
+          cancelled: 0,
+          inProgress: 0,
+          ready: 0,
+          proposed: 0,
+          blocked: 0,
+          research: 0
+        },
+        progressPercent: 0,
+        releaseReadyPercent: 0,
+        deliveryEvidenceViolationCount: 0
+      }
+    })
+  );
+  assert.doesNotMatch(html, /Phase Readiness · Phase/);
+  assert.doesNotMatch(html, /Phase Progress · Phase/);
+  assert.match(html, /data-wc-action="phase-roster-start"/);
+});
+
 test("Phase Progress renders segmented bar without release control", () => {
   const overview = overviewPanelHtml(renderDashboardRootInnerHtml(readinessDashboardPayload()));
   assert.match(overview, /Phase Progress · Phase/);
@@ -2219,7 +2475,7 @@ test("Phase Readiness Complete & Release disabled before closeout reaches 100%",
   assert.match(head, /\bdash-phase-release-btn[\s\S]*\bdisabled\b/);
   assert.match(head, /wc-btn-disabled/);
   assert.doesNotMatch(head, /dash-phase-release-btn--preflight/);
-  assert.match(head, /Complete &amp; Release unlocks when phase readiness reaches 100%/);
+  assert.match(head, /Complete &amp; Release unlocks when readiness and Phase Progress both reach 100%/);
 });
 
 test("Phase Readiness enables Complete & Release when closeout passed", () => {

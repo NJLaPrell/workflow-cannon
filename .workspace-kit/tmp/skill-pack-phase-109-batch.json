@@ -1,0 +1,157 @@
+{
+  "expectedPlanningGeneration": 3768,
+  "ops": [
+    {
+      "kind": "create-task",
+      "payload": {
+        "allocateId": true,
+        "title": "Skill packs Wave 1: ship daily driver packs",
+        "status": "ready",
+        "type": "workspace-kit",
+        "priority": "P1",
+        "phaseKey": "109",
+        "phase": "Phase 109",
+        "ownership": "workspace-kit",
+        "summary": "Add wc-agent-bootstrap, wc-policy-cli, wc-task-author, and wc-task-delivery under .claude/skills with dual-install to .cursor/skills.",
+        "description": "Implement Wave 1 from .ai/backlogs/skill-pack-first-party-v1.md: four SKILL.md trees with selection-quality descriptions, thin bodies linking .ai canon, and recommend-skills tags. Migrate task-flow-subagent-delivery into wc-task-delivery.",
+        "approach": "Follow the backlog per-pack specs. Use the shared SKILL.md body template. Verify list-skills and recommend-skills after each pack lands.",
+        "technicalScope": [
+          "Add .claude/skills/wc-agent-bootstrap/SKILL.md per backlog spec.",
+          "Add .claude/skills/wc-policy-cli/SKILL.md per backlog spec.",
+          "Add .claude/skills/wc-task-author/SKILL.md per backlog spec.",
+          "Add .claude/skills/wc-task-delivery/SKILL.md migrated from .cursor/skills/task-flow-subagent-delivery.",
+          "Mirror or symlink Wave 1 ids to .cursor/skills for Cursor agent selection.",
+          "Run pnpm exec wk run list-skills and recommend-skills smoke queries from the backlog cheat sheet."
+        ],
+        "acceptanceCriteria": [
+          "list-skills returns at least four first-party ids: wc-agent-bootstrap, wc-policy-cli, wc-task-author, wc-task-delivery.",
+          "recommend-skills with tags workflow-cannon and delivery returns wc-task-delivery when taskType workspace-kit is set.",
+          "create-task accepts metadata.skillIds including wc-task-delivery after packs exist.",
+          "SKILL.md bodies link .ai canon only; no full playbook paste.",
+          "task-flow-subagent-delivery is superseded or symlinked to wc-task-delivery."
+        ],
+        "metadata": {
+          "epic": "skill-pack-first-party-v1",
+          "phase": 109,
+          "source": ".ai/backlogs/skill-pack-first-party-v1.md",
+          "workPackage": 1,
+          "skillPackWave": 1,
+          "plannedSkillIds": ["wc-agent-bootstrap", "wc-policy-cli", "wc-task-author", "wc-task-delivery"]
+        }
+      }
+    },
+    {
+      "kind": "create-task",
+      "payload": {
+        "allocateId": true,
+        "title": "Skill packs Wave 2: delivery closure packs",
+        "status": "ready",
+        "type": "workspace-kit",
+        "priority": "P1",
+        "phaseKey": "109",
+        "phase": "Phase 109",
+        "ownership": "workspace-kit",
+        "summary": "Add wc-pr-review, wc-release-captain, wc-improvement-discovery, and wc-improvement-triage skill packs.",
+        "description": "Implement Wave 2 from the skill pack backlog: maintainer delivery closure, release captain, and improvement loop packs with playbook anchors.",
+        "approach": "Ship four SKILL.md trees after Wave 1 is discoverable. Keep tags aligned with recommend-skills contract.",
+        "technicalScope": [
+          "Add wc-pr-review, wc-release-captain, wc-improvement-discovery, wc-improvement-triage under .claude/skills.",
+          "Mirror Wave 2 packs to .cursor/skills.",
+          "Each pack includes workflow-cannon plus workflow-specific discoveryTags from the backlog.",
+          "Document Suggested skillIds in relevant .ai/playbooks where the backlog calls for it."
+        ],
+        "acceptanceCriteria": [
+          "list-skills lists all four Wave 2 pack ids.",
+          "recommend-skills with tags workflow-cannon and release returns wc-release-captain.",
+          "recommend-skills with tags workflow-cannon and improvement returns improvement packs.",
+          "Playbook skill-attachments cross-links remain accurate."
+        ],
+        "metadata": {
+          "epic": "skill-pack-first-party-v1",
+          "phase": 109,
+          "source": ".ai/backlogs/skill-pack-first-party-v1.md",
+          "workPackage": 2,
+          "skillPackWave": 2,
+          "plannedSkillIds": ["wc-pr-review", "wc-release-captain", "wc-improvement-discovery", "wc-improvement-triage"]
+        }
+      }
+    },
+    {
+      "kind": "create-task",
+      "payload": {
+        "allocateId": true,
+        "title": "Skill packs Wave 3: intake, UI, and docs packs",
+        "status": "ready",
+        "type": "workspace-kit",
+        "priority": "P2",
+        "phaseKey": "109",
+        "phase": "Phase 109",
+        "ownership": "workspace-kit",
+        "summary": "Add wishlist, transcript, dashboard, doc governance, agent doc routing, and phase journal skill packs.",
+        "description": "Implement Wave 3 from the skill pack backlog: six secondary packs for intake, dashboard operator flows, documentation governance, and phase journal work.",
+        "approach": "Land packs after Wave 1 discovery works. Optional skills.discoveryRoots extension can ship in Wave 4 instead.",
+        "technicalScope": [
+          "Add wc-wishlist-intake, wc-transcript-churn, wc-dashboard-operator, wc-doc-governance, wc-agent-doc-routing, wc-phase-journal.",
+          "Mirror Wave 3 packs to .cursor/skills.",
+          "Validate recommend-skills queries for wishlist and dashboard tags from the backlog cheat sheet."
+        ],
+        "acceptanceCriteria": [
+          "list-skills lists all six Wave 3 pack ids.",
+          "Each pack description matches backlog selection-quality wording.",
+          "recommend-skills smoke tests for wishlist and docs tags pass.",
+          "No duplicate discovery id conflicts between .claude and .cursor roots."
+        ],
+        "metadata": {
+          "epic": "skill-pack-first-party-v1",
+          "phase": 109,
+          "source": ".ai/backlogs/skill-pack-first-party-v1.md",
+          "workPackage": 3,
+          "skillPackWave": 3,
+          "plannedSkillIds": [
+            "wc-wishlist-intake",
+            "wc-transcript-churn",
+            "wc-dashboard-operator",
+            "wc-doc-governance",
+            "wc-agent-doc-routing",
+            "wc-phase-journal"
+          ]
+        }
+      }
+    },
+    {
+      "kind": "create-task",
+      "payload": {
+        "allocateId": true,
+        "title": "Skill packs Wave 4: discovery config and playbook hygiene",
+        "status": "ready",
+        "type": "workspace-kit",
+        "priority": "P2",
+        "phaseKey": "109",
+        "phase": "Phase 109",
+        "ownership": "workspace-kit",
+        "summary": "Extend skills.discoveryRoots, update playbook Suggested skillIds, and close the skill-pack epic acceptance checklist.",
+        "description": "Wave 4 hygiene from the skill pack backlog: dual-root config, playbook index updates, PROJECT_TOOLS pointer, and epic-level acceptance verification.",
+        "approach": "Run after Waves 2 and 3 content exists. Prefer workspace-kit config patch over ad-hoc JSON edits.",
+        "technicalScope": [
+          "Add skills.discoveryRoots for .cursor/skills when not redundant with mirrors.",
+          "Update .ai/playbooks/README.md and task-to-phase-branch with Suggested skillIds footnotes.",
+          "Point PROJECT_TOOLS skill section at .ai/backlogs/skill-pack-first-party-v1.md.",
+          "Run full backlog acceptance checklist and list-skills inventory."
+        ],
+        "acceptanceCriteria": [
+          "All Wave 1–3 packs discoverable via list-skills.",
+          "task-to-phase-branch documents Suggested skillIds wc-task-delivery and wc-policy-cli.",
+          "Backlog epic acceptance items in skill-pack-first-party-v1.md are satisfied or explicitly deferred with notes.",
+          "recommend-skills cheat sheet queries from the backlog all return expected packs."
+        ],
+        "metadata": {
+          "epic": "skill-pack-first-party-v1",
+          "phase": 109,
+          "source": ".ai/backlogs/skill-pack-first-party-v1.md",
+          "workPackage": 4,
+          "skillPackWave": 4
+        }
+      }
+    }
+  ]
+}

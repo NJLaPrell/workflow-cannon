@@ -47,11 +47,6 @@
           "type": "webview",
           "id": "workflowCannon.dashboard",
           "name": "Dashboard"
-        },
-        {
-          "type": "webview",
-          "id": "workflowCannon.guidance",
-          "name": "CAE"
         }
       ]
     },

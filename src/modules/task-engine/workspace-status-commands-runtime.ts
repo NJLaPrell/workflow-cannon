@@ -191,6 +191,17 @@ function patchProjectConfigPhaseHint(
   return next;
 }
 
+/** Clear `kit.currentPhaseNumber` / `kit.currentPhaseLabel` when workspace has no active phase. */
+function clearProjectConfigPhaseHint(doc: Record<string, unknown>): Record<string, unknown> {
+  const next: Record<string, unknown> = { ...doc };
+  const kit =
+    doc.kit && typeof doc.kit === "object" && !Array.isArray(doc.kit) ? { ...(doc.kit as Record<string, unknown>) } : {};
+  delete kit.currentPhaseNumber;
+  delete kit.currentPhaseLabel;
+  next.kit = kit;
+  return next;
+}
+
 function plannedWorkspaceStatusAfter(
   before: NonNullable<ReturnType<typeof readKitWorkspaceStatusRow>>,
   patch: WorkspaceStatusUpdatePatch
@@ -475,22 +486,59 @@ export async function runUpdateWorkspaceStatus(
     const dual = openSqliteDualForWorkspaceStatus(ctx);
     const db = dual.getDatabase();
     const before = readKitWorkspaceStatusRow(db);
+    if (!workspaceStatusTableAvailable(db) || before === null) {
+      return {
+        ok: false,
+        code: "workspace-status-unavailable",
+        message: "kit_workspace_status not available for update-workspace-status"
+      };
+    }
+    const clearedCurrent =
+      Object.hasOwn(patch, "currentKitPhase") && patch.currentKitPhase === null;
     const { beforeRevision, afterRevision } = patchWorkspaceStatus(db, {
       expectedWorkspaceRevision: revRaw,
       patch,
       actor,
-      command
+      command,
+      details:
+        clearedCurrent && before.currentKitPhase
+          ? { previousCurrentKitPhase: before.currentKitPhase }
+          : undefined
     });
     const after = readKitWorkspaceStatusRow(db);
+    if (!after) {
+      return {
+        ok: false,
+        code: "storage-read-error",
+        message: "update-workspace-status wrote but could not re-read workspace status"
+      };
+    }
+
+    let exportStatus: Record<string, unknown> | undefined;
+    if (clearedCurrent) {
+      const configBefore = await readProjectConfigDocument(ctx.workspacePath);
+      const configAfter = clearProjectConfigPhaseHint(configBefore);
+      await writeProjectConfigDocument(ctx.workspacePath, configAfter);
+      const writtenExport = writeWorkspaceStatusDbExport(ctx, formatWorkspaceStatusDbExportYaml(after));
+      exportStatus = {
+        written: true,
+        fileRelativePath: writtenExport,
+        workspaceRevision: after.workspaceRevision
+      };
+    }
+
     return {
       ok: true,
-      code: "workspace-status-updated",
-      message: "Updated kit workspace status",
+      code: clearedCurrent ? "workspace-phase-cleared" : "workspace-status-updated",
+      message: clearedCurrent
+        ? "Cleared workspace current phase"
+        : "Updated kit workspace status",
       data: {
         beforeRevision,
         afterRevision,
         workspaceStatusBefore: before,
-        workspaceStatusAfter: after
+        workspaceStatusAfter: after,
+        ...(exportStatus ? { exportStatus } : {})
       }
     };
   } catch (e) {

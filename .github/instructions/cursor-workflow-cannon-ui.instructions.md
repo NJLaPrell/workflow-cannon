@@ -39,7 +39,6 @@ Audience: agents only. Apply these rules verbatim when writing or modifying webv
 - [extensions/cursor-workflow-cannon/src/views/status/render-status-tab.ts](../../extensions/cursor-workflow-cannon/src/views/status/render-status-tab.ts)
 - [extensions/cursor-workflow-cannon/src/views/config/ConfigViewProvider.ts](../../extensions/cursor-workflow-cannon/src/views/config/ConfigViewProvider.ts)
 - [extensions/cursor-workflow-cannon/src/views/guidance/GuidancePanel.ts](../../extensions/cursor-workflow-cannon/src/views/guidance/GuidancePanel.ts)
-- [extensions/cursor-workflow-cannon/src/views/guidance/GuidanceViewProvider.ts](../../extensions/cursor-workflow-cannon/src/views/guidance/GuidanceViewProvider.ts)
 - [extensions/cursor-workflow-cannon/src/views/guidance/render-guidance-panel.ts](../../extensions/cursor-workflow-cannon/src/views/guidance/render-guidance-panel.ts)
 - [extensions/cursor-workflow-cannon/src/views/shared/guidance-panel-webview-css.ts](../../extensions/cursor-workflow-cannon/src/views/shared/guidance-panel-webview-css.ts)
 
@@ -289,7 +288,7 @@ R10.9 Row — `.wc-row` (alias `.dash-row`). `display: flex; align-items: flex-s
 
 R11.1 The drawer markup contract is owned by [dashboard-input-drawer.ts](../../extensions/cursor-workflow-cannon/src/views/dashboard/dashboard-input-drawer.ts) (`DrawerFormSpec`, `renderDrawerFormHtml`). New mutation flows MUST construct a `DrawerFormSpec` and POST `wcDrawerOpen` rather than calling `vscode.window.showInputBox` / `showQuickPick`.
 
-R11.2 Drawer CSS MUST be sourced from a single shared constant (target: `src/views/shared/wc-drawer-css.ts` exporting `WC_DRAWER_CSS`). Until that file exists, copy the block verbatim from [DashboardViewProvider.ts](../../extensions/cursor-workflow-cannon/src/views/dashboard/DashboardViewProvider.ts); do NOT diverge from the Guidance copy in [GuidanceViewProvider.ts](../../extensions/cursor-workflow-cannon/src/views/guidance/GuidanceViewProvider.ts).
+R11.2 Drawer CSS MUST be sourced from a single shared constant (target: `src/views/shared/wc-drawer-css.ts` exporting `WC_DRAWER_CSS`). Until that file exists, copy the block verbatim from [DashboardViewProvider.ts](../../extensions/cursor-workflow-cannon/src/views/dashboard/DashboardViewProvider.ts); keep [GuidancePanel.ts](../../extensions/cursor-workflow-cannon/src/views/guidance/GuidancePanel.ts) in sync when it embeds the same drawer host.
 
 R11.3 Required attributes:
 - Panel: `role="dialog"`, `aria-modal="true"`, `data-wc-drawer-workflow="<workflowId>"`.

@@ -9,6 +9,7 @@
 
 import {
   buildNarrowPhaseRosterRows,
+  buildPhaseRosterRowsWhenNoCurrent,
   type PhaseCatalogListRow
 } from "../phase-roster-display.js";
 import {
@@ -17,7 +18,6 @@ import {
   resolvePhaseScheduleTag,
   type PhaseScheduleFocus
 } from "../phase-schedule-tag.js";
-import { buildGuidanceAuthoringWebviewBootstrap } from "../guidance/guidance-authoring-webview-bootstrap.js";
 import { renderStatusTabInnerHtml } from "../status/render-status-tab.js";
 import { renderConfigPanelShellHtml } from "../config/config-panel-shell.js";
 
@@ -248,8 +248,312 @@ function recommendedNextCategoryFromRow(row: Record<string, unknown>): "executio
   return "execution";
 }
 
+/** Stable phase key from a dashboard task/list row. */
+export function dashboardRowPhaseKey(row: unknown): string {
+  if (!row || typeof row !== "object") {
+    return "";
+  }
+  const r = row as { phaseKey?: unknown; phase?: unknown };
+  const pk = r.phaseKey != null ? String(r.phaseKey).trim() : "";
+  if (pk.length > 0) {
+    return pk;
+  }
+  const phase = r.phase != null ? String(r.phase).trim() : "";
+  const m = phase.match(/(?:^|\s)phase\s+(\d+)/i);
+  return m ? m[1] : "";
+}
+
+/** First ready-queue row in the workspace current phase. */
+export function pickNextTaskInCurrentPhase(readyTop: unknown[], currentPhaseKey: string): unknown | null {
+  const cur = currentPhaseKey.trim();
+  if (cur.length === 0) {
+    return null;
+  }
+  for (const row of readyTop) {
+    if (dashboardRowPhaseKey(row) === cur) {
+      return row;
+    }
+  }
+  return null;
+}
+
+export function suggestedNextMatchesPhase(suggestedNext: unknown, currentPhaseKey: string): boolean {
+  const cur = currentPhaseKey.trim();
+  if (cur.length === 0 || !suggestedNext || typeof suggestedNext !== "object") {
+    return false;
+  }
+  return dashboardRowPhaseKey(suggestedNext) === cur;
+}
+
+export type UpNextCardRenderArgs = {
+  ws: Record<string, unknown> | null;
+  phaseSnapshot: PhaseSnapshot | null;
+  suggestedNext: unknown;
+  readyTop: unknown[];
+  readyCount: number;
+  firstWishlistOpen: unknown;
+  humanGatesCount: number;
+  /** Optional rows to surface in-progress / blocked / gated work in the current phase. */
+  phaseWorkCandidates?: unknown[];
+};
+
+/**
+ * Phase-aware Up next: current-phase task, closeout, pick-phase, then legacy fallbacks.
+ */
+export function renderUpNextCardHtml(args: UpNextCardRenderArgs): string {
+  const curPhase = workspaceCurrentPhaseKey(args.ws);
+
+  if (curPhase.length === 0) {
+    const nextPhase =
+      args.ws?.nextKitPhase != null ? String(args.ws.nextKitPhase).trim() : "";
+    return renderRecommendedNextPickPhaseCard(nextPhase);
+  }
+
+  const phaseTask =
+    pickNextTaskInCurrentPhase(args.readyTop, curPhase) ??
+    (suggestedNextMatchesPhase(args.suggestedNext, curPhase) ? args.suggestedNext : null);
+  if (phaseTask) {
+    return renderRecommendedNextCard(phaseTask);
+  }
+
+  const snap = args.phaseSnapshot;
+  const snapForPhase =
+    snap && (snap.phaseKey === curPhase || snap.phaseKey == null || snap.phaseKey === "")
+      ? snap
+      : snap?.phaseKey === curPhase
+        ? snap
+        : null;
+
+  if (snapForPhase && !phaseDeliveryQueueDrainedForUpNext(snapForPhase)) {
+    const candidate = pickFirstRowInCurrentPhase(args.phaseWorkCandidates ?? [], curPhase);
+    if (candidate) {
+      return renderRecommendedNextCard(candidate, { statusTag: taskRowStatusTag(candidate) });
+    }
+    return renderRecommendedNextPhaseWorkCard(curPhase, snapForPhase);
+  }
+
+  if (snapForPhase) {
+    const closeout = renderRecommendedNextCloseoutCard({
+      curPhase,
+      nextKitPhase:
+        args.ws?.nextKitPhase != null ? String(args.ws.nextKitPhase).trim() : "",
+      snapshot: snapForPhase,
+      humanGatesCount: args.humanGatesCount
+    });
+    if (closeout.length > 0) {
+      return closeout;
+    }
+  }
+
+  if (args.readyCount > 0 && args.suggestedNext && typeof args.suggestedNext === "object") {
+    return renderRecommendedNextCard(args.suggestedNext);
+  }
+  if (args.readyCount === 0 && args.firstWishlistOpen) {
+    return renderRecommendedNextWishlistCard(args.firstWishlistOpen);
+  }
+  return "";
+}
+
+function pickFirstRowInCurrentPhase(rows: unknown[], currentPhaseKey: string): unknown | null {
+  const cur = currentPhaseKey.trim();
+  for (const row of rows) {
+    if (dashboardRowPhaseKey(row) === cur) {
+      return row;
+    }
+  }
+  return null;
+}
+
+function taskRowStatusTag(row: unknown): string {
+  if (!row || typeof row !== "object") {
+    return "task";
+  }
+  const status = String((row as { status?: unknown }).status ?? "")
+    .trim()
+    .toLowerCase();
+  if (status.length > 0) {
+    return status.replace(/_/g, "-");
+  }
+  return "task";
+}
+
+/** True when no runnable ready work remains in the current phase queue snapshot. */
+function phaseDeliveryQueueDrainedForUpNext(snapshot: PhaseSnapshot): boolean {
+  if (snapshot.closeoutPassed) {
+    return true;
+  }
+  if (snapshot.queue.ready > 0) {
+    return false;
+  }
+  return snapshot.remainingCount === 0 && snapshot.queue.inProgress === 0;
+}
+
+function renderRecommendedNextPickPhaseCard(nextKitPhase: string): string {
+  const next = nextKitPhase.trim();
+  const title =
+    next.length > 0
+      ? "Start Phase " + next + " from the roster"
+      : "Choose a phase and start delivery";
+  const detail =
+    next.length > 0
+      ? "Set the workspace current phase, then pick up ready work on the Queue tab."
+      : "Use Start on a phase in the roster below when you are ready to deliver.";
+  const startBtn =
+    next.length > 0
+      ? '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="phase-roster-start" data-wc-phase-key="' +
+        escapeHtmlAttr(next) +
+        '" title="Set Phase ' +
+        escapeHtmlAttr(next) +
+        ' as the active workspace phase">Start Phase ' +
+        escapeHtml(next) +
+        " &rarr;</button>"
+      : "";
+  return (
+    '<div class="wc-rec-next wc-rec-next-pick-phase">' +
+    '<div class="wc-rec-header">' +
+    '<span class="wc-rec-label">&#9733; Up next</span>' +
+    "</div>" +
+    '<p class="wc-rec-title">' +
+    escapeHtml(title) +
+    "</p>" +
+    '<p class="muted wc-rec-subtitle">' +
+    escapeHtml(detail) +
+    "</p>" +
+    '<div class="wc-rec-footer">' +
+    '<span class="wc-rec-tag wc-rec-tag-phase">phase</span>' +
+    '<span class="wc-rec-footer-actions">' +
+    '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="focus-phase-roster" title="Jump to the phase roster">Roster &darr;</button>' +
+    startBtn +
+    "</span>" +
+    "</div>" +
+    "</div>"
+  );
+}
+
+function renderRecommendedNextPhaseWorkCard(curPhase: string, snapshot: PhaseSnapshot): string {
+  const parts: string[] = [];
+  if (snapshot.queue.inProgress > 0) {
+    parts.push(String(snapshot.queue.inProgress) + " in progress");
+  }
+  if (snapshot.remainingCount > 0) {
+    parts.push(String(snapshot.remainingCount) + " remaining");
+  }
+  if (snapshot.queue.blocked > 0) {
+    parts.push(String(snapshot.queue.blocked) + " blocked");
+  }
+  const detail =
+    parts.length > 0
+      ? parts.join(" · ") + " — open the Queue tab filtered to this phase."
+      : "Open the Queue tab to continue delivery work in this phase.";
+  const pk = escapeHtmlAttr(curPhase);
+  return (
+    '<div class="wc-rec-next wc-rec-next-phase-work">' +
+    '<div class="wc-rec-header">' +
+    '<span class="wc-rec-label">&#9733; Up next</span>' +
+    "</div>" +
+    '<p class="wc-rec-title">Continue Phase ' +
+    escapeHtml(curPhase) +
+    " delivery work</p>" +
+    '<p class="muted wc-rec-subtitle">' +
+    escapeHtml(detail) +
+    "</p>" +
+    '<div class="wc-rec-footer">' +
+    '<span class="wc-rec-tag wc-rec-tag-phase">Phase ' +
+    escapeHtml(curPhase) +
+    "</span>" +
+    '<span class="wc-rec-footer-actions">' +
+    '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="open-queue-for-phase" data-wc-phase-key="' +
+    pk +
+    '" title="Open Queue tab for this phase">Queue &rarr;</button>' +
+    "</span>" +
+    "</div>" +
+    "</div>"
+  );
+}
+
+function renderRecommendedNextCloseoutCard(args: {
+  curPhase: string;
+  nextKitPhase: string;
+  snapshot: PhaseSnapshot;
+  humanGatesCount: number;
+}): string {
+  const checks = buildPhaseProgressChecks({
+    snapshot: args.snapshot,
+    humanGateCount: args.humanGatesCount
+  });
+  const failing = checks.find((c) => !c.ok);
+  const cur = args.curPhase.trim();
+  const next = args.nextKitPhase.trim();
+  const phasePhrase = "Phase " + cur;
+
+  let title = "Phase closeout and release";
+  let detail =
+    "Merge the phase branch, publish, tag, and roll workspace to the next phase when checks pass.";
+  if (failing) {
+    title = failing.label;
+    detail = failing.failHelp;
+  } else if (args.snapshot.released) {
+    title =
+      next.length > 0
+        ? "Phase delivered — start Phase " + next
+        : "Phase delivered — pick the next phase";
+    detail = "Delivery tasks are terminal. Use the roster to start the next slice.";
+  }
+
+  const releaseBtn = renderPhaseCompleteReleaseButton({
+    phaseKey: cur,
+    phasePhrase,
+    taskIds: [],
+    workspaceCurrent: cur,
+    workspaceNext: next,
+    scope: "current",
+    closeoutReady: args.snapshot.closeoutPassed && args.snapshot.releaseReadyPercent >= 100,
+    disabled:
+      !args.snapshot.closeoutPassed ||
+      args.snapshot.releaseReadyPercent < 100 ||
+      args.humanGatesCount > 0 ||
+      args.snapshot.deliveryEvidenceViolationCount > 0
+  });
+
+  const startNextBtn =
+    args.snapshot.released && next.length > 0 && next !== cur
+      ? '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="phase-roster-start" data-wc-phase-key="' +
+        escapeHtmlAttr(next) +
+        '">Start Phase ' +
+        escapeHtml(next) +
+        " &rarr;</button>"
+      : "";
+
+  return (
+    '<div class="wc-rec-next wc-rec-next-closeout">' +
+    '<div class="wc-rec-header">' +
+    '<span class="wc-rec-label">&#9733; Up next</span>' +
+    "</div>" +
+    '<p class="wc-rec-title">' +
+    escapeHtml(title) +
+    "</p>" +
+    '<p class="muted wc-rec-subtitle">' +
+    escapeHtml(detail) +
+    "</p>" +
+    '<div class="wc-rec-footer">' +
+    '<span class="wc-rec-tag wc-rec-tag-closeout">closeout</span>' +
+    '<span class="wc-rec-tag wc-rec-tag-phase">Phase ' +
+    escapeHtml(cur) +
+    "</span>" +
+    '<span class="wc-rec-footer-actions">' +
+    releaseBtn +
+    startNextBtn +
+    "</span>" +
+    "</div>" +
+    "</div>"
+  );
+}
+
 /** ★ "Recommended Next" card — kit `suggestedNext` (phase-aware ready ordering). */
-function renderRecommendedNextCard(item: unknown): string {
+function renderRecommendedNextCard(
+  item: unknown,
+  options?: { statusTag?: string }
+): string {
   if (!item || typeof item !== "object") {
     return "";
   }
@@ -260,6 +564,7 @@ function renderRecommendedNextCard(item: unknown): string {
     phaseKey?: unknown;
     type?: unknown;
     priority?: unknown;
+    status?: unknown;
   };
   const id = String(row.id ?? "").trim();
   const title = String(row.title ?? "").trim();
@@ -279,6 +584,9 @@ function renderRecommendedNextCard(item: unknown): string {
   const category = recommendedNextCategoryFromRow(row as Record<string, unknown>);
   const catTag =
     '<span class="wc-rec-tag wc-rec-tag-cat">' + escapeHtml(category) + "</span>";
+  const statusTag =
+    options?.statusTag ??
+    (String(row.status ?? "").trim().toLowerCase() === "ready" ? "ready" : taskRowStatusTag(row));
   const viewBtn =
     id.length > 0
       ? '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="task-detail" data-task-id="' +
@@ -294,7 +602,9 @@ function renderRecommendedNextCard(item: unknown): string {
     escapeHtml(displayTitle) +
     "</p>" +
     '<div class="wc-rec-footer">' +
-    '<span class="wc-rec-tag wc-rec-tag-ready">ready</span>' +
+    '<span class="wc-rec-tag wc-rec-tag-status">' +
+    escapeHtml(statusTag) +
+    "</span>" +
     catTag +
     phaseTag +
     viewBtn +
@@ -352,7 +662,7 @@ function renderRecommendedNextWishlistCard(item: unknown): string {
 }
 
 const PHASE_READINESS_HELP =
-  "Is this phase ready to start? The checks show whether you have work to pick up, blockers, and a clear queue. The % is a start score—not how much delivery is finished (see Phase Progress). Wait until readiness hits 100% before starting new tasks in this phase.";
+  "Shows whether you are ready to start work in this phase. Every check below must pass to reach 100%. Once delivery has started, this score stays at 100%. To track how much of the phase is finished, see Phase Progress.";
 
 /** Reusable contextual help — blue “i”; text lives in data-wc-help-text for the fixed popover. */
 function renderContextHelpIcon(helpText: string, ariaLabel = "About this section"): string {
@@ -565,6 +875,7 @@ type PhaseSnapshot = {
   segments: PhaseSnapshotSegments;
   progressPercent: number;
   releaseReadyPercent: number;
+  deliveryEvidenceViolationCount: number;
 };
 
 const EMPTY_PHASE_QUEUE: PhaseSnapshotQueue = {
@@ -605,7 +916,8 @@ function normalizePhaseSnapshot(raw: unknown, ws: Record<string, unknown> | null
       queue: { ...EMPTY_PHASE_QUEUE },
       segments: { ...EMPTY_PHASE_SEGMENTS },
       progressPercent: 0,
-      releaseReadyPercent: 0
+      releaseReadyPercent: 0,
+      deliveryEvidenceViolationCount: 0
     };
   }
   const r = raw as Record<string, unknown>;
@@ -648,6 +960,10 @@ function normalizePhaseSnapshot(raw: unknown, ws: Record<string, unknown> | null
       : closeoutPassed
         ? 100
         : Math.min(99, progressPercent);
+  const deliveryEvidenceViolationCount =
+    typeof r.deliveryEvidenceViolationCount === "number" && Number.isFinite(r.deliveryEvidenceViolationCount)
+      ? Math.max(0, Math.floor(r.deliveryEvidenceViolationCount))
+      : 0;
   return {
     phaseKey,
     closeoutPassed,
@@ -658,7 +974,8 @@ function normalizePhaseSnapshot(raw: unknown, ws: Record<string, unknown> | null
     queue,
     segments,
     progressPercent,
-    releaseReadyPercent
+    releaseReadyPercent,
+    deliveryEvidenceViolationCount
   };
 }
 
@@ -674,43 +991,105 @@ function phaseSegmentTotal(segments: PhaseSnapshotSegments): number {
   );
 }
 
-function phaseHasRunnableOrCompletedWork(snapshot: PhaseSnapshot): boolean {
-  const q = snapshot.queue;
-  const runnable = q.ready + q.inProgress;
-  return runnable > 0 || snapshot.segments.completed > 0;
+/** Delivery has started — readiness score locks at 100% for the rest of the phase. */
+function phaseWorkHasBegun(snapshot: PhaseSnapshot): boolean {
+  const s = snapshot.segments;
+  return s.completed > 0 || s.inProgress > 0 || s.cancelled > 0;
 }
 
-function computeWorkReadinessScore(snapshot: PhaseSnapshot, workspaceBlockerCount: number): number {
-  if (!snapshot.phaseKey) {
+type PhaseReadinessCheck = {
+  label: string;
+  ok: boolean;
+  statusMeta?: string;
+  /** Shown via help icon when the check fails — operator actions only (R17.2). */
+  failHelp: string;
+};
+
+function buildPhaseReadinessChecks(args: {
+  curPhase: string;
+  blockers: string[];
+  pending: string[];
+  queue: PhaseSnapshotQueue;
+  segments: PhaseSnapshotSegments;
+  workBegun: boolean;
+}): PhaseReadinessCheck[] {
+  const { curPhase, blockers, pending, queue, segments, workBegun } = args;
+  const runnable = queue.ready + queue.inProgress;
+  const phaseBlocked = queue.blocked;
+  const phaseProposed = queue.proposed;
+
+  const readyWorkOk = workBegun || runnable > 0;
+  let readyWorkMeta: string | undefined;
+  if (workBegun && runnable === 0) {
+    readyWorkMeta =
+      segments.completed > 0
+        ? String(segments.completed) + " done · work in progress"
+        : "work in progress";
+  } else if (runnable > 0) {
+    readyWorkMeta = String(queue.ready) + " ready · " + String(queue.inProgress) + " in progress";
+  } else if (phaseProposed > 0) {
+    readyWorkMeta = String(phaseProposed) + " waiting to be accepted";
+  } else {
+    readyWorkMeta = "nothing to pick up yet";
+  }
+
+  const checks: PhaseReadinessCheck[] = [
+    {
+      label: "Current phase is set",
+      ok: workBegun || curPhase.length > 0,
+      statusMeta: curPhase.length > 0 ? "Phase " + curPhase : "not set yet",
+      failHelp:
+        "Open the Config tab and set your current phase under workspace status. You need this before work in the phase can begin."
+    },
+    {
+      label: "Tasks ready to pick up",
+      ok: readyWorkOk,
+      statusMeta: readyWorkMeta,
+      failHelp:
+        "Open the Queue tab and accept proposed tasks, or move tasks to Ready, so you have work waiting when this phase starts."
+    },
+    {
+      label: "No blocked tasks",
+      ok: workBegun || phaseBlocked === 0,
+      statusMeta: phaseBlocked === 0 ? "none" : String(phaseBlocked) + " blocked",
+      failHelp:
+        "Open the Queue tab, tap Blocked, and resolve any blocked tasks in this phase before you begin."
+    },
+    {
+      label: "No open decisions",
+      ok: workBegun || pending.length === 0,
+      statusMeta: pending.length === 0 ? "none" : String(pending.length) + " open",
+      failHelp:
+        "Open the Config tab and resolve any open decisions under workspace status before starting this phase."
+    },
+    {
+      label: "No workspace blockers",
+      ok: workBegun || blockers.length === 0,
+      statusMeta: blockers.length === 0 ? "none" : String(blockers.length) + " open",
+      failHelp:
+        "Open the Config tab and clear any workspace blockers under workspace status before starting this phase."
+    }
+  ];
+  return checks;
+}
+
+function computePhaseReadinessScore(checks: PhaseReadinessCheck[], workBegun: boolean): number {
+  if (workBegun) {
+    return 100;
+  }
+  if (checks.length === 0) {
     return 0;
   }
-  let score = 20;
-  const q = snapshot.queue;
-  const runnable = q.ready + q.inProgress;
-  if (runnable > 0) {
-    score += 30;
-  } else if (snapshot.segments.completed > 0) {
-    score += 24;
-  } else if (q.proposed > 0) {
-    score += 12;
-  }
-  if (q.blocked === 0) {
-    score += 25;
-  } else if (q.blocked === 1) {
-    score += 10;
-  }
-  if (workspaceBlockerCount === 0) {
-    score += 10;
-  }
-  if (q.proposed < 5) {
-    score += 15;
-  } else if (q.proposed < 10) {
-    score += 5;
-  }
-  return Math.min(100, score);
+  const passed = checks.filter((c) => c.ok).length;
+  return Math.round((passed / checks.length) * 100);
 }
 
-function renderPhaseCheckRow(label: string, ok: boolean, muted?: string): string {
+function renderPhaseCheckRow(check: PhaseReadinessCheck): string {
+  const { label, ok, statusMeta, failHelp } = check;
+  const help =
+    !ok && failHelp.trim().length > 0
+      ? " " + renderContextHelpIcon(failHelp, "What to do")
+      : "";
   return (
     '<div class="wc-cae-check">' +
     '<span class="wc-cae-check-icon ' +
@@ -720,8 +1099,11 @@ function renderPhaseCheckRow(label: string, ok: boolean, muted?: string): string
     "</span>" +
     '<span class="wc-cae-check-label">' +
     escapeHtml(label) +
+    help +
     "</span>" +
-    (muted ? '<span class="muted wc-cae-check-meta"> · ' + escapeHtml(muted) + "</span>" : "") +
+    (statusMeta
+      ? '<span class="muted wc-cae-check-meta"> · ' + escapeHtml(statusMeta) + "</span>"
+      : "") +
     "</div>"
   );
 }
@@ -842,10 +1224,135 @@ function renderPhaseProgressLegend(segments: PhaseSnapshotSegments): string {
   );
 }
 
+function workspaceCurrentPhaseKey(ws: Record<string, unknown> | null | undefined): string {
+  return ws?.currentKitPhase != null ? String(ws.currentKitPhase).trim() : "";
+}
+
+type PhaseProgressCheck = PhaseReadinessCheck;
+
+/** True when workspace may clear current phase via Mark Phase Complete. */
+function phaseMarkCompleteReady(snapshot: PhaseSnapshot, humanGateCount: number): boolean {
+  const evidenceOk =
+    snapshot.checkedTaskCount === 0 || snapshot.deliveryEvidenceViolationCount === 0;
+  return (
+    snapshot.closeoutPassed &&
+    snapshot.remainingCount === 0 &&
+    humanGateCount === 0 &&
+    evidenceOk
+  );
+}
+
+function renderPhaseMarkCompleteButton(phaseKey: string, ready: boolean): string {
+  const pk = escapeHtmlAttr(phaseKey.trim());
+  const disabled = !ready;
+  const title = ready
+    ? "Clear the active workspace phase after delivery closeout"
+    : "Finish delivery tasks, clear human gates, and record evidence before marking this phase complete";
+  const disabledAttr = disabled ? ' disabled aria-disabled="true"' : "";
+  return (
+    '<div class="wc-phase-progress-footer">' +
+    '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary dash-phase-mark-complete-btn' +
+    (disabled ? " wc-btn-disabled" : "") +
+    '" data-wc-action="phase-mark-complete"' +
+    disabledAttr +
+    ' data-wc-phase-key="' +
+    pk +
+    '" title="' +
+    escapeHtmlAttr(title) +
+    '">Mark Phase Complete</button>' +
+    "</div>"
+  );
+}
+
+function buildPhaseProgressChecks(args: {
+  snapshot: PhaseSnapshot;
+  humanGateCount: number;
+}): PhaseProgressCheck[] {
+  const { snapshot, humanGateCount } = args;
+  const segments = snapshot.segments;
+  const started = phaseWorkHasBegun(snapshot);
+  const checked = snapshot.checkedTaskCount;
+  const evidenceOk = snapshot.deliveryEvidenceViolationCount === 0;
+  const releaseReady = snapshot.releaseReadyPercent >= 100;
+
+  return [
+    {
+      label: "Delivery work started",
+      ok: started,
+      statusMeta: started ? "underway" : "not started",
+      failHelp: "Pick up ready tasks on the Queue tab to begin delivery for this phase."
+    },
+    {
+      label: "All delivery tasks finished",
+      ok: snapshot.closeoutPassed,
+      statusMeta: snapshot.closeoutPassed
+        ? "done"
+        : snapshot.remainingCount > 0
+          ? String(snapshot.remainingCount) + " remaining"
+          : checked === 0
+            ? "no delivery tasks"
+            : "in progress",
+      failHelp:
+        "Finish or explicitly handle every delivery task in this phase before closeout. Check the Queue tab for remaining work."
+    },
+    {
+      label: "Delivery evidence recorded",
+      ok: checked === 0 || evidenceOk,
+      statusMeta:
+        checked === 0
+          ? "n/a"
+          : evidenceOk
+            ? "clear"
+            : String(snapshot.deliveryEvidenceViolationCount) + " gaps",
+      failHelp:
+        "Add delivery evidence on finished tasks before release. Open a task row and complete its delivery evidence fields."
+    },
+    {
+      label: "Human gates clear",
+      ok: humanGateCount === 0,
+      statusMeta: humanGateCount === 0 ? "none" : String(humanGateCount) + " waiting",
+      failHelp:
+        "Resolve human approval gates on the Queue tab (Human filter) before publishing this phase."
+    },
+    {
+      label: "Phase released",
+      ok: snapshot.released,
+      statusMeta: snapshot.released ? "delivered" : "still current",
+      failHelp:
+        "After merge and publish, roll workspace to the next phase using Complete & Release or Start on the next phase in the roster."
+    },
+    {
+      label: "Ready for publish closeout",
+      ok: releaseReady,
+      statusMeta: releaseReady ? "100%" : String(snapshot.releaseReadyPercent) + "%",
+      failHelp:
+        "Closeout must reach 100% before publish. Finish remaining delivery tasks and evidence first."
+    }
+  ];
+}
+
+function renderPhaseRosterStartButton(phaseKey: string, isCurrent: boolean): string {
+  if (isCurrent) {
+    return (
+      '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" disabled aria-disabled="true" title="This is the current workspace phase">Current</button>'
+    );
+  }
+  const pk = escapeHtmlAttr(phaseKey.trim());
+  return (
+    '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary dash-phase-roster-start" data-wc-action="phase-roster-start" data-wc-phase-key="' +
+    pk +
+    '" title="Set Phase ' +
+    escapeHtmlAttr(phaseKey.trim()) +
+    ' as the active workspace phase">Start</button>'
+  );
+}
+
 /** Phase readiness — can we work this phase now? (scoped to current phase). */
 function renderPhaseReadinessCard(ws: Record<string, unknown> | null, snapshot: PhaseSnapshot | null): string {
-  const curPhase =
-    snapshot?.phaseKey ?? (ws?.currentKitPhase != null ? String(ws.currentKitPhase).trim() : "");
+  const curPhase = workspaceCurrentPhaseKey(ws);
+  if (curPhase.length === 0) {
+    return "";
+  }
   const nextPhase =
     ws?.nextKitPhase != null ? String(ws.nextKitPhase).trim() : "";
   const blockers: string[] = Array.isArray(ws?.blockers)
@@ -857,16 +1364,19 @@ function renderPhaseReadinessCard(ws: Record<string, unknown> | null, snapshot: 
 
   const queue = snapshot?.queue ?? EMPTY_PHASE_QUEUE;
   const segments = snapshot?.segments ?? EMPTY_PHASE_SEGMENTS;
-  const runnable = queue.ready + queue.inProgress;
-  const phaseBlocked = queue.blocked;
-  const phaseProposed = queue.proposed;
-  const runnableOrDone = snapshot ? phaseHasRunnableOrCompletedWork(snapshot) : false;
-  const deliveryStarted =
-    segments.completed > 0 || segments.inProgress > 0 || segments.cancelled > 0;
+  const workBegun = snapshot ? phaseWorkHasBegun(snapshot) : false;
 
-  const score = snapshot ? computeWorkReadinessScore(snapshot, blockers.length) : 0;
+  const checks = buildPhaseReadinessChecks({
+    curPhase,
+    blockers,
+    pending,
+    queue,
+    segments,
+    workBegun
+  });
+  const score = computePhaseReadinessScore(checks, workBegun);
   const scoreColor =
-    score >= 75 ? "wc-cae-score-ok" : score >= 40 ? "wc-cae-score-warn" : "wc-cae-score-bad";
+    score >= 100 ? "wc-cae-score-ok" : score >= 60 ? "wc-cae-score-warn" : "wc-cae-score-bad";
 
   const phaseSection =
     curPhase.length > 0
@@ -879,57 +1389,11 @@ function renderPhaseReadinessCard(ws: Record<string, unknown> | null, snapshot: 
       : '<p class="muted">No current phase set in workspace snapshot.</p>';
 
   const checksSection =
-    '<div class="wc-cae-checks">' +
-    renderPhaseCheckRow(
-      "Runnable work in phase",
-      runnableOrDone,
-      runnable > 0
-        ? String(queue.ready) + " ready · " + String(queue.inProgress) + " in progress"
-        : segments.completed > 0
-          ? String(segments.completed) + " completed (no ready work right now)"
-          : phaseProposed > 0
-            ? String(phaseProposed) + " proposed (not yet ready)"
-            : "none"
-    ) +
-    renderPhaseCheckRow(
-      "Delivery work started",
-      deliveryStarted,
-      deliveryStarted
-        ? String(segments.completed) +
-          " done · " +
-          String(segments.inProgress) +
-          " in progress" +
-          (segments.cancelled > 0 ? " · " + String(segments.cancelled) + " cancelled" : "")
-        : "no delivery tasks started"
-    ) +
-    renderPhaseCheckRow(
-      "Pending decisions clear",
-      pending.length === 0,
-      pending.length === 0 ? "none" : String(pending.length) + " open"
-    ) +
-    renderPhaseCheckRow(
-      "No blocked tasks in phase",
-      phaseBlocked === 0,
-      phaseBlocked === 0 ? "clear" : String(phaseBlocked) + " blocked"
-    ) +
-    renderPhaseCheckRow(
-      "Phase configured",
-      curPhase.length > 0,
-      curPhase.length > 0 ? curPhase : "not set"
-    ) +
-    renderPhaseCheckRow(
-      "Proposed in phase manageable",
-      phaseProposed < 10,
-      String(phaseProposed) + " proposed"
-    ) +
-    (blockers.length > 0
-      ? renderPhaseCheckRow(
-          "Workspace blockers clear",
-          false,
-          String(blockers.length) + " workspace"
-        )
-      : "") +
-    "</div>";
+    '<div class="wc-cae-checks">' + checks.map((c) => renderPhaseCheckRow(c)).join("") + "</div>";
+
+  const workBegunNote = workBegun
+    ? '<p class="muted wc-phase-readiness-locked">Work in this phase has already started — readiness stays at 100%.</p>'
+    : "";
 
   const pendingBlock =
     pending.length > 0
@@ -979,14 +1443,15 @@ function renderPhaseReadinessCard(ws: Record<string, unknown> | null, snapshot: 
     "</span>" +
     '<span class="wc-cae-score-badge ' +
     scoreColor +
-    '" title="Ready to work in this phase">' +
+    '" title="Readiness to start this phase (100% required before work begins)">' +
     escapeHtml(String(score)) +
     "<span>%</span></span>" +
     "</button>" +
     releaseBtn +
     "</div>" +
     '<div class="wc-cae-readiness-body" id="wc-cae-readiness-body">' +
-    '<p class="muted wc-phase-card-hint">Whether this phase has runnable work and a clear queue — use Complete &amp; Release when closeout is at 100%.</p>' +
+    '<p class="muted wc-phase-card-hint">Every check below must pass before you begin. Use Complete &amp; Release when Phase Progress is 100%.</p>' +
+    workBegunNote +
     phaseSection +
     checksSection +
     pendingBlock +
@@ -996,14 +1461,17 @@ function renderPhaseReadinessCard(ws: Record<string, unknown> | null, snapshot: 
 }
 
 /** Phase progress — delivery task completion and release closeout. */
-function renderPhaseProgressCard(ws: Record<string, unknown> | null, snapshot: PhaseSnapshot | null): string {
-  const curPhase =
-    snapshot?.phaseKey ?? (ws?.currentKitPhase != null ? String(ws.currentKitPhase).trim() : "");
-  const nextPhase =
-    ws?.nextKitPhase != null ? String(ws.nextKitPhase).trim() : "";
-  if (curPhase.length === 0) {
+function renderPhaseProgressCard(
+  ws: Record<string, unknown> | null,
+  snapshot: PhaseSnapshot | null,
+  humanGateCount: number
+): string {
+  const curPhase = workspaceCurrentPhaseKey(ws);
+  if (curPhase.length === 0 || !snapshot) {
     return "";
   }
+  const nextPhase =
+    ws?.nextKitPhase != null ? String(ws.nextKitPhase).trim() : "";
   const segments = snapshot?.segments ?? EMPTY_PHASE_SEGMENTS;
   const barPct = phaseDeliveryBarPercent(segments);
   const releasePct = snapshot?.releaseReadyPercent ?? 0;
@@ -1026,11 +1494,18 @@ function renderPhaseProgressCard(ws: Record<string, unknown> | null, snapshot: P
         (remaining > 0 ? " · " + escapeHtml(String(remaining)) + " remaining" : "")
       : "No delivery tasks in this phase";
 
-  const closeoutLine = snapshot?.closeoutPassed
+  const closeoutLine = snapshot.closeoutPassed
     ? '<p class="wc-phase-closeout-ok">Closeout readiness passed — all phase delivery tasks are terminal.</p>'
     : remaining > 0
       ? '<p class="muted">Closeout blocked until remaining phase tasks are completed, cancelled, or explicitly handled.</p>'
       : "";
+
+  const progressChecks = buildPhaseProgressChecks({ snapshot, humanGateCount });
+  const progressChecksSection =
+    '<div class="wc-cae-checks wc-phase-progress-checks">' +
+    progressChecks.map((c) => renderPhaseCheckRow(c)).join("") +
+    "</div>";
+  const markCompleteReady = phaseMarkCompleteReady(snapshot, humanGateCount);
 
   return (
     '<section class="dash-card wc-phase-progress wc-phase-progress-collapsed" aria-label="Phase progress · Phase ' +
@@ -1049,13 +1524,15 @@ function renderPhaseProgressCard(ws: Record<string, unknown> | null, snapshot: P
     "</button>" +
     "</div>" +
     '<div class="wc-phase-progress-body" id="wc-phase-progress-body">' +
-    '<p class="muted wc-phase-card-hint">Delivery-task completion toward closeout and release — Complete &amp; Release is on Phase Readiness when at 100%.</p>' +
+    '<p class="muted wc-phase-card-hint">Task completion bar plus closeout gates toward publish and release.</p>' +
     '<p class="wc-phase-progress-summary">' +
     summaryLine +
     "</p>" +
     renderPhaseProgressBar(segments) +
     renderPhaseProgressLegend(segments) +
+    progressChecksSection +
     closeoutLine +
+    renderPhaseMarkCompleteButton(curPhase, markCompleteReady) +
     "</div>" +
     "</section>"
   );
@@ -1723,7 +2200,7 @@ function renderPhaseCompleteReleaseButton(args: {
   const title =
     scope === "current"
       ? disabled
-        ? "Complete & Release unlocks when phase readiness reaches 100%"
+        ? "Complete & Release unlocks when readiness and Phase Progress both reach 100%"
         : closeoutReady
           ? "Drain current workspace phase, close out, and release"
           : "Start phase closeout — run preflight in chat before release"
@@ -3088,11 +3565,22 @@ function renderEditorIntegrationEmbed(editorIntegration: unknown): string {
 
 /** Phase roster from `dashboard-summary.systemStatus.phase.phaseCatalog` (Phase 88+). */
 export function renderPhaseCatalogOverviewSection(
-  phaseSlice: Record<string, unknown> | null | undefined
+  phaseSlice: Record<string, unknown> | null | undefined,
+  workspaceStatus?: Record<string, unknown> | null
 ): string {
   if (!phaseSlice || typeof phaseSlice !== "object") {
     return "";
   }
+  const rosterContext: Record<string, unknown> = {
+    ...phaseSlice,
+    currentKitPhase:
+      workspaceCurrentPhaseKey(workspaceStatus) ||
+      (phaseSlice.currentKitPhase != null ? String(phaseSlice.currentKitPhase).trim() : ""),
+    nextKitPhase:
+      workspaceStatus?.nextKitPhase != null
+        ? workspaceStatus.nextKitPhase
+        : phaseSlice.nextKitPhase
+  };
   const cat = phaseSlice.phaseCatalog as Record<string, unknown> | undefined;
   const supported = cat && cat.supported === true;
   if (!supported) {
@@ -3104,20 +3592,28 @@ export function renderPhaseCatalogOverviewSection(
     );
   }
   const phases = parsePhaseCatalogRows(phaseSlice);
+  const workspaceCurrent = workspaceCurrentPhaseKey(workspaceStatus);
 
   let inner: string;
   if (phases.length === 0) {
     inner =
       '<p class="muted">No phases in roster yet — set workspace current/next, assign tasks to a phase, or register a catalog entry.</p>';
   } else {
-    const narrow = buildNarrowPhaseRosterRows(phases, phaseSlice);
-    if (!narrow.ok) {
+    const narrow = buildNarrowPhaseRosterRows(phases, rosterContext);
+    const rosterRows = narrow.ok
+      ? narrow.rows
+      : workspaceCurrent.length === 0
+        ? buildPhaseRosterRowsWhenNoCurrent(phases, rosterContext)
+        : [];
+    if (rosterRows.length === 0) {
       inner =
-        '<p class="muted">Set a numeric workspace <b>current phase</b> to show the last delivered phase, the active one, and upcoming phases here.</p>';
+        workspaceCurrent.length === 0
+          ? '<p class="muted">Set <b>next phase</b> in workspace status, or use <b>Start</b> on a phase below when the roster lists phases.</p>'
+          : '<p class="muted">Set a numeric workspace <b>current phase</b> to show the last delivered phase, the active one, and upcoming phases here.</p>';
     } else {
-      const rosterFocus = phaseScheduleFocusFromWorkspace(phaseSlice);
+      const rosterFocus = phaseScheduleFocusFromWorkspace(rosterContext);
       let rows = "";
-      for (const r of narrow.rows) {
+      for (const r of rosterRows) {
         const sd = r.shortDescription != null ? String(r.shortDescription).trim() : "";
         const desc = sd.length > 0 ? escapeHtml(sd) : '<span class="muted">—</span>';
         const inputValue = escapeHtmlAttr(sd);
@@ -3125,6 +3621,10 @@ export function renderPhaseCatalogOverviewSection(
         const statusTag =
           scheduleTag !== null ? renderPhaseScheduleTagHtml(scheduleTag) : '<span class="muted">—</span>';
         const phaseKeyAttr = escapeHtmlAttr(r.phaseKey);
+        const phaseOrd = r.phaseKey.trim();
+        const isCurrent =
+          r.status === "current" ||
+          (workspaceCurrent.length > 0 && workspaceCurrent === phaseOrd);
         const noCatalogHint =
           r.inCatalog === true
             ? ""
@@ -3138,11 +3638,12 @@ export function renderPhaseCatalogOverviewSection(
           '<span class="dash-phase-saving" aria-live="polite" hidden>' +
           '<span class="wc-spinner wc-spinner-inline" aria-hidden="true"></span> Saving…</span></div>' +
           `<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary dash-phase-edit-anchor" data-wc-action="phase-deliverables-edit" data-wc-phase-key="${phaseKeyAttr}" aria-label="Edit deliverables for phase ${phaseKeyAttr}" title="Edit deliverables">Edit</button>` +
-          '<p class="dash-phase-deliverables-error bad" aria-live="polite" hidden></p></div></td></tr>';
+          '<p class="dash-phase-deliverables-error bad" aria-live="polite" hidden></p></div></td>' +
+          `<td class="dash-phase-roster-col-actions">${renderPhaseRosterStartButton(phaseKeyAttr, isCurrent)}</td></tr>`;
       }
       inner =
         rows.length > 0
-          ? '<table class="dash-phase-catalog-table"><thead><tr><th class="dash-phase-roster-col-phase">Phase</th><th class="dash-phase-roster-col-status">Status</th><th class="dash-phase-roster-col-deliverables">Deliverables</th></tr></thead><tbody>' +
+          ? '<table class="dash-phase-catalog-table"><thead><tr><th class="dash-phase-roster-col-phase">Phase</th><th class="dash-phase-roster-col-status">Status</th><th class="dash-phase-roster-col-deliverables">Deliverables</th><th class="dash-phase-roster-col-actions">Actions</th></tr></thead><tbody>' +
             rows +
             "</tbody></table>"
           : '<p class="muted">No matching roster rows.</p>';
@@ -3152,7 +3653,7 @@ export function renderPhaseCatalogOverviewSection(
   const btn =
     '<p style="margin-top:8px"><button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="register-phase-catalog">Register future phase</button></p>';
   return (
-    '<section class="dash-card dash-phase-catalog" aria-label="Phase catalog">' +
+    '<section id="wc-phase-roster" class="dash-card dash-phase-catalog" aria-label="Phase catalog">' +
     "<p><b>Phase Roster</b></p>" +
     table +
     btn +
@@ -3327,7 +3828,7 @@ function renderStatusSectionHtml(
       : "") +
     (tierRaw ? kvRow("Guidance tier", escapeHtml(tierRaw)) : "") +
     "</div>" +
-    '<p class="muted wc-status-guidance-manage">Manage guidance policies via the CAE sidebar panel (Workflow Cannon activity bar).</p>' +
+    '<p class="muted wc-status-guidance-manage">Manage guidance policies in the Dashboard <b>CAE</b> tab (Workflow Cannon → Dashboard).</p>' +
     "</section>";
 
   const pg = d.planningGeneration;
@@ -3890,13 +4391,24 @@ export function renderDashboardRootInnerHtml(
 
   const firstWishlistOpen = wishlistOpenTop[0];
   const suggestedNext = d.suggestedNext;
-  /** Kit `suggestedNext` when there is runnable ready work; wishlist card when queue is empty. */
-  const recNextCard =
-    readyCount > 0 && suggestedNext && typeof suggestedNext === "object"
-      ? renderRecommendedNextCard(suggestedNext)
-      : readyCount === 0 && firstWishlistOpen
-        ? renderRecommendedNextWishlistCard(firstWishlistOpen)
-        : "";
+  const phaseSnapshot = normalizePhaseSnapshot(d.currentPhaseDelivery, ws as Record<string, unknown> | null);
+  const phaseWorkCandidates = [
+    ...humanGatesTop,
+    ...blockedTop,
+    ...peTop,
+    ...piTop,
+    ...tcrTop
+  ];
+  const recNextCard = renderUpNextCardHtml({
+    ws: ws as Record<string, unknown> | null,
+    phaseSnapshot,
+    suggestedNext,
+    readyTop,
+    readyCount,
+    firstWishlistOpen,
+    humanGatesCount,
+    phaseWorkCandidates
+  });
 
   const totalReadyCount = readyCount;
   const totalProposedCount = piCount + peCount;
@@ -3906,13 +4418,11 @@ export function renderDashboardRootInnerHtml(
       ? ((d.completedSummary as Record<string, unknown>).count as number)
       : 0;
 
-  const phaseSnapshot = normalizePhaseSnapshot(d.currentPhaseDelivery, ws as Record<string, unknown> | null);
-
   const overviewContent =
     renderAgentStatusBanner(d) +
     recNextCard +
     renderPhaseReadinessCard(ws as Record<string, unknown> | null, phaseSnapshot) +
-    renderPhaseProgressCard(ws as Record<string, unknown> | null, phaseSnapshot) +
+    renderPhaseProgressCard(ws as Record<string, unknown> | null, phaseSnapshot, humanGatesCount) +
     renderStatPills(
       totalReadyCount,
       totalProposedCount,
@@ -3920,7 +4430,7 @@ export function renderDashboardRootInnerHtml(
       totalDoneCount,
       humanGatesCount
     ) +
-    renderPhaseCatalogOverviewSection(phaseSystemSlice) +
+    renderPhaseCatalogOverviewSection(phaseSystemSlice, ws as Record<string, unknown> | null) +
     renderWorkspaceBlockersPendingSection(ws as Record<string, unknown> | null) +
     renderTeamExecutionSection(d.teamExecution) +
     renderSubagentRegistrySection(d.subagentRegistry) +
@@ -3931,13 +4441,11 @@ export function renderDashboardRootInnerHtml(
     typeof embeddedCaePanelHtml === "string" && embeddedCaePanelHtml.trim().length > 0
       ? '<div class="gp-root wc-dash-cae-host dash-cae-embedded wc-dashboard-embedded-guidance">' +
         namespaceEmbeddedCaePanelHtml(embeddedCaePanelHtml) +
-        "<script>" +
-        buildGuidanceAuthoringWebviewBootstrap("dash-cae-") +
-        "</script></div>"
+        "</div>"
       : '<section class="dash-card" aria-label="CAE panel placeholder">' +
         '<p><b>CAE</b></p>' +
         '<p class="muted">Phase Readiness is under <b>WC Agent</b> on the Dashboard shell.</p>' +
-        '<p class="muted">Embedded CAE panel unavailable; use the Guidance panel as fallback.</p>' +
+        '<p class="muted">Embedded CAE unavailable; run <b>Workflow Cannon: Open Guidance Authoring</b> or refresh the Dashboard.</p>' +
         '</section>';
 
   const taskEngineContent =

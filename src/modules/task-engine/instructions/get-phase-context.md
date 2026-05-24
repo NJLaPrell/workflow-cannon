@@ -4,7 +4,7 @@ agentCapsule|v=1|command=get-phase-context|module=task-engine|schema_only=pnpm e
 
 # get-phase-context
 
-Return the most relevant **active** phase notes for current work using deterministic scoring (PHASE_JOURNAL.md). Notes whose **`expires_at`** is in the past are omitted unless **`includeExpired`** is **`true`**. Dismissed/deleted history (`dismissed`, `superseded`, `converted`) is not returned on this surface.
+Return the most relevant **active** phase notes for current work using deterministic scoring (`phase-journal-scoring.ts`). Notes whose **`expires_at`** is in the past are omitted unless **`includeExpired`** is **`true`**. Dismissed/deleted history (`dismissed`, `superseded`, `converted`) is not returned on this surface.
 
 When **`phaseKey`** is omitted, the command uses the **canonical current workspace phase** (`kit_workspace_status` / config fallback) or infers from **`taskId`** when that task carries phase metadata. If none apply, returns **`phase-note-phase-unresolved`**.
 

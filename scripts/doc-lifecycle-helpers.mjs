@@ -9,8 +9,7 @@ export const ALLOWED_ROOT_MARKDOWN_NAMES = Object.freeze([
   "README.md",
   "AGENTS.md",
   "CONTRIBUTING.md",
-  "CHANGELOG.md",
-  "PHASE_JOURNAL.md"
+  "CHANGELOG.md"
 ]);
 
 export const ALLOWED_ROOT_MARKDOWN = new Set(ALLOWED_ROOT_MARKDOWN_NAMES);

@@ -294,7 +294,8 @@ export async function runDashboardSummaryCommand(
   const currentPhaseDelivery = buildDashboardCurrentPhaseDelivery({
     tasks,
     workspaceStatus: wsForDelivery,
-    db: dualForStatus?.getDatabase() ?? null
+    db: dualForStatus?.getDatabase() ?? null,
+    effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined
   });
 
   const phaseCatalogPhases =

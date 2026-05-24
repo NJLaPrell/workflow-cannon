@@ -1,0 +1,187 @@
+{
+  "expectedPlanningGeneration": 3797,
+  "ops": [
+    {
+      "kind": "create-task",
+      "payload": {
+        "allocateId": true,
+        "title": "Phase kickoff: scope path manifest and git staleness engine",
+        "status": "proposed",
+        "type": "workspace-kit",
+        "priority": "P1",
+        "ownership": "workspace-kit",
+        "summary": "Shared library to extract scope paths from task rows and detect path-level git churn since task last update.",
+        "description": "Foundation for phase-kickoff-readiness. Parses stable workspace-relative path hints from task fields (technicalScope, description, optional metadata.scopePaths) and compares each path against git history relative to task.updatedAt. Produces deterministic finding codes for missing paths, renames, and high churn.",
+        "approach": "Pure task-engine module code with no CLI surface in this task. Unit tests use fixture repos and synthetic TaskEntity rows. Keep parsing conservative (backtick paths, explicit scopePaths array) to avoid false positives from prose.",
+        "risk": "Medium: path parsing heuristics can false-positive; start strict and document conventions.",
+        "technicalScope": [
+          "Add src/modules/task-engine/kickoff/scope-path-manifest.ts with extractScopePaths(task): string[] merging metadata.scopePaths, technicalScope lines, and description backtick paths matching ^(src|extensions|schemas|\\.ai|\\.cursor)/.",
+          "Add src/modules/task-engine/kickoff/path-git-staleness.ts with evaluatePathStaleness({ workspacePath, paths, sinceIso, baseRef? }) returning per-path { path, exists, deleted, commitsSinceUpdate, lastCommitIso }.",
+          "Use child_process spawn git -C workspacePath with --since and pathspecs; handle missing git gracefully (finding code kickoff-git-unavailable).",
+          "Add stable finding codes: kickoff-scope-path-missing, kickoff-scope-path-deleted, kickoff-scope-path-stale (threshold configurable), kickoff-scope-path-parse-skipped.",
+          "Export types KickoffScopeFinding, KickoffScopeManifestResult from kickoff/types.ts.",
+          "Add test/kickoff-scope-path-manifest.test.mjs and test/kickoff-path-git-staleness.test.mjs with tmp git fixtures."
+        ],
+        "acceptanceCriteria": [
+          "extractScopePaths returns deduped sorted paths for tasks with technicalScope bullet paths and metadata.scopePaths.",
+          "evaluatePathStaleness returns exists:false for deleted paths without throwing.",
+          "commitsSinceUpdate increments when git log --since=updatedAt has entries for the path.",
+          "Unit tests cover: no git repo, empty paths, deleted file, recent churn, clean path.",
+          "No dependency on dashboard or set-current-phase in this task."
+        ],
+        "metadata": {
+          "epic": "phase-kickoff-readiness",
+          "workPackage": 1,
+          "source": "phase kickoff scope audit design 2026-05-24",
+          "unphased": true
+        }
+      }
+    },
+    {
+      "kind": "create-task",
+      "payload": {
+        "allocateId": true,
+        "title": "Phase kickoff: phase-kickoff-readiness read-only command",
+        "status": "proposed",
+        "type": "workspace-kit",
+        "priority": "P1",
+        "ownership": "workspace-kit",
+        "summary": "New wk run phase-kickoff-readiness command: planning, git, scope, and validation slices for a target phase before starting delivery.",
+        "description": "Read-only aggregate audit answering whether phase tasks still fit the current codebase. Composes existing kit reads (phase-focus-dashboard, queue-git-alignment, phase-closeout-readiness subset) with the new scope path engine. Returns passed, findingCount, and findings[] with stable codes for agents and dashboard.",
+        "approach": "Register command in task-engine module; follow phase-delivery-preflight and phase-closeout-readiness patterns. Default phaseKey from kit_workspace_status when omitted. Advisory only on the command itself — no policyApproval on read path.",
+        "risk": "Medium: composition of multiple sub-audits must stay bounded (<2s typical repo).",
+        "technicalScope": [
+          "Add src/modules/task-engine/instructions/phase-kickoff-readiness.md and command handler phase-kickoff-readiness-command.ts.",
+          "Argv: phaseKey?, baseRef (default origin/main), integrationRef (default origin/release/phase-<key>), staleTaskDays (default 14), checkScopePaths (default true), includeValidationPlans (default true), mode advisory.",
+          "Slice planning: phase task counts by status; stale ready/in_progress by updatedAt; dependency-blocked ready; catalog shortDescription mismatch vs concatenated task summaries (advisory heuristic).",
+          "Slice git: integration branch exists (git rev-parse); ahead/behind vs baseRef counts; embed queue-git-alignment data.",
+          "Slice scope: run scope manifest + staleness for ready, in_progress, and proposed tasks in phase (cap 50 tasks); attach taskId per finding.",
+          "Slice validation: top 5 ready tasks call recommend-validation internally or duplicate thin wrapper.",
+          "Slice doctor: surface doctor contract issues count when helper exists.",
+          "Response schemaVersion 1: { phaseKey, passed, findingCount, findings[], slices: { planning, git, scope, validation, doctor }, checkedTaskCount }.",
+          "Add schemas/phase-kickoff-readiness-contract.v1.json and agent-cli snippet via generate-agent-cli-snippets.",
+          "Add test/task-engine-phase-kickoff-readiness.test.mjs with sqlite fixture store."
+        ],
+        "acceptanceCriteria": [
+          "pnpm exec wk run phase-kickoff-readiness --schema-only returns JSON schema.",
+          "pnpm exec wk run phase-kickoff-readiness with phaseKey returns ok:true with slices and findings arrays.",
+          "Findings use stable code field; each includes severity advisory|warn|block and message.",
+          "passed is false when any severity block finding exists; true when only advisory/warn or empty.",
+          "Command completes without policyApproval and does not mutate task store or workspace status.",
+          "Instruction doc lists related commands and dashboard integration follow-up."
+        ],
+        "metadata": {
+          "epic": "phase-kickoff-readiness",
+          "workPackage": 2,
+          "source": "phase kickoff scope audit design 2026-05-24",
+          "unphased": true
+        }
+      }
+    },
+    {
+      "kind": "create-task",
+      "payload": {
+        "allocateId": true,
+        "title": "Phase kickoff: set-current-phase dry-run findings and config gate",
+        "status": "proposed",
+        "type": "workspace-kit",
+        "priority": "P2",
+        "ownership": "workspace-kit",
+        "summary": "Attach phase-kickoff-readiness results to set-current-phase dry-run and optional enforce mode before live phase rollover.",
+        "description": "Operators and agents should see kickoff drift before workspace current phase changes. Extend set-current-phase dry-run payload and live path when tasks.phaseKickoff.enforcementMode is enforce.",
+        "approach": "Call phase-kickoff-readiness from workspace-status-commands-runtime during set-current-phase when dryRun or enforcement configured. Extend data.presentation.phaseRollover with kickoff slice per response-template-contract.",
+        "risk": "Low–medium: blocking live rollover is a policy change; default off.",
+        "technicalScope": [
+          "Add tasks.phaseKickoff config: { enforcementMode: off|advisory|enforce, staleTaskDays, checkScopePaths } in src/core/workspace-kit-config.ts with defaults off/advisory.",
+          "In set-current-phase handler: derive target phase from currentKitPhase leading digits; run kickoff audit; attach data.kickoffReadiness on all responses.",
+          "When enforcementMode enforce and passed false: return ok:false code phase-kickoff-blocked with remediation docPath .ai/runbooks/phase-kickoff-readiness.md.",
+          "Extend buildPhaseRolloverPresentation in response-template-shaping.ts with kickoffSummary: { passed, findingCount, topFindings[] }.",
+          "Update src/modules/task-engine/instructions/set-current-phase.md with kickoff behavior and config table.",
+          "Add test/set-current-phase-kickoff.test.mjs covering dry-run attach and enforce block."
+        ],
+        "acceptanceCriteria": [
+          "set-current-phase dryRun:true includes data.kickoffReadiness mirroring phase-kickoff-readiness shape.",
+          "data.presentation.phaseRollover includes kickoff summary when template applies.",
+          "With enforcementMode enforce and a blocking finding, live set-current-phase returns phase-kickoff-blocked without mutating kit_workspace_status.",
+          "With enforcementMode off, live write proceeds regardless of kickoff findings (findings still returned).",
+          "Config documented in task-engine config.md."
+        ],
+        "metadata": {
+          "epic": "phase-kickoff-readiness",
+          "workPackage": 3,
+          "source": "phase kickoff scope audit design 2026-05-24",
+          "unphased": true
+        }
+      }
+    },
+    {
+      "kind": "create-task",
+      "payload": {
+        "allocateId": true,
+        "title": "Phase kickoff: dashboard roster Start audit and readiness UX",
+        "status": "proposed",
+        "type": "workspace-kit",
+        "priority": "P2",
+        "ownership": "cursor-extension",
+        "summary": "Run phase-kickoff-readiness when operator clicks Phase Roster Start; surface findings in Phase Readiness before set-current-phase.",
+        "description": "Dashboard is the primary phase-start surface. Before calling set-current-phase, fetch kickoff readiness for the target phase, show a compact finding list, and require explicit confirm when severity block exists (enforce) or warn count exceeds threshold.",
+        "approach": "Extension CommandClient calls phase-kickoff-readiness; render in Phase Readiness card and confirm dialog. Respect kit config enforcementMode.",
+        "risk": "Medium: extra CLI latency on Start click; show progress notification.",
+        "technicalScope": [
+          "DashboardViewProvider.startPhaseFromRoster: call client.run phase-kickoff-readiness with phaseKey before set-current-phase.",
+          "When findings include block and config enforce: show vscode.window.showWarningMessage with Open Queue / Cancel; do not call set-current-phase on cancel.",
+          "When advisory: showInformationMessage with finding count and Continue anyway.",
+          "Extend dashboard-summary with includePhaseKickoff:true composing kickoff for requested phaseKey only (task-engine dashboard-on-command).",
+          "render-dashboard.ts: add renderPhaseKickoffFindingsList(findings) in Phase Readiness card.",
+          "Tests: render-dashboard.test.mjs fixture with kickoff findings."
+        ],
+        "acceptanceCriteria": [
+          "Clicking Start on a phase row runs kickoff audit before set-current-phase in the success path.",
+          "Blocking findings prevent set-current-phase when enforcementMode is enforce.",
+          "Phase Readiness shows top kickoff findings when dashboard-summary includes kickoff slice.",
+          "No regression to roster Start idempotency and expectedWorkspaceRevision flow.",
+          "Extension tests updated and passing."
+        ],
+        "metadata": {
+          "epic": "phase-kickoff-readiness",
+          "workPackage": 4,
+          "source": "phase kickoff scope audit design 2026-05-24",
+          "unphased": true
+        }
+      }
+    },
+    {
+      "kind": "create-task",
+      "payload": {
+        "allocateId": true,
+        "title": "Phase kickoff: machine canon runbook and agent CLI map",
+        "status": "proposed",
+        "type": "workspace-kit",
+        "priority": "P3",
+        "ownership": "workspace-kit",
+        "summary": "Document phase-kickoff-readiness for agents: runbook, AGENT-CLI-MAP snippet, phase-kickoff-assessment rule cross-link.",
+        "description": "Agents need a single machine path for kickoff checks at phase start. Add .ai/runbooks/phase-kickoff-readiness.md with copy-paste commands, finding code table, and tier semantics (block/warn/advisory).",
+        "approach": "Docs-only in .ai/; link from set-current-phase instruction. Regenerate snippets after command lands.",
+        "risk": "Low.",
+        "technicalScope": [
+          "Create .ai/runbooks/phase-kickoff-readiness.md: when to run, argv table, finding codes, remediation loops (refresh task scope vs split tasks vs phase note).",
+          "Add Tier C block to .ai/AGENT-CLI-MAP.extended.md for phase-kickoff-readiness.",
+          "Update .cursor/rules/phase-kickoff-assessment.mdc to reference runbook and CLI command instead of ROADMAP-only steps.",
+          "Run pnpm run build && node scripts/generate-agent-cli-snippets.mjs after command exists."
+        ],
+        "acceptanceCriteria": [
+          "Runbook exists under .ai/runbooks/ and is linked from set-current-phase instruction.",
+          "agent-cli-snippets includes phase-kickoff-readiness after snippet generation.",
+          "Finding codes in runbook match implementation codes from the command task.",
+          "No routine agent dependency on docs/maintainers/ for kickoff procedure."
+        ],
+        "metadata": {
+          "epic": "phase-kickoff-readiness",
+          "workPackage": 5,
+          "source": "phase kickoff scope audit design 2026-05-24",
+          "unphased": true
+        }
+      }
+    }
+  ]
+}

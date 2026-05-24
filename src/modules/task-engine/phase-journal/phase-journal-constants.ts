@@ -1,4 +1,4 @@
-/** MVP limits from PHASE_JOURNAL.md */
+/** Phase journal field limits and enums (canonical; see task-engine instructions). */
 export const PHASE_NOTE_SUMMARY_MAX = 280;
 export const PHASE_NOTE_DETAILS_MAX = 1200;
 export const PHASE_NOTE_REFS_MAX = 10;

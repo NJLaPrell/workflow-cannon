@@ -6,7 +6,7 @@ export type PhaseContextScoreInput = {
   refKeys: Set<string>;
 };
 
-/** Deterministic relevance score for `get-phase-context` (PHASE_JOURNAL.md). */
+/** Deterministic relevance score for `get-phase-context`. */
 export function scorePhaseNoteForContext(note: PhaseNoteRow, ctx: PhaseContextScoreInput): number {
   let score = 0;
   if (ctx.taskId && note.taskId === ctx.taskId) {

@@ -29,6 +29,9 @@ test("dashboard webview bootstrap queues wcReplaceRoot while UI is locked", () =
   assert.match(providerSrc, /setUiInteraction\('phase-deliverables', true\)/);
   assert.match(providerSrc, /setUiInteraction\('context-help', true\)/);
   assert.match(providerSrc, /wc-context-help-popover/);
+  assert.match(providerSrc, /wcReinitEmbeddedCae/);
+  assert.match(providerSrc, /wcMarkPhaseBusy/);
+  assert.match(providerSrc, /wcHidePhaseCards/);
   assert.match(providerSrc, /wcPhaseDeliverablesSaved/);
 });
 
