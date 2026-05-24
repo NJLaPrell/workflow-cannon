@@ -312,6 +312,7 @@ export type DashboardCurrentPhaseDelivery = {
   segments: DashboardCurrentPhaseSegments;
   progressPercent: number;
   releaseReadyPercent: number;
+  deliveryEvidenceViolationCount: number;
 };
 
 export type DashboardSummaryData = {

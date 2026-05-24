@@ -119,6 +119,44 @@ export function buildNarrowPhaseRosterRows(
   return { ok: true, rows };
 }
 
+/**
+ * When workspace has no current phase, anchor roster on `nextKitPhase` (or all numeric phases).
+ */
+export function buildPhaseRosterRowsWhenNoCurrent(
+  phases: ReadonlyArray<PhaseCatalogListRow>,
+  phaseSlice: Record<string, unknown>
+): PhaseRosterDisplayRow[] {
+  const nextOrd = parseLeadingDigitsOrdinal(phaseSlice.nextKitPhase);
+  if (nextOrd === null) {
+    return phases
+      .filter((p) => parseLeadingPhaseOrdinalFromKey(p.phaseKey) !== null)
+      .map((p) => ({ ...p, status: "future" as const }));
+  }
+
+  let delivered: PhaseCatalogListRow | null = null;
+  let bestPastOrd = -Infinity;
+  for (const p of phases) {
+    const o = parseLeadingPhaseOrdinalFromKey(p.phaseKey);
+    if (o !== null && o < nextOrd && o > bestPastOrd) {
+      bestPastOrd = o;
+      delivered = p;
+    }
+  }
+
+  const rows: PhaseRosterDisplayRow[] = [];
+  if (delivered) {
+    rows.push({ ...delivered, status: "delivered" });
+  }
+  for (const p of phases) {
+    const o = parseLeadingPhaseOrdinalFromKey(p.phaseKey);
+    if (o === null || o < nextOrd) {
+      continue;
+    }
+    rows.push({ ...p, status: o === nextOrd ? "next" : "future" });
+  }
+  return rows;
+}
+
 /** @deprecated Prefer {@link phaseScheduleTagLabel} from `phase-schedule-tag.ts`. */
 export function phaseRosterStatusLabel(status: PhaseRosterDisplayRow["status"]): string {
   switch (status) {

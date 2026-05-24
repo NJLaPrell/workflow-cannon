@@ -9,6 +9,7 @@
 
 import {
   buildNarrowPhaseRosterRows,
+  buildPhaseRosterRowsWhenNoCurrent,
   type PhaseCatalogListRow
 } from "../phase-roster-display.js";
 import {
@@ -565,6 +566,7 @@ type PhaseSnapshot = {
   segments: PhaseSnapshotSegments;
   progressPercent: number;
   releaseReadyPercent: number;
+  deliveryEvidenceViolationCount: number;
 };
 
 const EMPTY_PHASE_QUEUE: PhaseSnapshotQueue = {
@@ -605,7 +607,8 @@ function normalizePhaseSnapshot(raw: unknown, ws: Record<string, unknown> | null
       queue: { ...EMPTY_PHASE_QUEUE },
       segments: { ...EMPTY_PHASE_SEGMENTS },
       progressPercent: 0,
-      releaseReadyPercent: 0
+      releaseReadyPercent: 0,
+      deliveryEvidenceViolationCount: 0
     };
   }
   const r = raw as Record<string, unknown>;
@@ -648,6 +651,10 @@ function normalizePhaseSnapshot(raw: unknown, ws: Record<string, unknown> | null
       : closeoutPassed
         ? 100
         : Math.min(99, progressPercent);
+  const deliveryEvidenceViolationCount =
+    typeof r.deliveryEvidenceViolationCount === "number" && Number.isFinite(r.deliveryEvidenceViolationCount)
+      ? Math.max(0, Math.floor(r.deliveryEvidenceViolationCount))
+      : 0;
   return {
     phaseKey,
     closeoutPassed,
@@ -658,7 +665,8 @@ function normalizePhaseSnapshot(raw: unknown, ws: Record<string, unknown> | null
     queue,
     segments,
     progressPercent,
-    releaseReadyPercent
+    releaseReadyPercent,
+    deliveryEvidenceViolationCount
   };
 }
 
@@ -907,10 +915,101 @@ function renderPhaseProgressLegend(segments: PhaseSnapshotSegments): string {
   );
 }
 
+function workspaceCurrentPhaseKey(ws: Record<string, unknown> | null | undefined): string {
+  return ws?.currentKitPhase != null ? String(ws.currentKitPhase).trim() : "";
+}
+
+type PhaseProgressCheck = PhaseReadinessCheck;
+
+function buildPhaseProgressChecks(args: {
+  snapshot: PhaseSnapshot;
+  humanGateCount: number;
+}): PhaseProgressCheck[] {
+  const { snapshot, humanGateCount } = args;
+  const segments = snapshot.segments;
+  const started = phaseWorkHasBegun(snapshot);
+  const checked = snapshot.checkedTaskCount;
+  const evidenceOk = snapshot.deliveryEvidenceViolationCount === 0;
+  const releaseReady = snapshot.releaseReadyPercent >= 100;
+
+  return [
+    {
+      label: "Delivery work started",
+      ok: started,
+      statusMeta: started ? "underway" : "not started",
+      failHelp: "Pick up ready tasks on the Queue tab to begin delivery for this phase."
+    },
+    {
+      label: "All delivery tasks finished",
+      ok: snapshot.closeoutPassed,
+      statusMeta: snapshot.closeoutPassed
+        ? "done"
+        : snapshot.remainingCount > 0
+          ? String(snapshot.remainingCount) + " remaining"
+          : checked === 0
+            ? "no delivery tasks"
+            : "in progress",
+      failHelp:
+        "Finish or explicitly handle every delivery task in this phase before closeout. Check the Queue tab for remaining work."
+    },
+    {
+      label: "Delivery evidence recorded",
+      ok: checked === 0 || evidenceOk,
+      statusMeta:
+        checked === 0
+          ? "n/a"
+          : evidenceOk
+            ? "clear"
+            : String(snapshot.deliveryEvidenceViolationCount) + " gaps",
+      failHelp:
+        "Add delivery evidence on finished tasks before release. Open a task row and complete its delivery evidence fields."
+    },
+    {
+      label: "Human gates clear",
+      ok: humanGateCount === 0,
+      statusMeta: humanGateCount === 0 ? "none" : String(humanGateCount) + " waiting",
+      failHelp:
+        "Resolve human approval gates on the Queue tab (Human filter) before publishing this phase."
+    },
+    {
+      label: "Phase released",
+      ok: snapshot.released,
+      statusMeta: snapshot.released ? "delivered" : "still current",
+      failHelp:
+        "After merge and publish, roll workspace to the next phase using Complete & Release or Start on the next phase in the roster."
+    },
+    {
+      label: "Ready for publish closeout",
+      ok: releaseReady,
+      statusMeta: releaseReady ? "100%" : String(snapshot.releaseReadyPercent) + "%",
+      failHelp:
+        "Closeout must reach 100% before publish. Finish remaining delivery tasks and evidence first."
+    }
+  ];
+}
+
+function renderPhaseRosterStartButton(phaseKey: string, isCurrent: boolean): string {
+  if (isCurrent) {
+    return (
+      '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" disabled aria-disabled="true" title="This is the current workspace phase">Current</button>'
+    );
+  }
+  const pk = escapeHtmlAttr(phaseKey.trim());
+  return (
+    '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary dash-phase-roster-start" data-wc-action="phase-roster-start" data-wc-phase-key="' +
+    pk +
+    '" title="Set Phase ' +
+    escapeHtmlAttr(phaseKey.trim()) +
+    ' as the active workspace phase">Start</button>'
+  );
+}
+
 /** Phase readiness — can we work this phase now? (scoped to current phase). */
 function renderPhaseReadinessCard(ws: Record<string, unknown> | null, snapshot: PhaseSnapshot | null): string {
-  const curPhase =
-    snapshot?.phaseKey ?? (ws?.currentKitPhase != null ? String(ws.currentKitPhase).trim() : "");
+  const curPhase = workspaceCurrentPhaseKey(ws);
+  if (curPhase.length === 0) {
+    return "";
+  }
   const nextPhase =
     ws?.nextKitPhase != null ? String(ws.nextKitPhase).trim() : "";
   const blockers: string[] = Array.isArray(ws?.blockers)
@@ -1019,14 +1118,17 @@ function renderPhaseReadinessCard(ws: Record<string, unknown> | null, snapshot: 
 }
 
 /** Phase progress — delivery task completion and release closeout. */
-function renderPhaseProgressCard(ws: Record<string, unknown> | null, snapshot: PhaseSnapshot | null): string {
-  const curPhase =
-    snapshot?.phaseKey ?? (ws?.currentKitPhase != null ? String(ws.currentKitPhase).trim() : "");
-  const nextPhase =
-    ws?.nextKitPhase != null ? String(ws.nextKitPhase).trim() : "";
-  if (curPhase.length === 0) {
+function renderPhaseProgressCard(
+  ws: Record<string, unknown> | null,
+  snapshot: PhaseSnapshot | null,
+  humanGateCount: number
+): string {
+  const curPhase = workspaceCurrentPhaseKey(ws);
+  if (curPhase.length === 0 || !snapshot) {
     return "";
   }
+  const nextPhase =
+    ws?.nextKitPhase != null ? String(ws.nextKitPhase).trim() : "";
   const segments = snapshot?.segments ?? EMPTY_PHASE_SEGMENTS;
   const barPct = phaseDeliveryBarPercent(segments);
   const releasePct = snapshot?.releaseReadyPercent ?? 0;
@@ -1049,11 +1151,17 @@ function renderPhaseProgressCard(ws: Record<string, unknown> | null, snapshot: P
         (remaining > 0 ? " · " + escapeHtml(String(remaining)) + " remaining" : "")
       : "No delivery tasks in this phase";
 
-  const closeoutLine = snapshot?.closeoutPassed
+  const closeoutLine = snapshot.closeoutPassed
     ? '<p class="wc-phase-closeout-ok">Closeout readiness passed — all phase delivery tasks are terminal.</p>'
     : remaining > 0
       ? '<p class="muted">Closeout blocked until remaining phase tasks are completed, cancelled, or explicitly handled.</p>'
       : "";
+
+  const progressChecks = buildPhaseProgressChecks({ snapshot, humanGateCount });
+  const progressChecksSection =
+    '<div class="wc-cae-checks wc-phase-progress-checks">' +
+    progressChecks.map((c) => renderPhaseCheckRow(c)).join("") +
+    "</div>";
 
   return (
     '<section class="dash-card wc-phase-progress wc-phase-progress-collapsed" aria-label="Phase progress · Phase ' +
@@ -1072,12 +1180,13 @@ function renderPhaseProgressCard(ws: Record<string, unknown> | null, snapshot: P
     "</button>" +
     "</div>" +
     '<div class="wc-phase-progress-body" id="wc-phase-progress-body">' +
-    '<p class="muted wc-phase-card-hint">Delivery-task completion toward closeout and release — Complete &amp; Release is on Phase Readiness when at 100%.</p>' +
+    '<p class="muted wc-phase-card-hint">Task completion bar plus closeout gates toward publish and release.</p>' +
     '<p class="wc-phase-progress-summary">' +
     summaryLine +
     "</p>" +
     renderPhaseProgressBar(segments) +
     renderPhaseProgressLegend(segments) +
+    progressChecksSection +
     closeoutLine +
     "</div>" +
     "</section>"
@@ -3111,11 +3220,22 @@ function renderEditorIntegrationEmbed(editorIntegration: unknown): string {
 
 /** Phase roster from `dashboard-summary.systemStatus.phase.phaseCatalog` (Phase 88+). */
 export function renderPhaseCatalogOverviewSection(
-  phaseSlice: Record<string, unknown> | null | undefined
+  phaseSlice: Record<string, unknown> | null | undefined,
+  workspaceStatus?: Record<string, unknown> | null
 ): string {
   if (!phaseSlice || typeof phaseSlice !== "object") {
     return "";
   }
+  const rosterContext: Record<string, unknown> = {
+    ...phaseSlice,
+    currentKitPhase:
+      workspaceCurrentPhaseKey(workspaceStatus) ||
+      (phaseSlice.currentKitPhase != null ? String(phaseSlice.currentKitPhase).trim() : ""),
+    nextKitPhase:
+      workspaceStatus?.nextKitPhase != null
+        ? workspaceStatus.nextKitPhase
+        : phaseSlice.nextKitPhase
+  };
   const cat = phaseSlice.phaseCatalog as Record<string, unknown> | undefined;
   const supported = cat && cat.supported === true;
   if (!supported) {
@@ -3127,20 +3247,28 @@ export function renderPhaseCatalogOverviewSection(
     );
   }
   const phases = parsePhaseCatalogRows(phaseSlice);
+  const workspaceCurrent = workspaceCurrentPhaseKey(workspaceStatus);
 
   let inner: string;
   if (phases.length === 0) {
     inner =
       '<p class="muted">No phases in roster yet — set workspace current/next, assign tasks to a phase, or register a catalog entry.</p>';
   } else {
-    const narrow = buildNarrowPhaseRosterRows(phases, phaseSlice);
-    if (!narrow.ok) {
+    const narrow = buildNarrowPhaseRosterRows(phases, rosterContext);
+    const rosterRows = narrow.ok
+      ? narrow.rows
+      : workspaceCurrent.length === 0
+        ? buildPhaseRosterRowsWhenNoCurrent(phases, rosterContext)
+        : [];
+    if (rosterRows.length === 0) {
       inner =
-        '<p class="muted">Set a numeric workspace <b>current phase</b> to show the last delivered phase, the active one, and upcoming phases here.</p>';
+        workspaceCurrent.length === 0
+          ? '<p class="muted">Set <b>next phase</b> in workspace status, or use <b>Start</b> on a phase below when the roster lists phases.</p>'
+          : '<p class="muted">Set a numeric workspace <b>current phase</b> to show the last delivered phase, the active one, and upcoming phases here.</p>';
     } else {
-      const rosterFocus = phaseScheduleFocusFromWorkspace(phaseSlice);
+      const rosterFocus = phaseScheduleFocusFromWorkspace(rosterContext);
       let rows = "";
-      for (const r of narrow.rows) {
+      for (const r of rosterRows) {
         const sd = r.shortDescription != null ? String(r.shortDescription).trim() : "";
         const desc = sd.length > 0 ? escapeHtml(sd) : '<span class="muted">—</span>';
         const inputValue = escapeHtmlAttr(sd);
@@ -3148,6 +3276,10 @@ export function renderPhaseCatalogOverviewSection(
         const statusTag =
           scheduleTag !== null ? renderPhaseScheduleTagHtml(scheduleTag) : '<span class="muted">—</span>';
         const phaseKeyAttr = escapeHtmlAttr(r.phaseKey);
+        const phaseOrd = r.phaseKey.trim();
+        const isCurrent =
+          r.status === "current" ||
+          (workspaceCurrent.length > 0 && workspaceCurrent === phaseOrd);
         const noCatalogHint =
           r.inCatalog === true
             ? ""
@@ -3161,11 +3293,12 @@ export function renderPhaseCatalogOverviewSection(
           '<span class="dash-phase-saving" aria-live="polite" hidden>' +
           '<span class="wc-spinner wc-spinner-inline" aria-hidden="true"></span> Saving…</span></div>' +
           `<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary dash-phase-edit-anchor" data-wc-action="phase-deliverables-edit" data-wc-phase-key="${phaseKeyAttr}" aria-label="Edit deliverables for phase ${phaseKeyAttr}" title="Edit deliverables">Edit</button>` +
-          '<p class="dash-phase-deliverables-error bad" aria-live="polite" hidden></p></div></td></tr>';
+          '<p class="dash-phase-deliverables-error bad" aria-live="polite" hidden></p></div></td>' +
+          `<td class="dash-phase-roster-col-actions">${renderPhaseRosterStartButton(phaseKeyAttr, isCurrent)}</td></tr>`;
       }
       inner =
         rows.length > 0
-          ? '<table class="dash-phase-catalog-table"><thead><tr><th class="dash-phase-roster-col-phase">Phase</th><th class="dash-phase-roster-col-status">Status</th><th class="dash-phase-roster-col-deliverables">Deliverables</th></tr></thead><tbody>' +
+          ? '<table class="dash-phase-catalog-table"><thead><tr><th class="dash-phase-roster-col-phase">Phase</th><th class="dash-phase-roster-col-status">Status</th><th class="dash-phase-roster-col-deliverables">Deliverables</th><th class="dash-phase-roster-col-actions">Actions</th></tr></thead><tbody>' +
             rows +
             "</tbody></table>"
           : '<p class="muted">No matching roster rows.</p>';
@@ -3935,7 +4068,7 @@ export function renderDashboardRootInnerHtml(
     renderAgentStatusBanner(d) +
     recNextCard +
     renderPhaseReadinessCard(ws as Record<string, unknown> | null, phaseSnapshot) +
-    renderPhaseProgressCard(ws as Record<string, unknown> | null, phaseSnapshot) +
+    renderPhaseProgressCard(ws as Record<string, unknown> | null, phaseSnapshot, humanGatesCount) +
     renderStatPills(
       totalReadyCount,
       totalProposedCount,
@@ -3943,7 +4076,7 @@ export function renderDashboardRootInnerHtml(
       totalDoneCount,
       humanGatesCount
     ) +
-    renderPhaseCatalogOverviewSection(phaseSystemSlice) +
+    renderPhaseCatalogOverviewSection(phaseSystemSlice, ws as Record<string, unknown> | null) +
     renderWorkspaceBlockersPendingSection(ws as Record<string, unknown> | null) +
     renderTeamExecutionSection(d.teamExecution) +
     renderSubagentRegistrySection(d.subagentRegistry) +

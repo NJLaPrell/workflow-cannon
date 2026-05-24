@@ -307,7 +307,8 @@ test("renderDashboardRootInnerHtml renders phase roster deliverables inline edit
   assert.match(html, /Phase Roster/);
   assert.match(html, /dash-phase-roster-col-phase/);
   assert.match(html, /dash-phase-roster-col-status/);
-  assert.match(html, /dash-phase-roster-col-deliverables/);
+  assert.match(html, /dash-phase-roster-col-actions/);
+  assert.match(html, /data-wc-action="phase-roster-start"/);
   assert.match(html, /data-wc-action="phase-deliverables-edit"/);
   assert.match(html, /dash-phase-edit-anchor/);
   assert.match(html, /dash-phase-deliverables-input/);
@@ -2059,6 +2060,7 @@ function phaseDeliveryFixture(overrides = {}) {
     },
     progressPercent: 100,
     releaseReadyPercent: 100,
+    deliveryEvidenceViolationCount: 0,
     ...overrides
   };
 }
@@ -2228,6 +2230,69 @@ test("Phase Progress badge percent matches segmented bar fill", () => {
     overview.match(/<section class="dash-card wc-phase-progress[\s\S]*?<\/section>/)?.[0] ?? "";
   assert.match(progressSection, /wc-cae-score-badge[\s\S]*>80<span>%<\/span>/);
   assert.match(progressSection, /aria-valuenow="80"/);
+});
+
+test("Phase Progress renders closeout gate checkmarks", () => {
+  const html = renderDashboardRootInnerHtml(readinessDashboardPayload());
+  assert.match(html, /wc-phase-progress-checks/);
+  assert.match(html, /Delivery work started/);
+  assert.match(html, /All delivery tasks finished/);
+  assert.match(html, /Delivery evidence recorded/);
+  assert.match(html, /Human gates clear/);
+  assert.match(html, /Phase released/);
+  assert.match(html, /Ready for publish closeout/);
+});
+
+test("Phase Readiness and Progress hidden when workspace has no current phase", () => {
+  const html = renderDashboardRootInnerHtml(
+    readinessDashboardPayload({
+      workspaceStatus: {
+        currentKitPhase: null,
+        nextKitPhase: "108",
+        blockers: [],
+        pendingDecisions: []
+      },
+      systemStatus: {
+        phase: {
+          currentKitPhase: null,
+          nextKitPhase: "108",
+          canonicalPhaseKey: null,
+          phaseCatalog: {
+            supported: true,
+            phases: [
+              { phaseKey: "107", shortDescription: "Shipped slice", inCatalog: true },
+              { phaseKey: "108", shortDescription: "Next up", inCatalog: true }
+            ]
+          }
+        }
+      },
+      currentPhaseDelivery: {
+        schemaVersion: 2,
+        phaseKey: null,
+        closeoutPassed: false,
+        released: false,
+        remainingCount: 0,
+        terminalCount: 0,
+        checkedTaskCount: 0,
+        queue: { ready: 0, proposed: 0, blocked: 0, inProgress: 0, research: 0 },
+        segments: {
+          completed: 0,
+          cancelled: 0,
+          inProgress: 0,
+          ready: 0,
+          proposed: 0,
+          blocked: 0,
+          research: 0
+        },
+        progressPercent: 0,
+        releaseReadyPercent: 0,
+        deliveryEvidenceViolationCount: 0
+      }
+    })
+  );
+  assert.doesNotMatch(html, /Phase Readiness · Phase/);
+  assert.doesNotMatch(html, /Phase Progress · Phase/);
+  assert.match(html, /data-wc-action="phase-roster-start"/);
 });
 
 test("Phase Progress renders segmented bar without release control", () => {

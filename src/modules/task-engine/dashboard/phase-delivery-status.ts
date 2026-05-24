@@ -1,5 +1,13 @@
 import type DatabaseCtor from "better-sqlite3";
-import { buildPhaseCloseoutReadiness, isPhaseDeliveryTask } from "../delivery-evidence.js";
+import {
+  buildPhaseCloseoutReadiness,
+  buildPhaseDeliveryPreflight,
+  isPhaseDeliveryTask
+} from "../delivery-evidence.js";
+import {
+  buildDeliveryEvidencePolicyContext,
+  resolveMaintainerDeliveryPolicy
+} from "../maintainer-delivery-policy-resolver.js";
 import { inferTaskPhaseKey } from "../phase-resolution.js";
 import type { TaskEntity, TaskStatus } from "../types.js";
 
@@ -39,6 +47,8 @@ export type DashboardCurrentPhaseDelivery = {
   progressPercent: number;
   /** 100 when `closeoutPassed`; otherwise mirrors `progressPercent` (cap 99). */
   releaseReadyPercent: number;
+  /** Delivery-evidence preflight violations for phase delivery tasks (0 when none or no phase). */
+  deliveryEvidenceViolationCount: number;
 };
 
 function workspaceStatusEventsReadable(db: SqliteDb): boolean {
@@ -234,6 +244,7 @@ export function buildDashboardCurrentPhaseDelivery(args: {
   tasks: TaskEntity[];
   workspaceStatus: { currentKitPhase?: string | null; nextKitPhase?: string | null } | null;
   db: SqliteDb | null;
+  effectiveConfig?: Record<string, unknown>;
 }): DashboardCurrentPhaseDelivery {
   const phaseKey =
     args.workspaceStatus?.currentKitPhase != null
@@ -263,6 +274,26 @@ export function buildDashboardCurrentPhaseDelivery(args: {
       ? Math.min(99, progressPercent)
       : 0;
 
+  let deliveryEvidenceViolationCount = 0;
+  if (phaseKey) {
+    const policyContextByTaskId = Object.fromEntries(
+      args.tasks.map((task) => {
+        const resolved = resolveMaintainerDeliveryPolicy({
+          effectiveConfig: args.effectiveConfig,
+          task
+        });
+        return [task.id, buildDeliveryEvidencePolicyContext(resolved)];
+      })
+    );
+    const preflight = buildPhaseDeliveryPreflight({
+      tasks: args.tasks,
+      phaseKey,
+      includeInProgress: true,
+      policyContextByTaskId
+    });
+    deliveryEvidenceViolationCount = preflight.violationCount;
+  }
+
   return {
     schemaVersion: 2,
     phaseKey,
@@ -274,6 +305,7 @@ export function buildDashboardCurrentPhaseDelivery(args: {
     queue,
     segments,
     progressPercent,
-    releaseReadyPercent
+    releaseReadyPercent,
+    deliveryEvidenceViolationCount
   };
 }
