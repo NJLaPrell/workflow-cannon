@@ -25,5 +25,5 @@ Before treating a phase as closed for **execution** purposes:
 
 ## Related
 
-- Plan: repo root **`PHASE_JOURNAL.md`** (retention section).
+- Machine canon: **`.ai/runbooks/phase-journal-retention.md`** (this file), **`.ai/cae/phase-journal-operator.md`**, task-engine **`src/modules/task-engine/instructions/*phase-note*.md`**.
 - SQLite authority: [workspace-status-sqlite.md](./workspace-status-sqlite.md).

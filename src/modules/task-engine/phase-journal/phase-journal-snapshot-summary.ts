@@ -23,7 +23,7 @@ export function isPhaseJournalPersistedOnDb(db: SqliteDb): boolean {
   return readKitUserVersion(db) >= PHASE_JOURNAL_MIN_KIT_USER_VERSION && phaseNotesTableExists(db);
 }
 
-/** Default cap for `topNotes` in agent-session-snapshot (PHASE_JOURNAL.md). */
+/** Default cap for `topNotes` in agent-session-snapshot. */
 export const PHASE_JOURNAL_SNAPSHOT_TOP_NOTES = 3;
 
 export type PhaseJournalSnapshotTopNote = {

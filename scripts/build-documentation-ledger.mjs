@@ -107,13 +107,6 @@ const ROOT_FILE_DISPOSITION = {
     lifecycle: "active",
     audience: "maintainer",
     canonicalSource: "CHANGELOG.md"
-  },
-  "PHASE_JOURNAL.md": {
-    disposition: "keep",
-    rationale: "Phase journal operator contract + example workflow (tests + task planRef strings).",
-    lifecycle: "active",
-    audience: "maintainer",
-    canonicalSource: "PHASE_JOURNAL.md"
   }
 };
 
@@ -135,7 +128,7 @@ function buildLedger() {
       lifecycle: "active",
       canonicalSource: "per-file (see rootMarkdownFiles)",
       dispositionDefault: "keep",
-      notes: "Root *.md limited to intentional entry points (README, AGENTS, CONTRIBUTING, CHANGELOG, PHASE_JOURNAL); historical planning lives under docs/maintainers/archive/repo-root-planning/."
+      notes: "Root *.md limited to intentional entry points (README, AGENTS, CONTRIBUTING, CHANGELOG); phase journal canon lives under .ai/runbooks/ and task-engine instructions."
     },
     "agent-machine-canonical": {
       audience: "agent",

@@ -11,9 +11,9 @@
         "phaseKey": "78",
         "phase": "Phase 78",
         "dependsOn": ["T100033"],
-        "planRef": "PHASE_JOURNAL.md",
+        "planRef": ".ai/runbooks/phase-journal-retention.md",
         "summary": "Implement deferred SQL table phase_note_task_suggestions and wire propose-tasks-from-phase-notes / convert-phase-note-to-task to structured suggestion rows per journal schema.",
-        "description": "PHASE_JOURNAL.md defines phase_note_task_suggestions as deferrable; this task completes the data model. Add migration with FK to phase_notes, indexes as needed. Extend propose command to optionally persist structured suggestions; convert reads suggestion rows or inline note payloads. Keep MVP path backward compatible if suggestions table empty.",
+        "description": ".ai/runbooks/phase-journal-retention.md defines phase_note_task_suggestions as deferrable; this task completes the data model. Add migration with FK to phase_notes, indexes as needed. Extend propose command to optionally persist structured suggestions; convert reads suggestion rows or inline note payloads. Keep MVP path backward compatible if suggestions table empty.",
         "technicalScope": [
           "SQLite migration: phase_note_task_suggestions DDL + indexes",
           "Store/repository methods; transactional convert updates note + suggestion state",
@@ -48,9 +48,9 @@
         "phaseKey": "78",
         "phase": "Phase 78",
         "dependsOn": ["T100029", "T100031"],
-        "planRef": "PHASE_JOURNAL.md",
+        "planRef": ".ai/runbooks/phase-journal-retention.md",
         "summary": "Implement and document retention behavior: default reads target current phase; historical phase requires explicit phaseKey; phase-close expectations for blockers/risk/follow-ups.",
-        "description": "PHASE_JOURNAL.md Retention section: active blockers/risk/follow-ups must be converted, dismissed, superseded, or carried forward at phase close; ordinary notes queryable by phase but not surfaced by default outside phase; get-phase-context defaults to current kit phase when omitted. Add operator guidance (.ai runbook), tests for default phase inference vs explicit historical query, and optional read-only audit helper listing active critical notes for a phaseKey.",
+        "description": ".ai/runbooks/phase-journal-retention.md Retention section: active blockers/risk/follow-ups must be converted, dismissed, superseded, or carried forward at phase close; ordinary notes queryable by phase but not surfaced by default outside phase; get-phase-context defaults to current kit phase when omitted. Add operator guidance (.ai runbook), tests for default phase inference vs explicit historical query, and optional read-only audit helper listing active critical notes for a phaseKey.",
         "technicalScope": [
           "Wire default phaseKey resolution from kit_workspace_status / phase-status when commands omit phaseKey",
           "list-phase-notes / get-phase-context / get-next-actions respect defaults and caps across phases",
@@ -84,9 +84,9 @@
         "phaseKey": "78",
         "phase": "Phase 78",
         "dependsOn": ["T100030", "T100031"],
-        "planRef": "PHASE_JOURNAL.md",
+        "planRef": ".ai/runbooks/phase-journal-retention.md",
         "summary": "Update canonical agent-facing contracts and JSON schemas so phaseJournal / phaseContext fields are versioned, additive, bounded, and CI-checked.",
-        "description": "PHASE_JOURNAL.md Agent read contract: agents must not read SQLite; supported surfaces include get-phase-context, list-phase-notes, agent-session-snapshot, get-next-actions. Deliver stable schema fragments (or shared TypeScript types exported for consumers), update exports/tests that snapshot CLI shapes, and reference AGENTS.md / contract package paths as required by repo conventions.",
+        "description": ".ai/runbooks/phase-journal-retention.md Agent read contract: agents must not read SQLite; supported surfaces include get-phase-context, list-phase-notes, agent-session-snapshot, get-next-actions. Deliver stable schema fragments (or shared TypeScript types exported for consumers), update exports/tests that snapshot CLI shapes, and reference AGENTS.md / contract package paths as required by repo conventions.",
         "technicalScope": [
           "schemas/ or contracts: phaseJournal summary, phaseContext blocks, note projection subset",
           "Golden tests or schema validation against sample CLI stdout",
@@ -119,7 +119,7 @@
         "phaseKey": "78",
         "phase": "Phase 78",
         "dependsOn": ["T100029"],
-        "planRef": "PHASE_JOURNAL.md",
+        "planRef": ".ai/runbooks/phase-journal-retention.md",
         "summary": "Complete note lifecycle beyond dismiss/supersede: honor expires_at, transition to expired status in reads, optional mutate command for bounded corrections.",
         "description": "Data model includes expires_at and status expired; MVP command list omitted explicit expiry/update. Implement filter logic so expired notes excluded from default queries; optional expire-phase-note or batch reconcile; optional update-phase-note limited to summary/details within token caps with audit metadata. Deterministic ordering unchanged.",
         "technicalScope": [
@@ -155,9 +155,9 @@
         "phaseKey": "78",
         "phase": "Phase 78",
         "dependsOn": ["T100029"],
-        "planRef": "PHASE_JOURNAL.md",
+        "planRef": ".ai/runbooks/phase-journal-retention.md",
         "summary": "Enforce Privacy and secret-safety rules on all Phase Journal writes: reuse kit redaction/secret-guard if present; deterministic rejection patterns for obvious secret shapes.",
-        "description": "PHASE_JOURNAL.md forbids secrets, tokens, keys, large pasted excerpts, PII. Integrate with existing Workflow Cannon utilities if available; otherwise implement conservative validators (length, entropy heuristics optional) and structured error codes. Cover add-phase-note, run-transition phaseNotes, convert paths that embed description.",
+        "description": ".ai/runbooks/phase-journal-retention.md forbids secrets, tokens, keys, large pasted excerpts, PII. Integrate with existing Workflow Cannon utilities if available; otherwise implement conservative validators (length, entropy heuristics optional) and structured error codes. Cover add-phase-note, run-transition phaseNotes, convert paths that embed description.",
         "technicalScope": [
           "Discover and call shared redaction module or add thin phase-journal guard",
           "Unit tests: blocked writes for representative secret patterns; allowed sanitized summaries",
@@ -190,9 +190,9 @@
         "phaseKey": "78",
         "phase": "Phase 78",
         "dependsOn": ["T100029"],
-        "planRef": "PHASE_JOURNAL.md",
+        "planRef": ".ai/runbooks/phase-journal-retention.md",
         "summary": "Optional JSON policyApproval or config gate for dismiss/supersede on priority=critical notes; doctor or phase-status advisory counts for open critical phase notes.",
-        "description": "PHASE_JOURNAL policy table suggests dismiss/supersede may need sensitivity for critical priority. Implement config-driven requirement (default off matches MVP). Add lightweight observability: doctor optional line or phase-status payload snippet with active critical phase note count for current phase — read-only, bounded.",
+        "description": "phase journal policy table suggests dismiss/supersede may need sensitivity for critical priority. Implement config-driven requirement (default off matches MVP). Add lightweight observability: doctor optional line or phase-status payload snippet with active critical phase note count for current phase — read-only, bounded.",
         "technicalScope": [
           "Kit config key design + validation",
           "Command guard when critical + policy requires approval",
@@ -225,9 +225,9 @@
         "phaseKey": "78",
         "phase": "Phase 78",
         "dependsOn": ["T100030", "T100031", "T100032", "T100033", "T100034", "T100035", "T100036", "T100037", "T100038", "T100039"],
-        "planRef": "PHASE_JOURNAL.md",
+        "planRef": ".ai/runbooks/phase-journal-retention.md",
         "summary": "Automate the journal's Example workflow section as an integration or smoke test: notes + transition attachment + cross-agent reads + propose/convert path.",
-        "description": "PHASE_JOURNAL.md lists steps 1–10 from task start through get-phase-context, add-phase-note, run-transition phaseNotes, agent-session-snapshot, get-next-actions suggestions, convert to proposed task. Implement one deterministic test (Node test or fixture DB) that exercises the chain without manual chat; gate regressions on Phase Journal behavior.",
+        "description": ".ai/runbooks/phase-journal-retention.md lists steps 1–10 from task start through get-phase-context, add-phase-note, run-transition phaseNotes, agent-session-snapshot, get-next-actions suggestions, convert to proposed task. Implement one deterministic test (Node test or fixture DB) that exercises the chain without manual chat; gate regressions on Phase Journal behavior.",
         "technicalScope": [
           "Fixture planning SQLite or in-memory harness per repo patterns",
           "Scripted wk run invocations or direct module calls where faster",
@@ -239,7 +239,7 @@
           "Covers agent-session-snapshot phaseJournal and get-next-actions phaseContext when prior tasks merged",
           "Covers propose-tasks-from-phase-notes + convert-phase-note-to-task happy path",
           "Test passes in CI pre-merge gates",
-          "Maps steps to PHASE_JOURNAL.md Example workflow for maintainer traceability"
+          "Maps steps to .ai/runbooks/phase-journal-retention.md Example workflow for maintainer traceability"
         ],
         "risk": "Low — test maintenance cost if CLI JSON shifts; pin schema assertions.",
         "metadata": {

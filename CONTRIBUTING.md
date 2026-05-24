@@ -13,7 +13,7 @@ pnpm run check
 pnpm test
 ```
 
-Phase journal behavior from `PHASE_JOURNAL.md` (Example workflow) is regression-tested as **`PHASE_JOURNAL example workflow — golden integration (T100040)`** in `test/task-engine.test.mjs` (same `pnpm test` run).
+Phase journal behavior is regression-tested as **`PHASE_JOURNAL example workflow — golden integration (T100040)`** in `test/task-engine.test.mjs` (same `pnpm test` run). Operator canon: **`.ai/runbooks/phase-journal-retention.md`**, **`.ai/cae/phase-journal-operator.md`**, and **`src/modules/task-engine/instructions/`** phase-journal commands.
 
 ## Cursor / VS Code extension
 

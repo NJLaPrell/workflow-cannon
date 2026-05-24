@@ -10,17 +10,17 @@
         "status": "proposed",
         "phaseKey": "78",
         "phase": "Phase 78",
-        "planRef": "PHASE_JOURNAL.md",
+        "planRef": ".ai/runbooks/phase-journal-retention.md",
         "summary": "Add idempotent planning-SQLite migration for phase journal tables, indexes, and a typed store API used only inside task-engine (no raw table reads for agents).",
-        "description": "Implement tables `phase_notes` and `phase_note_refs` per PHASE_JOURNAL.md (phase_key join key, provenance, idempotency_key partial unique index when feasible). Wire DDL through existing kit SQLite migration path (prepareKitSqliteDatabase / migrateKitSqliteSchema patterns). Implement internal helpers: create note idempotently, list/filter, dismiss, supersede; preserve existing planning/task-engine behavior when tables empty.",
+        "description": "Implement tables `phase_notes` and `phase_note_refs` per .ai/runbooks/phase-journal-retention.md (phase_key join key, provenance, idempotency_key partial unique index when feasible). Wire DDL through existing kit SQLite migration path (prepareKitSqliteDatabase / migrateKitSqliteSchema patterns). Implement internal helpers: create note idempotently, list/filter, dismiss, supersede; preserve existing planning/task-engine behavior when tables empty.",
         "technicalScope": [
-          "SQL migration: phase_notes + phase_note_refs + required indexes from PHASE_JOURNAL.md",
+          "SQL migration: phase_notes + phase_note_refs + required indexes from .ai/runbooks/phase-journal-retention.md",
           "Store module under src/modules/task-engine/phase-journal/ (or agreed layout): types, persist, idempotent insert",
           "Unit/integration tests: migration idempotency, CRUD, idempotency key replay",
           "No new agent-facing commands in this slice — persistence only"
         ],
         "acceptanceCriteria": [
-          "phase_notes and phase_note_refs exist with columns and indexes as specified in PHASE_JOURNAL.md MVP",
+          "phase_notes and phase_note_refs exist with columns and indexes as specified in .ai/runbooks/phase-journal-retention.md MVP",
           "Store supports create (idempotent), list by phase_key/status, dismiss, supersede without corrupting unrelated rows",
           "Migration reruns cleanly; relational + planning open paths unchanged for workspaces without notes",
           "Agents still have no stable read contract to raw tables — internal module tests only until commands land in T100029"
@@ -29,7 +29,7 @@
         "metadata": {
           "phaseJournal": {
             "mvpId": "T-PJ-001",
-            "specPath": "PHASE_JOURNAL.md",
+            "specPath": ".ai/runbooks/phase-journal-retention.md",
             "dependsOnMvp": [],
             "unblocksMvp": ["T-PJ-002", "T-PJ-003", "T-PJ-004", "T-PJ-005", "T-PJ-006"]
           }
@@ -47,13 +47,13 @@
         "phaseKey": "78",
         "phase": "Phase 78",
         "dependsOn": ["T100028"],
-        "planRef": "PHASE_JOURNAL.md",
+        "planRef": ".ai/runbooks/phase-journal-retention.md",
         "summary": "Expose Phase Journal through workspace-kit run commands with validation, bounded projections, manifest + instructions, and task-engine dispatch wiring.",
         "description": "Implement add-phase-note, list-phase-notes, get-phase-context (deterministic relevance scoring per journal), dismiss-phase-note, supersede-phase-note. Enforce token limits (summary 280, details 1200, refs max 10, default list limits). Infer phaseKey from taskId when possible. Wire resolvePhaseJournalCommands in planning dispatch. Update builtin-run-command-manifest.json, instructions/*.md, run-contract schemas/tests as required by repo standards.",
         "technicalScope": [
           "Command handlers + argv validation + JSON envelopes consistent with task-engine",
           "Secret-safety / redaction hooks if project utility exists; otherwise instruction-level prohibitions",
-          "get-phase-context: scoring table from PHASE_JOURNAL.md (deterministic tie-break)",
+          "get-phase-context: scoring table from .ai/runbooks/phase-journal-retention.md (deterministic tie-break)",
           "Tests: manifest parity, happy paths, validation failures, idempotent add-phase-note"
         ],
         "acceptanceCriteria": [
@@ -61,13 +61,13 @@
           "Validation enforces note types, statuses, priorities, lengths, ref counts; phase/task existence when checkable",
           "list/get return bounded projections — not raw SQLite rows",
           "Instruction files + manifest entries + contract checks updated; CI gates pass",
-          "Default policy: non-sensitive reads/writes per PHASE_JOURNAL policy table unless configured otherwise"
+          "Default policy: non-sensitive reads/writes per phase journal policy table unless configured otherwise"
         ],
         "risk": "Medium — surface area + contract drift if manifest/schemas not updated.",
         "metadata": {
           "phaseJournal": {
             "mvpId": "T-PJ-002",
-            "specPath": "PHASE_JOURNAL.md",
+            "specPath": ".ai/runbooks/phase-journal-retention.md",
             "dependsOnMvp": ["T-PJ-001"],
             "linkedTasks": ["T100028", "T100030", "T100031", "T100032", "T100033"]
           }
@@ -85,9 +85,9 @@
         "phaseKey": "78",
         "phase": "Phase 78",
         "dependsOn": ["T100029"],
-        "planRef": "PHASE_JOURNAL.md",
+        "planRef": ".ai/runbooks/phase-journal-retention.md",
         "summary": "Add additive, bounded phaseJournal block to agent-session-snapshot when phase is known or inferable — summary only, no full details.",
-        "description": "Extend agent-session-snapshot read model per PHASE_JOURNAL.md: phaseKey/phaseLabel, counts (active, critical, open follow-ups), topNotes (max 3 default) without details body. Exclude non-active by default. Deterministic ordering.",
+        "description": "Extend agent-session-snapshot read model per .ai/runbooks/phase-journal-retention.md: phaseKey/phaseLabel, counts (active, critical, open follow-ups), topNotes (max 3 default) without details body. Exclude non-active by default. Deterministic ordering.",
         "technicalScope": [
           "Snapshot assembler changes + schema/version bump if contract versioned",
           "Tests: golden JSON fragments for snapshot with/without notes",
@@ -103,7 +103,7 @@
         "metadata": {
           "phaseJournal": {
             "mvpId": "T-PJ-003",
-            "specPath": "PHASE_JOURNAL.md",
+            "specPath": ".ai/runbooks/phase-journal-retention.md",
             "dependsOnMvp": ["T-PJ-002"],
             "linkedTasks": ["T100029", "T100031"]
           }
@@ -121,9 +121,9 @@
         "phaseKey": "78",
         "phase": "Phase 78",
         "dependsOn": ["T100029"],
-        "planRef": "PHASE_JOURNAL.md",
+        "planRef": ".ai/runbooks/phase-journal-retention.md",
         "summary": "Attach bounded phaseContext / taskSuggestionsFromNotes to get-next-actions without overriding task selection rules.",
-        "description": "Per PHASE_JOURNAL.md: include relevantNotes and taskSuggestionsFromNotes arrays with strict caps. Notes explain context only — ready queue ordering, status, and deps remain authoritative.",
+        "description": "Per .ai/runbooks/phase-journal-retention.md: include relevantNotes and taskSuggestionsFromNotes arrays with strict caps. Notes explain context only — ready queue ordering, status, and deps remain authoritative.",
         "technicalScope": [
           "Next-actions builder integration + relevance reuse or shared helper with get-phase-context",
           "Tests: selection unchanged when notes present; suggestions bounded",
@@ -139,7 +139,7 @@
         "metadata": {
           "phaseJournal": {
             "mvpId": "T-PJ-004",
-            "specPath": "PHASE_JOURNAL.md",
+            "specPath": ".ai/runbooks/phase-journal-retention.md",
             "dependsOnMvp": ["T-PJ-002"],
             "linkedTasks": ["T100029", "T100030"]
           }
@@ -157,9 +157,9 @@
         "phaseKey": "78",
         "phase": "Phase 78",
         "dependsOn": ["T100029"],
-        "planRef": "PHASE_JOURNAL.md",
+        "planRef": ".ai/runbooks/phase-journal-retention.md",
         "summary": "Extend run-transition to accept optional phaseNotes[] inheriting task phaseKey; same transaction as transition; idempotent keys; omit behavior unchanged.",
-        "description": "Implement PHASE_JOURNAL.md run-transition attachment: validate phaseNotes same as add-phase-note subset, infer phaseKey from task, fail closed before any write on validation error. Transaction must commit transition + notes together or neither.",
+        "description": "Implement .ai/runbooks/phase-journal-retention.md run-transition attachment: validate phaseNotes same as add-phase-note subset, infer phaseKey from task, fail closed before any write on validation error. Transaction must commit transition + notes together or neither.",
         "technicalScope": [
           "Transition command schema + TransitionService / planning transaction boundary",
           "Tests: transition succeeds with notes; fails atomically on bad note; idempotency replay",
@@ -176,7 +176,7 @@
         "metadata": {
           "phaseJournal": {
             "mvpId": "T-PJ-005",
-            "specPath": "PHASE_JOURNAL.md",
+            "specPath": ".ai/runbooks/phase-journal-retention.md",
             "dependsOnMvp": ["T-PJ-002"],
             "linkedTasks": ["T100029", "T100033"]
           }
@@ -194,9 +194,9 @@
         "phaseKey": "78",
         "phase": "Phase 78",
         "dependsOn": ["T100029"],
-        "planRef": "PHASE_JOURNAL.md",
+        "planRef": ".ai/runbooks/phase-journal-retention.md",
         "summary": "Second-pass commands: read-only proposal harvester + convert note → proposed task via existing create-task paths; mark note converted with converted_task_id.",
-        "description": "Per PHASE_JOURNAL.md: propose-tasks-from-phase-notes scans active follow-up/task-suggestion/risk/blocker notes (bounded). convert-phase-note-to-task creates task with matching phaseKey default, marks note status converted, stores converted_task_id. Cannot bypass lifecycle policy for ready/in_progress without transitions. Optional phase_note_task_suggestions table may be deferred — if deferred, document follow-up task id in metadata.",
+        "description": "Per .ai/runbooks/phase-journal-retention.md: propose-tasks-from-phase-notes scans active follow-up/task-suggestion/risk/blocker notes (bounded). convert-phase-note-to-task creates task with matching phaseKey default, marks note status converted, stores converted_task_id. Cannot bypass lifecycle policy for ready/in_progress without transitions. Optional phase_note_task_suggestions table may be deferred — if deferred, document follow-up task id in metadata.",
         "technicalScope": [
           "Command implementations + reuse create-task internals / allocateId",
           "Policy alignment with create-task for proposed vs sensitive states",
@@ -214,7 +214,7 @@
         "metadata": {
           "phaseJournal": {
             "mvpId": "T-PJ-006",
-            "specPath": "PHASE_JOURNAL.md",
+            "specPath": ".ai/runbooks/phase-journal-retention.md",
             "dependsOnMvp": ["T-PJ-002"],
             "linkedTasks": ["T100029", "T100032"],
             "relatedDefects": ["T100027"]

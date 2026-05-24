@@ -27,7 +27,7 @@ pnpm exec wk run get-phase-context '{"taskId":"T100041","limit":10}'
 
 ## Writes and mutators
 
-- **`add-phase-note`** — idempotent when **`clientMutationId`** repeats; respect token caps in **`PHASE_JOURNAL.md`**. Snippet: **`.ai/agent-cli-snippets/by-command/add-phase-note.json`**.
+- **`add-phase-note`** — idempotent when **`idempotencyKey`** / **`clientMutationId`** repeats; respect caps in **`src/modules/task-engine/phase-journal/phase-journal-constants.ts`** (summary 280, details 1200, refs 10). Snippet: **`.ai/agent-cli-snippets/by-command/add-phase-note.json`**.
 - **`dismiss-phase-note`**, **`supersede-phase-note`**, **`update-phase-note`**, **`convert-phase-note-to-task`** — follow Tier **B** / sensitivity from **`--schema-only`** / **`src/modules/task-engine/instructions/*.md`**; use JSON **`policyApproval`** when the manifest requires it (**`.ai/POLICY-APPROVAL.md`**).
 - **`propose-tasks-from-phase-notes`** — harvest proposals; does not substitute lifecycle policy.
 
@@ -35,7 +35,7 @@ pnpm exec wk run get-phase-context '{"taskId":"T100041","limit":10}'
 
 Optional **`phaseNotes`** on **`run-transition`** attach notes in the **same transaction** as the transition. Validate shapes against the **`add-phase-note`** subset; Tier **A** **`policyApproval`** applies to **`run-transition`** when policy-sensitive.
 
-Snippet: **`.ai/agent-cli-snippets/by-command/run-transition.json`**. Extended narrative: **`PHASE_JOURNAL.md`** → **Integration points** → **`run-transition`**.
+Snippet: **`.ai/agent-cli-snippets/by-command/run-transition.json`**. Extended narrative: **`src/modules/task-engine/instructions/run-transition.md`** (`phaseNotes` batch).
 
 Example skeleton:
 
