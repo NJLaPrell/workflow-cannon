@@ -8,6 +8,23 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [0.99.3] - 2026-05-24
+
+Phase 113 — **Dashboard queue and drawer hardening** (mutation/refresh lanes, refresh controller, drawer session, webview client extraction).
+
+### Added
+
+- CommandClient mutation vs refresh lanes with keyed refresh coalescing.
+- `DashboardRefreshController` — single owner for dashboard-summary refresh scheduling.
+- Drawer session state machine with `wcDrawerState` snapshots to the webview.
+- `dashboard-webview-client.ts` — extracted, tested dashboard sidebar bootstrap.
+- `notifyAfterDrawerClosed` lifecycle helper; regression tests for queue starvation and submit-lock leaks.
+
+### Changed
+
+- Accept / Accept All no longer starve behind overlapping `dashboard-summary` refresh backlog.
+- Workflow Cannon output channel tracing for kit runs and dashboard scheduling.
+
 ## [0.99.2] - 2026-05-22
 
 Phase 107 — **Dashboard policy rationale UX** (routine auto-rationale, elevated explainers, machine docs).
