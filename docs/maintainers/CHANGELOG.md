@@ -8,6 +8,16 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [0.99.4] - 2026-05-24
+
+Hotfix — **Dashboard back-to-back Accept** no longer hangs on the second proposed task.
+
+### Fixed
+
+- CommandClient preempts in-flight `dashboard-summary` refresh when a mutation (`run-transition`, etc.) enqueues, so consecutive Accept drawer submits are not blocked behind a running refresh CLI.
+- Post-submit dashboard refresh is fire-and-forget so the drawer handler releases before the next accept opens.
+- Reset webview `drawerSubmitInFlight` when the drawer reopens.
+
 ## [0.99.3] - 2026-05-24
 
 Phase 113 — **Dashboard queue and drawer hardening** (mutation/refresh lanes, refresh controller, drawer session, webview client extraction).
