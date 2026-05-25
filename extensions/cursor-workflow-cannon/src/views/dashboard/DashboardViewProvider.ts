@@ -845,7 +845,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
           this.endDrawerSubmitRefreshHold();
         }
         if (refreshed) {
-          await this.pushUpdate({ light: true });
+          void this.pushUpdate({ light: true });
         }
       }
       if (msg?.type === "drawerCancel") {

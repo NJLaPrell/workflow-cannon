@@ -1,4 +1,4 @@
-import { execFile, execFileSync } from "node:child_process";
+import { execFile, execFileSync, type ChildProcess } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -432,6 +432,74 @@ function inferCliPackageRoot(cliJs: string): string {
   return path.dirname(path.dirname(cliJs));
 }
 
+function execKitCancellable(
+  workspaceRoot: string,
+  cliArgs: string[],
+  maxBuffer = 20 * 1024 * 1024,
+  timeoutMs = 30_000,
+  cliPathOverride?: string,
+  resolveNodeExecutable?: () => string | undefined,
+  extensionRoot?: string
+): { promise: Promise<CommandClientExecResult>; kill: () => void } {
+  let child: ChildProcess | undefined;
+  const kill = (): void => {
+    if (child && !child.killed) {
+      child.kill("SIGTERM");
+    }
+  };
+
+  const run = (
+    executable: string,
+    argsPrefix: string[]
+  ): { promise: Promise<CommandClientExecResult>; kill: () => void } => {
+    const promise = new Promise<CommandClientExecResult>((resolve, reject) => {
+      child = execFile(
+        executable,
+        [...argsPrefix, ...cliArgs],
+        { cwd: workspaceRoot, maxBuffer, windowsHide: true, timeout: timeoutMs },
+        (err, stdout, stderr) => {
+          child = undefined;
+          const out = String(stdout ?? "");
+          const errOut = String(stderr ?? "");
+          if (err) {
+            if ((err as NodeJS.ErrnoException).code === "ENOENT") {
+              reject(err);
+              return;
+            }
+            const code = typeof err.code === "number" ? err.code : 1;
+            resolve({ exitCode: code, stdout: out, stderr: errOut });
+            return;
+          }
+          resolve({ exitCode: 0, stdout: out, stderr: errOut });
+        }
+      );
+    });
+    return { promise, kill };
+  };
+
+  if (!cliPathOverride) {
+    const runtimePlan = resolveRuntimeStampExecutionPlan(workspaceRoot);
+    if (runtimePlan.kind === "invalid") {
+      return {
+        promise: Promise.resolve(
+          structuredRuntimeStampFailure("extension-runtime-stamp-invalid", runtimePlan.message, {
+            stampPath: runtimePlan.stampPath
+          })
+        ),
+        kill: () => undefined
+      };
+    }
+    if (runtimePlan.kind === "launcher" || runtimePlan.kind === "stamped-node") {
+      return run(runtimePlan.executable, runtimePlan.argsPrefix);
+    }
+  }
+  const cliJs = resolveCliJs(workspaceRoot, cliPathOverride, extensionRoot);
+  const cliPackageRoot = inferCliPackageRoot(cliJs);
+  const runtimeRoots = [cliPackageRoot, extensionRoot].filter((root): root is string => Boolean(root));
+  const nodeBin = pickNodeExecutable(resolveNodeExecutable, workspaceRoot, [cliPackageRoot], runtimeRoots);
+  return run(nodeBin, [cliJs]);
+}
+
 function execKit(
   workspaceRoot: string,
   cliArgs: string[],
@@ -567,6 +635,9 @@ export class CommandClient {
   private refreshSlots = new Map<string, RefreshSlot>();
   private laneDrainScheduled = false;
   private laneDraining = false;
+  /** Kill hook for an in-flight refresh CLI child (preempted when a mutation starts). */
+  private inFlightRefreshKill: (() => void) | null = null;
+  private activeRunCommand: string | undefined;
 
   constructor(private readonly workspaceRoot: string, options?: CommandClientOptions) {
     this.timeoutMs = options?.timeoutMs ?? 30_000;
@@ -578,16 +649,43 @@ export class CommandClient {
     this.onKitRunNotice = options?.onKitRunNotice;
     this.execFn =
       options?.execFn ??
-      ((root, cliArgs) =>
-        execKit(
-          root,
-          cliArgs,
-          20 * 1024 * 1024,
-          this.timeoutMs,
-          this.cliPathOverride,
-          this.resolveNodeExecutable,
-          this.extensionRoot
-        ));
+      ((root, cliArgs) => this.execTracked(root, cliArgs));
+  }
+
+  /** Drop pending refresh work and abort an in-flight refresh CLI so mutations can run immediately. */
+  preemptRefreshForMutation(): void {
+    const paused = kitRefreshPausedResult();
+    for (const slot of this.refreshSlots.values()) {
+      for (const waiter of slot.waiters) {
+        waiter.resolve(paused);
+      }
+    }
+    this.refreshSlots.clear();
+    if (this.inFlightRefreshKill) {
+      this.inFlightRefreshKill();
+      this.inFlightRefreshKill = null;
+    }
+  }
+
+  private execTracked(workspaceRoot: string, cliArgs: string[]): Promise<CommandClientExecResult> {
+    const commandName = this.activeRunCommand ?? cliArgs[1] ?? "";
+    const tracked = execKitCancellable(
+      workspaceRoot,
+      cliArgs,
+      20 * 1024 * 1024,
+      this.timeoutMs,
+      this.cliPathOverride,
+      this.resolveNodeExecutable,
+      this.extensionRoot
+    );
+    if (isKitRefreshRunCommand(commandName)) {
+      this.inFlightRefreshKill = tracked.kill;
+    }
+    return tracked.promise.finally(() => {
+      if (this.inFlightRefreshKill === tracked.kill) {
+        this.inFlightRefreshKill = null;
+      }
+    });
   }
 
   getWorkspaceRoot(): string {
@@ -597,6 +695,9 @@ export class CommandClient {
   /** Pause dashboard refresh kit reads so drawer / phase mutations are not queued behind them. */
   setRefreshPaused(paused: boolean): void {
     this.refreshPaused = paused;
+    if (paused) {
+      this.preemptRefreshForMutation();
+    }
   }
 
   isRefreshPaused(): boolean {
@@ -606,6 +707,7 @@ export class CommandClient {
   private enqueueLane(commandName: string, work: () => Promise<KitRunResult>): Promise<KitRunResult> {
     const lane = kitRunLaneForCommand(commandName);
     if (lane === "mutation") {
+      this.preemptRefreshForMutation();
       return new Promise<KitRunResult>((resolve, reject) => {
         this.mutationEntries.push({ work, resolve, reject });
         this.scheduleLaneDrain();
@@ -700,6 +802,7 @@ export class CommandClient {
 
   /** Single serialized `workspace-kit run` invocation (do not call directly). */
   private async runOnce(commandName: string, args: Record<string, unknown>): Promise<KitRunResult> {
+    this.activeRunCommand = commandName;
     const startedAt = this.onKitRunStart?.(commandName, args) ?? Date.now();
     const jsonArg = JSON.stringify(args);
     try {
@@ -750,6 +853,10 @@ export class CommandClient {
       };
       this.onKitRunEnd?.(commandName, startedAt, fail);
       return fail;
+    } finally {
+      if (this.activeRunCommand === commandName) {
+        this.activeRunCommand = undefined;
+      }
     }
   }
 

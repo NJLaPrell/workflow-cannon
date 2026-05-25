@@ -564,6 +564,7 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
   window.addEventListener('message', function(ev) {
     var m = ev.data;
     if (m && m.type === 'wcDrawerOpen' && typeof m.html === 'string') {
+      drawerSubmitInFlight = false;
       var dh = document.getElementById('wc-drawer-host');
       if (!dh) return;
       if (!String(m.html).trim()) return;

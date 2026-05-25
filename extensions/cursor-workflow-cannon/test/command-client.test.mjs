@@ -557,11 +557,15 @@ test("CommandClient mutation lane runs before queued refresh", async () => {
       return { exitCode: 0, stdout: JSON.stringify({ ok: true, code: args[1] }), stderr: "" };
     }
   });
-  await Promise.all([
+  const [summary, transition] = await Promise.all([
     client.run("dashboard-summary", {}),
     client.run("run-transition", { taskId: "T1", action: "accept" })
   ]);
-  assert.deepEqual(order, ["run-transition", "dashboard-summary"]);
+  assert.equal(transition.ok, true);
+  assert.equal(transition.code, "run-transition");
+  assert.deepEqual(order, ["run-transition"]);
+  assert.equal(summary.ok, false);
+  assert.equal(summary.code, "extension-refresh-paused");
 });
 
 test("CommandClient coalesces pending refresh jobs with the same key", async () => {
