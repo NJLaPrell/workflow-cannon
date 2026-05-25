@@ -1,6 +1,8 @@
 # Workflow Cannon Planner Direction
 
-This document defines the desired future state for planning in Workflow Cannon and explains how that objective should be implemented from the current system state.
+This document defines the desired **product** future state for planning in Workflow Cannon and explains how that objective should be implemented from the current system state.
+
+**Implementation WBS:** [`PLANNER_TASKS.md`](./PLANNER_TASKS.md) — work breakdown, human-reviewed prerequisite artifacts (`A-ARCH`, `A-SCHEMA`, `A-UX`, etc.), and delivery tasks. This file stays product/direction; that file stays execution.
 
 ## Expectation Summary
 
@@ -26,7 +28,9 @@ A proper plan artifact should include, as appropriate:
 
 Workflow Cannon should also provide a natural planning entry point:
 
-> A user chats with an agent, brainstorms naturally, refines the idea, assesses value/risk/technical impact, and then explicitly approves the result. On approval, Workflow Cannon generates the formal plan artifact.
+> A user chats with an agent, brainstorms naturally, refines the idea, and assesses value/risk/technical impact. The agent drafts a structured plan; Workflow Cannon validates it; the user **explicitly accepts** it. Only then does Workflow Cannon materialize phase-ready execution tasks from the plan’s WBS.
+
+Chat is for discovery. The **PlanArtifact** (structured data, versioned) is the durable output — not the transcript.
 
 The planning experience should **not** primarily use hard-coded guided-question flows. Instead, CAE should guide the agent with a flexible set of questions, concerns, and lenses to consider while the conversation remains natural.
 
@@ -35,10 +39,9 @@ Desired planning flow:
 ```text
 natural brainstorm
 → CAE-guided agent reasoning
-→ user-approved plan artifact
-→ WBS
-→ recommended phases/tasks
-→ task engine registration
+→ draft PlanArtifact v1 (includes WBS, phase recommendations, task payloads)
+→ review + user acceptance
+→ finalize to phase / task engine registration
 ```
 
 ## Direction Verdict
@@ -283,7 +286,8 @@ Example acceptance record:
   "confirmed": true,
   "acceptedAt": "...",
   "rationale": "...",
-  "planVersion": "..."
+  "planVersion": "...",
+  "planRef": "plan:<id>:<version>"
 }
 ```
 
@@ -312,11 +316,12 @@ But there is not yet a formal plan artifact that recommends phases, work order, 
 The Dashboard should eventually show:
 
 - current plan draft
-- unanswered concerns
-- plan completeness
-- WBS preview
-- task sizing findings
+- unanswered concerns / open questions
+- plan completeness and review findings
+- WBS preview and task sizing findings
 - user approval status
+- phase recommendation
+- task creation preview (finalize dry-run)
 - opened phase/tasks
 
 Right now that future Dashboard workflow is not the center of the planning model.
@@ -600,3 +605,9 @@ User brainstorms naturally with an agent
 ```
 
 At that point, Workflow Cannon has a coherent planning source of truth and a clear path from idea to execution.
+
+---
+
+## Implementation
+
+Delivery sequencing, task sizing, and **human-reviewed prerequisite artifacts** before coding (architecture doc, schema spec, UX mockups, command contracts, etc.) live in **[`PLANNER_TASKS.md`](./PLANNER_TASKS.md)**. That WBS maps each section of this document to concrete work packages and defers explicit items (e.g. dashboard drift display in v1).
