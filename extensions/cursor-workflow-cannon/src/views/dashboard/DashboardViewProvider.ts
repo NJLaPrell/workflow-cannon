@@ -36,11 +36,16 @@ import {
 } from "../../policy/dashboard-policy-path.js";
 import { executeCreateWishlistFromValidatedFields } from "../../add-wishlist-item-flow.js";
 import {
+  buildListTasksArgsForQueueBucket,
+  filterTasksForQueueBucketCategory,
+  renderQueueBucketRowsHtml,
+  type DashboardQueueBucketCategory
+} from "./dashboard-queue-bucket-lazy.js";
+import {
   escapeHtml,
   lazyTerminalBucketListLimit,
   lookupDashboardTaskPhaseKey,
   lookupProposedTaskPhaseKey,
-  renderDashboardQueueTaskRowsHtml,
   renderDashboardRootInnerHtml,
   type DashboardPhaseJournalBundle,
   type PhaseJournalKitPayload,
@@ -454,6 +459,22 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         await webview.postMessage({ type: "wcReleaseRefreshBlock" });
         await this.pushUpdate({ projection: "full", skipHeavyFetches: false });
       }
+      if (msg?.type === "loadQueueBucketRows") {
+        const categoryRaw = (msg as { category?: unknown }).category;
+        const category =
+          typeof categoryRaw === "string" ? (categoryRaw.trim() as DashboardQueueBucketCategory) : null;
+        const phaseKey =
+          typeof (msg as { phaseKey?: unknown }).phaseKey === "string"
+            ? (msg as { phaseKey: string }).phaseKey
+            : "";
+        const cursor =
+          typeof (msg as { cursor?: unknown }).cursor === "string"
+            ? (msg as { cursor: string }).cursor
+            : undefined;
+        if (category) {
+          void this.loadQueueBucketRows(category, phaseKey, cursor);
+        }
+      }
       if (msg?.type === "loadLazyTerminalBucket") {
         const terminalRaw = (msg as { terminalStatus?: unknown }).terminalStatus;
         const terminalStatus =
@@ -463,7 +484,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
             ? (msg as { phaseKey: string }).phaseKey
             : "";
         if (terminalStatus) {
-          void this.loadLazyTerminalBucket(phaseKey, terminalStatus);
+          void this.loadQueueBucketRows(terminalStatus, phaseKey);
         }
       }
       if (msg?.type === "wishlistPage") {
@@ -1046,43 +1067,55 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
   }
 
-  private async loadLazyTerminalBucket(
+  private async loadQueueBucketRows(
+    category: DashboardQueueBucketCategory,
     phaseKey: string,
-    terminalStatus: "completed" | "cancelled"
+    cursor?: string
   ): Promise<void> {
     const pk = phaseKey.trim();
     const phaseKeyArg = pk.length > 0 ? pk : "__no_phase__";
+    const append = typeof cursor === "string" && cursor.trim().length > 0;
     try {
-      const raw = await this.client.run("list-tasks", {
-        phaseKey: phaseKeyArg,
-        status: terminalStatus,
-        limit: lazyTerminalBucketListLimit()
-      });
+      const raw = await this.client.run(
+        "list-tasks",
+        buildListTasksArgsForQueueBucket(category, phaseKeyArg, lazyTerminalBucketListLimit(), cursor)
+      );
       const data =
         raw && typeof raw === "object" && "data" in raw
-          ? (raw as { data?: unknown }).data
+          ? (raw as { data?: Record<string, unknown> }).data
           : undefined;
-      const tasks =
-        data && typeof data === "object" && Array.isArray((data as { tasks?: unknown }).tasks)
-          ? ((data as { tasks: unknown[] }).tasks as unknown[])
-          : [];
-      const html = renderDashboardQueueTaskRowsHtml(tasks);
+      const tasksRaw =
+        data && Array.isArray(data.tasks) ? (data.tasks as unknown[]) : [];
+      const tasks = filterTasksForQueueBucketCategory(category, tasksRaw);
+      const nextCursor =
+        data && typeof data.nextCursor === "string" ? data.nextCursor : null;
+      const html = renderQueueBucketRowsHtml(category, tasks, { nextCursor });
       await this.view?.webview.postMessage({
-        type: "wcLazyTerminalBucketHtml",
+        type: "wcQueueBucketRowsHtml",
+        category,
         phaseKey: pk,
-        terminalStatus,
-        html
+        html,
+        append
       });
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unable to load tasks.";
       await this.view?.webview.postMessage({
-        type: "wcLazyTerminalBucketHtml",
+        type: "wcQueueBucketRowsHtml",
+        category,
         phaseKey: pk,
-        terminalStatus,
         html:
-          '<p class="muted wc-lazy-bucket-hint" role="status">' + escapeHtml(message) + "</p>"
+          '<p class="muted wc-lazy-bucket-hint" role="status">' + escapeHtml(message) + "</p>",
+        append: false
       });
     }
+  }
+
+  /** @deprecated — use {@link loadQueueBucketRows} */
+  private async loadLazyTerminalBucket(
+    phaseKey: string,
+    terminalStatus: "completed" | "cancelled"
+  ): Promise<void> {
+    await this.loadQueueBucketRows(terminalStatus, phaseKey);
   }
 
   private async onPlanningWizardStart(planningType: string): Promise<void> {
