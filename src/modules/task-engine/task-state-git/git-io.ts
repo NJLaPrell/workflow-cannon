@@ -45,6 +45,23 @@ export function resolveTaskStateGitRef(
   return { missing: true, tried };
 }
 
+export function remoteBranchHeadSha(
+  cwd: string,
+  branch: string,
+  remote = "origin"
+): string | null {
+  const r = runGit(cwd, ["ls-remote", "--heads", remote, branch]);
+  if (!r.ok || !r.stdout.trim()) {
+    return null;
+  }
+  const line = r.stdout.split("\n").find((row) => row.trim().length > 0);
+  if (!line) {
+    return null;
+  }
+  const sha = line.split(/\s+/)[0]?.trim();
+  return sha && sha.length > 0 ? sha : null;
+}
+
 export function gitFetchTaskStateBranch(
   cwd: string,
   branch: string = TASK_STATE_GIT_BRANCH
@@ -69,4 +86,8 @@ export function gitLsTreeNames(cwd: string, ref: string, treePath: string): stri
     .split("\n")
     .map((line) => line.trim())
     .filter((line) => line.length > 0);
+}
+
+export function removeGitWorktree(repoCwd: string, worktreePath: string): GitRunResult {
+  return runGit(repoCwd, ["worktree", "remove", "--force", worktreePath]);
 }

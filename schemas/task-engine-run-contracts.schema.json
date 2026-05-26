@@ -48,6 +48,7 @@
         "repair-task-state-cache",
         "task-state-status",
         "task-state-hydrate",
+        "task-state-init",
         "batch-transition",
         "block-task",
         "check-task-store-commit",
@@ -203,6 +204,9 @@
         },
         "task-state-hydrate": {
           "$ref": "#/$defs/contractTaskStateHydrate"
+        },
+        "task-state-init": {
+          "$ref": "#/$defs/contractTaskStateInit"
         },
         "batch-transition": {
           "$ref": "#/$defs/contractBatchTransition"
@@ -3281,6 +3285,31 @@
                 "fetch": { "type": "boolean" },
                 "branch": { "type": "string" },
                 "eventLogRelativePath": { "type": "string" },
+                "policyApproval": { "type": "object", "additionalProperties": true }
+              }
+            },
+            "responseData": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          }
+        }
+      ]
+    },
+    "contractTaskStateInit": {
+      "allOf": [
+        { "$ref": "#/$defs/contractBase" },
+        {
+          "properties": {
+            "args": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "dryRun": { "type": "boolean" },
+                "overwriteExisting": { "type": "boolean" },
+                "push": { "type": "boolean" },
+                "branch": { "type": "string" },
+                "snapshotId": { "type": "string" },
                 "policyApproval": { "type": "object", "additionalProperties": true }
               }
             },

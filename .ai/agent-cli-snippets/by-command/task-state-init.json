@@ -1,14 +1,23 @@
 {
   "ok": true,
   "code": "run-args-schema",
-  "command": "apply-task-state-events",
+  "command": "task-state-init",
   "schema": {
     "type": "object",
     "properties": {
       "dryRun": {
         "type": "boolean"
       },
-      "eventLogRelativePath": {
+      "overwriteExisting": {
+        "type": "boolean"
+      },
+      "push": {
+        "type": "boolean"
+      },
+      "branch": {
+        "type": "string"
+      },
+      "snapshotId": {
         "type": "string"
       },
       "policyApproval": {
@@ -23,15 +32,15 @@
   "examples": [
     {
       "description": "Minimal argv example",
-      "argv": "workspace-kit run apply-task-state-events '{}'"
+      "argv": "workspace-kit run task-state-init '{}'"
     }
   ],
-  "instructionPath": "src/modules/task-engine/instructions/apply-task-state-events.md",
+  "instructionPath": "src/modules/task-engine/instructions/task-state-init.md",
   "moduleId": "task-engine",
-  "description": "Incrementally apply canonical task-state JSONL events newer than projection metadata applied_sequence.",
+  "description": "Bootstrap workflow-cannon/task-state from SQLite: manifest, snapshot, event segment; refuses overwrite unless approved.",
   "policy": {
     "sensitivity": "sensitive",
-    "operationId": "tasks.apply-task-state-events",
+    "operationId": "tasks.task-state-init",
     "jsonApprovalRequired": true
   },
   "planningGeneration": {
@@ -49,5 +58,5 @@
     "listCommands": "pnpm exec wk run --list-commands",
     "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
   },
-  "invocationId": "eaebba31-f66e-4243-91d6-94de66afd600"
+  "invocationId": "435ac11c-e78c-4112-a32c-39e9a6da4b57"
 }
