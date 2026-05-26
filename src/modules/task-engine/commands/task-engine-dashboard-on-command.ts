@@ -41,7 +41,8 @@ import {
   readCurrentAgentActivityLease
 } from "../agent-activity-store.js";
 import { projectDashboardTaskRow } from "../task-read-projections.js";
-import { buildDashboardCurrentPhaseDelivery } from "../dashboard/phase-delivery-status.js";
+import { buildDashboardCurrentPhaseDelivery, collectDeliveredPhaseKeys } from "../dashboard/phase-delivery-status.js";
+import { resolveLegacyDeliveredMaxOrdinal } from "../phase-resolution.js";
 import { buildDashboardPastPhaseNotes } from "../dashboard/build-dashboard-past-phase-notes.js";
 import { buildDashboardApprovalQueueSummary } from "../dashboard/build-dashboard-approval-queue.js";
 import { buildPhaseFocusDashboard } from "../dashboard/build-phase-focus-dashboard.js";
@@ -297,6 +298,13 @@ export async function runDashboardSummaryCommand(
     db: dualForStatus?.getDatabase() ?? null,
     effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined
   });
+  const deliveredPhaseKeys =
+    dualForStatus != null
+      ? collectDeliveredPhaseKeys(dualForStatus.getDatabase(), tasks)
+      : [];
+  const legacyDeliveredMaxOrdinal = resolveLegacyDeliveredMaxOrdinal(
+    ctx.effectiveConfig as Record<string, unknown> | undefined
+  );
 
   const phaseCatalogPhases =
     systemStatus.phase?.phaseCatalog?.phases ?? [];
@@ -423,6 +431,8 @@ export async function runDashboardSummaryCommand(
     systemStatus,
     agentStatus,
     currentPhaseDelivery,
+    deliveredPhaseKeys,
+    legacyDeliveredMaxOrdinal,
     pastPhaseNotes,
     ...(includePhaseFocus && sqliteDual
       ? {

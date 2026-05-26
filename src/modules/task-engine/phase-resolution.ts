@@ -124,6 +124,40 @@ export function phaseLadderBlocksBeforeCurrent(effectiveConfig: Record<string, u
 }
 
 /**
+ * When set, numeric phase keys with leading ordinal in `[0, N]` are treated as delivered
+ * for dashboard tags/roster (pre–delivery-evidence history). Omit or null disables.
+ */
+export function resolveLegacyDeliveredMaxOrdinal(
+  effectiveConfig: Record<string, unknown> | undefined
+): number | null {
+  const kit = effectiveConfig?.kit;
+  const kitObj =
+    kit !== null && typeof kit === "object" && !Array.isArray(kit) ? (kit as Record<string, unknown>) : undefined;
+  const delivery = kitObj?.phaseDelivery;
+  const deliveryObj =
+    delivery !== null && typeof delivery === "object" && !Array.isArray(delivery)
+      ? (delivery as Record<string, unknown>)
+      : undefined;
+  const raw = deliveryObj?.legacyDeliveredMaxOrdinal;
+  if (typeof raw === "number" && Number.isFinite(raw) && raw >= 0) {
+    return Math.floor(raw);
+  }
+  return null;
+}
+
+/** True when `phaseKey` leading ordinal is within the configured legacy delivered ceiling. */
+export function isPhaseLegacyDeliveredByOrdinal(
+  phaseKey: string,
+  legacyDeliveredMaxOrdinal: number | null | undefined
+): boolean {
+  if (legacyDeliveredMaxOrdinal === null || legacyDeliveredMaxOrdinal === undefined) {
+    return false;
+  }
+  const ord = parseLeadingPhaseOrdinal(phaseKey);
+  return ord !== null && ord >= 0 && ord <= legacyDeliveredMaxOrdinal;
+}
+
+/**
  * How a task's target phase relates to the workspace's current kit phase
  * (authoritative "where we are" from `resolveCanonicalPhase`, not per-task `phaseKey` alone).
  */

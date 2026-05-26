@@ -1704,7 +1704,7 @@ export function buildReviewApprovalItemDrawerSpec(p: {
       ? "Accept"
       : p.decision === "decline"
         ? "Decline"
-        : "Accept with edits";
+        : "Accept With Edits";
   const fields: DrawerFormField[] = [];
   if (p.decision === "accept_edited") {
     fields.push({
@@ -1724,23 +1724,30 @@ export function buildReviewApprovalItemDrawerSpec(p: {
       "Recorded decision after review"
     )
   );
+  const drawerTitle =
+    p.decision === "accept_edited"
+      ? `Accept With Edits -- ${p.taskId}`
+      : `${decisionLabel} — ${p.taskId}`;
+  const primaryLabel = p.decision === "accept_edited" ? "Accept" : decisionLabel;
+  const descriptionHtml =
+    p.decision === "accept_edited"
+      ? undefined
+      : appendElevatedPolicyExplainer(
+          "Runs <code>review-item</code> for improvement <b>" +
+            escapeDrawerHtml(p.title) +
+            "</b> (<code>" +
+            escapeDrawerHtml(p.taskId) +
+            "</code>). Decision is persisted to <code>kit_approval_decisions</code> in kit SQLite." +
+            " <span class=\"muted\">Routine tier: policy rationale is auto-filled on submit.</span>",
+          "review-approval-item",
+          p.decision
+        );
   return {
     workflowId: "review-approval-item",
-    title: `${decisionLabel} — ${p.taskId}`,
-    descriptionHtml: appendElevatedPolicyExplainer(
-      "Runs <code>review-item</code> for improvement <b>" +
-        escapeDrawerHtml(p.title) +
-        "</b> (<code>" +
-        escapeDrawerHtml(p.taskId) +
-        "</code>). Decision is persisted to <code>kit_approval_decisions</code> in kit SQLite." +
-        (p.decision === "accept" || p.decision === "decline"
-          ? " <span class=\"muted\">Routine tier: policy rationale is auto-filled on submit.</span>"
-          : ""),
-      "review-approval-item",
-      p.decision
-    ),
+    title: drawerTitle,
+    descriptionHtml,
     fields,
-    primaryLabel: decisionLabel,
+    primaryLabel,
     cancelLabel: "Cancel"
   };
 }

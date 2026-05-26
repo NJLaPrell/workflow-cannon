@@ -20,7 +20,7 @@ export const DASHBOARD_POLICY_TIER_MATRIX: readonly DashboardPolicyTierRow[] = [
   { workflowId: "accept-proposed", action: "accept-batch", command: "run-transition", tier: "routine" },
   { workflowId: "review-approval-item", action: "accept", command: "review-item", tier: "routine" },
   { workflowId: "review-approval-item", action: "decline", command: "review-item", tier: "routine" },
-  { workflowId: "review-approval-item", action: "accept_edited", command: "review-item", tier: "elevated" },
+  { workflowId: "review-approval-item", action: "accept_edited", command: "review-item", tier: "routine" },
   { workflowId: "dismiss-phase-note", action: "critical", command: "dismiss-phase-note", tier: "elevated" },
   { workflowId: "dismiss-phase-note", action: "normal", command: "dismiss-phase-note", tier: "routine" },
   { workflowId: "assign-task-phase", action: "assign", command: "assign-task-phase", tier: "routine" },
@@ -84,9 +84,7 @@ export const ELEVATED_POLICY_EXPLAINER_LEAD_BY_PATH: Readonly<Record<string, str
     "<p><b>Cancel assignment.</b> Ends the assignment record; use when the handoff should not continue.</p>",
   "register-subagent:register":
     "<p><b>Register subagent role.</b> Persists an allowlist of kit commands this subagent may invoke — " +
-    "review commands before registering.</p>",
-  "review-approval-item:accept_edited":
-    "<p><b>Accept with edits.</b> You are changing the improvement summary before recording the decision.</p>"
+    "review commands before registering.</p>"
 };
 
 export function elevatedPolicyExplainerHtml(workflowId: string, action: string): string | undefined {

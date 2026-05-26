@@ -263,6 +263,22 @@
       "user"
     ]
   },
+  "kit.phaseDelivery.legacyDeliveredMaxOrdinal": {
+    "key": "kit.phaseDelivery.legacyDeliveredMaxOrdinal",
+    "type": "number",
+    "description": "When set to a non-negative integer N, numeric phase keys with leading ordinal in [0, N] are treated as delivered for dashboard phase tags and roster (pre-delivery-evidence history).",
+    "default": null,
+    "domainScope": "project",
+    "owningModule": "task-engine",
+    "sensitive": false,
+    "requiresRestart": false,
+    "requiresApproval": false,
+    "exposure": "maintainer",
+    "writableLayers": [
+      "project",
+      "user"
+    ]
+  },
   "modules.enabled": {
     "key": "modules.enabled",
     "type": "array",

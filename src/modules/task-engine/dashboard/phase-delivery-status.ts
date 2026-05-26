@@ -8,7 +8,11 @@ import {
   buildDeliveryEvidencePolicyContext,
   resolveMaintainerDeliveryPolicy
 } from "../maintainer-delivery-policy-resolver.js";
-import { inferTaskPhaseKey } from "../phase-resolution.js";
+import {
+  inferTaskPhaseKey,
+  isPhaseLegacyDeliveredByOrdinal,
+  resolveLegacyDeliveredMaxOrdinal
+} from "../phase-resolution.js";
 import type { TaskEntity, TaskStatus } from "../types.js";
 
 type SqliteDb = InstanceType<typeof DatabaseCtor>;
@@ -65,6 +69,62 @@ function workspaceStatusEventsReadable(db: SqliteDb): boolean {
   } catch {
     return false;
   }
+}
+
+/** Phase keys with closeout-passed delivery evidence among workspace rollover candidates. */
+export function collectDeliveredPhaseKeys(
+  db: SqliteDb,
+  tasks: TaskEntity[],
+  limit = 300
+): string[] {
+  const candidates = collectRolledOutPhaseKeys(db, limit);
+  const delivered: string[] = [];
+  for (const phaseKey of candidates) {
+    const closeout = buildPhaseCloseoutReadiness({ tasks, phaseKey });
+    if (closeout.passed) {
+      delivered.push(phaseKey);
+    }
+  }
+  return delivered;
+}
+
+/** Unique phase keys rolled off via `set_current_phase` events (newest events first, capped). */
+export function collectRolledOutPhaseKeys(db: SqliteDb, limit = 300): string[] {
+  const out = new Set<string>();
+  if (!workspaceStatusEventsReadable(db)) {
+    return [];
+  }
+  const rows = db
+    .prepare(
+      `SELECT details_json
+       FROM kit_workspace_status_events
+       WHERE event_kind = 'set_current_phase'
+       ORDER BY id DESC
+       LIMIT ?`
+    )
+    .all(limit) as Array<{ details_json: string }>;
+  for (const row of rows) {
+    try {
+      const details = JSON.parse(row.details_json) as Record<string, unknown>;
+      const prior =
+        typeof details.previousCurrentKitPhase === "string"
+          ? details.previousCurrentKitPhase.trim()
+          : "";
+      if (prior.length > 0) {
+        out.add(prior);
+      }
+    } catch {
+      /* Ignore malformed historical details. */
+    }
+  }
+  return [...out].sort((a, b) => {
+    const ao = parseLeadingPhaseOrdinal(a);
+    const bo = parseLeadingPhaseOrdinal(b);
+    if (ao !== null && bo !== null && ao !== bo) {
+      return ao - bo;
+    }
+    return a.localeCompare(b);
+  });
 }
 
 /** True when a live `set-current-phase` rolled workspace off this phase key. */
@@ -256,10 +316,13 @@ export function buildDashboardCurrentPhaseDelivery(args: {
   });
   let released = false;
   if (phaseKey) {
-    if (args.db && wasWorkspacePhaseRolledOut(args.db, phaseKey)) {
+    const legacyMax = resolveLegacyDeliveredMaxOrdinal(args.effectiveConfig);
+    if (isPhaseLegacyDeliveredByOrdinal(phaseKey, legacyMax)) {
       released = true;
-    } else if (isPhaseBehindWorkspaceCurrent(phaseKey, args.workspaceStatus)) {
-      released = true;
+    } else if (args.db) {
+      released =
+        wasWorkspacePhaseRolledOut(args.db, phaseKey) &&
+        buildPhaseCloseoutReadiness({ tasks: args.tasks, phaseKey }).passed;
     }
   }
 

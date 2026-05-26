@@ -21,11 +21,37 @@ import {
 import { renderStatusTabInnerHtml } from "../status/render-status-tab.js";
 import { renderConfigPanelShellHtml } from "../config/config-panel-shell.js";
 
-function phaseScheduleFocusFromWorkspace(ws: Record<string, unknown> | null | undefined): PhaseScheduleFocus {
+function phaseScheduleFocusFromWorkspace(
+  ws: Record<string, unknown> | null | undefined,
+  releasedPhaseKeys?: readonly string[],
+  legacyDeliveredMaxOrdinal?: number | null
+): PhaseScheduleFocus {
+  const released =
+    releasedPhaseKeys && releasedPhaseKeys.length > 0 ? new Set(releasedPhaseKeys) : undefined;
   return {
     currentKitPhase: ws?.currentKitPhase != null ? String(ws.currentKitPhase) : null,
-    nextKitPhase: ws?.nextKitPhase != null ? String(ws.nextKitPhase) : null
+    nextKitPhase: ws?.nextKitPhase != null ? String(ws.nextKitPhase) : null,
+    releasedPhaseKeys: released,
+    legacyDeliveredMaxOrdinal
   };
+}
+
+function readDeliveredPhaseKeys(data: Record<string, unknown>): string[] {
+  if (Array.isArray(data.deliveredPhaseKeys)) {
+    return (data.deliveredPhaseKeys as unknown[]).filter((k): k is string => typeof k === "string");
+  }
+  if (Array.isArray(data.rolledOutPhaseKeys)) {
+    return (data.rolledOutPhaseKeys as unknown[]).filter((k): k is string => typeof k === "string");
+  }
+  return [];
+}
+
+function readLegacyDeliveredMaxOrdinal(data: Record<string, unknown>): number | null {
+  const raw = data.legacyDeliveredMaxOrdinal;
+  if (typeof raw === "number" && Number.isFinite(raw) && raw >= 0) {
+    return Math.floor(raw);
+  }
+  return null;
 }
 
 function parsePhaseCatalogRows(phaseSlice: Record<string, unknown> | undefined): PhaseCatalogListRow[] {
@@ -2350,10 +2376,10 @@ function renderReadyPhaseBuckets(
   emptyMessage: string,
   phaseTrackPrefix: string,
   workspaceStatus: Record<string, unknown> | null,
+  phaseFocus: PhaseScheduleFocus,
   catalog: Map<string, PhaseCatalogListRow>
 ): string {
   const buckets = phaseBucketsNonEmpty(phaseBuckets);
-  const phaseFocus = phaseScheduleFocusFromWorkspace(workspaceStatus);
   const wsCur =
     workspaceStatus?.currentKitPhase != null ? String(workspaceStatus.currentKitPhase).trim() : "";
   const wsNext =
@@ -3178,7 +3204,7 @@ function renderApprovalInboxSection(queue: unknown): string {
         id +
         '" data-task-title="' +
         title +
-        '" title="review-item accept_edited">Accept edited</button>' +
+        '" title="review-item accept_edited">Accept Edited.</button>' +
         "</div></div>"
       );
     })
@@ -3674,7 +3700,9 @@ function renderEditorIntegrationEmbed(editorIntegration: unknown): string {
 /** Phase roster from `dashboard-summary.systemStatus.phase.phaseCatalog` (Phase 88+). */
 export function renderPhaseCatalogOverviewSection(
   phaseSlice: Record<string, unknown> | null | undefined,
-  workspaceStatus?: Record<string, unknown> | null
+  workspaceStatus?: Record<string, unknown> | null,
+  releasedPhaseKeys?: readonly string[],
+  legacyDeliveredMaxOrdinal?: number | null
 ): string {
   if (!phaseSlice || typeof phaseSlice !== "object") {
     return "";
@@ -3707,11 +3735,21 @@ export function renderPhaseCatalogOverviewSection(
     inner =
       '<p class="muted">No phases in roster yet — set workspace current/next, assign tasks to a phase, or register a catalog entry.</p>';
   } else {
-    const narrow = buildNarrowPhaseRosterRows(phases, rosterContext);
+    const narrow = buildNarrowPhaseRosterRows(
+      phases,
+      rosterContext,
+      releasedPhaseKeys,
+      legacyDeliveredMaxOrdinal
+    );
     const rosterRows = narrow.ok
       ? narrow.rows
       : workspaceCurrent.length === 0
-        ? buildPhaseRosterRowsWhenNoCurrent(phases, rosterContext)
+        ? buildPhaseRosterRowsWhenNoCurrent(
+            phases,
+            rosterContext,
+            releasedPhaseKeys,
+            legacyDeliveredMaxOrdinal
+          )
         : [];
     if (rosterRows.length === 0) {
       inner =
@@ -3719,7 +3757,11 @@ export function renderPhaseCatalogOverviewSection(
           ? '<p class="muted">Set <b>next phase</b> in workspace status, or use <b>Start</b> on a phase below when the roster lists phases.</p>'
           : '<p class="muted">Set a numeric workspace <b>current phase</b> to show the last delivered phase, the active one, and upcoming phases here.</p>';
     } else {
-      const rosterFocus = phaseScheduleFocusFromWorkspace(rosterContext);
+      const rosterFocus = phaseScheduleFocusFromWorkspace(
+        rosterContext,
+        releasedPhaseKeys,
+        legacyDeliveredMaxOrdinal
+      );
       let rows = "";
       for (const r of rosterRows) {
         const sd = r.shortDescription != null ? String(r.shortDescription).trim() : "";
@@ -4272,7 +4314,9 @@ export function renderDashboardRootInnerHtml(
   const d = p.data ?? {};
   const ss = (d.stateSummary as Record<string, unknown>) || {};
   const ws = (d.workspaceStatus as Record<string, unknown> | null | undefined) ?? null;
-  const phaseFocus = phaseScheduleFocusFromWorkspace(ws);
+  const deliveredPhaseKeys = readDeliveredPhaseKeys(d);
+  const legacyDeliveredMaxOrdinal = readLegacyDeliveredMaxOrdinal(d);
+  const phaseFocus = phaseScheduleFocusFromWorkspace(ws, deliveredPhaseKeys, legacyDeliveredMaxOrdinal);
   const phaseSystemSlice =
     d.systemStatus && typeof d.systemStatus === "object"
       ? ((d.systemStatus as Record<string, unknown>).phase as Record<string, unknown> | undefined)
@@ -4415,6 +4459,7 @@ export function renderDashboardRootInnerHtml(
           "No ready tasks.",
           "rdy",
           ws as Record<string, unknown> | null,
+          phaseFocus,
           phaseCatalogLookup
         ),
       false,
@@ -4538,7 +4583,12 @@ export function renderDashboardRootInnerHtml(
       totalDoneCount,
       humanGatesCount
     ) +
-    renderPhaseCatalogOverviewSection(phaseSystemSlice, ws as Record<string, unknown> | null) +
+    renderPhaseCatalogOverviewSection(
+      phaseSystemSlice,
+      ws as Record<string, unknown> | null,
+      deliveredPhaseKeys,
+      legacyDeliveredMaxOrdinal
+    ) +
     renderWorkspaceBlockersPendingSection(ws as Record<string, unknown> | null) +
     renderTeamExecutionSection(d.teamExecution) +
     renderSubagentRegistrySection(d.subagentRegistry) +

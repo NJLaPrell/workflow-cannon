@@ -396,6 +396,16 @@ export type DashboardSummaryData = {
   /** Phase Readiness Complete & Release gating — closeout audit + release/rollover detection. */
   currentPhaseDelivery: DashboardCurrentPhaseDelivery;
   /**
+   * Phase keys with closeout-passed delivery evidence among phases rolled off via workspace events.
+   * Drives Delivered vs Future schedule tags in queue buckets and roster.
+   */
+  deliveredPhaseKeys?: string[];
+  /**
+   * When set, numeric phase keys with leading ordinal in `[0, N]` are treated as delivered
+   * (pre–delivery-evidence history). From `kit.phaseDelivery.legacyDeliveredMaxOrdinal`.
+   */
+  legacyDeliveredMaxOrdinal?: number | null;
+  /**
    * Past-phase journal rollup for dashboard (phases with ordinal before workspace current).
    * Omitted when phase journal SQLite is unavailable; empty array when no past notes exist.
    */

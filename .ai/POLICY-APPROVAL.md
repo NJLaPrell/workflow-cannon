@@ -37,7 +37,7 @@ The Dashboard webview drawer is an **approval surface** for gated mutations: the
 | **Routine** | Confirm the action; no rationale textarea | Structured auto string (`dashboard\|workflow=…\|command=…\|tier=routine\|…`) from `buildDashboardPolicyApproval` |
 | **Elevated** | Drawer shows policy explainer + required rationale field | Same structured prefix + `\|detail=<human text>` |
 
-**Matrix:** `extensions/cursor-workflow-cannon/src/policy/dashboard-policy-tier.ts` (`DASHBOARD_POLICY_TIER_MATRIX`). Elevated examples: batch accept, critical phase-note dismiss, rewind checkpoint, block/cancel assignment, register subagent, review-item accept with edits.
+**Matrix:** `extensions/cursor-workflow-cannon/src/policy/dashboard-policy-tier.ts` (`DASHBOARD_POLICY_TIER_MATRIX`). Elevated examples: critical phase-note dismiss, rewind checkpoint, block/cancel assignment, register subagent. Routine review-item paths (accept, decline, accept_edited) auto-fill policy traces from the drawer.
 
 **Agents / terminal:** Do **not** paste Dashboard auto-rationale boilerplate on CLI runs — supply task-specific prose in JSON **`policyApproval.rationale`** as usual.
 

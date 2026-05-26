@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import Database from "better-sqlite3";
 import {
   buildDashboardCurrentPhaseDelivery,
+  collectDeliveredPhaseKeys,
+  collectRolledOutPhaseKeys,
   countPhaseQueueMetrics,
   wasWorkspacePhaseRolledOut
 } from "../dist/modules/task-engine/dashboard/phase-delivery-status.js";
@@ -54,6 +56,54 @@ test("wasWorkspacePhaseRolledOut detects previousCurrentKitPhase on set_current_
   );
   assert.equal(wasWorkspacePhaseRolledOut(db, "98"), true);
   assert.equal(wasWorkspacePhaseRolledOut(db, "99"), false);
+  db.close();
+});
+
+test("collectRolledOutPhaseKeys gathers unique previousCurrentKitPhase values", () => {
+  const db = openStatusDb();
+  db.prepare(
+    `INSERT INTO kit_workspace_status_events (
+      created_at, event_kind, command, revision_before, revision_after, details_json
+    ) VALUES (?, 'set_current_phase', 'set-current-phase', 0, 1, ?)`
+  ).run(
+    "2026-01-01T00:00:00.000Z",
+    JSON.stringify({ previousCurrentKitPhase: "98" })
+  );
+  db.prepare(
+    `INSERT INTO kit_workspace_status_events (
+      created_at, event_kind, command, revision_before, revision_after, details_json
+    ) VALUES (?, 'set_current_phase', 'set-current-phase', 1, 2, ?)`
+  ).run(
+    "2026-01-02T00:00:00.000Z",
+    JSON.stringify({ previousCurrentKitPhase: "99" })
+  );
+  assert.deepEqual(collectRolledOutPhaseKeys(db), ["98", "99"]);
+  db.close();
+});
+
+test("collectDeliveredPhaseKeys excludes rolled-out phases without closeout readiness", () => {
+  const db = openStatusDb();
+  db.prepare(
+    `INSERT INTO kit_workspace_status_events (
+      created_at, event_kind, command, revision_before, revision_after, details_json
+    ) VALUES (?, 'set_current_phase', 'set-current-phase', 0, 1, ?)`
+  ).run(
+    "2026-01-01T00:00:00.000Z",
+    JSON.stringify({ previousCurrentKitPhase: "113" })
+  );
+  const tasks = [
+    {
+      id: "T1",
+      status: "ready",
+      phaseKey: "113",
+      type: "phase_delivery",
+      title: "Still open",
+      createdAt: "",
+      updatedAt: ""
+    }
+  ];
+  assert.deepEqual(collectRolledOutPhaseKeys(db), ["113"]);
+  assert.deepEqual(collectDeliveredPhaseKeys(db, tasks), []);
   db.close();
 });
 

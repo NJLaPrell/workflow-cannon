@@ -666,6 +666,7 @@ export function validatePersistedConfigDocument(
         key !== "lifecycleHooks" &&
         key !== "autoCheckpoint" &&
         key !== "phaseJournal" &&
+        key !== "phaseDelivery" &&
         key !== "cae"
       ) {
         throw new Error(`config-invalid(${label}): unknown kit.${key}`);
@@ -839,6 +840,33 @@ export function validatePersistedConfigDocument(
           REGISTRY["kit.phaseJournal.requirePolicyApprovalForCriticalDismissSupersede"]!,
           pj.requirePolicyApprovalForCriticalDismissSupersede
         );
+      }
+    }
+    if (k.phaseDelivery !== undefined) {
+      if (
+        typeof k.phaseDelivery !== "object" ||
+        k.phaseDelivery === null ||
+        Array.isArray(k.phaseDelivery)
+      ) {
+        throw new Error(`config-invalid(${label}): kit.phaseDelivery must be an object`);
+      }
+      const pd = k.phaseDelivery as Record<string, unknown>;
+      for (const pk of Object.keys(pd)) {
+        if (pk !== "legacyDeliveredMaxOrdinal") {
+          throw new Error(`config-invalid(${label}): unknown kit.phaseDelivery.${pk}`);
+        }
+      }
+      if (pd.legacyDeliveredMaxOrdinal !== undefined) {
+        validateValueForMetadata(
+          REGISTRY["kit.phaseDelivery.legacyDeliveredMaxOrdinal"]!,
+          pd.legacyDeliveredMaxOrdinal
+        );
+        const n = pd.legacyDeliveredMaxOrdinal;
+        if (typeof n !== "number" || !Number.isFinite(n) || n < 0 || Math.floor(n) !== n) {
+          throw new Error(
+            `config-invalid(${label}): kit.phaseDelivery.legacyDeliveredMaxOrdinal must be a non-negative integer`
+          );
+        }
       }
     }
     if (k.cae !== undefined) {

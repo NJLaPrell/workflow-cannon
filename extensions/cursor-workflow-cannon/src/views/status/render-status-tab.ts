@@ -6,6 +6,24 @@ import { escapeHtml } from "../dashboard/render-dashboard.js";
 import { buildNarrowPhaseRosterRows, type PhaseCatalogListRow } from "../phase-roster-display.js";
 import { renderPhaseScheduleTagHtml, resolvePhaseScheduleTag } from "../phase-schedule-tag.js";
 
+function readDeliveredPhaseKeysFromDashboard(data: Record<string, unknown>): string[] {
+  if (Array.isArray(data.deliveredPhaseKeys)) {
+    return (data.deliveredPhaseKeys as unknown[]).filter((k): k is string => typeof k === "string");
+  }
+  if (Array.isArray(data.rolledOutPhaseKeys)) {
+    return (data.rolledOutPhaseKeys as unknown[]).filter((k): k is string => typeof k === "string");
+  }
+  return [];
+}
+
+function readLegacyDeliveredMaxOrdinalFromDashboard(data: Record<string, unknown>): number | null {
+  const raw = data.legacyDeliveredMaxOrdinal;
+  if (typeof raw === "number" && Number.isFinite(raw) && raw >= 0) {
+    return Math.floor(raw);
+  }
+  return null;
+}
+
 /**
  * Component-level CSS used by the Status tab inside the Dashboard sidebar
  * webview (`DashboardViewProvider`). Excludes document-level resets so it
@@ -275,7 +293,14 @@ export function renderStatusTabInnerHtml(
         catBlock =
           '<p class="wc-muted">Phase roster: no rows yet (workspace phases above; task-assigned phases appear here when present).</p>';
       } else {
-        const narrow = buildNarrowPhaseRosterRows(catPhases, phaseRec);
+        const deliveredKeys = readDeliveredPhaseKeysFromDashboard(d);
+        const legacyDeliveredMaxOrdinal = readLegacyDeliveredMaxOrdinalFromDashboard(d);
+        const narrow = buildNarrowPhaseRosterRows(
+          catPhases,
+          phaseRec,
+          deliveredKeys,
+          legacyDeliveredMaxOrdinal
+        );
         if (!narrow.ok) {
           catBlock =
             '<p class="wc-muted">Phase roster: set a numeric workspace <b>current phase</b> to show last delivered, current, and future phases.</p>';
@@ -283,7 +308,10 @@ export function renderStatusTabInnerHtml(
           const rosterFocus = {
             currentKitPhase:
               typeof phaseRec.currentKitPhase === "string" ? phaseRec.currentKitPhase : null,
-            nextKitPhase: typeof phaseRec.nextKitPhase === "string" ? phaseRec.nextKitPhase : null
+            nextKitPhase: typeof phaseRec.nextKitPhase === "string" ? phaseRec.nextKitPhase : null,
+            releasedPhaseKeys:
+              deliveredKeys.length > 0 ? new Set(deliveredKeys) : undefined,
+            legacyDeliveredMaxOrdinal
           };
           let catRows = "";
           for (const r of narrow.rows) {
