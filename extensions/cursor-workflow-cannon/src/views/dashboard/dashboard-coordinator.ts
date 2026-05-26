@@ -46,8 +46,18 @@ export type DashboardCoordinatorDeps = {
  */
 export class DashboardCoordinator {
   private mutationActive = false;
+  private readonly registeredDrawerWorkflows = new Set<string>();
 
   constructor(private readonly deps: DashboardCoordinatorDeps) {}
+
+  /** Marks a drawer workflow as coordinator-owned (accept-proposed, etc.). */
+  registerDrawerWorkflow(workflowId: string): void {
+    this.registeredDrawerWorkflows.add(workflowId);
+  }
+
+  isDrawerWorkflowRegistered(workflowId: string): boolean {
+    return this.registeredDrawerWorkflows.has(workflowId);
+  }
 
   get sideEffects(): SideEffectBus {
     return this.deps.sideEffects;
