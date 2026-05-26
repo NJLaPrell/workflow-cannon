@@ -77,9 +77,15 @@ test("deriveTaskStateSyncState covers missing, behind, current, conflict", () =>
   );
 });
 
+function ensureGitIdentity(cwd) {
+  runGit(cwd, ["config", "user.email", "test@example.com"]);
+  runGit(cwd, ["config", "user.name", "Test"]);
+}
+
 test("task-state-status reports missing without branch", async () => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "wk-task-state-missing-"));
   runGit(tmp, ["init"]);
+  ensureGitIdentity(tmp);
   runGit(tmp, ["commit", "--allow-empty", "-m", "empty"]);
   const result = await runTaskStateStatus({ workspacePath: tmp, config: {} }, {});
   assert.equal(result.ok, true);

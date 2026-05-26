@@ -139,6 +139,8 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
     "sync-task-store-after-merge",
     "synthesize-transcript-churn",
     "task-persistence-readiness",
+    "task-state-hydrate",
+    "task-state-status",
     "unblock-task",
     "uninstall-git-hooks",
     "update-behavior-profile",
