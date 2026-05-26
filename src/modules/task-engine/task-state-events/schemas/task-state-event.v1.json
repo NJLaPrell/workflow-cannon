@@ -93,7 +93,11 @@
           "maxItems": 64,
           "items": { "type": "string", "minLength": 1, "maxLength": 128 }
         },
-        "payloadDigest": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+        "payloadDigest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "values": {
+          "type": "object",
+          "additionalProperties": true
+        }
       }
     },
     "taskTransitionedPayload": {
