@@ -321,6 +321,7 @@ test("renderDashboardRootInnerHtml renders phase roster deliverables inline edit
   assert.match(html, /data-wc-action="phase-roster-start"/);
   assert.match(html, /data-wc-action="phase-deliverables-edit"/);
   assert.match(html, /dash-phase-edit-anchor/);
+  assert.match(html, /dash-phase-roster-status-inner/);
   assert.match(html, /dash-phase-roster-actions/);
   assert.match(html, /Register Phase\./);
   assert.doesNotMatch(html, /Register future phase/);
@@ -1574,6 +1575,23 @@ test("lookupProposedTaskPhaseKey resolves from phase buckets and top rows", () =
   assert.equal(lookupProposedTaskPhaseKey(data, "T100407"), "101");
 });
 
+test("renderUpNextCardHtml puts View action inline without footer tags", () => {
+  const html = renderUpNextCardHtml({
+    ws: { currentKitPhase: "108", nextKitPhase: "109" },
+    phaseSnapshot: null,
+    suggestedNext: { id: "T501", title: "Ship the thing", phaseKey: "108" },
+    readyTop: [{ id: "T501", title: "Ship the thing", phaseKey: "108" }],
+    readyCount: 1,
+    firstWishlistOpen: null,
+    humanGatesCount: 0
+  });
+  assert.match(html, /wc-rec-title-row/);
+  assert.match(html, /Ship the thing[\s\S]*data-wc-action="task-detail"/);
+  assert.match(html, />View &rarr;<\/button>/);
+  assert.doesNotMatch(html, /wc-rec-footer/);
+  assert.doesNotMatch(html, /wc-rec-tag/);
+});
+
 test("renderUpNextCardHtml surfaces phase closeout when delivery queue is drained", () => {
   const html = renderUpNextCardHtml({
     ws: { currentKitPhase: "108", nextKitPhase: "109" },
@@ -1586,6 +1604,8 @@ test("renderUpNextCardHtml surfaces phase closeout when delivery queue is draine
   });
   assert.match(html, /wc-rec-next-closeout/);
   assert.match(html, /Complete &amp; Release/);
+  assert.match(html, /wc-rec-title-row/);
+  assert.doesNotMatch(html, /wc-rec-tag/);
   assert.doesNotMatch(html, /Later phase/);
 });
 

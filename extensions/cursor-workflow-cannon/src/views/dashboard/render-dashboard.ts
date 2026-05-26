@@ -281,18 +281,6 @@ export function renderActiveFocusHtml(raw: string): string {
   return renderMarkdownBoldAfterEscape(escapeHtml(raw));
 }
 
-function recommendedNextCategoryFromRow(row: Record<string, unknown>): "execution" | "improvement" {
-  const type = String(row.type ?? "").trim().toLowerCase();
-  if (type === "improvement") {
-    return "improvement";
-  }
-  const id = String(row.id ?? "").trim();
-  if (/^imp-/i.test(id)) {
-    return "improvement";
-  }
-  return "execution";
-}
-
 /** Stable phase key from a dashboard task/list row. */
 export function dashboardRowPhaseKey(row: unknown): string {
   if (!row || typeof row !== "object") {
@@ -474,7 +462,7 @@ export function renderUpNextCardHtml(args: UpNextCardRenderArgs): string {
   if (snapForPhase && !phaseDeliveryQueueDrainedForUpNext(snapForPhase)) {
     const candidate = pickFirstRowInCurrentPhase(args.phaseWorkCandidates ?? [], curPhase);
     if (candidate) {
-      return renderRecommendedNextCard(candidate, { statusTag: taskRowStatusTag(candidate) });
+      return renderRecommendedNextCard(candidate);
     }
     return renderRecommendedNextPhaseWorkCard(curPhase, snapForPhase);
   }
@@ -511,19 +499,6 @@ function pickFirstRowInCurrentPhase(rows: unknown[], currentPhaseKey: string): u
   return null;
 }
 
-function taskRowStatusTag(row: unknown): string {
-  if (!row || typeof row !== "object") {
-    return "task";
-  }
-  const status = String((row as { status?: unknown }).status ?? "")
-    .trim()
-    .toLowerCase();
-  if (status.length > 0) {
-    return status.replace(/_/g, "-");
-  }
-  return "task";
-}
-
 /** True when no runnable ready work remains in the current phase queue snapshot. */
 function phaseDeliveryQueueDrainedForUpNext(snapshot: PhaseSnapshot): boolean {
   if (snapshot.closeoutPassed) {
@@ -535,30 +510,40 @@ function phaseDeliveryQueueDrainedForUpNext(snapshot: PhaseSnapshot): boolean {
   return snapshot.remainingCount === 0 && snapshot.queue.inProgress === 0;
 }
 
+function renderUpNextTitleRow(title: string, actionsHtml: string): string {
+  const actionsBlock =
+    actionsHtml.length > 0
+      ? '<span class="wc-rec-title-actions">' + actionsHtml + "</span>"
+      : "";
+  return (
+    '<div class="wc-rec-title-row">' +
+    '<p class="wc-rec-title">' +
+    escapeHtml(title) +
+    "</p>" +
+    actionsBlock +
+    "</div>"
+  );
+}
+
 function renderRecommendedNextPickPhaseCard(nextKitPhase: string): string {
   const next = nextKitPhase.trim();
   if (next.length > 0) {
     const pk = escapeHtmlAttr(next);
     const title = "Start Phase " + next;
-    return (
-      '<div class="wc-rec-next wc-rec-next-pick-phase">' +
-      '<div class="wc-rec-header">' +
-      '<span class="wc-rec-label">&#9733; Up next</span>' +
-      "</div>" +
-      '<div class="wc-rec-title-row">' +
-      '<p class="wc-rec-title">' +
-      escapeHtml(title) +
-      "</p>" +
-      '<span class="wc-rec-title-actions">' +
+    const startBtn =
       '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="phase-roster-start" data-wc-phase-key="' +
       pk +
       '" title="Set Phase ' +
       pk +
       ' as the active workspace phase">' +
       escapeHtml(title) +
-      " &rarr;</button>" +
-      "</span>" +
+      " &rarr;</button>";
+    return (
+      '<div class="wc-rec-next wc-rec-next-pick-phase">' +
+      '<div class="wc-rec-header">' +
+      '<span class="wc-rec-label">&#9733; Up next</span>' +
       "</div>" +
+      renderUpNextTitleRow(title, startBtn) +
       "</div>"
     );
   }
@@ -589,27 +574,19 @@ function renderRecommendedNextPhaseWorkCard(curPhase: string, snapshot: PhaseSna
       ? parts.join(" · ") + " — open the Queue tab filtered to this phase."
       : "Open the Queue tab to continue delivery work in this phase.";
   const pk = escapeHtmlAttr(curPhase);
+  const queueBtn =
+    '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="open-queue-for-phase" data-wc-phase-key="' +
+    pk +
+    '" title="Open Queue tab for this phase">Queue &rarr;</button>';
   return (
     '<div class="wc-rec-next wc-rec-next-phase-work">' +
     '<div class="wc-rec-header">' +
     '<span class="wc-rec-label">&#9733; Up next</span>' +
     "</div>" +
-    '<p class="wc-rec-title">Continue Phase ' +
-    escapeHtml(curPhase) +
-    " delivery work</p>" +
+    renderUpNextTitleRow("Continue Phase " + curPhase + " delivery work", queueBtn) +
     '<p class="muted wc-rec-subtitle">' +
     escapeHtml(detail) +
     "</p>" +
-    '<div class="wc-rec-footer">' +
-    '<span class="wc-rec-tag wc-rec-tag-phase">Phase ' +
-    escapeHtml(curPhase) +
-    "</span>" +
-    '<span class="wc-rec-footer-actions">' +
-    '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="open-queue-for-phase" data-wc-phase-key="' +
-    pk +
-    '" title="Open Queue tab for this phase">Queue &rarr;</button>' +
-    "</span>" +
-    "</div>" +
     "</div>"
   );
 }
@@ -667,69 +644,37 @@ function renderRecommendedNextCloseoutCard(args: {
         " &rarr;</button>"
       : "";
 
+  const actionsHtml = releaseBtn + startNextBtn;
+
   return (
     '<div class="wc-rec-next wc-rec-next-closeout">' +
     '<div class="wc-rec-header">' +
     '<span class="wc-rec-label">&#9733; Up next</span>' +
     "</div>" +
-    '<p class="wc-rec-title">' +
-    escapeHtml(title) +
-    "</p>" +
+    renderUpNextTitleRow(title, actionsHtml) +
     '<p class="muted wc-rec-subtitle">' +
     escapeHtml(detail) +
     "</p>" +
-    '<div class="wc-rec-footer">' +
-    '<span class="wc-rec-tag wc-rec-tag-closeout">closeout</span>' +
-    '<span class="wc-rec-tag wc-rec-tag-phase">Phase ' +
-    escapeHtml(cur) +
-    "</span>" +
-    '<span class="wc-rec-footer-actions">' +
-    releaseBtn +
-    startNextBtn +
-    "</span>" +
-    "</div>" +
     "</div>"
   );
 }
 
 /** ★ "Recommended Next" card — kit `suggestedNext` (phase-aware ready ordering). */
-function renderRecommendedNextCard(
-  item: unknown,
-  options?: { statusTag?: string }
-): string {
+function renderRecommendedNextCard(item: unknown): string {
   if (!item || typeof item !== "object") {
     return "";
   }
   const row = item as {
     id?: unknown;
     title?: unknown;
-    phase?: unknown;
-    phaseKey?: unknown;
-    type?: unknown;
-    priority?: unknown;
-    status?: unknown;
   };
   const id = String(row.id ?? "").trim();
   const title = String(row.title ?? "").trim();
-  const phaseKey = row.phaseKey != null ? String(row.phaseKey).trim() : "";
-  const phaseLabel = row.phase != null ? String(row.phase).trim() : "";
   if (!title && !id) {
     return "";
   }
   const displayTitle = title || id;
   const idAttr = id ? escapeHtmlAttr(id) : "";
-  const phaseDisplay =
-    phaseKey.length > 0 ? "Phase " + phaseKey : phaseLabel.length > 0 ? phaseLabel : "";
-  const phaseTag =
-    phaseDisplay.length > 0
-      ? '<span class="wc-rec-tag wc-rec-tag-phase">' + escapeHtml(phaseDisplay) + "</span>"
-      : "";
-  const category = recommendedNextCategoryFromRow(row as Record<string, unknown>);
-  const catTag =
-    '<span class="wc-rec-tag wc-rec-tag-cat">' + escapeHtml(category) + "</span>";
-  const statusTag =
-    options?.statusTag ??
-    (String(row.status ?? "").trim().toLowerCase() === "ready" ? "ready" : taskRowStatusTag(row));
   const viewBtn =
     id.length > 0
       ? '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="task-detail" data-task-id="' +
@@ -741,17 +686,7 @@ function renderRecommendedNextCard(
     '<div class="wc-rec-header">' +
     '<span class="wc-rec-label">&#9733; Up next</span>' +
     "</div>" +
-    '<p class="wc-rec-title">' +
-    escapeHtml(displayTitle) +
-    "</p>" +
-    '<div class="wc-rec-footer">' +
-    '<span class="wc-rec-tag wc-rec-tag-status">' +
-    escapeHtml(statusTag) +
-    "</span>" +
-    catTag +
-    phaseTag +
-    viewBtn +
-    "</div>" +
+    renderUpNextTitleRow(displayTitle, viewBtn) +
     "</div>"
   );
 }
@@ -778,28 +713,12 @@ function renderRecommendedNextWishlistCard(item: unknown): string {
         idAttr +
         '" title="Prefill wishlist intake chat">Process &rarr;</button>'
       : "";
-  const viewBtn =
-    wishlistId.length > 0
-      ? '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="wishlist-view" data-wishlist-id="' +
-        idAttr +
-        '" title="Open wishlist fields in the editor">View</button>'
-      : "";
   return (
     '<div class="wc-rec-next wc-rec-next-wishlist">' +
     '<div class="wc-rec-header">' +
     '<span class="wc-rec-label">&#9733; Up next</span>' +
     "</div>" +
-    "<p class=\"wc-rec-title\">" +
-    escapeHtml(displayTitle) +
-    "</p>" +
-    '<div class="wc-rec-footer">' +
-    '<span class="wc-rec-tag wc-rec-tag-wishlist">wishlist</span>' +
-    '<span class="wc-rec-tag wc-rec-tag-open">open</span>' +
-    '<span class="wc-rec-footer-actions">' +
-    processBtn +
-    viewBtn +
-    "</span>" +
-    "</div>" +
+    renderUpNextTitleRow(displayTitle, processBtn) +
     "</div>"
   );
 }
@@ -3836,7 +3755,7 @@ export function renderPhaseCatalogOverviewSection(
             : ' <span class="wc-context-help dash-phase-catalog-hint" tabindex="0" role="button" aria-label="Not in planning catalog" data-wc-help-text="Not in the planning catalog yet. You can still edit deliverables here. Use Register Phase. to add a catalog row.">' +
               '<span class="wc-context-help-icon" aria-hidden="true">?</span></span>';
         rows +=
-          `<tr><td class="dash-phase-roster-col-phase">${renderPhaseRosterPhaseLink(r.phaseKey)}</td><td class="dash-phase-roster-col-status">${statusTag}${noCatalogHint}</td><td class="dash-phase-roster-col-deliverables dash-phase-deliverables-cell"><div class="dash-phase-deliverables" data-wc-phase-row="${phaseKeyAttr}">` +
+          `<tr><td class="dash-phase-roster-col-phase">${renderPhaseRosterPhaseLink(r.phaseKey)}</td><td class="dash-phase-roster-col-status"><span class="dash-phase-roster-status-inner">${statusTag}${noCatalogHint}</span></td><td class="dash-phase-roster-col-deliverables dash-phase-deliverables-cell"><div class="dash-phase-deliverables" data-wc-phase-row="${phaseKeyAttr}">` +
           '<div class="dash-phase-deliverables-body">' +
           `<span class="dash-phase-deliverables-text">${desc}</span>` +
           `<div class="dash-phase-deliverables-editor" hidden><input type="text" class="dash-phase-deliverables-input wc-input" data-wc-phase-input="${phaseKeyAttr}" value="${inputValue}" aria-label="Deliverables for phase ${phaseKeyAttr}" /></div>` +
@@ -4060,7 +3979,7 @@ function renderStatusSectionHtml(
 
 /**
  * Render the full status panel (header, This Workspace, Planning Data, Agent
- * Profile, Phase & Workspace, Coordination, Doctor, Modules, CAE, Task Counts)
+ * Profile, Phase & Workspace, Coordination, Doctor, Modules, CAE)
  * inside the Dashboard sidebar's Status tab. The standalone Status webview
  * panel was sunsetted; this is now the only host for `renderStatusTabInnerHtml`.
  */
