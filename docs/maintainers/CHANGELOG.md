@@ -8,6 +8,22 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [0.99.8] - 2026-05-26
+
+Patch — **Phase 113 dashboard intent coordinator** (snapshot-driven drawer UX, mutation holds, lazy-load merge).
+
+### Added
+
+- `DashboardCoordinator` with `SideEffectBus`, drawer intents (`drawer.submit` / `drawer.cancel`), and `wcHostSnapshot` applier in the webview.
+- `handleAcceptProposedDrawerSubmit` with snapshot progress and coordinator-driven toasts.
+- `.ai/adrs/ADR-dashboard-intent-snapshot-v1.md` (R1–R3 intent/snapshot contract).
+
+### Changed
+
+- Drawer submit/cancel route through `coordinator.dispatch`; refresh defers while `coordinator.isMutationActive()` with `refreshBusy` on host snapshot.
+- Removed legacy `wcDrawerProgress` / `wcDrawerValidation` / `wcDrawerClose` and `dashboardDrawerSubmitInFlight`; drawer UX is snapshot-only.
+- Merged Phase 108 shell-first lazy dashboard hydration with Phase 113 coordinator locks (light section refresh + host snapshot refresh busy).
+
 ## [0.99.7] - 2026-05-26
 
 Patch — **Phase 108 dashboard lazy loading** (shell-first paint, split hydration, regression gates).

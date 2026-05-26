@@ -26,6 +26,8 @@ import {
   DashboardRefreshController,
   type DashboardRefreshMode
 } from "./dashboard-refresh-controller.js";
+import { DashboardCoordinator } from "./dashboard-coordinator.js";
+import { SideEffectBus } from "./dashboard-side-effects.js";
 import { DrawerSessionController } from "./drawer-session.js";
 import { buildDashboardWebviewBootstrapScript } from "./dashboard-webview-client.js";
 import type { DashboardSectionId, DashboardSectionLoadState } from "./dashboard-section-registry.js";
@@ -383,8 +385,14 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   private dashboardInteractionLocks = new Set<string>();
   private dashboardRefreshAfterInteraction = false;
 
+  /** Surfaced as wcHostSnapshot.interaction.refreshBusy (T100497). */
+  private dashboardRefreshBusy = false;
+
   /** Host drawer session state machine → wcDrawerState snapshots. */
   private drawerSessionHost?: DrawerSessionController;
+
+  /** Intent/snapshot coordinator scaffold (T100492); drawer flows migrate in T100493+. */
+  private dashboardCoordinator?: DashboardCoordinator;
 
   /** 0-based page for wishlist rows in `dashboard-summary` (5 per page). */
   private wishlistPage = 0;
@@ -394,8 +402,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   /** In-webview drawer session (register catalog, dismiss phase note, …). */
   private dashboardDrawerSession: DashboardDrawerSession | null = null;
 
-  /** Prevents duplicate drawerSubmit handling when message listeners stack or the webview double-fires. */
-  private dashboardDrawerSubmitInFlight = false;
+  /** Toasts/refresh scheduled after coordinator.runMutation (T100493). */
+  private drawerSubmitPendingEffects: Array<(bus: SideEffectBus) => void> = [];
 
   /** Prior webview message subscription — disposed before re-wiring resolveWebviewView. */
   private webviewMessageDisposable: vscode.Disposable | undefined;
@@ -442,9 +450,10 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   ): void {
     this.view = webviewView;
     const { webview } = webviewView;
-    this.drawerSessionHost = new DrawerSessionController((message) => {
-      void webview.postMessage(message);
+    this.drawerSessionHost = new DrawerSessionController(() => {
+      this.dashboardCoordinator?.emitSnapshot();
     });
+    this.initDashboardCoordinator(webview);
     this.dashboardGuidanceAuthoring = new GuidanceAuthoringExtensionSide({
       client: this.client,
       workspaceFolder: vscode.workspace.workspaceFolders?.[0],
@@ -871,41 +880,38 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         }
       }
       if (msg?.type === "drawerSubmit") {
-        if (this.dashboardDrawerSubmitInFlight) {
-          logWc("dashboard", "drawerSubmit ignored (already in flight)");
-          return;
-        }
         const rawVals = (msg as { values?: unknown }).values;
         const values = normalizeDrawerValues(rawVals);
         if (await this.dashboardGuidanceAuthoring?.handleCaeDrawerSubmitIfActive(values)) {
           return;
         }
         const session = this.dashboardDrawerSession;
+        const coordinator = this.dashboardCoordinator;
+        if (!coordinator) {
+          logWc("dashboard", "drawerSubmit ignored (coordinator not ready)");
+          return;
+        }
         logWc(
           "dashboard",
           session ? `drawerSubmit ${summarizeDrawerSession(session)}` : "drawerSubmit (no session)"
         );
-        this.dashboardDrawerSubmitInFlight = true;
-        this.beginDrawerSubmitRefreshHold();
-        let refreshed = false;
-        try {
-          refreshed = await this.handleDrawerSubmit(values);
-        } finally {
-          if (!this.dashboardDrawerSession) {
-            await this.closeDashboardDrawer();
-          }
-          this.endDrawerSubmitRefreshHold();
-        }
-        if (refreshed) {
-          await this.applyDashboardMutationInvalidation("task-queue");
-        }
+        await coordinator.dispatch({
+          type: "drawer.submit",
+          values,
+          sessionLabel: session ? summarizeDrawerSession(session) : "drawer submit"
+        });
       }
       if (msg?.type === "drawerCancel") {
         logWc("dashboard", "drawerCancel");
         if (await this.dashboardGuidanceAuthoring?.handleCaeDrawerCancelIfActive()) {
           return;
         }
-        await this.closeDashboardDrawer();
+        const coordinator = this.dashboardCoordinator;
+        if (coordinator) {
+          await coordinator.dispatch({ type: "drawer.cancel" });
+        } else {
+          await this.closeDashboardDrawer();
+        }
       }
       if (msg?.type === "dashboardAcceptProposedPhase") {
         const rawIds = typeof msg.taskIds === "string" ? msg.taskIds : "";
@@ -961,7 +967,6 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       this.staleDashboardSections.clear();
       this.webviewMessageDisposable?.dispose();
       this.webviewMessageDisposable = undefined;
-      this.dashboardDrawerSubmitInFlight = false;
       this.refreshController.notifyMutationEnd();
       this.client.setRefreshPaused(false);
       if (this.dashboardPollTimer) {
@@ -1680,7 +1685,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     const html = renderDrawerFormHtml(buildRegisterPhaseCatalogDrawerSpec());
     this.dashboardDrawerSession = { kind: "register-catalog" };
-    await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
+    await this.postWcDrawerOpen(html);
   }
 
   /** Update a phase roster Deliverables value via upsert-phase-catalog-entry with one mismatch retry. */
@@ -1987,7 +1992,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     this.dashboardDrawerSession = null;
     this.drawerSessionHost?.reset();
     logWc("dashboard", "drawer closed");
-    await this.view?.webview.postMessage({ type: "wcDrawerClose" });
+    this.dashboardCoordinator?.emitSnapshot();
   }
 
   /** Close drawer first; run notify without blocking submit lock release in the caller `finally`. */
@@ -2001,13 +2006,39 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     });
   }
 
+  private resetDrawerSubmitPendingEffects(): void {
+    this.drawerSubmitPendingEffects = [];
+  }
+
+  private flushDrawerSubmitPendingEffects(bus: SideEffectBus): void {
+    const pending = this.drawerSubmitPendingEffects;
+    this.drawerSubmitPendingEffects = [];
+    for (const run of pending) {
+      run(bus);
+    }
+  }
+
+  private queueDrawerSideEffect(run: (bus: SideEffectBus) => void): void {
+    this.drawerSubmitPendingEffects.push(run);
+  }
+
+  private queueDrawerNotify(message: string, severity: "info" | "error" = "info"): void {
+    this.queueDrawerSideEffect((bus) => bus.notify(message, severity));
+  }
+
+  private queueDrawerNotifyAfterClose(message: string, severity: "info" | "error" = "info"): void {
+    this.queueDrawerSideEffect((bus) => {
+      void this.closeDashboardDrawer().then(() => bus.notify(message, severity));
+    });
+  }
+
   private async openAddWishlistDrawer(): Promise<void> {
     if (this.dashboardDrawerSession) {
       return;
     }
     const html = renderDrawerFormHtml(buildAddWishlistDrawerSpec());
     this.dashboardDrawerSession = { kind: "add-wishlist" };
-    await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
+    await this.postWcDrawerOpen(html);
   }
 
   private async onTaskCommentsComingSoon(taskId: string, mode: "view" | "add"): Promise<void> {
@@ -2026,19 +2057,80 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
   }
 
-  private async postDrawerValidationToWebview(message: string): Promise<void> {
-    this.drawerSessionHost?.setValidationError(message);
-    await this.view?.webview.postMessage({ type: "wcDrawerValidation", message });
+  private async postWcDrawerOpen(html: string, workflowId = "drawer"): Promise<void> {
+    await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
+    this.drawerSessionHost?.open(workflowId);
+    this.dashboardCoordinator?.emitSnapshot();
   }
 
-  private async postDrawerProgressToWebview(label: string): Promise<void> {
+  private async postDrawerValidationToWebview(message: string): Promise<void> {
+    this.drawerSessionHost?.setValidationError(message);
+    this.dashboardCoordinator?.emitSnapshot();
+  }
+
+  /** Snapshot-first drawer progress (T100495+). */
+  private setDrawerMutationProgress(label: string): void {
     this.drawerSessionHost?.setSubmitting(label);
-    const webview = this.view?.webview;
-    if (!webview) {
+    this.dashboardCoordinator?.emitSnapshot();
+  }
+
+  private queueDrawerKitStateChanged(): void {
+    this.queueDrawerSideEffect(() => {
+      this.notifyKitStateChanged();
+    });
+  }
+
+  private initDashboardCoordinator(webview: vscode.Webview): void {
+    if (!this.drawerSessionHost) {
       return;
     }
-    await webview.postMessage({ type: "wcDrawerProgress", label });
-    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    const sideEffects = new SideEffectBus({
+      notify: (message, severity) => {
+        if (severity === "error") {
+          void vscode.window.showErrorMessage(message);
+        } else {
+          void vscode.window.showInformationMessage(message);
+        }
+      },
+      scheduleRefresh: (mode, reason) => {
+        this.refreshController.request({ reason, mode });
+      },
+      notifyKitChanged: () => {
+        this.notifyKitStateChanged();
+      }
+    });
+    this.dashboardCoordinator = new DashboardCoordinator({
+      drawerSession: this.drawerSessionHost,
+      refreshController: this.refreshController,
+      client: this.client,
+      beginMutationHold: () => this.beginDashboardMutationRefreshHold(),
+      endMutationHold: () => this.endDashboardMutationRefreshHold(),
+      beginDrawerMutationHold: () => this.beginDrawerSubmitRefreshHold(),
+      endDrawerMutationHold: () => this.endDrawerSubmitRefreshHold(),
+      emitToWebview: (snapshot) => {
+        void webview.postMessage({ type: "wcHostSnapshot", snapshot });
+      },
+      sideEffects,
+      onDrawerSubmit: async (values) => ({
+        refreshed: await this.handleDrawerSubmit(values)
+      }),
+      onDrawerCancel: async () => {
+        await this.closeDashboardDrawer();
+      },
+      hasActiveDrawerSession: () => this.dashboardDrawerSession !== null,
+      closeDrawer: () => this.closeDashboardDrawer(),
+      resetDrawerSubmitPendingEffects: () => this.resetDrawerSubmitPendingEffects(),
+      flushDrawerSubmitPendingEffects: (bus) => this.flushDrawerSubmitPendingEffects(bus),
+      isRefreshBusy: () => this.dashboardRefreshBusy,
+      isRefreshDeferred: () => this.refreshController.hasDeferredRefreshPending()
+    });
+    this.dashboardCoordinator.registerDrawerWorkflow("accept-proposed");
+    this.dashboardCoordinator.emitSnapshot();
+  }
+
+  /** Exposed for follow-on coordinator migration tasks and unit integration. */
+  getDashboardCoordinator(): DashboardCoordinator | undefined {
+    return this.dashboardCoordinator;
   }
 
   /** Hold dashboard refresh while kit mutations run (drawer batch, roster start, etc.). */
@@ -2056,16 +2148,11 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   private beginDrawerSubmitRefreshHold(): void {
     this.beginDashboardMutationRefreshHold();
     this.dashboardRefreshAfterInteraction = true;
-    this.setDashboardUiInteraction("drawer-submit", true);
-    this.setDashboardUiInteraction("drawer-busy", true);
   }
 
   private endDrawerSubmitRefreshHold(): void {
     this.endDashboardMutationRefreshHold();
     this.dashboardRefreshAfterInteraction = false;
-    this.dashboardDrawerSubmitInFlight = false;
-    this.setDashboardUiInteraction("drawer-submit", false);
-    this.setDashboardUiInteraction("drawer-busy", false);
   }
 
   private isPushUpdateStale(updateSequence: number, activeView: vscode.WebviewView): boolean {
@@ -2085,6 +2172,116 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     const phase = systemStatus?.phase as Record<string, unknown> | undefined;
     const ck = phase?.currentKitPhase;
     return typeof ck === "string" && ck.trim().length > 0;
+  }
+
+  /**
+   * Accept-proposed drawer: kit mutations inside coordinator.runDrawerMutation; toasts via SideEffectBus after.
+   * Manual QA: accept T1 then T2 on proposed queue — second submit must not hang while first toast is visible.
+   */
+  private async handleAcceptProposedDrawerSubmit(
+    session: Extract<DashboardDrawerSession, { kind: "accept-proposed" }>,
+    values: Record<string, string>
+  ): Promise<boolean> {
+    const coordinator = this.dashboardCoordinator;
+    if (!coordinator?.isDrawerWorkflowRegistered("accept-proposed")) {
+      return false;
+    }
+    const taskIds = session.taskIds;
+    const validated = validateAcceptProposedSubmit(values);
+    if (!validated.ok) {
+      await this.postDrawerValidationToWebview(validated.error);
+      return false;
+    }
+    const { phaseKey } = validated.values;
+    const categoryLabel = session.categoryLabel;
+    if (taskIds.length === 0) {
+      return false;
+    }
+    const total = taskIds.length;
+    if (total === 1) {
+      const taskId = taskIds[0]!;
+      this.setDrawerMutationProgress(`Accepting ${taskId}…`);
+      const r = await this.client.run("run-transition", {
+        taskId,
+        action: "accept",
+        policyApproval: dashboardPolicyApproval(
+          { workflowId: "accept-proposed", action: "accept-single", command: "run-transition" },
+          { taskId, phaseKey }
+        ),
+        ...expectedPlanningGenerationArgs()
+      });
+      if (!r.ok) {
+        await this.postDrawerValidationToWebview((r.message ?? JSON.stringify(r)).slice(0, 900));
+        return false;
+      }
+      ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
+      this.setDrawerMutationProgress(`Assigning ${taskId} → phase ${phaseKey}…`);
+      const r2 = await this.client.run("assign-task-phase", {
+        taskId,
+        phaseKey,
+        ...expectedPlanningGenerationArgs()
+      });
+      if (!r2.ok) {
+        this.closeDashboardDrawer();
+        this.queueDrawerKitStateChanged();
+        this.queueDrawerNotify(
+          `Accepted ${taskId} but assign-task-phase failed: ${(r2.message ?? r2.code ?? JSON.stringify(r2)).slice(0, 520)}`,
+          "error"
+        );
+        return true;
+      }
+      ingestPlanningMetaFromData(r2.data as Record<string, unknown> | undefined);
+      this.queueDrawerKitStateChanged();
+      this.queueDrawerNotifyAfterClose(`Accepted ${taskId} and assigned phase ${phaseKey}.`);
+      return true;
+    }
+    const failures: string[] = [];
+    this.setDrawerMutationProgress(`Starting batch accept (${String(total)} tasks)…`);
+    for (let i = 0; i < taskIds.length; i++) {
+      const taskId = taskIds[i]!;
+      const step = i + 1;
+      this.setDrawerMutationProgress(`Accepting ${taskId} (${step} of ${total})…`);
+      const r = await this.client.run("run-transition", {
+        taskId,
+        action: "accept",
+        policyApproval: dashboardPolicyApproval(
+          { workflowId: "accept-proposed", action: "accept-batch", command: "run-transition" },
+          { taskId, phaseKey }
+        ),
+        ...expectedPlanningGenerationArgs()
+      });
+      if (!r.ok) {
+        failures.push(`${taskId}: ${(r.message ?? r.code ?? JSON.stringify(r)).slice(0, 200)}`);
+        continue;
+      }
+      ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
+      this.setDrawerMutationProgress(`Assigning ${taskId} → phase ${phaseKey} (${step} of ${total})…`);
+      const r2 = await this.client.run("assign-task-phase", {
+        taskId,
+        phaseKey,
+        ...expectedPlanningGenerationArgs()
+      });
+      if (!r2.ok) {
+        failures.push(`${taskId} assign: ${(r2.message ?? r2.code ?? JSON.stringify(r2)).slice(0, 180)}`);
+      } else {
+        ingestPlanningMetaFromData(r2.data as Record<string, unknown> | undefined);
+      }
+    }
+    this.closeDashboardDrawer();
+    this.queueDrawerKitStateChanged();
+    if (failures.length > 0) {
+      this.queueDrawerNotifyAfterClose(
+        `Some batch operations failed (${String(failures.length)}/${String(taskIds.length)}): ${failures
+          .slice(0, 3)
+          .join(" · ")}`.slice(0, 900),
+        "error"
+      );
+      return true;
+    }
+    this.queueDrawerNotifyAfterClose(
+      `Accepted ${String(taskIds.length)} proposed ${categoryLabel.trim() || "task"}(s) into phase ${phaseKey}.`
+    );
+    return true;
   }
 
   /**
@@ -2123,7 +2320,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       ingestPlanningMetaFromData(out.data as Record<string, unknown> | undefined);
       await this.closeDashboardDrawer();
       this.notifyKitStateChanged();
-      void vscode.window.showInformationMessage(`Phase catalog updated for ${phaseKey}`);
+      this.queueDrawerNotify(`Phase catalog updated for ${phaseKey}`);
       return true;
     }
     if (session.kind === "dismiss-note") {
@@ -2164,7 +2361,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
       this.closeDashboardDrawer();
       this.notifyKitStateChanged();
-      await vscode.window.showInformationMessage(r.message ?? "Phase note dismissed");
+      this.queueDrawerNotify(r.message ?? "Phase note dismissed");
       return true;
     }
     if (session.kind === "view-phase-note") {
@@ -2191,7 +2388,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
       this.closeDashboardDrawer();
       this.notifyKitStateChanged();
-      await vscode.window.showInformationMessage(r.message ?? "Phase note updated");
+      this.queueDrawerNotify(r.message ?? "Phase note updated");
       return true;
     }
     if (session.kind === "add-wishlist") {
@@ -2233,7 +2430,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         ingestPlanningMetaFromData(out.data as Record<string, unknown> | undefined);
         this.closeDashboardDrawer();
         this.notifyKitStateChanged();
-        await vscode.window.showInformationMessage(`Moved ${taskId} to backlog (phase cleared)`);
+        this.queueDrawerNotify(`Moved ${taskId} to backlog (phase cleared)`);
         return true;
       }
       const { phaseKey } = validated.values;
@@ -2259,7 +2456,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       ingestPlanningMetaFromData(out.data as Record<string, unknown> | undefined);
       this.closeDashboardDrawer();
       this.notifyKitStateChanged();
-      await vscode.window.showInformationMessage(`Phase set for ${taskId} → ${phaseKey}`);
+      this.queueDrawerNotify(`Phase set for ${taskId} → ${phaseKey}`);
       return true;
     }
     if (session.kind === "add-phase-note") {
@@ -2292,7 +2489,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
       this.closeDashboardDrawer();
       this.notifyKitStateChanged();
-      await vscode.window.showInformationMessage(r.message ?? "Phase note added");
+      this.queueDrawerNotify(r.message ?? "Phase note added");
       return true;
     }
     if (session.kind === "convert-phase-note") {
@@ -2307,7 +2504,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
       this.closeDashboardDrawer();
       this.notifyKitStateChanged();
-      await vscode.window.showInformationMessage(r.message ?? "Converted phase note to task");
+      this.queueDrawerNotify(r.message ?? "Converted phase note to task");
       return true;
     }
     if (session.kind === "persist-phase-note-proposals") {
@@ -2322,113 +2519,11 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
       this.closeDashboardDrawer();
       this.notifyKitStateChanged();
-      await vscode.window.showInformationMessage(r.message ?? "Persisted phase note proposals");
+      this.queueDrawerNotify(r.message ?? "Persisted phase note proposals");
       return true;
     }
     if (session.kind === "accept-proposed") {
-      const taskIds = session.taskIds;
-      const validated = validateAcceptProposedSubmit(values);
-      if (!validated.ok) {
-        await this.postDrawerValidationToWebview(validated.error);
-        return false;
-      }
-      const { phaseKey } = validated.values;
-      const categoryLabel = session.categoryLabel;
-      if (taskIds.length === 0) {
-        return false;
-      }
-      const total = taskIds.length;
-      if (total === 1) {
-        const taskId = taskIds[0]!;
-        await this.postDrawerProgressToWebview(`Accepting ${taskId}…`);
-        const r = await this.client.run("run-transition", {
-          taskId,
-          action: "accept",
-          policyApproval: dashboardPolicyApproval(
-            { workflowId: "accept-proposed", action: "accept-single", command: "run-transition" },
-            { taskId, phaseKey }
-          ),
-          ...expectedPlanningGenerationArgs()
-        });
-        if (!r.ok) {
-          await this.postDrawerValidationToWebview((r.message ?? JSON.stringify(r)).slice(0, 900));
-          return false;
-        }
-        ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
-        await this.postDrawerProgressToWebview(`Assigning ${taskId} → phase ${phaseKey}…`);
-        const r2 = await this.client.run("assign-task-phase", {
-          taskId,
-          phaseKey,
-          ...expectedPlanningGenerationArgs()
-        });
-        if (!r2.ok) {
-          this.notifyKitStateChanged();
-          await this.notifyAfterDrawerClosed(() =>
-            vscode.window.showErrorMessage(
-              `Accepted ${taskId} but assign-task-phase failed: ${(r2.message ?? r2.code ?? JSON.stringify(r2)).slice(0, 520)}`
-            )
-          );
-          return true;
-        }
-        ingestPlanningMetaFromData(r2.data as Record<string, unknown> | undefined);
-        this.notifyKitStateChanged();
-        await this.notifyAfterDrawerClosed(() =>
-          vscode.window.showInformationMessage(`Accepted ${taskId} and assigned phase ${phaseKey}.`)
-        );
-        return true;
-      }
-      const failures: string[] = [];
-      await this.postDrawerProgressToWebview(`Starting batch accept (${String(total)} tasks)…`);
-      for (let i = 0; i < taskIds.length; i++) {
-        const taskId = taskIds[i]!;
-        const step = i + 1;
-        await this.postDrawerProgressToWebview(`Accepting ${taskId} (${step} of ${total})…`);
-        const r = await this.client.run("run-transition", {
-          taskId,
-          action: "accept",
-          policyApproval: dashboardPolicyApproval(
-            { workflowId: "accept-proposed", action: "accept-batch", command: "run-transition" },
-            { taskId, phaseKey }
-          ),
-          ...expectedPlanningGenerationArgs()
-        });
-        if (!r.ok) {
-          failures.push(`${taskId}: ${(r.message ?? r.code ?? JSON.stringify(r)).slice(0, 200)}`);
-          continue;
-        }
-        ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
-        await this.postDrawerProgressToWebview(
-          `Assigning ${taskId} → phase ${phaseKey} (${step} of ${total})…`
-        );
-        const r2 = await this.client.run("assign-task-phase", {
-          taskId,
-          phaseKey,
-          ...expectedPlanningGenerationArgs()
-        });
-        if (!r2.ok) {
-          failures.push(`${taskId} assign: ${(r2.message ?? r2.code ?? JSON.stringify(r2)).slice(0, 180)}`);
-        } else {
-          ingestPlanningMetaFromData(r2.data as Record<string, unknown> | undefined);
-        }
-      }
-      await this.closeDashboardDrawer();
-      this.notifyKitStateChanged();
-      if (failures.length > 0) {
-        await this.notifyAfterDrawerClosed(() =>
-          vscode.window.showErrorMessage(
-            `Some batch operations failed (${String(failures.length)}/${String(taskIds.length)}): ${failures
-              .slice(0, 3)
-              .join(" · ")}`.slice(0, 900)
-          )
-        );
-        return true;
-      }
-      await this.notifyAfterDrawerClosed(() =>
-        vscode.window.showInformationMessage(
-          `Accepted ${String(taskIds.length)} proposed ${categoryLabel.trim() || "task"}(s) into phase ${phaseKey}.`
-        )
-      );
-      return true;
+      return this.handleAcceptProposedDrawerSubmit(session, values);
     }
     if (session.kind === "register-team-assignment") {
       const validated = validateRegisterTeamAssignmentSubmit(values);
@@ -2454,7 +2549,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
       this.closeDashboardDrawer();
       this.notifyKitStateChanged();
-      await vscode.window.showInformationMessage(r.message ?? `Registered assignment for ${executionTaskId}`);
+      this.queueDrawerNotify(r.message ?? `Registered assignment for ${executionTaskId}`);
       return true;
     }
     if (session.kind === "submit-team-handoff") {
@@ -2491,7 +2586,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
       this.closeDashboardDrawer();
       this.notifyKitStateChanged();
-      await vscode.window.showInformationMessage(r.message ?? "Handoff submitted");
+      this.queueDrawerNotify(r.message ?? "Handoff submitted");
       return true;
     }
     if (session.kind === "reconcile-team-assignment") {
@@ -2517,7 +2612,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
       this.closeDashboardDrawer();
       this.notifyKitStateChanged();
-      await vscode.window.showInformationMessage(r.message ?? "Assignment reconciled");
+      this.queueDrawerNotify(r.message ?? "Assignment reconciled");
       return true;
     }
     if (session.kind === "block-team-assignment") {
@@ -2543,7 +2638,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
       this.closeDashboardDrawer();
       this.notifyKitStateChanged();
-      await vscode.window.showInformationMessage(r.message ?? "Assignment blocked");
+      this.queueDrawerNotify(r.message ?? "Assignment blocked");
       return true;
     }
     if (session.kind === "cancel-team-assignment") {
@@ -2568,7 +2663,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
       this.closeDashboardDrawer();
       this.notifyKitStateChanged();
-      await vscode.window.showInformationMessage(r.message ?? "Assignment cancelled");
+      this.queueDrawerNotify(r.message ?? "Assignment cancelled");
       return true;
     }
     if (session.kind === "register-subagent") {
@@ -2599,7 +2694,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
       this.closeDashboardDrawer();
       this.notifyKitStateChanged();
-      await vscode.window.showInformationMessage(r.message ?? `Registered subagent ${validated.values.subagentId}`);
+      this.queueDrawerNotify(r.message ?? `Registered subagent ${validated.values.subagentId}`);
       return true;
     }
     if (session.kind === "spawn-subagent") {
@@ -2632,7 +2727,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
       this.closeDashboardDrawer();
       this.notifyKitStateChanged();
-      await vscode.window.showInformationMessage(r.message ?? "Subagent session started");
+      this.queueDrawerNotify(r.message ?? "Subagent session started");
       return true;
     }
     if (session.kind === "close-subagent-session") {
@@ -2656,7 +2751,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
       this.closeDashboardDrawer();
       this.notifyKitStateChanged();
-      await vscode.window.showInformationMessage(r.message ?? "Session closed");
+      this.queueDrawerNotify(r.message ?? "Session closed");
       return true;
     }
     if (session.kind === "retire-subagent") {
@@ -2680,7 +2775,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
       this.closeDashboardDrawer();
       this.notifyKitStateChanged();
-      await vscode.window.showInformationMessage(r.message ?? `Retired subagent ${validated.values.subagentId}`);
+      this.queueDrawerNotify(r.message ?? `Retired subagent ${validated.values.subagentId}`);
       return true;
     }
     if (session.kind === "create-checkpoint") {
@@ -2712,7 +2807,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       this.closeDashboardDrawer();
       this.notifyKitStateChanged();
       await this.pushUpdate();
-      await vscode.window.showInformationMessage(r.message ?? "Checkpoint created");
+      this.queueDrawerNotify(r.message ?? "Checkpoint created");
       return true;
     }
     if (session.kind === "rewind-checkpoint") {
@@ -2737,7 +2832,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
       this.closeDashboardDrawer();
       this.notifyKitStateChanged();
-      await vscode.window.showInformationMessage(r.message ?? "Rewound to checkpoint");
+      this.queueDrawerNotify(r.message ?? "Rewound to checkpoint");
       return true;
     }
     if (session.kind === "view-checkpoint-compare") {
@@ -2770,12 +2865,11 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
       this.closeDashboardDrawer();
       this.notifyKitStateChanged();
-      await vscode.window.showInformationMessage(r.message ?? `Recorded ${session.decision} for ${session.taskId}`);
+      this.queueDrawerNotify(r.message ?? `Recorded ${session.decision} for ${session.taskId}`);
       return true;
     }
     return false;
   }
-
   /**
    * Dashboard "Phase" row action → `assign-task-phase` with planning-generation prelude when required.
    */
@@ -2794,7 +2888,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       buildAssignTaskPhaseDrawerSpec(taskId, suggestions, defaultPhaseKey || undefined)
     );
     this.dashboardDrawerSession = { kind: "assign-task-phase", taskId };
-    await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
+    await this.postWcDrawerOpen(html);
   }
 
   private async onDismissPhaseNote(noteId: string, priority: string): Promise<void> {
@@ -2803,7 +2897,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     const html = renderDrawerFormHtml(buildDismissPhaseNoteDrawerSpec(noteId, priority));
     this.dashboardDrawerSession = { kind: "dismiss-note", noteId, priority };
-    await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
+    await this.postWcDrawerOpen(html);
   }
 
   private async onViewPhaseNote(params: {
@@ -2818,7 +2912,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     const html = renderDrawerFormHtml(buildViewPhaseNoteDrawerSpec(params));
     this.dashboardDrawerSession = { kind: "view-phase-note", noteId: params.noteId };
-    await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
+    await this.postWcDrawerOpen(html);
   }
 
   private async onEditPhaseNote(params: {
@@ -2831,7 +2925,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     const html = renderDrawerFormHtml(buildEditPhaseNoteDrawerSpec(params));
     this.dashboardDrawerSession = { kind: "edit-phase-note", noteId: params.noteId };
-    await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
+    await this.postWcDrawerOpen(html);
   }
 
   private async openRegisterTeamAssignmentDrawer(): Promise<void> {
@@ -2840,7 +2934,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     const html = renderDrawerFormHtml(buildRegisterTeamAssignmentDrawerSpec());
     this.dashboardDrawerSession = { kind: "register-team-assignment" };
-    await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
+    await this.postWcDrawerOpen(html);
   }
 
   private async openSubmitTeamHandoffDrawer(assignmentId: string, workerId: string): Promise<void> {
@@ -2849,7 +2943,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     const html = renderDrawerFormHtml(buildSubmitTeamHandoffDrawerSpec({ assignmentId, workerId }));
     this.dashboardDrawerSession = { kind: "submit-team-handoff", assignmentId, workerId };
-    await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
+    await this.postWcDrawerOpen(html);
   }
 
   private async openReconcileTeamAssignmentDrawer(assignmentId: string, supervisorId: string): Promise<void> {
@@ -2858,7 +2952,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     const html = renderDrawerFormHtml(buildReconcileTeamAssignmentDrawerSpec({ assignmentId, supervisorId }));
     this.dashboardDrawerSession = { kind: "reconcile-team-assignment", assignmentId, supervisorId };
-    await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
+    await this.postWcDrawerOpen(html);
   }
 
   private async openBlockTeamAssignmentDrawer(assignmentId: string, supervisorId: string): Promise<void> {
@@ -2867,7 +2961,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     const html = renderDrawerFormHtml(buildBlockTeamAssignmentDrawerSpec({ assignmentId, supervisorId }));
     this.dashboardDrawerSession = { kind: "block-team-assignment", assignmentId, supervisorId };
-    await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
+    await this.postWcDrawerOpen(html);
   }
 
   private async openCancelTeamAssignmentDrawer(assignmentId: string, supervisorId: string): Promise<void> {
@@ -2882,7 +2976,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       assignmentId,
       supervisorId: supervisorId || "operator"
     };
-    await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
+    await this.postWcDrawerOpen(html);
   }
 
   private async openRegisterSubagentDrawer(): Promise<void> {
@@ -2891,7 +2985,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     const html = renderDrawerFormHtml(buildRegisterSubagentDrawerSpec());
     this.dashboardDrawerSession = { kind: "register-subagent" };
-    await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
+    await this.postWcDrawerOpen(html);
   }
 
   private async openSpawnSubagentDrawer(subagentId?: string, executionTaskId?: string): Promise<void> {
@@ -2909,7 +3003,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       subagentId: subagentId || undefined,
       executionTaskId: executionTaskId || undefined
     };
-    await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
+    await this.postWcDrawerOpen(html);
   }
 
   private async openCloseSubagentSessionDrawer(sessionId: string, definitionId: string): Promise<void> {
@@ -2918,7 +3012,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     const html = renderDrawerFormHtml(buildCloseSubagentSessionDrawerSpec({ sessionId, definitionId }));
     this.dashboardDrawerSession = { kind: "close-subagent-session", sessionId, definitionId };
-    await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
+    await this.postWcDrawerOpen(html);
   }
 
   private async openRetireSubagentDrawer(subagentId?: string): Promise<void> {
@@ -2927,7 +3021,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     const html = renderDrawerFormHtml(buildRetireSubagentDrawerSpec({ subagentId: subagentId || undefined }));
     this.dashboardDrawerSession = { kind: "retire-subagent", subagentId: subagentId || undefined };
-    await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
+    await this.postWcDrawerOpen(html);
   }
 
   private async openCreateCheckpointDrawer(mode: "head" | "stash", taskId?: string): Promise<void> {
@@ -2938,7 +3032,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       buildCreateCheckpointDrawerSpec({ mode, taskId: taskId || undefined })
     );
     this.dashboardDrawerSession = { kind: "create-checkpoint", mode, taskId: taskId || undefined };
-    await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
+    await this.postWcDrawerOpen(html);
   }
 
   private async openRewindCheckpointDrawer(
@@ -2962,7 +3056,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       refKind,
       taskId: taskId || undefined
     };
-    await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
+    await this.postWcDrawerOpen(html);
   }
 
   private async openCompareCheckpointDrawer(checkpointId: string): Promise<void> {
@@ -2988,7 +3082,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       })
     );
     this.dashboardDrawerSession = { kind: "view-checkpoint-compare" };
-    await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
+    await this.postWcDrawerOpen(html);
   }
 
   private async openReviewApprovalItemDrawer(
@@ -3003,7 +3097,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       buildReviewApprovalItemDrawerSpec({ taskId, title: title || taskId, decision })
     );
     this.dashboardDrawerSession = { kind: "review-approval-item", taskId, title, decision };
-    await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
+    await this.postWcDrawerOpen(html);
   }
 
   private async onAddPhaseNote(): Promise<void> {
@@ -3019,7 +3113,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     const html = renderDrawerFormHtml(buildAddPhaseNoteDrawerSpec(phaseKey));
     this.dashboardDrawerSession = { kind: "add-phase-note" };
-    await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
+    await this.postWcDrawerOpen(html);
   }
 
   private async onConvertPhaseNote(noteId: string): Promise<void> {
@@ -3028,7 +3122,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     const html = renderDrawerFormHtml(buildConvertPhaseNoteDrawerSpec(noteId));
     this.dashboardDrawerSession = { kind: "convert-phase-note", noteId };
-    await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
+    await this.postWcDrawerOpen(html);
   }
 
   private async onPersistPhaseNoteProposals(): Promise<void> {
@@ -3037,7 +3131,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     const html = renderDrawerFormHtml(buildPersistPhaseNoteProposalsDrawerSpec());
     this.dashboardDrawerSession = { kind: "persist-phase-note-proposals" };
-    await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
+    await this.postWcDrawerOpen(html);
   }
 
   /** Proposed-row Accept → drawer (phase) → run-transition accept → assign-task-phase. */
@@ -3058,7 +3152,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     );
     this.dashboardDrawerSession = { kind: "accept-proposed", taskIds: [taskId], categoryLabel: "" };
     this.drawerSessionHost?.open("accept-proposed");
-    await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
+    await this.postWcDrawerOpen(html);
   }
 
   private async onDashboardAcceptProposedBatch(
@@ -3084,7 +3178,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     );
     this.dashboardDrawerSession = { kind: "accept-proposed", taskIds, categoryLabel };
     this.drawerSessionHost?.open("accept-proposed");
-    await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
+    await this.postWcDrawerOpen(html);
   }
 
   private schedulePushUpdate(_delayMs: number): void {
@@ -3095,7 +3189,16 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   }
 
   private isDashboardRefreshDeferred(): boolean {
-    return this.refreshController.isSuppressed() || this.dashboardInteractionLocks.size > 0;
+    return (
+      this.refreshController.isSuppressed() ||
+      this.dashboardCoordinator?.isMutationActive() === true ||
+      this.dashboardInteractionLocks.size > 0
+    );
+  }
+
+  private setDashboardRefreshBusy(busy: boolean): void {
+    this.dashboardRefreshBusy = busy;
+    this.dashboardCoordinator?.emitSnapshot();
   }
 
   private setDashboardUiInteraction(source: string, active: boolean): void {
@@ -3124,6 +3227,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     const skipHeavyFetches = refreshOptions?.skipHeavyFetches === true;
     if (this.isDashboardRefreshDeferred()) {
       this.refreshController.markDeferredRefreshNeeded();
+      this.dashboardCoordinator?.emitSnapshot();
       logWc("dashboard", "pushUpdate deferred (UI interaction lock active)");
       return;
     }
@@ -3135,6 +3239,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       await this.executeLightSectionRefresh(updateSequence);
       return;
     }
+    this.setDashboardRefreshBusy(true);
+    try {
     const { webview } = activeView;
     const requestedWishlistPage = this.wishlistPage;
     const startedAt = Date.now();
@@ -3352,6 +3458,9 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       await webview.postMessage({ type: "wcReplaceRoot", html: rootInner });
     } catch (e) {
       logWc("dashboard", `pushUpdate render failed: ${e instanceof Error ? e.message : String(e)}`);
+    }
+    } finally {
+      this.setDashboardRefreshBusy(false);
     }
   }
 

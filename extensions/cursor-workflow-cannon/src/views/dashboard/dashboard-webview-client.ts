@@ -1,8 +1,12 @@
-import { buildDrawerStateApplierScript } from "./drawer-session.js";
+import { buildDrawerStateApplierScript, buildHostSnapshotApplierScript } from "./drawer-session.js";
 
 /** Dashboard sidebar webview bootstrap (drawer, tabs, refresh, wcReplaceRoot). */
 export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource: string): string {
+  const drawerApplier = buildDrawerStateApplierScript();
+  const hostSnapshotApplier = buildHostSnapshotApplierScript();
   return `(function(){
+  ${drawerApplier}
+  ${hostSnapshotApplier}
   var vscode = window.__wfcVscode || (window.__wfcVscode = acquireVsCodeApi());
   window.__wcEmbeddedCaeBootstrapSource = ${embeddedCaeBootstrapSource};
   function wcReinitEmbeddedCae() {
@@ -25,8 +29,8 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
 
   var localUiLocks = {};
   var pendingReplaceRootHtml = null;
+  var hostSnapshot = null;
   var pendingSectionPatches = {};
-  var drawerSubmitInFlight = false;
 
   /** Locks that defer wcReplaceRoot (editing deliverables, drawer, phase filter open, etc.). */
   function isLocalUiLocked() {
@@ -643,7 +647,6 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
   window.addEventListener('message', function(ev) {
     var m = ev.data;
     if (m && m.type === 'wcDrawerOpen' && typeof m.html === 'string') {
-      drawerSubmitInFlight = false;
       var dh = document.getElementById('wc-drawer-host');
       if (!dh) return;
       if (!String(m.html).trim()) return;
@@ -656,24 +659,8 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
       if (prim && prim.focus) prim.focus();
       return;
     }
-    if (m && m.type === 'wcDrawerClose') {
-      drawerSubmitInFlight = false;
-      setDrawerBusy(false);
-      var dh2 = document.getElementById('wc-drawer-host');
-      if (dh2) { dh2.innerHTML=''; dh2.classList.add('wc-drawer-host--hidden'); dh2.setAttribute('aria-hidden','true'); }
-      return;
-    }
-    
-    if (m && m.type === 'wcDrawerState' && m.state) { applyWcDrawerState(m.state); return; }
-    if (m && m.type === 'wcDrawerProgress' && typeof m.label === 'string') {
-      updateDrawerBusyLabel(m.label);
-      return;
-    }
-    if (m && m.type === 'wcDrawerValidation' && typeof m.message === 'string') {
-      drawerSubmitInFlight = false;
-      setDrawerBusy(false);
-      var v = document.getElementById('wc-drawer-validation');
-      if (v) { v.textContent = m.message; v.hidden = false; }
+    if (m && m.type === 'wcHostSnapshot' && m.snapshot) {
+      applyHostSnapshot(m.snapshot);
       return;
     }
     if (m && m.type === 'wcPhaseDeliverablesSaved') {
@@ -859,11 +846,9 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
     var act = t.getAttribute('data-wc-drawer-action');
     if (act === 'backdrop' || act === 'cancel') { vscode.postMessage({type:'drawerCancel'}); return; }
     if (act === 'submit') {
-      if (drawerSubmitInFlight || t.disabled || t.getAttribute('data-wc-drawer-submitting') === '1') return;
-      drawerSubmitInFlight = true;
-      t.disabled = true;
-      t.setAttribute('data-wc-drawer-submitting', '1');
-      setDrawerBusy(true, drawerSubmitBusyLabel(panel));
+      if (hostSnapshot && hostSnapshot.drawer && hostSnapshot.drawer.busy) return;
+      if (hostSnapshot && hostSnapshot.interaction && hostSnapshot.interaction.mutationActive) return;
+      if (t.disabled || t.getAttribute('data-wc-drawer-submitting') === '1') return;
       var vals = {};
       dh.querySelectorAll('[data-wc-drawer-field]').forEach(function(el) {
         var id = el.getAttribute('data-wc-drawer-field');
@@ -886,7 +871,6 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
   var btn = document.getElementById('btn');
   var rootEl = document.getElementById('root');
   if (btn) btn.addEventListener('click', function() {
-    setButtonBusy(btn, true, 'Refreshing…');
     vscode.postMessage({type:'refresh'});
   });
   if (rootEl) rootEl.addEventListener('click', function(ev) {

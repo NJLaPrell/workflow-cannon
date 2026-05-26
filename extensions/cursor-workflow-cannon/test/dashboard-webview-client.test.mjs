@@ -10,9 +10,11 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 test("buildDashboardWebviewBootstrapScript returns drawer + refresh client", () => {
   const script = buildDashboardWebviewBootstrapScript(JSON.stringify("(function(){})();"));
-  assert.match(script, /drawerSubmitInFlight/);
+  assert.doesNotMatch(script, /drawerSubmitInFlight/);
   assert.match(script, /wcReplaceRoot/);
   assert.match(script, /applyWcDrawerState/);
+  assert.match(script, /applyHostSnapshot/);
+  assert.match(script, /wcHostSnapshot/);
   assert.match(script, /wcReinitEmbeddedCae/);
   assert.doesNotMatch(readFileSync(path.join(__dirname, "../src/views/dashboard/DashboardViewProvider.ts"), "utf8"), /function setDrawerBusy\(busy, label\)/);
 });

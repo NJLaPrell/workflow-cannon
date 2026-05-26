@@ -46,15 +46,11 @@ test("dashboard drawer submit shows animated loading overlay while kit command r
   assert.match(webviewClientSrc, /function updateDrawerBusyLabel\(label\)/);
   assert.match(webviewClientSrc, /className = 'wc-drawer-loading'/);
   assert.match(webviewClientSrc, /class="wc-spinner"/);
-  assert.match(webviewClientSrc, /setDrawerBusy\(true, drawerSubmitBusyLabel\(panel\)\)/);
-  assert.match(webviewClientSrc, /setDrawerBusy\(false\)/);
-  assert.match(webviewClientSrc, /wcDrawerClose[\s\S]*setDrawerBusy\(false\)/);
-  assert.match(webviewClientSrc, /wcDrawerState/);
-  assert.match(webviewClientSrc, /applyWcDrawerState/);
-  assert.match(providerSrc, /wcDrawerProgress/);
-  assert.match(providerSrc, /postDrawerProgressToWebview/);
-  assert.match(webviewClientSrc, /updateDrawerBusyLabel\(m\.label\)/);
-  assert.match(webviewClientSrc, /setDrawerBusy\(true, label\)/);
+  assert.match(webviewClientSrc, /hostSnapshot\.drawer\.busy/);
+  assert.match(webviewClientSrc, /buildDrawerStateApplierScript/);
+  assert.match(webviewClientSrc, /buildHostSnapshotApplierScript/);
+  assert.match(providerSrc, /setDrawerMutationProgress/);
+  assert.doesNotMatch(providerSrc, /wcDrawerProgress/);
   assert.match(providerSrc, /Starting batch accept/);
   assert.match(providerSrc, /Accepting \$\{taskId\} \(\$\{step\} of \$\{total\}\)/);
   assert.match(webviewClientSrc, /drawerSubmitBusyLabel/);
@@ -83,11 +79,17 @@ test("dashboard roster start and mark complete pause refresh during kit mutation
   assert.match(providerSrc, /onMarkPhaseComplete[\s\S]*beginDashboardMutationRefreshHold/);
 });
 
-test("dashboard refresh button shows inline spinner while summary reloads", () => {
+test("dashboard refresh button busy state comes from wcHostSnapshot (T100497)", () => {
   assert.match(webviewClientSrc, /function setButtonBusy\(el, busy, label\)/);
-  assert.match(webviewClientSrc, /setButtonBusy\(btn, true, 'Refreshing…'\)/);
-  assert.match(webviewClientSrc, /setButtonBusy\(refreshBtn, false\)/);
-  assert.doesNotMatch(webviewClientSrc, /setUiInteraction\('refresh', true\)/);
+  assert.match(webviewClientSrc, /buildHostSnapshotApplierScript/);
+  assert.doesNotMatch(
+    webviewClientSrc.slice(webviewClientSrc.indexOf("if (btn) btn.addEventListener('click'")),
+    /setUiInteraction\('refresh', true\)/
+  );
+  assert.doesNotMatch(
+    webviewClientSrc.slice(webviewClientSrc.indexOf("if (btn) btn.addEventListener('click'")),
+    /setButtonBusy\(btn, true, 'Refreshing…'\)/
+  );
 });
 
 test("dashboard refresh does not block wcReplaceRoot via refresh lock", () => {
@@ -96,16 +98,18 @@ test("dashboard refresh does not block wcReplaceRoot via refresh lock", () => {
   assert.match(providerSrc, /wcReleaseRefreshBlock/);
 });
 
-test("dashboard drawer submit is guarded against duplicate host handling", () => {
-  assert.match(providerSrc, /dashboardDrawerSubmitInFlight/);
+test("dashboard drawer submit uses coordinator dispatch (T100493)", () => {
+  assert.doesNotMatch(providerSrc, /dashboardDrawerSubmitInFlight/);
   assert.match(providerSrc, /webviewMessageDisposable/);
   assert.match(providerSrc, /this\.webviewMessageDisposable\?\.dispose\(\)/);
-  assert.match(webviewClientSrc, /drawerSubmitInFlight/);
-  assert.match(providerSrc, /logWc\("dashboard", "drawerSubmit ignored/);
-  assert.match(providerSrc, /setDashboardUiInteraction\("drawer-busy", false\)/);
+  assert.match(webviewClientSrc, /hostSnapshot/);
+  assert.doesNotMatch(webviewClientSrc, /drawerSubmitInFlight/);
+  assert.match(providerSrc, /coordinator\.dispatch/);
+  assert.match(providerSrc, /queueDrawerNotify/);
   assert.match(providerSrc, /notifyAfterDrawerClosed/);
   assert.match(providerSrc, /void Promise\.resolve\(notify\(\)\)/);
   assert.match(providerSrc, /endDrawerSubmitRefreshHold/);
+  assert.doesNotMatch(providerSrc, /drawerSubmit ignored \(already in flight\)/);
 });
 
 test("dashboard and kit tracing use Workflow Cannon output channel", () => {
