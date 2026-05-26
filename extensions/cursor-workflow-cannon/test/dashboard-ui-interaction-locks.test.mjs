@@ -89,15 +89,15 @@ test("dashboard refresh button shows inline spinner while summary reloads", () =
   assert.match(webviewClientSrc, /setButtonBusy\(refreshBtn, false\)/);
 });
 
-test("dashboard drawer submit is guarded against duplicate host handling", () => {
+test("dashboard drawer submit uses coordinator dispatch (T100493)", () => {
   assert.match(providerSrc, /dashboardDrawerSubmitInFlight/);
   assert.match(providerSrc, /webviewMessageDisposable/);
   assert.match(providerSrc, /this\.webviewMessageDisposable\?\.dispose\(\)/);
   assert.match(webviewClientSrc, /drawerSubmitInFlight/);
-  assert.match(providerSrc, /logWc\("dashboard", "drawerSubmit ignored/);
-  assert.match(providerSrc, /setDashboardUiInteraction\("drawer-busy", false\)/);
-  assert.match(providerSrc, /notifyAfterDrawerClosed/);
+  assert.match(providerSrc, /coordinator\.dispatch/);
+  assert.match(providerSrc, /queueDrawerNotify/);
   assert.match(providerSrc, /endDrawerSubmitRefreshHold/);
+  assert.doesNotMatch(providerSrc, /drawerSubmit ignored \(already in flight\)/);
 });
 
 test("dashboard and kit tracing use Workflow Cannon output channel", () => {
