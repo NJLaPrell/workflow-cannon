@@ -29,6 +29,7 @@ import {
 import { DrawerSessionController } from "./drawer-session.js";
 import { buildDashboardWebviewBootstrapScript } from "./dashboard-webview-client.js";
 import type { DashboardSectionId, DashboardSectionLoadState } from "./dashboard-section-registry.js";
+import { DASHBOARD_SECTION_REGISTRY } from "./dashboard-section-registry.js";
 import { renderDashboardShellInnerHtml } from "./render-dashboard-shell.js";
 import {
   buildDashboardPolicyApprovalForPath,
@@ -46,11 +47,15 @@ import {
   lazyTerminalBucketListLimit,
   lookupDashboardTaskPhaseKey,
   lookupProposedTaskPhaseKey,
+  renderDashboardCaeSectionInnerHtml,
+  renderDashboardPhaseJournalSectionInnerHtml,
   renderDashboardRootInnerHtml,
+  renderDashboardStatusSectionInnerHtml,
   type DashboardPhaseJournalBundle,
   type PhaseJournalKitPayload,
   type PlanningInterviewWizardPanel
 } from "./render-dashboard.js";
+import { renderConfigPanelShellHtml } from "../config/config-panel-shell.js";
 import {
   buildPhaseKeySuggestion,
   sortPhaseKeySuggestions,
@@ -354,6 +359,9 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   /** After first full HTML load, refresh only swaps `#root` via postMessage so `<details open>` state survives. */
   private dashboardRootShellReady = false;
 
+  /** Sections hydrated via tab activation or eager first paint (T100398). */
+  private hydratedDashboardSections = new Set<DashboardSectionId>();
+
   /** Monotonic render token lives on {@link DashboardRefreshController}. */
   private readonly refreshController: DashboardRefreshController;
 
@@ -458,6 +466,12 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         this.dashboardRefreshAfterInteraction = false;
         await webview.postMessage({ type: "wcReleaseRefreshBlock" });
         await this.pushUpdate({ projection: "full", skipHeavyFetches: false });
+      }
+      if (msg?.type === "dashboardTabActivated") {
+        const tabId = typeof (msg as { tabId?: unknown }).tabId === "string" ? (msg as { tabId: string }).tabId : "";
+        if (tabId.length > 0) {
+          void this.onDashboardTabActivated(tabId);
+        }
       }
       if (msg?.type === "loadQueueBucketRows") {
         const categoryRaw = (msg as { category?: unknown }).category;
@@ -931,6 +945,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }, 45_000);
     webviewView.onDidDispose(() => {
       this.dashboardRootShellReady = false;
+      this.hydratedDashboardSections.clear();
       this.webviewMessageDisposable?.dispose();
       this.webviewMessageDisposable = undefined;
       this.dashboardDrawerSubmitInFlight = false;
@@ -963,6 +978,115 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       return;
     }
     await webview.postMessage({ type: "wcSectionPatch", sectionId, html, state });
+  }
+
+  private sectionsForTabActivation(tabId: string): DashboardSectionId[] {
+    return DASHBOARD_SECTION_REGISTRY.filter(
+      (section) =>
+        section.tabId === tabId &&
+        section.refreshPolicy === "on-tab-activate" &&
+        !this.hydratedDashboardSections.has(section.id)
+    ).map((section) => section.id);
+  }
+
+  private async onDashboardTabActivated(tabId: string): Promise<void> {
+    for (const sectionId of this.sectionsForTabActivation(tabId)) {
+      await this.hydrateDashboardSection(sectionId);
+    }
+  }
+
+  private async hydrateDashboardSection(sectionId: DashboardSectionId): Promise<void> {
+    if (this.hydratedDashboardSections.has(sectionId)) {
+      return;
+    }
+    await this.postSectionPatch(sectionId, "", "loading");
+    try {
+      let html = "";
+      if (sectionId === "status") {
+        const raw = (await this.client.run("dashboard-summary", {
+          projection: "status"
+        })) as Record<string, unknown>;
+        const editorIntegration = await resolveEditorIntegrationState();
+        html = renderDashboardStatusSectionInnerHtml(raw, editorIntegration);
+      } else if (sectionId === "cae") {
+        const caeSummary = await this.client.run("cae-authoring-summary", { schemaVersion: 1 });
+        if (isKitRefreshRunAborted(caeSummary as Record<string, unknown>)) {
+          return;
+        }
+        const panel = renderGuidanceAuthoringPanelInnerHtml(caeSummary);
+        this.lastEmbeddedCaePanelHtml = panel;
+        html = renderDashboardCaeSectionInnerHtml(panel);
+      } else if (sectionId === "phase-journal") {
+        const summaryData = this.lastDashboardSummaryData;
+        if (!summaryData || !this.summaryHasCanonicalWorkspacePhase(summaryData)) {
+          html = renderDashboardPhaseJournalSectionInnerHtml(null, summaryData?.phaseJournalStats);
+        } else {
+          const [lp, gpc] = (await Promise.all([
+            this.client.run("list-phase-notes", { ...expectedPlanningGenerationArgs() }),
+            this.client.run("get-phase-context", { ...expectedPlanningGenerationArgs() })
+          ])) as [PhaseJournalKitPayload & Record<string, unknown>, PhaseJournalKitPayload & Record<string, unknown>];
+          if (
+            isKitRefreshRunAborted(lp as Record<string, unknown>) ||
+            isKitRefreshRunAborted(gpc as Record<string, unknown>)
+          ) {
+            return;
+          }
+          ingestPlanningMetaFromData(lp.data as Record<string, unknown> | undefined);
+          ingestPlanningMetaFromData(gpc.data as Record<string, unknown> | undefined);
+          const pastFromSummary = summaryData.pastPhaseNotes;
+          const pastPhaseNotes: DashboardPhaseJournalBundle["pastPhaseNotes"] = Array.isArray(pastFromSummary)
+            ? pastFromSummary
+                .map((entry) => {
+                  if (!entry || typeof entry !== "object") {
+                    return null;
+                  }
+                  const rec = entry as Record<string, unknown>;
+                  const phaseKey = typeof rec.phaseKey === "string" ? rec.phaseKey.trim() : "";
+                  const notes = Array.isArray(rec.notes) ? rec.notes : [];
+                  if (!phaseKey || notes.length === 0) {
+                    return null;
+                  }
+                  return { phaseKey, notes };
+                })
+                .filter((e): e is { phaseKey: string; notes: unknown[] } => e !== null)
+            : undefined;
+          html = renderDashboardPhaseJournalSectionInnerHtml(
+            {
+              listPhaseNotes: {
+                ok: lp.ok,
+                code: lp.code,
+                message: lp.message,
+                data: lp.data as Record<string, unknown> | undefined
+              },
+              getPhaseContext: {
+                ok: gpc.ok,
+                code: gpc.code,
+                message: gpc.message,
+                data: gpc.data as Record<string, unknown> | undefined
+              },
+              pastPhaseNotes
+            },
+            summaryData.phaseJournalStats
+          );
+        }
+      } else if (sectionId === "config") {
+        html = renderConfigPanelShellHtml();
+      } else {
+        return;
+      }
+      await this.postSectionPatch(sectionId, html, "ready");
+      this.hydratedDashboardSections.add(sectionId);
+      if (sectionId === "config") {
+        await this.refreshDashboardConfigTab(this.view!.webview);
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unable to load section.";
+      await this.postSectionPatch(
+        sectionId,
+        '<p class="muted wc-dash-section-error" role="status">' + escapeHtml(message) + "</p>",
+        "error"
+      );
+    }
   }
 
   refresh(): void {
@@ -2955,6 +3079,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     let rootInner: string;
     const wizardPanel: PlanningInterviewWizardPanel | null = raw.ok === true ? this.planningWizardPanel() : null;
+    const useDeferredSecondary = skipHeavyFetches && summaryProjection === "overview";
     try {
       const editorIntegration = await resolveEditorIntegrationState();
       rootInner = renderDashboardRootInnerHtml(
@@ -2962,8 +3087,27 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         wizardPanel,
         editorIntegration,
         phaseJournal,
-        embeddedCaePanelHtml
+        embeddedCaePanelHtml,
+        useDeferredSecondary
+          ? {
+              deferredSections: new Set<DashboardSectionId>([
+                "status",
+                "config",
+                "cae",
+                "phase-journal"
+              ])
+            }
+          : undefined
       );
+      if (useDeferredSecondary) {
+        this.hydratedDashboardSections.clear();
+        this.hydratedDashboardSections.add("overview");
+        this.hydratedDashboardSections.add("queue");
+      } else {
+        this.hydratedDashboardSections = new Set(
+          DASHBOARD_SECTION_REGISTRY.map((section) => section.id)
+        );
+      }
     } catch (e) {
       rootInner = '<pre class="bad">Host render error: ' + escapeHtml(String(e)) + "</pre>";
     }

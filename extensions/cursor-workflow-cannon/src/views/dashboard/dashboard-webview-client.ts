@@ -561,6 +561,9 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
       var needsLoad = prevTab !== 'config' || !list || !!list.querySelector('.cfg-loading');
       if (needsLoad && window.wcConfigTab.requestLoad) window.wcConfigTab.requestLoad();
     }
+    if (tab !== prevTab) {
+      vscode.postMessage({ type: 'dashboardTabActivated', tabId: tab });
+    }
   }
 
   function syncQueueFiltersUi(root) {
