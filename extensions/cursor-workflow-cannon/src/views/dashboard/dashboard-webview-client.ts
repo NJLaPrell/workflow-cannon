@@ -25,6 +25,7 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
 
   var localUiLocks = {};
   var pendingReplaceRootHtml = null;
+  var pendingSectionPatches = {};
   var drawerSubmitInFlight = false;
 
   /** Locks that defer wcReplaceRoot (editing deliverables, drawer, phase filter open, etc.). */
@@ -43,6 +44,14 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
       var queued = pendingReplaceRootHtml;
       pendingReplaceRootHtml = null;
       applyReplaceRootHtml(queued);
+    }
+    if (!isLocalUiLocked() && pendingSectionPatches && Object.keys(pendingSectionPatches).length > 0) {
+      var queuedPatches = pendingSectionPatches;
+      pendingSectionPatches = {};
+      Object.keys(queuedPatches).forEach(function(patchKey) {
+        var patch = queuedPatches[patchKey];
+        if (patch) applySectionPatch(patch.sectionId, patch.html, patch.state);
+      });
     }
   }
 
@@ -262,6 +271,28 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
     var refreshBtn = document.getElementById('btn');
     setButtonBusy(refreshBtn, false);
     setUiInteraction('refresh', false);
+  }
+
+  function applySectionPatch(sectionId, html, state) {
+    var root = document.getElementById('root');
+    if (!root || !sectionId) return;
+    var el = root.querySelector('[data-wc-section="' + sectionId + '"]');
+    if (!el) return;
+    if (typeof html === 'string' && html.length > 0) {
+      el.innerHTML = html;
+    }
+    el.classList.remove(
+      'wc-dash-section--loading',
+      'wc-dash-section--ready',
+      'wc-dash-section--stale',
+      'wc-dash-section--error'
+    );
+    var st = state || 'ready';
+    el.classList.add('wc-dash-section--' + st);
+    el.setAttribute('aria-busy', st === 'loading' ? 'true' : 'false');
+    if (sectionId === 'cae' && typeof window.wcReinitEmbeddedCae === 'function') {
+      window.wcReinitEmbeddedCae();
+    }
   }
 
   function setMarkPhaseBusy(active) {
@@ -634,6 +665,28 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
         pendingReplaceRootHtml = null;
         applyReplaceRootHtml(pendingHtml);
       }
+      if (!isLocalUiLocked() && pendingSectionPatches && Object.keys(pendingSectionPatches).length > 0) {
+        var pendingPatchQueue = pendingSectionPatches;
+        pendingSectionPatches = {};
+        Object.keys(pendingPatchQueue).forEach(function(patchKey) {
+          var patch = pendingPatchQueue[patchKey];
+          if (patch) applySectionPatch(patch.sectionId, patch.html, patch.state);
+        });
+      }
+      return;
+    }
+    if (m && m.type === 'wcSectionPatch') {
+      var sectionId = typeof m.sectionId === 'string' ? m.sectionId.trim() : '';
+      if (!sectionId) return;
+      if (isLocalUiLocked()) {
+        pendingSectionPatches[sectionId] = {
+          sectionId: sectionId,
+          html: typeof m.html === 'string' ? m.html : '',
+          state: typeof m.state === 'string' ? m.state : 'ready'
+        };
+        return;
+      }
+      applySectionPatch(sectionId, m.html, m.state);
       return;
     }
     if (!m || m.type !== 'wcReplaceRoot' || typeof m.html !== 'string') return;

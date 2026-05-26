@@ -28,6 +28,8 @@ import {
 } from "./dashboard-refresh-controller.js";
 import { DrawerSessionController } from "./drawer-session.js";
 import { buildDashboardWebviewBootstrapScript } from "./dashboard-webview-client.js";
+import type { DashboardSectionId, DashboardSectionLoadState } from "./dashboard-section-registry.js";
+import { renderDashboardShellInnerHtml } from "./render-dashboard-shell.js";
 import {
   buildDashboardPolicyApprovalForPath,
   type DashboardPolicyPathRef
@@ -920,7 +922,24 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       }
       this.dashboardGuidanceAuthoring = undefined;
     });
+    // Shell-first paint (T100395): document before any dashboard-summary await.
+    webview.html = this.buildHtml(webview, renderDashboardShellInnerHtml());
+    this.dashboardRootShellReady = true;
+    logWc("dashboard", "resolveWebviewView: shell painted synchronously");
     void this.pushUpdate();
+  }
+
+  /** Section-level DOM patch (T100395); full wcReplaceRoot remains the compatibility fallback. */
+  private async postSectionPatch(
+    sectionId: DashboardSectionId,
+    html: string,
+    state: DashboardSectionLoadState
+  ): Promise<void> {
+    const webview = this.view?.webview;
+    if (!webview) {
+      return;
+    }
+    await webview.postMessage({ type: "wcSectionPatch", sectionId, html, state });
   }
 
   refresh(): void {
@@ -2910,12 +2929,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       return;
     }
     try {
-      if (!this.dashboardRootShellReady) {
-        webview.html = this.buildHtml(webview, rootInner);
-        this.dashboardRootShellReady = true;
-      } else {
-        await webview.postMessage({ type: "wcReplaceRoot", html: rootInner });
-      }
+      // Full-root refresh stays the compatibility path while section slices land (T100396+).
+      await webview.postMessage({ type: "wcReplaceRoot", html: rootInner });
     } catch (e) {
       logWc("dashboard", `pushUpdate render failed: ${e instanceof Error ? e.message : String(e)}`);
     }
@@ -3172,11 +3187,15 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       font-variant: normal;
     }
     .dash-phase-catalog-table th.dash-phase-roster-col-phase,
-    .dash-phase-catalog-table td.dash-phase-roster-col-phase,
+    .dash-phase-catalog-table td.dash-phase-roster-col-phase {
+      width: 1%;
+      white-space: nowrap;
+    }
     .dash-phase-catalog-table th.dash-phase-roster-col-status,
     .dash-phase-catalog-table td.dash-phase-roster-col-status {
       width: 1%;
       white-space: nowrap;
+      vertical-align: middle;
     }
     .dash-phase-catalog-table th.dash-phase-roster-col-deliverables,
     .dash-phase-catalog-table td.dash-phase-roster-col-deliverables {
@@ -3187,6 +3206,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       width: 1%;
       white-space: nowrap;
       text-align: right;
+      vertical-align: middle;
     }
     .dash-phase-no-catalog {
       cursor: help;
@@ -3219,7 +3239,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     .dash-phase-roster-actions {
       display: inline-flex;
-      flex-wrap: wrap;
+      flex-wrap: nowrap;
       align-items: center;
       justify-content: flex-end;
       gap: 4px;
@@ -3621,7 +3641,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     .wc-rec-subtitle {
       font-size: 11px;
-      margin: -4px 0 8px 0;
+      margin: 4px 0 0 0;
       line-height: 1.4;
       white-space: normal;
     }
@@ -3846,7 +3866,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      margin-left: 6px;
+      flex-shrink: 0;
+      margin-left: 4px;
       vertical-align: middle;
       cursor: help;
       outline: none;
@@ -3984,9 +4005,14 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     .wc-cae-readiness-title {
       min-width: 0;
       flex: 1;
+      display: inline-flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 4px;
     }
     .wc-cae-readiness-title b {
       font-weight: 600;
+      line-height: 1.35;
     }
     button.wc-cae-readiness-toggle:hover {
       background: var(--vscode-list-hoverBackground, rgba(127,127,127,.12));
@@ -4135,10 +4161,68 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       color: var(--vscode-editorWarning-foreground, #cca700);
       border: 1px solid rgba(204,167,0,0.35);
     }
-    .wc-cae-check-label { flex: 1; min-width: 0; }
+    .wc-cae-check-label {
+      flex: 1;
+      min-width: 0;
+      display: inline-flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 4px;
+      line-height: 1.35;
+    }
+    .dash-phase-roster-status-inner {
+      display: inline-flex;
+      align-items: center;
+      flex-wrap: nowrap;
+      gap: 4px;
+    }
     .wc-cae-check-meta { flex-shrink: 0; }
     .wc-cae-decisions { margin-top: 8px; }
     .wc-cae-decisions > p { margin: 0 0 4px 0; }
+    /* ── Dashboard lazy-loading shell (T100395) ── */
+    .wc-dashboard-shell-initial .wc-dash-section { margin: 8px 0; }
+    .wc-dash-section-inner {
+      padding: 10px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.25));
+      background: var(--vscode-editor-background, rgba(127,127,127,.08));
+    }
+    .wc-dash-section-label { margin: 0 0 4px 0; }
+    .wc-dash-section-status { margin: 0 0 8px 0; font-size: 11px; }
+    .wc-dash-section-skeleton {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .wc-dash-section-skeleton > span {
+      display: block;
+      height: 10px;
+      border-radius: 4px;
+      background: linear-gradient(
+        90deg,
+        var(--vscode-textBlockQuote-background, rgba(127,127,127,.15)) 0%,
+        var(--vscode-list-hoverBackground, rgba(127,127,127,.22)) 50%,
+        var(--vscode-textBlockQuote-background, rgba(127,127,127,.15)) 100%
+      );
+      background-size: 200% 100%;
+      animation: wc-dash-skeleton-shimmer 1.4s ease-in-out infinite;
+    }
+    .wc-dash-section-skeleton > span:nth-child(1) { width: 92%; }
+    .wc-dash-section-skeleton > span:nth-child(2) { width: 78%; }
+    .wc-dash-section-skeleton > span:nth-child(3) { width: 64%; }
+    .wc-dash-section--ready .wc-dash-section-skeleton,
+    .wc-dash-section--stale .wc-dash-section-status,
+    .wc-dash-section--error .wc-dash-section-skeleton { display: none; }
+    .wc-dash-section--stale .wc-dash-section-inner {
+      border-color: color-mix(in srgb, var(--vscode-editorWarning-foreground, #cca700) 45%, transparent);
+    }
+    .wc-dash-section--error .wc-dash-section-inner {
+      border-color: color-mix(in srgb, var(--vscode-editorError-foreground, #f14c4c) 45%, transparent);
+    }
+    @keyframes wc-dash-skeleton-shimmer {
+      0% { background-position: 100% 0; }
+      100% { background-position: -100% 0; }
+    }
     .wc-cae-decision {
       font-size: 11px;
       padding: 4px 6px;
