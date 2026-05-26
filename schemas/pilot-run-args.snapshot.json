@@ -96,6 +96,7 @@
     "synthesize-transcript-churn",
     "task-persistence-readiness",
     "task-state-hydrate",
+    "task-state-init",
     "task-state-status",
     "unblock-task",
     "uninstall-git-hooks",
@@ -1764,6 +1765,31 @@
           "type": "string"
         },
         "eventLogRelativePath": {
+          "type": "string"
+        },
+        "policyApproval": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "task-state-init": {
+      "type": "object",
+      "properties": {
+        "dryRun": {
+          "type": "boolean"
+        },
+        "overwriteExisting": {
+          "type": "boolean"
+        },
+        "push": {
+          "type": "boolean"
+        },
+        "branch": {
+          "type": "string"
+        },
+        "snapshotId": {
           "type": "string"
         },
         "policyApproval": {

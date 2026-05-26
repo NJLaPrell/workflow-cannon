@@ -36,9 +36,9 @@
   "moduleId": "task-engine",
   "description": "Fetch canonical task-state branch, materialize JSONL locally, and rebuild SQLite projection.",
   "policy": {
-    "sensitivity": "sensitive-with-dryrun",
+    "sensitivity": "sensitive",
     "operationId": "tasks.task-state-hydrate",
-    "jsonApprovalRequired": "when dryRun is false or omitted by command policy"
+    "jsonApprovalRequired": true
   },
   "planningGeneration": {
     "cliPrelude": false,
@@ -55,5 +55,5 @@
     "listCommands": "pnpm exec wk run --list-commands",
     "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
   },
-  "invocationId": "c5c86aec-ceb3-4c7d-86de-523a0941508f"
+  "invocationId": "61dfa1b7-7f70-433a-a458-c1c9ab0ff6ce"
 }

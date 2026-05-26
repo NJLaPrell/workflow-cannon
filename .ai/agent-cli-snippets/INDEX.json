@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-05-26T21:59:06.496Z",
+  "generatedAt": "2026-05-26T23:41:46.892Z",
   "commands": [
     {
       "name": "accept-improvement",
@@ -1020,6 +1020,11 @@
     {
       "name": "task-state-hydrate",
       "path": ".ai/agent-cli-snippets/by-command/task-state-hydrate.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "task-state-init",
+      "path": ".ai/agent-cli-snippets/by-command/task-state-init.json",
       "moduleId": "task-engine"
     },
     {
