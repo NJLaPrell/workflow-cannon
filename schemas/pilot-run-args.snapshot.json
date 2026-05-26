@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "sourceSchemaPackageVersion": "0.99.6",
+  "sourceSchemaPackageVersion": "0.99.7",
   "pilotCommands": [
     "accept-improvement",
     "add-dependency",
@@ -674,6 +674,21 @@
           "type": "integer",
           "minimum": 1,
           "maximum": 100
+        },
+        "includePhaseFocus": {
+          "type": "boolean"
+        },
+        "phaseKey": {
+          "type": "string"
+        },
+        "projection": {
+          "type": "string",
+          "enum": [
+            "full",
+            "overview",
+            "queue",
+            "status"
+          ]
         }
       },
       "additionalProperties": false

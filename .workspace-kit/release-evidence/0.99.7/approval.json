@@ -1,0 +1,24 @@
+{
+  "approval": {
+    "actor": "nicklaprell",
+    "timestamp": "2026-05-26T05:40:00.000Z",
+    "rationale": "User explicitly approved Phase 108 closeout publish in Cursor chat (fold in remaining lazy-loading tasks, confirm publish).",
+    "scope": "phase-108 closeout: merge release/phase-108 to main and npm publish 0.99.7"
+  },
+  "releaseNotes": {
+    "source": "docs/maintainers/CHANGELOG.md",
+    "entries": [
+      "0.99.7 — Phase 108 dashboard lazy loading (shell-first paint, split hydration, regression gates)"
+    ]
+  },
+  "followUpScan": {
+    "scannedAt": "2026-05-26T05:40:00.000Z",
+    "rationale": "Phase 108 scoped to six completed dashboard lazy-loading tasks (T100395–T100400); no additional follow-on execution tasks filed at closeout."
+  },
+  "followUpTasks": [],
+  "git": {
+    "branch": "release/phase-108",
+    "mergeTarget": "main",
+    "mergeSha": "076e971fee6f9477ea525ee20eec2f2438cc2775"
+  }
+}

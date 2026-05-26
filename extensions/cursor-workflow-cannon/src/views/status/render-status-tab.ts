@@ -3,26 +3,6 @@
  */
 
 import { escapeHtml } from "../dashboard/render-dashboard.js";
-import { buildNarrowPhaseRosterRows, type PhaseCatalogListRow } from "../phase-roster-display.js";
-import { renderPhaseScheduleTagHtml, resolvePhaseScheduleTag } from "../phase-schedule-tag.js";
-
-function readDeliveredPhaseKeysFromDashboard(data: Record<string, unknown>): string[] {
-  if (Array.isArray(data.deliveredPhaseKeys)) {
-    return (data.deliveredPhaseKeys as unknown[]).filter((k): k is string => typeof k === "string");
-  }
-  if (Array.isArray(data.rolledOutPhaseKeys)) {
-    return (data.rolledOutPhaseKeys as unknown[]).filter((k): k is string => typeof k === "string");
-  }
-  return [];
-}
-
-function readLegacyDeliveredMaxOrdinalFromDashboard(data: Record<string, unknown>): number | null {
-  const raw = data.legacyDeliveredMaxOrdinal;
-  if (typeof raw === "number" && Number.isFinite(raw) && raw >= 0) {
-    return Math.floor(raw);
-  }
-  return null;
-}
 
 /**
  * Component-level CSS used by the Status tab inside the Dashboard sidebar
@@ -266,81 +246,7 @@ export function renderStatusTabInnerHtml(
       kvRow("Maintainer YAML export", escapeHtml(expStale)) +
       "<p><b>Drift & hints</b></p>" +
       driftHtml;
-    const cat = phase.phaseCatalog as Record<string, unknown> | undefined;
-    const catSupported = cat && cat.supported === true;
-    const catPhasesRaw = catSupported && Array.isArray(cat.phases) ? (cat.phases as unknown[]) : [];
-    const catPhases: PhaseCatalogListRow[] = [];
-    for (const raw of catPhasesRaw) {
-      if (!raw || typeof raw !== "object") {
-        continue;
-      }
-      const row = raw as Record<string, unknown>;
-      const pk = typeof row.phaseKey === "string" ? row.phaseKey : "";
-      if (!pk) {
-        continue;
-      }
-      const sdRaw = row.shortDescription != null ? String(row.shortDescription).trim() : "";
-      catPhases.push({
-        phaseKey: pk,
-        shortDescription: sdRaw.length > 0 ? sdRaw : null,
-        inCatalog: row.inCatalog === true
-      });
-    }
-    const phaseRec = phase as Record<string, unknown>;
-    let catBlock = "";
-    if (catSupported) {
-      if (catPhases.length === 0) {
-        catBlock =
-          '<p class="wc-muted">Phase roster: no rows yet (workspace phases above; task-assigned phases appear here when present).</p>';
-      } else {
-        const deliveredKeys = readDeliveredPhaseKeysFromDashboard(d);
-        const legacyDeliveredMaxOrdinal = readLegacyDeliveredMaxOrdinalFromDashboard(d);
-        const narrow = buildNarrowPhaseRosterRows(
-          catPhases,
-          phaseRec,
-          deliveredKeys,
-          legacyDeliveredMaxOrdinal
-        );
-        if (!narrow.ok) {
-          catBlock =
-            '<p class="wc-muted">Phase roster: set a numeric workspace <b>current phase</b> to show last delivered, current, and future phases.</p>';
-        } else {
-          const rosterFocus = {
-            currentKitPhase:
-              typeof phaseRec.currentKitPhase === "string" ? phaseRec.currentKitPhase : null,
-            nextKitPhase: typeof phaseRec.nextKitPhase === "string" ? phaseRec.nextKitPhase : null,
-            releasedPhaseKeys:
-              deliveredKeys.length > 0 ? new Set(deliveredKeys) : undefined,
-            legacyDeliveredMaxOrdinal
-          };
-          let catRows = "";
-          for (const r of narrow.rows) {
-            const sd = r.shortDescription != null ? String(r.shortDescription).trim() : "";
-            const desc = sd.length > 0 ? escapeHtml(sd) : "—";
-            const tag = resolvePhaseScheduleTag(r.phaseKey, rosterFocus);
-            const status =
-              tag !== null ? renderPhaseScheduleTagHtml(tag) : '<span class="wc-muted">—</span>';
-            catRows +=
-              "<tr><td><code>" +
-              escapeHtml(r.phaseKey) +
-              "</code></td><td>" +
-              status +
-              "</td><td>" +
-              desc +
-              "</td></tr>";
-          }
-          catBlock =
-            catRows.length > 0
-              ? "<p><b>Phase Roster</b></p><table class=\"wc-mini-table\"><thead><tr><th>Key</th><th>Status</th><th>Deliverables</th></tr></thead><tbody>" +
-                catRows +
-                "</tbody></table>"
-              : '<p class="wc-muted">Phase roster: no matching rows.</p>';
-        }
-      }
-    } else {
-      catBlock = '<p class="wc-muted">Phase roster descriptions need planning SQLite v23+.</p>';
-    }
-    parts.push(card("Phase & Workspace", body + catBlock));
+    parts.push(card("Phase & Workspace", body));
   }
 
   const coord = sys.coordination as Record<string, unknown> | undefined;
@@ -424,14 +330,6 @@ export function renderStatusTabInnerHtml(
       "</ul>" +
       '<p class="wc-hint">Separate from any <code>data.cae</code> block when shadow preflight runs.</p>';
     parts.push(card("Context Activation (CAE)", body));
-  }
-
-  const ss = d.stateSummary as Record<string, unknown> | undefined;
-  if (ss && typeof ss === "object") {
-    const body =
-      kvRow("Ready · Active · Blocked", escapeHtml(String(ss.ready ?? "—")) + " · " + escapeHtml(String(ss.in_progress ?? "—")) + " · " + escapeHtml(String(ss.blocked ?? "—"))) +
-      kvRow("Active tasks (total)", escapeHtml(String(ss.total ?? "—")));
-    parts.push(card("Task Counts", body));
   }
 
   return parts.join("");

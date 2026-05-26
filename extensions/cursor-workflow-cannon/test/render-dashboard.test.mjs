@@ -240,9 +240,17 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.match(html, /<option value="14">Current \(14\)<\/option>/);
   assert.match(html, /<option value="15">Next \(15\)<\/option>/);
   assert.match(html, /<option value="29">Phase 29<\/option>/);
-  assert.match(html, /imp-example/);
-  assert.match(html, /T319/);
-  assert.match(html, /T320/);
+  assert.doesNotMatch(taskEnginePanel, /imp-example/);
+  const lazyBucketBodies = [
+    ...taskEnginePanel.matchAll(
+      /<div class="wc-lazy-bucket-body" data-wc-lazy-loaded="0">([\s\S]*?)<\/div><\/details>/g
+    )
+  ].map((match) => match[1]);
+  assert.ok(lazyBucketBodies.length >= 3, "expected lazy queue bucket placeholders");
+  for (const body of lazyBucketBodies) {
+    assert.doesNotMatch(body, /T319/);
+    assert.doesNotMatch(body, /T320/);
+  }
   assert.match(html, /W1/);
   assert.match(html, /class="wc-btn wc-btn-sm wc-btn-secondary"[^>]*data-wc-action="wishlist-view"/);
   assert.match(html, />View<\/button>/);
@@ -250,18 +258,16 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.match(html, />Process<\/button>/);
   assert.match(html, /class="wc-btn wc-btn-sm wc-btn-secondary"[^>]*data-wc-action="wishlist-decline"/);
   assert.match(html, />Decline<\/button>/);
-  assert.match(html, /data-task-id="T501"/);
-  assert.match(html, /class="wc-btn wc-btn-sm wc-btn-success"[^>]*data-wc-action="proposed-imp-accept"/);
-  assert.match(html, /class="wc-btn wc-btn-sm wc-btn-danger"[^>]*data-wc-action="proposed-imp-decline"/);
+  assert.match(html, /data-wc-action="wishlist-decline"[\s\S]*data-task-id="T501"/);
+  assert.doesNotMatch(html, /class="wc-btn wc-btn-sm wc-btn-success"[^>]*data-wc-action="proposed-imp-accept"/);
+  assert.doesNotMatch(html, /class="wc-btn wc-btn-sm wc-btn-danger"[^>]*data-wc-action="proposed-imp-decline"/);
   assert.doesNotMatch(html, /proposed-imp-chat/);
   assert.doesNotMatch(html, /proposed-exe-chat/);
-  assert.match(html, /data-wc-action="task-detail"/);
-  assert.match(html, /class="wc-btn wc-btn-sm wc-btn-info"[^>]*data-wc-action="assign-phase"/);
-  assert.match(html, /class="wc-btn wc-btn-sm wc-btn-secondary"[^>]*data-wc-action="task-detail"/);
-  assert.match(html, /data-wc-action="task-detail"[\s\S]*?>View Task<\/button>/);
-  assert.match(html, /data-wc-action="task-comments-view"[\s\S]*?>View Comments<\/button>/);
-  assert.match(html, /class="wc-btn wc-btn-sm wc-btn-info"[^>]*data-wc-action="task-comment-add"/);
-  assert.match(html, /data-wc-action="task-comment-add"[\s\S]*?>Add Comment<\/button>/);
+  assert.doesNotMatch(html, /class="wc-btn wc-btn-sm wc-btn-info"[^>]*data-wc-action="assign-phase"/);
+  assert.doesNotMatch(html, /data-wc-action="task-detail"[\s\S]*?>View Task<\/button>/);
+  assert.doesNotMatch(html, /data-wc-action="task-comments-view"[\s\S]*?>View Comments<\/button>/);
+  assert.doesNotMatch(html, /class="wc-btn wc-btn-sm wc-btn-info"[^>]*data-wc-action="task-comment-add"/);
+  assert.doesNotMatch(html, /data-wc-action="task-comment-add"[\s\S]*?>Add Comment<\/button>/);
   assert.match(html, /wc-btn-sm/);
   assert.match(html, /phase-bucket/);
   assert.match(html, /data-wc-phase-bucket="14"/);
@@ -272,9 +278,13 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.match(html, /<b>Cancelled<\/b>/);
   assert.match(html, /terminal-phase-bucket/);
   assert.match(html, /wc-lazy-terminal-bucket/);
+  assert.match(html, /wc-lazy-queue-bucket/);
   assert.match(html, /data-wc-lazy-loaded="0"/);
   assert.match(html, /wc-lazy-bucket-hint/);
-  assert.match(html, /data-wc-lazy-terminal="completed"/);
+  assert.match(html, /data-wc-queue-category="completed"/);
+  assert.match(html, /data-wc-queue-category="ready"/);
+  assert.match(html, /data-wc-queue-category="proposed-improvement"/);
+  assert.doesNotMatch(html, /data-wc-queue-category="blocked"/);
   assert.doesNotMatch(html, /T099/);
   assert.match(html, /Not Phased/);
   assert.doesNotMatch(html, /Dependency Overview/);
@@ -321,6 +331,7 @@ test("renderDashboardRootInnerHtml renders phase roster deliverables inline edit
   assert.match(html, /data-wc-action="phase-roster-start"/);
   assert.match(html, /data-wc-action="phase-deliverables-edit"/);
   assert.match(html, /dash-phase-edit-anchor/);
+  assert.match(html, /dash-phase-roster-status-inner/);
   assert.match(html, /dash-phase-roster-actions/);
   assert.match(html, /Register Phase\./);
   assert.doesNotMatch(html, /Register future phase/);
@@ -1574,6 +1585,23 @@ test("lookupProposedTaskPhaseKey resolves from phase buckets and top rows", () =
   assert.equal(lookupProposedTaskPhaseKey(data, "T100407"), "101");
 });
 
+test("renderUpNextCardHtml puts View action inline without footer tags", () => {
+  const html = renderUpNextCardHtml({
+    ws: { currentKitPhase: "108", nextKitPhase: "109" },
+    phaseSnapshot: null,
+    suggestedNext: { id: "T501", title: "Ship the thing", phaseKey: "108" },
+    readyTop: [{ id: "T501", title: "Ship the thing", phaseKey: "108" }],
+    readyCount: 1,
+    firstWishlistOpen: null,
+    humanGatesCount: 0
+  });
+  assert.match(html, /wc-rec-title-row/);
+  assert.match(html, /Ship the thing[\s\S]*data-wc-action="task-detail"/);
+  assert.match(html, />View &rarr;<\/button>/);
+  assert.doesNotMatch(html, /wc-rec-footer/);
+  assert.doesNotMatch(html, /wc-rec-tag/);
+});
+
 test("renderUpNextCardHtml surfaces phase closeout when delivery queue is drained", () => {
   const html = renderUpNextCardHtml({
     ws: { currentKitPhase: "108", nextKitPhase: "109" },
@@ -1586,6 +1614,8 @@ test("renderUpNextCardHtml surfaces phase closeout when delivery queue is draine
   });
   assert.match(html, /wc-rec-next-closeout/);
   assert.match(html, /Complete &amp; Release/);
+  assert.match(html, /wc-rec-title-row/);
+  assert.doesNotMatch(html, /wc-rec-tag/);
   assert.doesNotMatch(html, /Later phase/);
 });
 

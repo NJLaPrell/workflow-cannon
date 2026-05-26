@@ -16,7 +16,7 @@
       "const": 1
     },
     "packageVersion": {
-      "const": "0.99.6",
+      "const": "0.99.7",
       "description": "Must match package.json version."
     },
     "moduleId": {
@@ -2910,6 +2910,21 @@
                   "type": "integer",
                   "minimum": 1,
                   "maximum": 100
+                },
+                "includePhaseFocus": {
+                  "type": "boolean"
+                },
+                "phaseKey": {
+                  "type": "string"
+                },
+                "projection": {
+                  "type": "string",
+                  "enum": [
+                    "full",
+                    "overview",
+                    "queue",
+                    "status"
+                  ]
                 }
               }
             },

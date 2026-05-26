@@ -28,22 +28,39 @@ import {
 } from "./dashboard-refresh-controller.js";
 import { DrawerSessionController } from "./drawer-session.js";
 import { buildDashboardWebviewBootstrapScript } from "./dashboard-webview-client.js";
+import type { DashboardSectionId, DashboardSectionLoadState } from "./dashboard-section-registry.js";
+import { DASHBOARD_SECTION_REGISTRY } from "./dashboard-section-registry.js";
+import {
+  dashboardSectionsForMutation,
+  extractDashboardSectionInnerHtml,
+  type DashboardMutationKind
+} from "./dashboard-section-invalidation.js";
+import { renderDashboardShellInnerHtml } from "./render-dashboard-shell.js";
 import {
   buildDashboardPolicyApprovalForPath,
   type DashboardPolicyPathRef
 } from "../../policy/dashboard-policy-path.js";
 import { executeCreateWishlistFromValidatedFields } from "../../add-wishlist-item-flow.js";
 import {
+  buildListTasksArgsForQueueBucket,
+  filterTasksForQueueBucketCategory,
+  renderQueueBucketRowsHtml,
+  type DashboardQueueBucketCategory
+} from "./dashboard-queue-bucket-lazy.js";
+import {
   escapeHtml,
   lazyTerminalBucketListLimit,
   lookupDashboardTaskPhaseKey,
   lookupProposedTaskPhaseKey,
-  renderDashboardQueueTaskRowsHtml,
+  renderDashboardCaeSectionInnerHtml,
+  renderDashboardPhaseJournalSectionInnerHtml,
   renderDashboardRootInnerHtml,
+  renderDashboardStatusSectionInnerHtml,
   type DashboardPhaseJournalBundle,
   type PhaseJournalKitPayload,
   type PlanningInterviewWizardPanel
 } from "./render-dashboard.js";
+import { renderConfigPanelShellHtml } from "../config/config-panel-shell.js";
 import {
   buildPhaseKeySuggestion,
   sortPhaseKeySuggestions,
@@ -347,6 +364,15 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   /** After first full HTML load, refresh only swaps `#root` via postMessage so `<details open>` state survives. */
   private dashboardRootShellReady = false;
 
+  /** Sections hydrated via tab activation or eager first paint (T100398). */
+  private hydratedDashboardSections = new Set<DashboardSectionId>();
+
+  /** Active sidebar tab — drives targeted invalidation (T100399). */
+  private activeDashboardTab = "overview";
+
+  /** Sections marked stale while their tab was hidden (T100399). */
+  private staleDashboardSections = new Set<DashboardSectionId>();
+
   /** Monotonic render token lives on {@link DashboardRefreshController}. */
   private readonly refreshController: DashboardRefreshController;
 
@@ -383,8 +409,10 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   /** Cached CAE tab HTML for light dashboard refreshes. */
   private lastEmbeddedCaePanelHtml: string | null = null;
 
-  /** Options consumed by the next `pushUpdateOnce` (e.g. skip CAE refetch). */
-  private pendingPushUpdateOptions: { light?: boolean } | undefined;
+  /** Options consumed by the next `pushUpdateOnce` (projection / light refresh). */
+  private pendingPushUpdateOptions:
+    | { light?: boolean; projection?: "full" | "overview"; skipHeavyFetches?: boolean }
+    | undefined;
 
   constructor(
     private readonly extensionUri: vscode.Uri,
@@ -403,7 +431,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       }
     });
     onKitStateChanged(() => {
-      this.refreshController.request({ reason: "kit-state-changed" });
+      this.refreshController.request({ reason: "kit-state-changed", mode: "light" });
     });
   }
 
@@ -448,7 +476,30 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         this.dashboardInteractionLocks.clear();
         this.dashboardRefreshAfterInteraction = false;
         await webview.postMessage({ type: "wcReleaseRefreshBlock" });
-        await this.pushUpdate();
+        await this.pushUpdate({ projection: "full", skipHeavyFetches: false });
+      }
+      if (msg?.type === "dashboardTabActivated") {
+        const tabId = typeof (msg as { tabId?: unknown }).tabId === "string" ? (msg as { tabId: string }).tabId : "";
+        if (tabId.length > 0) {
+          this.activeDashboardTab = tabId;
+          void this.onDashboardTabActivated(tabId);
+        }
+      }
+      if (msg?.type === "loadQueueBucketRows") {
+        const categoryRaw = (msg as { category?: unknown }).category;
+        const category =
+          typeof categoryRaw === "string" ? (categoryRaw.trim() as DashboardQueueBucketCategory) : null;
+        const phaseKey =
+          typeof (msg as { phaseKey?: unknown }).phaseKey === "string"
+            ? (msg as { phaseKey: string }).phaseKey
+            : "";
+        const cursor =
+          typeof (msg as { cursor?: unknown }).cursor === "string"
+            ? (msg as { cursor: string }).cursor
+            : undefined;
+        if (category) {
+          void this.loadQueueBucketRows(category, phaseKey, cursor);
+        }
       }
       if (msg?.type === "loadLazyTerminalBucket") {
         const terminalRaw = (msg as { terminalStatus?: unknown }).terminalStatus;
@@ -459,7 +510,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
             ? (msg as { phaseKey: string }).phaseKey
             : "";
         if (terminalStatus) {
-          void this.loadLazyTerminalBucket(phaseKey, terminalStatus);
+          void this.loadQueueBucketRows(terminalStatus, phaseKey);
         }
       }
       if (msg?.type === "wishlistPage") {
@@ -471,7 +522,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
               ? parseInt(rawP.trim(), 10)
               : 0;
         this.wishlistPage = p;
-        await this.pushUpdate();
+        await this.applyDashboardMutationInvalidation("task-queue");
       }
       if (msg?.type === "prefillWishlistChat") {
         const raw = msg?.wishlistId;
@@ -617,7 +668,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
           if (msg?.transitionKind === "human-gate") {
             await this.client.clearActivity();
           }
-          await this.pushUpdate();
+          await this.applyDashboardMutationInvalidation("task-queue");
         }
       }
       if (msg?.type === "dismissPhaseNote") {
@@ -626,7 +677,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         if (nid.length > 0) {
           await this.onDismissPhaseNote(nid, pri);
           if (!this.dashboardDrawerSession) {
-            await this.pushUpdate();
+            await this.applyDashboardMutationInvalidation("phase-journal");
           }
         }
       }
@@ -661,7 +712,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       }
       if (msg?.type === "addPhaseNote") {
         await this.onAddPhaseNote();
-        await this.pushUpdate();
+        await this.applyDashboardMutationInvalidation("phase-journal");
       }
       if (msg?.type === "prefillPhaseNotesDiscoveryChat") {
         await prefillCursorChat(buildPhaseNotesDiscoveryPrompt(), { newChat: true });
@@ -762,12 +813,12 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         const nid = typeof msg.noteId === "string" ? msg.noteId.trim() : "";
         if (nid.length > 0) {
           await this.onConvertPhaseNote(nid);
-          await this.pushUpdate();
+          await this.applyDashboardMutationInvalidation("phase-journal");
         }
       }
       if (msg?.type === "persistPhaseNoteProposals") {
         await this.onPersistPhaseNoteProposals();
-        await this.pushUpdate();
+        await this.applyDashboardMutationInvalidation("phase-journal");
       }
       if (msg?.type === "assignTaskPhase") {
         const rawId = msg?.taskId;
@@ -846,7 +897,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
           this.endDrawerSubmitRefreshHold();
         }
         if (refreshed) {
-          void this.pushUpdate({ light: true });
+          await this.applyDashboardMutationInvalidation("task-queue");
         }
       }
       if (msg?.type === "drawerCancel") {
@@ -906,6 +957,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }, 45_000);
     webviewView.onDidDispose(() => {
       this.dashboardRootShellReady = false;
+      this.hydratedDashboardSections.clear();
+      this.staleDashboardSections.clear();
       this.webviewMessageDisposable?.dispose();
       this.webviewMessageDisposable = undefined;
       this.dashboardDrawerSubmitInFlight = false;
@@ -920,7 +973,340 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       }
       this.dashboardGuidanceAuthoring = undefined;
     });
-    void this.pushUpdate();
+    // Shell-first paint (T100395): document before any dashboard-summary await.
+    webview.html = this.buildHtml(webview, renderDashboardShellInnerHtml());
+    this.dashboardRootShellReady = true;
+    logWc("dashboard", "resolveWebviewView: shell painted synchronously");
+    void this.pushUpdate({ projection: "overview", skipHeavyFetches: true });
+  }
+
+  /** Section-level DOM patch (T100395); full wcReplaceRoot remains the compatibility fallback. */
+  private async postSectionPatch(
+    sectionId: DashboardSectionId,
+    html: string,
+    state: DashboardSectionLoadState
+  ): Promise<void> {
+    const webview = this.view?.webview;
+    if (!webview) {
+      return;
+    }
+    await webview.postMessage({ type: "wcSectionPatch", sectionId, html, state });
+  }
+
+  private sectionsForTabActivation(tabId: string): DashboardSectionId[] {
+    return DASHBOARD_SECTION_REGISTRY.filter(
+      (section) =>
+        section.tabId === tabId &&
+        section.refreshPolicy === "on-tab-activate" &&
+        !this.hydratedDashboardSections.has(section.id)
+    ).map((section) => section.id);
+  }
+
+  private async onDashboardTabActivated(tabId: string): Promise<void> {
+    for (const sectionId of this.sectionsForTabActivation(tabId)) {
+      await this.hydrateDashboardSection(sectionId);
+    }
+    const staleOnTab = DASHBOARD_SECTION_REGISTRY.filter(
+      (section) => section.tabId === tabId && this.staleDashboardSections.has(section.id)
+    ).map((section) => section.id);
+    if (staleOnTab.length > 0) {
+      await this.patchDashboardSectionsFromSummary(staleOnTab);
+    }
+  }
+
+  private async hydrateDashboardSection(sectionId: DashboardSectionId): Promise<void> {
+    if (this.hydratedDashboardSections.has(sectionId)) {
+      return;
+    }
+    await this.postSectionPatch(sectionId, "", "loading");
+    try {
+      let html = "";
+      if (sectionId === "status") {
+        const raw = (await this.client.run("dashboard-summary", {
+          projection: "status"
+        })) as Record<string, unknown>;
+        const editorIntegration = await resolveEditorIntegrationState();
+        html = renderDashboardStatusSectionInnerHtml(raw, editorIntegration);
+      } else if (sectionId === "cae") {
+        const caeSummary = await this.client.run("cae-authoring-summary", { schemaVersion: 1 });
+        if (isKitRefreshRunAborted(caeSummary as Record<string, unknown>)) {
+          return;
+        }
+        const panel = renderGuidanceAuthoringPanelInnerHtml(caeSummary);
+        this.lastEmbeddedCaePanelHtml = panel;
+        html = renderDashboardCaeSectionInnerHtml(panel);
+      } else if (sectionId === "phase-journal") {
+        const summaryData = this.lastDashboardSummaryData;
+        if (!summaryData || !this.summaryHasCanonicalWorkspacePhase(summaryData)) {
+          html = renderDashboardPhaseJournalSectionInnerHtml(null, summaryData?.phaseJournalStats);
+        } else {
+          const [lp, gpc] = (await Promise.all([
+            this.client.run("list-phase-notes", { ...expectedPlanningGenerationArgs() }),
+            this.client.run("get-phase-context", { ...expectedPlanningGenerationArgs() })
+          ])) as [PhaseJournalKitPayload & Record<string, unknown>, PhaseJournalKitPayload & Record<string, unknown>];
+          if (
+            isKitRefreshRunAborted(lp as Record<string, unknown>) ||
+            isKitRefreshRunAborted(gpc as Record<string, unknown>)
+          ) {
+            return;
+          }
+          ingestPlanningMetaFromData(lp.data as Record<string, unknown> | undefined);
+          ingestPlanningMetaFromData(gpc.data as Record<string, unknown> | undefined);
+          const pastFromSummary = summaryData.pastPhaseNotes;
+          const pastPhaseNotes: DashboardPhaseJournalBundle["pastPhaseNotes"] = Array.isArray(pastFromSummary)
+            ? pastFromSummary
+                .map((entry) => {
+                  if (!entry || typeof entry !== "object") {
+                    return null;
+                  }
+                  const rec = entry as Record<string, unknown>;
+                  const phaseKey = typeof rec.phaseKey === "string" ? rec.phaseKey.trim() : "";
+                  const notes = Array.isArray(rec.notes) ? rec.notes : [];
+                  if (!phaseKey || notes.length === 0) {
+                    return null;
+                  }
+                  return { phaseKey, notes };
+                })
+                .filter((e): e is { phaseKey: string; notes: unknown[] } => e !== null)
+            : undefined;
+          html = renderDashboardPhaseJournalSectionInnerHtml(
+            {
+              listPhaseNotes: {
+                ok: lp.ok,
+                code: lp.code,
+                message: lp.message,
+                data: lp.data as Record<string, unknown> | undefined
+              },
+              getPhaseContext: {
+                ok: gpc.ok,
+                code: gpc.code,
+                message: gpc.message,
+                data: gpc.data as Record<string, unknown> | undefined
+              },
+              pastPhaseNotes
+            },
+            summaryData.phaseJournalStats
+          );
+        }
+      } else if (sectionId === "config") {
+        html = renderConfigPanelShellHtml();
+      } else {
+        return;
+      }
+      await this.postSectionPatch(sectionId, html, "ready");
+      this.hydratedDashboardSections.add(sectionId);
+      if (sectionId === "config") {
+        await this.refreshDashboardConfigTab(this.view!.webview);
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unable to load section.";
+      await this.postSectionPatch(
+        sectionId,
+        '<p class="muted wc-dash-section-error" role="status">' + escapeHtml(message) + "</p>",
+        "error"
+      );
+    }
+  }
+
+  private async markDashboardSectionStale(sectionId: DashboardSectionId): Promise<void> {
+    if (!this.hydratedDashboardSections.has(sectionId)) {
+      return;
+    }
+    this.staleDashboardSections.add(sectionId);
+    await this.postSectionPatch(sectionId, "", "stale");
+  }
+
+  private async applyDashboardMutationInvalidation(
+    kind: DashboardMutationKind | readonly DashboardSectionId[]
+  ): Promise<void> {
+    const sectionIds =
+      typeof kind === "string" ? dashboardSectionsForMutation(kind) : kind;
+    const toStale: DashboardSectionId[] = [];
+    const toRefresh: DashboardSectionId[] = [];
+    for (const sectionId of sectionIds) {
+      if (!this.hydratedDashboardSections.has(sectionId)) {
+        continue;
+      }
+      const tabId = DASHBOARD_SECTION_REGISTRY.find((s) => s.id === sectionId)?.tabId ?? "";
+      if (tabId === this.activeDashboardTab) {
+        toRefresh.push(sectionId);
+      } else {
+        toStale.push(sectionId);
+      }
+    }
+    for (const sectionId of toStale) {
+      await this.markDashboardSectionStale(sectionId);
+    }
+    if (toRefresh.length > 0) {
+      await this.patchDashboardSectionsFromSummary(toRefresh);
+    }
+  }
+
+  private async fetchPhaseJournalBundleForRender(
+    summaryData: Record<string, unknown>
+  ): Promise<DashboardPhaseJournalBundle | undefined> {
+    if (!this.summaryHasCanonicalWorkspacePhase(summaryData)) {
+      return undefined;
+    }
+    const [lp, gpc] = (await Promise.all([
+      this.client.run("list-phase-notes", { ...expectedPlanningGenerationArgs() }),
+      this.client.run("get-phase-context", { ...expectedPlanningGenerationArgs() })
+    ])) as [
+      PhaseJournalKitPayload & Record<string, unknown>,
+      PhaseJournalKitPayload & Record<string, unknown>
+    ];
+    if (
+      isKitRefreshRunAborted(lp as Record<string, unknown>) ||
+      isKitRefreshRunAborted(gpc as Record<string, unknown>)
+    ) {
+      return undefined;
+    }
+    ingestPlanningMetaFromData(lp.data as Record<string, unknown> | undefined);
+    ingestPlanningMetaFromData(gpc.data as Record<string, unknown> | undefined);
+    const pastFromSummary = summaryData.pastPhaseNotes;
+    const pastPhaseNotes: DashboardPhaseJournalBundle["pastPhaseNotes"] = Array.isArray(pastFromSummary)
+      ? pastFromSummary
+          .map((entry) => {
+            if (!entry || typeof entry !== "object") {
+              return null;
+            }
+            const rec = entry as Record<string, unknown>;
+            const phaseKey = typeof rec.phaseKey === "string" ? rec.phaseKey.trim() : "";
+            const notes = Array.isArray(rec.notes) ? rec.notes : [];
+            if (!phaseKey || notes.length === 0) {
+              return null;
+            }
+            return { phaseKey, notes };
+          })
+          .filter((e): e is { phaseKey: string; notes: unknown[] } => e !== null)
+      : undefined;
+    return {
+      listPhaseNotes: {
+        ok: lp.ok,
+        code: lp.code,
+        message: lp.message,
+        data: lp.data as Record<string, unknown> | undefined
+      },
+      getPhaseContext: {
+        ok: gpc.ok,
+        code: gpc.code,
+        message: gpc.message,
+        data: gpc.data as Record<string, unknown> | undefined
+      },
+      pastPhaseNotes
+    };
+  }
+
+  private async patchDashboardSectionsFromSummary(
+    sectionIds: readonly DashboardSectionId[],
+    updateSequence?: number
+  ): Promise<void> {
+    const activeView = this.view;
+    if (!activeView || sectionIds.length === 0) {
+      return;
+    }
+    const needsPhaseJournal = sectionIds.includes("phase-journal");
+    const needsCae = sectionIds.includes("cae");
+    let raw: DashboardSummaryCommandSuccess | Record<string, unknown>;
+    try {
+      raw = (await this.client.run("dashboard-summary", {
+        wishlistPage: this.wishlistPage,
+        wishlistPageSize: 5,
+        projection: "full"
+      })) as DashboardSummaryCommandSuccess | Record<string, unknown>;
+      if (isKitRefreshRunAborted(raw as Record<string, unknown>)) {
+        return;
+      }
+    } catch (e) {
+      logWc(
+        "dashboard",
+        `patchDashboardSectionsFromSummary failed: ${e instanceof Error ? e.message : String(e)}`
+      );
+      return;
+    }
+    if (
+      typeof updateSequence === "number" &&
+      this.isPushUpdateStale(updateSequence, activeView)
+    ) {
+      return;
+    }
+    let phaseJournal: DashboardPhaseJournalBundle | undefined;
+    let embeddedCaePanelHtml: string | null = this.lastEmbeddedCaePanelHtml;
+    if (raw.ok === true && raw.data && typeof raw.data === "object") {
+      this.lastDashboardSummaryData = raw.data as Record<string, unknown>;
+      ingestPlanningMetaFromData(raw.data as Record<string, unknown>);
+      try {
+        if (needsPhaseJournal) {
+          phaseJournal = await this.fetchPhaseJournalBundleForRender(raw.data as Record<string, unknown>);
+        }
+        if (needsCae) {
+          const caeSummary = await this.client.run("cae-authoring-summary", { schemaVersion: 1 });
+          if (!isKitRefreshRunAborted(caeSummary as Record<string, unknown>)) {
+            embeddedCaePanelHtml = renderGuidanceAuthoringPanelInnerHtml(caeSummary);
+            this.lastEmbeddedCaePanelHtml = embeddedCaePanelHtml;
+          }
+        }
+      } catch {
+        /* section patch falls back to summary-only slices */
+      }
+    }
+    const wizardPanel = raw.ok === true ? this.planningWizardPanel() : null;
+    let rootInner: string;
+    try {
+      const editorIntegration = await resolveEditorIntegrationState();
+      rootInner = renderDashboardRootInnerHtml(
+        raw,
+        wizardPanel,
+        editorIntegration,
+        phaseJournal,
+        embeddedCaePanelHtml
+      );
+    } catch (e) {
+      logWc(
+        "dashboard",
+        `patchDashboardSectionsFromSummary render failed: ${e instanceof Error ? e.message : String(e)}`
+      );
+      return;
+    }
+    for (const sectionId of sectionIds) {
+      const inner = extractDashboardSectionInnerHtml(rootInner, sectionId);
+      if (inner == null) {
+        continue;
+      }
+      await this.postSectionPatch(sectionId, inner, "ready");
+      this.hydratedDashboardSections.add(sectionId);
+      this.staleDashboardSections.delete(sectionId);
+      if (sectionId === "config") {
+        await this.refreshDashboardConfigTab(activeView.webview);
+      }
+    }
+  }
+
+  private async executeLightSectionRefresh(updateSequence: number): Promise<void> {
+    const activeView = this.view;
+    if (!activeView) {
+      return;
+    }
+    const hydrated = DASHBOARD_SECTION_REGISTRY.map((s) => s.id).filter((id) =>
+      this.hydratedDashboardSections.has(id)
+    );
+    if (hydrated.length === 0) {
+      return;
+    }
+    const toRefresh = hydrated.filter(
+      (id) => (DASHBOARD_SECTION_REGISTRY.find((s) => s.id === id)?.tabId ?? "") === this.activeDashboardTab
+    );
+    const toStale = hydrated.filter((id) => !toRefresh.includes(id));
+    for (const sectionId of toStale) {
+      await this.markDashboardSectionStale(sectionId);
+    }
+    if (toRefresh.length > 0) {
+      await this.patchDashboardSectionsFromSummary(toRefresh, updateSequence);
+    }
+    logWc(
+      "dashboard",
+      `executeLightSectionRefresh refreshed=${toRefresh.join(",") || "none"} stale=${toStale.join(",") || "none"} tab=${this.activeDashboardTab}`
+    );
   }
 
   refresh(): void {
@@ -931,7 +1317,12 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     void this.refreshController.pushNow();
   }
 
-  private async pushUpdate(options?: { light?: boolean }): Promise<void> {
+  private async pushUpdate(options?: {
+    light?: boolean;
+    projection?: "full" | "overview";
+    skipHeavyFetches?: boolean;
+  }): Promise<void> {
+    this.pendingPushUpdateOptions = options;
     await this.refreshController.pushNow(options);
   }
 
@@ -1020,43 +1411,55 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
   }
 
-  private async loadLazyTerminalBucket(
+  private async loadQueueBucketRows(
+    category: DashboardQueueBucketCategory,
     phaseKey: string,
-    terminalStatus: "completed" | "cancelled"
+    cursor?: string
   ): Promise<void> {
     const pk = phaseKey.trim();
     const phaseKeyArg = pk.length > 0 ? pk : "__no_phase__";
+    const append = typeof cursor === "string" && cursor.trim().length > 0;
     try {
-      const raw = await this.client.run("list-tasks", {
-        phaseKey: phaseKeyArg,
-        status: terminalStatus,
-        limit: lazyTerminalBucketListLimit()
-      });
+      const raw = await this.client.run(
+        "list-tasks",
+        buildListTasksArgsForQueueBucket(category, phaseKeyArg, lazyTerminalBucketListLimit(), cursor)
+      );
       const data =
         raw && typeof raw === "object" && "data" in raw
-          ? (raw as { data?: unknown }).data
+          ? (raw as { data?: Record<string, unknown> }).data
           : undefined;
-      const tasks =
-        data && typeof data === "object" && Array.isArray((data as { tasks?: unknown }).tasks)
-          ? ((data as { tasks: unknown[] }).tasks as unknown[])
-          : [];
-      const html = renderDashboardQueueTaskRowsHtml(tasks);
+      const tasksRaw =
+        data && Array.isArray(data.tasks) ? (data.tasks as unknown[]) : [];
+      const tasks = filterTasksForQueueBucketCategory(category, tasksRaw);
+      const nextCursor =
+        data && typeof data.nextCursor === "string" ? data.nextCursor : null;
+      const html = renderQueueBucketRowsHtml(category, tasks, { nextCursor });
       await this.view?.webview.postMessage({
-        type: "wcLazyTerminalBucketHtml",
+        type: "wcQueueBucketRowsHtml",
+        category,
         phaseKey: pk,
-        terminalStatus,
-        html
+        html,
+        append
       });
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unable to load tasks.";
       await this.view?.webview.postMessage({
-        type: "wcLazyTerminalBucketHtml",
+        type: "wcQueueBucketRowsHtml",
+        category,
         phaseKey: pk,
-        terminalStatus,
         html:
-          '<p class="muted wc-lazy-bucket-hint" role="status">' + escapeHtml(message) + "</p>"
+          '<p class="muted wc-lazy-bucket-hint" role="status">' + escapeHtml(message) + "</p>",
+        append: false
       });
     }
+  }
+
+  /** @deprecated — use {@link loadQueueBucketRows} */
+  private async loadLazyTerminalBucket(
+    phaseKey: string,
+    terminalStatus: "completed" | "cancelled"
+  ): Promise<void> {
+    await this.loadQueueBucketRows(terminalStatus, phaseKey);
   }
 
   private async onPlanningWizardStart(planningType: string): Promise<void> {
@@ -2715,10 +3118,21 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       return;
     }
     const lightRefresh = mode === "light";
+    const refreshOptions = this.pendingPushUpdateOptions;
     this.pendingPushUpdateOptions = undefined;
+    const summaryProjection = refreshOptions?.projection ?? "full";
+    const skipHeavyFetches = refreshOptions?.skipHeavyFetches === true;
     if (this.isDashboardRefreshDeferred()) {
       this.refreshController.markDeferredRefreshNeeded();
       logWc("dashboard", "pushUpdate deferred (UI interaction lock active)");
+      return;
+    }
+    if (
+      lightRefresh &&
+      refreshOptions?.projection === undefined &&
+      refreshOptions?.skipHeavyFetches !== true
+    ) {
+      await this.executeLightSectionRefresh(updateSequence);
       return;
     }
     const { webview } = activeView;
@@ -2726,13 +3140,14 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     const startedAt = Date.now();
     logWc(
       "dashboard",
-      `pushUpdate START light=${String(lightRefresh)} page=${String(requestedWishlistPage)} seq=${String(updateSequence)}`
+      `pushUpdate START light=${String(lightRefresh)} projection=${summaryProjection} skipHeavy=${String(skipHeavyFetches)} page=${String(requestedWishlistPage)} seq=${String(updateSequence)}`
     );
     let raw: DashboardSummaryCommandSuccess | Record<string, unknown>;
     try {
       raw = (await this.client.run("dashboard-summary", {
         wishlistPage: requestedWishlistPage,
-        wishlistPageSize: 5
+        wishlistPageSize: 5,
+        projection: summaryProjection
       })) as DashboardSummaryCommandSuccess | Record<string, unknown>;
       if (isKitRefreshRunAborted(raw as Record<string, unknown>)) {
         logWc("dashboard", "pushUpdate aborted (refresh paused or preempted)");
@@ -2741,7 +3156,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       if (isWishlistPagingArgRejection(raw as Record<string, unknown>)) {
         logWc("dashboard", "pushUpdate: dashboard-summary rejected wishlist paging; retrying without paging");
         this.wishlistPage = 0;
-        raw = (await this.client.run("dashboard-summary", {})) as DashboardSummaryCommandSuccess | Record<string, unknown>;
+        raw = (await this.client.run("dashboard-summary", { projection: summaryProjection })) as DashboardSummaryCommandSuccess | Record<string, unknown>;
         if (isKitRefreshRunAborted(raw as Record<string, unknown>)) {
           logWc("dashboard", "pushUpdate aborted (refresh paused or preempted)");
           return;
@@ -2769,6 +3184,9 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       try {
         if (lightRefresh) {
           embeddedCaePanelHtml = this.lastEmbeddedCaePanelHtml;
+          phaseJournal = undefined;
+        } else if (skipHeavyFetches) {
+          embeddedCaePanelHtml = null;
           phaseJournal = undefined;
         } else if (this.summaryHasCanonicalWorkspacePhase(raw.data)) {
           if (this.isPushUpdateStale(updateSequence, activeView)) {
@@ -2889,6 +3307,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     let rootInner: string;
     const wizardPanel: PlanningInterviewWizardPanel | null = raw.ok === true ? this.planningWizardPanel() : null;
+    const useDeferredSecondary = skipHeavyFetches && summaryProjection === "overview";
     try {
       const editorIntegration = await resolveEditorIntegrationState();
       rootInner = renderDashboardRootInnerHtml(
@@ -2896,8 +3315,27 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         wizardPanel,
         editorIntegration,
         phaseJournal,
-        embeddedCaePanelHtml
+        embeddedCaePanelHtml,
+        useDeferredSecondary
+          ? {
+              deferredSections: new Set<DashboardSectionId>([
+                "status",
+                "config",
+                "cae",
+                "phase-journal"
+              ])
+            }
+          : undefined
       );
+      if (useDeferredSecondary) {
+        this.hydratedDashboardSections.clear();
+        this.hydratedDashboardSections.add("overview");
+        this.hydratedDashboardSections.add("queue");
+      } else {
+        this.hydratedDashboardSections = new Set(
+          DASHBOARD_SECTION_REGISTRY.map((section) => section.id)
+        );
+      }
     } catch (e) {
       rootInner = '<pre class="bad">Host render error: ' + escapeHtml(String(e)) + "</pre>";
     }
@@ -2910,12 +3348,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       return;
     }
     try {
-      if (!this.dashboardRootShellReady) {
-        webview.html = this.buildHtml(webview, rootInner);
-        this.dashboardRootShellReady = true;
-      } else {
-        await webview.postMessage({ type: "wcReplaceRoot", html: rootInner });
-      }
+      // Full-root refresh stays the compatibility path while section slices land (T100396+).
+      await webview.postMessage({ type: "wcReplaceRoot", html: rootInner });
     } catch (e) {
       logWc("dashboard", `pushUpdate render failed: ${e instanceof Error ? e.message : String(e)}`);
     }
@@ -3172,11 +3606,15 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       font-variant: normal;
     }
     .dash-phase-catalog-table th.dash-phase-roster-col-phase,
-    .dash-phase-catalog-table td.dash-phase-roster-col-phase,
+    .dash-phase-catalog-table td.dash-phase-roster-col-phase {
+      width: 1%;
+      white-space: nowrap;
+    }
     .dash-phase-catalog-table th.dash-phase-roster-col-status,
     .dash-phase-catalog-table td.dash-phase-roster-col-status {
       width: 1%;
       white-space: nowrap;
+      vertical-align: middle;
     }
     .dash-phase-catalog-table th.dash-phase-roster-col-deliverables,
     .dash-phase-catalog-table td.dash-phase-roster-col-deliverables {
@@ -3187,6 +3625,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       width: 1%;
       white-space: nowrap;
       text-align: right;
+      vertical-align: middle;
     }
     .dash-phase-no-catalog {
       cursor: help;
@@ -3219,7 +3658,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     .dash-phase-roster-actions {
       display: inline-flex;
-      flex-wrap: wrap;
+      flex-wrap: nowrap;
       align-items: center;
       justify-content: flex-end;
       gap: 4px;
@@ -3621,7 +4060,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     .wc-rec-subtitle {
       font-size: 11px;
-      margin: -4px 0 8px 0;
+      margin: 4px 0 0 0;
       line-height: 1.4;
       white-space: normal;
     }
@@ -3846,7 +4285,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      margin-left: 6px;
+      flex-shrink: 0;
+      margin-left: 4px;
       vertical-align: middle;
       cursor: help;
       outline: none;
@@ -3984,9 +4424,14 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     .wc-cae-readiness-title {
       min-width: 0;
       flex: 1;
+      display: inline-flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 4px;
     }
     .wc-cae-readiness-title b {
       font-weight: 600;
+      line-height: 1.35;
     }
     button.wc-cae-readiness-toggle:hover {
       background: var(--vscode-list-hoverBackground, rgba(127,127,127,.12));
@@ -4135,10 +4580,68 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       color: var(--vscode-editorWarning-foreground, #cca700);
       border: 1px solid rgba(204,167,0,0.35);
     }
-    .wc-cae-check-label { flex: 1; min-width: 0; }
+    .wc-cae-check-label {
+      flex: 1;
+      min-width: 0;
+      display: inline-flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 4px;
+      line-height: 1.35;
+    }
+    .dash-phase-roster-status-inner {
+      display: inline-flex;
+      align-items: center;
+      flex-wrap: nowrap;
+      gap: 4px;
+    }
     .wc-cae-check-meta { flex-shrink: 0; }
     .wc-cae-decisions { margin-top: 8px; }
     .wc-cae-decisions > p { margin: 0 0 4px 0; }
+    /* ── Dashboard lazy-loading shell (T100395) ── */
+    .wc-dashboard-shell-initial .wc-dash-section { margin: 8px 0; }
+    .wc-dash-section-inner {
+      padding: 10px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.25));
+      background: var(--vscode-editor-background, rgba(127,127,127,.08));
+    }
+    .wc-dash-section-label { margin: 0 0 4px 0; }
+    .wc-dash-section-status { margin: 0 0 8px 0; font-size: 11px; }
+    .wc-dash-section-skeleton {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .wc-dash-section-skeleton > span {
+      display: block;
+      height: 10px;
+      border-radius: 4px;
+      background: linear-gradient(
+        90deg,
+        var(--vscode-textBlockQuote-background, rgba(127,127,127,.15)) 0%,
+        var(--vscode-list-hoverBackground, rgba(127,127,127,.22)) 50%,
+        var(--vscode-textBlockQuote-background, rgba(127,127,127,.15)) 100%
+      );
+      background-size: 200% 100%;
+      animation: wc-dash-skeleton-shimmer 1.4s ease-in-out infinite;
+    }
+    .wc-dash-section-skeleton > span:nth-child(1) { width: 92%; }
+    .wc-dash-section-skeleton > span:nth-child(2) { width: 78%; }
+    .wc-dash-section-skeleton > span:nth-child(3) { width: 64%; }
+    .wc-dash-section--ready .wc-dash-section-skeleton,
+    .wc-dash-section--stale .wc-dash-section-status,
+    .wc-dash-section--error .wc-dash-section-skeleton { display: none; }
+    .wc-dash-section--stale .wc-dash-section-inner {
+      border-color: color-mix(in srgb, var(--vscode-editorWarning-foreground, #cca700) 45%, transparent);
+    }
+    .wc-dash-section--error .wc-dash-section-inner {
+      border-color: color-mix(in srgb, var(--vscode-editorError-foreground, #f14c4c) 45%, transparent);
+    }
+    @keyframes wc-dash-skeleton-shimmer {
+      0% { background-position: 100% 0; }
+      100% { background-position: -100% 0; }
+    }
     .wc-cae-decision {
       font-size: 11px;
       padding: 4px 6px;
