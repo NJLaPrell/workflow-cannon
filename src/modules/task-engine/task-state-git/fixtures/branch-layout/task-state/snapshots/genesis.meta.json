@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "snapshotId": "genesis",
+  "throughSequence": 0,
+  "throughEventId": "genesis",
+  "recordedAt": "2026-05-26T20:00:00.000Z",
+  "contentPath": "task-state/snapshots/genesis.json",
+  "contentDigest": "a92074b1a355a01933d22e616bdb4195b71144e793f4fa0bb5d7d34b4405f109",
+  "taskCount": 0
+}

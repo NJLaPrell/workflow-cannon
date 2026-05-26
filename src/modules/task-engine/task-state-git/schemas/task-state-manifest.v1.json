@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workflow-cannon.dev/schemas/task-state-manifest.v1.json",
+  "title": "TaskStateGitManifestV1",
+  "description": "task-state/manifest.json on git branch workflow-cannon/task-state (Phase 115 S3.1).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "branch",
+    "root",
+    "integrity",
+    "retention",
+    "eventLog",
+    "snapshots",
+    "head"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "branch": { "type": "string", "minLength": 1 },
+    "root": { "type": "string", "const": "task-state" },
+    "integrity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["algorithm", "canonicalJson"],
+      "properties": {
+        "algorithm": { "const": "sha256" },
+        "canonicalJson": { "const": true }
+      }
+    },
+    "retention": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["maxEventSegments", "maxSnapshots", "segmentMaxBytes"],
+      "properties": {
+        "maxEventSegments": { "type": "integer", "minimum": 1 },
+        "maxSnapshots": { "type": "integer", "minimum": 1 },
+        "segmentMaxBytes": { "type": "integer", "minimum": 1024 }
+      }
+    },
+    "eventLog": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["segmentFilePattern", "eventSchemaRef"],
+      "properties": {
+        "segmentFilePattern": { "type": "string", "minLength": 1 },
+        "eventSchemaRef": { "type": "string", "minLength": 1 }
+      }
+    },
+    "snapshots": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["metadataFilePattern", "contentFilePattern"],
+      "properties": {
+        "metadataFilePattern": { "type": "string", "minLength": 1 },
+        "contentFilePattern": { "type": "string", "minLength": 1 }
+      }
+    },
+    "head": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "latestSequence",
+        "latestEventId",
+        "latestSegmentPath",
+        "latestSnapshotId"
+      ],
+      "properties": {
+        "latestSequence": { "type": "integer", "minimum": 0 },
+        "latestEventId": { "type": ["string", "null"] },
+        "latestSegmentPath": { "type": ["string", "null"] },
+        "latestSnapshotId": { "type": ["string", "null"] }
+      }
+    },
+    "manifestDigest": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+  }
+}
