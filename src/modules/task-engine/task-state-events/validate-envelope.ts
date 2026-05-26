@@ -29,14 +29,47 @@ function formatAjvErrors(errors: ErrorObject[] | null | undefined): string[] {
   });
 }
 
+const ENVELOPE_ONLY_KEYS = new Set([
+  "schemaVersion",
+  "eventId",
+  "sequence",
+  "parentEventId",
+  "recordedAt",
+  "actor",
+  "clientMutationId",
+  "command",
+  "workspace"
+]);
+
+function envelopeOnlyInput(input: unknown): unknown {
+  if (!input || typeof input !== "object" || Array.isArray(input)) {
+    return input;
+  }
+  const out: Record<string, unknown> = {};
+  for (const key of ENVELOPE_ONLY_KEYS) {
+    if (key in (input as Record<string, unknown>)) {
+      out[key] = (input as Record<string, unknown>)[key];
+    }
+  }
+  return out;
+}
+
 export function validateTaskStateEventEnvelope(
   input: unknown
 ): { ok: true; data: TaskStateEventEnvelopeV1 } | { ok: false; errors: string[] } {
   const validate = loadValidator();
-  if (!validate(input)) {
+  const slice = envelopeOnlyInput(input);
+  if (!validate(slice)) {
     return { ok: false, errors: formatAjvErrors(validate.errors) };
   }
-  return { ok: true, data: input as TaskStateEventEnvelopeV1 };
+  const extra =
+    input && typeof input === "object" && !Array.isArray(input)
+      ? Object.keys(input as Record<string, unknown>).filter((k) => !ENVELOPE_ONLY_KEYS.has(k))
+      : [];
+  if (extra.length > 0) {
+    return { ok: false, errors: [`(root): unexpected properties for envelope-only validation: ${extra.join(", ")}`] };
+  }
+  return { ok: true, data: slice as TaskStateEventEnvelopeV1 };
 }
 
 export function taskStateEventEnvelopeSchemaRelativePath(): string {

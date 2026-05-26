@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "eventId": "tse.20260526T200000Z.transition-fixture",
+  "sequence": 2,
+  "parentEventId": "tse.20260526T120001Z.child",
+  "recordedAt": "2026-05-26T20:00:00.000Z",
+  "actor": {
+    "id": "maintainer@example.com",
+    "source": "git-config"
+  },
+  "clientMutationId": "start-T100498",
+  "command": {
+    "name": "run-transition",
+    "moduleId": "task-engine",
+    "invocationId": "fc9778af-f7cd-498e-98f5-d0acc44f55eb",
+    "argvDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  },
+  "kind": "task.transitioned",
+  "payload": {
+    "taskId": "T100498",
+    "fromState": "ready",
+    "toState": "in_progress",
+    "action": "start",
+    "transitionId": "T100498-2026-05-26T19:27:28.453Z-a6946f3c",
+    "guardResults": [
+      { "allowed": true, "guardName": "state-validity" },
+      { "allowed": true, "guardName": "dependency-check" },
+      { "allowed": true, "guardName": "single-task-in-progress" },
+      { "allowed": true, "guardName": "task-intake" },
+      { "allowed": true, "guardName": "delivery-evidence" }
+    ],
+    "dependentsUnblocked": []
+  }
+}
