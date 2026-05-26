@@ -8,4 +8,4 @@ This root file is intentionally pointer-only to avoid split release history.
 
 - See `docs/maintainers/CHANGELOG.md` for all release notes, migration notes, and historical entries.
 
-Latest release: **v0.99.0** (Phase 104 — CAE signals, operator CLI, release semver; see canonical changelog).
+Latest release: **v0.99.7** (Phase 108 — dashboard lazy loading; see canonical changelog).

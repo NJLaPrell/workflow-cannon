@@ -8,6 +8,21 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [0.99.7] - 2026-05-26
+
+Patch — **Phase 108 dashboard lazy loading** (shell-first paint, split hydration, regression gates).
+
+### Added
+
+- Dashboard shell paints synchronously before the first `dashboard-summary` read; overview projection uses `skipHeavyFetches` so CAE and phase journal CLI work defer until tab activation.
+- Lazy queue phase buckets load rows on expand with cursor pagination; secondary tabs hydrate via `dashboardTabActivated` / `wcSectionPatch`.
+- Targeted section invalidation after mutations (light watcher refresh patches visible sections; hidden sections mark stale).
+- `dashboard-lazy-regression-gates.test.mjs` and split `scripts/bench-dashboard-refresh.mjs` paths (overview / queue / full / secondary block).
+
+### Changed
+
+- Manual Refresh still runs full reconciliation; kit watcher uses light invalidation instead of monolithic `pushUpdate` for routine mutations.
+
 ## [0.99.6] - 2026-05-25
 
 Patch — **Back-to-back Accept drawer submit** no longer hangs on Accepting.
