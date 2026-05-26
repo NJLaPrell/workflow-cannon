@@ -16,6 +16,7 @@ export type DashboardHostSnapshot = {
   drawer: WcDrawerStateSnapshot;
   interaction: {
     mutationActive: boolean;
+    refreshBusy: boolean;
   };
 };
 
@@ -35,6 +36,8 @@ export type DashboardCoordinatorDeps = {
   closeDrawer: () => Promise<void>;
   resetDrawerSubmitPendingEffects: () => void;
   flushDrawerSubmitPendingEffects: (bus: SideEffectBus) => void;
+  /** Host refresh button busy state for snapshot.interaction.refreshBusy (T100494). */
+  isRefreshBusy: () => boolean;
 };
 
 /**
@@ -55,7 +58,8 @@ export class DashboardCoordinator {
       schemaVersion: 1,
       drawer: this.deps.drawerSession.snapshot(),
       interaction: {
-        mutationActive: this.mutationActive
+        mutationActive: this.mutationActive,
+        refreshBusy: this.deps.isRefreshBusy()
       }
     };
   }

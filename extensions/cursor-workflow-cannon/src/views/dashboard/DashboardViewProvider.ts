@@ -424,6 +424,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     const { webview } = webviewView;
     this.drawerSessionHost = new DrawerSessionController((message) => {
       void webview.postMessage(message);
+      this.dashboardCoordinator?.emitSnapshot();
     });
     this.initDashboardCoordinator(webview);
     this.dashboardGuidanceAuthoring = new GuidanceAuthoringExtensionSide({
@@ -1282,7 +1283,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     const html = renderDrawerFormHtml(buildRegisterPhaseCatalogDrawerSpec());
     this.dashboardDrawerSession = { kind: "register-catalog" };
-    await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
+    await this.postWcDrawerOpen(html);
   }
 
   /** Update a phase roster Deliverables value via upsert-phase-catalog-entry with one mismatch retry. */
@@ -1629,7 +1630,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     const html = renderDrawerFormHtml(buildAddWishlistDrawerSpec());
     this.dashboardDrawerSession = { kind: "add-wishlist" };
-    await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
+    await this.postWcDrawerOpen(html);
   }
 
   private async onTaskCommentsComingSoon(taskId: string, mode: "view" | "add"): Promise<void> {
@@ -1648,8 +1649,15 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
   }
 
+  private async postWcDrawerOpen(html: string, workflowId = "drawer"): Promise<void> {
+    await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
+    this.drawerSessionHost?.open(workflowId);
+    this.dashboardCoordinator?.emitSnapshot();
+  }
+
   private async postDrawerValidationToWebview(message: string): Promise<void> {
     this.drawerSessionHost?.setValidationError(message);
+    this.dashboardCoordinator?.emitSnapshot();
     await this.view?.webview.postMessage({ type: "wcDrawerValidation", message });
   }
 
@@ -1703,7 +1711,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       hasActiveDrawerSession: () => this.dashboardDrawerSession !== null,
       closeDrawer: () => this.closeDashboardDrawer(),
       resetDrawerSubmitPendingEffects: () => this.resetDrawerSubmitPendingEffects(),
-      flushDrawerSubmitPendingEffects: (bus) => this.flushDrawerSubmitPendingEffects(bus)
+      flushDrawerSubmitPendingEffects: (bus) => this.flushDrawerSubmitPendingEffects(bus),
+      isRefreshBusy: () => this.dashboardInteractionLocks.has("refresh")
     });
     this.dashboardCoordinator.emitSnapshot();
   }
@@ -2459,7 +2468,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       buildAssignTaskPhaseDrawerSpec(taskId, suggestions, defaultPhaseKey || undefined)
     );
     this.dashboardDrawerSession = { kind: "assign-task-phase", taskId };
-    await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
+    await this.postWcDrawerOpen(html);
   }
 
   private async onDismissPhaseNote(noteId: string, priority: string): Promise<void> {
@@ -2468,7 +2477,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     const html = renderDrawerFormHtml(buildDismissPhaseNoteDrawerSpec(noteId, priority));
     this.dashboardDrawerSession = { kind: "dismiss-note", noteId, priority };
-    await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
+    await this.postWcDrawerOpen(html);
   }
 
   private async onViewPhaseNote(params: {
@@ -2483,7 +2492,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     const html = renderDrawerFormHtml(buildViewPhaseNoteDrawerSpec(params));
     this.dashboardDrawerSession = { kind: "view-phase-note", noteId: params.noteId };
-    await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
+    await this.postWcDrawerOpen(html);
   }
 
   private async onEditPhaseNote(params: {
@@ -2496,7 +2505,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     const html = renderDrawerFormHtml(buildEditPhaseNoteDrawerSpec(params));
     this.dashboardDrawerSession = { kind: "edit-phase-note", noteId: params.noteId };
-    await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
+    await this.postWcDrawerOpen(html);
   }
 
   private async openRegisterTeamAssignmentDrawer(): Promise<void> {
@@ -2505,7 +2514,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     const html = renderDrawerFormHtml(buildRegisterTeamAssignmentDrawerSpec());
     this.dashboardDrawerSession = { kind: "register-team-assignment" };
-    await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
+    await this.postWcDrawerOpen(html);
   }
 
   private async openSubmitTeamHandoffDrawer(assignmentId: string, workerId: string): Promise<void> {
@@ -2514,7 +2523,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     const html = renderDrawerFormHtml(buildSubmitTeamHandoffDrawerSpec({ assignmentId, workerId }));
     this.dashboardDrawerSession = { kind: "submit-team-handoff", assignmentId, workerId };
-    await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
+    await this.postWcDrawerOpen(html);
   }
 
   private async openReconcileTeamAssignmentDrawer(assignmentId: string, supervisorId: string): Promise<void> {
@@ -2523,7 +2532,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     const html = renderDrawerFormHtml(buildReconcileTeamAssignmentDrawerSpec({ assignmentId, supervisorId }));
     this.dashboardDrawerSession = { kind: "reconcile-team-assignment", assignmentId, supervisorId };
-    await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
+    await this.postWcDrawerOpen(html);
   }
 
   private async openBlockTeamAssignmentDrawer(assignmentId: string, supervisorId: string): Promise<void> {
@@ -2532,7 +2541,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     const html = renderDrawerFormHtml(buildBlockTeamAssignmentDrawerSpec({ assignmentId, supervisorId }));
     this.dashboardDrawerSession = { kind: "block-team-assignment", assignmentId, supervisorId };
-    await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
+    await this.postWcDrawerOpen(html);
   }
 
   private async openCancelTeamAssignmentDrawer(assignmentId: string, supervisorId: string): Promise<void> {
@@ -2547,7 +2556,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       assignmentId,
       supervisorId: supervisorId || "operator"
     };
-    await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
+    await this.postWcDrawerOpen(html);
   }
 
   private async openRegisterSubagentDrawer(): Promise<void> {
@@ -2556,7 +2565,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     const html = renderDrawerFormHtml(buildRegisterSubagentDrawerSpec());
     this.dashboardDrawerSession = { kind: "register-subagent" };
-    await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
+    await this.postWcDrawerOpen(html);
   }
 
   private async openSpawnSubagentDrawer(subagentId?: string, executionTaskId?: string): Promise<void> {
@@ -2574,7 +2583,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       subagentId: subagentId || undefined,
       executionTaskId: executionTaskId || undefined
     };
-    await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
+    await this.postWcDrawerOpen(html);
   }
 
   private async openCloseSubagentSessionDrawer(sessionId: string, definitionId: string): Promise<void> {
@@ -2583,7 +2592,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     const html = renderDrawerFormHtml(buildCloseSubagentSessionDrawerSpec({ sessionId, definitionId }));
     this.dashboardDrawerSession = { kind: "close-subagent-session", sessionId, definitionId };
-    await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
+    await this.postWcDrawerOpen(html);
   }
 
   private async openRetireSubagentDrawer(subagentId?: string): Promise<void> {
@@ -2592,7 +2601,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     const html = renderDrawerFormHtml(buildRetireSubagentDrawerSpec({ subagentId: subagentId || undefined }));
     this.dashboardDrawerSession = { kind: "retire-subagent", subagentId: subagentId || undefined };
-    await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
+    await this.postWcDrawerOpen(html);
   }
 
   private async openCreateCheckpointDrawer(mode: "head" | "stash", taskId?: string): Promise<void> {
@@ -2603,7 +2612,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       buildCreateCheckpointDrawerSpec({ mode, taskId: taskId || undefined })
     );
     this.dashboardDrawerSession = { kind: "create-checkpoint", mode, taskId: taskId || undefined };
-    await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
+    await this.postWcDrawerOpen(html);
   }
 
   private async openRewindCheckpointDrawer(
@@ -2627,7 +2636,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       refKind,
       taskId: taskId || undefined
     };
-    await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
+    await this.postWcDrawerOpen(html);
   }
 
   private async openCompareCheckpointDrawer(checkpointId: string): Promise<void> {
@@ -2653,7 +2662,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       })
     );
     this.dashboardDrawerSession = { kind: "view-checkpoint-compare" };
-    await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
+    await this.postWcDrawerOpen(html);
   }
 
   private async openReviewApprovalItemDrawer(
@@ -2668,7 +2677,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       buildReviewApprovalItemDrawerSpec({ taskId, title: title || taskId, decision })
     );
     this.dashboardDrawerSession = { kind: "review-approval-item", taskId, title, decision };
-    await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
+    await this.postWcDrawerOpen(html);
   }
 
   private async onAddPhaseNote(): Promise<void> {
@@ -2684,7 +2693,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     const html = renderDrawerFormHtml(buildAddPhaseNoteDrawerSpec(phaseKey));
     this.dashboardDrawerSession = { kind: "add-phase-note" };
-    await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
+    await this.postWcDrawerOpen(html);
   }
 
   private async onConvertPhaseNote(noteId: string): Promise<void> {
@@ -2693,7 +2702,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     const html = renderDrawerFormHtml(buildConvertPhaseNoteDrawerSpec(noteId));
     this.dashboardDrawerSession = { kind: "convert-phase-note", noteId };
-    await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
+    await this.postWcDrawerOpen(html);
   }
 
   private async onPersistPhaseNoteProposals(): Promise<void> {
@@ -2702,7 +2711,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     const html = renderDrawerFormHtml(buildPersistPhaseNoteProposalsDrawerSpec());
     this.dashboardDrawerSession = { kind: "persist-phase-note-proposals" };
-    await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
+    await this.postWcDrawerOpen(html);
   }
 
   /** Proposed-row Accept → drawer (phase) → run-transition accept → assign-task-phase. */
@@ -2723,7 +2732,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     );
     this.dashboardDrawerSession = { kind: "accept-proposed", taskIds: [taskId], categoryLabel: "" };
     this.drawerSessionHost?.open("accept-proposed");
-    await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
+    await this.postWcDrawerOpen(html);
   }
 
   private async onDashboardAcceptProposedBatch(
@@ -2749,7 +2758,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     );
     this.dashboardDrawerSession = { kind: "accept-proposed", taskIds, categoryLabel };
     this.drawerSessionHost?.open("accept-proposed");
-    await this.view?.webview.postMessage({ type: "wcDrawerOpen", html });
+    await this.postWcDrawerOpen(html);
   }
 
   private schedulePushUpdate(_delayMs: number): void {

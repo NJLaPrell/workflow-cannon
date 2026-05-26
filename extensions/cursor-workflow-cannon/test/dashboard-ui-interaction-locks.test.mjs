@@ -46,7 +46,7 @@ test("dashboard drawer submit shows animated loading overlay while kit command r
   assert.match(webviewClientSrc, /function updateDrawerBusyLabel\(label\)/);
   assert.match(webviewClientSrc, /className = 'wc-drawer-loading'/);
   assert.match(webviewClientSrc, /class="wc-spinner"/);
-  assert.match(webviewClientSrc, /setDrawerBusy\(true, drawerSubmitBusyLabel\(panel\)\)/);
+  assert.match(webviewClientSrc, /hostSnapshot\.drawer\.busy/);
   assert.match(webviewClientSrc, /setDrawerBusy\(false\)/);
   assert.match(webviewClientSrc, /wcDrawerClose[\s\S]*setDrawerBusy\(false\)/);
   assert.match(webviewClientSrc, /wcDrawerState/);
@@ -93,7 +93,8 @@ test("dashboard drawer submit uses coordinator dispatch (T100493)", () => {
   assert.match(providerSrc, /dashboardDrawerSubmitInFlight/);
   assert.match(providerSrc, /webviewMessageDisposable/);
   assert.match(providerSrc, /this\.webviewMessageDisposable\?\.dispose\(\)/);
-  assert.match(webviewClientSrc, /drawerSubmitInFlight/);
+  assert.match(webviewClientSrc, /hostSnapshot/);
+  assert.doesNotMatch(webviewClientSrc, /drawerSubmitInFlight/);
   assert.match(providerSrc, /coordinator\.dispatch/);
   assert.match(providerSrc, /queueDrawerNotify/);
   assert.match(providerSrc, /endDrawerSubmitRefreshHold/);
