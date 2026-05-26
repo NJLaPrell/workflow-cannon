@@ -1,6 +1,11 @@
 import type { DashboardSectionId } from "./dashboard-section-registry.js";
 import { lookupDashboardSection } from "./dashboard-section-registry.js";
 
+/**
+ * Mutation → section invalidation map (T100399).
+ * Visible tab sections patch via `wcSectionPatch`; hidden hydrated sections mark `stale` until re-activated.
+ */
+
 /** Coarse mutation buckets → dashboard sections that may need patch or stale marking (T100399). */
 export type DashboardMutationKind =
   | "task-queue"

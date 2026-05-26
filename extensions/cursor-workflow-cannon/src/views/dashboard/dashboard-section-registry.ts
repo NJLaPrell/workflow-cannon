@@ -1,5 +1,13 @@
 /** Dashboard lazy-loading section registry (T100395 foundation). */
 
+/**
+ * Section model (Phase 108):
+ * - `eager` sections (overview, queue) hydrate on first `dashboard-summary` read with `skipHeavyFetches`.
+ * - `on-tab-activate` sections (status, config, cae, phase-journal) stay placeholders until tab open.
+ * - Targeted invalidation after mutations: see `dashboard-section-invalidation.ts` (T100399).
+ * - Manual Refresh runs full reconciliation via `wcReplaceRoot`; light watcher refresh patches visible sections only.
+ */
+
 export type DashboardSectionId =
   | "overview"
   | "queue"
