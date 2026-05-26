@@ -24,6 +24,7 @@ Optional JSON object:
 | `wishlistPageSize` | integer (1–100) | `10` | Rows per wishlist page (`openTop` length). |
 | `includePhaseFocus` | boolean | `false` | When `true`, adds **`phaseFocus`** (`AgentPhaseFocusDashboard` v1) — same bounded slice as **`phase-focus-dashboard`**. |
 | `phaseKey` | string | workspace current | Phase scope for **`phaseFocus`** when `includePhaseFocus` is set. |
+| `projection` | string (`full`, `overview`, `queue`, `status`) | `full` | Section slice for lazy dashboard hydration. **`overview`** omits queue rollups and phase-journal SQLite reads; extension uses it for first paint after the shell (T100396). CLI default **`full`** preserves aggregate compatibility. |
 
 Also accepts standard invocation `config` / `actor` overlays where applicable.
 
@@ -34,6 +35,7 @@ Also accepts standard invocation `config` / `actor` overlays where applicable.
 | Field | Description |
 | --- | --- |
 | `schemaVersion` | **`7`** adds **`agentStatus`** (schema-versioned derived WC Agent status). **`6`** adds **`systemStatus.identity`** (project/package/workspace-kit versions) and **`systemStatus.planningStore`** (SQLite path). **`5`** adds **`systemStatus`** (phase/drift slice, doctor contract issues, module activation ids, CAE posture lines). **`4`** was identical without **`systemStatus`**. **`3`** adds **`subagentRegistry`**; **`2`** added **`teamExecution`**; older clients must tolerate unknown fields |
+| `dashboardProjection` | When set, names the section slice (`full`, `overview`, `queue`, `status`). Omitted or **`full`** on default aggregate responses. |
 | `taskStoreLastUpdated` | ISO timestamp from task store document |
 | `workspaceStatus` | `{ currentKitPhase, nextKitPhase, activeFocus, lastUpdated, blockers[], pendingDecisions[], nextAgentActions[] }` shallow-parse from `workspace-kit-status.yaml`; file-missing yields `null` |
 | `stateSummary` | Task counts by status + `total` (same shape as `get-next-actions`; **excludes** **`wishlist_intake`** so the grid matches execution/improvement work — wishlist stays in **`wishlist`** / open-wishlist rollups) |

@@ -2384,6 +2384,32 @@ test("taskEngineModule dashboard-summary dependencyOverview critical path orders
   assert.deepEqual(dep.criticalPathReady, ["T100", "T101"]);
 });
 
+test("taskEngineModule dashboard-summary overview projection omits queue rollups", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(makeTask({ id: "T900", status: "ready", priority: "P1" }));
+    store.addTask(makeTask({ id: "T901", status: "proposed", priority: "P2" }));
+  });
+
+  const ctx = sqliteTaskEngineCtx(workspace);
+  const full = await taskEngineModule.onCommand({ name: "dashboard-summary", args: {} }, ctx);
+  const overview = await taskEngineModule.onCommand(
+    { name: "dashboard-summary", args: { projection: "overview" } },
+    ctx
+  );
+  assert.equal(full.ok, true);
+  assert.equal(overview.ok, true);
+  assert.equal(overview.data.dashboardProjection, "overview");
+  assert.equal(full.data.readyQueueCount, 1);
+  assert.equal(overview.data.readyQueueCount, 0);
+  assert.ok(overview.data.systemStatus);
+  assert.ok(overview.data.agentGuidance);
+  assert.ok(overview.data.currentPhaseDelivery);
+  assert.equal(overview.data.pastPhaseNotes.length, 0);
+  assert.equal(overview.data.phaseJournalStats.available, false);
+  assert.ok(JSON.stringify(overview.data).length < JSON.stringify(full.data).length);
+});
+
 test("taskEngineModule dashboard-summary splits ready improvements vs execution", async () => {
   const workspace = await tmpDir();
   await seedSqliteStore(workspace, (store) => {
