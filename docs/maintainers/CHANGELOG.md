@@ -8,6 +8,15 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [0.99.5] - 2026-05-25
+
+Patch — **Phase backfill assign** and **preempted refresh dashboard stability**.
+
+### Fixed
+
+- `assign-task-phase` and `upsert-phase-catalog-entry` accept numeric phase keys before workspace current kit phase by default; set `kit.phaseLadder.blockBeforeCurrent: true` to restore forward-only ladder enforcement.
+- Preempted in-flight `dashboard-summary` refresh (SIGTERM during Accept) maps to `extension-refresh-paused` instead of `extension-json-parse`; dashboard keeps last good paint.
+
 ## [0.99.4] - 2026-05-24
 
 Hotfix — **Dashboard back-to-back Accept** no longer hangs on the second proposed task.
