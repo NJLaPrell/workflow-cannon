@@ -51,8 +51,10 @@ test("DashboardViewProvider paints shell before pushUpdate (T100395)", () => {
   assert.match(src, /renderDashboardShellInnerHtml\(\)/);
   assert.match(src, /shell painted synchronously/);
   const resolveBlock = src.slice(src.indexOf("resolveWebviewView("));
-  const pushIdx = resolveBlock.indexOf("void this.pushUpdate()");
   const shellIdx = resolveBlock.indexOf("renderDashboardShellInnerHtml()");
+  const pushIdx = resolveBlock.indexOf(
+    'void this.pushUpdate({ projection: "overview", skipHeavyFetches: true })'
+  );
   assert.ok(shellIdx >= 0 && pushIdx >= 0 && shellIdx < pushIdx, "shell must render before pushUpdate");
 });
 
