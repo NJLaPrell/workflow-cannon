@@ -7,3 +7,4 @@
 - `transitions.strict`: Enforce strict lifecycle transitions (default: `true`)
 - `defaultTaskType`: Default task type label for new tasks (default: `workspace-kit`)
 - `autoUnblock`: Automatically unblock dependents when a task completes (default: `true`)
+- `kit.phaseLadder.blockBeforeCurrent`: When `true`, reject numeric `phaseKey`s whose leading ordinal sorts before workspace current kit phase on **`assign-task-phase`** and **`upsert-phase-catalog-entry`** (default: `false` — past-phase bucketing allowed).

@@ -1592,9 +1592,9 @@ test("list-phase-catalog includes phases from completed tasks without kit_phase_
   assert.deepEqual(keys, ["72", "96"]);
 });
 
-test("upsert-phase-catalog-entry rejects numeric phase before workspace current", async () => {
+test("upsert-phase-catalog-entry rejects numeric phase before workspace current when blockBeforeCurrent", async () => {
   const workspace = await tmpDir();
-  const ctx = sqliteTaskEngineCtx(workspace);
+  const ctx = sqliteTaskEngineCtx(workspace, { kit: { phaseLadder: { blockBeforeCurrent: true } } });
   await seedSqliteStore(workspace, () => {});
   await taskEngineModule.onCommand(
     { name: "set-current-phase", args: { currentKitPhase: "88", expectedWorkspaceRevision: 0 } },
@@ -4161,9 +4161,29 @@ test("taskEngineModule create-task and update-task commands persist mutations", 
   assert.equal(fetched.data.task.title, "Updated task title");
 });
 
-test("taskEngineModule assign-task-phase rejects numeric phase before workspace current", async () => {
+test("taskEngineModule assign-task-phase allows numeric phase before workspace current by default", async () => {
   const workspace = await tmpDir();
-  const ctx = sqliteTaskEngineCtx(workspace, { kit: { currentPhaseNumber: 40 } });
+  const ctx = sqliteTaskEngineCtx(workspace, { kit: { currentPhaseNumber: 114 } });
+  const created = await taskEngineModule.onCommand(
+    { name: "create-task", args: { id: "T4199", title: "Backfill phase", status: "ready" } },
+    ctx
+  );
+  assert.equal(created.ok, true);
+
+  const assigned = await taskEngineModule.onCommand(
+    {
+      name: "assign-task-phase",
+      args: { taskId: "T4199", phaseKey: "110", phase: "Phase 110 (backfill)" }
+    },
+    ctx
+  );
+  assert.equal(assigned.ok, true);
+  assert.equal(assigned.code, "task-phase-assigned");
+});
+
+test("taskEngineModule assign-task-phase rejects numeric phase before workspace current when blockBeforeCurrent", async () => {
+  const workspace = await tmpDir();
+  const ctx = sqliteTaskEngineCtx(workspace, { kit: { currentPhaseNumber: 40, phaseLadder: { blockBeforeCurrent: true } } });
   const created = await taskEngineModule.onCommand(
     { name: "create-task", args: { id: "T410", title: "Phase test", status: "ready" } },
     ctx

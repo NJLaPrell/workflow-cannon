@@ -12,7 +12,7 @@ Optional **`clientMutationId`** enables idempotent replay: same payload returns 
 
 **`remove`:** when **`true`**, deletes the catalog row for **`phaseKey`** (does not change workspace current/next phase).
 
-Numeric **`phaseKey`s** whose leading ordinal sorts **strictly before** the workspace current kit phase are rejected (**`phase-target-before-current-workspace-phase`**) — same ladder rule as **`assign-task-phase`**.
+By default, catalog upserts accept any valid numeric **`phaseKey`**. When **`kit.phaseLadder.blockBeforeCurrent`** is **`true`**, numeric **`phaseKey`s** whose leading ordinal sorts **strictly before** the workspace current kit phase are rejected (**`phase-target-before-current-workspace-phase`**) — same opt-in ladder rule as **`assign-task-phase`**.
 
 When **`tasks.planningGenerationPolicy`** is **`require`**, pass **`expectedPlanningGeneration`** from a prior read (**`list-tasks`**, **`phase-status`**, **`list-phase-catalog`**, etc.).
 

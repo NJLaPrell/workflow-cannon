@@ -30,7 +30,7 @@ import {
   readKitWorkspaceStatusRow,
   readWorkspaceStatusSnapshotFromDual
 } from "./persistence/workspace-status-store.js";
-import { parseLeadingPhaseOrdinal, resolveCanonicalPhase } from "./phase-resolution.js";
+import { parseLeadingPhaseOrdinal, phaseLadderBlocksBeforeCurrent, resolveCanonicalPhase } from "./phase-resolution.js";
 import { TaskEngineError } from "./transitions.js";
 
 function nowIso(): string {
@@ -127,7 +127,12 @@ export async function runUpsertPhaseCatalogEntry(
     phaseRes.canonicalPhaseKey !== undefined && phaseRes.canonicalPhaseKey !== null
       ? parseLeadingPhaseOrdinal(phaseRes.canonicalPhaseKey)
       : null;
-  if (assignedOrd !== null && wsOrd !== null && assignedOrd < wsOrd) {
+  if (
+    phaseLadderBlocksBeforeCurrent(ctx.effectiveConfig as Record<string, unknown> | undefined) &&
+    assignedOrd !== null &&
+    wsOrd !== null &&
+    assignedOrd < wsOrd
+  ) {
     return {
       ok: false,
       code: "phase-target-before-current-workspace-phase",

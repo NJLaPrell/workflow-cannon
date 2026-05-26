@@ -18,7 +18,13 @@ export type KitRunResult = {
   [key: string]: unknown;
 };
 
-export type CommandClientExecResult = { exitCode: number; stdout: string; stderr: string };
+export type CommandClientExecResult = {
+  exitCode: number;
+  stdout: string;
+  stderr: string;
+  /** Set when execKitCancellable.kill() preempted the child (refresh lane). */
+  preempted?: boolean;
+};
 export type CommandClientExecFn = (workspaceRoot: string, cliArgs: string[]) => Promise<CommandClientExecResult>;
 
 export type CommandClientActivityInput = {
@@ -442,8 +448,10 @@ function execKitCancellable(
   extensionRoot?: string
 ): { promise: Promise<CommandClientExecResult>; kill: () => void } {
   let child: ChildProcess | undefined;
+  let preempted = false;
   const kill = (): void => {
     if (child && !child.killed) {
+      preempted = true;
       child.kill("SIGTERM");
     }
   };
@@ -467,10 +475,10 @@ function execKitCancellable(
               return;
             }
             const code = typeof err.code === "number" ? err.code : 1;
-            resolve({ exitCode: code, stdout: out, stderr: errOut });
+            resolve({ exitCode: code, stdout: out, stderr: errOut, preempted });
             return;
           }
-          resolve({ exitCode: 0, stdout: out, stderr: errOut });
+          resolve({ exitCode: 0, stdout: out, stderr: errOut, preempted });
         }
       );
     });
@@ -806,11 +814,16 @@ export class CommandClient {
     const startedAt = this.onKitRunStart?.(commandName, args) ?? Date.now();
     const jsonArg = JSON.stringify(args);
     try {
-      const { stdout, stderr, exitCode } = await this.execFn(this.workspaceRoot, [
+      const { stdout, stderr, exitCode, preempted } = await this.execFn(this.workspaceRoot, [
         "run",
         commandName,
         jsonArg
       ]);
+      if (preempted && isKitRefreshRunCommand(commandName)) {
+        const paused = kitRefreshPausedResult();
+        this.onKitRunEnd?.(commandName, startedAt, paused);
+        return paused;
+      }
       if (stderr.trim()) {
         this.onKitRunNotice?.(`stderr ${commandName}: ${stderr.trim().slice(0, 400)}`);
       }

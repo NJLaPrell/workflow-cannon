@@ -107,6 +107,23 @@ export function parseLeadingPhaseOrdinal(phaseKey: string | null | undefined): n
 }
 
 /**
+ * When true, numeric phase keys whose leading ordinal sorts strictly before workspace
+ * current kit phase are rejected by assign-task-phase and upsert-phase-catalog-entry.
+ * Default false — maintainers may bucket tasks to past phases while the workspace advances.
+ */
+export function phaseLadderBlocksBeforeCurrent(effectiveConfig: Record<string, unknown> | undefined): boolean {
+  const kit = effectiveConfig?.kit;
+  const kitObj =
+    kit !== null && typeof kit === "object" && !Array.isArray(kit) ? (kit as Record<string, unknown>) : undefined;
+  const ladder = kitObj?.phaseLadder;
+  const ladderObj =
+    ladder !== null && typeof ladder === "object" && !Array.isArray(ladder)
+      ? (ladder as Record<string, unknown>)
+      : undefined;
+  return ladderObj?.blockBeforeCurrent === true;
+}
+
+/**
  * How a task's target phase relates to the workspace's current kit phase
  * (authoritative "where we are" from `resolveCanonicalPhase`, not per-task `phaseKey` alone).
  */

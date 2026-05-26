@@ -21,7 +21,7 @@ import {
 } from "../../playbook-chat-prompts.js";
 import { confirmAndRunTransition } from "../../run-transition-with-approval.js";
 import { isWcTraceVerbose, logWc } from "../../runtime/workflow-cannon-log.js";
-import { KIT_REFRESH_PAUSED_CODE } from "../../runtime/kit-refresh-run-commands.js";
+import { isKitRefreshRunAborted } from "../../runtime/kit-refresh-run-commands.js";
 import {
   DashboardRefreshController,
   type DashboardRefreshMode
@@ -2726,16 +2726,16 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         wishlistPage: requestedWishlistPage,
         wishlistPageSize: 5
       })) as DashboardSummaryCommandSuccess | Record<string, unknown>;
-      if (raw.code === KIT_REFRESH_PAUSED_CODE) {
-        logWc("dashboard", "pushUpdate aborted (refresh paused)");
+      if (isKitRefreshRunAborted(raw as Record<string, unknown>)) {
+        logWc("dashboard", "pushUpdate aborted (refresh paused or preempted)");
         return;
       }
       if (isWishlistPagingArgRejection(raw as Record<string, unknown>)) {
         logWc("dashboard", "pushUpdate: dashboard-summary rejected wishlist paging; retrying without paging");
         this.wishlistPage = 0;
         raw = (await this.client.run("dashboard-summary", {})) as DashboardSummaryCommandSuccess | Record<string, unknown>;
-        if (raw.code === KIT_REFRESH_PAUSED_CODE) {
-          logWc("dashboard", "pushUpdate aborted (refresh paused)");
+        if (isKitRefreshRunAborted(raw as Record<string, unknown>)) {
+          logWc("dashboard", "pushUpdate aborted (refresh paused or preempted)");
           return;
         }
       }
@@ -2780,9 +2780,9 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
             Record<string, unknown>
           ];
           if (
-            lp.code === KIT_REFRESH_PAUSED_CODE ||
-            gpc.code === KIT_REFRESH_PAUSED_CODE ||
-            caeSummary.code === KIT_REFRESH_PAUSED_CODE ||
+            isKitRefreshRunAborted(lp as Record<string, unknown>) ||
+            isKitRefreshRunAborted(gpc as Record<string, unknown>) ||
+            isKitRefreshRunAborted(caeSummary as Record<string, unknown>) ||
             this.isPushUpdateStale(updateSequence, activeView)
           ) {
             logWc("dashboard", "pushUpdate aborted during phase journal fetch");
@@ -2833,7 +2833,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
             return;
           }
           const caeSummary = await this.client.run("cae-authoring-summary", { schemaVersion: 1 });
-          if (caeSummary.code === KIT_REFRESH_PAUSED_CODE || this.isPushUpdateStale(updateSequence, activeView)) {
+          if (isKitRefreshRunAborted(caeSummary as Record<string, unknown>) || this.isPushUpdateStale(updateSequence, activeView)) {
             logWc("dashboard", "pushUpdate aborted during CAE fetch (no workspace phase)");
             return;
           }

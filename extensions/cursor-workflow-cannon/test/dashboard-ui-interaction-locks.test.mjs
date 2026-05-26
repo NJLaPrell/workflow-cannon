@@ -72,7 +72,7 @@ test("dashboard drawer submit suppresses dashboard-summary refresh during batch 
   assert.match(providerSrc, /setRefreshPaused\(true\)/);
   assert.match(refreshControllerSrc, /setSuppressed/);
   assert.match(refreshControllerSrc, /notifyMutationStart/);
-  assert.match(providerSrc, /KIT_REFRESH_PAUSED_CODE/);
+  assert.match(providerSrc, /isKitRefreshRunAborted/);
   assert.match(providerSrc, /summaryHasCanonicalWorkspacePhase/);
   assert.match(providerSrc, /pushUpdate\(\{ light: true \}\)/);
   assert.match(refreshControllerSrc, /this\.queued = true/);
