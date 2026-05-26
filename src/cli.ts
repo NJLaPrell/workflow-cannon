@@ -155,6 +155,17 @@ function writeDoctorFailureRemediation(
       "  - kit_workspace_status row missing (SQLite v10+): repair planning DB or re-run kit migrations; see `.ai/runbooks/workspace-status-sqlite.md` and `docs/maintainers/runbooks/task-persistence-operator.md`."
     );
   }
+  const planningSqlite = issues.some(
+    (issue) =>
+      issue.reason.includes("sqlite-") ||
+      issue.path.includes("workspace-kit.db") ||
+      issue.path === "better-sqlite3"
+  );
+  if (planningSqlite) {
+    writeError(
+      "  - Planning SQLite: run `pnpm exec wk run backup-planning-sqlite '{\"outputPath\":\".workspace-kit/backups/planning-pre-repair.db\"}'` then `pnpm exec wk run task-persistence-readiness '{}'` before manual DB repair — docs/maintainers/runbooks/task-persistence-operator.md"
+    );
+  }
 }
 
 function doctorWantsMachineJson(doctorRest: string[]): boolean {
