@@ -45,6 +45,16 @@ test("DashboardCoordinator.runMutation holds refresh until fn completes", async 
     scheduleRefresh: (mode, reason) => sideEffectCalls.push(["refresh", mode, reason]),
     notifyKitChanged: () => sideEffectCalls.push(["kit"])
   });
+  const noopDrawerDeps = {
+    beginDrawerMutationHold: () => {},
+    endDrawerMutationHold: () => {},
+    onDrawerSubmit: async () => ({ refreshed: false }),
+    onDrawerCancel: async () => {},
+    hasActiveDrawerSession: () => false,
+    closeDrawer: async () => {},
+    resetDrawerSubmitPendingEffects: () => {},
+    flushDrawerSubmitPendingEffects: () => {}
+  };
   const coordinator = new DashboardCoordinator({
     drawerSession: drawer,
     refreshController,
@@ -62,7 +72,8 @@ test("DashboardCoordinator.runMutation holds refresh until fn completes", async 
       refreshController.notifyMutationEnd();
     },
     emitToWebview: (snapshot) => emitted.push(snapshot),
-    sideEffects
+    sideEffects,
+    ...noopDrawerDeps
   });
 
   const result = await coordinator.runMutation("Working…", async () => {
@@ -110,7 +121,15 @@ test("DashboardCoordinator.runMutation releases hold when fn throws", async () =
       notify: () => {},
       scheduleRefresh: () => {},
       notifyKitChanged: () => {}
-    })
+    }),
+    beginDrawerMutationHold: () => {},
+    endDrawerMutationHold: () => {},
+    onDrawerSubmit: async () => ({ refreshed: false }),
+    onDrawerCancel: async () => {},
+    hasActiveDrawerSession: () => false,
+    closeDrawer: async () => {},
+    resetDrawerSubmitPendingEffects: () => {},
+    flushDrawerSubmitPendingEffects: () => {}
   });
 
   await assert.rejects(

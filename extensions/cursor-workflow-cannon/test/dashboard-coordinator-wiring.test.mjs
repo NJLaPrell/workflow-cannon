@@ -15,4 +15,6 @@ test("DashboardViewProvider constructs DashboardCoordinator on resolveWebviewVie
   assert.match(providerSrc, /new DashboardCoordinator/);
   assert.match(providerSrc, /wcHostSnapshot/);
   assert.match(providerSrc, /getDashboardCoordinator/);
+  assert.match(providerSrc, /onDrawerSubmit/);
+  assert.match(providerSrc, /beginDrawerMutationHold/);
 });

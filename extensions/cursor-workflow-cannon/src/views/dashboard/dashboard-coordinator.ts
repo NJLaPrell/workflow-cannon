@@ -1,7 +1,15 @@
 import type { CommandClient } from "../../runtime/command-client.js";
+import type {
+  DashboardIntent,
+  DrawerSubmitHandlerResult,
+  DrawerSubmitIntent
+} from "./drawer-intents.js";
+import { isDrawerCancelIntent, isDrawerSubmitIntent } from "./drawer-intents.js";
 import type { DashboardRefreshController } from "./dashboard-refresh-controller.js";
 import type { DrawerSessionController, WcDrawerStateSnapshot } from "./drawer-session.js";
 import type { SideEffectBus } from "./dashboard-side-effects.js";
+
+export type { DashboardIntent, DrawerSubmitHandlerResult } from "./drawer-intents.js";
 
 export type DashboardHostSnapshot = {
   schemaVersion: 1;
@@ -17,18 +25,21 @@ export type DashboardCoordinatorDeps = {
   client: CommandClient;
   beginMutationHold: () => void;
   endMutationHold: () => void;
+  beginDrawerMutationHold: () => void;
+  endDrawerMutationHold: () => void;
   emitToWebview: (snapshot: DashboardHostSnapshot) => void;
   sideEffects: SideEffectBus;
-};
-
-export type DashboardIntent = {
-  type: string;
-  [key: string]: unknown;
+  onDrawerSubmit: (values: Record<string, string>) => Promise<DrawerSubmitHandlerResult>;
+  onDrawerCancel: () => Promise<void>;
+  hasActiveDrawerSession: () => boolean;
+  closeDrawer: () => Promise<void>;
+  resetDrawerSubmitPendingEffects: () => void;
+  flushDrawerSubmitPendingEffects: (bus: SideEffectBus) => void;
 };
 
 /**
- * Host-side dashboard intent coordinator (T100492 scaffold).
- * Owns the kit mutation critical section; side effects run via {@link SideEffectBus} after runMutation.
+ * Host-side dashboard intent coordinator.
+ * Owns drawer mutation critical sections; side effects run after {@link runMutation}.
  */
 export class DashboardCoordinator {
   private mutationActive = false;
@@ -53,9 +64,14 @@ export class DashboardCoordinator {
     this.deps.emitToWebview(this.snapshot());
   }
 
-  /** Intent entry point — extended in follow-on tasks (T100493+). */
-  dispatch(_intent: DashboardIntent): void {
-    // Scaffold: no routed intents until drawer flows migrate.
+  async dispatch(intent: DashboardIntent): Promise<void> {
+    if (isDrawerSubmitIntent(intent)) {
+      await this.handleDrawerSubmitIntent(intent);
+      return;
+    }
+    if (isDrawerCancelIntent(intent)) {
+      await this.handleDrawerCancelIntent();
+    }
   }
 
   isMutationActive(): boolean {
@@ -77,6 +93,34 @@ export class DashboardCoordinator {
       this.mutationActive = false;
       this.deps.endMutationHold();
       this.emitSnapshot();
+    }
+  }
+
+  private async handleDrawerSubmitIntent(intent: DrawerSubmitIntent): Promise<void> {
+    this.deps.resetDrawerSubmitPendingEffects();
+    const result = await this.runDrawerMutation(intent.sessionLabel, () =>
+      this.deps.onDrawerSubmit(intent.values)
+    );
+    this.deps.flushDrawerSubmitPendingEffects(this.deps.sideEffects);
+    if (!this.deps.hasActiveDrawerSession()) {
+      await this.deps.closeDrawer();
+    }
+    if (result.refreshed) {
+      this.deps.sideEffects.scheduleRefresh("light", "drawer-submit");
+    }
+  }
+
+  private async handleDrawerCancelIntent(): Promise<void> {
+    await this.deps.onDrawerCancel();
+    this.emitSnapshot();
+  }
+
+  private async runDrawerMutation<T>(submitLabel: string, fn: () => Promise<T>): Promise<T> {
+    this.deps.beginDrawerMutationHold();
+    try {
+      return await this.runMutation(submitLabel, fn);
+    } finally {
+      this.deps.endDrawerMutationHold();
     }
   }
 }
