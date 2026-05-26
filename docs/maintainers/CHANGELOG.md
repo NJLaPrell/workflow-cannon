@@ -8,6 +8,16 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [0.99.6] - 2026-05-25
+
+Patch — **Back-to-back Accept drawer submit** no longer hangs on Accepting.
+
+### Fixed
+
+- `notifyAfterDrawerClosed` runs toast notifications fire-and-forget so `dashboardDrawerSubmitInFlight` releases before the user can submit the next Accept.
+- Assign failure path uses the same close-then-notify pattern instead of awaiting error toasts inside the submit critical section.
+- CommandClient lane drain sets `laneDrainAgain` when work arrives during an in-flight drain.
+
 ## [0.99.5] - 2026-05-25
 
 Patch — **Phase backfill assign** and **preempted refresh dashboard stability**.
