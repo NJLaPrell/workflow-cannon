@@ -9,6 +9,7 @@
     "agent-mutation-plan",
     "agent-session-snapshot",
     "apply-task-batch",
+    "apply-task-state-events",
     "archive-task",
     "assign-task-phase",
     "backfill-task-feature-links",
@@ -272,6 +273,22 @@
         },
         "config": {
           "type": "object"
+        }
+      },
+      "additionalProperties": true
+    },
+    "apply-task-state-events": {
+      "type": "object",
+      "properties": {
+        "dryRun": {
+          "type": "boolean"
+        },
+        "eventLogRelativePath": {
+          "type": "string"
+        },
+        "policyApproval": {
+          "type": "object",
+          "additionalProperties": true
         }
       },
       "additionalProperties": true

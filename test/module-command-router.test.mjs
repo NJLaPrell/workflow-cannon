@@ -37,6 +37,7 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
     "agent-mutation-plan",
     "agent-session-snapshot",
     "apply-task-batch",
+    "apply-task-state-events",
     "archive-task",
     "assign-task-phase",
     "backfill-task-feature-links",

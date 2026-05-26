@@ -1,0 +1,53 @@
+{
+  "ok": true,
+  "code": "run-args-schema",
+  "command": "apply-task-state-events",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "dryRun": {
+        "type": "boolean"
+      },
+      "eventLogRelativePath": {
+        "type": "string"
+      },
+      "policyApproval": {
+        "type": "object",
+        "additionalProperties": true
+      }
+    },
+    "additionalProperties": true
+  },
+  "schemaSource": "pilot-run-args-snapshot",
+  "sampleArgs": {},
+  "examples": [
+    {
+      "description": "Minimal argv example",
+      "argv": "workspace-kit run apply-task-state-events '{}'"
+    }
+  ],
+  "instructionPath": "src/modules/task-engine/instructions/apply-task-state-events.md",
+  "moduleId": "task-engine",
+  "description": "Incrementally apply canonical task-state JSONL events newer than projection metadata applied_sequence.",
+  "policy": {
+    "sensitivity": "sensitive",
+    "operationId": "tasks.apply-task-state-events",
+    "jsonApprovalRequired": true
+  },
+  "planningGeneration": {
+    "cliPrelude": false,
+    "expectedPlanningGeneration": "not required by CLI prelude"
+  },
+  "idempotency": {
+    "clientMutationId": false
+  },
+  "responseTemplate": {
+    "defaultResponseTemplateId": "default"
+  },
+  "remediationContract": ".ai/runbooks/agent-task-engine-ergonomics.md",
+  "discovery": {
+    "listCommands": "pnpm exec wk run --list-commands",
+    "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
+  },
+  "invocationId": "d529017f-ae55-4f12-ad95-81c416c19bad"
+}

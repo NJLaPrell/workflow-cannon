@@ -32,6 +32,7 @@ export type PolicyOperationId =
   | "tasks.uninstall-git-hooks"
   | "tasks.sync-task-store-after-merge"
   | "tasks.rebuild-task-state-cache"
+  | "tasks.apply-task-state-events"
   | "tasks.synthesize-transcript-churn"
   | "approvals.review-item"
   | "improvement.generate-recommendations"

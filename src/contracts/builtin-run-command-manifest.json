@@ -557,6 +557,15 @@
   },
   {
     "moduleId": "task-engine",
+    "name": "apply-task-state-events",
+    "file": "apply-task-state-events.md",
+    "description": "Incrementally apply canonical task-state JSONL events newer than projection metadata applied_sequence.",
+    "policyOperationId": "tasks.apply-task-state-events",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "task-engine",
     "name": "persist-planning-execution-drafts",
     "file": "persist-planning-execution-drafts.md",
     "description": "Persist multiple proposed execution tasks from planning decomposition in one transaction (convert-wishlist-compatible rows).",
