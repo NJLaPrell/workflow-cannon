@@ -185,6 +185,9 @@ export async function collectTaskPersistenceDoctorSummaryLines(cwd: string): Pro
     "Team assignments / subagents: `pnpm exec wk run list-assignments '{}'`, `list-subagents` / `list-subagent-sessions` — rollups in `dashboard-summary`; runbook `.ai/runbooks/subagent-registry.md`; ADRs `docs/maintainers/adrs/ADR-team-execution-v1.md`, `ADR-subagent-registry-v1.md`."
   );
   lines.push("Persistence map (JSON): workspace-kit run get-kit-persistence-map '{}'");
+  lines.push(
+    "Planning SQLite recovery (before risky edits): pnpm exec wk run backup-planning-sqlite '{\"outputPath\":\".workspace-kit/backups/planning-pre-repair.db\"}' ; pnpm exec wk run task-persistence-readiness '{}'"
+  );
   lines.push("Backend paths + recovery: docs/maintainers/runbooks/task-persistence-operator.md");
   const pol = getPlanningGenerationPolicy({ effectiveConfig: effective });
   lines.push(
