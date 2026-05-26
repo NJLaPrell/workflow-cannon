@@ -2368,6 +2368,7 @@ function renderReadyPhaseBuckets(
         const phasePhrase = resolvePhasePhraseForCompleteRelease(b);
         const taskIds = collectPhaseBucketTaskIds(b);
         const showRelease = readyPhaseBucketHasTasks(raw) && phaseKey.length > 0;
+        const c = typeof b.count === "number" ? b.count : 0;
         const releaseBtn = showRelease
           ? renderPhaseCompleteReleaseButton({
               phaseKey,
@@ -2378,16 +2379,20 @@ function renderReadyPhaseBuckets(
               scope: "bucket"
             })
           : "";
-        const body = renderTaskRowList(b.top ?? [], "No tasks in this phase.");
+        const inner =
+          c === 0
+            ? '<p class="muted">No tasks in this phase.</p>'
+            : lazyQueueBucketPlaceholder(c);
         return (
-          '<details class="phase-bucket"' +
+          '<details' +
+          lazyQueueBucketDetailsAttrs("ready", phaseKey, c) +
           phaseBucketFilterAttr(b.phaseKey) +
           wcTrackAttr(phaseTrackPrefix + "-p" + String(i)) +
           '><summary class="phase-bucket-summary">' +
           summaryLabel +
           releaseBtn +
           "</summary>" +
-          body +
+          inner +
           "</details>"
         );
       })
@@ -2428,6 +2433,7 @@ function renderProposedPhaseBuckets(
           ? (b.taskIds as unknown[]).map((x) => String(x).trim()).filter((id) => id.length > 0)
           : [];
         const c = typeof b.count === "number" ? b.count : 0;
+        const phaseKey = b.phaseKey != null ? String(b.phaseKey).trim() : "";
         const acceptAllBtn =
           c > 0 && taskIds.length > 0
             ? '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary dash-phase-accept-all" data-wc-action="proposed-imp-accept-phase" data-proposed-task-ids="' +
@@ -2439,9 +2445,10 @@ function renderProposedPhaseBuckets(
         const inner =
           c === 0
             ? '<p class="muted">No tasks in this phase.</p>'
-            : renderProposedImprovementsList(c, b.top ?? []);
+            : lazyQueueBucketPlaceholder(c);
         return (
-          '<details class="phase-bucket"' +
+          '<details' +
+          lazyQueueBucketDetailsAttrs("proposed-improvement", phaseKey, c) +
           phaseBucketFilterAttr(b.phaseKey) +
           wcTrackAttr(phaseTrackPrefix + "-p" + String(i)) +
           '><summary class="phase-bucket-summary">' +
@@ -2485,12 +2492,14 @@ function renderTranscriptChurnResearchPhaseBuckets(
         const b = raw as { label?: unknown; top?: unknown; count?: unknown; phaseKey?: unknown };
         const summary = phaseBucketSummaryHtml(b, phaseFocus, catalog);
         const c = typeof b.count === "number" ? b.count : 0;
+        const phaseKey = b.phaseKey != null ? String(b.phaseKey).trim() : "";
         const inner =
           c === 0
             ? '<p class="muted">No tasks in this phase.</p>'
-            : renderTranscriptChurnResearchList(c, b.top ?? []);
+            : lazyQueueBucketPlaceholder(c);
         return (
-          '<details class="phase-bucket"' +
+          '<details' +
+          lazyQueueBucketDetailsAttrs("transcript-churn", phaseKey, c) +
           phaseBucketFilterAttr(b.phaseKey) +
           wcTrackAttr(phaseTrackPrefix + "-p" + String(i)) +
           '><summary class="phase-bucket-summary">' +
@@ -2538,6 +2547,7 @@ function renderProposedExecutionPhaseBuckets(
           ? (b.taskIds as unknown[]).map((x) => String(x).trim()).filter((id) => id.length > 0)
           : [];
         const c = typeof b.count === "number" ? b.count : 0;
+        const phaseKey = b.phaseKey != null ? String(b.phaseKey).trim() : "";
         const acceptAllBtn =
           c > 0 && taskIds.length > 0
             ? '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary dash-phase-accept-all" data-wc-action="proposed-exe-accept-phase" data-proposed-task-ids="' +
@@ -2549,9 +2559,10 @@ function renderProposedExecutionPhaseBuckets(
         const inner =
           c === 0
             ? '<p class="muted">No tasks in this phase.</p>'
-            : renderProposedExecutionList(c, b.top ?? []);
+            : lazyQueueBucketPlaceholder(c);
         return (
-          '<details class="phase-bucket"' +
+          '<details' +
+          lazyQueueBucketDetailsAttrs("proposed-execution", phaseKey, c) +
           phaseBucketFilterAttr(b.phaseKey) +
           wcTrackAttr(phaseTrackPrefix + "-p" + String(i)) +
           '><summary class="phase-bucket-summary">' +
@@ -2595,12 +2606,14 @@ function renderBlockedPhaseBuckets(
         const b = raw as { label?: unknown; top?: unknown; count?: unknown; phaseKey?: unknown };
         const summary = phaseBucketSummaryHtml(b, phaseFocus, catalog);
         const c = typeof b.count === "number" ? b.count : 0;
+        const phaseKey = b.phaseKey != null ? String(b.phaseKey).trim() : "";
         const inner =
           c === 0
             ? '<p class="muted">No blocked tasks in this phase.</p>'
-            : renderBlockedList(b.top ?? []);
+            : lazyQueueBucketPlaceholder(c);
         return (
-          '<details class="phase-bucket"' +
+          '<details' +
+          lazyQueueBucketDetailsAttrs("blocked", phaseKey, c) +
           phaseBucketFilterAttr(b.phaseKey) +
           wcTrackAttr(phaseTrackPrefix + "-p" + String(i)) +
           '><summary class="phase-bucket-summary">' +
@@ -2615,12 +2628,12 @@ function renderBlockedPhaseBuckets(
   );
 }
 
-const LAZY_TERMINAL_BUCKET_LIMIT = 50;
+const LAZY_QUEUE_BUCKET_LIMIT = 50;
 
-function lazyTerminalBucketPlaceholder(count: number): string {
+function lazyQueueBucketPlaceholder(count: number): string {
   const hint =
-    count > LAZY_TERMINAL_BUCKET_LIMIT
-      ? "Expand to load the first " + String(LAZY_TERMINAL_BUCKET_LIMIT) + " tasks…"
+    count > LAZY_QUEUE_BUCKET_LIMIT
+      ? "Expand to load the first " + String(LAZY_QUEUE_BUCKET_LIMIT) + " tasks…"
       : "Expand to load tasks…";
   return (
     '<div class="wc-lazy-bucket-body" data-wc-lazy-loaded="0">' +
@@ -2628,6 +2641,35 @@ function lazyTerminalBucketPlaceholder(count: number): string {
     escapeHtml(hint) +
     "</p></div>"
   );
+}
+
+function lazyQueueBucketDetailsAttrs(
+  category: string,
+  phaseKey: string,
+  count: number,
+  extraClass = ""
+): string {
+  const cls =
+    "phase-bucket wc-lazy-queue-bucket" +
+    (category === "completed" || category === "cancelled" ? " terminal-phase-bucket" : "") +
+    (extraClass.length > 0 ? " " + extraClass : "");
+  return (
+    ' class="' +
+    cls +
+    '"' +
+    ' data-wc-queue-category="' +
+    escapeHtmlAttr(category) +
+    '" data-wc-phase-key="' +
+    escapeHtmlAttr(phaseKey) +
+    '" data-wc-bucket-count="' +
+    escapeHtmlAttr(String(count)) +
+    '"'
+  );
+}
+
+/** @deprecated use lazyQueueBucketListLimit */
+function lazyTerminalBucketPlaceholder(count: number): string {
+  return lazyQueueBucketPlaceholder(count);
 }
 
 /**
@@ -2658,18 +2700,13 @@ function renderTerminalTaskPhaseBuckets(
         const inner =
           c === 0
             ? '<p class="muted">No tasks in this phase.</p>'
-            : lazyTerminalBucketPlaceholder(c);
+            : lazyQueueBucketPlaceholder(c);
         return (
-          '<details class="phase-bucket terminal-phase-bucket wc-lazy-terminal-bucket"' +
+          '<details' +
+          lazyQueueBucketDetailsAttrs(terminalStatus, phaseKey, c, "wc-lazy-terminal-bucket") +
           phaseBucketFilterAttr(b.phaseKey) +
           wcTrackAttr(phaseTrackPrefix + "-p" + String(i)) +
-          ' data-wc-lazy-terminal="' +
-          escapeHtmlAttr(terminalStatus) +
-          '" data-wc-phase-key="' +
-          escapeHtmlAttr(phaseKey) +
-          '" data-wc-bucket-count="' +
-          escapeHtmlAttr(String(c)) +
-          '"><summary class="phase-bucket-summary">' +
+          '><summary class="phase-bucket-summary">' +
           summary +
           "</summary>" +
           inner +
@@ -2690,7 +2727,11 @@ export function renderDashboardQueueTaskRowsHtml(
 }
 
 export function lazyTerminalBucketListLimit(): number {
-  return LAZY_TERMINAL_BUCKET_LIMIT;
+  return LAZY_QUEUE_BUCKET_LIMIT;
+}
+
+export function lazyQueueBucketListLimit(): number {
+  return LAZY_QUEUE_BUCKET_LIMIT;
 }
 
 /** Readable label for `build-plan` planningType / status strings (dashboard only). */

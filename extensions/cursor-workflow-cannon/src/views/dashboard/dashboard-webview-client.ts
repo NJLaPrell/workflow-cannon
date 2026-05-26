@@ -265,7 +265,7 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
     restoreConfigTabState(root, configState);
     applyTab(activeTab);
     applyQueueFilters(root);
-    reloadOpenLazyTerminalBuckets(root);
+    reloadOpenLazyQueueBuckets(root);
     if (editState) restorePhaseDeliverablesEditState(editState);
     if (typeof window.wcReinitEmbeddedCae === 'function') window.wcReinitEmbeddedCae();
     var refreshBtn = document.getElementById('btn');
@@ -359,52 +359,82 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
     }
   }
 
-  function lazyTerminalBucketSelector(terminalStatus, phaseKey) {
+  function lazyQueueBucketSelector(category, phaseKey) {
     var pk = phaseKey != null ? String(phaseKey) : '';
-    return 'details.wc-lazy-terminal-bucket[data-wc-lazy-terminal="' +
-      String(terminalStatus).replace(/"/g, '\\\\"') +
+    return 'details.wc-lazy-queue-bucket[data-wc-queue-category="' +
+      String(category).replace(/"/g, '\\\\"') +
       '"][data-wc-phase-key="' +
       pk.replace(/"/g, '\\\\"') +
       '"]';
   }
 
-  function requestLazyTerminalBucketLoad(detailsEl) {
-    if (!detailsEl || detailsEl.getAttribute('data-wc-lazy-loaded') === '1') return;
-    if (detailsEl.getAttribute('data-wc-lazy-loading') === '1') return;
-    var status = (detailsEl.getAttribute('data-wc-lazy-terminal') || '').trim();
-    if (status !== 'completed' && status !== 'cancelled') return;
+  function lazyTerminalBucketSelector(terminalStatus, phaseKey) {
+    return lazyQueueBucketSelector(terminalStatus, phaseKey);
+  }
+
+  function requestLazyQueueBucketLoad(detailsEl, cursor) {
+    if (!detailsEl) return;
+    var category = (detailsEl.getAttribute('data-wc-queue-category') || '').trim();
+    if (!category) return;
+    var append = typeof cursor === 'string' && cursor.trim().length > 0;
+    if (!append) {
+      if (detailsEl.getAttribute('data-wc-lazy-loaded') === '1') return;
+      if (detailsEl.getAttribute('data-wc-lazy-loading') === '1') return;
+    } else {
+      if (detailsEl.getAttribute('data-wc-lazy-more-loading') === '1') return;
+      detailsEl.setAttribute('data-wc-lazy-more-loading', '1');
+    }
     detailsEl.setAttribute('data-wc-lazy-loading', '1');
     var body = detailsEl.querySelector('.wc-lazy-bucket-body');
     if (body) {
       var hint = body.querySelector('.wc-lazy-bucket-hint');
-      if (hint) hint.textContent = 'Loading…';
+      if (hint && !append) hint.textContent = 'Loading…';
     }
     vscode.postMessage({
-      type: 'loadLazyTerminalBucket',
-      terminalStatus: status,
-      phaseKey: detailsEl.getAttribute('data-wc-phase-key') || ''
+      type: 'loadQueueBucketRows',
+      category: category,
+      phaseKey: detailsEl.getAttribute('data-wc-phase-key') || '',
+      cursor: append ? cursor : undefined
     });
   }
 
-  function applyLazyTerminalBucketHtml(terminalStatus, phaseKey, html) {
+  function requestLazyTerminalBucketLoad(detailsEl) {
+    requestLazyQueueBucketLoad(detailsEl);
+  }
+
+  function applyQueueBucketRowsHtml(category, phaseKey, html, append) {
     var root = document.getElementById('root');
     if (!root) return;
-    var bucket = root.querySelector(lazyTerminalBucketSelector(terminalStatus, phaseKey));
+    var bucket = root.querySelector(lazyQueueBucketSelector(category, phaseKey));
     if (!bucket) return;
     bucket.removeAttribute('data-wc-lazy-loading');
-    bucket.setAttribute('data-wc-lazy-loaded', '1');
+    bucket.removeAttribute('data-wc-lazy-more-loading');
     var body = bucket.querySelector('.wc-lazy-bucket-body');
-    if (body) {
+    if (!body) return;
+    if (append) {
+      var moreWrap = body.querySelector('.wc-lazy-bucket-more');
+      if (moreWrap) moreWrap.remove();
+      body.insertAdjacentHTML('beforeend', typeof html === 'string' ? html : '');
+    } else {
+      bucket.setAttribute('data-wc-lazy-loaded', '1');
       body.innerHTML = typeof html === 'string' ? html : '';
       body.setAttribute('data-wc-lazy-loaded', '1');
     }
   }
 
-  function reloadOpenLazyTerminalBuckets(root) {
+  function applyLazyTerminalBucketHtml(terminalStatus, phaseKey, html) {
+    applyQueueBucketRowsHtml(terminalStatus, phaseKey, html, false);
+  }
+
+  function reloadOpenLazyQueueBuckets(root) {
     if (!root) return;
-    root.querySelectorAll('details.wc-lazy-terminal-bucket[open]').forEach(function(d) {
-      if (d.getAttribute('data-wc-lazy-loaded') !== '1') requestLazyTerminalBucketLoad(d);
+    root.querySelectorAll('details.wc-lazy-queue-bucket[open]').forEach(function(d) {
+      if (d.getAttribute('data-wc-lazy-loaded') !== '1') requestLazyQueueBucketLoad(d);
     });
+  }
+
+  function reloadOpenLazyTerminalBuckets(root) {
+    reloadOpenLazyQueueBuckets(root);
   }
 
   function restorePhaseCardCollapseState(root) {
@@ -642,6 +672,12 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
       var pk = typeof m.phaseKey === 'string' ? m.phaseKey.trim() : '';
       var msg = typeof m.message === 'string' ? m.message : 'Unable to save deliverables.';
       if (pk) restorePhaseDeliverablesFromError(pk, msg);
+      return;
+    }
+    if (m && m.type === 'wcQueueBucketRowsHtml') {
+      var queueCat = typeof m.category === 'string' ? m.category : '';
+      var queuePk = typeof m.phaseKey === 'string' ? m.phaseKey : '';
+      applyQueueBucketRowsHtml(queueCat, queuePk, m.html, m.append === true);
       return;
     }
     if (m && m.type === 'wcLazyTerminalBucketHtml') {
@@ -1019,7 +1055,7 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
     if (act === 'planning-wizard-start') { var sel = document.getElementById('wc-planning-type'); var pt = sel && sel.value ? String(sel.value).trim() : ''; if (pt) vscode.postMessage({type:'planningWizardStart',planningType:pt}); return; }
     if (act === 'planning-wizard-submit') { var ta = document.getElementById('wc-planning-answer'); var txt = ta && typeof ta.value === 'string' ? ta.value.trim() : ''; vscode.postMessage({type:'planningWizardSubmit',answer:txt}); return; }
     if (act === 'planning-wizard-cancel') { vscode.postMessage({type:'planningWizardCancel'}); return; }
-    if (act === 'planning-wizard-dismiss') { vscode.postMessage({type:'planningWizardDismiss'});return;}if(act==="collaboration-hub"){vscode.postMessage({type:"prefillCollaborationHubChat"});return;}if(act==="deliver-phase-prompt"){var kp=(t.getAttribute("data-wc-kit-phase")||"").trim();vscode.postMessage({type:"prefillDeliverPhaseChat",kitPhase:kp});return;}if(act==="add-wishlist-item"){vscode.postMessage({type:"addWishlistItem"});return;}if(act==="generate-features-chat"){vscode.postMessage({type:"prefillGenerateFeaturesChat"});return;}if(act==="transcript-churn-research-chat"){var tcTid=(t.getAttribute("data-task-id")||"").trim();vscode.postMessage({type:"prefillTranscriptChurnResearchChat",taskId:tcTid});return;}if(act==="wishlist-chat"){var wid=t.getAttribute("data-wishlist-id")||"";vscode.postMessage({type:"prefillWishlistChat",wishlistId:wid});return;}if(act==="wishlist-page"){var wpp=parseInt(String(t.getAttribute("data-wishlist-page")||"0"),10);if(!Number.isNaN(wpp)&&wpp>=0)vscode.postMessage({type:"wishlistPage",page:wpp});return;}if(act==="wishlist-decline"){var wlTid=(t.getAttribute("data-task-id")||"").trim();if(wlTid)vscode.postMessage({type:"dashboardTransition",taskId:wlTid,action:"reject",transitionKind:"wishlist"});return;}if(act==="phase-complete-release"){var ph=(t.getAttribute("data-wc-phase-phrase")||"").trim();var pk=(t.getAttribute("data-wc-phase-key")||"").trim();var ids=(t.getAttribute("data-wc-phase-task-ids")||"").trim();var wcur=(t.getAttribute("data-wc-workspace-current-phase")||"").trim();var wnxt=(t.getAttribute("data-wc-workspace-next-phase")||"").trim();var rscope=(t.getAttribute("data-wc-release-scope")||"").trim();vscode.postMessage({type:"prefillPhaseCompleteReleaseChat",phasePhrase:ph,phaseKey:pk,seededTaskIdsCsv:ids,workspaceCurrentPhase:wcur,workspaceNextPhase:wnxt,scope:rscope==="current"?"current":rscope==="bucket"?"bucket":undefined});return;}if(act==="proposed-imp-accept-phase"||act==="proposed-exe-accept-phase"){var batch=(t.getAttribute("data-proposed-task-ids")||"").trim();var cat=act==="proposed-exe-accept-phase"?"execution":"improvement";var dpk=(t.getAttribute("data-proposed-phase-key")||"").trim();vscode.postMessage({type:"dashboardAcceptProposedPhase",category:cat,taskIds:batch,phaseKey:dpk});return;}if(act==="phase-notes-chat"){vscode.postMessage({type:"prefillPhaseNotesDiscoveryChat"});return;}if(act==="phase-note-add"){vscode.postMessage({type:"addPhaseNote"});return;}if(act==="phase-note-dismiss"){var dpn=(t.getAttribute("data-note-id")||"").trim();var dpp=(t.getAttribute("data-note-priority")||"").trim();if(dpn)vscode.postMessage({type:"dismissPhaseNote",noteId:dpn,priority:dpp});return;}if(act==="phase-note-convert"){var cpn=(t.getAttribute("data-note-id")||"").trim();if(cpn)vscode.postMessage({type:"convertPhaseNote",noteId:cpn});return;}if(act==="phase-notes-propose-persist"){vscode.postMessage({type:"persistPhaseNoteProposals"});return;}if(act==="register-phase-catalog"){vscode.postMessage({type:"registerPhaseCatalogEntry"});return;}if(act==="phase-mark-complete"){var markPk=(t.getAttribute("data-wc-phase-key")||"").trim();if(markPk)vscode.postMessage({type:"markPhaseComplete",phaseKey:markPk});return;}if(act==="phase-roster-start"){var rosterPk=(t.getAttribute("data-wc-phase-key")||"").trim();if(rosterPk)vscode.postMessage({type:"startPhaseFromRoster",phaseKey:rosterPk});return;}if(act==="team-assignment-register"){vscode.postMessage({type:"registerTeamAssignment"});return;}if(act==="team-execution-chat"){vscode.postMessage({type:"prefillTeamExecutionChat"});return;}if(act==="team-assignment-handoff"){var teamAid=(t.getAttribute("data-assignment-id")||"").trim();var teamWid=(t.getAttribute("data-worker-id")||"").trim();if(teamAid&&teamWid)vscode.postMessage({type:"submitTeamHandoff",assignmentId:teamAid,workerId:teamWid});return;}if(act==="team-assignment-reconcile"){var teamAid2=(t.getAttribute("data-assignment-id")||"").trim();var teamSid=(t.getAttribute("data-supervisor-id")||"").trim();if(teamAid2&&teamSid)vscode.postMessage({type:"reconcileTeamAssignment",assignmentId:teamAid2,supervisorId:teamSid});return;}if(act==="team-assignment-block"){var teamAid3=(t.getAttribute("data-assignment-id")||"").trim();var teamSid2=(t.getAttribute("data-supervisor-id")||"").trim();if(teamAid3&&teamSid2)vscode.postMessage({type:"blockTeamAssignment",assignmentId:teamAid3,supervisorId:teamSid2});return;}if(act==="team-assignment-cancel"){var teamAid4=(t.getAttribute("data-assignment-id")||"").trim();var teamSid3=(t.getAttribute("data-supervisor-id")||"").trim();if(teamAid4)vscode.postMessage({type:"cancelTeamAssignment",assignmentId:teamAid4,supervisorId:teamSid3});return;}if(act==="subagent-register"){vscode.postMessage({type:"registerSubagent"});return;}if(act==="subagent-registry-chat"){vscode.postMessage({type:"prefillSubagentRegistryChat"});return;}if(act==="subagent-spawn"){var subId=(t.getAttribute("data-subagent-id")||"").trim();vscode.postMessage({type:"spawnSubagent",subagentId:subId});return;}if(act==="subagent-session-close"){var subSid=(t.getAttribute("data-session-id")||"").trim();var subDef=(t.getAttribute("data-definition-id")||"").trim();if(subSid&&subDef)vscode.postMessage({type:"closeSubagentSession",sessionId:subSid,definitionId:subDef});return;}if(act==="subagent-retire"){var subRet=(t.getAttribute("data-subagent-id")||"").trim();vscode.postMessage({type:"retireSubagent",subagentId:subRet});return;}if(act==="checkpoint-create-head"){vscode.postMessage({type:"createCheckpoint",mode:"head"});return;}if(act==="checkpoint-create-stash"){vscode.postMessage({type:"createCheckpoint",mode:"stash"});return;}if(act==="checkpoint-recovery-chat"){vscode.postMessage({type:"prefillTaskCheckpointsRecoveryChat"});return;}if(act==="checkpoint-compare"){var ckptCmp=(t.getAttribute("data-checkpoint-id")||"").trim();if(ckptCmp)vscode.postMessage({type:"compareCheckpoint",checkpointId:ckptCmp});return;}if(act==="checkpoint-rewind"){var ckptRw=(t.getAttribute("data-checkpoint-id")||"").trim();var ckptRk=(t.getAttribute("data-ref-kind")||"").trim();var ckptTid=(t.getAttribute("data-task-id")||"").trim();if(ckptRw)vscode.postMessage({type:"rewindCheckpoint",checkpointId:ckptRw,refKind:ckptRk,taskId:ckptTid});return;}if(act==="approval-inbox-chat"){vscode.postMessage({type:"prefillPolicyApprovalInboxChat"});return;}if(act==="approval-review-accept"){var apTid=(t.getAttribute("data-task-id")||"").trim();var apTit=(t.getAttribute("data-task-title")||"").trim();if(apTid)vscode.postMessage({type:"reviewApprovalItem",taskId:apTid,title:apTit,decision:"accept"});return;}if(act==="approval-review-decline"){var apTid2=(t.getAttribute("data-task-id")||"").trim();var apTit2=(t.getAttribute("data-task-title")||"").trim();if(apTid2)vscode.postMessage({type:"reviewApprovalItem",taskId:apTid2,title:apTit2,decision:"decline"});return;}if(act==="approval-review-accept-edited"){var apTid3=(t.getAttribute("data-task-id")||"").trim();var apTit3=(t.getAttribute("data-task-title")||"").trim();if(apTid3)vscode.postMessage({type:"reviewApprovalItem",taskId:apTid3,title:apTit3,decision:"accept_edited"});return;}if(act==="assign-phase"){var apTid=(t.getAttribute("data-task-id")||"").trim();if(apTid)vscode.postMessage({type:"assignTaskPhase",taskId:apTid});return;}var tid=(t.getAttribute("data-task-id")||"").trim();if(act==="task-detail"){if(tid)vscode.postMessage({type:"openTaskDetail",taskId:tid});return;}if(act==="task-comments-view"){if(tid)vscode.postMessage({type:"viewTaskComments",taskId:tid});return;}if(act==="task-comment-add"){if(tid)vscode.postMessage({type:"addTaskComment",taskId:tid});return;}if(act==="proposed-imp-accept"||act==="proposed-exe-accept"){vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"accept"});return;}if(act==="human-gate-resume-ready"){if(tid)vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"resume_ready",transitionKind:"human-gate"});return;}if(act==="human-gate-resume-work"){if(tid)vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"resume_work",transitionKind:"human-gate"});return;}if(act==="proposed-imp-decline"||act==="proposed-exe-decline"){vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"reject"});return;}});
+    if (act === 'planning-wizard-dismiss') { vscode.postMessage({type:'planningWizardDismiss'});return;}if(act==="collaboration-hub"){vscode.postMessage({type:"prefillCollaborationHubChat"});return;}if(act==="deliver-phase-prompt"){var kp=(t.getAttribute("data-wc-kit-phase")||"").trim();vscode.postMessage({type:"prefillDeliverPhaseChat",kitPhase:kp});return;}if(act==="add-wishlist-item"){vscode.postMessage({type:"addWishlistItem"});return;}if(act==="generate-features-chat"){vscode.postMessage({type:"prefillGenerateFeaturesChat"});return;}if(act==="transcript-churn-research-chat"){var tcTid=(t.getAttribute("data-task-id")||"").trim();vscode.postMessage({type:"prefillTranscriptChurnResearchChat",taskId:tcTid});return;}if(act==="wishlist-chat"){var wid=t.getAttribute("data-wishlist-id")||"";vscode.postMessage({type:"prefillWishlistChat",wishlistId:wid});return;}if(act==="wishlist-page"){var wpp=parseInt(String(t.getAttribute("data-wishlist-page")||"0"),10);if(!Number.isNaN(wpp)&&wpp>=0)vscode.postMessage({type:"wishlistPage",page:wpp});return;}if(act==="wishlist-decline"){var wlTid=(t.getAttribute("data-task-id")||"").trim();if(wlTid)vscode.postMessage({type:"dashboardTransition",taskId:wlTid,action:"reject",transitionKind:"wishlist"});return;}if(act==="phase-complete-release"){var ph=(t.getAttribute("data-wc-phase-phrase")||"").trim();var pk=(t.getAttribute("data-wc-phase-key")||"").trim();var ids=(t.getAttribute("data-wc-phase-task-ids")||"").trim();var wcur=(t.getAttribute("data-wc-workspace-current-phase")||"").trim();var wnxt=(t.getAttribute("data-wc-workspace-next-phase")||"").trim();var rscope=(t.getAttribute("data-wc-release-scope")||"").trim();vscode.postMessage({type:"prefillPhaseCompleteReleaseChat",phasePhrase:ph,phaseKey:pk,seededTaskIdsCsv:ids,workspaceCurrentPhase:wcur,workspaceNextPhase:wnxt,scope:rscope==="current"?"current":rscope==="bucket"?"bucket":undefined});return;}if(act==="proposed-imp-accept-phase"||act==="proposed-exe-accept-phase"){var batch=(t.getAttribute("data-proposed-task-ids")||"").trim();var cat=act==="proposed-exe-accept-phase"?"execution":"improvement";var dpk=(t.getAttribute("data-proposed-phase-key")||"").trim();vscode.postMessage({type:"dashboardAcceptProposedPhase",category:cat,taskIds:batch,phaseKey:dpk});return;}if(act==="phase-notes-chat"){vscode.postMessage({type:"prefillPhaseNotesDiscoveryChat"});return;}if(act==="phase-note-add"){vscode.postMessage({type:"addPhaseNote"});return;}if(act==="phase-note-dismiss"){var dpn=(t.getAttribute("data-note-id")||"").trim();var dpp=(t.getAttribute("data-note-priority")||"").trim();if(dpn)vscode.postMessage({type:"dismissPhaseNote",noteId:dpn,priority:dpp});return;}if(act==="phase-note-convert"){var cpn=(t.getAttribute("data-note-id")||"").trim();if(cpn)vscode.postMessage({type:"convertPhaseNote",noteId:cpn});return;}if(act==="phase-notes-propose-persist"){vscode.postMessage({type:"persistPhaseNoteProposals"});return;}if(act==="register-phase-catalog"){vscode.postMessage({type:"registerPhaseCatalogEntry"});return;}if(act==="phase-mark-complete"){var markPk=(t.getAttribute("data-wc-phase-key")||"").trim();if(markPk)vscode.postMessage({type:"markPhaseComplete",phaseKey:markPk});return;}if(act==="phase-roster-start"){var rosterPk=(t.getAttribute("data-wc-phase-key")||"").trim();if(rosterPk)vscode.postMessage({type:"startPhaseFromRoster",phaseKey:rosterPk});return;}if(act==="team-assignment-register"){vscode.postMessage({type:"registerTeamAssignment"});return;}if(act==="team-execution-chat"){vscode.postMessage({type:"prefillTeamExecutionChat"});return;}if(act==="team-assignment-handoff"){var teamAid=(t.getAttribute("data-assignment-id")||"").trim();var teamWid=(t.getAttribute("data-worker-id")||"").trim();if(teamAid&&teamWid)vscode.postMessage({type:"submitTeamHandoff",assignmentId:teamAid,workerId:teamWid});return;}if(act==="team-assignment-reconcile"){var teamAid2=(t.getAttribute("data-assignment-id")||"").trim();var teamSid=(t.getAttribute("data-supervisor-id")||"").trim();if(teamAid2&&teamSid)vscode.postMessage({type:"reconcileTeamAssignment",assignmentId:teamAid2,supervisorId:teamSid});return;}if(act==="team-assignment-block"){var teamAid3=(t.getAttribute("data-assignment-id")||"").trim();var teamSid2=(t.getAttribute("data-supervisor-id")||"").trim();if(teamAid3&&teamSid2)vscode.postMessage({type:"blockTeamAssignment",assignmentId:teamAid3,supervisorId:teamSid2});return;}if(act==="team-assignment-cancel"){var teamAid4=(t.getAttribute("data-assignment-id")||"").trim();var teamSid3=(t.getAttribute("data-supervisor-id")||"").trim();if(teamAid4)vscode.postMessage({type:"cancelTeamAssignment",assignmentId:teamAid4,supervisorId:teamSid3});return;}if(act==="subagent-register"){vscode.postMessage({type:"registerSubagent"});return;}if(act==="subagent-registry-chat"){vscode.postMessage({type:"prefillSubagentRegistryChat"});return;}if(act==="subagent-spawn"){var subId=(t.getAttribute("data-subagent-id")||"").trim();vscode.postMessage({type:"spawnSubagent",subagentId:subId});return;}if(act==="subagent-session-close"){var subSid=(t.getAttribute("data-session-id")||"").trim();var subDef=(t.getAttribute("data-definition-id")||"").trim();if(subSid&&subDef)vscode.postMessage({type:"closeSubagentSession",sessionId:subSid,definitionId:subDef});return;}if(act==="subagent-retire"){var subRet=(t.getAttribute("data-subagent-id")||"").trim();vscode.postMessage({type:"retireSubagent",subagentId:subRet});return;}if(act==="checkpoint-create-head"){vscode.postMessage({type:"createCheckpoint",mode:"head"});return;}if(act==="checkpoint-create-stash"){vscode.postMessage({type:"createCheckpoint",mode:"stash"});return;}if(act==="checkpoint-recovery-chat"){vscode.postMessage({type:"prefillTaskCheckpointsRecoveryChat"});return;}if(act==="checkpoint-compare"){var ckptCmp=(t.getAttribute("data-checkpoint-id")||"").trim();if(ckptCmp)vscode.postMessage({type:"compareCheckpoint",checkpointId:ckptCmp});return;}if(act==="checkpoint-rewind"){var ckptRw=(t.getAttribute("data-checkpoint-id")||"").trim();var ckptRk=(t.getAttribute("data-ref-kind")||"").trim();var ckptTid=(t.getAttribute("data-task-id")||"").trim();if(ckptRw)vscode.postMessage({type:"rewindCheckpoint",checkpointId:ckptRw,refKind:ckptRk,taskId:ckptTid});return;}if(act==="approval-inbox-chat"){vscode.postMessage({type:"prefillPolicyApprovalInboxChat"});return;}if(act==="approval-review-accept"){var apTid=(t.getAttribute("data-task-id")||"").trim();var apTit=(t.getAttribute("data-task-title")||"").trim();if(apTid)vscode.postMessage({type:"reviewApprovalItem",taskId:apTid,title:apTit,decision:"accept"});return;}if(act==="approval-review-decline"){var apTid2=(t.getAttribute("data-task-id")||"").trim();var apTit2=(t.getAttribute("data-task-title")||"").trim();if(apTid2)vscode.postMessage({type:"reviewApprovalItem",taskId:apTid2,title:apTit2,decision:"decline"});return;}if(act==="approval-review-accept-edited"){var apTid3=(t.getAttribute("data-task-id")||"").trim();var apTit3=(t.getAttribute("data-task-title")||"").trim();if(apTid3)vscode.postMessage({type:"reviewApprovalItem",taskId:apTid3,title:apTit3,decision:"accept_edited"});return;}if(act==="queue-bucket-load-more"){var loadCat=(t.getAttribute("data-wc-queue-category")||"").trim();var loadCursor=(t.getAttribute("data-wc-queue-cursor")||"").trim();var loadBucket=t.closest("details.wc-lazy-queue-bucket");if(loadCat&&loadCursor&&loadBucket)requestLazyQueueBucketLoad(loadBucket,loadCursor);return;}if(act==="assign-phase"){var apTid=(t.getAttribute("data-task-id")||"").trim();if(apTid)vscode.postMessage({type:"assignTaskPhase",taskId:apTid});return;}var tid=(t.getAttribute("data-task-id")||"").trim();if(act==="task-detail"){if(tid)vscode.postMessage({type:"openTaskDetail",taskId:tid});return;}if(act==="task-comments-view"){if(tid)vscode.postMessage({type:"viewTaskComments",taskId:tid});return;}if(act==="task-comment-add"){if(tid)vscode.postMessage({type:"addTaskComment",taskId:tid});return;}if(act==="proposed-imp-accept"||act==="proposed-exe-accept"){vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"accept"});return;}if(act==="human-gate-resume-ready"){if(tid)vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"resume_ready",transitionKind:"human-gate"});return;}if(act==="human-gate-resume-work"){if(tid)vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"resume_work",transitionKind:"human-gate"});return;}if(act==="proposed-imp-decline"||act==="proposed-exe-decline"){vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"reject"});return;}});
 
   if (rootEl) rootEl.addEventListener('keydown', function(ev) {
     var target = ev.target;
@@ -1066,8 +1102,8 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
   if (rootEl) rootEl.addEventListener('toggle', function(ev) {
     var el = ev.target;
     if (!el || el.tagName !== 'DETAILS' || !rootEl.contains(el)) return;
-    if (!el.classList.contains('wc-lazy-terminal-bucket') || !el.open) return;
-    requestLazyTerminalBucketLoad(el);
+    if (!el.classList.contains('wc-lazy-queue-bucket') || !el.open) return;
+    requestLazyQueueBucketLoad(el);
   }, true);
 })();`;
 }
