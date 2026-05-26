@@ -21,6 +21,29 @@ import {
 import { renderStatusTabInnerHtml } from "../status/render-status-tab.js";
 import { renderConfigPanelShellHtml } from "../config/config-panel-shell.js";
 import { compareQueuePhaseFilterValues } from "../phase-select-options.js";
+import type { DashboardSectionId } from "./dashboard-section-registry.js";
+import { lookupDashboardSection } from "./dashboard-section-registry.js";
+import { renderDashboardSectionPlaceholder } from "./render-dashboard-shell.js";
+
+export type RenderDashboardRootOptions = {
+  /** Sections that stay as loading placeholders until tab activation (T100398). */
+  deferredSections?: ReadonlySet<DashboardSectionId>;
+};
+
+function wrapDashboardSection(
+  id: DashboardSectionId,
+  innerHtml: string,
+  deferred: boolean
+): string {
+  if (deferred) {
+    return renderDashboardSectionPlaceholder(id, "loading");
+  }
+  return (
+    `<div data-wc-section="${id}" class="wc-dash-section wc-dash-section--ready" aria-busy="false">` +
+    innerHtml +
+    "</div>"
+  );
+}
 
 function phaseScheduleFocusFromWorkspace(
   ws: Record<string, unknown> | null | undefined,
@@ -4312,7 +4335,8 @@ export function renderDashboardRootInnerHtml(
   planningWizardPanel?: PlanningInterviewWizardPanel | null,
   editorIntegration?: EditorIntegrationRenderState | null,
   phaseJournal?: DashboardPhaseJournalBundle | null,
-  embeddedCaePanelHtml?: string | null
+  embeddedCaePanelHtml?: string | null,
+  options?: RenderDashboardRootOptions
 ): string {
   if (payload === null || payload === undefined) {
     return "<p>No payload</p>";
@@ -4623,15 +4647,33 @@ export function renderDashboardRootInnerHtml(
         '<p class="muted">Embedded CAE unavailable; run <b>Workflow Cannon: Open Guidance Authoring</b> or refresh the Dashboard.</p>' +
         '</section>';
 
-  const taskEngineContent =
-    renderPhaseNotesOverviewSection(phaseJournal ?? null, d.phaseJournalStats) +
-    tasksBlock +
-    wishlistSection +
-    renderPlanningSession(planningSession, planningWizardPanel);
+  const deferred = options?.deferredSections ?? new Set<DashboardSectionId>();
+  const queueInner =
+    tasksBlock + wishlistSection + renderPlanningSession(planningSession, planningWizardPanel);
+  const phaseJournalInner = renderPhaseNotesOverviewSection(phaseJournal ?? null, d.phaseJournalStats);
 
-  const statusContent = renderStatusSectionHtml(d, ss, editorIntegration);
+  const overviewWrapped = wrapDashboardSection("overview", overviewContent, deferred.has("overview"));
+  const queueWrapped = wrapDashboardSection("queue", queueInner, deferred.has("queue"));
+  const phaseJournalWrapped = wrapDashboardSection(
+    "phase-journal",
+    phaseJournalInner,
+    deferred.has("phase-journal")
+  );
+  const taskEngineContent = phaseJournalWrapped + queueWrapped;
 
-  const configContent = renderConfigPanelShellHtml();
+  const statusWrapped = wrapDashboardSection(
+    "status",
+    renderStatusSectionHtml(d, ss, editorIntegration),
+    deferred.has("status")
+  );
+
+  const configWrapped = wrapDashboardSection(
+    "config",
+    renderConfigPanelShellHtml(),
+    deferred.has("config")
+  );
+
+  const caeWrapped = wrapDashboardSection("cae", caePanelContent, deferred.has("cae"));
 
   // ── Tab shell ──────────────────────────────────────────────────────────────
 
@@ -4650,11 +4692,59 @@ export function renderDashboardRootInnerHtml(
     '<button type="button" class="wc-tab-btn" role="tab" data-wc-tab="config">Config</button>' +
     '<button type="button" class="wc-tab-btn" role="tab" data-wc-tab="cae">CAE</button>' +
     "</div>" +
-    '<div class="wc-tab-panel" data-wc-tab="overview" role="tabpanel">' + overviewContent + "</div>" +
-    '<div class="wc-tab-panel" data-wc-tab="task-engine" role="tabpanel" style="display:none">' + taskEngineContent + "</div>" +
-    '<div class="wc-tab-panel" data-wc-tab="status" role="tabpanel" style="display:none">' + statusContent + "</div>" +
-    '<div class="wc-tab-panel" data-wc-tab="config" role="tabpanel" style="display:none">' + configContent + "</div>" +
-    '<div class="wc-tab-panel" data-wc-tab="cae" role="tabpanel" style="display:none">' + caePanelContent + "</div>" +
+    '<div class="wc-tab-panel" data-wc-tab="overview" role="tabpanel">' + overviewWrapped + "</div>" +
+    '<div class="wc-tab-panel" data-wc-tab="task-engine" role="tabpanel" style="display:none">' +
+    taskEngineContent +
+    "</div>" +
+    '<div class="wc-tab-panel" data-wc-tab="status" role="tabpanel" style="display:none">' +
+    statusWrapped +
+    "</div>" +
+    '<div class="wc-tab-panel" data-wc-tab="config" role="tabpanel" style="display:none">' +
+    configWrapped +
+    "</div>" +
+    '<div class="wc-tab-panel" data-wc-tab="cae" role="tabpanel" style="display:none">' +
+    caeWrapped +
+    "</div>" +
     "</div>"
   );
+}
+
+/** Status tab inner HTML for section patch hydration (T100398). */
+export function renderDashboardStatusSectionInnerHtml(
+  payload: unknown,
+  editorIntegration?: EditorIntegrationRenderState | null
+): string {
+  const p = payload as { ok?: unknown; data?: Record<string, unknown> };
+  if (p.ok !== true) {
+    return '<p class="muted" role="status">Status unavailable.</p>';
+  }
+  const d = p.data ?? {};
+  const ss = (d.stateSummary as Record<string, unknown>) || {};
+  return renderStatusSectionHtml(d, ss, editorIntegration ?? null);
+}
+
+/** CAE tab inner HTML for section patch hydration (T100398). */
+export function renderDashboardCaeSectionInnerHtml(embeddedCaePanelHtml: string | null): string {
+  if (typeof embeddedCaePanelHtml === "string" && embeddedCaePanelHtml.trim().length > 0) {
+    return (
+      '<div class="gp-root wc-dash-cae-host dash-cae-embedded wc-dashboard-embedded-guidance">' +
+      namespaceEmbeddedCaePanelHtml(embeddedCaePanelHtml) +
+      "</div>"
+    );
+  }
+  return (
+    '<section class="dash-card" aria-label="CAE panel placeholder">' +
+    '<p><b>CAE</b></p>' +
+    '<p class="muted">Phase Readiness is under <b>WC Agent</b> on the Dashboard shell.</p>' +
+    '<p class="muted">Embedded CAE unavailable; run <b>Workflow Cannon: Open Guidance Authoring</b> or refresh the Dashboard.</p>' +
+    "</section>"
+  );
+}
+
+/** Phase journal block inside the Queue tab (T100398 section patch). */
+export function renderDashboardPhaseJournalSectionInnerHtml(
+  phaseJournal: DashboardPhaseJournalBundle | null | undefined,
+  phaseJournalStats: unknown
+): string {
+  return renderPhaseNotesOverviewSection(phaseJournal ?? null, phaseJournalStats);
 }

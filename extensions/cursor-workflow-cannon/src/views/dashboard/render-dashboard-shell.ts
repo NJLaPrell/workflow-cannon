@@ -18,6 +18,23 @@ function sectionStatusCopy(state: DashboardSectionLoadState): string {
   }
 }
 
+const SECTION_LABELS: Record<DashboardSectionId, string> = {
+  overview: "Overview",
+  queue: "Task queue",
+  "phase-journal": "Phase journal",
+  status: "Workspace status",
+  config: "Configuration",
+  cae: "CAE authoring"
+};
+
+export function renderDashboardSectionPlaceholder(
+  id: DashboardSectionId,
+  state: DashboardSectionLoadState = "loading",
+  label = SECTION_LABELS[id]
+): string {
+  return renderSectionPlaceholder(id, label, state);
+}
+
 function renderSectionPlaceholder(
   id: DashboardSectionId,
   label: string,
@@ -39,12 +56,12 @@ function renderSectionPlaceholder(
 
 /** Inner HTML for `#root` before any kit read completes — tab chrome + section placeholders only. */
 export function renderDashboardShellInnerHtml(): string {
-  const overview = renderSectionPlaceholder("overview", "Overview");
-  const queue = renderSectionPlaceholder("queue", "Task queue");
-  const phaseJournal = renderSectionPlaceholder("phase-journal", "Phase journal");
-  const status = renderSectionPlaceholder("status", "Workspace status");
-  const config = renderSectionPlaceholder("config", "Configuration");
-  const cae = renderSectionPlaceholder("cae", "CAE authoring");
+  const overview = renderDashboardSectionPlaceholder("overview");
+  const queue = renderDashboardSectionPlaceholder("queue");
+  const phaseJournal = renderDashboardSectionPlaceholder("phase-journal");
+  const status = renderDashboardSectionPlaceholder("status");
+  const config = renderDashboardSectionPlaceholder("config");
+  const cae = renderDashboardSectionPlaceholder("cae");
 
   return (
     '<div class="wc-dashboard-tab-shell wc-dashboard-shell-initial">' +
