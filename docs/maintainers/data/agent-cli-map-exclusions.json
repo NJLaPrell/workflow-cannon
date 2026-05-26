@@ -34,6 +34,12 @@
     "transcript-automation-status",
     "update-wishlist",
     "update-workspace-status",
-    "workspace-status-history"
-  ]
+    "workspace-status-history",
+    "task-state-status",
+    "task-state-hydrate"
+  ],
+  "exclusionRationales": {
+    "task-state-status": "Phase 115 S3.2; machine canon via .ai/agent-cli-snippets and instructions/*.md",
+    "task-state-hydrate": "Phase 115 S3.2; machine canon via .ai/agent-cli-snippets and instructions/*.md"
+  }
 }

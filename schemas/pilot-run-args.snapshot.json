@@ -95,6 +95,8 @@
     "sync-task-store-after-merge",
     "synthesize-transcript-churn",
     "task-persistence-readiness",
+    "task-state-hydrate",
+    "task-state-status",
     "unblock-task",
     "uninstall-git-hooks",
     "update-phase-note",
@@ -1747,6 +1749,40 @@
     },
     "task-persistence-readiness": {
       "type": "object",
+      "additionalProperties": true
+    },
+    "task-state-hydrate": {
+      "type": "object",
+      "properties": {
+        "dryRun": {
+          "type": "boolean"
+        },
+        "fetch": {
+          "type": "boolean"
+        },
+        "branch": {
+          "type": "string"
+        },
+        "eventLogRelativePath": {
+          "type": "string"
+        },
+        "policyApproval": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "task-state-status": {
+      "type": "object",
+      "properties": {
+        "fetch": {
+          "type": "boolean"
+        },
+        "branch": {
+          "type": "string"
+        }
+      },
       "additionalProperties": true
     },
     "unblock-task": {

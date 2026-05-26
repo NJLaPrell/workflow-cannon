@@ -956,6 +956,23 @@
   },
   {
     "moduleId": "task-engine",
+    "name": "task-state-status",
+    "file": "task-state-status.md",
+    "description": "Read-only sync state vs canonical workflow-cannon/task-state git branch (current/behind/missing/conflict).",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "task-state-hydrate",
+    "file": "task-state-hydrate.md",
+    "description": "Fetch canonical task-state branch, materialize JSONL locally, and rebuild SQLite projection.",
+    "policyOperationId": "tasks.task-state-hydrate",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "task-engine",
     "name": "list-module-states",
     "file": "list-module-states.md",
     "description": "List unified SQLite module-state rows for diagnostics and migration verification.",

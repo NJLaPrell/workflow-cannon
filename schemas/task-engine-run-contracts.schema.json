@@ -46,6 +46,8 @@
         "backup-planning-sqlite",
         "rebuild-task-state-cache",
         "repair-task-state-cache",
+        "task-state-status",
+        "task-state-hydrate",
         "batch-transition",
         "block-task",
         "check-task-store-commit",
@@ -195,6 +197,12 @@
         },
         "repair-task-state-cache": {
           "$ref": "#/$defs/contractRepairTaskStateCache"
+        },
+        "task-state-status": {
+          "$ref": "#/$defs/contractTaskStateStatus"
+        },
+        "task-state-hydrate": {
+          "$ref": "#/$defs/contractTaskStateHydrate"
         },
         "batch-transition": {
           "$ref": "#/$defs/contractBatchTransition"
@@ -3227,6 +3235,58 @@
                   "additionalProperties": true
                 }
               }
+            }
+          }
+        }
+      ]
+    },
+    "contractTaskStateStatus": {
+      "allOf": [
+        { "$ref": "#/$defs/contractBase" },
+        {
+          "properties": {
+            "args": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "fetch": { "type": "boolean" },
+                "branch": { "type": "string" }
+              }
+            },
+            "responseData": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "schemaVersion": { "const": 1 },
+                "syncState": {
+                  "type": "string",
+                  "enum": ["current", "behind", "missing", "conflict"]
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "contractTaskStateHydrate": {
+      "allOf": [
+        { "$ref": "#/$defs/contractBase" },
+        {
+          "properties": {
+            "args": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "dryRun": { "type": "boolean" },
+                "fetch": { "type": "boolean" },
+                "branch": { "type": "string" },
+                "eventLogRelativePath": { "type": "string" },
+                "policyApproval": { "type": "object", "additionalProperties": true }
+              }
+            },
+            "responseData": {
+              "type": "object",
+              "additionalProperties": true
             }
           }
         }

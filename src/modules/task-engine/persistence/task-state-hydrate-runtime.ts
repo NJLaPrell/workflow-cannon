@@ -1,0 +1,136 @@
+import fs from "node:fs";
+import path from "node:path";
+import type { ModuleCommandResult, ModuleLifecycleContext } from "../../../contracts/module-contract.js";
+import { DEFAULT_TASK_STATE_EVENT_LOG_RELATIVE, resolveTaskStateEventLogPath } from "../task-state-events/task-state-event-log-io.js";
+import { TASK_STATE_GIT_BRANCH } from "../task-state-git/constants.js";
+import {
+  gitFetchTaskStateBranch,
+  isGitRepository,
+  resolveTaskStateGitRef
+} from "../task-state-git/git-io.js";
+import {
+  readEventSegmentsJsonl,
+  readTaskStateBranchLayout,
+  segmentPathsThroughHead
+} from "../task-state-git/read-branch-layout.js";
+import { runRebuildTaskStateCache } from "./rebuild-task-state-cache-runtime.js";
+
+export async function runTaskStateHydrate(
+  ctx: ModuleLifecycleContext,
+  args: Record<string, unknown>
+): Promise<ModuleCommandResult> {
+  const dryRun = args.dryRun === true;
+  const fetch = args.fetch !== false;
+  const branch =
+    typeof args.branch === "string" && args.branch.trim() ? args.branch.trim() : TASK_STATE_GIT_BRANCH;
+  const eventLogRelativePath =
+    typeof args.eventLogRelativePath === "string" && args.eventLogRelativePath.trim()
+      ? args.eventLogRelativePath.trim()
+      : DEFAULT_TASK_STATE_EVENT_LOG_RELATIVE;
+
+  if (!isGitRepository(ctx.workspacePath)) {
+    return {
+      ok: false,
+      code: "not-a-git-repo",
+      message: "task-state-hydrate requires a git workspace"
+    };
+  }
+
+  let fetchOk = true;
+  let fetchStderr: string | undefined;
+  if (fetch) {
+    const fr = gitFetchTaskStateBranch(ctx.workspacePath, branch);
+    fetchOk = fr.ok;
+    fetchStderr = fr.stderr || undefined;
+    if (!fr.ok && !dryRun) {
+      return {
+        ok: false,
+        code: "task-state-fetch-failed",
+        message: `git fetch failed for ${branch}`,
+        data: { schemaVersion: 1, stderr: fetchStderr }
+      };
+    }
+  }
+
+  const resolved = resolveTaskStateGitRef(ctx.workspacePath, branch);
+  if ("missing" in resolved) {
+    return {
+      ok: false,
+      code: "task-state-branch-missing",
+      message: `Canonical branch ${branch} is not available (try fetch:true)`,
+      data: { schemaVersion: 1, tried: resolved.tried, fetchOk, fetchStderr }
+    };
+  }
+
+  const layoutRead = readTaskStateBranchLayout(ctx.workspacePath, resolved.ref, resolved.tipSha);
+  if (!layoutRead.ok) {
+    return {
+      ok: false,
+      code: layoutRead.code,
+      message: layoutRead.message,
+      data: { schemaVersion: 1, ref: resolved.ref }
+    };
+  }
+
+  const segmentPaths =
+    layoutRead.layout.eventSegmentPaths.length > 0
+      ? layoutRead.layout.eventSegmentPaths
+      : segmentPathsThroughHead(layoutRead.layout.manifest);
+
+  const eventsRead = readEventSegmentsJsonl(ctx.workspacePath, resolved.ref, segmentPaths);
+  if (!eventsRead.ok) {
+    return {
+      ok: false,
+      code: eventsRead.code,
+      message: eventsRead.message,
+      data: { schemaVersion: 1, segmentPaths }
+    };
+  }
+
+  const logPath = resolveTaskStateEventLogPath(ctx.workspacePath, eventLogRelativePath);
+  const preview = {
+    schemaVersion: 1,
+    dryRun,
+    branch,
+    gitRef: resolved.ref,
+    remoteTipSha: resolved.tipSha,
+    eventLogPath: logPath,
+    segmentCount: segmentPaths.length,
+    eventLineCount: eventsRead.lines.length,
+    remoteLatestSequence: layoutRead.layout.manifest.head.latestSequence,
+    fetchOk,
+    fetchStderr
+  };
+
+  if (dryRun) {
+    return {
+      ok: true,
+      code: "task-state-hydrate-dry-run",
+      message: "Dry run: would write canonical JSONL and rebuild SQLite projection",
+      data: preview
+    };
+  }
+
+  fs.mkdirSync(path.dirname(logPath), { recursive: true });
+  const body = eventsRead.lines.length > 0 ? `${eventsRead.lines.join("\n")}\n` : "";
+  fs.writeFileSync(logPath, body, "utf8");
+
+  const rebuild = await runRebuildTaskStateCache(ctx, {
+    eventLogRelativePath,
+    policyApproval: args.policyApproval
+  });
+
+  if (!rebuild.ok) {
+    return rebuild;
+  }
+
+  return {
+    ok: true,
+    code: "task-state-hydrated",
+    message: "Hydrated local task-state cache from git branch and rebuilt projection",
+    data: {
+      ...preview,
+      rebuild: rebuild.data
+    }
+  };
+}

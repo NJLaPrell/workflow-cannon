@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-05-26T21:19:54.853Z",
+  "generatedAt": "2026-05-26T21:59:06.496Z",
   "commands": [
     {
       "name": "accept-improvement",
@@ -1015,6 +1015,16 @@
     {
       "name": "task-persistence-readiness",
       "path": ".ai/agent-cli-snippets/by-command/task-persistence-readiness.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "task-state-hydrate",
+      "path": ".ai/agent-cli-snippets/by-command/task-state-hydrate.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "task-state-status",
+      "path": ".ai/agent-cli-snippets/by-command/task-state-status.json",
       "moduleId": "task-engine"
     },
     {
