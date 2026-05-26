@@ -122,7 +122,7 @@ export async function collectTaskPersistenceDoctorSummaryLines(cwd: string): Pro
     runtimeVersion: "doctor"
   } as ModuleLifecycleContext);
   const rel = path.relative(cwd, path.resolve(cwd, dbRel)) || dbRel;
-  lines.push(`Effective task persistence: sqlite — DB path: ${rel}`);
+  lines.push(`Effective task persistence: sqlite — DB path: ${rel} (canonical runtime truth; maintainer YAML/JSON exports are non-authoritative snapshots — see kit_export_envelope on export-workspace-status / export-feature-taxonomy-json)`);
   const dbAbs = path.resolve(cwd, dbRel);
   if (fs.existsSync(dbAbs)) {
     try {
