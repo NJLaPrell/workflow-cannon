@@ -141,6 +141,7 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
     "task-persistence-readiness",
     "task-state-hydrate",
     "task-state-init",
+    "task-state-verify",
     "task-state-status",
     "unblock-task",
     "uninstall-git-hooks",

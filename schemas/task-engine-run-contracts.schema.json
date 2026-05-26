@@ -49,6 +49,7 @@
         "task-state-status",
         "task-state-hydrate",
         "task-state-init",
+        "task-state-verify",
         "batch-transition",
         "block-task",
         "check-task-store-commit",
@@ -207,6 +208,9 @@
         },
         "task-state-init": {
           "$ref": "#/$defs/contractTaskStateInit"
+        },
+        "task-state-verify": {
+          "$ref": "#/$defs/contractTaskStateStatus"
         },
         "batch-transition": {
           "$ref": "#/$defs/contractBatchTransition"

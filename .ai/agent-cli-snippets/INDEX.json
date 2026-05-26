@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-05-26T23:41:46.892Z",
+  "generatedAt": "2026-05-26T23:58:19.364Z",
   "commands": [
     {
       "name": "accept-improvement",
@@ -1030,6 +1030,11 @@
     {
       "name": "task-state-status",
       "path": ".ai/agent-cli-snippets/by-command/task-state-status.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "task-state-verify",
+      "path": ".ai/agent-cli-snippets/by-command/task-state-verify.json",
       "moduleId": "task-engine"
     },
     {

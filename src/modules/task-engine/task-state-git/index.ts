@@ -46,3 +46,12 @@ export {
   validateTaskStateGitSnapshotMeta
 } from "./validate-snapshot-meta.js";
 export { createDefaultTaskStateGitManifest } from "./manifest-defaults.js";
+export type {
+  TaskStateVerifyFinding,
+  TaskStateVerifyFindingCode,
+  TaskStateVerifyResult
+} from "./verify-layout.js";
+export {
+  verifyTaskStateLayoutInWorkspace,
+  verifyTaskStateLayoutOnDisk
+} from "./verify-layout.js";
