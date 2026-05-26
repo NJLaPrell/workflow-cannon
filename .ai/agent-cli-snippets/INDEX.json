@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-05-26T21:16:34.858Z",
+  "generatedAt": "2026-05-26T21:19:54.853Z",
   "commands": [
     {
       "name": "accept-improvement",
@@ -880,6 +880,11 @@
     {
       "name": "remove-dependency",
       "path": ".ai/agent-cli-snippets/by-command/remove-dependency.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "repair-task-state-cache",
+      "path": ".ai/agent-cli-snippets/by-command/repair-task-state-cache.json",
       "moduleId": "task-engine"
     },
     {

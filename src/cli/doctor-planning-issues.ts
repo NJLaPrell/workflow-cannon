@@ -9,6 +9,7 @@ import {
   parseKitPhaseNumberFromYaml
 } from "../modules/task-engine/phase-resolution.js";
 import { validatePlanningPersistenceForDoctor } from "../modules/task-engine/doctor-planning-persistence.js";
+import { collectDoctorTaskStateProjectionIssues } from "../modules/task-engine/doctor-task-state-projection.js";
 import {
   getPlanningGenerationPolicy,
   planningSqliteDatabaseRelativePath
@@ -82,7 +83,8 @@ export async function collectDoctorPlanningPersistenceIssues(
     const { effective } = await resolveRegistryAndConfig(cwd, defaultRegistryModules, {});
     const persistence = await validatePlanningPersistenceForDoctor(cwd, effective);
     const phaseIssues = await collectDoctorKitPhaseIssues(cwd, effective);
-    return [...persistence, ...phaseIssues];
+    const projectionIssues = await collectDoctorTaskStateProjectionIssues(cwd, effective);
+    return [...persistence, ...phaseIssues, ...projectionIssues];
   } catch (err) {
     return [
       {

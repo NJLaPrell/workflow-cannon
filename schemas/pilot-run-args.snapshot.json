@@ -81,6 +81,7 @@
     "release-status",
     "release-workspace-edit-lease",
     "remove-dependency",
+    "repair-task-state-cache",
     "replay-queue-snapshot",
     "report-defect",
     "resolve-maintainer-delivery-policy",
@@ -1425,6 +1426,25 @@
         }
       },
       "additionalProperties": false
+    },
+    "repair-task-state-cache": {
+      "type": "object",
+      "properties": {
+        "dryRun": {
+          "type": "boolean"
+        },
+        "autoRebuild": {
+          "type": "boolean"
+        },
+        "eventLogRelativePath": {
+          "type": "string"
+        },
+        "policyApproval": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
     },
     "replay-queue-snapshot": {
       "type": "object"

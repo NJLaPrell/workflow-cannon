@@ -119,6 +119,7 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
     "release-status",
     "release-workspace-edit-lease",
     "remove-dependency",
+    "repair-task-state-cache",
     "replay-queue-snapshot",
     "report-defect",
     "resolve-agent-guidance",

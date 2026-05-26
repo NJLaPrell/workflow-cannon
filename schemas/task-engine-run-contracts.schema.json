@@ -45,6 +45,7 @@
         "backfill-task-feature-links",
         "backup-planning-sqlite",
         "rebuild-task-state-cache",
+        "repair-task-state-cache",
         "batch-transition",
         "block-task",
         "check-task-store-commit",
@@ -191,6 +192,9 @@
         },
         "rebuild-task-state-cache": {
           "$ref": "#/$defs/contractRebuildTaskStateCache"
+        },
+        "repair-task-state-cache": {
+          "$ref": "#/$defs/contractRepairTaskStateCache"
         },
         "batch-transition": {
           "$ref": "#/$defs/contractBatchTransition"
@@ -3128,6 +3132,26 @@
               "type": "object",
               "additionalProperties": true
             }
+          }
+        }
+      ]
+    },
+    "contractRepairTaskStateCache": {
+      "allOf": [
+        { "$ref": "#/$defs/contractBase" },
+        {
+          "properties": {
+            "args": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "dryRun": { "type": "boolean" },
+                "autoRebuild": { "type": "boolean" },
+                "eventLogRelativePath": { "type": "string" },
+                "policyApproval": { "type": "object", "additionalProperties": true }
+              }
+            },
+            "responseData": { "type": "object", "additionalProperties": true }
           }
         }
       ]
