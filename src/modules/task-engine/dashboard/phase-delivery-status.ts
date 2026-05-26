@@ -88,6 +88,41 @@ export function collectDeliveredPhaseKeys(
   return delivered;
 }
 
+/**
+ * Phase key → ISO timestamp when workspace rolled off that phase (`previousCurrentKitPhase`
+ * on `set_current_phase` events). Later rollovers overwrite earlier entries for the same key.
+ */
+export function collectPhaseReleaseDatesByKey(db: SqliteDb, limit = 500): Record<string, string> {
+  const out: Record<string, string> = {};
+  if (!workspaceStatusEventsReadable(db)) {
+    return out;
+  }
+  const rows = db
+    .prepare(
+      `SELECT created_at, details_json
+       FROM kit_workspace_status_events
+       WHERE event_kind = 'set_current_phase'
+       ORDER BY id ASC
+       LIMIT ?`
+    )
+    .all(limit) as Array<{ created_at: string; details_json: string }>;
+  for (const row of rows) {
+    try {
+      const details = JSON.parse(row.details_json) as Record<string, unknown>;
+      const prior =
+        typeof details.previousCurrentKitPhase === "string"
+          ? details.previousCurrentKitPhase.trim()
+          : "";
+      if (prior.length > 0 && typeof row.created_at === "string" && row.created_at.trim().length > 0) {
+        out[prior] = row.created_at.trim();
+      }
+    } catch {
+      /* Ignore malformed historical details. */
+    }
+  }
+  return out;
+}
+
 /** Unique phase keys rolled off via `set_current_phase` events (newest events first, capped). */
 export function collectRolledOutPhaseKeys(db: SqliteDb, limit = 300): string[] {
   const out = new Set<string>();

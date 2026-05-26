@@ -210,7 +210,7 @@ export function renderDrawerFormHtml(spec: DrawerFormSpec): string {
 export function buildRegisterPhaseCatalogDrawerSpec(): DrawerFormSpec {
   return {
     workflowId: "register-phase-catalog",
-    title: "Register future phase (catalog)",
+    title: "Register Phase. (catalog)",
     descriptionHtml:
       "Stable <code>phaseKey</code> must not sort before the current workspace phase. " +
       "Mutations still run through <code>upsert-phase-catalog-entry</code> on the host.",

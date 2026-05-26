@@ -401,6 +401,11 @@ export type DashboardSummaryData = {
    */
   deliveredPhaseKeys?: string[];
   /**
+   * ISO timestamps when workspace rolled off each phase key via `set_current_phase` events.
+   * Drives Queue phase-filter ordering (newest release first).
+   */
+  phaseReleaseDates?: Record<string, string>;
+  /**
    * When set, numeric phase keys with leading ordinal in `[0, N]` are treated as delivered
    * (pre–delivery-evidence history). From `kit.phaseDelivery.legacyDeliveredMaxOrdinal`.
    */

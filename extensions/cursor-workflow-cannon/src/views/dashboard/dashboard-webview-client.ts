@@ -27,8 +27,11 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
   var pendingReplaceRootHtml = null;
   var drawerSubmitInFlight = false;
 
+  /** Locks that defer wcReplaceRoot (editing deliverables, drawer, phase filter open, etc.). */
   function isLocalUiLocked() {
-    return Object.keys(localUiLocks).length > 0;
+    return Object.keys(localUiLocks).some(function(k) {
+      return k !== 'refresh';
+    });
   }
 
   function setUiInteraction(source, active) {
@@ -624,6 +627,15 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
       hidePhaseCardsNow();
       return;
     }
+    if (m && m.type === 'wcReleaseRefreshBlock') {
+      delete localUiLocks['refresh'];
+      if (pendingReplaceRootHtml && !isLocalUiLocked()) {
+        var pendingHtml = pendingReplaceRootHtml;
+        pendingReplaceRootHtml = null;
+        applyReplaceRootHtml(pendingHtml);
+      }
+      return;
+    }
     if (!m || m.type !== 'wcReplaceRoot' || typeof m.html !== 'string') return;
     if (isLocalUiLocked()) {
       pendingReplaceRootHtml = m.html;
@@ -771,7 +783,6 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
   var rootEl = document.getElementById('root');
   if (btn) btn.addEventListener('click', function() {
     setButtonBusy(btn, true, 'Refreshing…');
-    setUiInteraction('refresh', true);
     vscode.postMessage({type:'refresh'});
   });
   if (rootEl) rootEl.addEventListener('click', function(ev) {

@@ -447,6 +447,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       if (msg?.type === "refresh") {
         this.dashboardInteractionLocks.clear();
         this.dashboardRefreshAfterInteraction = false;
+        await webview.postMessage({ type: "wcReleaseRefreshBlock" });
         await this.pushUpdate();
       }
       if (msg?.type === "loadLazyTerminalBucket") {
@@ -1399,7 +1400,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     } finally {
       this.endDashboardMutationRefreshHold();
     }
-    await this.pushUpdate({ light: true });
+    await this.view?.webview.postMessage({ type: "wcReleaseRefreshBlock" });
+    await this.pushUpdate();
   }
 
   /** Clear workspace current phase after delivery closeout (update-workspace-status). */
@@ -3163,6 +3165,11 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       font-weight: 600;
       font-size: 11px;
       background: var(--vscode-textCodeBlock-background);
+      text-transform: none;
+      letter-spacing: normal;
+    }
+    .dash-phase-roster-th {
+      font-variant: normal;
     }
     .dash-phase-catalog-table th.dash-phase-roster-col-phase,
     .dash-phase-catalog-table td.dash-phase-roster-col-phase,
@@ -3190,17 +3197,13 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       min-width: 0;
     }
     .dash-phase-deliverables {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) auto;
-      column-gap: 8px;
-      row-gap: 4px;
-      align-items: start;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
       width: 100%;
       min-width: 0;
     }
     .dash-phase-deliverables-body {
-      grid-column: 1;
-      grid-row: 1;
       min-width: 0;
       display: flex;
       flex-direction: column;
@@ -3212,11 +3215,34 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       line-height: 1.35;
     }
     .dash-phase-edit-anchor {
-      grid-column: 2;
-      grid-row: 1;
-      justify-self: end;
-      align-self: start;
       margin: 0;
+    }
+    .dash-phase-roster-actions {
+      display: inline-flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 4px;
+    }
+    .dash-phase-roster-phase-link {
+      appearance: none;
+      border: none;
+      background: transparent;
+      padding: 0;
+      margin: 0;
+      font: inherit;
+      color: var(--vscode-textLink-foreground);
+      cursor: pointer;
+      text-align: left;
+    }
+    .dash-phase-roster-phase-link:hover code,
+    .dash-phase-roster-phase-link:focus-visible code {
+      text-decoration: underline;
+    }
+    .dash-phase-roster-phase-link code {
+      color: inherit;
+      background: transparent;
+      padding: 0;
     }
     .dash-phase-deliverables-editor {
       width: 100%;
@@ -3574,6 +3600,24 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       overflow: hidden;
       text-overflow: ellipsis;
       color: var(--vscode-foreground);
+    }
+    .wc-rec-title-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+    }
+    .wc-rec-title-row .wc-rec-title {
+      flex: 1 1 auto;
+      min-width: 0;
+      margin: 0;
+    }
+    .wc-rec-title-actions {
+      display: inline-flex;
+      flex-shrink: 0;
+      align-items: center;
+      gap: 4px;
+      margin-left: auto;
     }
     .wc-rec-subtitle {
       font-size: 11px;

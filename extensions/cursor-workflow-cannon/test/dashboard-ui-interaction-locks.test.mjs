@@ -87,6 +87,13 @@ test("dashboard refresh button shows inline spinner while summary reloads", () =
   assert.match(webviewClientSrc, /function setButtonBusy\(el, busy, label\)/);
   assert.match(webviewClientSrc, /setButtonBusy\(btn, true, 'Refreshing…'\)/);
   assert.match(webviewClientSrc, /setButtonBusy\(refreshBtn, false\)/);
+  assert.doesNotMatch(webviewClientSrc, /setUiInteraction\('refresh', true\)/);
+});
+
+test("dashboard refresh does not block wcReplaceRoot via refresh lock", () => {
+  assert.match(webviewClientSrc, /k !== 'refresh'/);
+  assert.match(webviewClientSrc, /wcReleaseRefreshBlock/);
+  assert.match(providerSrc, /wcReleaseRefreshBlock/);
 });
 
 test("dashboard drawer submit is guarded against duplicate host handling", () => {

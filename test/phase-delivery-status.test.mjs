@@ -4,6 +4,7 @@ import Database from "better-sqlite3";
 import {
   buildDashboardCurrentPhaseDelivery,
   collectDeliveredPhaseKeys,
+  collectPhaseReleaseDatesByKey,
   collectRolledOutPhaseKeys,
   countPhaseQueueMetrics,
   wasWorkspacePhaseRolledOut
@@ -78,6 +79,31 @@ test("collectRolledOutPhaseKeys gathers unique previousCurrentKitPhase values", 
     JSON.stringify({ previousCurrentKitPhase: "99" })
   );
   assert.deepEqual(collectRolledOutPhaseKeys(db), ["98", "99"]);
+  db.close();
+});
+
+test("collectPhaseReleaseDatesByKey maps previousCurrentKitPhase to event created_at", () => {
+  const db = openStatusDb();
+  db.prepare(
+    `INSERT INTO kit_workspace_status_events (
+      created_at, event_kind, command, revision_before, revision_after, details_json
+    ) VALUES (?, 'set_current_phase', 'set-current-phase', 0, 1, ?)`
+  ).run(
+    "2026-01-01T00:00:00.000Z",
+    JSON.stringify({ previousCurrentKitPhase: "98" })
+  );
+  db.prepare(
+    `INSERT INTO kit_workspace_status_events (
+      created_at, event_kind, command, revision_before, revision_after, details_json
+    ) VALUES (?, 'set_current_phase', 'set-current-phase', 1, 2, ?)`
+  ).run(
+    "2026-05-01T12:00:00.000Z",
+    JSON.stringify({ previousCurrentKitPhase: "99" })
+  );
+  assert.deepEqual(collectPhaseReleaseDatesByKey(db), {
+    "98": "2026-01-01T00:00:00.000Z",
+    "99": "2026-05-01T12:00:00.000Z"
+  });
   db.close();
 });
 

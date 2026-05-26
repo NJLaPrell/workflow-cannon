@@ -126,12 +126,7 @@ function rosterFutureStatus(
   const pk = phaseKey.trim();
   const nextKitTrim =
     typeof phaseSlice.nextKitPhase === "string" ? phaseSlice.nextKitPhase.trim() : "";
-  const nextOrd = parseLeadingDigitsOrdinal(phaseSlice.nextKitPhase);
-  const po = parseLeadingPhaseOrdinalFromKey(pk);
-  const isNext =
-    (nextKitTrim.length > 0 && pk === nextKitTrim) ||
-    (nextOrd !== null && po !== null && po === nextOrd);
-  return isNext ? "next" : "future";
+  return nextKitTrim.length > 0 && pk === nextKitTrim ? "next" : "future";
 }
 
 export type PhaseRosterNarrowResult =

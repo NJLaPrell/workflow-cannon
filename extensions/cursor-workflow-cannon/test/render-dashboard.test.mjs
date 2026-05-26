@@ -171,6 +171,7 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.ok(statusPanel.indexOf('aria-label="Agent profile"') < statusPanel.indexOf('aria-label="Workspace identity"'));
   assert.ok(overviewPanel.indexOf("dash-agent-status-banner") < overviewPanel.indexOf("wc-cae-readiness"));
   assert.ok(overviewPanel.indexOf("wc-rec-next") < overviewPanel.indexOf("wc-cae-readiness"));
+  assert.ok(overviewPanel.indexOf("wc-stat-pills") < overviewPanel.indexOf("dash-agent-status-banner"));
   assert.match(overviewPanel, /wc-stat-pills/);
   assert.match(overviewPanel, /wc-pill-human/);
   assert.match(overviewPanel, /wc-stat-num-human/);
@@ -312,11 +313,17 @@ test("renderDashboardRootInnerHtml renders phase roster deliverables inline edit
 
   assert.match(html, /Phase Roster/);
   assert.match(html, /dash-phase-roster-col-phase/);
+  assert.match(html, /dash-phase-roster-phase-link/);
+  assert.match(html, /data-wc-action="open-queue-for-phase"/);
+  assert.match(html, /data-wc-phase-key="95"/);
   assert.match(html, /dash-phase-roster-col-status/);
   assert.match(html, /dash-phase-roster-col-actions/);
   assert.match(html, /data-wc-action="phase-roster-start"/);
   assert.match(html, /data-wc-action="phase-deliverables-edit"/);
   assert.match(html, /dash-phase-edit-anchor/);
+  assert.match(html, /dash-phase-roster-actions/);
+  assert.match(html, /Register Phase\./);
+  assert.doesNotMatch(html, /Register future phase/);
   assert.match(html, /dash-phase-deliverables-input/);
   assert.match(html, /data-wc-phase-row="95"/);
   assert.match(html, /aria-label="Edit deliverables for phase 95"/);
@@ -1594,6 +1601,12 @@ test("renderUpNextCardHtml prompts to pick a phase when none is current", () => 
   });
   assert.match(html, /wc-rec-next-pick-phase/);
   assert.match(html, /Start Phase 109/);
+  assert.doesNotMatch(html, /from the roster/);
+  assert.doesNotMatch(html, /Set the workspace current phase/);
+  assert.doesNotMatch(html, /wc-rec-tag-phase/);
+  assert.doesNotMatch(html, /focus-phase-roster/);
+  assert.match(html, /wc-rec-title-row/);
+  assert.match(html, /data-wc-action="phase-roster-start"/);
 });
 
 const deliverTestDepOverview = {
@@ -2504,7 +2517,44 @@ test("Phase Progress renders segmented bar without release control", () => {
   assert.match(readinessSection, /dash-phase-release-btn/);
 });
 
-test("Phase Readiness Complete & Release disabled before closeout reaches 100%", () => {
+test("Phase Readiness Complete & Release disabled before readiness reaches 100%", () => {
+  const html = renderDashboardRootInnerHtml(
+    readinessDashboardPayload({
+      workspaceStatus: {
+        currentKitPhase: "100",
+        nextKitPhase: "101",
+        blockers: [],
+        pendingDecisions: ["Pick release train"]
+      },
+      currentPhaseDelivery: phaseDeliveryFixture({
+        closeoutPassed: false,
+        releaseReadyPercent: 40,
+        progressPercent: 40,
+        remainingCount: 6,
+        terminalCount: 4,
+        checkedTaskCount: 10,
+        queue: { ready: 0, proposed: 2, blocked: 0, inProgress: 0, research: 0 },
+        segments: {
+          completed: 0,
+          cancelled: 0,
+          inProgress: 0,
+          ready: 0,
+          proposed: 2,
+          blocked: 0,
+          research: 0
+        }
+      })
+    })
+  );
+  const head = html.match(/wc-cae-readiness-head[\s\S]*?<\/div>\s*<div class="wc-cae-readiness-body"/)?.[0] ?? "";
+  assert.match(head, /dash-phase-release-btn/);
+  assert.match(head, /\bdash-phase-release-btn[\s\S]*\bdisabled\b/);
+  assert.match(head, /wc-btn-disabled/);
+  assert.doesNotMatch(head, /dash-phase-release-btn--preflight/);
+  assert.match(head, /Complete &amp; Release unlocks when phase readiness reaches 100%/);
+});
+
+test("Phase Readiness enables Complete & Release at 100% readiness before closeout passes", () => {
   const html = renderDashboardRootInnerHtml(
     readinessDashboardPayload({
       currentPhaseDelivery: phaseDeliveryFixture({
@@ -2517,12 +2567,10 @@ test("Phase Readiness Complete & Release disabled before closeout reaches 100%",
       })
     })
   );
-  const head = html.match(/wc-cae-readiness-head[\s\S]*?<\/div>\s*<div class="wc-cae-readiness-body"/)?.[0] ?? "";
+  const head = html.match(/wc-cae-readiness-head[\s\S]*?<\/div>/)?.[0] ?? "";
   assert.match(head, /dash-phase-release-btn/);
-  assert.match(head, /\bdash-phase-release-btn[\s\S]*\bdisabled\b/);
-  assert.match(head, /wc-btn-disabled/);
-  assert.doesNotMatch(head, /dash-phase-release-btn--preflight/);
-  assert.match(head, /Complete &amp; Release unlocks when readiness and Phase Progress both reach 100%/);
+  assert.doesNotMatch(head, /\bdash-phase-release-btn[\s\S]*\bdisabled\b/);
+  assert.match(head, /dash-phase-release-btn--preflight/);
 });
 
 test("Phase Readiness enables Complete & Release when closeout passed", () => {

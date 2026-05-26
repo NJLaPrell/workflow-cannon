@@ -13,6 +13,8 @@ export type PhaseScheduleFocus = {
   releasedPhaseKeys?: ReadonlySet<string> | readonly string[];
   /** Pre–delivery-evidence ceiling: ordinals in `[0, N]` count as delivered when set. */
   legacyDeliveredMaxOrdinal?: number | null;
+  /** When set, `next` applies only if canonical `nextKitPhase` is in this roster/catalog set. */
+  knownRosterPhaseKeys?: ReadonlySet<string>;
 };
 
 function phaseKeyWasReleased(key: string, focus: PhaseScheduleFocus): boolean {
@@ -82,11 +84,15 @@ export function resolvePhaseScheduleTag(
   if (curKey.length > 0 && key === curKey) {
     return "current";
   }
-  if (nxtKey.length > 0 && key === nxtKey) {
-    return "next";
-  }
   if (phaseKeyWasReleased(key, focus)) {
     return "delivered";
+  }
+  if (nxtKey.length > 0 && key === nxtKey) {
+    const known = focus.knownRosterPhaseKeys;
+    if (known && !known.has(nxtKey)) {
+      return "future";
+    }
+    return "next";
   }
   return "future";
 }

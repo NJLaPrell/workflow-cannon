@@ -14,6 +14,25 @@ test("resolvePhaseScheduleTag classifies relative to workspace current and next"
   assert.equal(resolvePhaseScheduleTag("101", focus), "future");
 });
 
+test("resolvePhaseScheduleTag prefers delivered over stale nextKitPhase", () => {
+  const focus = {
+    currentKitPhase: "114",
+    nextKitPhase: "106",
+    releasedPhaseKeys: new Set(["106"])
+  };
+  assert.equal(resolvePhaseScheduleTag("106", focus), "delivered");
+});
+
+test("resolvePhaseScheduleTag skips next when canonical next is absent from roster", () => {
+  const focus = {
+    currentKitPhase: "114",
+    nextKitPhase: "115",
+    knownRosterPhaseKeys: new Set(["114", "116"])
+  };
+  assert.equal(resolvePhaseScheduleTag("115", focus), "future");
+  assert.equal(resolvePhaseScheduleTag("116", focus), "future");
+});
+
 test("resolvePhaseScheduleTag treats legacy delivered ordinals as delivered", () => {
   const focus = {
     currentKitPhase: "114",
