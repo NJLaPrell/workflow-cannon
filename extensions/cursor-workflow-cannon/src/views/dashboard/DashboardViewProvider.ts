@@ -30,6 +30,11 @@ import { DrawerSessionController } from "./drawer-session.js";
 import { buildDashboardWebviewBootstrapScript } from "./dashboard-webview-client.js";
 import type { DashboardSectionId, DashboardSectionLoadState } from "./dashboard-section-registry.js";
 import { DASHBOARD_SECTION_REGISTRY } from "./dashboard-section-registry.js";
+import {
+  dashboardSectionsForMutation,
+  extractDashboardSectionInnerHtml,
+  type DashboardMutationKind
+} from "./dashboard-section-invalidation.js";
 import { renderDashboardShellInnerHtml } from "./render-dashboard-shell.js";
 import {
   buildDashboardPolicyApprovalForPath,
@@ -362,6 +367,12 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   /** Sections hydrated via tab activation or eager first paint (T100398). */
   private hydratedDashboardSections = new Set<DashboardSectionId>();
 
+  /** Active sidebar tab — drives targeted invalidation (T100399). */
+  private activeDashboardTab = "overview";
+
+  /** Sections marked stale while their tab was hidden (T100399). */
+  private staleDashboardSections = new Set<DashboardSectionId>();
+
   /** Monotonic render token lives on {@link DashboardRefreshController}. */
   private readonly refreshController: DashboardRefreshController;
 
@@ -420,7 +431,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       }
     });
     onKitStateChanged(() => {
-      this.refreshController.request({ reason: "kit-state-changed" });
+      this.refreshController.request({ reason: "kit-state-changed", mode: "light" });
     });
   }
 
@@ -470,6 +481,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       if (msg?.type === "dashboardTabActivated") {
         const tabId = typeof (msg as { tabId?: unknown }).tabId === "string" ? (msg as { tabId: string }).tabId : "";
         if (tabId.length > 0) {
+          this.activeDashboardTab = tabId;
           void this.onDashboardTabActivated(tabId);
         }
       }
@@ -510,7 +522,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
               ? parseInt(rawP.trim(), 10)
               : 0;
         this.wishlistPage = p;
-        await this.pushUpdate();
+        await this.applyDashboardMutationInvalidation("task-queue");
       }
       if (msg?.type === "prefillWishlistChat") {
         const raw = msg?.wishlistId;
@@ -656,7 +668,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
           if (msg?.transitionKind === "human-gate") {
             await this.client.clearActivity();
           }
-          await this.pushUpdate();
+          await this.applyDashboardMutationInvalidation("task-queue");
         }
       }
       if (msg?.type === "dismissPhaseNote") {
@@ -665,7 +677,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         if (nid.length > 0) {
           await this.onDismissPhaseNote(nid, pri);
           if (!this.dashboardDrawerSession) {
-            await this.pushUpdate();
+            await this.applyDashboardMutationInvalidation("phase-journal");
           }
         }
       }
@@ -700,7 +712,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       }
       if (msg?.type === "addPhaseNote") {
         await this.onAddPhaseNote();
-        await this.pushUpdate();
+        await this.applyDashboardMutationInvalidation("phase-journal");
       }
       if (msg?.type === "prefillPhaseNotesDiscoveryChat") {
         await prefillCursorChat(buildPhaseNotesDiscoveryPrompt(), { newChat: true });
@@ -801,12 +813,12 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         const nid = typeof msg.noteId === "string" ? msg.noteId.trim() : "";
         if (nid.length > 0) {
           await this.onConvertPhaseNote(nid);
-          await this.pushUpdate();
+          await this.applyDashboardMutationInvalidation("phase-journal");
         }
       }
       if (msg?.type === "persistPhaseNoteProposals") {
         await this.onPersistPhaseNoteProposals();
-        await this.pushUpdate();
+        await this.applyDashboardMutationInvalidation("phase-journal");
       }
       if (msg?.type === "assignTaskPhase") {
         const rawId = msg?.taskId;
@@ -885,7 +897,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
           this.endDrawerSubmitRefreshHold();
         }
         if (refreshed) {
-          void this.pushUpdate({ light: true });
+          await this.applyDashboardMutationInvalidation("task-queue");
         }
       }
       if (msg?.type === "drawerCancel") {
@@ -946,6 +958,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     webviewView.onDidDispose(() => {
       this.dashboardRootShellReady = false;
       this.hydratedDashboardSections.clear();
+      this.staleDashboardSections.clear();
       this.webviewMessageDisposable?.dispose();
       this.webviewMessageDisposable = undefined;
       this.dashboardDrawerSubmitInFlight = false;
@@ -992,6 +1005,12 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   private async onDashboardTabActivated(tabId: string): Promise<void> {
     for (const sectionId of this.sectionsForTabActivation(tabId)) {
       await this.hydrateDashboardSection(sectionId);
+    }
+    const staleOnTab = DASHBOARD_SECTION_REGISTRY.filter(
+      (section) => section.tabId === tabId && this.staleDashboardSections.has(section.id)
+    ).map((section) => section.id);
+    if (staleOnTab.length > 0) {
+      await this.patchDashboardSectionsFromSummary(staleOnTab);
     }
   }
 
@@ -1087,6 +1106,207 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         "error"
       );
     }
+  }
+
+  private async markDashboardSectionStale(sectionId: DashboardSectionId): Promise<void> {
+    if (!this.hydratedDashboardSections.has(sectionId)) {
+      return;
+    }
+    this.staleDashboardSections.add(sectionId);
+    await this.postSectionPatch(sectionId, "", "stale");
+  }
+
+  private async applyDashboardMutationInvalidation(
+    kind: DashboardMutationKind | readonly DashboardSectionId[]
+  ): Promise<void> {
+    const sectionIds =
+      typeof kind === "string" ? dashboardSectionsForMutation(kind) : kind;
+    const toStale: DashboardSectionId[] = [];
+    const toRefresh: DashboardSectionId[] = [];
+    for (const sectionId of sectionIds) {
+      if (!this.hydratedDashboardSections.has(sectionId)) {
+        continue;
+      }
+      const tabId = DASHBOARD_SECTION_REGISTRY.find((s) => s.id === sectionId)?.tabId ?? "";
+      if (tabId === this.activeDashboardTab) {
+        toRefresh.push(sectionId);
+      } else {
+        toStale.push(sectionId);
+      }
+    }
+    for (const sectionId of toStale) {
+      await this.markDashboardSectionStale(sectionId);
+    }
+    if (toRefresh.length > 0) {
+      await this.patchDashboardSectionsFromSummary(toRefresh);
+    }
+  }
+
+  private async fetchPhaseJournalBundleForRender(
+    summaryData: Record<string, unknown>
+  ): Promise<DashboardPhaseJournalBundle | undefined> {
+    if (!this.summaryHasCanonicalWorkspacePhase(summaryData)) {
+      return undefined;
+    }
+    const [lp, gpc] = (await Promise.all([
+      this.client.run("list-phase-notes", { ...expectedPlanningGenerationArgs() }),
+      this.client.run("get-phase-context", { ...expectedPlanningGenerationArgs() })
+    ])) as [
+      PhaseJournalKitPayload & Record<string, unknown>,
+      PhaseJournalKitPayload & Record<string, unknown>
+    ];
+    if (
+      isKitRefreshRunAborted(lp as Record<string, unknown>) ||
+      isKitRefreshRunAborted(gpc as Record<string, unknown>)
+    ) {
+      return undefined;
+    }
+    ingestPlanningMetaFromData(lp.data as Record<string, unknown> | undefined);
+    ingestPlanningMetaFromData(gpc.data as Record<string, unknown> | undefined);
+    const pastFromSummary = summaryData.pastPhaseNotes;
+    const pastPhaseNotes: DashboardPhaseJournalBundle["pastPhaseNotes"] = Array.isArray(pastFromSummary)
+      ? pastFromSummary
+          .map((entry) => {
+            if (!entry || typeof entry !== "object") {
+              return null;
+            }
+            const rec = entry as Record<string, unknown>;
+            const phaseKey = typeof rec.phaseKey === "string" ? rec.phaseKey.trim() : "";
+            const notes = Array.isArray(rec.notes) ? rec.notes : [];
+            if (!phaseKey || notes.length === 0) {
+              return null;
+            }
+            return { phaseKey, notes };
+          })
+          .filter((e): e is { phaseKey: string; notes: unknown[] } => e !== null)
+      : undefined;
+    return {
+      listPhaseNotes: {
+        ok: lp.ok,
+        code: lp.code,
+        message: lp.message,
+        data: lp.data as Record<string, unknown> | undefined
+      },
+      getPhaseContext: {
+        ok: gpc.ok,
+        code: gpc.code,
+        message: gpc.message,
+        data: gpc.data as Record<string, unknown> | undefined
+      },
+      pastPhaseNotes
+    };
+  }
+
+  private async patchDashboardSectionsFromSummary(
+    sectionIds: readonly DashboardSectionId[],
+    updateSequence?: number
+  ): Promise<void> {
+    const activeView = this.view;
+    if (!activeView || sectionIds.length === 0) {
+      return;
+    }
+    const needsPhaseJournal = sectionIds.includes("phase-journal");
+    const needsCae = sectionIds.includes("cae");
+    let raw: DashboardSummaryCommandSuccess | Record<string, unknown>;
+    try {
+      raw = (await this.client.run("dashboard-summary", {
+        wishlistPage: this.wishlistPage,
+        wishlistPageSize: 5,
+        projection: "full"
+      })) as DashboardSummaryCommandSuccess | Record<string, unknown>;
+      if (isKitRefreshRunAborted(raw as Record<string, unknown>)) {
+        return;
+      }
+    } catch (e) {
+      logWc(
+        "dashboard",
+        `patchDashboardSectionsFromSummary failed: ${e instanceof Error ? e.message : String(e)}`
+      );
+      return;
+    }
+    if (
+      typeof updateSequence === "number" &&
+      this.isPushUpdateStale(updateSequence, activeView)
+    ) {
+      return;
+    }
+    let phaseJournal: DashboardPhaseJournalBundle | undefined;
+    let embeddedCaePanelHtml: string | null = this.lastEmbeddedCaePanelHtml;
+    if (raw.ok === true && raw.data && typeof raw.data === "object") {
+      this.lastDashboardSummaryData = raw.data as Record<string, unknown>;
+      ingestPlanningMetaFromData(raw.data as Record<string, unknown>);
+      try {
+        if (needsPhaseJournal) {
+          phaseJournal = await this.fetchPhaseJournalBundleForRender(raw.data as Record<string, unknown>);
+        }
+        if (needsCae) {
+          const caeSummary = await this.client.run("cae-authoring-summary", { schemaVersion: 1 });
+          if (!isKitRefreshRunAborted(caeSummary as Record<string, unknown>)) {
+            embeddedCaePanelHtml = renderGuidanceAuthoringPanelInnerHtml(caeSummary);
+            this.lastEmbeddedCaePanelHtml = embeddedCaePanelHtml;
+          }
+        }
+      } catch {
+        /* section patch falls back to summary-only slices */
+      }
+    }
+    const wizardPanel = raw.ok === true ? this.planningWizardPanel() : null;
+    let rootInner: string;
+    try {
+      const editorIntegration = await resolveEditorIntegrationState();
+      rootInner = renderDashboardRootInnerHtml(
+        raw,
+        wizardPanel,
+        editorIntegration,
+        phaseJournal,
+        embeddedCaePanelHtml
+      );
+    } catch (e) {
+      logWc(
+        "dashboard",
+        `patchDashboardSectionsFromSummary render failed: ${e instanceof Error ? e.message : String(e)}`
+      );
+      return;
+    }
+    for (const sectionId of sectionIds) {
+      const inner = extractDashboardSectionInnerHtml(rootInner, sectionId);
+      if (inner == null) {
+        continue;
+      }
+      await this.postSectionPatch(sectionId, inner, "ready");
+      this.hydratedDashboardSections.add(sectionId);
+      this.staleDashboardSections.delete(sectionId);
+      if (sectionId === "config") {
+        await this.refreshDashboardConfigTab(activeView.webview);
+      }
+    }
+  }
+
+  private async executeLightSectionRefresh(updateSequence: number): Promise<void> {
+    const activeView = this.view;
+    if (!activeView) {
+      return;
+    }
+    const hydrated = DASHBOARD_SECTION_REGISTRY.map((s) => s.id).filter((id) =>
+      this.hydratedDashboardSections.has(id)
+    );
+    if (hydrated.length === 0) {
+      return;
+    }
+    const toRefresh = hydrated.filter(
+      (id) => (DASHBOARD_SECTION_REGISTRY.find((s) => s.id === id)?.tabId ?? "") === this.activeDashboardTab
+    );
+    const toStale = hydrated.filter((id) => !toRefresh.includes(id));
+    for (const sectionId of toStale) {
+      await this.markDashboardSectionStale(sectionId);
+    }
+    if (toRefresh.length > 0) {
+      await this.patchDashboardSectionsFromSummary(toRefresh, updateSequence);
+    }
+    logWc(
+      "dashboard",
+      `executeLightSectionRefresh refreshed=${toRefresh.join(",") || "none"} stale=${toStale.join(",") || "none"} tab=${this.activeDashboardTab}`
+    );
   }
 
   refresh(): void {
@@ -2905,6 +3125,14 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     if (this.isDashboardRefreshDeferred()) {
       this.refreshController.markDeferredRefreshNeeded();
       logWc("dashboard", "pushUpdate deferred (UI interaction lock active)");
+      return;
+    }
+    if (
+      lightRefresh &&
+      refreshOptions?.projection === undefined &&
+      refreshOptions?.skipHeavyFetches !== true
+    ) {
+      await this.executeLightSectionRefresh(updateSequence);
       return;
     }
     const { webview } = activeView;

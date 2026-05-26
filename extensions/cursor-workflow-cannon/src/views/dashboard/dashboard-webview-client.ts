@@ -281,6 +281,18 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
     if (typeof html === 'string' && html.length > 0) {
       el.innerHTML = html;
     }
+    var staleBadge = el.querySelector('.wc-dash-section-stale-badge');
+    if (st === 'stale') {
+      if (!staleBadge) {
+        staleBadge = document.createElement('p');
+        staleBadge.className = 'wc-dash-section-status muted wc-dash-section-stale-badge';
+        staleBadge.setAttribute('role', 'status');
+        staleBadge.textContent = 'Stale — switch away and back or use Refresh';
+        el.insertBefore(staleBadge, el.firstChild);
+      }
+    } else if (staleBadge) {
+      staleBadge.remove();
+    }
     el.classList.remove(
       'wc-dash-section--loading',
       'wc-dash-section--ready',
