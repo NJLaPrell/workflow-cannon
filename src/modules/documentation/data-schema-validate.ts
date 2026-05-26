@@ -1,6 +1,7 @@
 import AjvImport from "ajv";
 import type { ErrorObject, ValidateFunction } from "ajv";
 import { existsSync, readFileSync } from "node:fs";
+import { unwrapKitJsonExportPayload } from "../../core/kit-export-envelope.js";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -152,7 +153,7 @@ export function readAndValidateFeatureTaxonomyData(
   const path = join(dir, taxonomyFileName);
   let parsed: unknown;
   try {
-    parsed = JSON.parse(readFileSync(path, "utf8")) as unknown;
+    parsed = unwrapKitJsonExportPayload(JSON.parse(readFileSync(path, "utf8")) as unknown);
   } catch (e) {
     return { ok: false, errors: [`${path}: ${(e as Error).message}`], path };
   }

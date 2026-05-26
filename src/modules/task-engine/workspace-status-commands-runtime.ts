@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import type DatabaseCtor from "better-sqlite3";
 import type { ModuleCommandResult, ModuleLifecycleContext } from "../../contracts/module-contract.js";
+import { readSourceSequenceFromExportYaml } from "../../core/kit-export-envelope.js";
 import { readKitSqliteUserVersion } from "../../core/state/workspace-kit-sqlite.js";
 import { readProjectConfigDocument, writeProjectConfigDocument } from "../../core/workspace-kit-config.js";
 import { inferTaskPhaseKey, parseKitPhaseNumberFromYaml, resolveCanonicalPhase } from "./phase-resolution.js";
@@ -118,10 +119,7 @@ function phaseTaskCounts(tasks: TaskEntity[], phaseKey: string | null): Record<T
 function readWorkspaceStatusExportRevision(exportAbs: string): number | null {
   try {
     const body = fs.readFileSync(exportAbs, "utf8");
-    const match = body.match(/^# workspace_revision: ([0-9]+)$/m);
-    if (!match) return null;
-    const revision = Number(match[1]);
-    return Number.isInteger(revision) && revision >= 0 ? revision : null;
+    return readSourceSequenceFromExportYaml(body);
   } catch {
     return null;
   }

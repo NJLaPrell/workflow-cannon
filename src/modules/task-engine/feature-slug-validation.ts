@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from "node:fs";
+import { unwrapKitJsonExportPayload } from "../../core/kit-export-envelope.js";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -24,7 +25,9 @@ function loadKnownFeatureSlugs(): Set<string> {
 /** Load taxonomy slugs from shipped `feature-taxonomy.json` (no memo — prefer `loadKnownFeatureSlugs()` for hot path). */
 export function loadKnownFeatureSlugsFromJsonFile(): Set<string> {
   const path = resolveFeatureTaxonomyPath();
-  const raw = JSON.parse(readFileSync(path, "utf8")) as { features?: Array<{ slug?: string }> };
+  const raw = unwrapKitJsonExportPayload(JSON.parse(readFileSync(path, "utf8"))) as {
+    features?: Array<{ slug?: string }>;
+  };
   const next = new Set<string>();
   for (const f of raw.features ?? []) {
     if (typeof f.slug === "string" && f.slug.length > 0) {
