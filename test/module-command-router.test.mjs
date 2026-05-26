@@ -43,6 +43,7 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
     "backup-planning-sqlite",
     "batch-transition",
     "block-task",
+    "check-task-store-commit",
     "claim-next-task",
     "claim-workspace-edit-lease",
     "classify-kit-state",
