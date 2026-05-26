@@ -44,8 +44,11 @@
         "assign-task-phase",
         "backfill-task-feature-links",
         "backup-planning-sqlite",
+        "rebuild-task-state-cache",
+        "repair-task-state-cache",
         "batch-transition",
         "block-task",
+        "check-task-store-commit",
         "remove-dependency",
         "get-dependency-graph",
         "get-kit-persistence-map",
@@ -106,6 +109,7 @@
         "propose-tasks-from-phase-notes",
         "propose-release-version",
         "apply-task-batch",
+        "apply-task-state-events",
         "resolve-maintainer-delivery-policy",
         "resolve-task-intake-policy",
         "review-planning-execution-drafts",
@@ -186,11 +190,20 @@
         "backup-planning-sqlite": {
           "$ref": "#/$defs/contractBackupPlanningSqlite"
         },
+        "rebuild-task-state-cache": {
+          "$ref": "#/$defs/contractRebuildTaskStateCache"
+        },
+        "repair-task-state-cache": {
+          "$ref": "#/$defs/contractRepairTaskStateCache"
+        },
         "batch-transition": {
           "$ref": "#/$defs/contractBatchTransition"
         },
         "block-task": {
           "$ref": "#/$defs/contractTaskIntentWithTaskId"
+        },
+        "check-task-store-commit": {
+          "$ref": "#/$defs/contractBase"
         },
         "remove-dependency": {
           "$ref": "#/$defs/contractDependencyMutation"
@@ -380,6 +393,9 @@
         },
         "apply-task-batch": {
           "$ref": "#/$defs/contractApplyTaskBatch"
+        },
+        "apply-task-state-events": {
+          "$ref": "#/$defs/contractApplyTaskStateEvents"
         },
         "resolve-maintainer-delivery-policy": {
           "$ref": "#/$defs/contractBase"
@@ -3115,6 +3131,102 @@
             "responseData": {
               "type": "object",
               "additionalProperties": true
+            }
+          }
+        }
+      ]
+    },
+    "contractRepairTaskStateCache": {
+      "allOf": [
+        { "$ref": "#/$defs/contractBase" },
+        {
+          "properties": {
+            "args": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "dryRun": { "type": "boolean" },
+                "autoRebuild": { "type": "boolean" },
+                "eventLogRelativePath": { "type": "string" },
+                "policyApproval": { "type": "object", "additionalProperties": true }
+              }
+            },
+            "responseData": { "type": "object", "additionalProperties": true }
+          }
+        }
+      ]
+    },
+    "contractApplyTaskStateEvents": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/contractBase"
+        },
+        {
+          "properties": {
+            "args": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "dryRun": { "type": "boolean" },
+                "eventLogRelativePath": { "type": "string" },
+                "policyApproval": { "type": "object", "additionalProperties": true }
+              }
+            },
+            "responseData": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          }
+        }
+      ]
+    },
+    "contractRebuildTaskStateCache": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/contractBase"
+        },
+        {
+          "properties": {
+            "args": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "dryRun": {
+                  "type": "boolean"
+                },
+                "eventLogRelativePath": {
+                  "type": "string"
+                },
+                "policyApproval": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            },
+            "responseData": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "schemaVersion": {
+                  "const": 1
+                },
+                "eventLogPath": {
+                  "type": "string"
+                },
+                "eventCount": {
+                  "type": "integer"
+                },
+                "taskCount": {
+                  "type": "integer"
+                },
+                "appliedSequence": {
+                  "type": "integer"
+                },
+                "projectionMeta": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
             }
           }
         }

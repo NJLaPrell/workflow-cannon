@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "eventId": "tse.20260526T200003Z.batch-fixture",
+  "sequence": 5,
+  "parentEventId": "tse.20260526T200002Z.updated-fixture",
+  "recordedAt": "2026-05-26T20:00:03.000Z",
+  "actor": { "id": "maintainer@example.com", "source": "git-config" },
+  "command": {
+    "name": "apply-task-batch",
+    "moduleId": "task-engine"
+  },
+  "kind": "task.batch_applied",
+  "payload": {
+    "batchId": "batch-fixture-001",
+    "appliedCount": 2,
+    "transitionIds": [
+      "T100499-2026-05-26T20:29:21.977Z-e53b4a06",
+      "T100500-2026-05-26T20:32:57.475Z-faee6856"
+    ],
+    "taskIds": ["T100499", "T100500"]
+  }
+}

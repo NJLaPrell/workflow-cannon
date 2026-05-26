@@ -13,6 +13,7 @@ import {
   listRegistryFeatures,
   readSqliteUserVersion
 } from "./feature-registry-queries.js";
+import { buildKitExportEnvelopeV1, wrapJsonExportWithEnvelopeV1 } from "../../../core/kit-export-envelope.js";
 import { openPlanningStores } from "./planning-open.js";
 import { TaskEngineError } from "../transitions.js";
 
@@ -83,8 +84,14 @@ export async function runExportFeatureTaxonomyJson(
       message: `outputRelativePath must stay under documentation data directory (${dataDir})`
     };
   }
+  const planningGeneration = planning.sqliteDual.getPlanningGeneration();
+  const envelope = buildKitExportEnvelopeV1({
+    sourceSequence: planningGeneration,
+    sourceKind: "feature_registry"
+  });
+  const wrapped = wrapJsonExportWithEnvelopeV1(envelope, v.data);
   if (!dryRun) {
-    await writeFile(absOut, `${JSON.stringify(v.data, null, 2)}\n`, "utf8");
+    await writeFile(absOut, `${JSON.stringify(wrapped, null, 2)}\n`, "utf8");
   }
   return {
     ok: true,
@@ -93,7 +100,8 @@ export async function runExportFeatureTaxonomyJson(
     data: {
       dryRun,
       path: outRel,
-      featureCount: v.data.features.length
+      featureCount: v.data.features.length,
+      kitExportEnvelope: envelope
     } as Record<string, unknown>
   };
 }

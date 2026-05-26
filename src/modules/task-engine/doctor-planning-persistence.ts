@@ -11,6 +11,8 @@ import {
   classifyNativeSqliteErrorMessage,
   nativeSqliteRecoveryHint
 } from "../../core/native-sqlite-diagnostics.js";
+import { collectTaskStoreSqliteStagedIssues } from "../../core/task-store-git-commit-policy.js";
+import { withPlanningSqliteRecoveryHint } from "./planning-sqlite-doctor-remediation.js";
 import {
   hashWorkingTreeTaskStore,
   probeTaskStoreShaAtGitRef
@@ -46,7 +48,7 @@ export async function validatePlanningPersistenceForDoctor(
     const hint = nativeSqliteRecoveryHint(classification);
     issues.push({
       path: "better-sqlite3",
-      reason: `${classification.kind}: ${msg} — ${hint}`
+      reason: withPlanningSqliteRecoveryHint(`${classification.kind}: ${msg} — ${hint}`)
     });
     return issues;
   }
@@ -55,6 +57,13 @@ export async function validatePlanningPersistenceForDoctor(
   const dbRel = planningSqliteDatabaseRelativePath(ctx);
   const dbAbs = path.resolve(workspacePath, dbRel);
   const relDisplay = path.relative(workspacePath, dbAbs) || dbAbs;
+
+  for (const staged of collectTaskStoreSqliteStagedIssues({
+    workspacePath,
+    sqliteDatabaseRelativePath: dbRel
+  })) {
+    issues.push({ path: staged.path, reason: staged.reason });
+  }
 
   if (!fs.existsSync(dbAbs)) {
     issues.push({
@@ -211,5 +220,13 @@ export async function validatePlanningPersistenceForDoctor(
     db.close();
   }
 
-  return issues;
+  return issues.map((issue) => {
+    if (
+      issue.reason.includes("task-store-sqlite-staged-without-approval") ||
+      issue.reason.startsWith("task-store-git-divergence:")
+    ) {
+      return issue;
+    }
+    return { ...issue, reason: withPlanningSqliteRecoveryHint(issue.reason) };
+  });
 }

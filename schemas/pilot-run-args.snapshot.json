@@ -9,12 +9,14 @@
     "agent-mutation-plan",
     "agent-session-snapshot",
     "apply-task-batch",
+    "apply-task-state-events",
     "archive-task",
     "assign-task-phase",
     "backfill-task-feature-links",
     "backup-planning-sqlite",
     "batch-transition",
     "block-task",
+    "check-task-store-commit",
     "claim-next-task",
     "claim-workspace-edit-lease",
     "classify-kit-state",
@@ -72,12 +74,14 @@
     "propose-tasks-from-phase-notes",
     "queue-git-alignment",
     "queue-health",
+    "rebuild-task-state-cache",
     "recommend-validation",
     "reject-improvement",
     "release-evidence-manifest",
     "release-status",
     "release-workspace-edit-lease",
     "remove-dependency",
+    "repair-task-state-cache",
     "replay-queue-snapshot",
     "report-defect",
     "resolve-maintainer-delivery-policy",
@@ -274,6 +278,22 @@
       },
       "additionalProperties": true
     },
+    "apply-task-state-events": {
+      "type": "object",
+      "properties": {
+        "dryRun": {
+          "type": "boolean"
+        },
+        "eventLogRelativePath": {
+          "type": "string"
+        },
+        "policyApproval": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
     "archive-task": {
       "type": "object",
       "required": [
@@ -442,6 +462,9 @@
         }
       },
       "additionalProperties": true
+    },
+    "check-task-store-commit": {
+      "type": "object"
     },
     "claim-next-task": {
       "type": "object",
@@ -1266,6 +1289,22 @@
       "type": "object",
       "additionalProperties": false
     },
+    "rebuild-task-state-cache": {
+      "type": "object",
+      "properties": {
+        "dryRun": {
+          "type": "boolean"
+        },
+        "eventLogRelativePath": {
+          "type": "string"
+        },
+        "policyApproval": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
     "recommend-validation": {
       "type": "object",
       "properties": {
@@ -1387,6 +1426,25 @@
         }
       },
       "additionalProperties": false
+    },
+    "repair-task-state-cache": {
+      "type": "object",
+      "properties": {
+        "dryRun": {
+          "type": "boolean"
+        },
+        "autoRebuild": {
+          "type": "boolean"
+        },
+        "eventLogRelativePath": {
+          "type": "string"
+        },
+        "policyApproval": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
     },
     "replay-queue-snapshot": {
       "type": "object"

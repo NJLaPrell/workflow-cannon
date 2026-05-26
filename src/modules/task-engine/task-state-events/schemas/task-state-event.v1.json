@@ -1,0 +1,150 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workflow-cannon.dev/schemas/task-state-event.v1.json",
+  "title": "Task state event (envelope + payload v1)",
+  "description": "Canonical git-backed task-state event: shared envelope (S1.1) plus discriminated payload (S1.2).",
+  "$ref": "#/$defs/fullEvent",
+  "$defs": {
+    "fullEvent": {
+      "allOf": [
+        { "$ref": "task-state-event-envelope.v1.json" },
+        {
+          "type": "object",
+          "required": ["kind", "payload"],
+          "properties": {
+            "kind": {
+              "type": "string",
+              "enum": ["task.created", "task.updated", "task.transitioned", "task.batch_applied"]
+            },
+            "payload": {
+              "oneOf": [
+                { "$ref": "#/$defs/taskCreatedPayload" },
+                { "$ref": "#/$defs/taskUpdatedPayload" },
+                { "$ref": "#/$defs/taskTransitionedPayload" },
+                { "$ref": "#/$defs/taskBatchAppliedPayload" }
+              ]
+            }
+          }
+        },
+        {
+          "propertyNames": {
+            "enum": [
+              "schemaVersion",
+              "eventId",
+              "sequence",
+              "parentEventId",
+              "recordedAt",
+              "actor",
+              "clientMutationId",
+              "command",
+              "workspace",
+              "kind",
+              "payload"
+            ]
+          }
+        }
+      ]
+    },
+    "taskStatus": {
+      "type": "string",
+      "enum": [
+        "research",
+        "proposed",
+        "ready",
+        "in_progress",
+        "awaiting_review",
+        "awaiting_policy_approval",
+        "awaiting_external_decision",
+        "blocked",
+        "completed",
+        "cancelled"
+      ]
+    },
+    "guardResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["allowed", "guardName"],
+      "properties": {
+        "allowed": { "type": "boolean" },
+        "guardName": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "reason": { "type": "string", "maxLength": 512 }
+      }
+    },
+    "taskCreatedPayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["taskId", "initialStatus", "title", "type"],
+      "properties": {
+        "taskId": { "type": "string", "pattern": "^T[0-9]+$" },
+        "initialStatus": { "$ref": "#/$defs/taskStatus" },
+        "title": { "type": "string", "minLength": 1, "maxLength": 512 },
+        "type": { "type": "string", "minLength": 1, "maxLength": 64 }
+      }
+    },
+    "taskUpdatedPayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["taskId", "changedFields"],
+      "properties": {
+        "taskId": { "type": "string", "pattern": "^T[0-9]+$" },
+        "changedFields": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 64,
+          "items": { "type": "string", "minLength": 1, "maxLength": 128 }
+        },
+        "payloadDigest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "values": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      }
+    },
+    "taskTransitionedPayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "taskId",
+        "fromState",
+        "toState",
+        "action",
+        "transitionId",
+        "guardResults",
+        "dependentsUnblocked"
+      ],
+      "properties": {
+        "taskId": { "type": "string", "pattern": "^T[0-9]+$" },
+        "fromState": { "$ref": "#/$defs/taskStatus" },
+        "toState": { "$ref": "#/$defs/taskStatus" },
+        "action": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "transitionId": { "type": "string", "minLength": 8, "maxLength": 128 },
+        "guardResults": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/guardResult" }
+        },
+        "dependentsUnblocked": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^T[0-9]+$" }
+        },
+        "payloadDigest": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+      }
+    },
+    "taskBatchAppliedPayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["appliedCount", "transitionIds", "taskIds"],
+      "properties": {
+        "batchId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "appliedCount": { "type": "integer", "minimum": 0 },
+        "transitionIds": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 8, "maxLength": 128 }
+        },
+        "taskIds": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^T[0-9]+$" }
+        }
+      }
+    }
+  }
+}

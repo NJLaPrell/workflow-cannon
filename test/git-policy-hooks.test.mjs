@@ -30,6 +30,10 @@ test("installGitPolicyHooks writes executable pre-push and pre-commit hooks", ()
       assert.ok(mode > 0, `hook ${rel} should be executable`);
       const body = fs.readFileSync(hookPath, "utf8");
       assert.match(body, /workspace-kit git-policy/);
+      if (rel.endsWith("pre-commit")) {
+        assert.match(body, /block_staged_task_store_without_approval/);
+        assert.match(body, /task-store-sqlite-commit-approval/);
+      }
     }
   } finally {
     uninstallGitPolicyHooks(tmp);

@@ -1,0 +1,72 @@
+[
+  {
+    "schemaVersion": 1,
+    "eventId": "tse.replay.0001.created",
+    "sequence": 1,
+    "parentEventId": null,
+    "recordedAt": "2026-05-26T21:00:00.000Z",
+    "actor": { "id": "system", "source": "system" },
+    "command": { "name": "create-task", "moduleId": "task-engine" },
+    "kind": "task.created",
+    "payload": {
+      "taskId": "T100509",
+      "initialStatus": "proposed",
+      "title": "Replay fixture task",
+      "type": "workspace-kit"
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "eventId": "tse.replay.0002.transition",
+    "sequence": 2,
+    "parentEventId": "tse.replay.0001.created",
+    "recordedAt": "2026-05-26T21:00:01.000Z",
+    "actor": { "id": "maintainer@example.com", "source": "explicit" },
+    "clientMutationId": "start-T100509",
+    "command": { "name": "run-transition", "moduleId": "task-engine" },
+    "kind": "task.transitioned",
+    "payload": {
+      "taskId": "T100509",
+      "fromState": "proposed",
+      "toState": "ready",
+      "action": "accept",
+      "transitionId": "T100509-2026-05-26T21:00:01.000Z-replay01",
+      "guardResults": [{ "allowed": true, "guardName": "state-validity" }],
+      "dependentsUnblocked": []
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "eventId": "tse.replay.0003.updated",
+    "sequence": 3,
+    "parentEventId": "tse.replay.0002.transition",
+    "recordedAt": "2026-05-26T21:00:02.000Z",
+    "actor": { "id": "maintainer@example.com", "source": "explicit" },
+    "command": { "name": "update-task", "moduleId": "task-engine" },
+    "kind": "task.updated",
+    "payload": {
+      "taskId": "T100509",
+      "changedFields": ["summary"],
+      "values": { "summary": "Stable replay summary" }
+    }
+  },
+  {
+    "schemaVersion": 1,
+    "eventId": "tse.replay.0004.start",
+    "sequence": 4,
+    "parentEventId": "tse.replay.0003.updated",
+    "recordedAt": "2026-05-26T21:00:03.000Z",
+    "actor": { "id": "maintainer@example.com", "source": "explicit" },
+    "command": { "name": "run-transition", "moduleId": "task-engine" },
+    "kind": "task.transitioned",
+    "payload": {
+      "taskId": "T100509",
+      "fromState": "ready",
+      "toState": "in_progress",
+      "action": "start",
+      "transitionId": "T100509-2026-05-26T21:00:03.000Z-replay02",
+      "guardResults": [{ "allowed": true, "guardName": "state-validity" }],
+      "dependentsUnblocked": []
+    }
+  }
+]

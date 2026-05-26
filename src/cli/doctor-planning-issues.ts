@@ -9,6 +9,7 @@ import {
   parseKitPhaseNumberFromYaml
 } from "../modules/task-engine/phase-resolution.js";
 import { validatePlanningPersistenceForDoctor } from "../modules/task-engine/doctor-planning-persistence.js";
+import { collectDoctorTaskStateProjectionIssues } from "../modules/task-engine/doctor-task-state-projection.js";
 import {
   getPlanningGenerationPolicy,
   planningSqliteDatabaseRelativePath
@@ -82,7 +83,8 @@ export async function collectDoctorPlanningPersistenceIssues(
     const { effective } = await resolveRegistryAndConfig(cwd, defaultRegistryModules, {});
     const persistence = await validatePlanningPersistenceForDoctor(cwd, effective);
     const phaseIssues = await collectDoctorKitPhaseIssues(cwd, effective);
-    return [...persistence, ...phaseIssues];
+    const projectionIssues = await collectDoctorTaskStateProjectionIssues(cwd, effective);
+    return [...persistence, ...phaseIssues, ...projectionIssues];
   } catch (err) {
     return [
       {
@@ -122,7 +124,7 @@ export async function collectTaskPersistenceDoctorSummaryLines(cwd: string): Pro
     runtimeVersion: "doctor"
   } as ModuleLifecycleContext);
   const rel = path.relative(cwd, path.resolve(cwd, dbRel)) || dbRel;
-  lines.push(`Effective task persistence: sqlite — DB path: ${rel}`);
+  lines.push(`Effective task persistence: sqlite — DB path: ${rel} (canonical runtime truth; maintainer YAML/JSON exports are non-authoritative snapshots — see kit_export_envelope on export-workspace-status / export-feature-taxonomy-json)`);
   const dbAbs = path.resolve(cwd, dbRel);
   if (fs.existsSync(dbAbs)) {
     try {
@@ -185,6 +187,9 @@ export async function collectTaskPersistenceDoctorSummaryLines(cwd: string): Pro
     "Team assignments / subagents: `pnpm exec wk run list-assignments '{}'`, `list-subagents` / `list-subagent-sessions` — rollups in `dashboard-summary`; runbook `.ai/runbooks/subagent-registry.md`; ADRs `docs/maintainers/adrs/ADR-team-execution-v1.md`, `ADR-subagent-registry-v1.md`."
   );
   lines.push("Persistence map (JSON): workspace-kit run get-kit-persistence-map '{}'");
+  lines.push(
+    "Planning SQLite recovery (before risky edits): pnpm exec wk run backup-planning-sqlite '{\"outputPath\":\".workspace-kit/backups/planning-pre-repair.db\"}' ; pnpm exec wk run task-persistence-readiness '{}'"
+  );
   lines.push("Backend paths + recovery: docs/maintainers/runbooks/task-persistence-operator.md");
   const pol = getPlanningGenerationPolicy({ effectiveConfig: effective });
   lines.push(

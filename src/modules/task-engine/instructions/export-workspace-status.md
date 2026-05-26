@@ -6,7 +6,7 @@ agentCapsule|v=1|command=export-workspace-status|module=task-engine|schema_only=
 
 Emit a **non-authoritative** YAML export of **`kit_workspace_status`** to **`docs/maintainers/data/workspace-kit-status.db-export.yaml`** (does not replace maintainer **`workspace-kit-status.yaml`**).
 
-The export includes a comment marker for **`workspace_revision`**. **`phase-status`** uses that marker to decide freshness, so unrelated writes to the planning SQLite file do not make the workspace-status export stale.
+The file begins with a structured **`kit_export_envelope`** block (`authoritative: false`, `generated_at`, `source_sequence`, `source_kind`). A legacy **`# workspace_revision:`** comment is also written for compatibility. **`phase-status`** reads **`source_sequence`** (or the legacy comment) to decide export freshness — unrelated task/CAE writes to the planning SQLite file do not make this export stale.
 
 ## Usage
 

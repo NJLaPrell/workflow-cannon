@@ -272,6 +272,14 @@
   },
   {
     "moduleId": "task-engine",
+    "name": "check-task-store-commit",
+    "file": "check-task-store-commit.md",
+    "description": "Fail when live planning SQLite (or wal/shm) is staged for commit without an explicit approval marker.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
     "name": "sync-task-store-after-merge",
     "file": "sync-task-store-after-merge.md",
     "description": "Diff task-store SQLite between a source git ref and working tree; replay missing transitions after feature merge.",
@@ -546,6 +554,15 @@
     "description": "Apply multiple create-task and update-task operations in one planning generation transaction.",
     "defaultResponseTemplateId": "default",
     "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "apply-task-state-events",
+    "file": "apply-task-state-events.md",
+    "description": "Incrementally apply canonical task-state JSONL events newer than projection metadata applied_sequence.",
+    "policyOperationId": "tasks.apply-task-state-events",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
   },
   {
     "moduleId": "task-engine",
@@ -918,6 +935,24 @@
     "description": "Online backup of the planning SQLite DB via better-sqlite3 (preferred over raw file copy under write load).",
     "defaultResponseTemplateId": "default",
     "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "rebuild-task-state-cache",
+    "file": "rebuild-task-state-cache.md",
+    "description": "Rebuild disposable SQLite task projection from canonical task-state event log JSONL.",
+    "policyOperationId": "tasks.rebuild-task-state-cache",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "repair-task-state-cache",
+    "file": "repair-task-state-cache.md",
+    "description": "Detect stale/corrupt SQLite projection vs canonical event log; rebuild when needed.",
+    "policyOperationId": "tasks.repair-task-state-cache",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
   },
   {
     "moduleId": "task-engine",

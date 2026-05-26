@@ -8,6 +8,9 @@ import { UnifiedStateDb } from "../../../core/state/unified-state-db.js";
 import { runClassifyKitState } from "../kit-state-classifier.js";
 import { runMigrateTaskPersistence } from "../persistence/migrate-task-persistence-runtime.js";
 import { runBackupPlanningSqlite } from "../persistence/backup-planning-sqlite-runtime.js";
+import { runApplyTaskStateEvents } from "../persistence/apply-task-state-events-runtime.js";
+import { runRepairTaskStateCache } from "../persistence/repair-task-state-cache-runtime.js";
+import { runRebuildTaskStateCache } from "../persistence/rebuild-task-state-cache-runtime.js";
 import { runGetKitPersistenceMap } from "../persistence/kit-persistence-map-runtime.js";
 import { runTaskPersistenceReadiness } from "../persistence/task-persistence-readiness.js";
 import { planningSqliteDatabaseRelativePath } from "../planning-config.js";
@@ -31,6 +34,7 @@ import {
   runInstallGitHooksCommand,
   runUninstallGitHooksCommand
 } from "./git-policy-hooks-commands.js";
+import { runCheckTaskStoreCommit } from "../persistence/check-task-store-commit-runtime.js";
 import { runGetLastOutput } from "./get-last-output-command.js";
 
 /** If non-null, dispatch should return immediately (command fully handled without planning stores). */
@@ -47,6 +51,15 @@ export async function routeTaskEngineBeforeOpenPlanningStores(
   }
   if (command.name === "backup-planning-sqlite") {
     return runBackupPlanningSqlite(ctx, args as Record<string, unknown>);
+  }
+  if (command.name === "rebuild-task-state-cache") {
+    return runRebuildTaskStateCache(ctx, args as Record<string, unknown>);
+  }
+  if (command.name === "apply-task-state-events") {
+    return runApplyTaskStateEvents(ctx, args as Record<string, unknown>);
+  }
+  if (command.name === "repair-task-state-cache") {
+    return runRepairTaskStateCache(ctx, args as Record<string, unknown>);
   }
   if (command.name === "get-kit-persistence-map") {
     return runGetKitPersistenceMap(ctx);
@@ -98,6 +111,9 @@ export async function routeTaskEngineBeforeOpenPlanningStores(
   }
   if (command.name === "uninstall-git-hooks") {
     return runUninstallGitHooksCommand(ctx);
+  }
+  if (command.name === "check-task-store-commit") {
+    return runCheckTaskStoreCommit(ctx);
   }
   if (command.name === "list-module-states" || command.name === "get-module-state") {
     const unified = new UnifiedStateDb(ctx.workspacePath, planningSqliteDatabaseRelativePath(ctx));

@@ -1,0 +1,130 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workflow-cannon.dev/schemas/task-state-event-envelope.v1.json",
+  "title": "Task state event envelope (v1)",
+  "description": "Shared envelope for canonical git-backed task-state events (Phase 114). Event payloads are defined in later schema versions.",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "eventId",
+    "sequence",
+    "parentEventId",
+    "recordedAt",
+    "actor",
+    "command"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 1,
+      "description": "Envelope schema version."
+    },
+    "eventId": {
+      "type": "string",
+      "minLength": 8,
+      "maxLength": 128,
+      "description": "Unique id for this event within the workspace log (uuid or transition-style id)."
+    },
+    "sequence": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Monotonic sequence number within the log stream."
+    },
+    "parentEventId": {
+      "type": ["string", "null"],
+      "minLength": 8,
+      "maxLength": 128,
+      "description": "Prior event id in the stream; null for the genesis event only."
+    },
+    "recordedAt": {
+      "type": "string",
+      "minLength": 20,
+      "maxLength": 64,
+      "description": "ISO-8601 timestamp when the event was recorded."
+    },
+    "actor": {
+      "$ref": "#/$defs/actor"
+    },
+    "clientMutationId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "description": "Optional idempotency key from workspace-kit run argv."
+    },
+    "command": {
+      "$ref": "#/$defs/commandMetadata"
+    },
+    "workspace": {
+      "$ref": "#/$defs/workspaceIdentity"
+    }
+  },
+  "$defs": {
+    "actor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 320
+        },
+        "source": {
+          "type": "string",
+          "enum": ["git-config", "explicit", "system"]
+        },
+        "sessionId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        }
+      }
+    },
+    "commandMetadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "moduleId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "invocationId": {
+          "type": "string",
+          "minLength": 8,
+          "maxLength": 128
+        },
+        "argvDigest": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      }
+    },
+    "workspaceIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "gitHeadSha": {
+          "type": "string",
+          "minLength": 7,
+          "maxLength": 64
+        },
+        "workspaceRoot": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "phaseKey": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32
+        }
+      }
+    }
+  }
+}

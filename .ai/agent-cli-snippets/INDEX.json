@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-05-20T01:24:14.866Z",
+  "generatedAt": "2026-05-26T21:19:54.853Z",
   "commands": [
     {
       "name": "accept-improvement",
@@ -40,6 +40,11 @@
     {
       "name": "apply-task-batch",
       "path": ".ai/agent-cli-snippets/by-command/apply-task-batch.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "apply-task-state-events",
+      "path": ".ai/agent-cli-snippets/by-command/apply-task-state-events.json",
       "moduleId": "task-engine"
     },
     {
@@ -346,6 +351,11 @@
       "name": "cancel-assignment",
       "path": ".ai/agent-cli-snippets/by-command/cancel-assignment.json",
       "moduleId": "team-execution"
+    },
+    {
+      "name": "check-task-store-commit",
+      "path": ".ai/agent-cli-snippets/by-command/check-task-store-commit.json",
+      "moduleId": "task-engine"
     },
     {
       "name": "claim-next-task",
@@ -818,6 +828,11 @@
       "moduleId": "task-engine"
     },
     {
+      "name": "rebuild-task-state-cache",
+      "path": ".ai/agent-cli-snippets/by-command/rebuild-task-state-cache.json",
+      "moduleId": "task-engine"
+    },
+    {
       "name": "recommend-skills",
       "path": ".ai/agent-cli-snippets/by-command/recommend-skills.json",
       "moduleId": "skills"
@@ -865,6 +880,11 @@
     {
       "name": "remove-dependency",
       "path": ".ai/agent-cli-snippets/by-command/remove-dependency.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "repair-task-state-cache",
+      "path": ".ai/agent-cli-snippets/by-command/repair-task-state-cache.json",
       "moduleId": "task-engine"
     },
     {
