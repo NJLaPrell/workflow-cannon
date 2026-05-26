@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "eventId": "tse.20260526T120000Z.genesis",
+  "sequence": 0,
+  "parentEventId": null,
+  "recordedAt": "2026-05-26T12:00:00.000Z",
+  "actor": {
+    "id": "maintainer@example.com",
+    "source": "git-config",
+    "sessionId": "cursor-session-fixture"
+  },
+  "clientMutationId": "fixture-genesis",
+  "command": {
+    "name": "run-transition",
+    "moduleId": "task-engine",
+    "invocationId": "00000000-0000-4000-8000-000000000001",
+    "argvDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "workspace": {
+    "gitHeadSha": "bf6bfeb7d54e8dac8c86d8d9d1d462bb56b90bc9",
+    "workspaceRoot": ".",
+    "phaseKey": "114"
+  }
+}
