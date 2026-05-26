@@ -359,6 +359,9 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   private dashboardInteractionLocks = new Set<string>();
   private dashboardRefreshAfterInteraction = false;
 
+  /** Surfaced as wcHostSnapshot.interaction.refreshBusy (T100497). */
+  private dashboardRefreshBusy = false;
+
   /** Host drawer session state machine → wcDrawerState snapshots. */
   private drawerSessionHost?: DrawerSessionController;
 
@@ -1708,7 +1711,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       closeDrawer: () => this.closeDashboardDrawer(),
       resetDrawerSubmitPendingEffects: () => this.resetDrawerSubmitPendingEffects(),
       flushDrawerSubmitPendingEffects: (bus) => this.flushDrawerSubmitPendingEffects(bus),
-      isRefreshBusy: () => this.dashboardInteractionLocks.has("refresh")
+      isRefreshBusy: () => this.dashboardRefreshBusy,
+      isRefreshDeferred: () => this.refreshController.hasDeferredRefreshPending()
     });
     this.dashboardCoordinator.registerDrawerWorkflow("accept-proposed");
     this.dashboardCoordinator.emitSnapshot();
@@ -1734,15 +1738,11 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   private beginDrawerSubmitRefreshHold(): void {
     this.beginDashboardMutationRefreshHold();
     this.dashboardRefreshAfterInteraction = true;
-    this.setDashboardUiInteraction("drawer-submit", true);
-    this.setDashboardUiInteraction("drawer-busy", true);
   }
 
   private endDrawerSubmitRefreshHold(): void {
     this.endDashboardMutationRefreshHold();
     this.dashboardRefreshAfterInteraction = false;
-    this.setDashboardUiInteraction("drawer-submit", false);
-    this.setDashboardUiInteraction("drawer-busy", false);
   }
 
   private isPushUpdateStale(updateSequence: number, activeView: vscode.WebviewView): boolean {
@@ -2779,7 +2779,16 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   }
 
   private isDashboardRefreshDeferred(): boolean {
-    return this.refreshController.isSuppressed() || this.dashboardInteractionLocks.size > 0;
+    return (
+      this.refreshController.isSuppressed() ||
+      this.dashboardCoordinator?.isMutationActive() === true ||
+      this.dashboardInteractionLocks.size > 0
+    );
+  }
+
+  private setDashboardRefreshBusy(busy: boolean): void {
+    this.dashboardRefreshBusy = busy;
+    this.dashboardCoordinator?.emitSnapshot();
   }
 
   private setDashboardUiInteraction(source: string, active: boolean): void {
@@ -2805,9 +2814,12 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     this.pendingPushUpdateOptions = undefined;
     if (this.isDashboardRefreshDeferred()) {
       this.refreshController.markDeferredRefreshNeeded();
+      this.dashboardCoordinator?.emitSnapshot();
       logWc("dashboard", "pushUpdate deferred (UI interaction lock active)");
       return;
     }
+    this.setDashboardRefreshBusy(true);
+    try {
     const { webview } = activeView;
     const requestedWishlistPage = this.wishlistPage;
     const startedAt = Date.now();
@@ -3005,6 +3017,9 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       }
     } catch (e) {
       logWc("dashboard", `pushUpdate render failed: ${e instanceof Error ? e.message : String(e)}`);
+    }
+    } finally {
+      this.setDashboardRefreshBusy(false);
     }
   }
 

@@ -755,8 +755,6 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
   var btn = document.getElementById('btn');
   var rootEl = document.getElementById('root');
   if (btn) btn.addEventListener('click', function() {
-    setButtonBusy(btn, true, 'Refreshing…');
-    setUiInteraction('refresh', true);
     vscode.postMessage({type:'refresh'});
   });
   if (rootEl) rootEl.addEventListener('click', function(ev) {

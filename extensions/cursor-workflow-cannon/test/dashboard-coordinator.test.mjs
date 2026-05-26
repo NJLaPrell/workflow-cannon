@@ -54,7 +54,8 @@ test("DashboardCoordinator.runMutation holds refresh until fn completes", async 
     closeDrawer: async () => {},
     resetDrawerSubmitPendingEffects: () => {},
     flushDrawerSubmitPendingEffects: () => {},
-    isRefreshBusy: () => false
+    isRefreshBusy: () => false,
+    isRefreshDeferred: () => false
   };
   const coordinator = new DashboardCoordinator({
     drawerSession: drawer,
@@ -131,7 +132,8 @@ test("DashboardCoordinator.runMutation releases hold when fn throws", async () =
     closeDrawer: async () => {},
     resetDrawerSubmitPendingEffects: () => {},
     flushDrawerSubmitPendingEffects: () => {},
-    isRefreshBusy: () => false
+    isRefreshBusy: () => false,
+    isRefreshDeferred: () => false
   });
 
   await assert.rejects(

@@ -138,6 +138,10 @@ export class DashboardRefreshController {
     this.refreshAfterDeferred = true;
   }
 
+  hasDeferredRefreshPending(): boolean {
+    return this.refreshAfterDeferred;
+  }
+
   private async runLoop(): Promise<void> {
     do {
       this.queued = false;
