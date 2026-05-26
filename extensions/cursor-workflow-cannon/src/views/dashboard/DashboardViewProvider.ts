@@ -373,9 +373,6 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   /** In-webview drawer session (register catalog, dismiss phase note, …). */
   private dashboardDrawerSession: DashboardDrawerSession | null = null;
 
-  /** Legacy drawer-submit flag — coordinator owns mutation gating (T100493); removed in T100496. */
-  private dashboardDrawerSubmitInFlight = false;
-
   /** Toasts/refresh scheduled after coordinator.runMutation (T100493). */
   private drawerSubmitPendingEffects: Array<(bus: SideEffectBus) => void> = [];
 
@@ -422,8 +419,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   ): void {
     this.view = webviewView;
     const { webview } = webviewView;
-    this.drawerSessionHost = new DrawerSessionController((message) => {
-      void webview.postMessage(message);
+    this.drawerSessionHost = new DrawerSessionController(() => {
       this.dashboardCoordinator?.emitSnapshot();
     });
     this.initDashboardCoordinator(webview);
@@ -914,7 +910,6 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       this.dashboardRootShellReady = false;
       this.webviewMessageDisposable?.dispose();
       this.webviewMessageDisposable = undefined;
-      this.dashboardDrawerSubmitInFlight = false;
       this.refreshController.notifyMutationEnd();
       this.client.setRefreshPaused(false);
       if (this.dashboardPollTimer) {
@@ -1589,7 +1584,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     this.dashboardDrawerSession = null;
     this.drawerSessionHost?.reset();
     logWc("dashboard", "drawer closed");
-    await this.view?.webview.postMessage({ type: "wcDrawerClose" });
+    this.dashboardCoordinator?.emitSnapshot();
   }
 
   /** Close drawer and release locks before modal/toast notifications (T100490). */
@@ -1658,20 +1653,9 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   private async postDrawerValidationToWebview(message: string): Promise<void> {
     this.drawerSessionHost?.setValidationError(message);
     this.dashboardCoordinator?.emitSnapshot();
-    await this.view?.webview.postMessage({ type: "wcDrawerValidation", message });
   }
 
-  private async postDrawerProgressToWebview(label: string): Promise<void> {
-    this.drawerSessionHost?.setSubmitting(label);
-    const webview = this.view?.webview;
-    if (!webview) {
-      return;
-    }
-    await webview.postMessage({ type: "wcDrawerProgress", label });
-    await new Promise<void>((resolve) => setTimeout(resolve, 0));
-  }
-
-  /** Snapshot-first drawer progress (T100495); prefer over legacy wcDrawerProgress. */
+  /** Snapshot-first drawer progress (T100495+). */
   private setDrawerMutationProgress(label: string): void {
     this.drawerSessionHost?.setSubmitting(label);
     this.dashboardCoordinator?.emitSnapshot();
@@ -1757,7 +1741,6 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   private endDrawerSubmitRefreshHold(): void {
     this.endDashboardMutationRefreshHold();
     this.dashboardRefreshAfterInteraction = false;
-    this.dashboardDrawerSubmitInFlight = false;
     this.setDashboardUiInteraction("drawer-submit", false);
     this.setDashboardUiInteraction("drawer-busy", false);
   }
