@@ -8,6 +8,7 @@ import { UnifiedStateDb } from "../../../core/state/unified-state-db.js";
 import { runClassifyKitState } from "../kit-state-classifier.js";
 import { runMigrateTaskPersistence } from "../persistence/migrate-task-persistence-runtime.js";
 import { runBackupPlanningSqlite } from "../persistence/backup-planning-sqlite-runtime.js";
+import { runRebuildTaskStateCache } from "../persistence/rebuild-task-state-cache-runtime.js";
 import { runGetKitPersistenceMap } from "../persistence/kit-persistence-map-runtime.js";
 import { runTaskPersistenceReadiness } from "../persistence/task-persistence-readiness.js";
 import { planningSqliteDatabaseRelativePath } from "../planning-config.js";
@@ -48,6 +49,9 @@ export async function routeTaskEngineBeforeOpenPlanningStores(
   }
   if (command.name === "backup-planning-sqlite") {
     return runBackupPlanningSqlite(ctx, args as Record<string, unknown>);
+  }
+  if (command.name === "rebuild-task-state-cache") {
+    return runRebuildTaskStateCache(ctx, args as Record<string, unknown>);
   }
   if (command.name === "get-kit-persistence-map") {
     return runGetKitPersistenceMap(ctx);

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-05-26T19:27:55.515Z",
+  "generatedAt": "2026-05-26T21:07:22.406Z",
   "commands": [
     {
       "name": "accept-improvement",
@@ -820,6 +820,11 @@
     {
       "name": "queue-health",
       "path": ".ai/agent-cli-snippets/by-command/queue-health.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "rebuild-task-state-cache",
+      "path": ".ai/agent-cli-snippets/by-command/rebuild-task-state-cache.json",
       "moduleId": "task-engine"
     },
     {

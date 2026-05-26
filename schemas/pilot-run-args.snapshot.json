@@ -15,6 +15,7 @@
     "backup-planning-sqlite",
     "batch-transition",
     "block-task",
+    "check-task-store-commit",
     "claim-next-task",
     "claim-workspace-edit-lease",
     "classify-kit-state",
@@ -72,6 +73,7 @@
     "propose-tasks-from-phase-notes",
     "queue-git-alignment",
     "queue-health",
+    "rebuild-task-state-cache",
     "recommend-validation",
     "reject-improvement",
     "release-evidence-manifest",
@@ -442,6 +444,9 @@
         }
       },
       "additionalProperties": true
+    },
+    "check-task-store-commit": {
+      "type": "object"
     },
     "claim-next-task": {
       "type": "object",
@@ -1265,6 +1270,22 @@
     "queue-health": {
       "type": "object",
       "additionalProperties": false
+    },
+    "rebuild-task-state-cache": {
+      "type": "object",
+      "properties": {
+        "dryRun": {
+          "type": "boolean"
+        },
+        "eventLogRelativePath": {
+          "type": "string"
+        },
+        "policyApproval": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
     },
     "recommend-validation": {
       "type": "object",

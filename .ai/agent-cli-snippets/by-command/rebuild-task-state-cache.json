@@ -1,0 +1,53 @@
+{
+  "ok": true,
+  "code": "run-args-schema",
+  "command": "rebuild-task-state-cache",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "dryRun": {
+        "type": "boolean"
+      },
+      "eventLogRelativePath": {
+        "type": "string"
+      },
+      "policyApproval": {
+        "type": "object",
+        "additionalProperties": true
+      }
+    },
+    "additionalProperties": true
+  },
+  "schemaSource": "pilot-run-args-snapshot",
+  "sampleArgs": {},
+  "examples": [
+    {
+      "description": "Minimal argv example",
+      "argv": "workspace-kit run rebuild-task-state-cache '{}'"
+    }
+  ],
+  "instructionPath": "src/modules/task-engine/instructions/rebuild-task-state-cache.md",
+  "moduleId": "task-engine",
+  "description": "Rebuild disposable SQLite task projection from canonical task-state event log JSONL.",
+  "policy": {
+    "sensitivity": "sensitive-with-dryrun",
+    "operationId": null,
+    "jsonApprovalRequired": "when dryRun is false or omitted by command policy"
+  },
+  "planningGeneration": {
+    "cliPrelude": false,
+    "expectedPlanningGeneration": "not required by CLI prelude"
+  },
+  "idempotency": {
+    "clientMutationId": false
+  },
+  "responseTemplate": {
+    "defaultResponseTemplateId": "default"
+  },
+  "remediationContract": ".ai/runbooks/agent-task-engine-ergonomics.md",
+  "discovery": {
+    "listCommands": "pnpm exec wk run --list-commands",
+    "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
+  },
+  "invocationId": "88e99e5d-a478-4d50-954f-5b81ab815ef0"
+}

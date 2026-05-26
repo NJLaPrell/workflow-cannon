@@ -43,6 +43,11 @@ export {
   TASK_STATE_EVENT_LOG_SUPPORTED_KINDS,
   TASK_STATE_EVENT_LOG_SUPPORTED_SCHEMA_VERSION
 } from "./event-admission-policy.js";
+export {
+  DEFAULT_TASK_STATE_EVENT_LOG_RELATIVE,
+  readTaskStateEventLogJsonl,
+  resolveTaskStateEventLogPath
+} from "./task-state-event-log-io.js";
 export type {
   TaskStateApplierError,
   TaskStateApplierErrorCode,
