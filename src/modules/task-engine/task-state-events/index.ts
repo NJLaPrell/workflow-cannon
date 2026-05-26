@@ -8,6 +8,18 @@ export {
   type TaskStateEventWorkspaceIdentityV1
 } from "./types.js";
 export {
+  type TaskStateEventKindV1,
+  type TaskStateEventPayloadV1,
+  type TaskStateEventV1,
+  type TaskBatchAppliedPayloadV1,
+  type TaskCreatedPayloadV1,
+  type TaskTransitionedPayloadV1,
+  type TaskUpdatedPayloadV1,
+  mutationTypeToEventKind,
+  transitionEvidenceToTransitionedPayload
+} from "./event-payloads.js";
+export {
   taskStateEventEnvelopeSchemaRelativePath,
   validateTaskStateEventEnvelope
 } from "./validate-envelope.js";
+export { validateTaskStateEvent } from "./validate-event.js";

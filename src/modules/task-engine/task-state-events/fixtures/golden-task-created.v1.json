@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "eventId": "tse.20260526T200001Z.created-fixture",
+  "sequence": 3,
+  "parentEventId": "tse.20260526T200000Z.transition-fixture",
+  "recordedAt": "2026-05-26T20:00:01.000Z",
+  "actor": { "id": "system", "source": "system" },
+  "command": {
+    "name": "create-task",
+    "moduleId": "task-engine"
+  },
+  "kind": "task.created",
+  "payload": {
+    "taskId": "T100509",
+    "initialStatus": "proposed",
+    "title": "Fixture task for event log golden sample",
+    "type": "workspace-kit"
+  }
+}

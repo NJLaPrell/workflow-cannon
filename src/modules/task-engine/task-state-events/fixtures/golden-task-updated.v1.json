@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "eventId": "tse.20260526T200002Z.updated-fixture",
+  "sequence": 4,
+  "parentEventId": "tse.20260526T200001Z.created-fixture",
+  "recordedAt": "2026-05-26T20:00:02.000Z",
+  "actor": { "id": "maintainer@example.com", "source": "explicit" },
+  "clientMutationId": "update-delivery-evidence",
+  "command": {
+    "name": "update-task",
+    "moduleId": "task-engine",
+    "argvDigest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+  },
+  "kind": "task.updated",
+  "payload": {
+    "taskId": "T100498",
+    "changedFields": ["metadata.deliveryEvidence"],
+    "payloadDigest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+  }
+}

@@ -4,7 +4,6 @@
   "title": "Task state event envelope (v1)",
   "description": "Shared envelope for canonical git-backed task-state events (Phase 114). Event payloads are defined in later schema versions.",
   "type": "object",
-  "additionalProperties": false,
   "required": [
     "schemaVersion",
     "eventId",
