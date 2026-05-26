@@ -44,6 +44,7 @@
         "assign-task-phase",
         "backfill-task-feature-links",
         "backup-planning-sqlite",
+        "rebuild-task-state-cache",
         "batch-transition",
         "block-task",
         "check-task-store-commit",
@@ -186,6 +187,9 @@
         },
         "backup-planning-sqlite": {
           "$ref": "#/$defs/contractBackupPlanningSqlite"
+        },
+        "rebuild-task-state-cache": {
+          "$ref": "#/$defs/contractRebuildTaskStateCache"
         },
         "batch-transition": {
           "$ref": "#/$defs/contractBatchTransition"
@@ -3119,6 +3123,58 @@
             "responseData": {
               "type": "object",
               "additionalProperties": true
+            }
+          }
+        }
+      ]
+    },
+    "contractRebuildTaskStateCache": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/contractBase"
+        },
+        {
+          "properties": {
+            "args": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "dryRun": {
+                  "type": "boolean"
+                },
+                "eventLogRelativePath": {
+                  "type": "string"
+                },
+                "policyApproval": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            },
+            "responseData": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "schemaVersion": {
+                  "const": 1
+                },
+                "eventLogPath": {
+                  "type": "string"
+                },
+                "eventCount": {
+                  "type": "integer"
+                },
+                "taskCount": {
+                  "type": "integer"
+                },
+                "appliedSequence": {
+                  "type": "integer"
+                },
+                "projectionMeta": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
             }
           }
         }

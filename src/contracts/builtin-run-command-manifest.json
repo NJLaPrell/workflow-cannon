@@ -929,6 +929,15 @@
   },
   {
     "moduleId": "task-engine",
+    "name": "rebuild-task-state-cache",
+    "file": "rebuild-task-state-cache.md",
+    "description": "Rebuild disposable SQLite task projection from canonical task-state event log JSONL.",
+    "policyOperationId": "tasks.rebuild-task-state-cache",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "task-engine",
     "name": "list-module-states",
     "file": "list-module-states.md",
     "description": "List unified SQLite module-state rows for diagnostics and migration verification.",

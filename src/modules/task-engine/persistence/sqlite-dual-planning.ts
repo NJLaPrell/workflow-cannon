@@ -984,6 +984,8 @@ export class SqliteDualPlanningStore {
       replaceAllTaskFeatureLinks(db, this._taskDoc.tasks);
     }
     if (evidenceTablesAvailable(db)) {
+      db.prepare(`DELETE FROM ${TASK_ENGINE_TRANSITION_LOG_TABLE}`).run();
+      db.prepare(`DELETE FROM ${TASK_ENGINE_MUTATION_LOG_TABLE}`).run();
       const insertTransition = db.prepare(
         `INSERT OR IGNORE INTO ${TASK_ENGINE_TRANSITION_LOG_TABLE} (
           transition_id, task_id, from_state, to_state, action, timestamp, actor,

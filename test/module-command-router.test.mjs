@@ -111,6 +111,7 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
     "propose-tasks-from-phase-notes",
     "queue-git-alignment",
     "queue-health",
+    "rebuild-task-state-cache",
     "recommend-validation",
     "reject-improvement",
     "release-evidence-manifest",
