@@ -26,6 +26,8 @@ import {
   DashboardRefreshController,
   type DashboardRefreshMode
 } from "./dashboard-refresh-controller.js";
+import { DashboardCoordinator } from "./dashboard-coordinator.js";
+import { SideEffectBus } from "./dashboard-side-effects.js";
 import { DrawerSessionController } from "./drawer-session.js";
 import { buildDashboardWebviewBootstrapScript } from "./dashboard-webview-client.js";
 import {
@@ -360,6 +362,9 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   /** Host drawer session state machine → wcDrawerState snapshots. */
   private drawerSessionHost?: DrawerSessionController;
 
+  /** Intent/snapshot coordinator scaffold (T100492); drawer flows migrate in T100493+. */
+  private dashboardCoordinator?: DashboardCoordinator;
+
   /** 0-based page for wishlist rows in `dashboard-summary` (5 per page). */
   private wishlistPage = 0;
 
@@ -417,6 +422,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     this.drawerSessionHost = new DrawerSessionController((message) => {
       void webview.postMessage(message);
     });
+    this.initDashboardCoordinator(webview);
     this.dashboardGuidanceAuthoring = new GuidanceAuthoringExtensionSide({
       client: this.client,
       workspaceFolder: vscode.workspace.workspaceFolders?.[0],
@@ -1629,6 +1635,44 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     await webview.postMessage({ type: "wcDrawerProgress", label });
     await new Promise<void>((resolve) => setTimeout(resolve, 0));
+  }
+
+  private initDashboardCoordinator(webview: vscode.Webview): void {
+    if (!this.drawerSessionHost) {
+      return;
+    }
+    const sideEffects = new SideEffectBus({
+      notify: (message, severity) => {
+        if (severity === "error") {
+          void vscode.window.showErrorMessage(message);
+        } else {
+          void vscode.window.showInformationMessage(message);
+        }
+      },
+      scheduleRefresh: (mode, reason) => {
+        this.refreshController.request({ reason, mode });
+      },
+      notifyKitChanged: () => {
+        this.notifyKitStateChanged();
+      }
+    });
+    this.dashboardCoordinator = new DashboardCoordinator({
+      drawerSession: this.drawerSessionHost,
+      refreshController: this.refreshController,
+      client: this.client,
+      beginMutationHold: () => this.beginDashboardMutationRefreshHold(),
+      endMutationHold: () => this.endDashboardMutationRefreshHold(),
+      emitToWebview: (snapshot) => {
+        void webview.postMessage({ type: "wcHostSnapshot", snapshot });
+      },
+      sideEffects
+    });
+    this.dashboardCoordinator.emitSnapshot();
+  }
+
+  /** Exposed for follow-on coordinator migration tasks and unit integration. */
+  getDashboardCoordinator(): DashboardCoordinator | undefined {
+    return this.dashboardCoordinator;
   }
 
   /** Hold dashboard refresh while kit mutations run (drawer batch, roster start, etc.). */
