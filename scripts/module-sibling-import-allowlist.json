@@ -34,19 +34,19 @@
     },
     {
       "file": "src/modules/task-engine/commands/task-engine-dashboard-on-command.ts",
-      "line": "26",
+      "line": "23",
       "importLine": "import { dashboardOnboardingTemperamentLabel } from \"../../agent-behavior/onboarding-temperament-label.js\";",
       "rationale": "Guidance dashboard reads behavior profile label."
     },
     {
       "file": "src/modules/task-engine/commands/task-engine-dashboard-on-command.ts",
-      "line": "27",
+      "line": "24",
       "importLine": "import { loadBehaviorWorkspaceState } from \"../../agent-behavior/persistence.js\";",
       "rationale": "Guidance dashboard reads behavior workspace state."
     },
     {
       "file": "src/modules/task-engine/commands/task-engine-dashboard-on-command.ts",
-      "line": "28",
+      "line": "25",
       "importLine": "import { BehaviorProfileStore } from \"../../agent-behavior/store.js\";",
       "rationale": "Guidance dashboard resolves effective behavior profile."
     },
