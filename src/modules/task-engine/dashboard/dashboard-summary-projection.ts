@@ -119,8 +119,10 @@ export function finalizeDashboardSummaryProjection(
       agentStatus: data.agentStatus,
       currentPhaseDelivery: data.currentPhaseDelivery,
       deliveredPhaseKeys: data.deliveredPhaseKeys,
+      rolledOutPhaseKeys: data.rolledOutPhaseKeys,
       phaseReleaseDates: data.phaseReleaseDates,
       legacyDeliveredMaxOrdinal: data.legacyDeliveredMaxOrdinal,
+      phaseKeysWithActiveQueueWork: data.phaseKeysWithActiveQueueWork,
       pastPhaseNotes: []
     };
   }
@@ -155,8 +157,10 @@ export function finalizeDashboardSummaryProjection(
       agentStatus: data.agentStatus,
       currentPhaseDelivery: data.currentPhaseDelivery,
       deliveredPhaseKeys: data.deliveredPhaseKeys,
+      rolledOutPhaseKeys: data.rolledOutPhaseKeys,
       phaseReleaseDates: data.phaseReleaseDates,
       legacyDeliveredMaxOrdinal: data.legacyDeliveredMaxOrdinal,
+      phaseKeysWithActiveQueueWork: data.phaseKeysWithActiveQueueWork,
       pastPhaseNotes: data.pastPhaseNotes
     };
   }
@@ -191,8 +195,10 @@ export function finalizeDashboardSummaryProjection(
     agentStatus: data.agentStatus,
     currentPhaseDelivery: data.currentPhaseDelivery,
     deliveredPhaseKeys: data.deliveredPhaseKeys,
+    rolledOutPhaseKeys: data.rolledOutPhaseKeys,
     phaseReleaseDates: data.phaseReleaseDates,
     legacyDeliveredMaxOrdinal: data.legacyDeliveredMaxOrdinal,
+    phaseKeysWithActiveQueueWork: data.phaseKeysWithActiveQueueWork,
     pastPhaseNotes: []
   };
 }

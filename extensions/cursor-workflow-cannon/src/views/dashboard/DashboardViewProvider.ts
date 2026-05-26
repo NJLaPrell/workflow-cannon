@@ -49,6 +49,7 @@ import {
   renderQueueBucketRowsHtml,
   type DashboardQueueBucketCategory
 } from "./dashboard-queue-bucket-lazy.js";
+import { computeQueueContentFingerprint } from "./dashboard-queue-fingerprint.js";
 import {
   escapeHtml,
   lazyTerminalBucketListLimit,
@@ -422,6 +423,9 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     | { light?: boolean; projection?: "full" | "overview"; skipHeavyFetches?: boolean }
     | undefined;
 
+  /** Last queue content fingerprint applied (skips kit-state DOM churn when rollups unchanged). */
+  private lastQueueContentFingerprint: string | null = null;
+
   constructor(
     private readonly extensionUri: vscode.Uri,
     private readonly client: CommandClient,
@@ -439,8 +443,78 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       }
     });
     onKitStateChanged(() => {
-      this.refreshController.request({ reason: "kit-state-changed", mode: "light" });
+      void this.onKitStateChangedRefresh();
     });
+  }
+
+  /**
+   * Kit file watcher refresh — never full `wcReplaceRoot` (that wipes lazy queue rows).
+   * Patches visible sections only; queue uses content fingerprint to no-op when unchanged.
+   */
+  private async onKitStateChangedRefresh(): Promise<void> {
+    if (!this.view?.visible || this.refreshController.isSuppressed()) {
+      return;
+    }
+    if (this.dashboardDrawerSession) {
+      return;
+    }
+    if (this.isDashboardRefreshDeferred()) {
+      this.refreshController.markDeferredRefreshNeeded();
+      return;
+    }
+    const updateSequence = this.refreshController.currentGeneration();
+    if (this.activeDashboardTab === "task-engine") {
+      if (this.hydratedDashboardSections.has("queue")) {
+        await this.patchQueueSectionFromKitState(updateSequence);
+      }
+      if (this.hydratedDashboardSections.has("phase-journal")) {
+        await this.patchDashboardSectionsFromSummary(["phase-journal"], updateSequence, {
+          light: true
+        });
+      }
+      return;
+    }
+    if (this.activeDashboardTab === "overview" && this.hydratedDashboardSections.has("overview")) {
+      await this.patchDashboardSectionsFromSummary(["overview"], updateSequence, { light: true });
+      return;
+    }
+    if (this.hydratedDashboardSections.has("queue")) {
+      await this.markDashboardSectionStale("queue");
+    }
+  }
+
+  /** Queue-only kit refresh with content fingerprint short-circuit. */
+  private async patchQueueSectionFromKitState(updateSequence?: number): Promise<void> {
+    let raw: DashboardSummaryCommandSuccess | Record<string, unknown>;
+    try {
+      raw = (await this.client.run("dashboard-summary", {
+        wishlistPage: this.wishlistPage,
+        wishlistPageSize: 5,
+        projection: "full"
+      })) as DashboardSummaryCommandSuccess | Record<string, unknown>;
+      if (isKitRefreshRunAborted(raw as Record<string, unknown>)) {
+        return;
+      }
+    } catch (e) {
+      logWc(
+        "dashboard",
+        `patchQueueSectionFromKitState failed: ${e instanceof Error ? e.message : String(e)}`
+      );
+      return;
+    }
+    if (raw.ok !== true || !raw.data || typeof raw.data !== "object") {
+      return;
+    }
+    const summaryData = raw.data as Record<string, unknown>;
+    const contentFp = computeQueueContentFingerprint(summaryData);
+    if (
+      this.lastQueueContentFingerprint !== null &&
+      contentFp === this.lastQueueContentFingerprint
+    ) {
+      logWc("dashboard", "patchQueueSectionFromKitState: skipped (queue content unchanged)");
+      return;
+    }
+    await this.patchDashboardSectionsFromSummary(["queue"], updateSequence, { light: true });
   }
 
   resolveWebviewView(
@@ -665,15 +739,19 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
             msg?.transitionKind === "wishlist" ? "this wishlist item" : undefined;
           if (action === "accept") {
             await this.onDashboardAcceptProposed(taskId);
-          } else {
-            await confirmAndRunTransition(
-              this.client,
-              this.notifyKitStateChanged,
-              taskId,
-              action,
-              rejectSubject
-            );
+            if (msg?.transitionKind === "human-gate") {
+              await this.client.clearActivity();
+            }
+            // Drawer submit refreshes the queue after accept+assign; do not patch here (collapses open buckets).
+            return;
           }
+          await confirmAndRunTransition(
+            this.client,
+            this.notifyKitStateChanged,
+            taskId,
+            action,
+            rejectSubject
+          );
           if (msg?.transitionKind === "human-gate") {
             await this.client.clearActivity();
           }
@@ -1204,14 +1282,16 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
 
   private async patchDashboardSectionsFromSummary(
     sectionIds: readonly DashboardSectionId[],
-    updateSequence?: number
+    updateSequence?: number,
+    options?: { light?: boolean }
   ): Promise<void> {
     const activeView = this.view;
     if (!activeView || sectionIds.length === 0) {
       return;
     }
-    const needsPhaseJournal = sectionIds.includes("phase-journal");
-    const needsCae = sectionIds.includes("cae");
+    let sectionsToPatch: DashboardSectionId[] = [...sectionIds];
+    const needsPhaseJournal = sectionsToPatch.includes("phase-journal");
+    const needsCae = sectionsToPatch.includes("cae");
     let raw: DashboardSummaryCommandSuccess | Record<string, unknown>;
     try {
       raw = (await this.client.run("dashboard-summary", {
@@ -1238,11 +1318,22 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     let phaseJournal: DashboardPhaseJournalBundle | undefined;
     let embeddedCaePanelHtml: string | null = this.lastEmbeddedCaePanelHtml;
     if (raw.ok === true && raw.data && typeof raw.data === "object") {
-      this.lastDashboardSummaryData = raw.data as Record<string, unknown>;
-      ingestPlanningMetaFromData(raw.data as Record<string, unknown>);
+      const summaryData = raw.data as Record<string, unknown>;
+      this.lastDashboardSummaryData = summaryData;
+      ingestPlanningMetaFromData(summaryData);
+      const contentFp = computeQueueContentFingerprint(summaryData);
+      if (
+        options?.light === true &&
+        sectionsToPatch.includes("queue") &&
+        this.lastQueueContentFingerprint !== null &&
+        contentFp === this.lastQueueContentFingerprint
+      ) {
+        sectionsToPatch = sectionsToPatch.filter((id) => id !== "queue");
+        logWc("dashboard", "patchDashboardSectionsFromSummary: skipped queue (content unchanged)");
+      }
       try {
         if (needsPhaseJournal) {
-          phaseJournal = await this.fetchPhaseJournalBundleForRender(raw.data as Record<string, unknown>);
+          phaseJournal = await this.fetchPhaseJournalBundleForRender(summaryData);
         }
         if (needsCae) {
           const caeSummary = await this.client.run("cae-authoring-summary", { schemaVersion: 1 });
@@ -1254,6 +1345,9 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       } catch {
         /* section patch falls back to summary-only slices */
       }
+    }
+    if (sectionsToPatch.length === 0) {
+      return;
     }
     const wizardPanel = raw.ok === true ? this.planningWizardPanel() : null;
     let rootInner: string;
@@ -1273,7 +1367,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       );
       return;
     }
-    for (const sectionId of sectionIds) {
+    for (const sectionId of sectionsToPatch) {
       const inner = extractDashboardSectionInnerHtml(rootInner, sectionId);
       if (inner == null) {
         continue;
@@ -1284,6 +1378,11 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       if (sectionId === "config") {
         await this.refreshDashboardConfigTab(activeView.webview);
       }
+    }
+    if (raw.ok === true && raw.data && typeof raw.data === "object" && sectionsToPatch.includes("queue")) {
+      this.lastQueueContentFingerprint = computeQueueContentFingerprint(
+        raw.data as Record<string, unknown>
+      );
     }
   }
 
@@ -1306,7 +1405,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       await this.markDashboardSectionStale(sectionId);
     }
     if (toRefresh.length > 0) {
-      await this.patchDashboardSectionsFromSummary(toRefresh, updateSequence);
+      await this.patchDashboardSectionsFromSummary(toRefresh, updateSequence, { light: true });
     }
     logWc(
       "dashboard",
@@ -1738,7 +1837,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       }
     } else if (currentKey.length > 0) {
       const pick = await vscode.window.showWarningMessage(
-        `Set Phase ${targetKey} as the current workspace phase?`,
+        `Set Phase ${targetKey} as your current phase?`,
         { modal: true },
         "Start phase"
       );
@@ -1747,7 +1846,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       }
     } else {
       const pick = await vscode.window.showInformationMessage(
-        `Start Phase ${targetKey} as your active workspace phase?`,
+        `Start Phase ${targetKey} as your current phase?`,
         { modal: true },
         "Start phase"
       );
@@ -1769,7 +1868,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       const wsStatus = statusData?.workspaceStatus as Record<string, unknown> | undefined;
       const revision = wsStatus?.workspaceRevision;
       if (typeof revision !== "number" || !Number.isInteger(revision) || revision < 0) {
-        await vscode.window.showErrorMessage("Could not read workspace revision for phase switch.");
+        await vscode.window.showErrorMessage("Could not confirm workspace state. Refresh the dashboard and try again.");
         return;
       }
 
@@ -1797,19 +1896,45 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
 
       if (out.ok !== true) {
         await vscode.window.showErrorMessage(
-          `set-current-phase failed: ${String(out.message ?? out.code ?? "unknown error")}`
+          `Could not switch phase: ${String(out.message ?? out.code ?? "unknown error")}`
         );
         return;
       }
 
       ingestPlanningMetaFromData(out.data as Record<string, unknown> | undefined);
+      const outData = out.data as Record<string, unknown> | undefined;
+      const wsFromKit = outData?.workspaceStatus;
+      if (wsFromKit && typeof wsFromKit === "object" && this.lastDashboardSummaryData) {
+        const prior = this.lastDashboardSummaryData;
+        const priorWs =
+          prior.workspaceStatus && typeof prior.workspaceStatus === "object"
+            ? (prior.workspaceStatus as Record<string, unknown>)
+            : {};
+        this.lastDashboardSummaryData = {
+          ...prior,
+          workspaceStatus: { ...priorWs, ...(wsFromKit as Record<string, unknown>) }
+        };
+        const phaseSlice = prior.systemStatus as Record<string, unknown> | undefined;
+        if (phaseSlice?.phase && typeof phaseSlice.phase === "object") {
+          const phase = phaseSlice.phase as Record<string, unknown>;
+          this.lastDashboardSummaryData.systemStatus = {
+            ...phaseSlice,
+            phase: {
+              ...phase,
+              currentKitPhase: targetKey,
+              nextKitPhase: nextKey
+            }
+          };
+        }
+      }
       this.notifyKitStateChanged();
       await vscode.window.showInformationMessage(`Workspace phase set to ${targetKey}.`);
     } finally {
       this.endDashboardMutationRefreshHold();
     }
     await this.view?.webview.postMessage({ type: "wcReleaseRefreshBlock" });
-    await this.pushUpdate();
+    await this.applyDashboardMutationInvalidation("overview");
+    await this.pushUpdate({ projection: "full", skipHeavyFetches: false });
   }
 
   /** Clear workspace current phase after delivery closeout (update-workspace-status). */
@@ -1828,7 +1953,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     if (currentKey !== targetKey) {
       await vscode.window.showWarningMessage(
-        `Workspace current phase is ${currentKey}, not ${targetKey}. Refresh the dashboard and try again.`
+        `Current phase is ${currentKey}, not ${targetKey}. Refresh the dashboard and try again.`
       );
       return;
     }
@@ -1847,7 +1972,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
 
     if (!closeoutPassed || remaining > 0 || humanGateCount > 0 || evidenceViolations > 0) {
       await vscode.window.showWarningMessage(
-        "Mark Phase Complete unlocks when all delivery tasks are terminal, human gates are clear, and delivery evidence is recorded."
+        "Mark Phase Complete unlocks when all delivery tasks are finished, human review is clear, and delivery evidence is recorded."
       );
       return;
     }
@@ -1888,7 +2013,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       if (typeof revision !== "number" || !Number.isInteger(revision) || revision < 0) {
         await webview?.postMessage({ type: "wcMarkPhaseBusy", active: false });
         this.setDashboardUiInteraction("mark-phase-complete", false);
-        await vscode.window.showErrorMessage("Could not read workspace revision for phase closeout.");
+        await vscode.window.showErrorMessage("Could not confirm workspace state. Refresh the dashboard and try again.");
         return;
       }
 
@@ -1900,9 +2025,9 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         nextFromWs.length > 0
           ? [
               `Start Phase ${nextFromWs} from the Phase Roster when you are ready to deliver`,
-              "Or use Complete & Release in chat for full publish and version closeout"
+              "Or use Complete & Release when you are ready to ship this phase."
             ]
-          : ["Pick the next phase from the Phase Roster when you are ready to deliver"];
+          : ["Pick the next phase from the Phase Roster when you are ready to deliver."];
 
       const out = await this.client.run("update-workspace-status", {
         expectedWorkspaceRevision: revision,
@@ -1939,7 +2064,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     await webview?.postMessage({ type: "wcMarkPhaseBusy", active: false });
     this.setDashboardUiInteraction("mark-phase-complete", false);
     await vscode.window.showInformationMessage(
-      `Phase ${targetKey} marked complete. No active workspace phase until you start the next one.`
+      `Phase ${targetKey} marked complete. Start the next phase from the roster when you are ready.`
     );
   }
 
@@ -2174,6 +2299,56 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     return typeof ck === "string" && ck.trim().length > 0;
   }
 
+  private async readTaskStatus(taskId: string): Promise<string | null> {
+    const r = await this.client.run("get-task", { taskId });
+    if (!r.ok || !r.data || typeof r.data !== "object") {
+      return null;
+    }
+    const task = (r.data as Record<string, unknown>).task;
+    if (!task || typeof task !== "object") {
+      return null;
+    }
+    const status = (task as Record<string, unknown>).status;
+    return typeof status === "string" && status.trim().length > 0 ? status.trim() : null;
+  }
+
+  /**
+   * `proposed` → `ready` when needed; no-op when the task is already `ready` (stale queue row or repeat submit).
+   */
+  private async ensureTaskAcceptedFromProposed(
+    taskId: string,
+    phaseKey: string,
+    policyMeta: { workflowId: string; action: "accept-single" | "accept-batch" }
+  ): Promise<{ ok: true } | { ok: false; message: string }> {
+    const status = await this.readTaskStatus(taskId);
+    if (status === "ready") {
+      return { ok: true };
+    }
+    if (status !== "proposed") {
+      return {
+        ok: false,
+        message: `Task ${taskId} is ${status ?? "unknown"}; accept only applies from proposed.`
+      };
+    }
+    const r = await this.client.run("run-transition", {
+      taskId,
+      action: "accept",
+      policyApproval: dashboardPolicyApproval(
+        { workflowId: "accept-proposed", action: policyMeta.action, command: "run-transition" },
+        { taskId, phaseKey }
+      ),
+      ...expectedPlanningGenerationArgs()
+    });
+    if (!r.ok) {
+      return {
+        ok: false,
+        message: (r.message ?? r.code ?? JSON.stringify(r)).slice(0, 900)
+      };
+    }
+    ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
+    return { ok: true };
+  }
+
   /**
    * Accept-proposed drawer: kit mutations inside coordinator.runDrawerMutation; toasts via SideEffectBus after.
    * Manual QA: accept T1 then T2 on proposed queue — second submit must not hang while first toast is visible.
@@ -2201,20 +2376,14 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     if (total === 1) {
       const taskId = taskIds[0]!;
       this.setDrawerMutationProgress(`Accepting ${taskId}…`);
-      const r = await this.client.run("run-transition", {
-        taskId,
-        action: "accept",
-        policyApproval: dashboardPolicyApproval(
-          { workflowId: "accept-proposed", action: "accept-single", command: "run-transition" },
-          { taskId, phaseKey }
-        ),
-        ...expectedPlanningGenerationArgs()
+      const acceptStep = await this.ensureTaskAcceptedFromProposed(taskId, phaseKey, {
+        workflowId: "accept-proposed",
+        action: "accept-single"
       });
-      if (!r.ok) {
-        await this.postDrawerValidationToWebview((r.message ?? JSON.stringify(r)).slice(0, 900));
+      if (!acceptStep.ok) {
+        await this.postDrawerValidationToWebview(acceptStep.message);
         return false;
       }
-      ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
       this.setDrawerMutationProgress(`Assigning ${taskId} → phase ${phaseKey}…`);
       const r2 = await this.client.run("assign-task-phase", {
         taskId,
@@ -2225,7 +2394,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         this.closeDashboardDrawer();
         this.queueDrawerKitStateChanged();
         this.queueDrawerNotify(
-          `Accepted ${taskId} but assign-task-phase failed: ${(r2.message ?? r2.code ?? JSON.stringify(r2)).slice(0, 520)}`,
+          `Accepted ${taskId}, but setting the phase failed: ${(r2.message ?? r2.code ?? JSON.stringify(r2)).slice(0, 520)}`,
           "error"
         );
         return true;
@@ -2241,20 +2410,14 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       const taskId = taskIds[i]!;
       const step = i + 1;
       this.setDrawerMutationProgress(`Accepting ${taskId} (${step} of ${total})…`);
-      const r = await this.client.run("run-transition", {
-        taskId,
-        action: "accept",
-        policyApproval: dashboardPolicyApproval(
-          { workflowId: "accept-proposed", action: "accept-batch", command: "run-transition" },
-          { taskId, phaseKey }
-        ),
-        ...expectedPlanningGenerationArgs()
+      const acceptStep = await this.ensureTaskAcceptedFromProposed(taskId, phaseKey, {
+        workflowId: "accept-proposed",
+        action: "accept-batch"
       });
-      if (!r.ok) {
-        failures.push(`${taskId}: ${(r.message ?? r.code ?? JSON.stringify(r)).slice(0, 200)}`);
+      if (!acceptStep.ok) {
+        failures.push(`${taskId}: ${acceptStep.message.slice(0, 200)}`);
         continue;
       }
-      ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
       this.setDrawerMutationProgress(`Assigning ${taskId} → phase ${phaseKey} (${step} of ${total})…`);
       const r2 = await this.client.run("assign-task-phase", {
         taskId,
@@ -2450,7 +2613,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       await this.client.clearActivity();
       if (!out.ok) {
         const detail = `${String(out.code ?? "")} ${String(out.message ?? "")}`.trim();
-        await this.postDrawerValidationToWebview(`assign-task-phase failed: ${detail}`.slice(0, 900));
+        await this.postDrawerValidationToWebview(`Could not set phase: ${detail}`.slice(0, 900));
         return false;
       }
       ingestPlanningMetaFromData(out.data as Record<string, unknown> | undefined);
@@ -2462,7 +2625,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     if (session.kind === "add-phase-note") {
       const phaseKey = this.inferPhaseKeyForKitPhaseNoteFromDashboard();
       if (!phaseKey) {
-        await this.postDrawerValidationToWebview("Could not resolve phaseKey from dashboard summary; refresh and retry.");
+        await this.postDrawerValidationToWebview("Could not resolve the current phase. Refresh the dashboard and try again.");
         return false;
       }
       const validated = validateAddPhaseNoteSubmit(values);
@@ -3107,7 +3270,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     const phaseKey = this.inferPhaseKeyForKitPhaseNoteFromDashboard();
     if (!phaseKey) {
       await vscode.window.showErrorMessage(
-        "Cannot resolve phaseKey for add-phase-note from the dashboard summary. Refresh the dashboard and try again."
+        "Could not resolve the current phase. Refresh the dashboard and try again."
       );
       return;
     }
@@ -3231,11 +3394,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       logWc("dashboard", "pushUpdate deferred (UI interaction lock active)");
       return;
     }
-    if (
-      lightRefresh &&
-      refreshOptions?.projection === undefined &&
-      refreshOptions?.skipHeavyFetches !== true
-    ) {
+    if (lightRefresh) {
       await this.executeLightSectionRefresh(updateSequence);
       return;
     }
@@ -3286,6 +3445,9 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     let embeddedCaePanelHtml: string | null = null;
     if (raw.ok === true && raw.data && typeof raw.data === "object") {
       this.lastDashboardSummaryData = raw.data as Record<string, unknown>;
+      this.lastQueueContentFingerprint = computeQueueContentFingerprint(
+        this.lastDashboardSummaryData
+      );
       ingestPlanningMetaFromData(raw.data as Record<string, unknown>);
       try {
         if (lightRefresh) {
@@ -3764,6 +3926,10 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     .dash-phase-edit-anchor {
       margin: 0;
+    }
+    .dash-phase-roster-start-spacer {
+      visibility: hidden;
+      pointer-events: none;
     }
     .dash-phase-roster-actions {
       display: inline-flex;
@@ -4898,7 +5064,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   <div id="wc-context-help-popover" class="wc-context-help-popover" role="tooltip" hidden></div>
   <div id="wc-drawer-host" class="wc-drawer-host wc-drawer-host--hidden" aria-hidden="true"></div>
   <footer class="dash-footer">
-    <button type="button" id="btn" class="wc-btn wc-btn-lg wc-btn-primary dash-refresh-btn" title="Refetch dashboard-summary now. The panel also reloads when you switch back to it, when kit-owned files change, and about every 45s while visible.">Refresh</button>
+    <button type="button" id="btn" class="wc-btn wc-btn-lg wc-btn-primary dash-refresh-btn" title="Refresh the dashboard now. The panel also updates when you return to it or when planning data changes.">Refresh</button>
   </footer>
   <script>${bootstrap}</script>
   <script>${buildConfigWebviewBootstrapScript({ autoLoad: false })}</script>

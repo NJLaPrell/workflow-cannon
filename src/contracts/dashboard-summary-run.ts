@@ -403,6 +403,11 @@ export type DashboardSummaryData = {
    */
   deliveredPhaseKeys?: string[];
   /**
+   * Phase keys workspace rolled off via `set_current_phase` (may lack closeout evidence).
+   * Dashboard roster merges these with {@link deliveredPhaseKeys} so past phases do not appear as Future.
+   */
+  rolledOutPhaseKeys?: string[];
+  /**
    * ISO timestamps when workspace rolled off each phase key via `set_current_phase` events.
    * Drives Queue phase-filter ordering (newest release first).
    */
@@ -412,6 +417,11 @@ export type DashboardSummaryData = {
    * (pre–delivery-evidence history). From `kit.phaseDelivery.legacyDeliveredMaxOrdinal`.
    */
   legacyDeliveredMaxOrdinal?: number | null;
+  /**
+   * Phase keys with non-terminal queue work. Roster and schedule tags keep these visible even when
+   * {@link legacyDeliveredMaxOrdinal} or rollover would otherwise mark the phase delivered.
+   */
+  phaseKeysWithActiveQueueWork?: string[];
   /**
    * Past-phase journal rollup for dashboard (phases with ordinal before workspace current).
    * Omitted when phase journal SQLite is unavailable; empty array when no past notes exist.

@@ -162,6 +162,36 @@ export function collectRolledOutPhaseKeys(db: SqliteDb, limit = 300): string[] {
   });
 }
 
+const TERMINAL_QUEUE_STATUSES = new Set<TaskStatus>(["completed", "cancelled"]);
+
+/**
+ * Phase keys with at least one non-terminal, non-archived task (ready, proposed, in progress, etc.).
+ * Dashboard roster and schedule tags keep these visible even when legacy rollover marks the phase delivered.
+ */
+export function collectPhaseKeysWithActiveQueueWork(tasks: TaskEntity[]): string[] {
+  const keys = new Set<string>();
+  for (const task of tasks) {
+    if (task.archived) {
+      continue;
+    }
+    if (TERMINAL_QUEUE_STATUSES.has(task.status)) {
+      continue;
+    }
+    const key = inferTaskPhaseKey(task);
+    if (key && key.length > 0) {
+      keys.add(key);
+    }
+  }
+  return [...keys].sort((a, b) => {
+    const ao = parseLeadingPhaseOrdinal(a);
+    const bo = parseLeadingPhaseOrdinal(b);
+    if (ao !== null && bo !== null && ao !== bo) {
+      return ao - bo;
+    }
+    return a.localeCompare(b);
+  });
+}
+
 /** True when a live `set-current-phase` rolled workspace off this phase key. */
 export function wasWorkspacePhaseRolledOut(db: SqliteDb, phaseKey: string): boolean {
   const key = phaseKey.trim();

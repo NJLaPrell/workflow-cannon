@@ -29,6 +29,7 @@ Audience: agents only. Apply these rules verbatim when writing or modifying webv
 | R16 | Migration policy |
 | R17 | Human copy (product voice) |
 | R18 | Loading indicators (spinner, drawer busy, button busy) |
+| R19 | Dashboard copy (capitalization, punctuation, vocabulary) |
 
 ## Files this guide governs
 
@@ -450,6 +451,68 @@ R18.6 **Default overlay labels** (`drawerBusyLabelForWorkflow` — operator copy
 - `register-phase-catalog` → **Updating phase catalog…**
 - `add-wishlist` → **Creating wishlist item…**
 - `add-phase-note` → **Adding phase note…**
-- fallback → **Running kit command…**
+- fallback → **Saving changes…**
 
 R18.7 **Forbidden:** disabling a control with no visible progress; inventing new spinner sizes or colors outside R18.1; using `aria-hidden="true"` on the status label (only the decorative ring is hidden).
+
+## R19. Dashboard copy
+
+R19 extends **R17** for Overview, Queue, Status (dashboard embed), roster, Up Next, readiness/progress cards, queue rows, and **operator** drawers (`accept-proposed`, `assign-task-phase`, `register-phase-catalog`, `add-wishlist`, `add-phase-note`). Governance/CAE drawers may keep approval-lane detail per **R17.5**; still prefer GUI verbs over CLI strings in `descriptionHtml` when the drawer is operator-facing.
+
+### R19.1 Voice
+
+- R19.1.1 Write for a human using the sidebar — tabs, buttons, and cards — not for agents maintaining the repo.
+- R19.1.2 Prefer one short sentence over a paragraph; use checklists and row actions instead of explaining backend semantics.
+- R19.1.3 **Forbidden in visible dashboard copy:** command names (`wk`, `pnpm`, `workspace-kit`, `run-transition`, `assign-task-phase`), schema/field names (`phaseKey`, `closeoutPassed`, `wishlist_intake`), persistence backends (SQLite, `user_version`), policy tiers, and “run X in chat” unless the control literally opens chat (then say **Open in chat**).
+
+### R19.2 Capitalization
+
+- R19.2.1 **Title case** — card titles (`<b>Phase Roster</b>`), section headings, table column headers, drawer titles, stat-pill labels, tab names, schedule tags (`Delivered`, `Current`, `Next`, `Future`).
+- R19.2.2 **Sentence case** — subtitles, hints, help popovers (`data-wc-help-text`), validation errors, checklist `failHelp`, empty-state body lines.
+- R19.2.3 Phase numbers in prose: **Phase 116** or `<code>116</code>` in tables; do not show internal branch keys (`release/phase-116`) in operator copy.
+
+### R19.3 Punctuation
+
+- R19.3.1 **Running text ends with `.`** — subtitles (`.wc-rec-subtitle`), muted hints, empty states, validation messages, help popovers.
+- R19.3.2 **No period on controls** — button labels, tab labels, inline tags, stat labels (`Ready`, not `Ready.`).
+- R19.3.3 Use `…` only for in-progress labels (**Saving…**, **Refreshing…**) per **R18**.
+- R19.3.4 At most one `!` in celebratory copy (prefer **Phase released!** over multiple exclamation marks).
+
+### R19.4 Product vocabulary
+
+Use the right column; avoid the left in operator-visible strings (including `title` / `aria-label`):
+
+| Say | Avoid |
+| --- | --- |
+| Phase | phaseKey, kit phase, canonical phase |
+| Task | status enum only (`ready`, `proposed`) |
+| Queue (tab) | execution queue, task store |
+| Wishlist | wishlist_intake |
+| Complete & Release | closeout, publish closeout, rollover |
+| Mark Phase Complete | update-workspace-status, clear workspace phase |
+| Deliverables | shortDescription, catalog row |
+| Delivered / Current / Next / Future | released, closeoutPassed, nextKitPhase |
+| Human review | human gates, policy gate |
+| Ready / Proposed / Blocked / Done | raw status ids in prose |
+| Config (tab) | workspace status snapshot, kit_workspace_status |
+| Open task detail | markdown view, task-detail command |
+
+`<code>` is for **user data** (phase id, task id), not commands or JSON field names.
+
+### R19.5 Surface patterns
+
+- R19.5.1 **Up Next** — Title = next action (task title or gate label); optional subtitle = one sentence; primary control on the title row. When the phase is released, show only **Phase released!** and optional celebration glyph — no extra instructions or release button.
+- R19.5.2 **Empty states** — `No {thing}.` or `No {thing} yet.` Optional second sentence naming a control (**Use Start on a phase in the roster below.**).
+- R19.5.3 **Checklist rows** — Label = title case noun phrase; meta after `·` = short fragment (`· not started`); help = full sentence(s) with period.
+- R19.5.4 **Do not add queue footnotes** that explain `run-transition`, policy tiers, or approval mechanics — row buttons must be self-explanatory via label + tooltip per **R19.6**.
+- R19.5.5 **Unavailable data** — `Team data is unavailable.` not `kit SQLite below v7`.
+
+### R19.6 Tooltips and `aria-label`
+
+- R19.6.1 Describe what the control does in plain language: **Move this task to the selected phase.**, not `assign-task-phase — set stable phaseKey`.
+- R19.6.2 Do not duplicate the visible button label in the tooltip unless adding context.
+- R19.6.3 `aria-label` on icon-only or terse buttons: short phrase; use a period only when it is a complete sentence.
+
+### R19.7 Toasts and host messages
+
+Extension `showInformationMessage` / `showErrorMessage` / `showWarningMessage` strings triggered from dashboard actions follow **R19** (no CLI, no revision jargon). Example: **Could not switch phase. Refresh the dashboard and try again.** not `set-current-phase failed`.

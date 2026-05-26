@@ -13,11 +13,17 @@ export type PhaseScheduleFocus = {
   releasedPhaseKeys?: ReadonlySet<string> | readonly string[];
   /** Pre–delivery-evidence ceiling: ordinals in `[0, N]` count as delivered when set. */
   legacyDeliveredMaxOrdinal?: number | null;
+  /** Phase keys with non-terminal queue work — never tagged delivered while work remains. */
+  activeQueuePhaseKeys?: ReadonlySet<string>;
   /** When set, `next` applies only if canonical `nextKitPhase` is in this roster/catalog set. */
   knownRosterPhaseKeys?: ReadonlySet<string>;
 };
 
 function phaseKeyWasReleased(key: string, focus: PhaseScheduleFocus): boolean {
+  const active = focus.activeQueuePhaseKeys;
+  if (active && active.has(key)) {
+    return false;
+  }
   const legacyMax = focus.legacyDeliveredMaxOrdinal;
   if (typeof legacyMax === "number" && Number.isFinite(legacyMax)) {
     const ord = parseLeadingPhaseOrdinalFromKey(key);

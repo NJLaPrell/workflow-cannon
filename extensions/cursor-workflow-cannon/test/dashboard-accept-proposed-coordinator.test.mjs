@@ -21,6 +21,24 @@ test("accept-proposed registered on coordinator and isolated handler", () => {
   assert.match(providerSrc, /setDrawerMutationProgress/);
 });
 
+test("proposed row Accept opens drawer without immediate queue invalidation", () => {
+  const block = providerSrc.slice(
+    providerSrc.indexOf('if (msg?.type === "dashboardTransition")'),
+    providerSrc.indexOf('if (msg?.type === "dismissPhaseNote")')
+  );
+  assert.match(block, /if \(action === "accept"\)[\s\S]*onDashboardAcceptProposed/);
+  assert.match(block, /Drawer submit refreshes the queue/);
+  assert.doesNotMatch(
+    block.slice(block.indexOf('if (action === "accept")'), block.indexOf("await confirmAndRunTransition")),
+    /applyDashboardMutationInvalidation\("task-queue"\)/
+  );
+});
+
+test("accept-proposed skips accept transition when task already ready", () => {
+  assert.match(providerSrc, /ensureTaskAcceptedFromProposed/);
+  assert.match(providerSrc, /status === "ready"/);
+});
+
 test("accept-proposed uses snapshot progress not wcDrawerProgress", () => {
   const handlerBlock = providerSrc.slice(
     providerSrc.indexOf("handleAcceptProposedDrawerSubmit"),

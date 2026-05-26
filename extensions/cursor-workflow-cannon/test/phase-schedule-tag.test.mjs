@@ -62,6 +62,19 @@ test("phaseScheduleTagLabel capitalizes schedule kinds", () => {
   assert.equal(phaseScheduleTagLabel("future"), "Future");
 });
 
+test("resolvePhaseScheduleTag keeps active queue phases from delivered tag", () => {
+  const focus = {
+    currentKitPhase: null,
+    nextKitPhase: "116",
+    releasedPhaseKeys: new Set(["108"]),
+    legacyDeliveredMaxOrdinal: 115,
+    activeQueuePhaseKeys: new Set(["108", "109"])
+  };
+  assert.equal(resolvePhaseScheduleTag("108", focus), "future");
+  assert.equal(resolvePhaseScheduleTag("109", focus), "future");
+  assert.equal(resolvePhaseScheduleTag("107", focus), "delivered");
+});
+
 test("renderPhaseScheduleTagHtml uses wc-phase-tag classes", () => {
   const html = renderPhaseScheduleTagHtml("next");
   assert.match(html, /wc-phase-tag wc-phase-tag-next/);

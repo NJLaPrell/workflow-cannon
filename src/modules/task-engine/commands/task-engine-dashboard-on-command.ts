@@ -18,10 +18,7 @@ import {
   readWorkspaceStatusSnapshotFromDual
 } from "../persistence/workspace-status-store.js";
 import { buildDashboardDependencyOverview } from "../dashboard/dashboard-dependency-overview.js";
-import {
-  buildDashboardPhaseBucketsForBlocking,
-  buildDashboardPhaseBucketsForTasks
-} from "../dashboard/dashboard-phase-buckets.js";
+import { buildDashboardPhaseBucketsForTasks } from "../dashboard/dashboard-phase-buckets.js";
 import { readBuildPlanSession, toDashboardPlanningSession } from "../../../core/planning/build-plan-session-file.js";
 import { dashboardOnboardingTemperamentLabel } from "../../agent-behavior/onboarding-temperament-label.js";
 import { loadBehaviorWorkspaceState } from "../../agent-behavior/persistence.js";
@@ -44,6 +41,8 @@ import { projectDashboardTaskRow } from "../task-read-projections.js";
 import {
   buildDashboardCurrentPhaseDelivery,
   collectDeliveredPhaseKeys,
+  collectPhaseKeysWithActiveQueueWork,
+  collectRolledOutPhaseKeys,
   collectPhaseReleaseDatesByKey
 } from "../dashboard/phase-delivery-status.js";
 import { resolveLegacyDeliveredMaxOrdinal } from "../phase-resolution.js";
@@ -111,7 +110,6 @@ export async function runDashboardSummaryCommand(
   const readyTop = needsQueueRollups ? readyQueue.slice(0, 15).map(toReadyRow) : [];
   const readyImprovementsTop = needsQueueRollups ? readyImprovements.slice(0, 15).map(toReadyRow) : [];
   const readyExecutionTop = needsQueueRollups ? readyExecution.slice(0, 15).map(toReadyRow) : [];
-  const blockedTop = needsQueueRollups ? suggestion.blockingAnalysis.slice(0, 15) : [];
 
   const wishlistItems = needsQueueRollups ? listWishlistIntakeTasksAsItems(store.getAllTasks()) : [];
   const wishlistOpenItems = wishlistItems.filter((i) => i.status === "open");
@@ -133,6 +131,12 @@ export async function runDashboardSummaryCommand(
   });
 
   const slimListRow = (t: (typeof tasks)[0]) => projectDashboardTaskRow(t, enrich, { includePriority: false });
+  const blockedTasks = needsQueueRollups
+    ? tasks
+        .filter((t) => t.status === "blocked" && !isWishlistIntakeTask(t))
+        .sort((a, b) => a.id.localeCompare(b.id))
+    : [];
+  const blockedTop = needsQueueRollups ? blockedTasks.slice(0, 15).map(slimListRow) : [];
   const proposedImprovements = needsQueueRollups
     ? tasks
         .filter((t) => t.status === "proposed" && isImprovementLikeTask(t))
@@ -207,11 +211,12 @@ export async function runDashboardSummaryCommand(
     : [];
 
   const blockedPhaseBuckets = needsQueueRollups
-    ? buildDashboardPhaseBucketsForBlocking(
-        suggestion.blockingAnalysis,
-        (id) => tasks.find((x) => x.id === id),
+    ? buildDashboardPhaseBucketsForTasks(
+        blockedTasks,
         workspaceStatus,
-        dashboardPhaseTop
+        slimListRow,
+        dashboardPhaseTop,
+        { includeAllTaskIds: true }
       )
     : [];
 
@@ -340,11 +345,14 @@ export async function runDashboardSummaryCommand(
     dualForStatus != null
       ? collectDeliveredPhaseKeys(dualForStatus.getDatabase(), tasks)
       : [];
+  const rolledOutPhaseKeys =
+    dualForStatus != null ? collectRolledOutPhaseKeys(dualForStatus.getDatabase()) : [];
   const phaseReleaseDates =
     dualForStatus != null ? collectPhaseReleaseDatesByKey(dualForStatus.getDatabase()) : {};
   const legacyDeliveredMaxOrdinal = resolveLegacyDeliveredMaxOrdinal(
     ctx.effectiveConfig as Record<string, unknown> | undefined
   );
+  const phaseKeysWithActiveQueueWork = collectPhaseKeysWithActiveQueueWork(tasks);
 
   const phaseCatalogPhases =
     systemStatus.phase?.phaseCatalog?.phases ?? [];
@@ -448,7 +456,7 @@ export async function runDashboardSummaryCommand(
       openTop: wishlistOpenTop
     },
     blockedSummary: {
-      count: suggestion.blockingAnalysis.length,
+      count: blockedTasks.length,
       top: blockedTop,
       phaseBuckets: blockedPhaseBuckets
     },
@@ -486,8 +494,10 @@ export async function runDashboardSummaryCommand(
     agentStatus,
     currentPhaseDelivery,
     deliveredPhaseKeys,
+    rolledOutPhaseKeys,
     phaseReleaseDates,
     legacyDeliveredMaxOrdinal,
+    phaseKeysWithActiveQueueWork,
     pastPhaseNotes,
     ...(includePhaseFocus && sqliteDual
       ? {

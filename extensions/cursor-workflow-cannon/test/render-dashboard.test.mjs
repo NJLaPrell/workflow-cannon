@@ -19,7 +19,8 @@ import {
   dashboardRowPhaseKey,
   lookupDashboardTaskPhaseKey,
   lookupProposedTaskPhaseKey,
-  pickNextTaskInCurrentPhase
+  pickNextTaskInCurrentPhase,
+  renderPhaseCatalogOverviewSection
 } from "../dist/views/dashboard/render-dashboard.js";
 import { buildPhaseCompleteReleaseChatPrompt } from "../dist/phase-complete-release-prompt.js";
 import { renderGuidanceAuthoringPanelInnerHtml } from "../dist/views/guidance/render-guidance-panel.js";
@@ -250,6 +251,7 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   for (const body of lazyBucketBodies) {
     assert.doesNotMatch(body, /T319/);
     assert.doesNotMatch(body, /T320/);
+    assert.doesNotMatch(body, /T099/);
   }
   assert.match(html, /W1/);
   assert.match(html, /class="wc-btn wc-btn-sm wc-btn-secondary"[^>]*data-wc-action="wishlist-view"/);
@@ -285,7 +287,6 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.match(html, /data-wc-queue-category="ready"/);
   assert.match(html, /data-wc-queue-category="proposed-improvement"/);
   assert.doesNotMatch(html, /data-wc-queue-category="blocked"/);
-  assert.doesNotMatch(html, /T099/);
   assert.match(html, /Not Phased/);
   assert.doesNotMatch(html, /Dependency Overview/);
   assert.match(html, /Planning Interview/);
@@ -329,11 +330,14 @@ test("renderDashboardRootInnerHtml renders phase roster deliverables inline edit
   assert.match(html, /dash-phase-roster-col-status/);
   assert.match(html, /dash-phase-roster-col-actions/);
   assert.match(html, /data-wc-action="phase-roster-start"/);
+  assert.doesNotMatch(html, />Current<\/button>/);
+  assert.match(html, /dash-phase-roster-start-spacer/);
   assert.match(html, /data-wc-action="phase-deliverables-edit"/);
   assert.match(html, /dash-phase-edit-anchor/);
   assert.match(html, /dash-phase-roster-status-inner/);
   assert.match(html, /dash-phase-roster-actions/);
-  assert.match(html, /Register Phase\./);
+  assert.match(html, /Register Phase<\/button>/);
+  assert.doesNotMatch(html, /Register Phase\.<\/button>/);
   assert.doesNotMatch(html, /Register future phase/);
   assert.match(html, /dash-phase-deliverables-input/);
   assert.match(html, /data-wc-phase-row="95"/);
@@ -1617,6 +1621,109 @@ test("renderUpNextCardHtml surfaces phase closeout when delivery queue is draine
   assert.match(html, /wc-rec-title-row/);
   assert.doesNotMatch(html, /wc-rec-tag/);
   assert.doesNotMatch(html, /Later phase/);
+  assert.doesNotMatch(html, /After merge and publish/);
+});
+
+test("renderPhaseCatalogOverviewSection omits action buttons on delivered roster row", () => {
+  const html = renderPhaseCatalogOverviewSection(
+    {
+      currentKitPhase: "114",
+      nextKitPhase: "115",
+      phaseCatalog: {
+        supported: true,
+        phases: [
+          { phaseKey: "113", shortDescription: "Shipped", inCatalog: true },
+          { phaseKey: "114", shortDescription: "Active", inCatalog: true },
+          { phaseKey: "115", shortDescription: "Next", inCatalog: true }
+        ]
+      }
+    },
+    { currentKitPhase: "114", nextKitPhase: "115" },
+    ["113"],
+    null
+  );
+  const deliveredRow =
+    html.match(
+      /<tbody>[\s\S]*?<tr>[\s\S]*?dash-phase-roster-actions--delivered[\s\S]*?<\/tr>/
+    )?.[0] ?? "";
+  assert.match(deliveredRow, /wc-phase-tag-delivered/);
+  assert.doesNotMatch(deliveredRow, /data-wc-action="phase-roster-start"/);
+  assert.doesNotMatch(deliveredRow, /data-wc-action="phase-deliverables-edit"/);
+  assert.doesNotMatch(deliveredRow, /dash-phase-roster-start-spacer/);
+});
+
+test("renderPhaseCatalogOverviewSection merges rolledOutPhaseKeys for roster narrowing", () => {
+  const html = renderDashboardRootInnerHtml({
+    ok: true,
+    data: {
+      stateSummary: { ready: 0, proposed: 0, blocked: 0, done: 0 },
+      workspaceStatus: { currentKitPhase: "114", nextKitPhase: "115" },
+      deliveredPhaseKeys: [],
+      rolledOutPhaseKeys: ["113"],
+      systemStatus: {
+        phase: {
+          currentKitPhase: "114",
+          nextKitPhase: "115",
+          phaseCatalog: {
+            supported: true,
+            phases: [
+              { phaseKey: "110", shortDescription: "Old", inCatalog: true },
+              { phaseKey: "113", shortDescription: "Rolled", inCatalog: true },
+              { phaseKey: "114", shortDescription: "Current", inCatalog: true },
+              { phaseKey: "115", shortDescription: "Next", inCatalog: true }
+            ]
+          }
+        }
+      },
+      currentPhaseDelivery: {
+        schemaVersion: 2,
+        phaseKey: "114",
+        closeoutPassed: false,
+        released: false,
+        remainingCount: 0,
+        terminalCount: 0,
+        checkedTaskCount: 0,
+        queue: { ready: 0, proposed: 0, blocked: 0, inProgress: 0, research: 0 },
+        segments: {
+          completed: 0,
+          cancelled: 0,
+          inProgress: 0,
+          ready: 0,
+          proposed: 0,
+          blocked: 0,
+          research: 0
+        },
+        progressPercent: 0,
+        releaseReadyPercent: 0,
+        deliveryEvidenceViolationCount: 0
+      }
+    }
+  });
+  const roster = html.match(/<section id="wc-phase-roster"[\s\S]*?<\/section>/)?.[0] ?? "";
+  assert.match(roster, /dash-phase-roster-actions--delivered/);
+  assert.match(roster, /<code>113<\/code>/);
+  assert.match(roster, /wc-phase-tag-delivered/);
+  assert.match(roster, /<code>110<\/code>[\s\S]*wc-phase-tag-future/);
+  assert.equal((roster.match(/dash-phase-roster-actions--delivered/g) ?? []).length, 1);
+  assert.match(html, /dash-phase-roster-start-spacer/);
+});
+
+test("renderUpNextCardHtml shows Phase Released only when phase is released", () => {
+  const html = renderUpNextCardHtml({
+    ws: { currentKitPhase: "108", nextKitPhase: "109" },
+    phaseSnapshot: { ...phaseSnapshotDrained, released: true },
+    suggestedNext: null,
+    readyTop: [],
+    readyCount: 0,
+    firstWishlistOpen: null,
+    humanGatesCount: 0
+  });
+  assert.match(html, /wc-rec-next-phase-released/);
+  assert.match(html, /Phase released!/);
+  assert.match(html, /&#127881;/);
+  assert.doesNotMatch(html, /Complete &amp; Release/);
+  assert.doesNotMatch(html, /wc-rec-subtitle/);
+  assert.doesNotMatch(html, /After merge and publish/);
 });
 
 test("renderUpNextCardHtml prompts to pick a phase when none is current", () => {
@@ -1798,7 +1905,7 @@ test("renderDashboardRootInnerHtml renders human gates section with resume actio
     }
   });
   assert.match(html, /data-wc-track="status-human-gates"/);
-  assert.match(html, /<b>Human gates<\/b> \(1\)/);
+  assert.match(html, /<b>Human Review<\/b> \(1\)/);
   assert.match(html, /data-wc-filter-btn="human-gates"/);
   assert.match(html, /Awaiting review/);
   assert.match(html, /data-wc-action="human-gate-resume-ready"/);
@@ -2139,7 +2246,7 @@ test("renderPlanningInterviewWizardPanel success shows response-only persistence
     code: "planning-response-ready",
     message: "All set."
   });
-  assert.match(html, /Response-only/);
+  assert.match(html, /Your answers were saved\. No task was created\./);
   assert.match(html, /data-wc-action="planning-wizard-dismiss"/);
 });
 
@@ -2354,7 +2461,7 @@ test("Phase Readiness score is 100% when phase delivery has started", () => {
   const readiness =
     html.match(/<section class="dash-card wc-cae-readiness[\s\S]*?<\/section>/)?.[0] ?? "";
   assert.match(readiness, /wc-cae-score-badge[\s\S]*>100<span>%<\/span>/);
-  assert.match(readiness, /Work in this phase has already started — readiness stays at 100%/);
+  assert.match(readiness, /Work in this phase has already started\. Readiness stays at 100%\./);
   assert.match(readiness, /3 done · work in progress/);
   assert.match(readiness, /wc-cae-check-ok[\s\S]*Tasks ready to pick up/);
 });
@@ -2418,12 +2525,13 @@ function overviewPanelHtml(html) {
   return html.slice(start, end);
 }
 
-test("Phase Progress badge percent matches segmented bar fill", () => {
+test("Phase Progress badge reflects closeout checklist not delivery bar alone", () => {
   const overview = overviewPanelHtml(
     renderDashboardRootInnerHtml(
       readinessDashboardPayload({
         currentPhaseDelivery: phaseDeliveryFixture({
           closeoutPassed: false,
+          released: false,
           releaseReadyPercent: 100,
           progressPercent: 100,
           terminalCount: 8,
@@ -2443,8 +2551,23 @@ test("Phase Progress badge percent matches segmented bar fill", () => {
   );
   const progressSection =
     overview.match(/<section class="dash-card wc-phase-progress[\s\S]*?<\/section>/)?.[0] ?? "";
-  assert.match(progressSection, /wc-cae-score-badge[\s\S]*>80<span>%<\/span>/);
+  assert.match(progressSection, /wc-cae-score-badge[\s\S]*>67<span>%<\/span>/);
   assert.match(progressSection, /aria-valuenow="80"/);
+  assert.doesNotMatch(progressSection, /wc-phase-card-hint/);
+});
+
+test("Phase Progress badge stays below 100% until phase is released", () => {
+  const overview = overviewPanelHtml(
+    renderDashboardRootInnerHtml(
+      readinessDashboardPayload({
+        currentPhaseDelivery: { ...phaseSnapshotDrained, released: false }
+      })
+    )
+  );
+  const progressSection =
+    overview.match(/<section class="dash-card wc-phase-progress[\s\S]*?<\/section>/)?.[0] ?? "";
+  assert.match(progressSection, /wc-cae-score-badge[\s\S]*>83<span>%<\/span>/);
+  assert.match(progressSection, /aria-valuenow="100"/);
 });
 
 test("Phase Progress renders Mark Phase Complete centered in card footer", () => {
@@ -2479,9 +2602,9 @@ test("Phase Progress renders closeout gate checkmarks", () => {
   assert.match(html, /Delivery work started/);
   assert.match(html, /All delivery tasks finished/);
   assert.match(html, /Delivery evidence recorded/);
-  assert.match(html, /Human gates clear/);
+  assert.match(html, /Human review clear/);
   assert.match(html, /Phase released/);
-  assert.match(html, /Ready for publish closeout/);
+  assert.match(html, /Ready to release/);
 });
 
 test("Phase Readiness and Progress hidden when workspace has no current phase", () => {

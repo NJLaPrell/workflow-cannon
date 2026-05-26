@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   buildNarrowPhaseRosterRows,
+  buildPhaseRosterRowsWhenNoCurrent,
   parseLeadingDigitsOrdinal,
   parseLeadingPhaseOrdinalFromKey,
   phaseRosterStatusLabel
@@ -110,6 +111,32 @@ test("buildNarrowPhaseRosterRows synthesizes current when missing from catalog",
   assert.equal(r.rows[0].status, "delivered");
   assert.equal(r.rows[1].status, "current");
   assert.equal(r.rows[1].inCatalog, false);
+});
+
+test("buildPhaseRosterRowsWhenNoCurrent keeps phases with active queue work despite legacy delivered ceiling", () => {
+  const slice = { currentKitPhase: null, nextKitPhase: "116" };
+  const phases = [
+    { phaseKey: "107", shortDescription: "Shipped", inCatalog: true },
+    { phaseKey: "108", shortDescription: "WIP", inCatalog: true },
+    { phaseKey: "109", shortDescription: "Active", inCatalog: true },
+    { phaseKey: "116", shortDescription: "Next", inCatalog: true }
+  ];
+  const rows = buildPhaseRosterRowsWhenNoCurrent(
+    phases,
+    slice,
+    ["107", "108"],
+    115,
+    ["108", "109"]
+  );
+  assert.deepEqual(
+    rows.map((x) => ({ k: x.phaseKey, s: x.status })),
+    [
+      { k: "107", s: "delivered" },
+      { k: "108", s: "future" },
+      { k: "109", s: "future" },
+      { k: "116", s: "next" }
+    ]
+  );
 });
 
 test("buildNarrowPhaseRosterRows returns no-workspace-ordinal when phase not parseable", () => {

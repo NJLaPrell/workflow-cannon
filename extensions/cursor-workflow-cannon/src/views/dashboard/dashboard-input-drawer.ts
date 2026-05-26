@@ -210,28 +210,27 @@ export function renderDrawerFormHtml(spec: DrawerFormSpec): string {
 export function buildRegisterPhaseCatalogDrawerSpec(): DrawerFormSpec {
   return {
     workflowId: "register-phase-catalog",
-    title: "Register Phase. (catalog)",
+    title: "Register Phase",
     descriptionHtml:
-      "Stable <code>phaseKey</code> must not sort before the current workspace phase. " +
-      "Mutations still run through <code>upsert-phase-catalog-entry</code> on the host.",
+      "Add a phase to the roster. The phase number must not be earlier than your current phase.",
     fields: [
       {
         id: "phaseKey",
         kind: "text",
-        label: "Phase key",
+        label: "Phase",
         placeholder: "e.g. 92",
         required: true
       },
       {
         id: "shortDescription",
         kind: "textarea",
-        label: "Short description (optional)",
-        placeholder: "Operator-facing label",
+        label: "Deliverables (Optional)",
+        placeholder: "Short description for this phase",
         required: false,
         rows: 3
       }
     ],
-    primaryLabel: "Upsert catalog row",
+    primaryLabel: "Save Phase",
     cancelLabel: "Cancel"
   };
 }
@@ -547,17 +546,17 @@ export function buildAddPhaseNoteDrawerSpec(phaseKey: string): DrawerFormSpec {
   const pk = phaseKey.trim();
   return {
     workflowId: "add-phase-note",
-    title: "Add phase note",
+    title: "Add Phase Note",
     descriptionHtml:
-      "Runs <code>add-phase-note</code> for phase <code>" +
+      "Add a note for phase <code>" +
       escapeDrawerHtml(pk) +
-      "</code>. Do not paste secrets — kit rejects secret-shaped patterns.",
+      "</code>. Do not paste secrets or credentials.",
     fields: [
       {
         id: "ctx",
         kind: "summary",
-        label: "Target phase",
-        body: "<div><b>phaseKey:</b> " + escapeDrawerHtml(pk) + "</div>"
+        label: "Target Phase",
+        body: "<div><b>Phase:</b> " + escapeDrawerHtml(pk) + "</div>"
       },
       {
         id: "noteType",
@@ -590,7 +589,7 @@ export function buildAddPhaseNoteDrawerSpec(phaseKey: string): DrawerFormSpec {
         rows: 4
       }
     ],
-    primaryLabel: "Add note",
+    primaryLabel: "Add Note",
     cancelLabel: "Cancel"
   };
 }
@@ -680,9 +679,8 @@ export function buildAssignTaskPhaseDrawerSpec(
   ];
   return {
     workflowId: "assign-task-phase",
-    title: `Set phase for ${taskId}`,
-    descriptionHtml:
-      "Assign a phase with <code>assign-task-phase</code> or move to backlog with <code>clear-task-phase</code>.",
+    title: `Set Phase for ${taskId}`,
+    descriptionHtml: "Choose a phase for this task, or move it to the backlog.",
     fields: [
       {
         id: "ctx",

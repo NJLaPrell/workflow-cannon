@@ -70,7 +70,7 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
     if (workflowId === 'register-phase-catalog') return 'Updating phase catalog…';
     if (workflowId === 'add-wishlist') return 'Creating wishlist item…';
     if (workflowId === 'add-phase-note') return 'Adding phase note…';
-    return 'Running kit command…';
+    return 'Saving changes…';
   }
 
   function drawerSubmitBusyLabel(panel) {
@@ -249,12 +249,32 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
     }
   }
 
+  function normalizeBucketTaskIdsAttr(raw) {
+    if (!raw || !String(raw).trim()) return '';
+    return String(raw)
+      .split(',')
+      .map(function(s) { return s.trim(); })
+      .filter(function(s) { return s.length > 0; })
+      .sort()
+      .join(',');
+  }
+
+  function bucketMetaMatches(bucket, entry) {
+    if (!bucket || !entry) return false;
+    return (
+      (bucket.getAttribute('data-wc-bucket-count') || '') === entry.count &&
+      normalizeBucketTaskIdsAttr(bucket.getAttribute('data-wc-bucket-task-ids')) ===
+        normalizeBucketTaskIdsAttr(entry.taskIds)
+    );
+  }
+
   function applyReplaceRootHtml(html) {
     var root = document.getElementById('root');
     if (!root) return;
     var open = {};
     var editState = capturePhaseDeliverablesEditState(root);
     var configState = captureConfigTabState(root);
+    var preservedQueue = captureQueueSectionUiState(root);
     root.querySelectorAll('details[data-wc-track]').forEach(function(d) {
       var k = d.getAttribute('data-wc-track');
       if (k && d.open) open[k] = true;
@@ -268,8 +288,9 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
     restorePhaseCardCollapseState(root);
     restoreConfigTabState(root, configState);
     applyTab(activeTab);
+    restoreQueueSectionUiState(root, preservedQueue);
     applyQueueFilters(root);
-    reloadOpenLazyQueueBuckets(root);
+    reloadOpenLazyQueueBucketsAfterMetaChange(root, preservedQueue.lazyBuckets);
     if (editState) restorePhaseDeliverablesEditState(editState);
     if (typeof window.wcReinitEmbeddedCae === 'function') window.wcReinitEmbeddedCae();
     var refreshBtn = document.getElementById('btn');
@@ -277,12 +298,107 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
     setUiInteraction('refresh', false);
   }
 
+  function lazyBucketPreserveKey(category, phaseKey) {
+    return String(category) + '|' + String(phaseKey);
+  }
+
+  function captureQueueSectionUiState(root) {
+    var openTracks = {};
+    if (root) {
+      root.querySelectorAll('details.status-section[open][data-wc-track]').forEach(function(d) {
+        var k = d.getAttribute('data-wc-track');
+        if (k) openTracks[k] = true;
+      });
+    }
+    return {
+      openTracks: openTracks,
+      lazyBuckets: captureLazyQueueBucketBodies(root)
+    };
+  }
+
+  function restoreQueueSectionUiState(root, state) {
+    if (!root || !state) return;
+    restoreLazyQueueBucketBodies(root, state.lazyBuckets);
+    window.__wcRestoringLazyBuckets = true;
+    try {
+      Object.keys(state.openTracks || {}).forEach(function(k) {
+        var el = root.querySelector('details.status-section[data-wc-track="' + k.replace(/"/g, '\\\\"') + '"]');
+        if (el) el.open = true;
+      });
+    } finally {
+      window.__wcRestoringLazyBuckets = false;
+    }
+  }
+
+  function captureLazyQueueBucketBodies(root) {
+    var map = {};
+    if (!root) return map;
+    root.querySelectorAll('details.wc-lazy-queue-bucket').forEach(function(bucket) {
+      var body = bucket.querySelector('.wc-lazy-bucket-body');
+      if (!body || body.getAttribute('data-wc-lazy-loaded') !== '1') return;
+      var category = bucket.getAttribute('data-wc-queue-category') || '';
+      var phaseKey = bucket.getAttribute('data-wc-phase-key') || '';
+      map[lazyBucketPreserveKey(category, phaseKey)] = {
+        category: category,
+        phaseKey: phaseKey,
+        count: bucket.getAttribute('data-wc-bucket-count') || '',
+        taskIds: bucket.getAttribute('data-wc-bucket-task-ids') || '',
+        bodyHtml: body.innerHTML,
+        open: bucket.open
+      };
+    });
+    return map;
+  }
+
+  function restoreLazyQueueBucketBodies(root, preserved) {
+    if (!root || !preserved) return;
+    window.__wcRestoringLazyBuckets = true;
+    try {
+      Object.keys(preserved).forEach(function(key) {
+        var entry = preserved[key];
+        if (!entry) return;
+        var bucket = root.querySelector(lazyQueueBucketSelector(entry.category, entry.phaseKey));
+        if (!bucket || !bucketMetaMatches(bucket, entry)) return;
+        var body = bucket.querySelector('.wc-lazy-bucket-body');
+        if (!body) return;
+        body.innerHTML = entry.bodyHtml;
+        body.setAttribute('data-wc-lazy-loaded', '1');
+        bucket.setAttribute('data-wc-lazy-loaded', '1');
+        bucket.removeAttribute('data-wc-lazy-loading');
+        bucket.removeAttribute('data-wc-lazy-more-loading');
+        if (entry.open) bucket.open = true;
+      });
+    } finally {
+      window.__wcRestoringLazyBuckets = false;
+    }
+  }
+
+  function reloadOpenLazyQueueBucketsAfterMetaChange(root, preserved) {
+    if (!root) return;
+    root.querySelectorAll('details.wc-lazy-queue-bucket[open]').forEach(function(d) {
+      var body = d.querySelector('.wc-lazy-bucket-body');
+      if (body && body.getAttribute('data-wc-lazy-loaded') === '1') return;
+      var category = d.getAttribute('data-wc-queue-category') || '';
+      var phaseKey = d.getAttribute('data-wc-phase-key') || '';
+      var entry = preserved && preserved[lazyBucketPreserveKey(category, phaseKey)];
+      if (entry && bucketMetaMatches(d, entry) && entry.bodyHtml) return;
+      requestLazyQueueBucketLoad(d);
+    });
+  }
+
   function applySectionPatch(sectionId, html, state) {
     var root = document.getElementById('root');
     if (!root || !sectionId) return;
     var el = root.querySelector('[data-wc-section="' + sectionId + '"]');
     if (!el) return;
-    if (typeof html === 'string' && html.length > 0) {
+    var st = state || 'ready';
+    if (sectionId === 'queue' && typeof html === 'string' && html.length > 0) {
+      var preservedQueue = captureQueueSectionUiState(root);
+      el.innerHTML = html;
+      restoreQueueSectionUiState(root, preservedQueue);
+      applyQueueFilters(root);
+      reloadOpenLazyQueueBucketsAfterMetaChange(root, preservedQueue.lazyBuckets);
+    } else if (typeof html === 'string' && html.length > 0) {
       el.innerHTML = html;
     }
     var staleBadge = el.querySelector('.wc-dash-section-stale-badge');
@@ -303,7 +419,6 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
       'wc-dash-section--stale',
       'wc-dash-section--error'
     );
-    var st = state || 'ready';
     el.classList.add('wc-dash-section--' + st);
     el.setAttribute('aria-busy', st === 'loading' ? 'true' : 'false');
     if (sectionId === 'cae' && typeof window.wcReinitEmbeddedCae === 'function') {
@@ -390,8 +505,13 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
 
   function requestLazyQueueBucketLoad(detailsEl, cursor) {
     if (!detailsEl) return;
+    if (window.__wcRestoringLazyBuckets) return;
     var category = (detailsEl.getAttribute('data-wc-queue-category') || '').trim();
     if (!category) return;
+    var bodyEarly = detailsEl.querySelector('.wc-lazy-bucket-body');
+    if (bodyEarly && bodyEarly.getAttribute('data-wc-lazy-loaded') === '1' && !(typeof cursor === 'string' && cursor.trim().length > 0)) {
+      return;
+    }
     var append = typeof cursor === 'string' && cursor.trim().length > 0;
     if (!append) {
       if (detailsEl.getAttribute('data-wc-lazy-loaded') === '1') return;

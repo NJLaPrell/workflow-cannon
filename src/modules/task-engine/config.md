@@ -8,4 +8,4 @@
 - `defaultTaskType`: Default task type label for new tasks (default: `workspace-kit`)
 - `autoUnblock`: Automatically unblock dependents when a task completes (default: `true`)
 - `kit.phaseLadder.blockBeforeCurrent`: When `true`, reject numeric `phaseKey`s whose leading ordinal sorts before workspace current kit phase on **`assign-task-phase`** and **`upsert-phase-catalog-entry`** (default: `false` — past-phase bucketing allowed).
-- `kit.phaseDelivery.legacyDeliveredMaxOrdinal`: When set to a non-negative integer **N**, numeric phase keys with leading ordinal in **`[0, N]`** are treated as **delivered** for dashboard phase tags and roster (pre–delivery-evidence history). Omit to disable.
+- `kit.phaseDelivery.legacyDeliveredMaxOrdinal`: When set to a non-negative integer **N**, numeric phase keys with leading ordinal in **`[0, N]`** are treated as **delivered** for dashboard phase tags and roster (pre–delivery-evidence history), except phases that still have non-terminal queue work (`ready`, `proposed`, `in_progress`, `blocked`, etc.). Omit to disable.

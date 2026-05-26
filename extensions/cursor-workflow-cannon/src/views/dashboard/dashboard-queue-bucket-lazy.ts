@@ -102,7 +102,6 @@ function renderProposedImprovementRows(tasks: unknown[]): string {
     return '<p class="muted">No proposed improvements in this phase.</p>';
   }
   return (
-    '<p class="muted"><b>Row actions</b> · Accept/Decline runs <code>run-transition</code> with approval.</p>' +
     '<div class="dash-row-list" role="list">' +
     tasks
       .map((x) => {
@@ -143,7 +142,6 @@ function renderProposedExecutionRows(tasks: unknown[]): string {
     return '<p class="muted">No proposed execution tasks in this phase.</p>';
   }
   return (
-    '<p class="muted"><b>Row actions</b> · Accept/Decline runs <code>run-transition</code>.</p>' +
     '<div class="dash-row-list" role="list">' +
     tasks
       .map((x) => {
