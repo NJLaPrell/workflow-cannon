@@ -14,7 +14,9 @@ workspace-kit run assign-task-phase '<json>'
 
 ## Phase ladder vs workspace current
 
-When the workspace has a resolvable **current kit phase number**, **`phaseKey`s whose leading digits sort **strictly before** that number are rejected with **`phase-target-before-current-workspace-phase`**. Keys **equal or higher** are allowed (future-phase planning). Keys **without** leading digits skip numeric comparison (opaque buckets).
+By default, **`assign-task-phase`** accepts any valid **`phaseKey`**, including numeric keys whose leading ordinal sorts **before** the workspace current kit phase (backfill / out-of-sequence bucketing).
+
+When **`kit.phaseLadder.blockBeforeCurrent`** is **`true`** in workspace config, numeric **`phaseKey`s whose leading digits sort strictly before** the current workspace kit phase are rejected with **`phase-target-before-current-workspace-phase`**. Keys **equal or higher** are always allowed (future-phase planning). Keys **without** leading digits skip numeric comparison (opaque buckets).
 
 ## Arguments
 

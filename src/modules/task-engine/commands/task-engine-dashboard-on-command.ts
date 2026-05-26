@@ -41,13 +41,25 @@ import {
   readCurrentAgentActivityLease
 } from "../agent-activity-store.js";
 import { projectDashboardTaskRow } from "../task-read-projections.js";
-import { buildDashboardCurrentPhaseDelivery } from "../dashboard/phase-delivery-status.js";
+import {
+  buildDashboardCurrentPhaseDelivery,
+  collectDeliveredPhaseKeys,
+  collectPhaseReleaseDatesByKey
+} from "../dashboard/phase-delivery-status.js";
+import { resolveLegacyDeliveredMaxOrdinal } from "../phase-resolution.js";
 import { buildDashboardPastPhaseNotes } from "../dashboard/build-dashboard-past-phase-notes.js";
 import { buildDashboardApprovalQueueSummary } from "../dashboard/build-dashboard-approval-queue.js";
 import { buildPhaseFocusDashboard } from "../dashboard/build-phase-focus-dashboard.js";
 import type { OpenedPlanningStores } from "../persistence/planning-open.js";
 import { buildDashboardHumanGatesSummary } from "../dashboard/build-dashboard-human-gates.js";
 import { buildDashboardPhaseJournalStats } from "../dashboard/build-dashboard-phase-journal-stats.js";
+import {
+  dashboardSummaryNeedsPastPhaseNotes,
+  dashboardSummaryNeedsPhaseJournalStats,
+  dashboardSummaryNeedsQueueRollups,
+  finalizeDashboardSummaryProjection,
+  parseDashboardSummaryProjection
+} from "../dashboard/dashboard-summary-projection.js";
 
 /** Parse optional `dashboard-summary` argv for wishlist table paging (extension + CLI). */
 export function parseDashboardWishlistPaging(args?: Record<string, unknown>): {
@@ -79,6 +91,8 @@ export async function runDashboardSummaryCommand(
   sqliteDual?: SqliteDualPlanningStore,
   commandArgs?: Record<string, unknown>
 ): Promise<ModuleCommandResult> {
+  const projection = parseDashboardSummaryProjection(commandArgs);
+  const needsQueueRollups = dashboardSummaryNeedsQueueRollups(projection);
   const tasks = store.getActiveTasks();
   const dualForStatus = sqliteDual ?? openSqliteDualForWorkspaceStatus(ctx);
   const workspaceStatus = readWorkspaceStatusSnapshotFromDual(dualForStatus);
@@ -94,12 +108,12 @@ export async function runDashboardSummaryCommand(
   const readyExecution = readyQueue.filter((t) => !isImprovementLikeTask(t));
   const enrich = sqliteDual ? buildFeatureEnrichmentBySlug(sqliteDual.getDatabase()) : new Map();
   const toReadyRow = (t: (typeof readyQueue)[0]) => projectDashboardTaskRow(t, enrich);
-  const readyTop = readyQueue.slice(0, 15).map(toReadyRow);
-  const readyImprovementsTop = readyImprovements.slice(0, 15).map(toReadyRow);
-  const readyExecutionTop = readyExecution.slice(0, 15).map(toReadyRow);
-  const blockedTop = suggestion.blockingAnalysis.slice(0, 15);
+  const readyTop = needsQueueRollups ? readyQueue.slice(0, 15).map(toReadyRow) : [];
+  const readyImprovementsTop = needsQueueRollups ? readyImprovements.slice(0, 15).map(toReadyRow) : [];
+  const readyExecutionTop = needsQueueRollups ? readyExecution.slice(0, 15).map(toReadyRow) : [];
+  const blockedTop = needsQueueRollups ? suggestion.blockingAnalysis.slice(0, 15) : [];
 
-  const wishlistItems = listWishlistIntakeTasksAsItems(store.getAllTasks());
+  const wishlistItems = needsQueueRollups ? listWishlistIntakeTasksAsItems(store.getAllTasks()) : [];
   const wishlistOpenItems = wishlistItems.filter((i) => i.status === "open");
   const wishlistOpenCount = wishlistOpenItems.length;
   const { page: wishlistPageReq, pageSize: wishlistPageSize } = parseDashboardWishlistPaging(commandArgs);
@@ -118,16 +132,20 @@ export async function runDashboardSummaryCommand(
     };
   });
 
-  const proposedImprovements = tasks
-    .filter((t) => t.status === "proposed" && isImprovementLikeTask(t))
-    .sort((a, b) => a.id.localeCompare(b.id));
   const slimListRow = (t: (typeof tasks)[0]) => projectDashboardTaskRow(t, enrich, { includePriority: false });
-  const proposedImprovementsTop = proposedImprovements.slice(0, 15).map(slimListRow);
+  const proposedImprovements = needsQueueRollups
+    ? tasks
+        .filter((t) => t.status === "proposed" && isImprovementLikeTask(t))
+        .sort((a, b) => a.id.localeCompare(b.id))
+    : [];
+  const proposedImprovementsTop = needsQueueRollups ? proposedImprovements.slice(0, 15).map(slimListRow) : [];
 
-  const proposedExecution = tasks
-    .filter((t) => t.status === "proposed" && !isImprovementLikeTask(t) && !isWishlistIntakeTask(t))
-    .sort((a, b) => a.id.localeCompare(b.id));
-  const proposedExecutionTop = proposedExecution.slice(0, 15).map(slimListRow);
+  const proposedExecution = needsQueueRollups
+    ? tasks
+        .filter((t) => t.status === "proposed" && !isImprovementLikeTask(t) && !isWishlistIntakeTask(t))
+        .sort((a, b) => a.id.localeCompare(b.id))
+    : [];
+  const proposedExecutionTop = needsQueueRollups ? proposedExecution.slice(0, 15).map(slimListRow) : [];
 
   const planningSession = toDashboardPlanningSession(
     await readBuildPlanSession(
@@ -138,74 +156,95 @@ export async function runDashboardSummaryCommand(
 
   const dashboardPhaseTop = 15;
   const toProposedRow = (t: (typeof tasks)[0]) => projectDashboardTaskRow(t, enrich, { includePriority: false });
-  const readyImprovementsPhaseBuckets = buildDashboardPhaseBucketsForTasks(
-    readyImprovements,
-    workspaceStatus,
-    toReadyRow,
-    dashboardPhaseTop
-  );
-  const readyExecutionPhaseBuckets = buildDashboardPhaseBucketsForTasks(
-    readyExecution,
-    workspaceStatus,
-    toReadyRow,
-    dashboardPhaseTop
-  );
-  const proposedImprovementsPhaseBuckets = buildDashboardPhaseBucketsForTasks(
-    proposedImprovements,
-    workspaceStatus,
-    toProposedRow,
-    dashboardPhaseTop,
-    { includeAllTaskIds: true }
-  );
-  const proposedExecutionPhaseBuckets = buildDashboardPhaseBucketsForTasks(
-    proposedExecution,
-    workspaceStatus,
-    toProposedRow,
-    dashboardPhaseTop,
-    { includeAllTaskIds: true }
-  );
+  const readyImprovementsPhaseBuckets = needsQueueRollups
+    ? buildDashboardPhaseBucketsForTasks(
+        readyImprovements,
+        workspaceStatus,
+        toReadyRow,
+        dashboardPhaseTop
+      )
+    : [];
+  const readyExecutionPhaseBuckets = needsQueueRollups
+    ? buildDashboardPhaseBucketsForTasks(
+        readyExecution,
+        workspaceStatus,
+        toReadyRow,
+        dashboardPhaseTop
+      )
+    : [];
+  const proposedImprovementsPhaseBuckets = needsQueueRollups
+    ? buildDashboardPhaseBucketsForTasks(
+        proposedImprovements,
+        workspaceStatus,
+        toProposedRow,
+        dashboardPhaseTop,
+        { includeAllTaskIds: true }
+      )
+    : [];
+  const proposedExecutionPhaseBuckets = needsQueueRollups
+    ? buildDashboardPhaseBucketsForTasks(
+        proposedExecution,
+        workspaceStatus,
+        toProposedRow,
+        dashboardPhaseTop,
+        { includeAllTaskIds: true }
+      )
+    : [];
 
-  const transcriptChurnResearch = tasks
-    .filter((t) => t.status === "research" && t.type === TRANSCRIPT_CHURN_TASK_TYPE)
-    .sort((a, b) => a.id.localeCompare(b.id));
-  const transcriptChurnResearchTop = transcriptChurnResearch.slice(0, 15).map(slimListRow);
-  const transcriptChurnResearchPhaseBuckets = buildDashboardPhaseBucketsForTasks(
-    transcriptChurnResearch,
-    workspaceStatus,
-    toProposedRow,
-    dashboardPhaseTop
-  );
+  const transcriptChurnResearch = needsQueueRollups
+    ? tasks
+        .filter((t) => t.status === "research" && t.type === TRANSCRIPT_CHURN_TASK_TYPE)
+        .sort((a, b) => a.id.localeCompare(b.id))
+    : [];
+  const transcriptChurnResearchTop = needsQueueRollups ? transcriptChurnResearch.slice(0, 15).map(slimListRow) : [];
+  const transcriptChurnResearchPhaseBuckets = needsQueueRollups
+    ? buildDashboardPhaseBucketsForTasks(
+        transcriptChurnResearch,
+        workspaceStatus,
+        toProposedRow,
+        dashboardPhaseTop
+      )
+    : [];
 
-  const blockedPhaseBuckets = buildDashboardPhaseBucketsForBlocking(
-    suggestion.blockingAnalysis,
-    (id) => tasks.find((x) => x.id === id),
-    workspaceStatus,
-    dashboardPhaseTop
-  );
+  const blockedPhaseBuckets = needsQueueRollups
+    ? buildDashboardPhaseBucketsForBlocking(
+        suggestion.blockingAnalysis,
+        (id) => tasks.find((x) => x.id === id),
+        workspaceStatus,
+        dashboardPhaseTop
+      )
+    : [];
 
-  const completedTasks = tasks
-    .filter((t) => t.status === "completed")
-    .sort((a, b) => a.id.localeCompare(b.id));
-  const cancelledTasks = tasks
-    .filter((t) => t.status === "cancelled")
-    .sort((a, b) => a.id.localeCompare(b.id));
-  const completedTop = completedTasks.slice(0, 15).map(toProposedRow);
-  const cancelledTop = cancelledTasks.slice(0, 15).map(toProposedRow);
+  const completedTasks = needsQueueRollups
+    ? tasks.filter((t) => t.status === "completed").sort((a, b) => a.id.localeCompare(b.id))
+    : [];
+  const cancelledTasks = needsQueueRollups
+    ? tasks.filter((t) => t.status === "cancelled").sort((a, b) => a.id.localeCompare(b.id))
+    : [];
+  const completedTop = needsQueueRollups ? completedTasks.slice(0, 15).map(toProposedRow) : [];
+  const cancelledTop = needsQueueRollups ? cancelledTasks.slice(0, 15).map(toProposedRow) : [];
   /** Terminal buckets: counts/labels only — dashboard lazy-loads rows per phase on expand. */
-  const completedPhaseBuckets = buildDashboardPhaseBucketsForTasks(
-    completedTasks,
-    workspaceStatus,
-    toProposedRow,
-    0
-  );
-  const cancelledPhaseBuckets = buildDashboardPhaseBucketsForTasks(
-    cancelledTasks,
-    workspaceStatus,
-    toProposedRow,
-    0
-  );
+  const completedPhaseBuckets = needsQueueRollups
+    ? buildDashboardPhaseBucketsForTasks(completedTasks, workspaceStatus, toProposedRow, 0)
+    : [];
+  const cancelledPhaseBuckets = needsQueueRollups
+    ? buildDashboardPhaseBucketsForTasks(cancelledTasks, workspaceStatus, toProposedRow, 0)
+    : [];
 
-  const dependencyOverview = buildDashboardDependencyOverview(tasks);
+  const dependencyOverview = needsQueueRollups
+    ? buildDashboardDependencyOverview(tasks)
+    : {
+        schemaVersion: 1 as const,
+        activeTaskCount: tasks.length,
+        includedTaskCount: 0,
+        edgeCount: 0,
+        truncated: false,
+        perfNote: "overview projection",
+        nodes: [],
+        edges: [],
+        mermaidFlowchart: "",
+        criticalPathReady: []
+      };
 
   const effCfg =
     ctx.effectiveConfig && typeof ctx.effectiveConfig === "object" && !Array.isArray(ctx.effectiveConfig)
@@ -297,14 +336,25 @@ export async function runDashboardSummaryCommand(
     db: dualForStatus?.getDatabase() ?? null,
     effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined
   });
+  const deliveredPhaseKeys =
+    dualForStatus != null
+      ? collectDeliveredPhaseKeys(dualForStatus.getDatabase(), tasks)
+      : [];
+  const phaseReleaseDates =
+    dualForStatus != null ? collectPhaseReleaseDatesByKey(dualForStatus.getDatabase()) : {};
+  const legacyDeliveredMaxOrdinal = resolveLegacyDeliveredMaxOrdinal(
+    ctx.effectiveConfig as Record<string, unknown> | undefined
+  );
 
   const phaseCatalogPhases =
     systemStatus.phase?.phaseCatalog?.phases ?? [];
-  const pastPhaseNotes = buildDashboardPastPhaseNotes({
-    db: dualForStatus?.getDatabase() ?? null,
-    phaseCatalogPhases,
-    currentKitPhase: systemStatus.phase?.currentKitPhase ?? workspaceStatus?.currentKitPhase ?? null
-  });
+  const pastPhaseNotes = dashboardSummaryNeedsPastPhaseNotes(projection)
+    ? buildDashboardPastPhaseNotes({
+        db: dualForStatus?.getDatabase() ?? null,
+        phaseCatalogPhases,
+        currentKitPhase: systemStatus.phase?.currentKitPhase ?? workspaceStatus?.currentKitPhase ?? null
+      })
+    : [];
 
   const currentKitPhase =
     systemStatus.phase?.currentKitPhase ?? workspaceStatus?.currentKitPhase ?? null;
@@ -315,11 +365,23 @@ export async function runDashboardSummaryCommand(
   );
   const approvalQueue = buildDashboardApprovalQueueSummary(tasks);
 
-  const phaseJournalStats = buildDashboardPhaseJournalStats({
-    db: dualForStatus?.getDatabase() ?? null,
-    currentKitPhase: typeof currentKitPhase === "string" ? currentKitPhase : null,
-    completedDeliveryTaskCount: currentPhaseDelivery.segments.completed
-  });
+  const phaseJournalStats = dashboardSummaryNeedsPhaseJournalStats(projection)
+    ? buildDashboardPhaseJournalStats({
+        db: dualForStatus?.getDatabase() ?? null,
+        currentKitPhase: typeof currentKitPhase === "string" ? currentKitPhase : null,
+        completedDeliveryTaskCount: currentPhaseDelivery.segments.completed
+      })
+    : {
+        schemaVersion: 1 as const,
+        available: false,
+        phases: [],
+        currentPhase: {
+          phaseKey: null,
+          activeNoteCount: 0,
+          completedDeliveryTaskCount: currentPhaseDelivery.segments.completed,
+          silenceWarning: false
+        }
+      };
 
   const includePhaseFocus =
     commandArgs?.includePhaseFocus === true || commandArgs?.includePhaseFocus === "true";
@@ -423,6 +485,9 @@ export async function runDashboardSummaryCommand(
     systemStatus,
     agentStatus,
     currentPhaseDelivery,
+    deliveredPhaseKeys,
+    phaseReleaseDates,
+    legacyDeliveredMaxOrdinal,
     pastPhaseNotes,
     ...(includePhaseFocus && sqliteDual
       ? {
@@ -435,10 +500,15 @@ export async function runDashboardSummaryCommand(
       : {})
   } satisfies DashboardSummaryData;
 
+  const sliced = finalizeDashboardSummaryProjection(data, projection);
+
   return {
     ok: true,
     code: "dashboard-summary",
-    message: "Dashboard summary built from task store and maintainer status snapshot",
-    data: data as Record<string, unknown>
+    message:
+      projection === "full"
+        ? "Dashboard summary built from task store and maintainer status snapshot"
+        : `Dashboard summary built (${projection} projection)`,
+    data: sliced as Record<string, unknown>
   };
 }

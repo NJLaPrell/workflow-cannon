@@ -1,0 +1,1666 @@
+{
+  "phaseKey": "110",
+  "phaseLabel": "Phase 110",
+  "shortDescription": "Planner",
+  "planRef": "PLANNER_TASKS.md",
+  "planningType": "new-feature",
+  "targetPhaseKey": "110",
+  "targetPhase": "Phase 110",
+  "desiredStatus": "proposed",
+  "clientMutationId": "planner-phase110-batch-v1",
+  "taskCount": 50,
+  "idRange": {
+    "first": "T100437",
+    "last": "T100486"
+  },
+  "tasks": [
+    {
+      "id": "T100437",
+      "title": "Inventory planning surface area (A-INV)",
+      "type": "workspace-kit",
+      "priority": "P1",
+      "status": "ready",
+      "phaseKey": "110",
+      "phase": "Phase 110",
+      "approach": "Recon planning module, build-plan session, persist/review drafts, dashboard planningSession; write gap table vs PLANNER.md.",
+      "summary": "Recon planning module, build-plan session, persist/review drafts, dashboard planningSession; write gap table vs PLANNER.md.",
+      "technicalScope": [
+        "Grep src/modules/planning, src/core/planning, extension planning wizard",
+        "Document paths and one-line roles in A-INV"
+      ],
+      "acceptanceCriteria": [
+        "A-INV table exists with path, role, gap note",
+        "No new long-lived doc unless requested"
+      ],
+      "metadata": {
+        "planner": {
+          "wbsId": "T-0.1",
+          "slice": "P0",
+          "specPath": "PLANNER_TASKS.md"
+        },
+        "planningProvenance": {
+          "source": "persist-planning-execution-drafts",
+          "planningType": "new-feature",
+          "planRef": "PLANNER_TASKS.md"
+        }
+      }
+    },
+    {
+      "id": "T100438",
+      "title": "Baseline health for planner work",
+      "type": "workspace-kit",
+      "priority": "P1",
+      "status": "ready",
+      "phaseKey": "110",
+      "phase": "Phase 110",
+      "approach": "Run wk doctor, build, test; record baseline before planner implementation.",
+      "summary": "Run wk doctor, build, test; record baseline before planner implementation.",
+      "technicalScope": [
+        "pnpm run wk doctor",
+        "pnpm run build",
+        "pnpm run test"
+      ],
+      "acceptanceCriteria": [
+        "Baseline captured",
+        "Pre-existing failures noted separately"
+      ],
+      "metadata": {
+        "planner": {
+          "wbsId": "T-0.2",
+          "slice": "P0",
+          "specPath": "PLANNER_TASKS.md"
+        },
+        "planningProvenance": {
+          "source": "persist-planning-execution-drafts",
+          "planningType": "new-feature",
+          "planRef": "PLANNER_TASKS.md"
+        }
+      }
+    },
+    {
+      "id": "T100439",
+      "title": "Write PLANNER_ARCHITECTURE.md (A-ARCH)",
+      "type": "workspace-kit",
+      "priority": "P1",
+      "status": "proposed",
+      "phaseKey": "110",
+      "phase": "Phase 110",
+      "approach": "Architecture decision doc: modules, storage, command pipeline, task-engine reuse, dashboard read path.",
+      "summary": "Architecture decision doc: modules, storage, command pipeline, task-engine reuse, dashboard read path.",
+      "technicalScope": [
+        "PLANNER_ARCHITECTURE.md with diagram",
+        "Module ownership and persistence decision",
+        "Integration with persist-planning-execution-drafts"
+      ],
+      "acceptanceCriteria": [
+        "A-ARCH ready for human review",
+        "Open questions listed"
+      ],
+      "dependsOn": [
+        "T100437"
+      ],
+      "metadata": {
+        "planner": {
+          "wbsId": "T-A.1",
+          "slice": "P0",
+          "specPath": "PLANNER_TASKS.md"
+        },
+        "planningProvenance": {
+          "source": "persist-planning-execution-drafts",
+          "planningType": "new-feature",
+          "planRef": "PLANNER_TASKS.md"
+        }
+      }
+    },
+    {
+      "id": "T100440",
+      "title": "Write PLANNER_SCHEMA.md (A-SCHEMA)",
+      "type": "workspace-kit",
+      "priority": "P1",
+      "status": "proposed",
+      "phaseKey": "110",
+      "phase": "Phase 110",
+      "approach": "PlanArtifact v1 schema spec: sections, WBS shape, approvalRecord, conditional profiles, examples.",
+      "summary": "PlanArtifact v1 schema spec: sections, WBS shape, approvalRecord, conditional profiles, examples.",
+      "technicalScope": [
+        "Required vs optional sections",
+        "Minimal + full JSON examples",
+        "Wishlist/session mapping notes"
+      ],
+      "acceptanceCriteria": [
+        "A-SCHEMA ready for human review"
+      ],
+      "dependsOn": [
+        "T100439"
+      ],
+      "metadata": {
+        "planner": {
+          "wbsId": "T-A.2",
+          "slice": "P0",
+          "specPath": "PLANNER_TASKS.md"
+        },
+        "planningProvenance": {
+          "source": "persist-planning-execution-drafts",
+          "planningType": "new-feature",
+          "planRef": "PLANNER_TASKS.md"
+        }
+      }
+    },
+    {
+      "id": "T100441",
+      "title": "Write PLANNER_COMMANDS.md (A-CONTRACTS, A-POLICY)",
+      "type": "workspace-kit",
+      "priority": "P1",
+      "status": "proposed",
+      "phaseKey": "110",
+      "phase": "Phase 110",
+      "approach": "Unified contracts for draft/review/accept/finalize commands plus policy touchpoints.",
+      "summary": "Unified contracts for draft/review/accept/finalize commands plus policy touchpoints.",
+      "technicalScope": [
+        "Request/response shapes and response codes",
+        "Dry-run vs persist, idempotency, planning generation",
+        "A-POLICY section for mutation commands"
+      ],
+      "acceptanceCriteria": [
+        "A-CONTRACTS and A-POLICY ready for review"
+      ],
+      "dependsOn": [
+        "T100439",
+        "T100440"
+      ],
+      "metadata": {
+        "planner": {
+          "wbsId": "T-A.3",
+          "slice": "P0",
+          "specPath": "PLANNER_TASKS.md"
+        },
+        "planningProvenance": {
+          "source": "persist-planning-execution-drafts",
+          "planningType": "new-feature",
+          "planRef": "PLANNER_TASKS.md"
+        }
+      }
+    },
+    {
+      "id": "T100442",
+      "title": "Write plan review rubric (A-RUBRIC)",
+      "type": "workspace-kit",
+      "priority": "P1",
+      "status": "proposed",
+      "phaseKey": "110",
+      "phase": "Phase 110",
+      "approach": "Blocker/warning rules, sizing, Gap 5 coverage, PLANNER Step 4 checks.",
+      "summary": "Blocker/warning rules, sizing, Gap 5 coverage, PLANNER Step 4 checks.",
+      "technicalScope": [
+        "PLANNER_REVIEW_RUBRIC.md or PLANNER_COMMANDS.md section",
+        "Relationship to ux-cae-pre-persist-v1"
+      ],
+      "acceptanceCriteria": [
+        "A-RUBRIC ready for human review"
+      ],
+      "dependsOn": [
+        "T100440",
+        "T100441"
+      ],
+      "metadata": {
+        "planner": {
+          "wbsId": "T-A.4",
+          "slice": "P0",
+          "specPath": "PLANNER_TASKS.md"
+        },
+        "planningProvenance": {
+          "source": "persist-planning-execution-drafts",
+          "planningType": "new-feature",
+          "planRef": "PLANNER_TASKS.md"
+        }
+      }
+    },
+    {
+      "id": "T100443",
+      "title": "Dashboard plan lifecycle mockups (A-UX)",
+      "type": "workspace-kit",
+      "priority": "P1",
+      "status": "proposed",
+      "phaseKey": "110",
+      "phase": "Phase 110",
+      "approach": "Wireframes for draft, findings, WBS, accept, finalize preview/persist, errors per PLANNER Step 7.",
+      "summary": "Wireframes for draft, findings, WBS, accept, finalize preview/persist, errors per PLANNER Step 7.",
+      "technicalScope": [
+        "Mockups attached to PR or docs/maintainers/planner-ux/",
+        "Accessibility notes"
+      ],
+      "acceptanceCriteria": [
+        "A-UX ready for human review"
+      ],
+      "dependsOn": [
+        "T100439",
+        "T100441"
+      ],
+      "metadata": {
+        "planner": {
+          "wbsId": "T-A.5",
+          "slice": "P0",
+          "specPath": "PLANNER_TASKS.md"
+        },
+        "planningProvenance": {
+          "source": "persist-planning-execution-drafts",
+          "planningType": "new-feature",
+          "planRef": "PLANNER_TASKS.md"
+        }
+      }
+    },
+    {
+      "id": "T100444",
+      "title": "Write PLANNER_TEST_STRATEGY.md (A-TEST)",
+      "type": "workspace-kit",
+      "priority": "P1",
+      "status": "proposed",
+      "phaseKey": "110",
+      "phase": "Phase 110",
+      "approach": "Test layers, fixtures, golden path, CI target for planner implementation.",
+      "summary": "Test layers, fixtures, golden path, CI target for planner implementation.",
+      "technicalScope": [
+        "Unit/integration/extension/E2E scope",
+        "Blocked-path cases"
+      ],
+      "acceptanceCriteria": [
+        "A-TEST ready for human review"
+      ],
+      "dependsOn": [
+        "T100441"
+      ],
+      "metadata": {
+        "planner": {
+          "wbsId": "T-A.6",
+          "slice": "P0",
+          "specPath": "PLANNER_TASKS.md"
+        },
+        "planningProvenance": {
+          "source": "persist-planning-execution-drafts",
+          "planningType": "new-feature",
+          "planRef": "PLANNER_TASKS.md"
+        }
+      }
+    },
+    {
+      "id": "T100445",
+      "title": "Compatibility note for build-plan (A-COMPAT)",
+      "type": "workspace-kit",
+      "priority": "P1",
+      "status": "proposed",
+      "phaseKey": "110",
+      "phase": "Phase 110",
+      "approach": "Section in PLANNER_ARCHITECTURE.md: build-plan, wishlist, planningSession bridge.",
+      "summary": "Section in PLANNER_ARCHITECTURE.md: build-plan, wishlist, planningSession bridge.",
+      "technicalScope": [
+        "What stays vs bridges vs deprecates"
+      ],
+      "acceptanceCriteria": [
+        "A-COMPAT ready for human review"
+      ],
+      "dependsOn": [
+        "T100439"
+      ],
+      "metadata": {
+        "planner": {
+          "wbsId": "T-A.7",
+          "slice": "P0",
+          "specPath": "PLANNER_TASKS.md"
+        },
+        "planningProvenance": {
+          "source": "persist-planning-execution-drafts",
+          "planningType": "new-feature",
+          "planRef": "PLANNER_TASKS.md"
+        }
+      }
+    },
+    {
+      "id": "T100446",
+      "title": "PlanArtifact v1 TypeScript types",
+      "type": "workspace-kit",
+      "priority": "P2",
+      "status": "proposed",
+      "phaseKey": "110",
+      "phase": "Phase 110",
+      "approach": "Implement src/core/planning/plan-artifact-v1.ts matching A-SCHEMA.",
+      "summary": "Implement src/core/planning/plan-artifact-v1.ts matching A-SCHEMA.",
+      "technicalScope": [
+        "Exported types for all PlanArtifact sections",
+        "schemaVersion: 1"
+      ],
+      "acceptanceCriteria": [
+        "Types compile with JSDoc on non-obvious fields"
+      ],
+      "dependsOn": [
+        "T100440"
+      ],
+      "metadata": {
+        "planner": {
+          "wbsId": "T-1.1",
+          "slice": "P1",
+          "specPath": "PLANNER_TASKS.md"
+        },
+        "planningProvenance": {
+          "source": "persist-planning-execution-drafts",
+          "planningType": "new-feature",
+          "planRef": "PLANNER_TASKS.md"
+        }
+      }
+    },
+    {
+      "id": "T100447",
+      "title": "PlanArtifact v1 JSON Schema",
+      "type": "workspace-kit",
+      "priority": "P2",
+      "status": "proposed",
+      "phaseKey": "110",
+      "phase": "Phase 110",
+      "approach": "schemas/planning/plan-artifact.v1.schema.json with WBS $ref.",
+      "summary": "schemas/planning/plan-artifact.v1.schema.json with WBS $ref.",
+      "technicalScope": [
+        "Validate minimal fixture",
+        "Reject empty identity/goals"
+      ],
+      "acceptanceCriteria": [
+        "Schema tests pass"
+      ],
+      "dependsOn": [
+        "T100446"
+      ],
+      "metadata": {
+        "planner": {
+          "wbsId": "T-1.2",
+          "slice": "P1",
+          "specPath": "PLANNER_TASKS.md"
+        },
+        "planningProvenance": {
+          "source": "persist-planning-execution-drafts",
+          "planningType": "new-feature",
+          "planRef": "PLANNER_TASKS.md"
+        }
+      }
+    },
+    {
+      "id": "T100448",
+      "title": "WBS sub-schema and normalizer stub",
+      "type": "workspace-kit",
+      "priority": "P2",
+      "status": "proposed",
+      "phaseKey": "110",
+      "phase": "Phase 110",
+      "approach": "normalizeWbsItemToTaskDraft() signature and shape guard stub.",
+      "summary": "normalizeWbsItemToTaskDraft() signature and shape guard stub.",
+      "technicalScope": [
+        "WBS item types + stub until WP-6"
+      ],
+      "acceptanceCriteria": [
+        "Shape guard tests pass"
+      ],
+      "dependsOn": [
+        "T100446"
+      ],
+      "metadata": {
+        "planner": {
+          "wbsId": "T-1.3",
+          "slice": "P1",
+          "specPath": "PLANNER_TASKS.md"
+        },
+        "planningProvenance": {
+          "source": "persist-planning-execution-drafts",
+          "planningType": "new-feature",
+          "planRef": "PLANNER_TASKS.md"
+        }
+      }
+    },
+    {
+      "id": "T100449",
+      "title": "Plan artifact storage layer",
+      "type": "workspace-kit",
+      "priority": "P2",
+      "status": "proposed",
+      "phaseKey": "110",
+      "phase": "Phase 110",
+      "approach": "Versioned read/write per A-ARCH (filesystem or module-state SQLite).",
+      "summary": "Versioned read/write per A-ARCH (filesystem or module-state SQLite).",
+      "technicalScope": [
+        "Round-trip persistence",
+        "List summaries, bump version"
+      ],
+      "acceptanceCriteria": [
+        "Round-trip test passes",
+        "Path documented"
+      ],
+      "dependsOn": [
+        "T100446",
+        "T100439"
+      ],
+      "metadata": {
+        "planner": {
+          "wbsId": "T-1.4",
+          "slice": "P1",
+          "specPath": "PLANNER_TASKS.md"
+        },
+        "planningProvenance": {
+          "source": "persist-planning-execution-drafts",
+          "planningType": "new-feature",
+          "planRef": "PLANNER_TASKS.md"
+        }
+      }
+    },
+    {
+      "id": "T100450",
+      "title": "PlanArtifact markdown render view",
+      "type": "workspace-kit",
+      "priority": "P2",
+      "status": "proposed",
+      "phaseKey": "110",
+      "phase": "Phase 110",
+      "approach": "renderPlanArtifactMarkdown() from structured data; omit empty optional sections.",
+      "summary": "renderPlanArtifactMarkdown() from structured data; omit empty optional sections.",
+      "technicalScope": [
+        "Pure render function",
+        "Snapshot tests"
+      ],
+      "acceptanceCriteria": [
+        "Minimal + full fixture snapshots"
+      ],
+      "dependsOn": [
+        "T100446"
+      ],
+      "metadata": {
+        "planner": {
+          "wbsId": "T-1.5",
+          "slice": "P1",
+          "specPath": "PLANNER_TASKS.md"
+        },
+        "planningProvenance": {
+          "source": "persist-planning-execution-drafts",
+          "planningType": "new-feature",
+          "planRef": "PLANNER_TASKS.md"
+        }
+      }
+    },
+    {
+      "id": "T100451",
+      "title": "Author CAE planning lens artifacts (A-CAE)",
+      "type": "workspace-kit",
+      "priority": "P2",
+      "status": "proposed",
+      "phaseKey": "110",
+      "phase": "Phase 110",
+      "approach": "CAE markdown lenses: completeness, architecture, risk, testing, UX, decomposition, anti-patterns, sizing.",
+      "summary": "CAE markdown lenses: completeness, architecture, risk, testing, UX, decomposition, anti-patterns, sizing.",
+      "technicalScope": [
+        "Register in artifacts.v1.json"
+      ],
+      "acceptanceCriteria": [
+        "A-CAE draft ready for human review"
+      ],
+      "dependsOn": [
+        "T100439"
+      ],
+      "metadata": {
+        "planner": {
+          "wbsId": "T-2.1",
+          "slice": "P2",
+          "specPath": "PLANNER_TASKS.md"
+        },
+        "planningProvenance": {
+          "source": "persist-planning-execution-drafts",
+          "planningType": "new-feature",
+          "planRef": "PLANNER_TASKS.md"
+        }
+      }
+    },
+    {
+      "id": "T100452",
+      "title": "Register CAE planning activations",
+      "type": "workspace-kit",
+      "priority": "P2",
+      "status": "proposed",
+      "phaseKey": "110",
+      "phase": "Phase 110",
+      "approach": "activations.v1.json for plan commands; bundles per PLANNER Step 2.",
+      "summary": "activations.v1.json for plan commands; bundles per PLANNER Step 2.",
+      "technicalScope": [
+        "cae-registry-validate passes"
+      ],
+      "acceptanceCriteria": [
+        "Planning activations registered"
+      ],
+      "dependsOn": [
+        "T100451"
+      ],
+      "metadata": {
+        "planner": {
+          "wbsId": "T-2.2",
+          "slice": "P2",
+          "specPath": "PLANNER_TASKS.md"
+        },
+        "planningProvenance": {
+          "source": "persist-planning-execution-drafts",
+          "planningType": "new-feature",
+          "planRef": "PLANNER_TASKS.md"
+        }
+      }
+    },
+    {
+      "id": "T100453",
+      "title": "Planning session CAE scope hook",
+      "type": "workspace-kit",
+      "priority": "P2",
+      "status": "proposed",
+      "phaseKey": "110",
+      "phase": "Phase 110",
+      "approach": "Surface planning bundles on draft-plan-artifact via existing scope kinds.",
+      "summary": "Surface planning bundles on draft-plan-artifact via existing scope kinds.",
+      "technicalScope": [
+        "Integration test for activation fire"
+      ],
+      "acceptanceCriteria": [
+        "Test proves activation on draft command"
+      ],
+      "dependsOn": [
+        "T100452"
+      ],
+      "metadata": {
+        "planner": {
+          "wbsId": "T-2.3",
+          "slice": "P2",
+          "specPath": "PLANNER_TASKS.md"
+        },
+        "planningProvenance": {
+          "source": "persist-planning-execution-drafts",
+          "planningType": "new-feature",
+          "planRef": "PLANNER_TASKS.md"
+        }
+      }
+    },
+    {
+      "id": "T100454",
+      "title": "Plan-artifact machine runbook",
+      "type": "workspace-kit",
+      "priority": "P2",
+      "status": "proposed",
+      "phaseKey": "110",
+      "phase": "Phase 110",
+      "approach": ".ai/runbooks/plan-artifact-workflow.md + CLI map snippets.",
+      "summary": ".ai/runbooks/plan-artifact-workflow.md + CLI map snippets.",
+      "technicalScope": [
+        "Link from planning README or runbooks HUB"
+      ],
+      "acceptanceCriteria": [
+        "Runbook discoverable by agents"
+      ],
+      "dependsOn": [
+        "T100452",
+        "T100441"
+      ],
+      "metadata": {
+        "planner": {
+          "wbsId": "T-2.4",
+          "slice": "P2",
+          "specPath": "PLANNER_TASKS.md"
+        },
+        "planningProvenance": {
+          "source": "persist-planning-execution-drafts",
+          "planningType": "new-feature",
+          "planRef": "PLANNER_TASKS.md"
+        }
+      }
+    },
+    {
+      "id": "T100455",
+      "title": "draft-plan-artifact instruction doc",
+      "type": "workspace-kit",
+      "priority": "P1",
+      "status": "proposed",
+      "phaseKey": "110",
+      "phase": "Phase 110",
+      "approach": "Instruction file per A-CONTRACTS with --schema-only.",
+      "summary": "Instruction file per A-CONTRACTS with --schema-only.",
+      "technicalScope": [
+        "src/modules/planning/instructions/draft-plan-artifact.md"
+      ],
+      "acceptanceCriteria": [
+        "Schema-only works",
+        "Command listed in wk run"
+      ],
+      "dependsOn": [
+        "T100441",
+        "T100447"
+      ],
+      "metadata": {
+        "planner": {
+          "wbsId": "T-3.1",
+          "slice": "P3",
+          "specPath": "PLANNER_TASKS.md"
+        },
+        "planningProvenance": {
+          "source": "persist-planning-execution-drafts",
+          "planningType": "new-feature",
+          "planRef": "PLANNER_TASKS.md"
+        }
+      }
+    },
+    {
+      "id": "T100456",
+      "title": "draft-plan-artifact validation",
+      "type": "workspace-kit",
+      "priority": "P1",
+      "status": "proposed",
+      "phaseKey": "110",
+      "phase": "Phase 110",
+      "approach": "JSON schema validate, normalize, path-level errors.",
+      "summary": "JSON schema validate, normalize, path-level errors.",
+      "technicalScope": [
+        "Validator module",
+        "Tests for valid/minimal and invalid rows"
+      ],
+      "acceptanceCriteria": [
+        "Validation tests pass"
+      ],
+      "dependsOn": [
+        "T100455"
+      ],
+      "metadata": {
+        "planner": {
+          "wbsId": "T-3.2",
+          "slice": "P3",
+          "specPath": "PLANNER_TASKS.md"
+        },
+        "planningProvenance": {
+          "source": "persist-planning-execution-drafts",
+          "planningType": "new-feature",
+          "planRef": "PLANNER_TASKS.md"
+        }
+      }
+    },
+    {
+      "id": "T100457",
+      "title": "draft-plan-artifact persist handler",
+      "type": "workspace-kit",
+      "priority": "P1",
+      "status": "proposed",
+      "phaseKey": "110",
+      "phase": "Phase 110",
+      "approach": "Wire onCommand; storage via WP-1; trace metadata.",
+      "summary": "Wire onCommand; storage via WP-1; trace metadata.",
+      "technicalScope": [
+        "Returns planId, version, planRef"
+      ],
+      "acceptanceCriteria": [
+        "CLI round-trip saves draft"
+      ],
+      "dependsOn": [
+        "T100456",
+        "T100449"
+      ],
+      "metadata": {
+        "planner": {
+          "wbsId": "T-3.3",
+          "slice": "P3",
+          "specPath": "PLANNER_TASKS.md"
+        },
+        "planningProvenance": {
+          "source": "persist-planning-execution-drafts",
+          "planningType": "new-feature",
+          "planRef": "PLANNER_TASKS.md"
+        }
+      }
+    },
+    {
+      "id": "T100458",
+      "title": "draft-plan-artifact tests and fixtures",
+      "type": "workspace-kit",
+      "priority": "P1",
+      "status": "proposed",
+      "phaseKey": "110",
+      "phase": "Phase 110",
+      "approach": "fixtures/planning + test/plan-artifact-draft.test.mjs.",
+      "summary": "fixtures/planning + test/plan-artifact-draft.test.mjs.",
+      "technicalScope": [
+        "CI green"
+      ],
+      "acceptanceCriteria": [
+        "Fixtures cover minimal feature plan"
+      ],
+      "dependsOn": [
+        "T100457"
+      ],
+      "metadata": {
+        "planner": {
+          "wbsId": "T-3.4",
+          "slice": "P3",
+          "specPath": "PLANNER_TASKS.md"
+        },
+        "planningProvenance": {
+          "source": "persist-planning-execution-drafts",
+          "planningType": "new-feature",
+          "planRef": "PLANNER_TASKS.md"
+        }
+      }
+    },
+    {
+      "id": "T100459",
+      "title": "review-plan-artifact instruction doc",
+      "type": "workspace-kit",
+      "priority": "P1",
+      "status": "proposed",
+      "phaseKey": "110",
+      "phase": "Phase 110",
+      "approach": "Instruction per A-CONTRACTS and A-RUBRIC summary.",
+      "summary": "Instruction per A-CONTRACTS and A-RUBRIC summary.",
+      "technicalScope": [
+        "--schema-only registration"
+      ],
+      "acceptanceCriteria": [
+        "Schema-only works"
+      ],
+      "dependsOn": [
+        "T100441",
+        "T100442"
+      ],
+      "metadata": {
+        "planner": {
+          "wbsId": "T-4.1",
+          "slice": "P3",
+          "specPath": "PLANNER_TASKS.md"
+        },
+        "planningProvenance": {
+          "source": "persist-planning-execution-drafts",
+          "planningType": "new-feature",
+          "planRef": "PLANNER_TASKS.md"
+        }
+      }
+    },
+    {
+      "id": "T100460",
+      "title": "reviewPlanArtifact engine",
+      "type": "workspace-kit",
+      "priority": "P1",
+      "status": "proposed",
+      "phaseKey": "110",
+      "phase": "Phase 110",
+      "approach": "Pure review engine per A-RUBRIC with findings.",
+      "summary": "Pure review engine per A-RUBRIC with findings.",
+      "technicalScope": [
+        "Unit tests per rubric rule"
+      ],
+      "acceptanceCriteria": [
+        "Review engine tests pass"
+      ],
+      "dependsOn": [
+        "T100459"
+      ],
+      "metadata": {
+        "planner": {
+          "wbsId": "T-4.2",
+          "slice": "P3",
+          "specPath": "PLANNER_TASKS.md"
+        },
+        "planningProvenance": {
+          "source": "persist-planning-execution-drafts",
+          "planningType": "new-feature",
+          "planRef": "PLANNER_TASKS.md"
+        }
+      }
+    },
+    {
+      "id": "T100461",
+      "title": "Plan review WBS sizing checks",
+      "type": "workspace-kit",
+      "priority": "P1",
+      "status": "proposed",
+      "phaseKey": "110",
+      "phase": "Phase 110",
+      "approach": "Oversized rows, vague AC, missing verification slices.",
+      "summary": "Oversized rows, vague AC, missing verification slices.",
+      "technicalScope": [
+        "Sizing rule tests"
+      ],
+      "acceptanceCriteria": [
+        "Bad fixtures caught"
+      ],
+      "dependsOn": [
+        "T100460"
+      ],
+      "metadata": {
+        "planner": {
+          "wbsId": "T-4.3",
+          "slice": "P3",
+          "specPath": "PLANNER_TASKS.md"
+        },
+        "planningProvenance": {
+          "source": "persist-planning-execution-drafts",
+          "planningType": "new-feature",
+          "planRef": "PLANNER_TASKS.md"
+        }
+      }
+    },
+    {
+      "id": "T100462",
+      "title": "Plan review WBS coverage map",
+      "type": "workspace-kit",
+      "priority": "P1",
+      "status": "proposed",
+      "phaseKey": "110",
+      "phase": "Phase 110",
+      "approach": "Goals/stories to WBS mapping; Gap 5 architecture/UI/test/rollout slices.",
+      "summary": "Goals/stories to WBS mapping; Gap 5 architecture/UI/test/rollout slices.",
+      "technicalScope": [
+        "Coverage map in response",
+        "Waiver support"
+      ],
+      "acceptanceCriteria": [
+        "Uncovered objectives produce blockers"
+      ],
+      "dependsOn": [
+        "T100460"
+      ],
+      "metadata": {
+        "planner": {
+          "wbsId": "T-4.4",
+          "slice": "P3",
+          "specPath": "PLANNER_TASKS.md"
+        },
+        "planningProvenance": {
+          "source": "persist-planning-execution-drafts",
+          "planningType": "new-feature",
+          "planRef": "PLANNER_TASKS.md"
+        }
+      }
+    },
+    {
+      "id": "T100463",
+      "title": "review-plan-artifact command wiring",
+      "type": "workspace-kit",
+      "priority": "P1",
+      "status": "proposed",
+      "phaseKey": "110",
+      "phase": "Phase 110",
+      "approach": "CLI command; response codes per A-CONTRACTS; no mutation.",
+      "summary": "CLI command; response codes per A-CONTRACTS; no mutation.",
+      "technicalScope": [
+        "review-plan-artifact handler"
+      ],
+      "acceptanceCriteria": [
+        "CLI returns findings"
+      ],
+      "dependsOn": [
+        "T100461",
+        "T100462"
+      ],
+      "metadata": {
+        "planner": {
+          "wbsId": "T-4.5",
+          "slice": "P3",
+          "specPath": "PLANNER_TASKS.md"
+        },
+        "planningProvenance": {
+          "source": "persist-planning-execution-drafts",
+          "planningType": "new-feature",
+          "planRef": "PLANNER_TASKS.md"
+        }
+      }
+    },
+    {
+      "id": "T100464",
+      "title": "review-plan-artifact tests and fixtures",
+      "type": "workspace-kit",
+      "priority": "P1",
+      "status": "proposed",
+      "phaseKey": "110",
+      "phase": "Phase 110",
+      "approach": "Pass/fail/coverage-gap fixtures.",
+      "summary": "Pass/fail/coverage-gap fixtures.",
+      "technicalScope": [
+        "test coverage"
+      ],
+      "acceptanceCriteria": [
+        "CI green"
+      ],
+      "dependsOn": [
+        "T100463"
+      ],
+      "metadata": {
+        "planner": {
+          "wbsId": "T-4.6",
+          "slice": "P3",
+          "specPath": "PLANNER_TASKS.md"
+        },
+        "planningProvenance": {
+          "source": "persist-planning-execution-drafts",
+          "planningType": "new-feature",
+          "planRef": "PLANNER_TASKS.md"
+        }
+      }
+    },
+    {
+      "id": "T100465",
+      "title": "accept-plan-artifact instruction doc",
+      "type": "workspace-kit",
+      "priority": "P1",
+      "status": "proposed",
+      "phaseKey": "110",
+      "phase": "Phase 110",
+      "approach": "approvalRecord shape per A-SCHEMA and A-CONTRACTS.",
+      "summary": "approvalRecord shape per A-SCHEMA and A-CONTRACTS.",
+      "technicalScope": [
+        "Example JSON in instruction"
+      ],
+      "acceptanceCriteria": [
+        "Schema-only works"
+      ],
+      "dependsOn": [
+        "T100441",
+        "T100463"
+      ],
+      "metadata": {
+        "planner": {
+          "wbsId": "T-5.1",
+          "slice": "P4",
+          "specPath": "PLANNER_TASKS.md"
+        },
+        "planningProvenance": {
+          "source": "persist-planning-execution-drafts",
+          "planningType": "new-feature",
+          "planRef": "PLANNER_TASKS.md"
+        }
+      }
+    },
+    {
+      "id": "T100466",
+      "title": "accept-plan-artifact command",
+      "type": "workspace-kit",
+      "priority": "P1",
+      "status": "proposed",
+      "phaseKey": "110",
+      "phase": "Phase 110",
+      "approach": "Require confirmed:true; version pin; optional strict review pass.",
+      "summary": "Require confirmed:true; version pin; optional strict review pass.",
+      "technicalScope": [
+        "plan-artifact-accepted response"
+      ],
+      "acceptanceCriteria": [
+        "Accept persists approval block"
+      ],
+      "dependsOn": [
+        "T100465",
+        "T100463"
+      ],
+      "metadata": {
+        "planner": {
+          "wbsId": "T-5.2",
+          "slice": "P4",
+          "specPath": "PLANNER_TASKS.md"
+        },
+        "planningProvenance": {
+          "source": "persist-planning-execution-drafts",
+          "planningType": "new-feature",
+          "planRef": "PLANNER_TASKS.md"
+        }
+      }
+    },
+    {
+      "id": "T100467",
+      "title": "accept-plan-artifact guardrails and tests",
+      "type": "workspace-kit",
+      "priority": "P1",
+      "status": "proposed",
+      "phaseKey": "110",
+      "phase": "Phase 110",
+      "approach": "Block accept on review blockers; version mismatch; idempotent re-accept.",
+      "summary": "Block accept on review blockers; version mismatch; idempotent re-accept.",
+      "technicalScope": [
+        "Test suite"
+      ],
+      "acceptanceCriteria": [
+        "CI green"
+      ],
+      "dependsOn": [
+        "T100466"
+      ],
+      "metadata": {
+        "planner": {
+          "wbsId": "T-5.3",
+          "slice": "P4",
+          "specPath": "PLANNER_TASKS.md"
+        },
+        "planningProvenance": {
+          "source": "persist-planning-execution-drafts",
+          "planningType": "new-feature",
+          "planRef": "PLANNER_TASKS.md"
+        }
+      }
+    },
+    {
+      "id": "T100468",
+      "title": "finalize-plan-to-phase instruction doc",
+      "type": "workspace-kit",
+      "priority": "P1",
+      "status": "proposed",
+      "phaseKey": "110",
+      "phase": "Phase 110",
+      "approach": "Contract for dry-run vs persist and acceptance requirement.",
+      "summary": "Contract for dry-run vs persist and acceptance requirement.",
+      "technicalScope": [
+        "Preview + persist examples"
+      ],
+      "acceptanceCriteria": [
+        "Schema-only works"
+      ],
+      "dependsOn": [
+        "T100441",
+        "T100466"
+      ],
+      "metadata": {
+        "planner": {
+          "wbsId": "T-6.1",
+          "slice": "P4",
+          "specPath": "PLANNER_TASKS.md"
+        },
+        "planningProvenance": {
+          "source": "persist-planning-execution-drafts",
+          "planningType": "new-feature",
+          "planRef": "PLANNER_TASKS.md"
+        }
+      }
+    },
+    {
+      "id": "T100469",
+      "title": "Phase proposal resolver",
+      "type": "workspace-kit",
+      "priority": "P1",
+      "status": "proposed",
+      "phaseKey": "110",
+      "phase": "Phase 110",
+      "approach": "Resolve phase key, collision detection, short description validation.",
+      "summary": "Resolve phase key, collision detection, short description validation.",
+      "technicalScope": [
+        "Pure resolver + unit tests"
+      ],
+      "acceptanceCriteria": [
+        "Deterministic resolver tests pass"
+      ],
+      "dependsOn": [
+        "T100439",
+        "T100468"
+      ],
+      "metadata": {
+        "planner": {
+          "wbsId": "T-6.2",
+          "slice": "P4",
+          "specPath": "PLANNER_TASKS.md"
+        },
+        "planningProvenance": {
+          "source": "persist-planning-execution-drafts",
+          "planningType": "new-feature",
+          "planRef": "PLANNER_TASKS.md"
+        }
+      }
+    },
+    {
+      "id": "T100470",
+      "title": "WBS to task draft normalizer",
+      "type": "workspace-kit",
+      "priority": "P1",
+      "status": "proposed",
+      "phaseKey": "110",
+      "phase": "Phase 110",
+      "approach": "normalizeWbsItemToTaskDraft to persist-planning-execution-drafts shape + provenance.",
+      "summary": "normalizeWbsItemToTaskDraft to persist-planning-execution-drafts shape + provenance.",
+      "technicalScope": [
+        "metadata.planRef, wbsPath"
+      ],
+      "acceptanceCriteria": [
+        "Normalizer tests pass"
+      ],
+      "dependsOn": [
+        "T100448",
+        "T100468"
+      ],
+      "metadata": {
+        "planner": {
+          "wbsId": "T-6.3",
+          "slice": "P4",
+          "specPath": "PLANNER_TASKS.md"
+        },
+        "planningProvenance": {
+          "source": "persist-planning-execution-drafts",
+          "planningType": "new-feature",
+          "planRef": "PLANNER_TASKS.md"
+        }
+      }
+    },
+    {
+      "id": "T100471",
+      "title": "finalize-plan-to-phase dry-run path",
+      "type": "workspace-kit",
+      "priority": "P1",
+      "status": "proposed",
+      "phaseKey": "110",
+      "phase": "Phase 110",
+      "approach": "Verify acceptance, phase, normalize, review-planning-execution-drafts equivalent; no writes.",
+      "summary": "Verify acceptance, phase, normalize, review-planning-execution-drafts equivalent; no writes.",
+      "technicalScope": [
+        "Preview command handler"
+      ],
+      "acceptanceCriteria": [
+        "Preview test passes",
+        "Missing acceptance blocks"
+      ],
+      "dependsOn": [
+        "T100469",
+        "T100470",
+        "T100466"
+      ],
+      "metadata": {
+        "planner": {
+          "wbsId": "T-6.4",
+          "slice": "P4",
+          "specPath": "PLANNER_TASKS.md"
+        },
+        "planningProvenance": {
+          "source": "persist-planning-execution-drafts",
+          "planningType": "new-feature",
+          "planRef": "PLANNER_TASKS.md"
+        }
+      }
+    },
+    {
+      "id": "T100472",
+      "title": "finalize-plan-to-phase persist path",
+      "type": "workspace-kit",
+      "priority": "P1",
+      "status": "proposed",
+      "phaseKey": "110",
+      "phase": "Phase 110",
+      "approach": "Policy + planning generation; delegate to persist-planning-execution-drafts.",
+      "summary": "Policy + planning generation; delegate to persist-planning-execution-drafts.",
+      "technicalScope": [
+        "Transactional persist",
+        "Idempotency test"
+      ],
+      "acceptanceCriteria": [
+        "Persist test passes"
+      ],
+      "dependsOn": [
+        "T100471"
+      ],
+      "metadata": {
+        "planner": {
+          "wbsId": "T-6.5",
+          "slice": "P4",
+          "specPath": "PLANNER_TASKS.md"
+        },
+        "planningProvenance": {
+          "source": "persist-planning-execution-drafts",
+          "planningType": "new-feature",
+          "planRef": "PLANNER_TASKS.md"
+        }
+      }
+    },
+    {
+      "id": "T100473",
+      "title": "finalize-plan-to-phase docs and CLI map",
+      "type": "workspace-kit",
+      "priority": "P1",
+      "status": "proposed",
+      "phaseKey": "110",
+      "phase": "Phase 110",
+      "approach": "AGENT-CLI-MAP, snippets, planning README.",
+      "summary": "AGENT-CLI-MAP, snippets, planning README.",
+      "technicalScope": [
+        "Agent discoverability"
+      ],
+      "acceptanceCriteria": [
+        "Docs registered"
+      ],
+      "dependsOn": [
+        "T100471"
+      ],
+      "metadata": {
+        "planner": {
+          "wbsId": "T-6.6",
+          "slice": "P4",
+          "specPath": "PLANNER_TASKS.md"
+        },
+        "planningProvenance": {
+          "source": "persist-planning-execution-drafts",
+          "planningType": "new-feature",
+          "planRef": "PLANNER_TASKS.md"
+        }
+      }
+    },
+    {
+      "id": "T100474",
+      "title": "dashboard-summary planArtifact contract",
+      "type": "workspace-kit",
+      "priority": "P2",
+      "status": "proposed",
+      "phaseKey": "110",
+      "phase": "Phase 110",
+      "approach": "Extend contract per A-ARCH and A-UX data needs.",
+      "summary": "Extend contract per A-ARCH and A-UX data needs.",
+      "technicalScope": [
+        "schemas/task-engine-run-contracts.schema.json",
+        "dashboard-summary.md"
+      ],
+      "acceptanceCriteria": [
+        "Schema validates",
+        "Null when no plan"
+      ],
+      "dependsOn": [
+        "T100443",
+        "T100457",
+        "T100463"
+      ],
+      "metadata": {
+        "planner": {
+          "wbsId": "T-7.1",
+          "slice": "P5",
+          "specPath": "PLANNER_TASKS.md"
+        },
+        "planningProvenance": {
+          "source": "persist-planning-execution-drafts",
+          "planningType": "new-feature",
+          "planRef": "PLANNER_TASKS.md"
+        }
+      }
+    },
+    {
+      "id": "T100475",
+      "title": "Dashboard plan draft panel",
+      "type": "workspace-kit",
+      "priority": "P2",
+      "status": "proposed",
+      "phaseKey": "110",
+      "phase": "Phase 110",
+      "approach": "Read-only plan sections; open questions prominent; webview styleguide.",
+      "summary": "Read-only plan sections; open questions prominent; webview styleguide.",
+      "technicalScope": [
+        "render-dashboard.ts",
+        "Renderer tests"
+      ],
+      "acceptanceCriteria": [
+        "Fixture render test passes"
+      ],
+      "dependsOn": [
+        "T100474"
+      ],
+      "metadata": {
+        "planner": {
+          "wbsId": "T-7.2",
+          "slice": "P5",
+          "specPath": "PLANNER_TASKS.md"
+        },
+        "planningProvenance": {
+          "source": "persist-planning-execution-drafts",
+          "planningType": "new-feature",
+          "planRef": "PLANNER_TASKS.md"
+        }
+      }
+    },
+    {
+      "id": "T100476",
+      "title": "Dashboard review findings and WBS preview",
+      "type": "workspace-kit",
+      "priority": "P2",
+      "status": "proposed",
+      "phaseKey": "110",
+      "phase": "Phase 110",
+      "approach": "Findings, sizing findings, WBS table per A-UX.",
+      "summary": "Findings, sizing findings, WBS table per A-UX.",
+      "technicalScope": [
+        "Extension renderer tests"
+      ],
+      "acceptanceCriteria": [
+        "Pass/fail render tests"
+      ],
+      "dependsOn": [
+        "T100474"
+      ],
+      "metadata": {
+        "planner": {
+          "wbsId": "T-7.3",
+          "slice": "P5",
+          "specPath": "PLANNER_TASKS.md"
+        },
+        "planningProvenance": {
+          "source": "persist-planning-execution-drafts",
+          "planningType": "new-feature",
+          "planRef": "PLANNER_TASKS.md"
+        }
+      }
+    },
+    {
+      "id": "T100477",
+      "title": "Dashboard plan accept action",
+      "type": "workspace-kit",
+      "priority": "P2",
+      "status": "proposed",
+      "phaseKey": "110",
+      "phase": "Phase 110",
+      "approach": "accept-plan-artifact + policy lane per A-UX.",
+      "summary": "accept-plan-artifact + policy lane per A-UX.",
+      "technicalScope": [
+        "Host action wiring"
+      ],
+      "acceptanceCriteria": [
+        "Accept disabled until review pass"
+      ],
+      "dependsOn": [
+        "T100476",
+        "T100466"
+      ],
+      "metadata": {
+        "planner": {
+          "wbsId": "T-7.4",
+          "slice": "P5",
+          "specPath": "PLANNER_TASKS.md"
+        },
+        "planningProvenance": {
+          "source": "persist-planning-execution-drafts",
+          "planningType": "new-feature",
+          "planRef": "PLANNER_TASKS.md"
+        }
+      }
+    },
+    {
+      "id": "T100478",
+      "title": "Dashboard finalize and open phase action",
+      "type": "workspace-kit",
+      "priority": "P2",
+      "status": "proposed",
+      "phaseKey": "110",
+      "phase": "Phase 110",
+      "approach": "Task creation preview dry-run + persist; refresh queue.",
+      "summary": "Task creation preview dry-run + persist; refresh queue.",
+      "technicalScope": [
+        "Extension action wiring"
+      ],
+      "acceptanceCriteria": [
+        "Tasks appear in Queue after persist"
+      ],
+      "dependsOn": [
+        "T100477",
+        "T100471",
+        "T100472"
+      ],
+      "metadata": {
+        "planner": {
+          "wbsId": "T-7.5",
+          "slice": "P5",
+          "specPath": "PLANNER_TASKS.md"
+        },
+        "planningProvenance": {
+          "source": "persist-planning-execution-drafts",
+          "planningType": "new-feature",
+          "planRef": "PLANNER_TASKS.md"
+        }
+      }
+    },
+    {
+      "id": "T100479",
+      "title": "Dashboard plan lifecycle tests",
+      "type": "workspace-kit",
+      "priority": "P2",
+      "status": "proposed",
+      "phaseKey": "110",
+      "phase": "Phase 110",
+      "approach": "Extension tests; CAE dashboard fixtures if needed.",
+      "summary": "Extension tests; CAE dashboard fixtures if needed.",
+      "technicalScope": [
+        "Extension + kit tests green"
+      ],
+      "acceptanceCriteria": [
+        "Lifecycle states covered"
+      ],
+      "dependsOn": [
+        "T100478"
+      ],
+      "metadata": {
+        "planner": {
+          "wbsId": "T-7.6",
+          "slice": "P5",
+          "specPath": "PLANNER_TASKS.md"
+        },
+        "planningProvenance": {
+          "source": "persist-planning-execution-drafts",
+          "planningType": "new-feature",
+          "planRef": "PLANNER_TASKS.md"
+        }
+      }
+    },
+    {
+      "id": "T100480",
+      "title": "build-plan compatibility shim",
+      "type": "workspace-kit",
+      "priority": "P2",
+      "status": "proposed",
+      "phaseKey": "110",
+      "phase": "Phase 110",
+      "approach": "Implement A-COMPAT decisions; keep build-plan tests passing.",
+      "summary": "Implement A-COMPAT decisions; keep build-plan tests passing.",
+      "technicalScope": [
+        "Bridge or deprecation docs in README"
+      ],
+      "acceptanceCriteria": [
+        "build-plan tests pass"
+      ],
+      "dependsOn": [
+        "T100445",
+        "T100472"
+      ],
+      "metadata": {
+        "planner": {
+          "wbsId": "T-8.1",
+          "slice": "P6",
+          "specPath": "PLANNER_TASKS.md"
+        },
+        "planningProvenance": {
+          "source": "persist-planning-execution-drafts",
+          "planningType": "new-feature",
+          "planRef": "PLANNER_TASKS.md"
+        }
+      }
+    },
+    {
+      "id": "T100481",
+      "title": "Planner E2E CLI golden path test",
+      "type": "workspace-kit",
+      "priority": "P2",
+      "status": "proposed",
+      "phaseKey": "110",
+      "phase": "Phase 110",
+      "approach": "draft to review to accept to finalize; draft A-E2E checklist.",
+      "summary": "draft to review to accept to finalize; draft A-E2E checklist.",
+      "technicalScope": [
+        "test file happy + blocked path"
+      ],
+      "acceptanceCriteria": [
+        "E2E test passes",
+        "A-E2E checklist drafted"
+      ],
+      "dependsOn": [
+        "T100472",
+        "T100444"
+      ],
+      "metadata": {
+        "planner": {
+          "wbsId": "T-8.2",
+          "slice": "P6",
+          "specPath": "PLANNER_TASKS.md"
+        },
+        "planningProvenance": {
+          "source": "persist-planning-execution-drafts",
+          "planningType": "new-feature",
+          "planRef": "PLANNER_TASKS.md"
+        }
+      }
+    },
+    {
+      "id": "T100482",
+      "title": "Plan/task drift report (stretch)",
+      "type": "workspace-kit",
+      "priority": "P2",
+      "status": "proposed",
+      "phaseKey": "110",
+      "phase": "Phase 110",
+      "approach": "Optional read-only divergence report stub.",
+      "summary": "Optional read-only divergence report stub.",
+      "technicalScope": [
+        "Follow-up if not implemented"
+      ],
+      "acceptanceCriteria": [
+        "Documented deferral or stub"
+      ],
+      "dependsOn": [
+        "T100472"
+      ],
+      "metadata": {
+        "planner": {
+          "wbsId": "T-8.3",
+          "slice": "P6",
+          "specPath": "PLANNER_TASKS.md"
+        },
+        "planningProvenance": {
+          "source": "persist-planning-execution-drafts",
+          "planningType": "new-feature",
+          "planRef": "PLANNER_TASKS.md"
+        }
+      }
+    },
+    {
+      "id": "T100483",
+      "title": "Planner release CI gate",
+      "type": "workspace-kit",
+      "priority": "P2",
+      "status": "proposed",
+      "phaseKey": "110",
+      "phase": "Phase 110",
+      "approach": "Fixture-based check per A-TEST.",
+      "summary": "Fixture-based check per A-TEST.",
+      "technicalScope": [
+        "CI target documented"
+      ],
+      "acceptanceCriteria": [
+        "CI gate runs plan-artifact fixtures"
+      ],
+      "dependsOn": [
+        "T100481"
+      ],
+      "metadata": {
+        "planner": {
+          "wbsId": "T-8.4",
+          "slice": "P6",
+          "specPath": "PLANNER_TASKS.md"
+        },
+        "planningProvenance": {
+          "source": "persist-planning-execution-drafts",
+          "planningType": "new-feature",
+          "planRef": "PLANNER_TASKS.md"
+        }
+      }
+    },
+    {
+      "id": "T100484",
+      "title": "Planner traceability matrix closeout",
+      "type": "workspace-kit",
+      "priority": "P2",
+      "status": "proposed",
+      "phaseKey": "110",
+      "phase": "Phase 110",
+      "approach": "Map PLANNER.md success loop and A-* artifacts to evidence.",
+      "summary": "Map PLANNER.md success loop and A-* artifacts to evidence.",
+      "technicalScope": [
+        "PR or task notes matrix"
+      ],
+      "acceptanceCriteria": [
+        "Traceability complete"
+      ],
+      "dependsOn": [
+        "T100481"
+      ],
+      "metadata": {
+        "planner": {
+          "wbsId": "T-9.1",
+          "slice": "P6",
+          "specPath": "PLANNER_TASKS.md"
+        },
+        "planningProvenance": {
+          "source": "persist-planning-execution-drafts",
+          "planningType": "new-feature",
+          "planRef": "PLANNER_TASKS.md"
+        }
+      }
+    },
+    {
+      "id": "T100485",
+      "title": "Planner full test sweep closeout",
+      "type": "workspace-kit",
+      "priority": "P2",
+      "status": "proposed",
+      "phaseKey": "110",
+      "phase": "Phase 110",
+      "approach": "pnpm run test, extension tests, wk doctor.",
+      "summary": "pnpm run test, extension tests, wk doctor.",
+      "technicalScope": [
+        "All green"
+      ],
+      "acceptanceCriteria": [
+        "Test sweep evidence recorded"
+      ],
+      "dependsOn": [
+        "T100484",
+        "T100479",
+        "T100483"
+      ],
+      "metadata": {
+        "planner": {
+          "wbsId": "T-9.2",
+          "slice": "P6",
+          "specPath": "PLANNER_TASKS.md"
+        },
+        "planningProvenance": {
+          "source": "persist-planning-execution-drafts",
+          "planningType": "new-feature",
+          "planRef": "PLANNER_TASKS.md"
+        }
+      }
+    },
+    {
+      "id": "T100486",
+      "title": "Planner delivery meta (optional)",
+      "type": "workspace-kit",
+      "priority": "P2",
+      "status": "proposed",
+      "phaseKey": "110",
+      "phase": "Phase 110",
+      "approach": "Optional ops note; this batch satisfies registration.",
+      "summary": "Optional ops note; this batch satisfies registration.",
+      "technicalScope": [
+        "N/A"
+      ],
+      "acceptanceCriteria": [
+        "Skipped or marked complete"
+      ],
+      "dependsOn": [
+        "T100485"
+      ],
+      "metadata": {
+        "planner": {
+          "wbsId": "T-9.3",
+          "slice": "P6",
+          "specPath": "PLANNER_TASKS.md"
+        },
+        "planningProvenance": {
+          "source": "persist-planning-execution-drafts",
+          "planningType": "new-feature",
+          "planRef": "PLANNER_TASKS.md"
+        }
+      }
+    }
+  ]
+}

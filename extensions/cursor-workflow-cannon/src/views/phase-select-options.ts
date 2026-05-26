@@ -41,6 +41,36 @@ export function comparePhaseKeysDescending(a: string, b: string): number {
   return b.localeCompare(a, undefined, { numeric: true });
 }
 
+/** Queue phase-filter ordering: release date descending, then phase key descending. */
+export function compareQueuePhaseFilterValues(
+  a: string,
+  b: string,
+  releaseDates?: Readonly<Record<string, string>>
+): number {
+  if (a === "__no_phase__") {
+    return 1;
+  }
+  if (b === "__no_phase__") {
+    return -1;
+  }
+  const dateA = releaseDates?.[a];
+  const dateB = releaseDates?.[b];
+  if (dateA && dateB && dateA !== dateB) {
+    return dateB.localeCompare(dateA);
+  }
+  const ordCmp = comparePhaseKeysDescending(a, b);
+  if (ordCmp !== 0) {
+    return ordCmp;
+  }
+  if (dateA && !dateB) {
+    return -1;
+  }
+  if (!dateA && dateB) {
+    return 1;
+  }
+  return 0;
+}
+
 export function sortPhaseKeySuggestions(suggestions: readonly PhaseKeySuggestion[]): PhaseKeySuggestion[] {
   return [...suggestions].sort((x, y) => comparePhaseKeysDescending(x.phaseKey, y.phaseKey));
 }

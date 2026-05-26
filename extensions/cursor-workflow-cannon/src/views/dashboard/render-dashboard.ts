@@ -20,12 +20,78 @@ import {
 } from "../phase-schedule-tag.js";
 import { renderStatusTabInnerHtml } from "../status/render-status-tab.js";
 import { renderConfigPanelShellHtml } from "../config/config-panel-shell.js";
+import { compareQueuePhaseFilterValues } from "../phase-select-options.js";
+import type { DashboardSectionId } from "./dashboard-section-registry.js";
+import { lookupDashboardSection } from "./dashboard-section-registry.js";
+import { renderDashboardSectionPlaceholder } from "./render-dashboard-shell.js";
 
-function phaseScheduleFocusFromWorkspace(ws: Record<string, unknown> | null | undefined): PhaseScheduleFocus {
+export type RenderDashboardRootOptions = {
+  /** Sections that stay as loading placeholders until tab activation (T100398). */
+  deferredSections?: ReadonlySet<DashboardSectionId>;
+};
+
+function wrapDashboardSection(
+  id: DashboardSectionId,
+  innerHtml: string,
+  deferred: boolean
+): string {
+  if (deferred) {
+    return renderDashboardSectionPlaceholder(id, "loading");
+  }
+  return (
+    `<div data-wc-section="${id}" class="wc-dash-section wc-dash-section--ready" aria-busy="false">` +
+    innerHtml +
+    "</div>"
+  );
+}
+
+function phaseScheduleFocusFromWorkspace(
+  ws: Record<string, unknown> | null | undefined,
+  releasedPhaseKeys?: readonly string[],
+  legacyDeliveredMaxOrdinal?: number | null
+): PhaseScheduleFocus {
+  const released =
+    releasedPhaseKeys && releasedPhaseKeys.length > 0 ? new Set(releasedPhaseKeys) : undefined;
   return {
     currentKitPhase: ws?.currentKitPhase != null ? String(ws.currentKitPhase) : null,
-    nextKitPhase: ws?.nextKitPhase != null ? String(ws.nextKitPhase) : null
+    nextKitPhase: ws?.nextKitPhase != null ? String(ws.nextKitPhase) : null,
+    releasedPhaseKeys: released,
+    legacyDeliveredMaxOrdinal
   };
+}
+
+function readDeliveredPhaseKeys(data: Record<string, unknown>): string[] {
+  if (Array.isArray(data.deliveredPhaseKeys)) {
+    return (data.deliveredPhaseKeys as unknown[]).filter((k): k is string => typeof k === "string");
+  }
+  if (Array.isArray(data.rolledOutPhaseKeys)) {
+    return (data.rolledOutPhaseKeys as unknown[]).filter((k): k is string => typeof k === "string");
+  }
+  return [];
+}
+
+function readLegacyDeliveredMaxOrdinal(data: Record<string, unknown>): number | null {
+  const raw = data.legacyDeliveredMaxOrdinal;
+  if (typeof raw === "number" && Number.isFinite(raw) && raw >= 0) {
+    return Math.floor(raw);
+  }
+  return null;
+}
+
+function readPhaseReleaseDates(data: Record<string, unknown>): Record<string, string> {
+  const raw = data.phaseReleaseDates;
+  if (!raw || typeof raw !== "object") {
+    return {};
+  }
+  const out: Record<string, string> = {};
+  for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
+    const k = String(key).trim();
+    const v = typeof value === "string" ? value.trim() : "";
+    if (k.length > 0 && v.length > 0) {
+      out[k] = v;
+    }
+  }
+  return out;
 }
 
 function parsePhaseCatalogRows(phaseSlice: Record<string, unknown> | undefined): PhaseCatalogListRow[] {
@@ -238,18 +304,6 @@ export function renderActiveFocusHtml(raw: string): string {
   return renderMarkdownBoldAfterEscape(escapeHtml(raw));
 }
 
-function recommendedNextCategoryFromRow(row: Record<string, unknown>): "execution" | "improvement" {
-  const type = String(row.type ?? "").trim().toLowerCase();
-  if (type === "improvement") {
-    return "improvement";
-  }
-  const id = String(row.id ?? "").trim();
-  if (/^imp-/i.test(id)) {
-    return "improvement";
-  }
-  return "execution";
-}
-
 /** Stable phase key from a dashboard task/list row. */
 export function dashboardRowPhaseKey(row: unknown): string {
   if (!row || typeof row !== "object") {
@@ -431,7 +485,7 @@ export function renderUpNextCardHtml(args: UpNextCardRenderArgs): string {
   if (snapForPhase && !phaseDeliveryQueueDrainedForUpNext(snapForPhase)) {
     const candidate = pickFirstRowInCurrentPhase(args.phaseWorkCandidates ?? [], curPhase);
     if (candidate) {
-      return renderRecommendedNextCard(candidate, { statusTag: taskRowStatusTag(candidate) });
+      return renderRecommendedNextCard(candidate);
     }
     return renderRecommendedNextPhaseWorkCard(curPhase, snapForPhase);
   }
@@ -468,19 +522,6 @@ function pickFirstRowInCurrentPhase(rows: unknown[], currentPhaseKey: string): u
   return null;
 }
 
-function taskRowStatusTag(row: unknown): string {
-  if (!row || typeof row !== "object") {
-    return "task";
-  }
-  const status = String((row as { status?: unknown }).status ?? "")
-    .trim()
-    .toLowerCase();
-  if (status.length > 0) {
-    return status.replace(/_/g, "-");
-  }
-  return "task";
-}
-
 /** True when no runnable ready work remains in the current phase queue snapshot. */
 function phaseDeliveryQueueDrainedForUpNext(snapshot: PhaseSnapshot): boolean {
   if (snapshot.closeoutPassed) {
@@ -492,44 +533,50 @@ function phaseDeliveryQueueDrainedForUpNext(snapshot: PhaseSnapshot): boolean {
   return snapshot.remainingCount === 0 && snapshot.queue.inProgress === 0;
 }
 
+function renderUpNextTitleRow(title: string, actionsHtml: string): string {
+  const actionsBlock =
+    actionsHtml.length > 0
+      ? '<span class="wc-rec-title-actions">' + actionsHtml + "</span>"
+      : "";
+  return (
+    '<div class="wc-rec-title-row">' +
+    '<p class="wc-rec-title">' +
+    escapeHtml(title) +
+    "</p>" +
+    actionsBlock +
+    "</div>"
+  );
+}
+
 function renderRecommendedNextPickPhaseCard(nextKitPhase: string): string {
   const next = nextKitPhase.trim();
-  const title =
-    next.length > 0
-      ? "Start Phase " + next + " from the roster"
-      : "Choose a phase and start delivery";
-  const detail =
-    next.length > 0
-      ? "Set the workspace current phase, then pick up ready work on the Queue tab."
-      : "Use Start on a phase in the roster below when you are ready to deliver.";
-  const startBtn =
-    next.length > 0
-      ? '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="phase-roster-start" data-wc-phase-key="' +
-        escapeHtmlAttr(next) +
-        '" title="Set Phase ' +
-        escapeHtmlAttr(next) +
-        ' as the active workspace phase">Start Phase ' +
-        escapeHtml(next) +
-        " &rarr;</button>"
-      : "";
+  if (next.length > 0) {
+    const pk = escapeHtmlAttr(next);
+    const title = "Start Phase " + next;
+    const startBtn =
+      '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="phase-roster-start" data-wc-phase-key="' +
+      pk +
+      '" title="Set Phase ' +
+      pk +
+      ' as the active workspace phase">' +
+      escapeHtml(title) +
+      " &rarr;</button>";
+    return (
+      '<div class="wc-rec-next wc-rec-next-pick-phase">' +
+      '<div class="wc-rec-header">' +
+      '<span class="wc-rec-label">&#9733; Up next</span>' +
+      "</div>" +
+      renderUpNextTitleRow(title, startBtn) +
+      "</div>"
+    );
+  }
   return (
     '<div class="wc-rec-next wc-rec-next-pick-phase">' +
     '<div class="wc-rec-header">' +
     '<span class="wc-rec-label">&#9733; Up next</span>' +
     "</div>" +
-    '<p class="wc-rec-title">' +
-    escapeHtml(title) +
-    "</p>" +
-    '<p class="muted wc-rec-subtitle">' +
-    escapeHtml(detail) +
-    "</p>" +
-    '<div class="wc-rec-footer">' +
-    '<span class="wc-rec-tag wc-rec-tag-phase">phase</span>' +
-    '<span class="wc-rec-footer-actions">' +
-    '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="focus-phase-roster" title="Jump to the phase roster">Roster &darr;</button>' +
-    startBtn +
-    "</span>" +
-    "</div>" +
+    '<p class="wc-rec-title">Choose a phase and start delivery</p>' +
+    '<p class="muted wc-rec-subtitle">Use Start on a phase in the roster below when you are ready to deliver.</p>' +
     "</div>"
   );
 }
@@ -550,27 +597,19 @@ function renderRecommendedNextPhaseWorkCard(curPhase: string, snapshot: PhaseSna
       ? parts.join(" · ") + " — open the Queue tab filtered to this phase."
       : "Open the Queue tab to continue delivery work in this phase.";
   const pk = escapeHtmlAttr(curPhase);
+  const queueBtn =
+    '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="open-queue-for-phase" data-wc-phase-key="' +
+    pk +
+    '" title="Open Queue tab for this phase">Queue &rarr;</button>';
   return (
     '<div class="wc-rec-next wc-rec-next-phase-work">' +
     '<div class="wc-rec-header">' +
     '<span class="wc-rec-label">&#9733; Up next</span>' +
     "</div>" +
-    '<p class="wc-rec-title">Continue Phase ' +
-    escapeHtml(curPhase) +
-    " delivery work</p>" +
+    renderUpNextTitleRow("Continue Phase " + curPhase + " delivery work", queueBtn) +
     '<p class="muted wc-rec-subtitle">' +
     escapeHtml(detail) +
     "</p>" +
-    '<div class="wc-rec-footer">' +
-    '<span class="wc-rec-tag wc-rec-tag-phase">Phase ' +
-    escapeHtml(curPhase) +
-    "</span>" +
-    '<span class="wc-rec-footer-actions">' +
-    '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="open-queue-for-phase" data-wc-phase-key="' +
-    pk +
-    '" title="Open Queue tab for this phase">Queue &rarr;</button>' +
-    "</span>" +
-    "</div>" +
     "</div>"
   );
 }
@@ -628,69 +667,37 @@ function renderRecommendedNextCloseoutCard(args: {
         " &rarr;</button>"
       : "";
 
+  const actionsHtml = releaseBtn + startNextBtn;
+
   return (
     '<div class="wc-rec-next wc-rec-next-closeout">' +
     '<div class="wc-rec-header">' +
     '<span class="wc-rec-label">&#9733; Up next</span>' +
     "</div>" +
-    '<p class="wc-rec-title">' +
-    escapeHtml(title) +
-    "</p>" +
+    renderUpNextTitleRow(title, actionsHtml) +
     '<p class="muted wc-rec-subtitle">' +
     escapeHtml(detail) +
     "</p>" +
-    '<div class="wc-rec-footer">' +
-    '<span class="wc-rec-tag wc-rec-tag-closeout">closeout</span>' +
-    '<span class="wc-rec-tag wc-rec-tag-phase">Phase ' +
-    escapeHtml(cur) +
-    "</span>" +
-    '<span class="wc-rec-footer-actions">' +
-    releaseBtn +
-    startNextBtn +
-    "</span>" +
-    "</div>" +
     "</div>"
   );
 }
 
 /** ★ "Recommended Next" card — kit `suggestedNext` (phase-aware ready ordering). */
-function renderRecommendedNextCard(
-  item: unknown,
-  options?: { statusTag?: string }
-): string {
+function renderRecommendedNextCard(item: unknown): string {
   if (!item || typeof item !== "object") {
     return "";
   }
   const row = item as {
     id?: unknown;
     title?: unknown;
-    phase?: unknown;
-    phaseKey?: unknown;
-    type?: unknown;
-    priority?: unknown;
-    status?: unknown;
   };
   const id = String(row.id ?? "").trim();
   const title = String(row.title ?? "").trim();
-  const phaseKey = row.phaseKey != null ? String(row.phaseKey).trim() : "";
-  const phaseLabel = row.phase != null ? String(row.phase).trim() : "";
   if (!title && !id) {
     return "";
   }
   const displayTitle = title || id;
   const idAttr = id ? escapeHtmlAttr(id) : "";
-  const phaseDisplay =
-    phaseKey.length > 0 ? "Phase " + phaseKey : phaseLabel.length > 0 ? phaseLabel : "";
-  const phaseTag =
-    phaseDisplay.length > 0
-      ? '<span class="wc-rec-tag wc-rec-tag-phase">' + escapeHtml(phaseDisplay) + "</span>"
-      : "";
-  const category = recommendedNextCategoryFromRow(row as Record<string, unknown>);
-  const catTag =
-    '<span class="wc-rec-tag wc-rec-tag-cat">' + escapeHtml(category) + "</span>";
-  const statusTag =
-    options?.statusTag ??
-    (String(row.status ?? "").trim().toLowerCase() === "ready" ? "ready" : taskRowStatusTag(row));
   const viewBtn =
     id.length > 0
       ? '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="task-detail" data-task-id="' +
@@ -702,17 +709,7 @@ function renderRecommendedNextCard(
     '<div class="wc-rec-header">' +
     '<span class="wc-rec-label">&#9733; Up next</span>' +
     "</div>" +
-    '<p class="wc-rec-title">' +
-    escapeHtml(displayTitle) +
-    "</p>" +
-    '<div class="wc-rec-footer">' +
-    '<span class="wc-rec-tag wc-rec-tag-status">' +
-    escapeHtml(statusTag) +
-    "</span>" +
-    catTag +
-    phaseTag +
-    viewBtn +
-    "</div>" +
+    renderUpNextTitleRow(displayTitle, viewBtn) +
     "</div>"
   );
 }
@@ -739,28 +736,12 @@ function renderRecommendedNextWishlistCard(item: unknown): string {
         idAttr +
         '" title="Prefill wishlist intake chat">Process &rarr;</button>'
       : "";
-  const viewBtn =
-    wishlistId.length > 0
-      ? '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="wishlist-view" data-wishlist-id="' +
-        idAttr +
-        '" title="Open wishlist fields in the editor">View</button>'
-      : "";
   return (
     '<div class="wc-rec-next wc-rec-next-wishlist">' +
     '<div class="wc-rec-header">' +
     '<span class="wc-rec-label">&#9733; Up next</span>' +
     "</div>" +
-    "<p class=\"wc-rec-title\">" +
-    escapeHtml(displayTitle) +
-    "</p>" +
-    '<div class="wc-rec-footer">' +
-    '<span class="wc-rec-tag wc-rec-tag-wishlist">wishlist</span>' +
-    '<span class="wc-rec-tag wc-rec-tag-open">open</span>' +
-    '<span class="wc-rec-footer-actions">' +
-    processBtn +
-    viewBtn +
-    "</span>" +
-    "</div>" +
+    renderUpNextTitleRow(displayTitle, processBtn) +
     "</div>"
   );
 }
@@ -848,9 +829,8 @@ function parsePhaseOrdinal(raw: unknown): number | null {
 function deriveQueuePhaseFilterOptions(args: {
   workspaceStatus: Record<string, unknown> | null;
   phaseBuckets: unknown[];
+  phaseReleaseDates?: Readonly<Record<string, string>>;
 }): Array<{ value: string; label: string }> {
-  const out: Array<{ value: string; label: string }> = [{ value: "all", label: "All phases" }];
-  const seen = new Set<string>(["all"]);
   const available = new Set<string>();
 
   for (const raw of args.phaseBuckets) {
@@ -868,15 +848,15 @@ function deriveQueuePhaseFilterOptions(args: {
     }
   }
 
-  const add = (value: string, label: string) => {
-    if (!available.has(value) || seen.has(value)) {
+  const labels = new Map<string, string>();
+  const setLabel = (value: string, label: string) => {
+    if (!available.has(value)) {
       return;
     }
-    seen.add(value);
-    out.push({ value, label });
+    labels.set(value, label);
   };
 
-  add("__no_phase__", "No Phase");
+  setLabel("__no_phase__", "No Phase");
 
   const currentOrd = parsePhaseOrdinal(args.workspaceStatus?.currentKitPhase);
   const nextOrd = parsePhaseOrdinal(args.workspaceStatus?.nextKitPhase);
@@ -884,32 +864,30 @@ function deriveQueuePhaseFilterOptions(args: {
   if (currentOrd !== null) {
     const previous = currentOrd - 1;
     if (previous > 0) {
-      add(String(previous), `Previous (${String(previous)})`);
+      setLabel(String(previous), `Previous (${String(previous)})`);
     }
-    add(String(currentOrd), `Current (${String(currentOrd)})`);
+    setLabel(String(currentOrd), `Current (${String(currentOrd)})`);
   }
   if (nextOrd !== null) {
-    add(String(nextOrd), `Next (${String(nextOrd)})`);
+    setLabel(String(nextOrd), `Next (${String(nextOrd)})`);
   }
 
-  const numericLeftovers = [...available]
-    .filter((k) => /^\d+$/.test(k) && !seen.has(k))
-    .map((k) => Number.parseInt(k, 10))
-    .filter((n) => Number.isFinite(n))
-    .sort((a, b) => a - b)
-    .map((n) => String(n));
-  for (const k of numericLeftovers) {
-    add(k, `Phase ${k}`);
+  for (const k of available) {
+    if (labels.has(k)) {
+      continue;
+    }
+    if (k === "__no_phase__") {
+      continue;
+    }
+    labels.set(k, /^\d+$/.test(k) ? `Phase ${k}` : `Phase ${k}`);
   }
 
-  const lexicalLeftovers = [...available]
-    .filter((k) => !/^\d+$/.test(k) && k !== "__no_phase__" && !seen.has(k))
-    .sort((a, b) => a.localeCompare(b));
-  for (const k of lexicalLeftovers) {
-    add(k, `Phase ${k}`);
-  }
+  const releaseDates = args.phaseReleaseDates ?? {};
+  const phaseValues = [...labels.keys()].sort((a, b) =>
+    compareQueuePhaseFilterValues(a, b, releaseDates)
+  );
 
-  return out;
+  return [{ value: "all", label: "All phases" }, ...phaseValues.map((value) => ({ value, label: labels.get(value)! }))];
 }
 
 function renderFilterChipBar(
@@ -1241,7 +1219,7 @@ function renderPhaseReleaseAction(args: {
     workspaceNext: args.workspaceNext,
     scope: "current",
     closeoutReady,
-    disabled: readinessScore < 100 || releaseReadyPercent < 100
+    disabled: readinessScore < 100
   });
 }
 
@@ -1435,6 +1413,31 @@ function buildPhaseProgressChecks(args: {
   ];
 }
 
+function renderPhaseRosterEditButton(phaseKey: string): string {
+  const pk = escapeHtmlAttr(phaseKey.trim());
+  return (
+    '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary dash-phase-edit-anchor" data-wc-action="phase-deliverables-edit" data-wc-phase-key="' +
+    pk +
+    '" aria-label="Edit deliverables for phase ' +
+    pk +
+    '" title="Edit deliverables">Edit</button>'
+  );
+}
+
+function renderPhaseRosterPhaseLink(phaseKey: string): string {
+  const pk = phaseKey.trim();
+  const pkAttr = escapeHtmlAttr(pk);
+  return (
+    '<button type="button" class="dash-phase-roster-phase-link" data-wc-action="open-queue-for-phase" data-wc-phase-key="' +
+    pkAttr +
+    '" title="Open Queue filtered to Phase ' +
+    pkAttr +
+    '"><code>' +
+    escapeHtml(pk) +
+    "</code></button>"
+  );
+}
+
 function renderPhaseRosterStartButton(phaseKey: string, isCurrent: boolean): string {
   if (isCurrent) {
     return (
@@ -1450,6 +1453,23 @@ function renderPhaseRosterStartButton(phaseKey: string, isCurrent: boolean): str
     ' as the active workspace phase">Start</button>'
   );
 }
+
+function renderPhaseRosterActionsCell(phaseKey: string, isCurrent: boolean): string {
+  return (
+    '<span class="dash-phase-roster-actions">' +
+    renderPhaseRosterEditButton(phaseKey) +
+    renderPhaseRosterStartButton(phaseKey, isCurrent) +
+    "</span>"
+  );
+}
+
+const PHASE_ROSTER_TABLE_HEAD =
+  "<tr>" +
+  '<th class="dash-phase-roster-col-phase dash-phase-roster-th" scope="col">Phase</th>' +
+  '<th class="dash-phase-roster-col-status dash-phase-roster-th" scope="col">Status</th>' +
+  '<th class="dash-phase-roster-col-deliverables dash-phase-roster-th" scope="col">Deliverables</th>' +
+  '<th class="dash-phase-roster-col-actions dash-phase-roster-th" scope="col">Actions</th>' +
+  "</tr>";
 
 /** Phase readiness — can we work this phase now? (scoped to current phase). */
 function renderPhaseReadinessCard(ws: Record<string, unknown> | null, snapshot: PhaseSnapshot | null): string {
@@ -1554,7 +1574,7 @@ function renderPhaseReadinessCard(ws: Record<string, unknown> | null, snapshot: 
     releaseBtn +
     "</div>" +
     '<div class="wc-cae-readiness-body" id="wc-cae-readiness-body">' +
-    '<p class="muted wc-phase-card-hint">Every check below must pass before you begin. Use Complete &amp; Release when Phase Progress is 100%.</p>' +
+    '<p class="muted wc-phase-card-hint">Every check below must pass before you begin. Complete &amp; Release unlocks at 100% readiness.</p>' +
     workBegunNote +
     phaseSection +
     checksSection +
@@ -2304,7 +2324,7 @@ function renderPhaseCompleteReleaseButton(args: {
   const title =
     scope === "current"
       ? disabled
-        ? "Complete & Release unlocks when readiness and Phase Progress both reach 100%"
+        ? "Complete & Release unlocks when phase readiness reaches 100%"
         : closeoutReady
           ? "Drain current workspace phase, close out, and release"
           : "Start phase closeout — run preflight in chat before release"
@@ -2350,10 +2370,10 @@ function renderReadyPhaseBuckets(
   emptyMessage: string,
   phaseTrackPrefix: string,
   workspaceStatus: Record<string, unknown> | null,
+  phaseFocus: PhaseScheduleFocus,
   catalog: Map<string, PhaseCatalogListRow>
 ): string {
   const buckets = phaseBucketsNonEmpty(phaseBuckets);
-  const phaseFocus = phaseScheduleFocusFromWorkspace(workspaceStatus);
   const wsCur =
     workspaceStatus?.currentKitPhase != null ? String(workspaceStatus.currentKitPhase).trim() : "";
   const wsNext =
@@ -2371,6 +2391,7 @@ function renderReadyPhaseBuckets(
         const phasePhrase = resolvePhasePhraseForCompleteRelease(b);
         const taskIds = collectPhaseBucketTaskIds(b);
         const showRelease = readyPhaseBucketHasTasks(raw) && phaseKey.length > 0;
+        const c = typeof b.count === "number" ? b.count : 0;
         const releaseBtn = showRelease
           ? renderPhaseCompleteReleaseButton({
               phaseKey,
@@ -2381,16 +2402,20 @@ function renderReadyPhaseBuckets(
               scope: "bucket"
             })
           : "";
-        const body = renderTaskRowList(b.top ?? [], "No tasks in this phase.");
+        const inner =
+          c === 0
+            ? '<p class="muted">No tasks in this phase.</p>'
+            : lazyQueueBucketPlaceholder(c);
         return (
-          '<details class="phase-bucket"' +
+          '<details' +
+          lazyQueueBucketDetailsAttrs("ready", phaseKey, c) +
           phaseBucketFilterAttr(b.phaseKey) +
           wcTrackAttr(phaseTrackPrefix + "-p" + String(i)) +
           '><summary class="phase-bucket-summary">' +
           summaryLabel +
           releaseBtn +
           "</summary>" +
-          body +
+          inner +
           "</details>"
         );
       })
@@ -2431,6 +2456,7 @@ function renderProposedPhaseBuckets(
           ? (b.taskIds as unknown[]).map((x) => String(x).trim()).filter((id) => id.length > 0)
           : [];
         const c = typeof b.count === "number" ? b.count : 0;
+        const phaseKey = b.phaseKey != null ? String(b.phaseKey).trim() : "";
         const acceptAllBtn =
           c > 0 && taskIds.length > 0
             ? '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary dash-phase-accept-all" data-wc-action="proposed-imp-accept-phase" data-proposed-task-ids="' +
@@ -2442,9 +2468,10 @@ function renderProposedPhaseBuckets(
         const inner =
           c === 0
             ? '<p class="muted">No tasks in this phase.</p>'
-            : renderProposedImprovementsList(c, b.top ?? []);
+            : lazyQueueBucketPlaceholder(c);
         return (
-          '<details class="phase-bucket"' +
+          '<details' +
+          lazyQueueBucketDetailsAttrs("proposed-improvement", phaseKey, c) +
           phaseBucketFilterAttr(b.phaseKey) +
           wcTrackAttr(phaseTrackPrefix + "-p" + String(i)) +
           '><summary class="phase-bucket-summary">' +
@@ -2488,12 +2515,14 @@ function renderTranscriptChurnResearchPhaseBuckets(
         const b = raw as { label?: unknown; top?: unknown; count?: unknown; phaseKey?: unknown };
         const summary = phaseBucketSummaryHtml(b, phaseFocus, catalog);
         const c = typeof b.count === "number" ? b.count : 0;
+        const phaseKey = b.phaseKey != null ? String(b.phaseKey).trim() : "";
         const inner =
           c === 0
             ? '<p class="muted">No tasks in this phase.</p>'
-            : renderTranscriptChurnResearchList(c, b.top ?? []);
+            : lazyQueueBucketPlaceholder(c);
         return (
-          '<details class="phase-bucket"' +
+          '<details' +
+          lazyQueueBucketDetailsAttrs("transcript-churn", phaseKey, c) +
           phaseBucketFilterAttr(b.phaseKey) +
           wcTrackAttr(phaseTrackPrefix + "-p" + String(i)) +
           '><summary class="phase-bucket-summary">' +
@@ -2541,6 +2570,7 @@ function renderProposedExecutionPhaseBuckets(
           ? (b.taskIds as unknown[]).map((x) => String(x).trim()).filter((id) => id.length > 0)
           : [];
         const c = typeof b.count === "number" ? b.count : 0;
+        const phaseKey = b.phaseKey != null ? String(b.phaseKey).trim() : "";
         const acceptAllBtn =
           c > 0 && taskIds.length > 0
             ? '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary dash-phase-accept-all" data-wc-action="proposed-exe-accept-phase" data-proposed-task-ids="' +
@@ -2552,9 +2582,10 @@ function renderProposedExecutionPhaseBuckets(
         const inner =
           c === 0
             ? '<p class="muted">No tasks in this phase.</p>'
-            : renderProposedExecutionList(c, b.top ?? []);
+            : lazyQueueBucketPlaceholder(c);
         return (
-          '<details class="phase-bucket"' +
+          '<details' +
+          lazyQueueBucketDetailsAttrs("proposed-execution", phaseKey, c) +
           phaseBucketFilterAttr(b.phaseKey) +
           wcTrackAttr(phaseTrackPrefix + "-p" + String(i)) +
           '><summary class="phase-bucket-summary">' +
@@ -2598,12 +2629,14 @@ function renderBlockedPhaseBuckets(
         const b = raw as { label?: unknown; top?: unknown; count?: unknown; phaseKey?: unknown };
         const summary = phaseBucketSummaryHtml(b, phaseFocus, catalog);
         const c = typeof b.count === "number" ? b.count : 0;
+        const phaseKey = b.phaseKey != null ? String(b.phaseKey).trim() : "";
         const inner =
           c === 0
             ? '<p class="muted">No blocked tasks in this phase.</p>'
-            : renderBlockedList(b.top ?? []);
+            : lazyQueueBucketPlaceholder(c);
         return (
-          '<details class="phase-bucket"' +
+          '<details' +
+          lazyQueueBucketDetailsAttrs("blocked", phaseKey, c) +
           phaseBucketFilterAttr(b.phaseKey) +
           wcTrackAttr(phaseTrackPrefix + "-p" + String(i)) +
           '><summary class="phase-bucket-summary">' +
@@ -2618,12 +2651,12 @@ function renderBlockedPhaseBuckets(
   );
 }
 
-const LAZY_TERMINAL_BUCKET_LIMIT = 50;
+const LAZY_QUEUE_BUCKET_LIMIT = 50;
 
-function lazyTerminalBucketPlaceholder(count: number): string {
+function lazyQueueBucketPlaceholder(count: number): string {
   const hint =
-    count > LAZY_TERMINAL_BUCKET_LIMIT
-      ? "Expand to load the first " + String(LAZY_TERMINAL_BUCKET_LIMIT) + " tasks…"
+    count > LAZY_QUEUE_BUCKET_LIMIT
+      ? "Expand to load the first " + String(LAZY_QUEUE_BUCKET_LIMIT) + " tasks…"
       : "Expand to load tasks…";
   return (
     '<div class="wc-lazy-bucket-body" data-wc-lazy-loaded="0">' +
@@ -2631,6 +2664,35 @@ function lazyTerminalBucketPlaceholder(count: number): string {
     escapeHtml(hint) +
     "</p></div>"
   );
+}
+
+function lazyQueueBucketDetailsAttrs(
+  category: string,
+  phaseKey: string,
+  count: number,
+  extraClass = ""
+): string {
+  const cls =
+    "phase-bucket wc-lazy-queue-bucket" +
+    (category === "completed" || category === "cancelled" ? " terminal-phase-bucket" : "") +
+    (extraClass.length > 0 ? " " + extraClass : "");
+  return (
+    ' class="' +
+    cls +
+    '"' +
+    ' data-wc-queue-category="' +
+    escapeHtmlAttr(category) +
+    '" data-wc-phase-key="' +
+    escapeHtmlAttr(phaseKey) +
+    '" data-wc-bucket-count="' +
+    escapeHtmlAttr(String(count)) +
+    '"'
+  );
+}
+
+/** @deprecated use lazyQueueBucketListLimit */
+function lazyTerminalBucketPlaceholder(count: number): string {
+  return lazyQueueBucketPlaceholder(count);
 }
 
 /**
@@ -2661,18 +2723,13 @@ function renderTerminalTaskPhaseBuckets(
         const inner =
           c === 0
             ? '<p class="muted">No tasks in this phase.</p>'
-            : lazyTerminalBucketPlaceholder(c);
+            : lazyQueueBucketPlaceholder(c);
         return (
-          '<details class="phase-bucket terminal-phase-bucket wc-lazy-terminal-bucket"' +
+          '<details' +
+          lazyQueueBucketDetailsAttrs(terminalStatus, phaseKey, c, "wc-lazy-terminal-bucket") +
           phaseBucketFilterAttr(b.phaseKey) +
           wcTrackAttr(phaseTrackPrefix + "-p" + String(i)) +
-          ' data-wc-lazy-terminal="' +
-          escapeHtmlAttr(terminalStatus) +
-          '" data-wc-phase-key="' +
-          escapeHtmlAttr(phaseKey) +
-          '" data-wc-bucket-count="' +
-          escapeHtmlAttr(String(c)) +
-          '"><summary class="phase-bucket-summary">' +
+          '><summary class="phase-bucket-summary">' +
           summary +
           "</summary>" +
           inner +
@@ -2693,7 +2750,11 @@ export function renderDashboardQueueTaskRowsHtml(
 }
 
 export function lazyTerminalBucketListLimit(): number {
-  return LAZY_TERMINAL_BUCKET_LIMIT;
+  return LAZY_QUEUE_BUCKET_LIMIT;
+}
+
+export function lazyQueueBucketListLimit(): number {
+  return LAZY_QUEUE_BUCKET_LIMIT;
 }
 
 /** Readable label for `build-plan` planningType / status strings (dashboard only). */
@@ -3178,7 +3239,7 @@ function renderApprovalInboxSection(queue: unknown): string {
         id +
         '" data-task-title="' +
         title +
-        '" title="review-item accept_edited">Accept edited</button>' +
+        '" title="review-item accept_edited">Accept Edited.</button>' +
         "</div></div>"
       );
     })
@@ -3674,7 +3735,9 @@ function renderEditorIntegrationEmbed(editorIntegration: unknown): string {
 /** Phase roster from `dashboard-summary.systemStatus.phase.phaseCatalog` (Phase 88+). */
 export function renderPhaseCatalogOverviewSection(
   phaseSlice: Record<string, unknown> | null | undefined,
-  workspaceStatus?: Record<string, unknown> | null
+  workspaceStatus?: Record<string, unknown> | null,
+  releasedPhaseKeys?: readonly string[],
+  legacyDeliveredMaxOrdinal?: number | null
 ): string {
   if (!phaseSlice || typeof phaseSlice !== "object") {
     return "";
@@ -3707,11 +3770,21 @@ export function renderPhaseCatalogOverviewSection(
     inner =
       '<p class="muted">No phases in roster yet — set workspace current/next, assign tasks to a phase, or register a catalog entry.</p>';
   } else {
-    const narrow = buildNarrowPhaseRosterRows(phases, rosterContext);
+    const narrow = buildNarrowPhaseRosterRows(
+      phases,
+      rosterContext,
+      releasedPhaseKeys,
+      legacyDeliveredMaxOrdinal
+    );
     const rosterRows = narrow.ok
       ? narrow.rows
       : workspaceCurrent.length === 0
-        ? buildPhaseRosterRowsWhenNoCurrent(phases, rosterContext)
+        ? buildPhaseRosterRowsWhenNoCurrent(
+            phases,
+            rosterContext,
+            releasedPhaseKeys,
+            legacyDeliveredMaxOrdinal
+          )
         : [];
     if (rosterRows.length === 0) {
       inner =
@@ -3719,7 +3792,14 @@ export function renderPhaseCatalogOverviewSection(
           ? '<p class="muted">Set <b>next phase</b> in workspace status, or use <b>Start</b> on a phase below when the roster lists phases.</p>'
           : '<p class="muted">Set a numeric workspace <b>current phase</b> to show the last delivered phase, the active one, and upcoming phases here.</p>';
     } else {
-      const rosterFocus = phaseScheduleFocusFromWorkspace(rosterContext);
+      const rosterFocus: PhaseScheduleFocus = {
+        ...phaseScheduleFocusFromWorkspace(
+          rosterContext,
+          releasedPhaseKeys,
+          legacyDeliveredMaxOrdinal
+        ),
+        knownRosterPhaseKeys: new Set(phases.map((p) => p.phaseKey.trim()).filter((k) => k.length > 0))
+      };
       let rows = "";
       for (const r of rosterRows) {
         const sd = r.shortDescription != null ? String(r.shortDescription).trim() : "";
@@ -3736,22 +3816,23 @@ export function renderPhaseCatalogOverviewSection(
         const noCatalogHint =
           r.inCatalog === true
             ? ""
-            : ' <span class="wc-context-help dash-phase-catalog-hint" tabindex="0" role="button" aria-label="Not in planning catalog" data-wc-help-text="Not in the planning catalog yet. You can still edit deliverables here. Use Register future phase to add a catalog row.">' +
+            : ' <span class="wc-context-help dash-phase-catalog-hint" tabindex="0" role="button" aria-label="Not in planning catalog" data-wc-help-text="Not in the planning catalog yet. You can still edit deliverables here. Use Register Phase. to add a catalog row.">' +
               '<span class="wc-context-help-icon" aria-hidden="true">?</span></span>';
         rows +=
-          `<tr><td class="dash-phase-roster-col-phase"><code>${escapeHtml(r.phaseKey)}</code></td><td class="dash-phase-roster-col-status">${statusTag}${noCatalogHint}</td><td class="dash-phase-roster-col-deliverables dash-phase-deliverables-cell"><div class="dash-phase-deliverables" data-wc-phase-row="${phaseKeyAttr}">` +
+          `<tr><td class="dash-phase-roster-col-phase">${renderPhaseRosterPhaseLink(r.phaseKey)}</td><td class="dash-phase-roster-col-status"><span class="dash-phase-roster-status-inner">${statusTag}${noCatalogHint}</span></td><td class="dash-phase-roster-col-deliverables dash-phase-deliverables-cell"><div class="dash-phase-deliverables" data-wc-phase-row="${phaseKeyAttr}">` +
           '<div class="dash-phase-deliverables-body">' +
           `<span class="dash-phase-deliverables-text">${desc}</span>` +
           `<div class="dash-phase-deliverables-editor" hidden><input type="text" class="dash-phase-deliverables-input wc-input" data-wc-phase-input="${phaseKeyAttr}" value="${inputValue}" aria-label="Deliverables for phase ${phaseKeyAttr}" /></div>` +
           '<span class="dash-phase-saving" aria-live="polite" hidden>' +
           '<span class="wc-spinner wc-spinner-inline" aria-hidden="true"></span> Saving…</span></div>' +
-          `<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary dash-phase-edit-anchor" data-wc-action="phase-deliverables-edit" data-wc-phase-key="${phaseKeyAttr}" aria-label="Edit deliverables for phase ${phaseKeyAttr}" title="Edit deliverables">Edit</button>` +
           '<p class="dash-phase-deliverables-error bad" aria-live="polite" hidden></p></div></td>' +
-          `<td class="dash-phase-roster-col-actions">${renderPhaseRosterStartButton(phaseKeyAttr, isCurrent)}</td></tr>`;
+          `<td class="dash-phase-roster-col-actions">${renderPhaseRosterActionsCell(phaseKeyAttr, isCurrent)}</td></tr>`;
       }
       inner =
         rows.length > 0
-          ? '<table class="dash-phase-catalog-table"><thead><tr><th class="dash-phase-roster-col-phase">Phase</th><th class="dash-phase-roster-col-status">Status</th><th class="dash-phase-roster-col-deliverables">Deliverables</th><th class="dash-phase-roster-col-actions">Actions</th></tr></thead><tbody>' +
+          ? '<table class="dash-phase-catalog-table"><thead>' +
+            PHASE_ROSTER_TABLE_HEAD +
+            "</thead><tbody>" +
             rows +
             "</tbody></table>"
           : '<p class="muted">No matching roster rows.</p>';
@@ -3759,7 +3840,7 @@ export function renderPhaseCatalogOverviewSection(
   }
   const table = inner;
   const btn =
-    '<p style="margin-top:8px"><button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="register-phase-catalog">Register future phase</button></p>';
+    '<p style="margin-top:8px"><button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="register-phase-catalog">Register Phase.</button></p>';
   return (
     '<section id="wc-phase-roster" class="dash-card dash-phase-catalog" aria-label="Phase catalog">' +
     "<p><b>Phase Roster</b></p>" +
@@ -3962,7 +4043,7 @@ function renderStatusSectionHtml(
 
 /**
  * Render the full status panel (header, This Workspace, Planning Data, Agent
- * Profile, Phase & Workspace, Coordination, Doctor, Modules, CAE, Task Counts)
+ * Profile, Phase & Workspace, Coordination, Doctor, Modules, CAE)
  * inside the Dashboard sidebar's Status tab. The standalone Status webview
  * panel was sunsetted; this is now the only host for `renderStatusTabInnerHtml`.
  */
@@ -4254,7 +4335,8 @@ export function renderDashboardRootInnerHtml(
   planningWizardPanel?: PlanningInterviewWizardPanel | null,
   editorIntegration?: EditorIntegrationRenderState | null,
   phaseJournal?: DashboardPhaseJournalBundle | null,
-  embeddedCaePanelHtml?: string | null
+  embeddedCaePanelHtml?: string | null,
+  options?: RenderDashboardRootOptions
 ): string {
   if (payload === null || payload === undefined) {
     return "<p>No payload</p>";
@@ -4272,7 +4354,9 @@ export function renderDashboardRootInnerHtml(
   const d = p.data ?? {};
   const ss = (d.stateSummary as Record<string, unknown>) || {};
   const ws = (d.workspaceStatus as Record<string, unknown> | null | undefined) ?? null;
-  const phaseFocus = phaseScheduleFocusFromWorkspace(ws);
+  const deliveredPhaseKeys = readDeliveredPhaseKeys(d);
+  const legacyDeliveredMaxOrdinal = readLegacyDeliveredMaxOrdinal(d);
+  const phaseFocus = phaseScheduleFocusFromWorkspace(ws, deliveredPhaseKeys, legacyDeliveredMaxOrdinal);
   const phaseSystemSlice =
     d.systemStatus && typeof d.systemStatus === "object"
       ? ((d.systemStatus as Record<string, unknown>).phase as Record<string, unknown> | undefined)
@@ -4399,7 +4483,8 @@ export function renderDashboardRootInnerHtml(
       blockedSummary.phaseBuckets,
       (d.completedSummary as Record<string, unknown> | undefined)?.phaseBuckets,
       (d.cancelledSummary as Record<string, unknown> | undefined)?.phaseBuckets
-    ]
+    ],
+    phaseReleaseDates: readPhaseReleaseDates(d)
   });
 
   const tasksBlock =
@@ -4415,6 +4500,7 @@ export function renderDashboardRootInnerHtml(
           "No ready tasks.",
           "rdy",
           ws as Record<string, unknown> | null,
+          phaseFocus,
           phaseCatalogLookup
         ),
       false,
@@ -4527,10 +4613,6 @@ export function renderDashboardRootInnerHtml(
       : 0;
 
   const overviewContent =
-    renderAgentStatusBanner(d) +
-    recNextCard +
-    renderPhaseReadinessCard(ws as Record<string, unknown> | null, phaseSnapshot) +
-    renderPhaseProgressCard(ws as Record<string, unknown> | null, phaseSnapshot, humanGatesCount) +
     renderStatPills(
       totalReadyCount,
       totalProposedCount,
@@ -4538,7 +4620,16 @@ export function renderDashboardRootInnerHtml(
       totalDoneCount,
       humanGatesCount
     ) +
-    renderPhaseCatalogOverviewSection(phaseSystemSlice, ws as Record<string, unknown> | null) +
+    renderAgentStatusBanner(d) +
+    recNextCard +
+    renderPhaseReadinessCard(ws as Record<string, unknown> | null, phaseSnapshot) +
+    renderPhaseProgressCard(ws as Record<string, unknown> | null, phaseSnapshot, humanGatesCount) +
+    renderPhaseCatalogOverviewSection(
+      phaseSystemSlice,
+      ws as Record<string, unknown> | null,
+      deliveredPhaseKeys,
+      legacyDeliveredMaxOrdinal
+    ) +
     renderWorkspaceBlockersPendingSection(ws as Record<string, unknown> | null) +
     renderTeamExecutionSection(d.teamExecution) +
     renderSubagentRegistrySection(d.subagentRegistry) +
@@ -4556,15 +4647,33 @@ export function renderDashboardRootInnerHtml(
         '<p class="muted">Embedded CAE unavailable; run <b>Workflow Cannon: Open Guidance Authoring</b> or refresh the Dashboard.</p>' +
         '</section>';
 
-  const taskEngineContent =
-    renderPhaseNotesOverviewSection(phaseJournal ?? null, d.phaseJournalStats) +
-    tasksBlock +
-    wishlistSection +
-    renderPlanningSession(planningSession, planningWizardPanel);
+  const deferred = options?.deferredSections ?? new Set<DashboardSectionId>();
+  const queueInner =
+    tasksBlock + wishlistSection + renderPlanningSession(planningSession, planningWizardPanel);
+  const phaseJournalInner = renderPhaseNotesOverviewSection(phaseJournal ?? null, d.phaseJournalStats);
 
-  const statusContent = renderStatusSectionHtml(d, ss, editorIntegration);
+  const overviewWrapped = wrapDashboardSection("overview", overviewContent, deferred.has("overview"));
+  const queueWrapped = wrapDashboardSection("queue", queueInner, deferred.has("queue"));
+  const phaseJournalWrapped = wrapDashboardSection(
+    "phase-journal",
+    phaseJournalInner,
+    deferred.has("phase-journal")
+  );
+  const taskEngineContent = phaseJournalWrapped + queueWrapped;
 
-  const configContent = renderConfigPanelShellHtml();
+  const statusWrapped = wrapDashboardSection(
+    "status",
+    renderStatusSectionHtml(d, ss, editorIntegration),
+    deferred.has("status")
+  );
+
+  const configWrapped = wrapDashboardSection(
+    "config",
+    renderConfigPanelShellHtml(),
+    deferred.has("config")
+  );
+
+  const caeWrapped = wrapDashboardSection("cae", caePanelContent, deferred.has("cae"));
 
   // ── Tab shell ──────────────────────────────────────────────────────────────
 
@@ -4583,11 +4692,59 @@ export function renderDashboardRootInnerHtml(
     '<button type="button" class="wc-tab-btn" role="tab" data-wc-tab="config">Config</button>' +
     '<button type="button" class="wc-tab-btn" role="tab" data-wc-tab="cae">CAE</button>' +
     "</div>" +
-    '<div class="wc-tab-panel" data-wc-tab="overview" role="tabpanel">' + overviewContent + "</div>" +
-    '<div class="wc-tab-panel" data-wc-tab="task-engine" role="tabpanel" style="display:none">' + taskEngineContent + "</div>" +
-    '<div class="wc-tab-panel" data-wc-tab="status" role="tabpanel" style="display:none">' + statusContent + "</div>" +
-    '<div class="wc-tab-panel" data-wc-tab="config" role="tabpanel" style="display:none">' + configContent + "</div>" +
-    '<div class="wc-tab-panel" data-wc-tab="cae" role="tabpanel" style="display:none">' + caePanelContent + "</div>" +
+    '<div class="wc-tab-panel" data-wc-tab="overview" role="tabpanel">' + overviewWrapped + "</div>" +
+    '<div class="wc-tab-panel" data-wc-tab="task-engine" role="tabpanel" style="display:none">' +
+    taskEngineContent +
+    "</div>" +
+    '<div class="wc-tab-panel" data-wc-tab="status" role="tabpanel" style="display:none">' +
+    statusWrapped +
+    "</div>" +
+    '<div class="wc-tab-panel" data-wc-tab="config" role="tabpanel" style="display:none">' +
+    configWrapped +
+    "</div>" +
+    '<div class="wc-tab-panel" data-wc-tab="cae" role="tabpanel" style="display:none">' +
+    caeWrapped +
+    "</div>" +
     "</div>"
   );
+}
+
+/** Status tab inner HTML for section patch hydration (T100398). */
+export function renderDashboardStatusSectionInnerHtml(
+  payload: unknown,
+  editorIntegration?: EditorIntegrationRenderState | null
+): string {
+  const p = payload as { ok?: unknown; data?: Record<string, unknown> };
+  if (p.ok !== true) {
+    return '<p class="muted" role="status">Status unavailable.</p>';
+  }
+  const d = p.data ?? {};
+  const ss = (d.stateSummary as Record<string, unknown>) || {};
+  return renderStatusSectionHtml(d, ss, editorIntegration ?? null);
+}
+
+/** CAE tab inner HTML for section patch hydration (T100398). */
+export function renderDashboardCaeSectionInnerHtml(embeddedCaePanelHtml: string | null): string {
+  if (typeof embeddedCaePanelHtml === "string" && embeddedCaePanelHtml.trim().length > 0) {
+    return (
+      '<div class="gp-root wc-dash-cae-host dash-cae-embedded wc-dashboard-embedded-guidance">' +
+      namespaceEmbeddedCaePanelHtml(embeddedCaePanelHtml) +
+      "</div>"
+    );
+  }
+  return (
+    '<section class="dash-card" aria-label="CAE panel placeholder">' +
+    '<p><b>CAE</b></p>' +
+    '<p class="muted">Phase Readiness is under <b>WC Agent</b> on the Dashboard shell.</p>' +
+    '<p class="muted">Embedded CAE unavailable; run <b>Workflow Cannon: Open Guidance Authoring</b> or refresh the Dashboard.</p>' +
+    "</section>"
+  );
+}
+
+/** Phase journal block inside the Queue tab (T100398 section patch). */
+export function renderDashboardPhaseJournalSectionInnerHtml(
+  phaseJournal: DashboardPhaseJournalBundle | null | undefined,
+  phaseJournalStats: unknown
+): string {
+  return renderPhaseNotesOverviewSection(phaseJournal ?? null, phaseJournalStats);
 }

@@ -56,6 +56,12 @@ test("dashboard-summary accepts wishlist paging args", () => {
   assert.equal(err, null);
 });
 
+test("dashboard-summary accepts projection arg", () => {
+  resetPilotRunArgsValidationCache();
+  const err = validatePilotRunCommandArgs("dashboard-summary", { projection: "overview" }, {});
+  assert.equal(err, null);
+});
+
 test("planning-generation-required when policy require and token omitted", () => {
   resetPilotRunArgsValidationCache();
   const args = {

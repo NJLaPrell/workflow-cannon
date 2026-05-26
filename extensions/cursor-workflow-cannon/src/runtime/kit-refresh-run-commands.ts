@@ -54,3 +54,19 @@ export function kitRefreshPausedResult(): {
     message: "Dashboard refresh paused while a mutating drawer action runs"
   };
 }
+
+/** Refresh reads aborted by pause/preempt — callers should keep the last good dashboard paint. */
+export function isKitRefreshRunAborted(result: {
+  ok?: boolean;
+  code?: string;
+  message?: string;
+}): boolean {
+  if (result.code === KIT_REFRESH_PAUSED_CODE) {
+    return true;
+  }
+  if (result.ok === false && result.code === "extension-json-parse") {
+    const msg = String(result.message ?? "");
+    return /exit 1;/.test(msg) && /stdout:\s*(?:;|$)/.test(msg);
+  }
+  return false;
+}

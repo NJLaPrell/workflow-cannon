@@ -1,0 +1,218 @@
+{
+  "phaseKey": "113",
+  "phaseLabel": "Phase 113",
+  "shortDescription": "Dashboard intent-snapshot architecture (Option 1)",
+  "planRef": ".ai/adrs/ADR-dashboard-intent-snapshot-v1.md",
+  "planningType": "new-feature",
+  "targetPhaseKey": "113",
+  "targetPhase": "Phase 113",
+  "desiredStatus": "ready",
+  "clientMutationId": "dashboard-intent-snapshot-phase113-batch-v1",
+  "taskCount": 6,
+  "idRange": { "first": "T100492", "last": "T100497" },
+  "tasks": [
+    {
+      "id": "T100492",
+      "title": "Extension: DashboardCoordinator skeleton + runMutation + SideEffectBus",
+      "type": "workspace-kit",
+      "priority": "P1",
+      "status": "ready",
+      "phaseKey": "113",
+      "phase": "Phase 113",
+      "features": ["cursor-extension"],
+      "summary": "Introduce a host-side DashboardCoordinator as the single entry for dashboard intents. Owns the drawer mutation critical section (kit calls only), releases locks before side effects, and delegates toasts/refresh via a non-blocking SideEffectBus. Foundation for Option 1 intent/snapshot architecture after 0.99.6 drawer submit lock fixes.",
+      "approach": "Add dashboard-coordinator.ts with dispatch(intent), runMutation(async fn), emitSnapshot(), and dashboard-side-effects.ts for fire-and-forget notify/refresh/kitStateChanged. Wire DashboardViewProvider to construct coordinator with CommandClient, DashboardRefreshController, DrawerSessionController deps. runMutation: beginDashboardMutationRefreshHold → await fn → finally release holds + emit snapshot. Do not migrate all drawer flows yet — scaffold + unit tests only.",
+      "technicalScope": [
+        "extensions/cursor-workflow-cannon/src/views/dashboard/dashboard-coordinator.ts (new)",
+        "extensions/cursor-workflow-cannon/src/views/dashboard/dashboard-side-effects.ts (new)",
+        "extensions/cursor-workflow-cannon/src/views/dashboard/drawer-session.ts (reuse WcDrawerStateSnapshot)",
+        "extensions/cursor-workflow-cannon/src/views/dashboard/DashboardViewProvider.ts (construct + delegate hook, minimal)",
+        "extensions/cursor-workflow-cannon/test/dashboard-coordinator.test.mjs (new)"
+      ],
+      "acceptanceCriteria": [
+        "DashboardCoordinator.runMutation runs kit work while refresh is paused and always releases mutation hold in finally even when fn throws",
+        "SideEffectBus.notify / scheduleRefresh / notifyKitChanged never use await on vscode.window or pushUpdate from inside runMutation",
+        "Coordinator emits a typed DashboardHostSnapshot (schemaVersion 1) with drawer slice from DrawerSessionController",
+        "Unit tests cover: successful mutation releases hold; thrown mutation still releases hold; side effect methods are invoked only after runMutation completes",
+        "pnpm run compile && pnpm run test in extensions/cursor-workflow-cannon pass"
+      ],
+      "metadata": {
+        "dashboardIntentSnapshot": {
+          "slice": "T1",
+          "architecture": "option-1-intent-snapshot",
+          "dependsOnRelease": "0.99.6"
+        },
+        "planningProvenance": {
+          "source": "maintainer-chat",
+          "planRef": ".ai/adrs/ADR-dashboard-intent-snapshot-v1.md",
+          "planningType": "new-feature"
+        }
+      }
+    },
+    {
+      "id": "T100493",
+      "title": "Extension: Wire drawerSubmit and drawerCancel through DashboardCoordinator",
+      "type": "workspace-kit",
+      "priority": "P1",
+      "status": "ready",
+      "phaseKey": "113",
+      "phase": "Phase 113",
+      "features": ["cursor-extension"],
+      "dependsOn": ["T100492"],
+      "summary": "Route webview drawerSubmit and drawerCancel messages through DashboardCoordinator.dispatch so kit mutations and lock release follow one path. Remove duplicate host guard patterns where coordinator owns submitting state.",
+      "approach": "Define DashboardIntent union: drawer.submit, drawer.cancel. Map existing DashboardViewProvider message handler to coordinator.dispatch. Move beginDrawerSubmitRefreshHold/endDrawerSubmitRefreshHold inside coordinator.runMutation. handleDrawerSubmit becomes coordinator-internal or injected handler registry keyed by dashboardDrawerSession.kind. Success/error toasts go through SideEffectBus after runMutation, not notifyAfterDrawerClosed await.",
+      "technicalScope": [
+        "extensions/cursor-workflow-cannon/src/views/dashboard/dashboard-coordinator.ts",
+        "extensions/cursor-workflow-cannon/src/views/dashboard/DashboardViewProvider.ts (drawerSubmit/drawerCancel handlers)",
+        "extensions/cursor-workflow-cannon/test/dashboard-coordinator.test.mjs",
+        "extensions/cursor-workflow-cannon/test/dashboard-ui-interaction-locks.test.mjs"
+      ],
+      "acceptanceCriteria": [
+        "drawerSubmit and drawerCancel webview messages invoke coordinator.dispatch only (no parallel lock paths)",
+        "Back-to-back Accept repro: second submit is processed while first success toast may still be visible (no drawerSubmit ignored while webview busy)",
+        "Validation errors post wcDrawerState / snapshot with step validation-error without holding submit lock after emit",
+        "Regression: dashboard-ui-interaction-locks tests updated for coordinator wiring",
+        "Extension test suite passes"
+      ],
+      "metadata": {
+        "dashboardIntentSnapshot": { "slice": "T2", "architecture": "option-1-intent-snapshot" },
+        "planningProvenance": {
+          "source": "maintainer-chat",
+          "planRef": ".ai/adrs/ADR-dashboard-intent-snapshot-v1.md"
+        }
+      }
+    },
+    {
+      "id": "T100494",
+      "title": "Extension: wcHostSnapshot webview channel + applyHostSnapshot",
+      "type": "workspace-kit",
+      "priority": "P1",
+      "status": "ready",
+      "phaseKey": "113",
+      "phase": "Phase 113",
+      "features": ["cursor-extension"],
+      "dependsOn": ["T100492", "T100493"],
+      "summary": "Add a single host→webview snapshot message (wcHostSnapshot) so drawer busy/validation state is derived from host truth. Remove webview drawerSubmitInFlight optimistic lock; gate submit clicks on snapshot.drawer.busy only.",
+      "approach": "Extend DashboardHostSnapshot with drawer + interaction.refreshBusy. Coordinator.emitSnapshot posts { type: wcHostSnapshot, snapshot }. In dashboard-webview-client.ts add applyHostSnapshot(snapshot) merging applyWcDrawerState behavior. Submit click handler: if snapshot.drawer.busy return; else post intent drawer.submit. Keep wcDrawerOpen for initial HTML injection only; follow with initial snapshot. Deprecate wcDrawerProgress, wcDrawerValidation, wcDrawerClose for drawer UX (compat shim one release if needed).",
+      "technicalScope": [
+        "extensions/cursor-workflow-cannon/src/views/dashboard/dashboard-coordinator.ts",
+        "extensions/cursor-workflow-cannon/src/views/dashboard/dashboard-webview-client.ts",
+        "extensions/cursor-workflow-cannon/src/views/dashboard/drawer-session.ts",
+        "extensions/cursor-workflow-cannon/test/dashboard-webview-client.test.mjs or render-dashboard tests"
+      ],
+      "acceptanceCriteria": [
+        "Webview submit button disabled or no-op when snapshot.drawer.busy === true",
+        "No drawerSubmitInFlight variable in dashboard-webview-client.ts (grep clean)",
+        "Host emits wcHostSnapshot on drawer open, submitting, validation-error, idle transitions",
+        "Manual or automated test: open accept drawer → submit → snapshot shows submitting then idle/closed without stale busy lock",
+        "Extension tests pass"
+      ],
+      "metadata": {
+        "dashboardIntentSnapshot": { "slice": "T3", "architecture": "option-1-intent-snapshot" },
+        "planningProvenance": {
+          "source": "maintainer-chat",
+          "planRef": ".ai/adrs/ADR-dashboard-intent-snapshot-v1.md"
+        }
+      }
+    },
+    {
+      "id": "T100495",
+      "title": "Extension: Migrate accept-proposed and batch accept drawers to coordinator",
+      "type": "workspace-kit",
+      "priority": "P1",
+      "status": "ready",
+      "phaseKey": "113",
+      "phase": "Phase 113",
+      "features": ["cursor-extension"],
+      "dependsOn": ["T100493", "T100494"],
+      "summary": "Move accept-proposed single and batch handleDrawerSubmit paths onto DashboardCoordinator mutation + SideEffectBus so run-transition and assign-task-phase never overlap with toast or refresh holds. Primary user-facing fix validation for consecutive Accept on proposed tasks.",
+      "approach": "Register accept-proposed session handler on coordinator. Single accept: runMutation with run-transition then assign-task-phase; on success SideEffectBus.notify + scheduleRefresh(light). Batch accept: one runMutation wrapping loop; aggregate failures; single notify. Remove notifyAfterDrawerClosed await pattern from these paths. Ensure expectedPlanningGenerationArgs passed inside mutation only.",
+      "technicalScope": [
+        "extensions/cursor-workflow-cannon/src/views/dashboard/dashboard-coordinator.ts",
+        "extensions/cursor-workflow-cannon/src/views/dashboard/DashboardViewProvider.ts (handleDrawerSubmit accept-proposed branches)",
+        "extensions/cursor-workflow-cannon/test/dashboard-coordinator.test.mjs",
+        "extensions/cursor-workflow-cannon/test/render-dashboard.test.mjs (if drawer open paths touched)"
+      ],
+      "acceptanceCriteria": [
+        "Accept T1 then Accept T2 on proposed queue without hang (manual QA steps documented in PR)",
+        "assign-task-phase failure shows error toast via SideEffectBus without blocking second submit",
+        "Batch accept-all completes with progress labels driven by snapshot submitting step",
+        "No await vscode.window.showInformationMessage inside runMutation or handleDrawerSubmit accept paths",
+        "Extension tests pass; pnpm run test green"
+      ],
+      "metadata": {
+        "dashboardIntentSnapshot": { "slice": "T4", "architecture": "option-1-intent-snapshot" },
+        "planningProvenance": {
+          "source": "maintainer-chat",
+          "planRef": ".ai/adrs/ADR-dashboard-intent-snapshot-v1.md"
+        }
+      }
+    },
+    {
+      "id": "T100496",
+      "title": "Extension: Remove legacy drawer postMessage types and dashboardDrawerSubmitInFlight",
+      "type": "workspace-kit",
+      "priority": "P2",
+      "status": "ready",
+      "phaseKey": "113",
+      "phase": "Phase 113",
+      "features": ["cursor-extension"],
+      "dependsOn": ["T100495"],
+      "summary": "Delete redundant host and webview drawer lock flags and legacy message types superseded by wcHostSnapshot. Reduce DashboardViewProvider postMessage surface to intents in / snapshots out.",
+      "approach": "Remove dashboardDrawerSubmitInFlight; grep and remove wcDrawerClose, wcDrawerProgress, wcDrawerValidation emission where snapshot covers same UX. Keep wcDrawerOpen for HTML payload only. Update dashboard-ui-interaction-locks.test.mjs and command-client tests if messages referenced. Document breaking change for any external webview consumers (none expected).",
+      "technicalScope": [
+        "extensions/cursor-workflow-cannon/src/views/dashboard/DashboardViewProvider.ts",
+        "extensions/cursor-workflow-cannon/src/views/dashboard/dashboard-webview-client.ts",
+        "extensions/cursor-workflow-cannon/src/views/dashboard/drawer-session.ts",
+        "extensions/cursor-workflow-cannon/test/dashboard-ui-interaction-locks.test.mjs"
+      ],
+      "acceptanceCriteria": [
+        "grep dashboardDrawerSubmitInFlight in extension src returns zero matches",
+        "grep drawerSubmitInFlight in dashboard-webview-client returns zero matches",
+        "Drawer UX still works for accept-proposed, assign-phase, add-wishlist smoke paths",
+        "Regression tests updated; extension test suite passes"
+      ],
+      "metadata": {
+        "dashboardIntentSnapshot": { "slice": "T5", "architecture": "option-1-intent-snapshot" },
+        "planningProvenance": {
+          "source": "maintainer-chat",
+          "planRef": ".ai/adrs/ADR-dashboard-intent-snapshot-v1.md"
+        }
+      }
+    },
+    {
+      "id": "T100497",
+      "title": "Extension: Derive dashboard interaction locks from coordinator state",
+      "type": "workspace-kit",
+      "priority": "P2",
+      "status": "ready",
+      "phaseKey": "113",
+      "phase": "Phase 113",
+      "features": ["cursor-extension"],
+      "dependsOn": ["T100496"],
+      "summary": "Replace scattered dashboardInteractionLocks Set and manual setDashboardUiInteraction calls with coordinator-derived InteractionState exposed in wcHostSnapshot. DashboardRefreshController.isDeferred reads coordinator.isMutationActive().",
+      "approach": "Add InteractionState { mutationActive, refreshDeferred } to DashboardHostSnapshot. Coordinator sets mutationActive for drawer submit and roster mutations. Remove drawer-submit and drawer-busy entries from dashboardInteractionLocks Set where redundant. Refresh button spinner uses snapshot.interaction.refreshBusy. onDeferredCleared fires when mutationActive transitions false.",
+      "technicalScope": [
+        "extensions/cursor-workflow-cannon/src/views/dashboard/dashboard-coordinator.ts",
+        "extensions/cursor-workflow-cannon/src/views/dashboard/dashboard-refresh-controller.ts",
+        "extensions/cursor-workflow-cannon/src/views/dashboard/DashboardViewProvider.ts",
+        "extensions/cursor-workflow-cannon/src/views/dashboard/dashboard-webview-client.ts",
+        "extensions/cursor-workflow-cannon/test/dashboard-ui-interaction-locks.test.mjs"
+      ],
+      "acceptanceCriteria": [
+        "DashboardRefreshController defers refresh when coordinator reports mutationActive",
+        "Refresh button busy state driven from snapshot.interaction.refreshBusy not ad-hoc setUiInteraction",
+        "setDashboardUiInteraction drawer-submit/drawer-busy calls removed or reduced to coordinator internals",
+        "Add .ai/adrs/ADR-dashboard-intent-snapshot-v1.md documenting R1 critical section, R2 release before side effects, R3 webview never gates submit",
+        "Extension tests pass; check stage passes if ADR linked from machine canon"
+      ],
+      "metadata": {
+        "dashboardIntentSnapshot": { "slice": "T6", "architecture": "option-1-intent-snapshot" },
+        "planningProvenance": {
+          "source": "maintainer-chat",
+          "planRef": ".ai/adrs/ADR-dashboard-intent-snapshot-v1.md"
+        }
+      }
+    }
+  ]
+}

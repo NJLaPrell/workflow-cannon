@@ -15,7 +15,7 @@ import {
   getPlanningGenerationPolicy,
   mergePlanningGenerationPolicyWarnings
 } from "./planning-config.js";
-import { parseLeadingPhaseOrdinal } from "./phase-resolution.js";
+import { parseLeadingPhaseOrdinal, phaseLadderBlocksBeforeCurrent } from "./phase-resolution.js";
 
 const PHASE_KEY_RE = /^[A-Za-z0-9][A-Za-z0-9._\-]{0,63}$/;
 
@@ -60,7 +60,12 @@ export async function runAssignTaskPhase(args: {
     canonicalWorkspacePhaseKey !== undefined && canonicalWorkspacePhaseKey !== null
       ? parseLeadingPhaseOrdinal(canonicalWorkspacePhaseKey)
       : null;
-  if (assignedOrd !== null && wsOrd !== null && assignedOrd < wsOrd) {
+  if (
+    phaseLadderBlocksBeforeCurrent(ctx.effectiveConfig as Record<string, unknown> | undefined) &&
+    assignedOrd !== null &&
+    wsOrd !== null &&
+    assignedOrd < wsOrd
+  ) {
     return {
       ok: false,
       code: "phase-target-before-current-workspace-phase",

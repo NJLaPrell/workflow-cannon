@@ -68,7 +68,7 @@ test("dashboard drawer submit suppresses dashboard-summary refresh during batch 
   assert.match(providerSrc, /setRefreshPaused\(true\)/);
   assert.match(refreshControllerSrc, /setSuppressed/);
   assert.match(refreshControllerSrc, /notifyMutationStart/);
-  assert.match(providerSrc, /KIT_REFRESH_PAUSED_CODE/);
+  assert.match(providerSrc, /isKitRefreshRunAborted/);
   assert.match(providerSrc, /summaryHasCanonicalWorkspacePhase/);
   assert.match(providerSrc, /pushUpdate\(\{ light: true \}\)/);
   assert.match(refreshControllerSrc, /this\.queued = true/);
@@ -86,6 +86,16 @@ test("dashboard refresh button busy state comes from wcHostSnapshot (T100497)", 
     webviewClientSrc.slice(webviewClientSrc.indexOf("if (btn) btn.addEventListener('click'")),
     /setUiInteraction\('refresh', true\)/
   );
+  assert.doesNotMatch(
+    webviewClientSrc.slice(webviewClientSrc.indexOf("if (btn) btn.addEventListener('click'")),
+    /setButtonBusy\(btn, true, 'Refreshing…'\)/
+  );
+});
+
+test("dashboard refresh does not block wcReplaceRoot via refresh lock", () => {
+  assert.match(webviewClientSrc, /k !== 'refresh'/);
+  assert.match(webviewClientSrc, /wcReleaseRefreshBlock/);
+  assert.match(providerSrc, /wcReleaseRefreshBlock/);
 });
 
 test("dashboard drawer submit uses coordinator dispatch (T100493)", () => {
@@ -96,6 +106,8 @@ test("dashboard drawer submit uses coordinator dispatch (T100493)", () => {
   assert.doesNotMatch(webviewClientSrc, /drawerSubmitInFlight/);
   assert.match(providerSrc, /coordinator\.dispatch/);
   assert.match(providerSrc, /queueDrawerNotify/);
+  assert.match(providerSrc, /notifyAfterDrawerClosed/);
+  assert.match(providerSrc, /void Promise\.resolve\(notify\(\)\)/);
   assert.match(providerSrc, /endDrawerSubmitRefreshHold/);
   assert.doesNotMatch(providerSrc, /drawerSubmit ignored \(already in flight\)/);
 });

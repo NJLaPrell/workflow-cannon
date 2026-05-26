@@ -317,6 +317,8 @@ export type DashboardCurrentPhaseDelivery = {
 
 export type DashboardSummaryData = {
   schemaVersion: 7;
+  /** When set, indicates which section slice this payload targets (`full` when omitted for legacy callers). */
+  dashboardProjection?: DashboardSummaryProjection;
   /** Monotonic optimistic-lock generation for the unified planning SQLite row. */
   planningGeneration: number;
   /** Effective `tasks.planningGenerationPolicy` for mutating commands. */
@@ -396,6 +398,21 @@ export type DashboardSummaryData = {
   /** Phase Readiness Complete & Release gating — closeout audit + release/rollover detection. */
   currentPhaseDelivery: DashboardCurrentPhaseDelivery;
   /**
+   * Phase keys with closeout-passed delivery evidence among phases rolled off via workspace events.
+   * Drives Delivered vs Future schedule tags in queue buckets and roster.
+   */
+  deliveredPhaseKeys?: string[];
+  /**
+   * ISO timestamps when workspace rolled off each phase key via `set_current_phase` events.
+   * Drives Queue phase-filter ordering (newest release first).
+   */
+  phaseReleaseDates?: Record<string, string>;
+  /**
+   * When set, numeric phase keys with leading ordinal in `[0, N]` are treated as delivered
+   * (pre–delivery-evidence history). From `kit.phaseDelivery.legacyDeliveredMaxOrdinal`.
+   */
+  legacyDeliveredMaxOrdinal?: number | null;
+  /**
    * Past-phase journal rollup for dashboard (phases with ordinal before workspace current).
    * Omitted when phase journal SQLite is unavailable; empty array when no past notes exist.
    */
@@ -432,3 +449,6 @@ export type DashboardSummaryCommandSuccess = {
   message: string;
   data: DashboardSummaryData;
 };
+
+/** Section slice selector for lazy dashboard hydration (T100396). Default CLI path is `full`. */
+export type DashboardSummaryProjection = "full" | "overview" | "queue" | "status";

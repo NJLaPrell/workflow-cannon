@@ -107,6 +107,17 @@ test("validatePersistedConfigDocument accepts kit.phaseJournal.requirePolicyAppr
   );
 });
 
+test("validatePersistedConfigDocument accepts kit.phaseDelivery.legacyDeliveredMaxOrdinal", () => {
+  validateDoc(
+    {
+      kit: {
+        phaseDelivery: { legacyDeliveredMaxOrdinal: 105 }
+      }
+    },
+    "fixture"
+  );
+});
+
 test("validatePersistedConfigDocument rejects unknown kit.phaseJournal keys", () => {
   assert.throws(
     () =>

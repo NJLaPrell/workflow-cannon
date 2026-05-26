@@ -8,6 +8,83 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [0.99.8] - 2026-05-26
+
+Patch — **Phase 113 dashboard intent coordinator** (snapshot-driven drawer UX, mutation holds, lazy-load merge).
+
+### Added
+
+- `DashboardCoordinator` with `SideEffectBus`, drawer intents (`drawer.submit` / `drawer.cancel`), and `wcHostSnapshot` applier in the webview.
+- `handleAcceptProposedDrawerSubmit` with snapshot progress and coordinator-driven toasts.
+- `.ai/adrs/ADR-dashboard-intent-snapshot-v1.md` (R1–R3 intent/snapshot contract).
+
+### Changed
+
+- Drawer submit/cancel route through `coordinator.dispatch`; refresh defers while `coordinator.isMutationActive()` with `refreshBusy` on host snapshot.
+- Removed legacy `wcDrawerProgress` / `wcDrawerValidation` / `wcDrawerClose` and `dashboardDrawerSubmitInFlight`; drawer UX is snapshot-only.
+- Merged Phase 108 shell-first lazy dashboard hydration with Phase 113 coordinator locks (light section refresh + host snapshot refresh busy).
+
+## [0.99.7] - 2026-05-26
+
+Patch — **Phase 108 dashboard lazy loading** (shell-first paint, split hydration, regression gates).
+
+### Added
+
+- Dashboard shell paints synchronously before the first `dashboard-summary` read; overview projection uses `skipHeavyFetches` so CAE and phase journal CLI work defer until tab activation.
+- Lazy queue phase buckets load rows on expand with cursor pagination; secondary tabs hydrate via `dashboardTabActivated` / `wcSectionPatch`.
+- Targeted section invalidation after mutations (light watcher refresh patches visible sections; hidden sections mark stale).
+- `dashboard-lazy-regression-gates.test.mjs` and split `scripts/bench-dashboard-refresh.mjs` paths (overview / queue / full / secondary block).
+
+### Changed
+
+- Manual Refresh still runs full reconciliation; kit watcher uses light invalidation instead of monolithic `pushUpdate` for routine mutations.
+
+## [0.99.6] - 2026-05-25
+
+Patch — **Back-to-back Accept drawer submit** no longer hangs on Accepting.
+
+### Fixed
+
+- `notifyAfterDrawerClosed` runs toast notifications fire-and-forget so `dashboardDrawerSubmitInFlight` releases before the user can submit the next Accept.
+- Assign failure path uses the same close-then-notify pattern instead of awaiting error toasts inside the submit critical section.
+- CommandClient lane drain sets `laneDrainAgain` when work arrives during an in-flight drain.
+
+## [0.99.5] - 2026-05-25
+
+Patch — **Phase backfill assign** and **preempted refresh dashboard stability**.
+
+### Fixed
+
+- `assign-task-phase` and `upsert-phase-catalog-entry` accept numeric phase keys before workspace current kit phase by default; set `kit.phaseLadder.blockBeforeCurrent: true` to restore forward-only ladder enforcement.
+- Preempted in-flight `dashboard-summary` refresh (SIGTERM during Accept) maps to `extension-refresh-paused` instead of `extension-json-parse`; dashboard keeps last good paint.
+
+## [0.99.4] - 2026-05-24
+
+Hotfix — **Dashboard back-to-back Accept** no longer hangs on the second proposed task.
+
+### Fixed
+
+- CommandClient preempts in-flight `dashboard-summary` refresh when a mutation (`run-transition`, etc.) enqueues, so consecutive Accept drawer submits are not blocked behind a running refresh CLI.
+- Post-submit dashboard refresh is fire-and-forget so the drawer handler releases before the next accept opens.
+- Reset webview `drawerSubmitInFlight` when the drawer reopens.
+
+## [0.99.3] - 2026-05-24
+
+Phase 113 — **Dashboard queue and drawer hardening** (mutation/refresh lanes, refresh controller, drawer session, webview client extraction).
+
+### Added
+
+- CommandClient mutation vs refresh lanes with keyed refresh coalescing.
+- `DashboardRefreshController` — single owner for dashboard-summary refresh scheduling.
+- Drawer session state machine with `wcDrawerState` snapshots to the webview.
+- `dashboard-webview-client.ts` — extracted, tested dashboard sidebar bootstrap.
+- `notifyAfterDrawerClosed` lifecycle helper; regression tests for queue starvation and submit-lock leaks.
+
+### Changed
+
+- Accept / Accept All no longer starve behind overlapping `dashboard-summary` refresh backlog.
+- Workflow Cannon output channel tracing for kit runs and dashboard scheduling.
+
 ## [0.99.2] - 2026-05-22
 
 Phase 107 — **Dashboard policy rationale UX** (routine auto-rationale, elevated explainers, machine docs).

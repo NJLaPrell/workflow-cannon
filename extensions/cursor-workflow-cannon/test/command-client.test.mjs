@@ -549,6 +549,42 @@ test("CommandClient.setRefreshPaused skips newly enqueued refresh after pause", 
   assert.deepEqual(calls, []);
 });
 
+test("CommandClient treats preempted in-flight refresh as paused", async () => {
+  const client = new CommandClient("/tmp/noop", {
+    execFn: async (_root, args) => {
+      const cmd = args[1];
+      if (cmd === "dashboard-summary") {
+        return { exitCode: 1, stdout: "", stderr: "", preempted: true };
+      }
+      return { exitCode: 0, stdout: JSON.stringify({ ok: true, code: cmd }), stderr: "" };
+    }
+  });
+  const summary = await client.run("dashboard-summary", {});
+  assert.equal(summary.ok, false);
+  assert.equal(summary.code, "extension-refresh-paused");
+});
+
+test("isKitRefreshRunAborted treats empty stdout json-parse as refresh abort", async () => {
+  const { isKitRefreshRunAborted } = await import("../dist/runtime/kit-refresh-run-commands.js");
+  assert.equal(
+    isKitRefreshRunAborted({
+      ok: false,
+      code: "extension-json-parse",
+      message: "exit 1; capture full stdout and JSON.parse the whole value; stdout: "
+    }),
+    true
+  );
+  assert.equal(isKitRefreshRunAborted({ ok: false, code: "extension-refresh-paused" }), true);
+  assert.equal(
+    isKitRefreshRunAborted({
+      ok: false,
+      code: "extension-json-parse",
+      message: "exit 1; stdout: not json"
+    }),
+    false
+  );
+});
+
 test("CommandClient mutation lane runs before queued refresh", async () => {
   const order = [];
   const client = new CommandClient("/tmp/noop", {
@@ -557,11 +593,15 @@ test("CommandClient mutation lane runs before queued refresh", async () => {
       return { exitCode: 0, stdout: JSON.stringify({ ok: true, code: args[1] }), stderr: "" };
     }
   });
-  await Promise.all([
+  const [summary, transition] = await Promise.all([
     client.run("dashboard-summary", {}),
     client.run("run-transition", { taskId: "T1", action: "accept" })
   ]);
-  assert.deepEqual(order, ["run-transition", "dashboard-summary"]);
+  assert.equal(transition.ok, true);
+  assert.equal(transition.code, "run-transition");
+  assert.deepEqual(order, ["run-transition"]);
+  assert.equal(summary.ok, false);
+  assert.equal(summary.code, "extension-refresh-paused");
 });
 
 test("CommandClient coalesces pending refresh jobs with the same key", async () => {

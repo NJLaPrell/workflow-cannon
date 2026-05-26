@@ -171,6 +171,7 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.ok(statusPanel.indexOf('aria-label="Agent profile"') < statusPanel.indexOf('aria-label="Workspace identity"'));
   assert.ok(overviewPanel.indexOf("dash-agent-status-banner") < overviewPanel.indexOf("wc-cae-readiness"));
   assert.ok(overviewPanel.indexOf("wc-rec-next") < overviewPanel.indexOf("wc-cae-readiness"));
+  assert.ok(overviewPanel.indexOf("wc-stat-pills") < overviewPanel.indexOf("dash-agent-status-banner"));
   assert.match(overviewPanel, /wc-stat-pills/);
   assert.match(overviewPanel, /wc-pill-human/);
   assert.match(overviewPanel, /wc-stat-num-human/);
@@ -239,9 +240,17 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.match(html, /<option value="14">Current \(14\)<\/option>/);
   assert.match(html, /<option value="15">Next \(15\)<\/option>/);
   assert.match(html, /<option value="29">Phase 29<\/option>/);
-  assert.match(html, /imp-example/);
-  assert.match(html, /T319/);
-  assert.match(html, /T320/);
+  assert.doesNotMatch(taskEnginePanel, /imp-example/);
+  const lazyBucketBodies = [
+    ...taskEnginePanel.matchAll(
+      /<div class="wc-lazy-bucket-body" data-wc-lazy-loaded="0">([\s\S]*?)<\/div><\/details>/g
+    )
+  ].map((match) => match[1]);
+  assert.ok(lazyBucketBodies.length >= 3, "expected lazy queue bucket placeholders");
+  for (const body of lazyBucketBodies) {
+    assert.doesNotMatch(body, /T319/);
+    assert.doesNotMatch(body, /T320/);
+  }
   assert.match(html, /W1/);
   assert.match(html, /class="wc-btn wc-btn-sm wc-btn-secondary"[^>]*data-wc-action="wishlist-view"/);
   assert.match(html, />View<\/button>/);
@@ -249,18 +258,16 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.match(html, />Process<\/button>/);
   assert.match(html, /class="wc-btn wc-btn-sm wc-btn-secondary"[^>]*data-wc-action="wishlist-decline"/);
   assert.match(html, />Decline<\/button>/);
-  assert.match(html, /data-task-id="T501"/);
-  assert.match(html, /class="wc-btn wc-btn-sm wc-btn-success"[^>]*data-wc-action="proposed-imp-accept"/);
-  assert.match(html, /class="wc-btn wc-btn-sm wc-btn-danger"[^>]*data-wc-action="proposed-imp-decline"/);
+  assert.match(html, /data-wc-action="wishlist-decline"[\s\S]*data-task-id="T501"/);
+  assert.doesNotMatch(html, /class="wc-btn wc-btn-sm wc-btn-success"[^>]*data-wc-action="proposed-imp-accept"/);
+  assert.doesNotMatch(html, /class="wc-btn wc-btn-sm wc-btn-danger"[^>]*data-wc-action="proposed-imp-decline"/);
   assert.doesNotMatch(html, /proposed-imp-chat/);
   assert.doesNotMatch(html, /proposed-exe-chat/);
-  assert.match(html, /data-wc-action="task-detail"/);
-  assert.match(html, /class="wc-btn wc-btn-sm wc-btn-info"[^>]*data-wc-action="assign-phase"/);
-  assert.match(html, /class="wc-btn wc-btn-sm wc-btn-secondary"[^>]*data-wc-action="task-detail"/);
-  assert.match(html, /data-wc-action="task-detail"[\s\S]*?>View Task<\/button>/);
-  assert.match(html, /data-wc-action="task-comments-view"[\s\S]*?>View Comments<\/button>/);
-  assert.match(html, /class="wc-btn wc-btn-sm wc-btn-info"[^>]*data-wc-action="task-comment-add"/);
-  assert.match(html, /data-wc-action="task-comment-add"[\s\S]*?>Add Comment<\/button>/);
+  assert.doesNotMatch(html, /class="wc-btn wc-btn-sm wc-btn-info"[^>]*data-wc-action="assign-phase"/);
+  assert.doesNotMatch(html, /data-wc-action="task-detail"[\s\S]*?>View Task<\/button>/);
+  assert.doesNotMatch(html, /data-wc-action="task-comments-view"[\s\S]*?>View Comments<\/button>/);
+  assert.doesNotMatch(html, /class="wc-btn wc-btn-sm wc-btn-info"[^>]*data-wc-action="task-comment-add"/);
+  assert.doesNotMatch(html, /data-wc-action="task-comment-add"[\s\S]*?>Add Comment<\/button>/);
   assert.match(html, /wc-btn-sm/);
   assert.match(html, /phase-bucket/);
   assert.match(html, /data-wc-phase-bucket="14"/);
@@ -271,9 +278,13 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.match(html, /<b>Cancelled<\/b>/);
   assert.match(html, /terminal-phase-bucket/);
   assert.match(html, /wc-lazy-terminal-bucket/);
+  assert.match(html, /wc-lazy-queue-bucket/);
   assert.match(html, /data-wc-lazy-loaded="0"/);
   assert.match(html, /wc-lazy-bucket-hint/);
-  assert.match(html, /data-wc-lazy-terminal="completed"/);
+  assert.match(html, /data-wc-queue-category="completed"/);
+  assert.match(html, /data-wc-queue-category="ready"/);
+  assert.match(html, /data-wc-queue-category="proposed-improvement"/);
+  assert.doesNotMatch(html, /data-wc-queue-category="blocked"/);
   assert.doesNotMatch(html, /T099/);
   assert.match(html, /Not Phased/);
   assert.doesNotMatch(html, /Dependency Overview/);
@@ -312,11 +323,18 @@ test("renderDashboardRootInnerHtml renders phase roster deliverables inline edit
 
   assert.match(html, /Phase Roster/);
   assert.match(html, /dash-phase-roster-col-phase/);
+  assert.match(html, /dash-phase-roster-phase-link/);
+  assert.match(html, /data-wc-action="open-queue-for-phase"/);
+  assert.match(html, /data-wc-phase-key="95"/);
   assert.match(html, /dash-phase-roster-col-status/);
   assert.match(html, /dash-phase-roster-col-actions/);
   assert.match(html, /data-wc-action="phase-roster-start"/);
   assert.match(html, /data-wc-action="phase-deliverables-edit"/);
   assert.match(html, /dash-phase-edit-anchor/);
+  assert.match(html, /dash-phase-roster-status-inner/);
+  assert.match(html, /dash-phase-roster-actions/);
+  assert.match(html, /Register Phase\./);
+  assert.doesNotMatch(html, /Register future phase/);
   assert.match(html, /dash-phase-deliverables-input/);
   assert.match(html, /data-wc-phase-row="95"/);
   assert.match(html, /aria-label="Edit deliverables for phase 95"/);
@@ -1567,6 +1585,23 @@ test("lookupProposedTaskPhaseKey resolves from phase buckets and top rows", () =
   assert.equal(lookupProposedTaskPhaseKey(data, "T100407"), "101");
 });
 
+test("renderUpNextCardHtml puts View action inline without footer tags", () => {
+  const html = renderUpNextCardHtml({
+    ws: { currentKitPhase: "108", nextKitPhase: "109" },
+    phaseSnapshot: null,
+    suggestedNext: { id: "T501", title: "Ship the thing", phaseKey: "108" },
+    readyTop: [{ id: "T501", title: "Ship the thing", phaseKey: "108" }],
+    readyCount: 1,
+    firstWishlistOpen: null,
+    humanGatesCount: 0
+  });
+  assert.match(html, /wc-rec-title-row/);
+  assert.match(html, /Ship the thing[\s\S]*data-wc-action="task-detail"/);
+  assert.match(html, />View &rarr;<\/button>/);
+  assert.doesNotMatch(html, /wc-rec-footer/);
+  assert.doesNotMatch(html, /wc-rec-tag/);
+});
+
 test("renderUpNextCardHtml surfaces phase closeout when delivery queue is drained", () => {
   const html = renderUpNextCardHtml({
     ws: { currentKitPhase: "108", nextKitPhase: "109" },
@@ -1579,6 +1614,8 @@ test("renderUpNextCardHtml surfaces phase closeout when delivery queue is draine
   });
   assert.match(html, /wc-rec-next-closeout/);
   assert.match(html, /Complete &amp; Release/);
+  assert.match(html, /wc-rec-title-row/);
+  assert.doesNotMatch(html, /wc-rec-tag/);
   assert.doesNotMatch(html, /Later phase/);
 });
 
@@ -1594,6 +1631,12 @@ test("renderUpNextCardHtml prompts to pick a phase when none is current", () => 
   });
   assert.match(html, /wc-rec-next-pick-phase/);
   assert.match(html, /Start Phase 109/);
+  assert.doesNotMatch(html, /from the roster/);
+  assert.doesNotMatch(html, /Set the workspace current phase/);
+  assert.doesNotMatch(html, /wc-rec-tag-phase/);
+  assert.doesNotMatch(html, /focus-phase-roster/);
+  assert.match(html, /wc-rec-title-row/);
+  assert.match(html, /data-wc-action="phase-roster-start"/);
 });
 
 const deliverTestDepOverview = {
@@ -2504,7 +2547,44 @@ test("Phase Progress renders segmented bar without release control", () => {
   assert.match(readinessSection, /dash-phase-release-btn/);
 });
 
-test("Phase Readiness Complete & Release disabled before closeout reaches 100%", () => {
+test("Phase Readiness Complete & Release disabled before readiness reaches 100%", () => {
+  const html = renderDashboardRootInnerHtml(
+    readinessDashboardPayload({
+      workspaceStatus: {
+        currentKitPhase: "100",
+        nextKitPhase: "101",
+        blockers: [],
+        pendingDecisions: ["Pick release train"]
+      },
+      currentPhaseDelivery: phaseDeliveryFixture({
+        closeoutPassed: false,
+        releaseReadyPercent: 40,
+        progressPercent: 40,
+        remainingCount: 6,
+        terminalCount: 4,
+        checkedTaskCount: 10,
+        queue: { ready: 0, proposed: 2, blocked: 0, inProgress: 0, research: 0 },
+        segments: {
+          completed: 0,
+          cancelled: 0,
+          inProgress: 0,
+          ready: 0,
+          proposed: 2,
+          blocked: 0,
+          research: 0
+        }
+      })
+    })
+  );
+  const head = html.match(/wc-cae-readiness-head[\s\S]*?<\/div>\s*<div class="wc-cae-readiness-body"/)?.[0] ?? "";
+  assert.match(head, /dash-phase-release-btn/);
+  assert.match(head, /\bdash-phase-release-btn[\s\S]*\bdisabled\b/);
+  assert.match(head, /wc-btn-disabled/);
+  assert.doesNotMatch(head, /dash-phase-release-btn--preflight/);
+  assert.match(head, /Complete &amp; Release unlocks when phase readiness reaches 100%/);
+});
+
+test("Phase Readiness enables Complete & Release at 100% readiness before closeout passes", () => {
   const html = renderDashboardRootInnerHtml(
     readinessDashboardPayload({
       currentPhaseDelivery: phaseDeliveryFixture({
@@ -2517,12 +2597,10 @@ test("Phase Readiness Complete & Release disabled before closeout reaches 100%",
       })
     })
   );
-  const head = html.match(/wc-cae-readiness-head[\s\S]*?<\/div>\s*<div class="wc-cae-readiness-body"/)?.[0] ?? "";
+  const head = html.match(/wc-cae-readiness-head[\s\S]*?<\/div>/)?.[0] ?? "";
   assert.match(head, /dash-phase-release-btn/);
-  assert.match(head, /\bdash-phase-release-btn[\s\S]*\bdisabled\b/);
-  assert.match(head, /wc-btn-disabled/);
-  assert.doesNotMatch(head, /dash-phase-release-btn--preflight/);
-  assert.match(head, /Complete &amp; Release unlocks when readiness and Phase Progress both reach 100%/);
+  assert.doesNotMatch(head, /\bdash-phase-release-btn[\s\S]*\bdisabled\b/);
+  assert.match(head, /dash-phase-release-btn--preflight/);
 });
 
 test("Phase Readiness enables Complete & Release when closeout passed", () => {

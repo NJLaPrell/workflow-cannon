@@ -2,17 +2,43 @@
  * Workspace phase schedule tags: Delivered, Current, Next, Future — shared by roster, queue buckets, status tab.
  */
 
-import {
-  parseLeadingDigitsOrdinal,
-  parseLeadingPhaseOrdinalFromKey
-} from "./phase-roster-display.js";
+import { parseLeadingPhaseOrdinalFromKey } from "./phase-roster-display.js";
 
 export type PhaseScheduleTagKind = "delivered" | "current" | "next" | "future";
 
 export type PhaseScheduleFocus = {
   currentKitPhase?: string | null;
   nextKitPhase?: string | null;
+  /** Phase keys with closeout-passed delivery evidence (`set_current_phase` events). */
+  releasedPhaseKeys?: ReadonlySet<string> | readonly string[];
+  /** Pre–delivery-evidence ceiling: ordinals in `[0, N]` count as delivered when set. */
+  legacyDeliveredMaxOrdinal?: number | null;
+  /** When set, `next` applies only if canonical `nextKitPhase` is in this roster/catalog set. */
+  knownRosterPhaseKeys?: ReadonlySet<string>;
 };
+
+function phaseKeyWasReleased(key: string, focus: PhaseScheduleFocus): boolean {
+  const legacyMax = focus.legacyDeliveredMaxOrdinal;
+  if (typeof legacyMax === "number" && Number.isFinite(legacyMax)) {
+    const ord = parseLeadingPhaseOrdinalFromKey(key);
+    if (ord !== null && ord >= 0 && ord <= legacyMax) {
+      return true;
+    }
+  }
+  const released = focus.releasedPhaseKeys;
+  if (!released) {
+    return false;
+  }
+  if (released instanceof Set) {
+    return released.has(key);
+  }
+  for (const candidate of released) {
+    if (candidate === key) {
+      return true;
+    }
+  }
+  return false;
+}
 
 function escapeHtml(s: string): string {
   return String(s)
@@ -40,7 +66,7 @@ export function phaseScheduleTagClassName(kind: PhaseScheduleTagKind): string {
   return "wc-phase-tag wc-phase-tag-" + kind;
 }
 
-/** Classify a phase key relative to workspace current / next pointers. */
+/** Classify a phase key relative to workspace current / next and delivery evidence. */
 export function resolvePhaseScheduleTag(
   phaseKey: string | null | undefined,
   focus: PhaseScheduleFocus
@@ -58,20 +84,15 @@ export function resolvePhaseScheduleTag(
   if (curKey.length > 0 && key === curKey) {
     return "current";
   }
-  if (nxtKey.length > 0 && key === nxtKey) {
-    return "next";
-  }
-  const tn = parseLeadingPhaseOrdinalFromKey(key);
-  const curOrd = parseLeadingDigitsOrdinal(focus.currentKitPhase);
-  const nxtOrd = parseLeadingDigitsOrdinal(focus.nextKitPhase);
-  if (tn !== null && curOrd !== null && tn < curOrd) {
+  if (phaseKeyWasReleased(key, focus)) {
     return "delivered";
   }
-  if (tn !== null && nxtOrd !== null && tn > nxtOrd) {
-    return "future";
-  }
-  if (tn !== null && curOrd !== null && tn > curOrd) {
-    return "future";
+  if (nxtKey.length > 0 && key === nxtKey) {
+    const known = focus.knownRosterPhaseKeys;
+    if (known && !known.has(nxtKey)) {
+      return "future";
+    }
+    return "next";
   }
   return "future";
 }

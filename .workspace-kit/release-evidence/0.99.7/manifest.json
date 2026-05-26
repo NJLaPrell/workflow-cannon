@@ -1,0 +1,288 @@
+{
+  "schemaVersion": 1,
+  "createdAt": "2026-05-26T05:37:49.343Z",
+  "releaseVersion": "0.99.7",
+  "packageName": "@workflow-cannon/workspace-kit",
+  "phaseKey": "108",
+  "git": {
+    "branch": "release/phase-108",
+    "mergeTarget": "main",
+    "mergeSha": "076e971fee6f9477ea525ee20eec2f2438cc2775"
+  },
+  "approval": {
+    "actor": "nicklaprell",
+    "timestamp": "2026-05-26T05:40:00.000Z",
+    "rationale": "User explicitly approved Phase 108 closeout publish in Cursor chat (fold in remaining lazy-loading tasks, confirm publish).",
+    "scope": "phase-108 closeout: merge release/phase-108 to main and npm publish 0.99.7"
+  },
+  "releaseNotes": {
+    "source": "docs/maintainers/CHANGELOG.md",
+    "entries": [
+      "0.99.7 — Phase 108 dashboard lazy loading (shell-first paint, split hydration, regression gates)"
+    ]
+  },
+  "validations": [
+    {
+      "command": "pnpm run build",
+      "conclusion": "success",
+      "source": "closeout-canonical"
+    },
+    {
+      "command": "pnpm run check",
+      "conclusion": "success",
+      "source": "closeout-canonical"
+    },
+    {
+      "command": "pnpm run test",
+      "conclusion": "success",
+      "source": "closeout-canonical"
+    },
+    {
+      "command": "pnpm run parity",
+      "conclusion": "success",
+      "source": "closeout-canonical"
+    },
+    {
+      "command": "node scripts/check-release-metadata.mjs",
+      "conclusion": "success",
+      "source": "closeout-canonical"
+    },
+    {
+      "command": "pnpm run pre-merge-gates",
+      "conclusion": "success",
+      "source": "closeout-canonical"
+    }
+  ],
+  "risks": [],
+  "publishArtifacts": [],
+  "taskDeliveryEvidence": [
+    {
+      "taskId": "T100395",
+      "title": "Dashboard lazy loading: first-paint shell and section registry",
+      "phaseKey": "108",
+      "deliveryEvidence": {
+        "schemaVersion": 1,
+        "branchName": "feature/T100395-dashboard-lazy-shell",
+        "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/432",
+        "prNumber": 432,
+        "baseBranch": "release/phase-108",
+        "mergeSha": "217c0b146375ca9536eaaff818a633a627fc1fb7",
+        "checks": [
+          {
+            "name": "test",
+            "conclusion": "success",
+            "url": "https://github.com/NJLaPrell/workflow-cannon/actions/runs/26433483347"
+          }
+        ],
+        "validationCommands": [
+          {
+            "command": "pnpm run build",
+            "exitCode": 0
+          },
+          {
+            "command": "pnpm run check",
+            "exitCode": 0
+          },
+          {
+            "command": "pnpm run test",
+            "exitCode": 0
+          }
+        ]
+      },
+      "deliveryEvidenceSummary": {
+        "schemaVersion": 1,
+        "mode": null
+      },
+      "deliveryWaiver": null
+    },
+    {
+      "taskId": "T100396",
+      "title": "Dashboard lazy loading: split summary data into section slices",
+      "phaseKey": "108",
+      "deliveryEvidence": {
+        "schemaVersion": 1,
+        "branchName": "feature/T100396-dashboard-summary-slices",
+        "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/433",
+        "prNumber": 433,
+        "baseBranch": "release/phase-108",
+        "mergeSha": "faba7227c50e247134b7a5f7cd0e17ccff80f664",
+        "checks": [
+          {
+            "name": "test",
+            "conclusion": "success",
+            "url": "https://github.com/NJLaPrell/workflow-cannon/actions/runs/26433639790"
+          }
+        ],
+        "validationCommands": [
+          {
+            "command": "pnpm run build",
+            "exitCode": 0
+          },
+          {
+            "command": "pnpm run check",
+            "exitCode": 0
+          },
+          {
+            "command": "pnpm run test",
+            "exitCode": 0
+          }
+        ]
+      },
+      "deliveryEvidenceSummary": {
+        "schemaVersion": 1,
+        "mode": null
+      },
+      "deliveryWaiver": null
+    },
+    {
+      "taskId": "T100397",
+      "title": "Dashboard lazy loading: queue sections and phase rows",
+      "phaseKey": "108",
+      "deliveryEvidence": {
+        "schemaVersion": 1,
+        "branchName": "feature/T100397-dashboard-lazy-queue-buckets",
+        "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/434",
+        "prNumber": 434,
+        "baseBranch": "release/phase-108",
+        "mergeSha": "1d7e21d97caa25281c56558d8cbb0a65deff8204",
+        "checks": [
+          {
+            "name": "test",
+            "conclusion": "success",
+            "detailsUrl": "https://github.com/NJLaPrell/workflow-cannon/actions/runs/26433806888/job/77812166353"
+          }
+        ],
+        "validationCommands": [
+          {
+            "command": "pnpm run check",
+            "exitCode": 0
+          },
+          {
+            "command": "pnpm run test",
+            "exitCode": 0
+          }
+        ]
+      },
+      "deliveryEvidenceSummary": {
+        "schemaVersion": 1,
+        "mode": null
+      },
+      "deliveryWaiver": null
+    },
+    {
+      "taskId": "T100398",
+      "title": "Dashboard lazy loading: hydrate secondary tabs on activation",
+      "phaseKey": "108",
+      "deliveryEvidence": {
+        "schemaVersion": 1,
+        "branchName": "feature/T100398-dashboard-lazy-tab-activation",
+        "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/435",
+        "prNumber": 435,
+        "baseBranch": "release/phase-108",
+        "mergeSha": "7855d19bd47107e7e66ae7408a78af75ae4a836c",
+        "checks": [
+          {
+            "name": "test",
+            "conclusion": "success",
+            "detailsUrl": "https://github.com/NJLaPrell/workflow-cannon/actions/runs/26433992317/job/77812720967"
+          }
+        ],
+        "validationCommands": [
+          {
+            "command": "pnpm run ext:compile",
+            "exitCode": 0
+          },
+          {
+            "command": "pnpm run test",
+            "exitCode": 0
+          }
+        ]
+      },
+      "deliveryEvidenceSummary": {
+        "schemaVersion": 1,
+        "mode": null
+      },
+      "deliveryWaiver": null
+    },
+    {
+      "taskId": "T100399",
+      "title": "Dashboard lazy loading: targeted invalidation after mutations",
+      "phaseKey": "108",
+      "deliveryEvidence": {
+        "schemaVersion": 1,
+        "branchName": "feature/T100399-dashboard-targeted-invalidation",
+        "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/436",
+        "prNumber": 436,
+        "baseBranch": "release/phase-108",
+        "mergeSha": "05bcb1cde445fbc83d3d24d5d31442b43abf4a69",
+        "checks": [
+          {
+            "name": "test",
+            "conclusion": "success",
+            "detailsUrl": "https://github.com/NJLaPrell/workflow-cannon/actions/runs/26434160452/job/77813221992"
+          }
+        ],
+        "validationCommands": [
+          {
+            "command": "pnpm run ext:compile",
+            "exitCode": 0
+          },
+          {
+            "command": "pnpm run test",
+            "exitCode": 0
+          }
+        ]
+      },
+      "deliveryEvidenceSummary": {
+        "schemaVersion": 1,
+        "mode": null
+      },
+      "deliveryWaiver": null
+    },
+    {
+      "taskId": "T100400",
+      "title": "Dashboard lazy loading: performance evidence and regression gates",
+      "phaseKey": "108",
+      "deliveryEvidence": {
+        "schemaVersion": 1,
+        "branchName": "feature/T100400-dashboard-lazy-regression-gates",
+        "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/437",
+        "prNumber": 437,
+        "baseBranch": "release/phase-108",
+        "mergeSha": "076e971fee6f9477ea525ee20eec2f2438cc2775",
+        "checks": [
+          {
+            "name": "test",
+            "conclusion": "success",
+            "detailsUrl": "https://github.com/NJLaPrell/workflow-cannon/actions/runs/26434326948/job/77813712500"
+          }
+        ],
+        "validationCommands": [
+          {
+            "command": "pnpm --filter cursor-workflow-cannon run test",
+            "exitCode": 0
+          },
+          {
+            "command": "node scripts/bench-dashboard-refresh.mjs",
+            "exitCode": 0
+          }
+        ]
+      },
+      "deliveryEvidenceSummary": {
+        "schemaVersion": 1,
+        "mode": null
+      },
+      "deliveryWaiver": null
+    }
+  ],
+  "followUpScan": {
+    "scannedAt": "2026-05-26T05:40:00.000Z",
+    "rationale": "Phase 108 scoped to six completed dashboard lazy-loading tasks (T100395–T100400); no additional follow-on execution tasks filed at closeout."
+  },
+  "followUpTasks": [],
+  "followUpSummary": {
+    "count": 0,
+    "scannedAt": "2026-05-26T05:40:00.000Z",
+    "rationale": "Phase 108 scoped to six completed dashboard lazy-loading tasks (T100395–T100400); no additional follow-on execution tasks filed at closeout."
+  }
+}
