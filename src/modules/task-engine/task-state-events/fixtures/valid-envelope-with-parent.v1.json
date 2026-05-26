@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "eventId": "tse.20260526T120001Z.child",
+  "sequence": 1,
+  "parentEventId": "tse.20260526T120000Z.genesis",
+  "recordedAt": "2026-05-26T12:00:01.000Z",
+  "actor": {
+    "id": "maintainer@example.com",
+    "source": "explicit"
+  },
+  "command": {
+    "name": "update-task",
+    "moduleId": "task-engine",
+    "invocationId": "00000000-0000-4000-8000-000000000002"
+  }
+}
