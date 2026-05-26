@@ -272,6 +272,14 @@
   },
   {
     "moduleId": "task-engine",
+    "name": "check-task-store-commit",
+    "file": "check-task-store-commit.md",
+    "description": "Fail when live planning SQLite (or wal/shm) is staged for commit without an explicit approval marker.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
     "name": "sync-task-store-after-merge",
     "file": "sync-task-store-after-merge.md",
     "description": "Diff task-store SQLite between a source git ref and working tree; replay missing transitions after feature merge.",

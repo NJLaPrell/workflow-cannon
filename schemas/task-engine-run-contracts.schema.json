@@ -46,6 +46,7 @@
         "backup-planning-sqlite",
         "batch-transition",
         "block-task",
+        "check-task-store-commit",
         "remove-dependency",
         "get-dependency-graph",
         "get-kit-persistence-map",
@@ -191,6 +192,9 @@
         },
         "block-task": {
           "$ref": "#/$defs/contractTaskIntentWithTaskId"
+        },
+        "check-task-store-commit": {
+          "$ref": "#/$defs/contractBase"
         },
         "remove-dependency": {
           "$ref": "#/$defs/contractDependencyMutation"

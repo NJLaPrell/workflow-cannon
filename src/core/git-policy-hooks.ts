@@ -5,6 +5,9 @@ import path from "node:path";
 export const GIT_HOOKS_DIR_RELATIVE = ".workspace-kit/git-hooks";
 export const GIT_POLICY_APPROVAL_RELATIVE = ".workspace-kit/policy/git-destructive-approval.json";
 
+/** Re-exported for hook installers; see task-store-git-commit-policy.ts */
+export { TASK_STORE_COMMIT_APPROVAL_RELATIVE } from "./task-store-git-commit-policy.js";
+
 const PROTECTED_BRANCH_PATTERNS = [
   /^refs\/heads\/main$/,
   /^refs\/heads\/master$/,
@@ -92,8 +95,47 @@ exit 0
 `;
 }
 
+function taskStoreCommitApprovalBody(): string {
+  return `
+TASK_STORE_APPROVAL_FILE="$ROOT/.workspace-kit/policy/task-store-sqlite-commit-approval.json"
+has_task_store_commit_approval() {
+  if [[ -n "\${WORKSPACE_KIT_TASK_STORE_COMMIT_APPROVAL:-}" ]]; then
+    node -e "const j=JSON.parse(process.env.WORKSPACE_KIT_TASK_STORE_COMMIT_APPROVAL||'{}'); process.exit(j.confirmed===true?0:1)" 2>/dev/null && return 0
+  fi
+  if [[ -f "$TASK_STORE_APPROVAL_FILE" ]]; then
+    node -e "const fs=require('fs'); const j=JSON.parse(fs.readFileSync(process.argv[1],'utf8')); const ok=j.confirmed===true&&(!j.expiresAt||Date.parse(j.expiresAt)>Date.now()); process.exit(ok?0:1)" "$TASK_STORE_APPROVAL_FILE" 2>/dev/null && return 0
+  fi
+  return 1
+}
+staged_task_store_sqlite_paths() {
+  git diff --cached --name-only --diff-filter=ACM 2>/dev/null | while IFS= read -r f; do
+    case "$f" in
+      .workspace-kit/tasks/*.db|.workspace-kit/tasks/*.db-wal|.workspace-kit/tasks/*.db-shm) echo "$f" ;;
+    esac
+  done
+}
+block_staged_task_store_without_approval() {
+  if has_task_store_commit_approval; then
+    return 0
+  fi
+  local hits
+  hits="$(staged_task_store_sqlite_paths)"
+  if [[ -n "$hits" ]]; then
+    echo "workspace-kit git-policy: blocked commit of live planning SQLite (staged):" >&2
+    echo "$hits" | sed 's/^/  - /' >&2
+    echo "Unstage, use backup/export commands, or write $TASK_STORE_APPROVAL_FILE with {\\"confirmed\\":true,\\"rationale\\":\\"...\\"}" >&2
+    echo "One-shot: WORKSPACE_KIT_TASK_STORE_COMMIT_APPROVAL='{\\"confirmed\\":true,\\"rationale\\":\\"...\\"}'" >&2
+    echo "Check: pnpm exec wk run check-task-store-commit '{}'" >&2
+    return 1
+  fi
+  return 0
+}
+`;
+}
+
 function preCommitHookBody(): string {
-  return `${hookScriptHeader()}
+  return `${hookScriptHeader()}${taskStoreCommitApprovalBody()}
+block_staged_task_store_without_approval || exit 1
 branch="$(git symbolic-ref -q HEAD 2>/dev/null || true)"
 if [[ -n "$branch" ]] && protected_ref "$branch"; then
   if has_approval; then

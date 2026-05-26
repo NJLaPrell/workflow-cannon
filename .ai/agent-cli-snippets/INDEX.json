@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-05-20T01:24:14.866Z",
+  "generatedAt": "2026-05-26T19:27:55.515Z",
   "commands": [
     {
       "name": "accept-improvement",
@@ -346,6 +346,11 @@
       "name": "cancel-assignment",
       "path": ".ai/agent-cli-snippets/by-command/cancel-assignment.json",
       "moduleId": "team-execution"
+    },
+    {
+      "name": "check-task-store-commit",
+      "path": ".ai/agent-cli-snippets/by-command/check-task-store-commit.json",
+      "moduleId": "task-engine"
     },
     {
       "name": "claim-next-task",
