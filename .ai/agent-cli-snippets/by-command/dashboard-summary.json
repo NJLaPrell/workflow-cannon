@@ -19,6 +19,21 @@
         "type": "integer",
         "minimum": 1,
         "maximum": 100
+      },
+      "includePhaseFocus": {
+        "type": "boolean"
+      },
+      "phaseKey": {
+        "type": "string"
+      },
+      "projection": {
+        "type": "string",
+        "enum": [
+          "full",
+          "overview",
+          "queue",
+          "status"
+        ]
       }
     },
     "additionalProperties": false
@@ -54,5 +69,5 @@
     "listCommands": "pnpm exec wk run --list-commands",
     "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
   },
-  "invocationId": "0b0a23cb-37c7-48d5-b1c4-f61fe60d9e94"
+  "invocationId": "84068959-20f2-4284-96e2-406b1fb40a62"
 }

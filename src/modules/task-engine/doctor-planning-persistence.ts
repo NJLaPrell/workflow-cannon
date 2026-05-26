@@ -11,6 +11,7 @@ import {
   classifyNativeSqliteErrorMessage,
   nativeSqliteRecoveryHint
 } from "../../core/native-sqlite-diagnostics.js";
+import { collectTaskStoreSqliteStagedIssues } from "../../core/task-store-git-commit-policy.js";
 import {
   hashWorkingTreeTaskStore,
   probeTaskStoreShaAtGitRef
@@ -55,6 +56,13 @@ export async function validatePlanningPersistenceForDoctor(
   const dbRel = planningSqliteDatabaseRelativePath(ctx);
   const dbAbs = path.resolve(workspacePath, dbRel);
   const relDisplay = path.relative(workspacePath, dbAbs) || dbAbs;
+
+  for (const staged of collectTaskStoreSqliteStagedIssues({
+    workspacePath,
+    sqliteDatabaseRelativePath: dbRel
+  })) {
+    issues.push({ path: staged.path, reason: staged.reason });
+  }
 
   if (!fs.existsSync(dbAbs)) {
     issues.push({

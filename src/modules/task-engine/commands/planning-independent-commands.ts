@@ -31,6 +31,7 @@ import {
   runInstallGitHooksCommand,
   runUninstallGitHooksCommand
 } from "./git-policy-hooks-commands.js";
+import { runCheckTaskStoreCommit } from "../persistence/check-task-store-commit-runtime.js";
 import { runGetLastOutput } from "./get-last-output-command.js";
 
 /** If non-null, dispatch should return immediately (command fully handled without planning stores). */
@@ -98,6 +99,9 @@ export async function routeTaskEngineBeforeOpenPlanningStores(
   }
   if (command.name === "uninstall-git-hooks") {
     return runUninstallGitHooksCommand(ctx);
+  }
+  if (command.name === "check-task-store-commit") {
+    return runCheckTaskStoreCommit(ctx);
   }
   if (command.name === "list-module-states" || command.name === "get-module-state") {
     const unified = new UnifiedStateDb(ctx.workspacePath, planningSqliteDatabaseRelativePath(ctx));
