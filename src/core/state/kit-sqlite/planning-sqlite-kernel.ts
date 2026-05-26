@@ -10,7 +10,7 @@ type SqliteDatabase = InstanceType<typeof Database>;
  */
 
 /** Bump and add a migration step in `migrateKitSqliteSchema` when DDL changes. Exposed for doctor / list-module-states. */
-export const KIT_SQLITE_USER_VERSION = 27;
+export const KIT_SQLITE_USER_VERSION = 28;
 
 export const TASK_ENGINE_TASKS_TABLE = "task_engine_tasks";
 export const TASK_ENGINE_DEPENDENCIES_TABLE = "task_engine_dependencies";
@@ -1067,6 +1067,33 @@ CREATE INDEX idx_kit_session_grants_session_id ON kit_session_grants(session_id)
 `);
 }
 
+/** Task-state event log projection cache metadata (Phase 114 / T100505). */
+function migrateV27ToV28(db: SqliteDatabase): void {
+  if (tableExists(db, "kit_task_state_projection_meta")) {
+    return;
+  }
+  db.exec(`
+CREATE TABLE kit_task_state_projection_meta (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  backend TEXT NOT NULL,
+  applied_sequence INTEGER NOT NULL DEFAULT 0,
+  source_commit TEXT,
+  projection_schema_version INTEGER NOT NULL DEFAULT 1,
+  sync_status TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+`);
+  db.prepare(
+    `INSERT OR IGNORE INTO kit_task_state_projection_meta (
+       id, backend, applied_sequence, source_commit, projection_schema_version, sync_status, updated_at
+     ) VALUES (1, @backend, 0, NULL, 1, @sync_status, @updated_at)`
+  ).run({
+    backend: "git-event-log",
+    sync_status: "empty",
+    updated_at: new Date().toISOString()
+  });
+}
+
 /** wk run invocation audit ring buffer (Phase 102 / T100295). */
 function migrateV26ToV27(db: SqliteDatabase): void {
   if (tableExists(db, "kit_run_log")) {
@@ -1240,6 +1267,11 @@ function migrateKitSqliteSchema(db: SqliteDatabase): void {
     migrateV26ToV27(db);
     db.pragma("user_version = 27");
     current = 27;
+  }
+  if (current < 28) {
+    migrateV27ToV28(db);
+    db.pragma("user_version = 28");
+    current = 28;
   }
 }
 
