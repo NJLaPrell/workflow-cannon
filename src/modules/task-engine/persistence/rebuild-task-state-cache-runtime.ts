@@ -1,27 +1,13 @@
-import { execFileSync } from "node:child_process";
 import type { ModuleCommandResult, ModuleLifecycleContext } from "../../../contracts/module-contract.js";
 import { admitTaskStateEventStream } from "../task-state-events/event-admission.js";
 import { replayTaskStateEvents } from "../task-state-events/event-applier.js";
 import { readTaskStateEventLogJsonl, resolveTaskStateEventLogPath } from "../task-state-events/task-state-event-log-io.js";
-import { openPlanningStores } from "./planning-open.js";
 import {
-  readTaskStateProjectionMeta,
-  upsertTaskStateProjectionMeta,
-  taskStateProjectionMetaTableAvailable
-} from "./task-state-projection-meta-store.js";
-
-function resolveGitHeadSha(workspacePath: string): string | null {
-  try {
-    const out = execFileSync("git", ["rev-parse", "HEAD"], {
-      cwd: workspacePath,
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "ignore"]
-    }).trim();
-    return out.length > 0 ? out : null;
-  } catch {
-    return null;
-  }
-}
+  openPlanningStoresForTaskStateCache,
+  persistTaskStateProjectionDocument,
+  resolveGitHeadSha,
+  upsertProjectionMetaAfterApply
+} from "./task-state-cache-runtime-shared.js";
 
 export async function runRebuildTaskStateCache(
   ctx: ModuleLifecycleContext,
@@ -88,26 +74,14 @@ export async function runRebuildTaskStateCache(
     };
   }
 
-  const planning = await openPlanningStores(ctx);
-  planning.sqliteDual.seedFromDocuments(document, planning.sqliteDual.wishlistDocument);
-  if (!planning.sqliteDual.relationalTasksEnabled) {
-    planning.sqliteDual.enableRelationalPersistenceAndPersist();
-  } else {
-    planning.sqliteDual.persistSync({ persistScope: "full" });
-  }
-
-  const db = planning.sqliteDual.getDatabase();
-  let projectionMeta = readTaskStateProjectionMeta(db);
-  if (taskStateProjectionMetaTableAvailable(db)) {
-    projectionMeta = upsertTaskStateProjectionMeta(db, {
-      backend: "git-event-log",
-      appliedSequence: lastSequence,
-      sourceCommit,
-      projectionSchemaVersion: 1,
-      syncStatus: admitted.events.length > 0 ? "fresh" : "empty",
-      updatedAt: document.lastUpdated
-    });
-  }
+  const planning = await openPlanningStoresForTaskStateCache(ctx);
+  persistTaskStateProjectionDocument(planning, document);
+  const projectionMeta = upsertProjectionMetaAfterApply(planning, {
+    appliedSequence: lastSequence,
+    sourceCommit,
+    syncStatus: admitted.events.length > 0 ? "fresh" : "empty",
+    updatedAt: document.lastUpdated
+  });
 
   return {
     ok: true,

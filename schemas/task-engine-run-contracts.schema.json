@@ -108,6 +108,7 @@
         "propose-tasks-from-phase-notes",
         "propose-release-version",
         "apply-task-batch",
+        "apply-task-state-events",
         "resolve-maintainer-delivery-policy",
         "resolve-task-intake-policy",
         "review-planning-execution-drafts",
@@ -388,6 +389,9 @@
         },
         "apply-task-batch": {
           "$ref": "#/$defs/contractApplyTaskBatch"
+        },
+        "apply-task-state-events": {
+          "$ref": "#/$defs/contractApplyTaskStateEvents"
         },
         "resolve-maintainer-delivery-policy": {
           "$ref": "#/$defs/contractBase"
@@ -3119,6 +3123,30 @@
             "args": {
               "type": "object",
               "additionalProperties": true
+            },
+            "responseData": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          }
+        }
+      ]
+    },
+    "contractApplyTaskStateEvents": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/contractBase"
+        },
+        {
+          "properties": {
+            "args": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "dryRun": { "type": "boolean" },
+                "eventLogRelativePath": { "type": "string" },
+                "policyApproval": { "type": "object", "additionalProperties": true }
+              }
             },
             "responseData": {
               "type": "object",
