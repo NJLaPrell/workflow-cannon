@@ -138,9 +138,11 @@ export function buildHostSnapshotApplierScript(): string {
     if (!snapshot || snapshot.schemaVersion !== 1) return;
     hostSnapshot = snapshot;
     if (snapshot.drawer) applyWcDrawerState(snapshot.drawer);
-    if (snapshot.interaction && typeof snapshot.interaction.refreshBusy === 'boolean') {
-      var refreshBtn = document.getElementById('btn');
-      if (refreshBtn) setButtonBusy(refreshBtn, snapshot.interaction.refreshBusy, 'Refreshing…');
+    if (snapshot.interaction) {
+      if (typeof snapshot.interaction.refreshBusy === 'boolean') {
+        var refreshBtn = document.getElementById('btn');
+        if (refreshBtn) setButtonBusy(refreshBtn, snapshot.interaction.refreshBusy, 'Refreshing…');
+      }
     }
   }
 `.trim();

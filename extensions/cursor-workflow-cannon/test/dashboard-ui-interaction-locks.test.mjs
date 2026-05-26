@@ -79,10 +79,13 @@ test("dashboard roster start and mark complete pause refresh during kit mutation
   assert.match(providerSrc, /onMarkPhaseComplete[\s\S]*beginDashboardMutationRefreshHold/);
 });
 
-test("dashboard refresh button shows inline spinner while summary reloads", () => {
+test("dashboard refresh button busy state comes from wcHostSnapshot (T100497)", () => {
   assert.match(webviewClientSrc, /function setButtonBusy\(el, busy, label\)/);
-  assert.match(webviewClientSrc, /setButtonBusy\(btn, true, 'Refreshing…'\)/);
-  assert.match(webviewClientSrc, /setButtonBusy\(refreshBtn, false\)/);
+  assert.match(webviewClientSrc, /buildHostSnapshotApplierScript/);
+  assert.doesNotMatch(
+    webviewClientSrc.slice(webviewClientSrc.indexOf("if (btn) btn.addEventListener('click'")),
+    /setUiInteraction\('refresh', true\)/
+  );
 });
 
 test("dashboard drawer submit uses coordinator dispatch (T100493)", () => {
