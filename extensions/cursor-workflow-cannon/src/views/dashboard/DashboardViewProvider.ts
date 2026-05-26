@@ -1585,10 +1585,15 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     await this.view?.webview.postMessage({ type: "wcDrawerClose" });
   }
 
-  /** Close drawer and release locks before modal/toast notifications (T100490). */
+  /** Close drawer first; run notify without blocking submit lock release in the caller `finally`. */
   private async notifyAfterDrawerClosed(notify: () => void | Thenable<unknown>): Promise<void> {
     await this.closeDashboardDrawer();
-    await notify();
+    void Promise.resolve(notify()).catch((err: unknown) => {
+      logWc(
+        "dashboard",
+        `drawer notify failed: ${err instanceof Error ? err.message : String(err)}`
+      );
+    });
   }
 
   private async openAddWishlistDrawer(): Promise<void> {
@@ -1952,10 +1957,11 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
           ...expectedPlanningGenerationArgs()
         });
         if (!r2.ok) {
-          this.closeDashboardDrawer();
           this.notifyKitStateChanged();
-          await vscode.window.showErrorMessage(
-            `Accepted ${taskId} but assign-task-phase failed: ${(r2.message ?? r2.code ?? JSON.stringify(r2)).slice(0, 520)}`
+          await this.notifyAfterDrawerClosed(() =>
+            vscode.window.showErrorMessage(
+              `Accepted ${taskId} but assign-task-phase failed: ${(r2.message ?? r2.code ?? JSON.stringify(r2)).slice(0, 520)}`
+            )
           );
           return true;
         }

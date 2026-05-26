@@ -97,6 +97,7 @@ test("dashboard drawer submit is guarded against duplicate host handling", () =>
   assert.match(providerSrc, /logWc\("dashboard", "drawerSubmit ignored/);
   assert.match(providerSrc, /setDashboardUiInteraction\("drawer-busy", false\)/);
   assert.match(providerSrc, /notifyAfterDrawerClosed/);
+  assert.match(providerSrc, /void Promise\.resolve\(notify\(\)\)/);
   assert.match(providerSrc, /endDrawerSubmitRefreshHold/);
 });
 

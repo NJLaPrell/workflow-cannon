@@ -643,6 +643,8 @@ export class CommandClient {
   private refreshSlots = new Map<string, RefreshSlot>();
   private laneDrainScheduled = false;
   private laneDraining = false;
+  /** Set when a drain is running and another lane change arrived — rerun after current drain. */
+  private laneDrainAgain = false;
   /** Kill hook for an in-flight refresh CLI child (preempted when a mutation starts). */
   private inFlightRefreshKill: (() => void) | null = null;
   private activeRunCommand: string | undefined;
@@ -748,6 +750,7 @@ export class CommandClient {
 
   private async drainLaneQueue(): Promise<void> {
     if (this.laneDraining) {
+      this.laneDrainAgain = true;
       return;
     }
     this.laneDraining = true;
@@ -789,7 +792,8 @@ export class CommandClient {
       }
     } finally {
       this.laneDraining = false;
-      if (this.mutationEntries.length > 0 || this.refreshSlots.size > 0) {
+      if (this.laneDrainAgain || this.mutationEntries.length > 0 || this.refreshSlots.size > 0) {
+        this.laneDrainAgain = false;
         void this.drainLaneQueue();
       }
     }
