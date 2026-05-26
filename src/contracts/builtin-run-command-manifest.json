@@ -947,6 +947,15 @@
   },
   {
     "moduleId": "task-engine",
+    "name": "repair-task-state-cache",
+    "file": "repair-task-state-cache.md",
+    "description": "Detect stale/corrupt SQLite projection vs canonical event log; rebuild when needed.",
+    "policyOperationId": "tasks.repair-task-state-cache",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "task-engine",
     "name": "list-module-states",
     "file": "list-module-states.md",
     "description": "List unified SQLite module-state rows for diagnostics and migration verification.",
