@@ -108,7 +108,6 @@ export function buildDrawerStateApplierScript(): string {
     var panel = dh.querySelector('.wc-drawer-panel');
     if (!panel && state.step !== 'idle' && state.step !== 'closing') return;
     if (state.step === 'idle' || state.step === 'closing') {
-      drawerSubmitInFlight = false;
       setDrawerBusy(false);
       if (state.step === 'closing') {
         dh.innerHTML = '';
@@ -118,7 +117,6 @@ export function buildDrawerStateApplierScript(): string {
       return;
     }
     if (state.validation) {
-      drawerSubmitInFlight = false;
       setDrawerBusy(false);
       var v = document.getElementById('wc-drawer-validation');
       if (v) { v.textContent = state.validation; v.hidden = false; }
@@ -128,6 +126,21 @@ export function buildDrawerStateApplierScript(): string {
       setDrawerBusy(true, state.label || undefined);
     } else {
       setDrawerBusy(false);
+    }
+  }
+`.trim();
+}
+
+/** Apply wcHostSnapshot in the webview (T100494) — drawer slice + refresh busy. */
+export function buildHostSnapshotApplierScript(): string {
+  return `
+  function applyHostSnapshot(snapshot) {
+    if (!snapshot || snapshot.schemaVersion !== 1) return;
+    hostSnapshot = snapshot;
+    if (snapshot.drawer) applyWcDrawerState(snapshot.drawer);
+    if (snapshot.interaction && typeof snapshot.interaction.refreshBusy === 'boolean') {
+      var refreshBtn = document.getElementById('btn');
+      if (refreshBtn) setButtonBusy(refreshBtn, snapshot.interaction.refreshBusy, 'Refreshing…');
     }
   }
 `.trim();
