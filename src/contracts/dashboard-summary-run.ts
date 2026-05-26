@@ -317,6 +317,8 @@ export type DashboardCurrentPhaseDelivery = {
 
 export type DashboardSummaryData = {
   schemaVersion: 7;
+  /** When set, indicates which section slice this payload targets (`full` when omitted for legacy callers). */
+  dashboardProjection?: DashboardSummaryProjection;
   /** Monotonic optimistic-lock generation for the unified planning SQLite row. */
   planningGeneration: number;
   /** Effective `tasks.planningGenerationPolicy` for mutating commands. */
@@ -447,3 +449,6 @@ export type DashboardSummaryCommandSuccess = {
   message: string;
   data: DashboardSummaryData;
 };
+
+/** Section slice selector for lazy dashboard hydration (T100396). Default CLI path is `full`. */
+export type DashboardSummaryProjection = "full" | "overview" | "queue" | "status";

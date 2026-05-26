@@ -2910,6 +2910,21 @@
                   "type": "integer",
                   "minimum": 1,
                   "maximum": 100
+                },
+                "includePhaseFocus": {
+                  "type": "boolean"
+                },
+                "phaseKey": {
+                  "type": "string"
+                },
+                "projection": {
+                  "type": "string",
+                  "enum": [
+                    "full",
+                    "overview",
+                    "queue",
+                    "status"
+                  ]
                 }
               }
             },

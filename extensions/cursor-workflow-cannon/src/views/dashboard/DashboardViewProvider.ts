@@ -385,8 +385,10 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   /** Cached CAE tab HTML for light dashboard refreshes. */
   private lastEmbeddedCaePanelHtml: string | null = null;
 
-  /** Options consumed by the next `pushUpdateOnce` (e.g. skip CAE refetch). */
-  private pendingPushUpdateOptions: { light?: boolean } | undefined;
+  /** Options consumed by the next `pushUpdateOnce` (projection / light refresh). */
+  private pendingPushUpdateOptions:
+    | { light?: boolean; projection?: "full" | "overview"; skipHeavyFetches?: boolean }
+    | undefined;
 
   constructor(
     private readonly extensionUri: vscode.Uri,
@@ -450,7 +452,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         this.dashboardInteractionLocks.clear();
         this.dashboardRefreshAfterInteraction = false;
         await webview.postMessage({ type: "wcReleaseRefreshBlock" });
-        await this.pushUpdate();
+        await this.pushUpdate({ projection: "full", skipHeavyFetches: false });
       }
       if (msg?.type === "loadLazyTerminalBucket") {
         const terminalRaw = (msg as { terminalStatus?: unknown }).terminalStatus;
@@ -926,7 +928,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     webview.html = this.buildHtml(webview, renderDashboardShellInnerHtml());
     this.dashboardRootShellReady = true;
     logWc("dashboard", "resolveWebviewView: shell painted synchronously");
-    void this.pushUpdate();
+    void this.pushUpdate({ projection: "overview", skipHeavyFetches: true });
   }
 
   /** Section-level DOM patch (T100395); full wcReplaceRoot remains the compatibility fallback. */
@@ -950,7 +952,12 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     void this.refreshController.pushNow();
   }
 
-  private async pushUpdate(options?: { light?: boolean }): Promise<void> {
+  private async pushUpdate(options?: {
+    light?: boolean;
+    projection?: "full" | "overview";
+    skipHeavyFetches?: boolean;
+  }): Promise<void> {
+    this.pendingPushUpdateOptions = options;
     await this.refreshController.pushNow(options);
   }
 
@@ -2734,7 +2741,10 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       return;
     }
     const lightRefresh = mode === "light";
+    const refreshOptions = this.pendingPushUpdateOptions;
     this.pendingPushUpdateOptions = undefined;
+    const summaryProjection = refreshOptions?.projection ?? "full";
+    const skipHeavyFetches = refreshOptions?.skipHeavyFetches === true;
     if (this.isDashboardRefreshDeferred()) {
       this.refreshController.markDeferredRefreshNeeded();
       logWc("dashboard", "pushUpdate deferred (UI interaction lock active)");
@@ -2745,13 +2755,14 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     const startedAt = Date.now();
     logWc(
       "dashboard",
-      `pushUpdate START light=${String(lightRefresh)} page=${String(requestedWishlistPage)} seq=${String(updateSequence)}`
+      `pushUpdate START light=${String(lightRefresh)} projection=${summaryProjection} skipHeavy=${String(skipHeavyFetches)} page=${String(requestedWishlistPage)} seq=${String(updateSequence)}`
     );
     let raw: DashboardSummaryCommandSuccess | Record<string, unknown>;
     try {
       raw = (await this.client.run("dashboard-summary", {
         wishlistPage: requestedWishlistPage,
-        wishlistPageSize: 5
+        wishlistPageSize: 5,
+        projection: summaryProjection
       })) as DashboardSummaryCommandSuccess | Record<string, unknown>;
       if (isKitRefreshRunAborted(raw as Record<string, unknown>)) {
         logWc("dashboard", "pushUpdate aborted (refresh paused or preempted)");
@@ -2760,7 +2771,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       if (isWishlistPagingArgRejection(raw as Record<string, unknown>)) {
         logWc("dashboard", "pushUpdate: dashboard-summary rejected wishlist paging; retrying without paging");
         this.wishlistPage = 0;
-        raw = (await this.client.run("dashboard-summary", {})) as DashboardSummaryCommandSuccess | Record<string, unknown>;
+        raw = (await this.client.run("dashboard-summary", { projection: summaryProjection })) as DashboardSummaryCommandSuccess | Record<string, unknown>;
         if (isKitRefreshRunAborted(raw as Record<string, unknown>)) {
           logWc("dashboard", "pushUpdate aborted (refresh paused or preempted)");
           return;
@@ -2788,6 +2799,9 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       try {
         if (lightRefresh) {
           embeddedCaePanelHtml = this.lastEmbeddedCaePanelHtml;
+          phaseJournal = undefined;
+        } else if (skipHeavyFetches) {
+          embeddedCaePanelHtml = null;
           phaseJournal = undefined;
         } else if (this.summaryHasCanonicalWorkspacePhase(raw.data)) {
           if (this.isPushUpdateStale(updateSequence, activeView)) {
