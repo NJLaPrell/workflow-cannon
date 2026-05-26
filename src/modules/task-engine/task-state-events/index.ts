@@ -29,6 +29,20 @@ export {
   materializeTaskStoreDocument,
   replayTaskStateEvents
 } from "./event-applier.js";
+export {
+  admitTaskStateEvent,
+  admitTaskStateEventStream
+} from "./event-admission.js";
+export type {
+  TaskStateEventAdmissionContext,
+  TaskStateEventAdmissionError,
+  TaskStateEventAdmissionErrorCode
+} from "./event-admission.js";
+export {
+  TASK_STATE_EVENT_LOG_SCHEMA_POLICY,
+  TASK_STATE_EVENT_LOG_SUPPORTED_KINDS,
+  TASK_STATE_EVENT_LOG_SUPPORTED_SCHEMA_VERSION
+} from "./event-admission-policy.js";
 export type {
   TaskStateApplierError,
   TaskStateApplierErrorCode,

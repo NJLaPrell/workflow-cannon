@@ -29,7 +29,7 @@
       "taskId": "T100509",
       "fromState": "proposed",
       "toState": "ready",
-      "action": "promote",
+      "action": "accept",
       "transitionId": "T100509-2026-05-26T21:00:01.000Z-replay01",
       "guardResults": [{ "allowed": true, "guardName": "state-validity" }],
       "dependentsUnblocked": []
