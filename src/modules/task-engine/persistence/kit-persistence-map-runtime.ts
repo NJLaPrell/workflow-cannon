@@ -94,6 +94,21 @@ export function runGetKitPersistenceMap(ctx: ModuleLifecycleContext): ModuleComm
         defaultMaxRows: 200,
         note:
           "Append-only ring buffer of recent wk run invocations (redacted args/response JSON). Each row keys invocationId from the run envelope."
+      },
+      taskStateProjection: {
+        minKitSqliteUserVersion: 28,
+        tables: ["kit_task_state_projection_meta"],
+        singletonRowId: 1,
+        columns: [
+          "backend",
+          "applied_sequence",
+          "source_commit",
+          "projection_schema_version",
+          "sync_status",
+          "updated_at"
+        ],
+        note:
+          "Tracks what canonical git-backed task-state event sequence/commit the local SQLite task projection last applied. Disposable cache — authoritative history remains the git event log (Phase 114)."
       }
     } as Record<string, unknown>
   };
