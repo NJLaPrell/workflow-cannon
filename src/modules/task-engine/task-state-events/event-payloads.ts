@@ -1,4 +1,9 @@
-import type { TaskMutationType, TaskStatus, TransitionEvidence } from "../types.js";
+import type {
+  TaskEntity,
+  TaskMutationType,
+  TaskStatus,
+  TransitionEvidence
+} from "../types.js";
 import type { TaskStateEventEnvelopeV1 } from "./types.js";
 
 /** Discriminated event kinds for Phase 114 S1.2 (lifecycle + mutations). */
@@ -21,6 +26,32 @@ export type TaskUpdatedPayloadV1 = {
   changedFields: string[];
   /** Optional digest of the update argv for idempotency audits. */
   payloadDigest?: string;
+  /** Optional field values applied on replay (subset of TaskEntity). */
+  values?: Partial<
+    Pick<
+      TaskEntity,
+      | "title"
+      | "type"
+      | "status"
+      | "priority"
+      | "phase"
+      | "phaseKey"
+      | "summary"
+      | "description"
+      | "risk"
+      | "approach"
+      | "archived"
+      | "archivedAt"
+      | "dependsOn"
+      | "unblocks"
+      | "technicalScope"
+      | "acceptanceCriteria"
+      | "features"
+      | "ownership"
+    >
+  > & {
+    metadata?: Record<string, unknown>;
+  };
 };
 
 export type TaskTransitionedPayloadV1 = {

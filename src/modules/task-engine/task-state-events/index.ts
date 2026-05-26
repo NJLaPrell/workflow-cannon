@@ -23,3 +23,16 @@ export {
   validateTaskStateEventEnvelope
 } from "./validate-envelope.js";
 export { validateTaskStateEvent } from "./validate-event.js";
+export {
+  applyTaskStateEvent,
+  createEmptyTaskStateProjection,
+  materializeTaskStoreDocument,
+  replayTaskStateEvents
+} from "./event-applier.js";
+export type {
+  TaskStateApplierError,
+  TaskStateApplierErrorCode,
+  TaskStateProjectionV1,
+  TaskStateReplayResultV1,
+  TaskVersionRecordV1
+} from "./projection-types.js";
