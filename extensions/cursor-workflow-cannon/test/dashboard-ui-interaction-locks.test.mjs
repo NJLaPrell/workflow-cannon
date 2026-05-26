@@ -52,7 +52,7 @@ test("dashboard drawer submit shows animated loading overlay while kit command r
   assert.match(webviewClientSrc, /wcDrawerState/);
   assert.match(webviewClientSrc, /applyWcDrawerState/);
   assert.match(providerSrc, /wcDrawerProgress/);
-  assert.match(providerSrc, /postDrawerProgressToWebview/);
+  assert.match(providerSrc, /setDrawerMutationProgress/);
   assert.match(webviewClientSrc, /updateDrawerBusyLabel\(m\.label\)/);
   assert.match(webviewClientSrc, /setDrawerBusy\(true, label\)/);
   assert.match(providerSrc, /Starting batch accept/);

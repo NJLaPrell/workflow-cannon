@@ -1671,6 +1671,18 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     await new Promise<void>((resolve) => setTimeout(resolve, 0));
   }
 
+  /** Snapshot-first drawer progress (T100495); prefer over legacy wcDrawerProgress. */
+  private setDrawerMutationProgress(label: string): void {
+    this.drawerSessionHost?.setSubmitting(label);
+    this.dashboardCoordinator?.emitSnapshot();
+  }
+
+  private queueDrawerKitStateChanged(): void {
+    this.queueDrawerSideEffect(() => {
+      this.notifyKitStateChanged();
+    });
+  }
+
   private initDashboardCoordinator(webview: vscode.Webview): void {
     if (!this.drawerSessionHost) {
       return;
@@ -1714,6 +1726,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       flushDrawerSubmitPendingEffects: (bus) => this.flushDrawerSubmitPendingEffects(bus),
       isRefreshBusy: () => this.dashboardInteractionLocks.has("refresh")
     });
+    this.dashboardCoordinator.registerDrawerWorkflow("accept-proposed");
     this.dashboardCoordinator.emitSnapshot();
   }
 
@@ -1766,6 +1779,116 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     const phase = systemStatus?.phase as Record<string, unknown> | undefined;
     const ck = phase?.currentKitPhase;
     return typeof ck === "string" && ck.trim().length > 0;
+  }
+
+  /**
+   * Accept-proposed drawer: kit mutations inside coordinator.runDrawerMutation; toasts via SideEffectBus after.
+   * Manual QA: accept T1 then T2 on proposed queue — second submit must not hang while first toast is visible.
+   */
+  private async handleAcceptProposedDrawerSubmit(
+    session: Extract<DashboardDrawerSession, { kind: "accept-proposed" }>,
+    values: Record<string, string>
+  ): Promise<boolean> {
+    const coordinator = this.dashboardCoordinator;
+    if (!coordinator?.isDrawerWorkflowRegistered("accept-proposed")) {
+      return false;
+    }
+    const taskIds = session.taskIds;
+    const validated = validateAcceptProposedSubmit(values);
+    if (!validated.ok) {
+      await this.postDrawerValidationToWebview(validated.error);
+      return false;
+    }
+    const { phaseKey } = validated.values;
+    const categoryLabel = session.categoryLabel;
+    if (taskIds.length === 0) {
+      return false;
+    }
+    const total = taskIds.length;
+    if (total === 1) {
+      const taskId = taskIds[0]!;
+      this.setDrawerMutationProgress(`Accepting ${taskId}…`);
+      const r = await this.client.run("run-transition", {
+        taskId,
+        action: "accept",
+        policyApproval: dashboardPolicyApproval(
+          { workflowId: "accept-proposed", action: "accept-single", command: "run-transition" },
+          { taskId, phaseKey }
+        ),
+        ...expectedPlanningGenerationArgs()
+      });
+      if (!r.ok) {
+        await this.postDrawerValidationToWebview((r.message ?? JSON.stringify(r)).slice(0, 900));
+        return false;
+      }
+      ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
+      this.setDrawerMutationProgress(`Assigning ${taskId} → phase ${phaseKey}…`);
+      const r2 = await this.client.run("assign-task-phase", {
+        taskId,
+        phaseKey,
+        ...expectedPlanningGenerationArgs()
+      });
+      if (!r2.ok) {
+        this.closeDashboardDrawer();
+        this.queueDrawerKitStateChanged();
+        this.queueDrawerNotify(
+          `Accepted ${taskId} but assign-task-phase failed: ${(r2.message ?? r2.code ?? JSON.stringify(r2)).slice(0, 520)}`,
+          "error"
+        );
+        return true;
+      }
+      ingestPlanningMetaFromData(r2.data as Record<string, unknown> | undefined);
+      this.queueDrawerKitStateChanged();
+      this.queueDrawerNotifyAfterClose(`Accepted ${taskId} and assigned phase ${phaseKey}.`);
+      return true;
+    }
+    const failures: string[] = [];
+    this.setDrawerMutationProgress(`Starting batch accept (${String(total)} tasks)…`);
+    for (let i = 0; i < taskIds.length; i++) {
+      const taskId = taskIds[i]!;
+      const step = i + 1;
+      this.setDrawerMutationProgress(`Accepting ${taskId} (${step} of ${total})…`);
+      const r = await this.client.run("run-transition", {
+        taskId,
+        action: "accept",
+        policyApproval: dashboardPolicyApproval(
+          { workflowId: "accept-proposed", action: "accept-batch", command: "run-transition" },
+          { taskId, phaseKey }
+        ),
+        ...expectedPlanningGenerationArgs()
+      });
+      if (!r.ok) {
+        failures.push(`${taskId}: ${(r.message ?? r.code ?? JSON.stringify(r)).slice(0, 200)}`);
+        continue;
+      }
+      ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
+      this.setDrawerMutationProgress(`Assigning ${taskId} → phase ${phaseKey} (${step} of ${total})…`);
+      const r2 = await this.client.run("assign-task-phase", {
+        taskId,
+        phaseKey,
+        ...expectedPlanningGenerationArgs()
+      });
+      if (!r2.ok) {
+        failures.push(`${taskId} assign: ${(r2.message ?? r2.code ?? JSON.stringify(r2)).slice(0, 180)}`);
+      } else {
+        ingestPlanningMetaFromData(r2.data as Record<string, unknown> | undefined);
+      }
+    }
+    this.closeDashboardDrawer();
+    this.queueDrawerKitStateChanged();
+    if (failures.length > 0) {
+      this.queueDrawerNotifyAfterClose(
+        `Some batch operations failed (${String(failures.length)}/${String(taskIds.length)}): ${failures
+          .slice(0, 3)
+          .join(" · ")}`.slice(0, 900),
+        "error"
+      );
+      return true;
+    }
+    this.queueDrawerNotifyAfterClose(
+      `Accepted ${String(taskIds.length)} proposed ${categoryLabel.trim() || "task"}(s) into phase ${phaseKey}.`
+    );
+    return true;
   }
 
   /**
@@ -2007,103 +2130,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       return true;
     }
     if (session.kind === "accept-proposed") {
-      const taskIds = session.taskIds;
-      const validated = validateAcceptProposedSubmit(values);
-      if (!validated.ok) {
-        await this.postDrawerValidationToWebview(validated.error);
-        return false;
-      }
-      const { phaseKey } = validated.values;
-      const categoryLabel = session.categoryLabel;
-      if (taskIds.length === 0) {
-        return false;
-      }
-      const total = taskIds.length;
-      if (total === 1) {
-        const taskId = taskIds[0]!;
-        await this.postDrawerProgressToWebview(`Accepting ${taskId}…`);
-        const r = await this.client.run("run-transition", {
-          taskId,
-          action: "accept",
-          policyApproval: dashboardPolicyApproval(
-            { workflowId: "accept-proposed", action: "accept-single", command: "run-transition" },
-            { taskId, phaseKey }
-          ),
-          ...expectedPlanningGenerationArgs()
-        });
-        if (!r.ok) {
-          await this.postDrawerValidationToWebview((r.message ?? JSON.stringify(r)).slice(0, 900));
-          return false;
-        }
-        ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
-        await this.postDrawerProgressToWebview(`Assigning ${taskId} → phase ${phaseKey}…`);
-        const r2 = await this.client.run("assign-task-phase", {
-          taskId,
-          phaseKey,
-          ...expectedPlanningGenerationArgs()
-        });
-        if (!r2.ok) {
-          this.closeDashboardDrawer();
-          this.notifyKitStateChanged();
-          this.queueDrawerNotify(
-            `Accepted ${taskId} but assign-task-phase failed: ${(r2.message ?? r2.code ?? JSON.stringify(r2)).slice(0, 520)}`,
-            "error"
-          );
-          return true;
-        }
-        ingestPlanningMetaFromData(r2.data as Record<string, unknown> | undefined);
-        this.notifyKitStateChanged();
-        this.queueDrawerNotifyAfterClose(`Accepted ${taskId} and assigned phase ${phaseKey}.`);
-        return true;
-      }
-      const failures: string[] = [];
-      await this.postDrawerProgressToWebview(`Starting batch accept (${String(total)} tasks)…`);
-      for (let i = 0; i < taskIds.length; i++) {
-        const taskId = taskIds[i]!;
-        const step = i + 1;
-        await this.postDrawerProgressToWebview(`Accepting ${taskId} (${step} of ${total})…`);
-        const r = await this.client.run("run-transition", {
-          taskId,
-          action: "accept",
-          policyApproval: dashboardPolicyApproval(
-            { workflowId: "accept-proposed", action: "accept-batch", command: "run-transition" },
-            { taskId, phaseKey }
-          ),
-          ...expectedPlanningGenerationArgs()
-        });
-        if (!r.ok) {
-          failures.push(`${taskId}: ${(r.message ?? r.code ?? JSON.stringify(r)).slice(0, 200)}`);
-          continue;
-        }
-        ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
-        await this.postDrawerProgressToWebview(
-          `Assigning ${taskId} → phase ${phaseKey} (${step} of ${total})…`
-        );
-        const r2 = await this.client.run("assign-task-phase", {
-          taskId,
-          phaseKey,
-          ...expectedPlanningGenerationArgs()
-        });
-        if (!r2.ok) {
-          failures.push(`${taskId} assign: ${(r2.message ?? r2.code ?? JSON.stringify(r2)).slice(0, 180)}`);
-        } else {
-          ingestPlanningMetaFromData(r2.data as Record<string, unknown> | undefined);
-        }
-      }
-      await this.closeDashboardDrawer();
-      this.notifyKitStateChanged();
-      if (failures.length > 0) {
-        this.queueDrawerNotifyAfterClose(`Some batch operations failed (${String(failures.length)}/${String(taskIds.length)}): ${failures
-              .slice(0, 3)
-              .join(" · ")}`.slice(0, 900),
-          "error"
-        );
-        return true;
-      }
-      this.queueDrawerNotifyAfterClose(
-        `Accepted ${String(taskIds.length)} proposed ${categoryLabel.trim() || "task"}(s) into phase ${phaseKey}.`
-      );
-      return true;
+      return this.handleAcceptProposedDrawerSubmit(session, values);
     }
     if (session.kind === "register-team-assignment") {
       const validated = validateRegisterTeamAssignmentSubmit(values);
