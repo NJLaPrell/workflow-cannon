@@ -2,18 +2,18 @@
 kit_export_envelope:
   schema_version: 1
   authoritative: false
-  generated_at: "2026-05-26T21:39:09.836Z"
-  source_sequence: 64
+  generated_at: "2026-05-27T05:00:15.390Z"
+  source_sequence: 68
   source_kind: "kit_workspace_status"
   role: "sqlite-projection-export"
 schema_version: 1
-current_kit_phase: "115"
+current_kit_phase: ""
 next_kit_phase: "116"
-last_updated: "2026-05-26T21:39:09.798Z"
-active_focus: "Phase 115 — release and task-state event log hardening"
+last_updated: "2026-05-27T04:44:17.793Z"
+active_focus: "Phase 114 delivered (v0.99.10) — no active workspace phase"
 blockers: []
 pending_decisions: []
 next_agent_actions:
-  - "Plan Phase 115 release and remaining event-log work"
-# workspace_revision: 64
-# updated_at: "2026-05-26T21:39:09.834Z"
+  - "Pick the next phase from the Phase Roster when you are ready to deliver."
+# workspace_revision: 68
+# updated_at: "2026-05-27T05:00:15.389Z"

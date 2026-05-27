@@ -21,13 +21,12 @@
         "shadowPreflight": true
       }
     },
-    "currentPhaseLabel": "Phase 115",
-    "currentPhaseNumber": 115,
     "phaseDelivery": {
       "legacyDeliveredMaxOrdinal": 113
     }
   },
   "tasks": {
+    "canonicalAuthority": "git-event-log",
     "intakePolicy": {
       "defaultProfile": "advisory",
       "enforcementMode": "enforce",
@@ -46,7 +45,6 @@
       }
     },
     "persistenceBackend": "sqlite",
-    "canonicalAuthority": "git-event-log",
     "planningGenerationPolicy": "require",
     "sqliteDatabaseRelativePath": ".workspace-kit/tasks/workspace-kit.db"
   }
