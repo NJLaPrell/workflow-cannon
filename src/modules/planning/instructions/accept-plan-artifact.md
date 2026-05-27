@@ -8,7 +8,7 @@ Record explicit operator acceptance of a PlanArtifact v1; pin `approvedVersion` 
 
 **Contract:** repo-root **`PLANNER_COMMANDS.md`** §4 · **Schema:** **`PLANNER_SCHEMA.md`** §2.14 · **Agent runbook:** **`.ai/runbooks/plan-artifact-workflow.md`**
 
-**Handler status:** acceptance persistence ships in **WP-5** (task T100466+). Until then, invocations return **`plan-artifact-command-not-implemented`**; **`--schema-only`** and **`list-commands`** are authoritative for argv shape.
+**Handler status:** acceptance persistence ships in **WP-5** (`accept-plan-artifact` handler, T100466+).
 
 ## Usage
 
@@ -50,8 +50,6 @@ pnpm exec wk run accept-plan-artifact '{"planId":"550e8400-e29b-41d4-a716-446655
 | `plan-artifact-schema-invalid` | false | Malformed `approvalRecord`. |
 | `planning-generation-mismatch` | false | Stale `expectedPlanningGeneration`. |
 | `policy-denied` | false | Missing/invalid `policyApproval`. |
-| `plan-artifact-command-not-implemented` | false | Handler not shipped yet (WP-5.2+). |
-
 ## Success `data`
 
 | Field | Description |

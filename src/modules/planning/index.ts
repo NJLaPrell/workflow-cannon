@@ -49,6 +49,7 @@ import {
   preludePlanArtifactDraftPersist
 } from "./persist-plan-artifact-draft.js";
 import { runReviewPlanArtifact } from "./review-plan-artifact-handler.js";
+import { runAcceptPlanArtifact } from "./accept-plan-artifact-handler.js";
 import { attachPolicyMeta } from "../task-engine/attach-planning-response-meta.js";
 import { planningGenPolicyGate } from "../task-engine/planning-generation-gate.js";
 import { TaskEngineError } from "../task-engine/transitions.js";
@@ -56,32 +57,6 @@ import { TaskEngineError } from "../task-engine/transitions.js";
 const DRAFT_PLAN_ARTIFACT_INSTRUCTION = "src/modules/planning/instructions/draft-plan-artifact.md";
 const REVIEW_PLAN_ARTIFACT_INSTRUCTION = "src/modules/planning/instructions/review-plan-artifact.md";
 const ACCEPT_PLAN_ARTIFACT_INSTRUCTION = "src/modules/planning/instructions/accept-plan-artifact.md";
-
-function approvalRecordShapeInvalid(record: unknown): string | null {
-  if (!record || typeof record !== "object" || Array.isArray(record)) {
-    return "accept-plan-artifact requires approvalRecord object";
-  }
-  const row = record as Record<string, unknown>;
-  if (row.schemaVersion !== 1) {
-    return "approvalRecord.schemaVersion must be 1";
-  }
-  if (row.confirmed !== true) {
-    return "approvalRecord.confirmed must be true";
-  }
-  if (typeof row.approvedVersion !== "number" || !Number.isInteger(row.approvedVersion) || row.approvedVersion < 1) {
-    return "approvalRecord.approvedVersion must be a positive integer";
-  }
-  if (typeof row.approvedAt !== "string" || row.approvedAt.trim().length === 0) {
-    return "approvalRecord.approvedAt is required";
-  }
-  if (typeof row.approvedBy !== "string" || row.approvedBy.trim().length === 0) {
-    return "approvalRecord.approvedBy is required";
-  }
-  if (typeof row.planRef !== "string" || row.planRef.trim().length === 0) {
-    return "approvalRecord.planRef is required";
-  }
-  return null;
-}
 
 async function recordBuildPlanActivity(
   ctx: Parameters<NonNullable<WorkflowModule["onCommand"]>>[1],
@@ -139,39 +114,11 @@ export const planningModule: WorkflowModule = {
     }
 
     if (command.name === "accept-plan-artifact") {
-      const args = command.args ?? {};
-      const planId = typeof args.planId === "string" ? args.planId.trim() : "";
-      if (!planId) {
-        return {
-          ok: false,
-          code: "invalid-run-args",
-          message: "accept-plan-artifact requires planId"
-        };
-      }
-      const approvalError = approvalRecordShapeInvalid(args.approvalRecord);
-      if (approvalError) {
-        return {
-          ok: false,
-          code: "invalid-run-args",
-          message: approvalError
-        };
-      }
-      return {
-        ok: false,
-        code: "plan-artifact-command-not-implemented",
-        message:
-          "accept-plan-artifact persistence is not implemented yet (WP-5.2); schema-only and instruction are authoritative.",
-        remediation: {
-          instructionPath: ACCEPT_PLAN_ARTIFACT_INSTRUCTION,
-          docPath: ".ai/runbooks/plan-artifact-workflow.md"
-        },
-        data: {
-          schemaVersion: 1,
-          responseSchemaVersion: 1,
-          planId,
-          strict: args.strict !== false
-        }
-      };
+      return runAcceptPlanArtifact(
+        (command.args ?? {}) as Record<string, unknown>,
+        ctx,
+        ACCEPT_PLAN_ARTIFACT_INSTRUCTION
+      );
     }
 
     if (command.name === "draft-plan-artifact") {
