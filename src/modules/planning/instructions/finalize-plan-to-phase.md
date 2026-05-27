@@ -8,7 +8,7 @@ Materialize an **accepted** PlanArtifact v1 WBS into task-engine execution rows 
 
 **Contract:** repo-root **`PLANNER_COMMANDS.md`** §5 · **Schema:** **`PLANNER_SCHEMA.md`** §2.15–2.16 · **Agent runbook:** **`.ai/runbooks/plan-artifact-workflow.md`**
 
-**Handler status:** dry-run preview ships in **WP-6.4** (T100471); persist path ships in **WP-6.5** (T100472+).
+**Handler status:** dry-run preview ships in **WP-6.4** (T100471); persist/finalize path ships in **WP-6.5** (T100472).
 
 ## Usage
 
@@ -37,7 +37,6 @@ pnpm exec wk run finalize-plan-to-phase '{"planId":"550e8400-e29b-41d4-a716-4466
 | `targetPhase` | No | Label; default `Phase <targetPhaseKey>`. |
 | `desiredStatus` | No | `proposed` \| `ready`; default `ready`. |
 | `wbsFilter` | No | `wbsId[]` — finalize subset only. |
-| `markFinalized` | No | When `dryRun: true`, optional `true` sets plan `status: finalized` without task writes (default `false`). |
 | `expectedPlanningGeneration` | When policy `require` | Required when `dryRun: false`. Copy from `list-tasks` / `get-task`. |
 | `policyApproval` | When `dryRun: false` | `{ "confirmed": true, "rationale": "…" }` on argv (Tier B). |
 | `clientMutationId` | No | Forwarded to `persist-planning-execution-drafts`; per-task `clientMutationId::<taskId>`. |
@@ -55,8 +54,8 @@ pnpm exec wk run finalize-plan-to-phase '{"planId":"550e8400-e29b-41d4-a716-4466
 1. Load plan; assert accepted + approval version pin.
 2. For each selected WBS row: `normalizeWbsItemToTaskDraft()` → task row shape.
 3. Call **`review-planning-execution-drafts`** (or equivalent) on `tasks[]`.
-4. **`dryRun: true`** — return `taskPreview`, embedded `review`, optional `taskGenerationPayloads`; no task writes unless `markFinalized: true`.
-5. **`dryRun: false`** — call **`persist-planning-execution-drafts`** with `planRef`, `planningType` from `identity`, provenance; set plan `status: finalized`.
+4. **`dryRun: true`** — return `taskPreview`, embedded `review`, optional `taskGenerationPayloads`; no task writes.
+5. **`dryRun: false`** — call **`persist-planning-execution-drafts`** with `planRef`, `planningType` from `identity`, provenance, `clientMutationId`, `expectedPlanningGeneration`, and `policyApproval`; set plan `status: finalized` after successful task persistence.
 
 ## Response codes (normative)
 
@@ -82,6 +81,16 @@ pnpm exec wk run finalize-plan-to-phase '{"planId":"550e8400-e29b-41d4-a716-4466
 | `taskGenerationPayloads` | Optional denormalized copy for dashboard preview. |
 | `phaseKey` | Resolved target phase. |
 | `review` | Embedded `review-planning-execution-drafts` outcome. |
+
+## Success `data` (persist)
+
+| Field | Description |
+| --- | --- |
+| `createdTasks` | Tasks created by delegated `persist-planning-execution-drafts`. |
+| `count` | Number of materialized tasks. |
+| `status` | Final PlanArtifact lifecycle status (`finalized`). |
+| `storagePath` | Relative path to the new finalized artifact version. |
+| `delegatedCode` | Task-engine persist response code. |
 
 ## Related
 
