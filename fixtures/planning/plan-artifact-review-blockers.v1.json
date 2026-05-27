@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "planId": "d4e5f6a7-b8c9-4012-d345-6789abcdef01",
+  "version": 1,
+  "planRef": "plan-artifact:d4e5f6a7-b8c9-4012-d345-6789abcdef01",
+  "status": "draft",
+  "identity": {
+    "title": "Coverage fixture — uncovered goals and missing test slice",
+    "planningType": "change",
+    "summary": "RUBRIC-COV-GOAL and RUBRIC-COV-TEST review fixture"
+  },
+  "goals": [
+    "Goal alpha is mapped in WBS goalMapping",
+    "Goal beta has no WBS mapping and should block review"
+  ],
+  "nonGoals": ["Dashboard UI"],
+  "valueAssessment": { "impact": "Test coverage", "confidence": "high" },
+  "riskAssessment": [],
+  "technicalImpact": { "systemsTouched": ["src/core/planning"] },
+  "testingStrategy": {
+    "layers": ["performance"],
+    "criticalPaths": ["WBS testingVerification must reference performance layer"]
+  },
+  "implementationGuidance": ["Use under minimal profile in coverage tests"],
+  "whatNotToDo": ["Do not treat as production plan"],
+  "assumptions": ["Fixture is schema-valid"],
+  "openQuestions": [],
+  "wbs": [
+    {
+      "wbsId": "WBS-1",
+      "title": "Partial goal coverage row",
+      "goalMapping": ["Goal alpha is mapped in WBS goalMapping"],
+      "suggestedTaskTitle": "Coverage partial row",
+      "approach": "Only maps the first goal",
+      "technicalScope": ["src/core/planning/review-plan-artifact.ts"],
+      "acceptanceCriteria": ["Review reports Goal beta as uncovered"],
+      "testingVerification": ["Manual schema review only"],
+      "dependsOn": [],
+      "sizingConfidence": "medium",
+      "doneMeans": "Fixture used by review-plan-artifact-coverage.test.mjs",
+      "generatedTaskPayload": {
+        "title": "Coverage partial row",
+        "approach": "Only maps the first goal",
+        "technicalScope": ["src/core/planning/review-plan-artifact.ts"],
+        "acceptanceCriteria": ["Review reports Goal beta as uncovered"]
+      }
+    }
+  ],
+  "phaseRecommendations": [
+    { "phaseKey": "110", "label": "Phase 110", "rationale": "Planner tranche", "isPrimary": true }
+  ],
+  "provenance": {
+    "createdAt": "2026-05-27T16:00:00.000Z",
+    "updatedAt": "2026-05-27T16:00:00.000Z",
+    "createdBy": "fixture",
+    "source": "draft-plan-artifact"
+  }
+}
