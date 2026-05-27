@@ -12,6 +12,7 @@
     "generate-document",
     "generate-recommendations",
     "disable-plugin",
+    "draft-plan-artifact",
     "enable-plugin",
     "install-plugin",
     "ingest-transcripts",

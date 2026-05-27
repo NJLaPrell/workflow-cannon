@@ -1,26 +1,26 @@
 {
   "ok": true,
   "code": "run-args-schema",
-  "command": "document-project",
+  "command": "draft-plan-artifact",
   "schema": {
     "type": "object",
     "additionalProperties": true,
-    "description": "Permissive fallback args schema for 'document-project'. Use instructionPath for command-specific field guidance until a stricter schema is added."
+    "description": "Permissive fallback args schema for 'draft-plan-artifact'. Use instructionPath for command-specific field guidance until a stricter schema is added."
   },
   "schemaSource": "manifest-permissive-fallback",
   "sampleArgs": {},
   "examples": [
     {
       "description": "Minimal argv example",
-      "argv": "workspace-kit run document-project '{}'"
+      "argv": "workspace-kit run draft-plan-artifact '{}'"
     }
   ],
-  "instructionPath": "src/modules/documentation/instructions/document-project.md",
-  "moduleId": "documentation",
-  "description": "Generate all project docs from templates to .ai and docs/maintainers surfaces.",
+  "instructionPath": "src/modules/planning/instructions/draft-plan-artifact.md",
+  "moduleId": "planning",
+  "description": "Validate and optionally persist a PlanArtifact v1 draft.",
   "policy": {
     "sensitivity": "sensitive-with-dryrun",
-    "operationId": "doc.document-project",
+    "operationId": "planning.draft-plan-artifact",
     "jsonApprovalRequired": "when dryRun is false or omitted by command policy"
   },
   "planningGeneration": {
@@ -38,5 +38,5 @@
     "listCommands": "pnpm exec wk run --list-commands",
     "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
   },
-  "invocationId": "15367850-b62a-4f0c-9370-91e4fb8a4b2f"
+  "invocationId": "62bdea3b-17d2-484a-b6d5-4f75d95c0c9c"
 }
