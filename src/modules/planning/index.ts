@@ -35,6 +35,7 @@ import {
 import { validateTaskSetForStrictMode } from "../task-engine/strict-task-validation.js";
 import {
   buildScoringHints,
+  buildPlanArtifactRecommendedNextCommands,
   findMissingAnsweredQuestions,
   persistInterviewSnapshot,
   resolveOutputMode,
@@ -518,6 +519,7 @@ export const planningModule: WorkflowModule = {
       if (outputMode === "tasks") {
         const persistTasks = args.persistTasks === true;
         const executionDraftsRaw = args.executionTaskDrafts;
+        const recommendedNextCommands = buildPlanArtifactRecommendedNextCommands({ outputMode });
         const useDraftDecomposition =
           finalize === true &&
           Array.isArray(executionDraftsRaw) &&
@@ -592,6 +594,7 @@ export const planningModule: WorkflowModule = {
               scoringHints,
               capturedAnswers: answers,
               artifact,
+              recommendedNextCommands,
               taskOutputs: built.tasks,
               planningDecomposition: {
                 schemaVersion: 1,
@@ -723,6 +726,7 @@ export const planningModule: WorkflowModule = {
             scoringHints,
             capturedAnswers: answers,
             artifact,
+            recommendedNextCommands,
             taskOutputs: [task],
             provenance: {
               planRef,

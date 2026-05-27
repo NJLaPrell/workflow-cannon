@@ -316,6 +316,16 @@ These are **chat-shaped** recipes: what to say, what to attach, and what you sho
 2. Attach `.ai/playbooks/wishlist-intake-to-execution.md` or `.cursor/rules/playbook-wishlist-intake-to-execution.mdc`
 3. Tell the agent to follow intake questions then conversion steps the playbook specifies
 
+### Plan phase-scoped work
+
+**What it is:** Use PlanArtifact for larger WBS-style plans that need review, acceptance, and a controlled finalize step into task-engine work.
+
+**How to drive it in chat:**
+
+1. Ask the agent to draft a PlanArtifact for the phase or feature you want to plan
+2. Review and accept the PlanArtifact before finalizing it into ready tasks
+3. Use `build-plan` for quick guided interviews and wishlist intake; when `build-plan` task output grows into phase-scoped WBS work, follow its `recommendedNextCommands` bridge to `draft-plan-artifact`
+
 ### Run structured onboarding in chat
 
 **What it is:** Set collaboration defaults once so future sessions start with less drift and less repeated setup.
