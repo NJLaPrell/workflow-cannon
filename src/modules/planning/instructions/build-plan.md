@@ -34,6 +34,8 @@ While an interview is **in progress** or **blocked on finalize**, the module per
 - `executionTaskDrafts` (optional array): when `finalize:true` and `outputMode:"tasks"`, a **non-empty** array of **convert-wishlist-compatible** task rows (`id` optional — missing/invalid ids are allocated as the next free `T###`; `title`, `phase`, `approach`, non-empty `technicalScope`, non-empty `acceptanceCriteria` required per row; same rules as `convert-wishlist` `tasks[]`). Produces **`planning-multi-task-decomposition-preview`** with `data.taskOutputs[]`, `data.planningDecomposition`, and provenance. **`persistTasks` must be false** (or omitted); multi-row persistence is a separate task-engine bulk command with **`expectedPlanningGeneration`**.
 - `action:"discard"` (optional): clears the saved local planning interview snapshot without requiring `planningType`.
 
+When `outputMode:"tasks"`, responses include additive `data.recommendedNextCommands[]` pointing to `draft-plan-artifact` with `importSource:"import-build-plan"`. Existing `build-plan` task preview and persistence response codes remain unchanged; use the recommendation when the interview is growing into phase-scoped WBS work that needs PlanArtifact review, accept, and finalize gates.
+
 ## Returns
 
 - `planning-questions`: unresolved critical questions (with adaptive follow-ups) to answer next.

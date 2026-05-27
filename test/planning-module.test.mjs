@@ -251,6 +251,8 @@ test("planningModule build-plan supports tasks output mode branch", async () => 
   assert.ok(Array.isArray(result.data.taskOutputs));
   assert.equal(result.data.taskOutputs.length, 1);
   assert.equal(typeof result.data.provenance.planRef, "string");
+  assert.equal(result.data.recommendedNextCommands[0].command, "draft-plan-artifact");
+  assert.equal(result.data.recommendedNextCommands[0].argsTemplate.importSource, "import-build-plan");
 });
 
 test("planningModule build-plan finalize with executionTaskDrafts emits multi-task envelope", async () => {
@@ -299,6 +301,7 @@ test("planningModule build-plan finalize with executionTaskDrafts emits multi-ta
   assert.equal(first.data.taskOutputs[1].id, "T999");
   assert.equal(first.data.planningDecomposition.schemaVersion, 1);
   assert.equal(first.data.planningDecomposition.convertWishlistTaskRowCompatible, true);
+  assert.equal(first.data.recommendedNextCommands[0].command, "draft-plan-artifact");
 
   const second = await planningModule.onCommand(
     {
@@ -515,6 +518,7 @@ test("planningModule build-plan can persist tasks in tasks output mode", async (
   );
   assert.equal(result.ok, true);
   assert.equal(result.code, "planning-task-output-created");
+  assert.equal(result.data.recommendedNextCommands[0].command, "draft-plan-artifact");
   const outputTaskId = result.data.taskOutputs[0].id;
   const taskStore = await loadSqliteTaskStore(workspace);
   const created = taskStore.getTask(outputTaskId);
