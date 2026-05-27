@@ -2,7 +2,6 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { admitTaskStateEventStream } from "../task-state-events/event-admission.js";
-import { replayTaskStateEvents } from "../task-state-events/event-applier.js";
 import type { TaskStateEventV1 } from "../task-state-events/event-payloads.js";
 import type { TaskStateProjectionV1 } from "../task-state-events/projection-types.js";
 import { TASK_STATE_GIT_BRANCH, TASK_STATE_MANIFEST_RELATIVE } from "./constants.js";
@@ -22,7 +21,11 @@ import {
   readTaskStateBranchLayout,
   segmentPathsThroughHead
 } from "./read-branch-layout.js";
-import { readRemoteSnapshotProjection, readRemoteTaskVersionMap } from "./remote-projection-versions.js";
+import {
+  admitRemoteEventStream,
+  readRemoteSnapshotProjection,
+  readRemoteTaskVersionMap
+} from "./remote-projection-versions.js";
 import { resolveEventSegmentRelativePath } from "./layout.js";
 
 export type PublishTaskStateEventsInput = {
@@ -132,7 +135,7 @@ function loadRemoteEvents(
     return { ok: false, code: read.code, message: read.message };
   }
   const raw = read.lines.map((line) => JSON.parse(line) as unknown);
-  const admitted = admitTaskStateEventStream(raw);
+  const admitted = admitRemoteEventStream(workspacePath, ref, manifest, raw);
   if (!admitted.ok) {
     return {
       ok: false,
@@ -250,15 +253,6 @@ export async function publishTaskStateEvents(
       return remoteLoaded;
     }
 
-    const replayed = replayTaskStateEvents(remoteLoaded.events);
-    if (!replayed.ok) {
-      return {
-        ok: false,
-        code: "task-state-remote-replay-failed",
-        message: replayed.error.message
-      };
-    }
-
     const remoteVersions = readRemoteTaskVersionMap(input.workspacePath, resolved.ref, resolved.tipSha);
     const versionConflict = detectTaskVersionConflict({
       expectedTaskVersions: input.expectedTaskVersions,
@@ -283,14 +277,16 @@ export async function publishTaskStateEvents(
 
     const headMoved = resolved.tipSha !== expectedHeadSha;
     const publishedEvents = assignEventSequences(input.events, layoutRead.layout.manifest.head);
-    const initialProjection = readRemoteSnapshotProjection(
+    const headProjection = readRemoteSnapshotProjection(
       input.workspacePath,
       resolved.ref,
       resolved.tipSha
     );
+    // `readRemoteSnapshotProjection` already replays the remote tail on the bootstrap snapshot.
+    // Seeding admission with both that head projection and `remoteLoaded.events` would replay tail twice.
     const admitted = admitTaskStateEventStream(publishedEvents, {
-      priorEvents: remoteLoaded.events,
-      initialProjection: initialProjection ?? undefined
+      priorEvents: headProjection ? [] : remoteLoaded.events,
+      initialProjection: headProjection ?? undefined
     });
     if (!admitted.ok) {
       return {

@@ -24,8 +24,7 @@ import {
   type TaskStateSnapshotContentV1
 } from "../task-state-git/snapshot-projection.js";
 import { validateTaskStateGitSnapshotMeta } from "../task-state-git/validate-snapshot-meta.js";
-import { readRemoteSnapshotProjection } from "../task-state-git/remote-projection-versions.js";
-import { admitTaskStateEventStream } from "../task-state-events/event-admission.js";
+import { admitRemoteEventStream } from "../task-state-git/remote-projection-versions.js";
 import { runRebuildTaskStateCache } from "./rebuild-task-state-cache-runtime.js";
 import {
   openPlanningStoresForTaskStateCache,
@@ -134,14 +133,12 @@ export async function runTaskStateHydrate(
   fs.writeFileSync(logPath, body, "utf8");
 
   const rawEvents = eventsRead.lines.map((line) => JSON.parse(line) as unknown);
-  const initialProjection = readRemoteSnapshotProjection(
+  const admitted = admitRemoteEventStream(
     ctx.workspacePath,
     resolved.ref,
-    resolved.tipSha
+    layoutRead.layout.manifest,
+    rawEvents
   );
-  const admitted = admitTaskStateEventStream(rawEvents, {
-    initialProjection: initialProjection ?? undefined
-  });
   if (!admitted.ok) {
     return {
       ok: false,

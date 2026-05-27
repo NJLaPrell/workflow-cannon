@@ -93,7 +93,11 @@ export function transitionEvidenceToTransitionedPayload(
     toState: evidence.toState,
     action: evidence.action,
     transitionId: evidence.transitionId,
-    guardResults: evidence.guardResults,
+    guardResults: evidence.guardResults.map((guard) => ({
+      allowed: guard.allowed,
+      guardName: guard.guardName,
+      ...(guard.message?.trim() ? { reason: guard.message.trim() } : {})
+    })),
     dependentsUnblocked: evidence.dependentsUnblocked,
     payloadDigest: evidence.payloadDigest
   };
