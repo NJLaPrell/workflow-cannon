@@ -80,20 +80,21 @@ describe("accept-plan-artifact instruction (T100465)", () => {
       { runtimeVersion: "0.1", workspacePath: root }
     );
     assert.equal(missingRecord.ok, false);
-    assert.equal(missingRecord.code, "invalid-run-args");
+    assert.equal(missingRecord.code, "plan-artifact-schema-invalid");
 
-    const stub = await planningModule.onCommand(
+    const notFound = await planningModule.onCommand(
       {
         name: "accept-plan-artifact",
         args: {
           planId: "550e8400-e29b-41d4-a716-446655440000",
-          approvalRecord: SAMPLE_APPROVAL
+          approvalRecord: SAMPLE_APPROVAL,
+          expectedPlanningGeneration: 0,
+          policyApproval: { confirmed: true, rationale: "instruction test" }
         }
       },
-      { runtimeVersion: "0.1", workspacePath: root }
+      { runtimeVersion: "0.1", workspacePath: root, effectiveConfig: { tasks: { persistenceBackend: "sqlite" } } }
     );
-    assert.equal(stub.ok, false);
-    assert.equal(stub.code, "plan-artifact-command-not-implemented");
-    assert.ok(stub.remediation?.instructionPath?.includes("accept-plan-artifact.md"));
+    assert.equal(notFound.ok, false);
+    assert.equal(notFound.code, "plan-artifact-not-found");
   });
 });
