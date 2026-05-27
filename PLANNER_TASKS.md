@@ -296,6 +296,18 @@ T-8.2 → A-E2E ───────────────────→ WP-
 | `extensions/cursor-workflow-cannon/src/views/dashboard/render-dashboard.ts` | Renders dashboard planning session and wizard panel UI sections shown to operators. | UI does not yet center on draft/review/accept/finalize lifecycle and WBS completeness surfaces called out in `PLANNER.md`. |
 | `extensions/cursor-workflow-cannon/src/views/dashboard/dashboard-webview-client.ts` | Handles webview interaction locks and dashboard patch/apply behavior for planning and other tabs. | Client lock model is ready for richer flows, but no PlanArtifact-specific interaction model is implemented yet. |
 
+#### Baseline health snapshot (T-0.2 / T100438)
+
+Captured on **`release/phase-110`** at commit **`ff65b18`** (2026-05-27). Environment: Node **v22.22.3**, pnpm **10.26.1**, package **`@workflow-cannon/workspace-kit@0.99.11`**.
+
+| Command | Exit | Result | Notes |
+| --- | ---: | --- | --- |
+| `pnpm exec wk doctor` | 1 | **Failed** | **Pre-existing (not introduced by planner work):** task-state projection admission — `task.transitioned` references unknown task **T100517** in `.workspace-kit/tasks/workspace-kit.db` and `task-state-events.jsonl`. Remediation hint from doctor: `rebuild-task-state-cache` (also rejected admission on retry). |
+| `pnpm run build` | 0 | **Passed** | `tsc -p tsconfig.json` clean. |
+| `pnpm run test` | 0 | **Passed** | **1157** tests, **0** failures (~49s). |
+
+**Pre-existing failures (separate from planner implementation):** treat **`wk doctor`** task-state event admission as workspace-store hygiene debt until repaired; do not block planner doc/code tasks on doctor green unless closeout policy requires it. Re-run this table after store repair or before phase closeout.
+
 ---
 
 ### WP-A — Human-reviewed decision artifacts (produce before heavy implementation)
