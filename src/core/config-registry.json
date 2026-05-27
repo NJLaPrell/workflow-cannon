@@ -15,6 +15,26 @@
       "user"
     ]
   },
+  "tasks.canonicalAuthority": {
+    "key": "tasks.canonicalAuthority",
+    "type": "string",
+    "description": "Canonical task-state authority: sqlite (legacy) or git-event-log (mutations publish to workflow-cannon/task-state).",
+    "default": "sqlite",
+    "allowedValues": [
+      "sqlite",
+      "git-event-log"
+    ],
+    "domainScope": "project",
+    "owningModule": "task-engine",
+    "sensitive": false,
+    "requiresRestart": false,
+    "requiresApproval": true,
+    "exposure": "public",
+    "writableLayers": [
+      "project",
+      "user"
+    ]
+  },
   "tasks.persistenceBackend": {
     "key": "tasks.persistenceBackend",
     "type": "string",

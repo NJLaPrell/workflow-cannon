@@ -95,9 +95,12 @@
     "sync-task-store-after-merge",
     "synthesize-transcript-churn",
     "task-persistence-readiness",
+    "task-state-compact",
     "task-state-hydrate",
     "task-state-init",
+    "task-state-migrate-baseline",
     "task-state-publish",
+    "task-state-snapshot",
     "task-state-status",
     "task-state-verify",
     "unblock-task",
@@ -1754,6 +1757,18 @@
       "type": "object",
       "additionalProperties": true
     },
+    "task-state-compact": {
+      "type": "object",
+      "properties": {
+        "dryRun": {
+          "type": "boolean"
+        },
+        "branch": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    },
     "task-state-hydrate": {
       "type": "object",
       "properties": {
@@ -1801,9 +1816,16 @@
       },
       "additionalProperties": true
     },
+    "task-state-migrate-baseline": {
+      "type": "object"
+    },
     "task-state-publish": {
       "type": "object",
-      "required": ["events", "expectedHeadSha", "expectedTaskVersions"],
+      "required": [
+        "events",
+        "expectedHeadSha",
+        "expectedTaskVersions"
+      ],
       "properties": {
         "dryRun": {
           "type": "boolean"
@@ -1829,6 +1851,25 @@
         },
         "push": {
           "type": "boolean"
+        },
+        "policyApproval": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "task-state-snapshot": {
+      "type": "object",
+      "properties": {
+        "dryRun": {
+          "type": "boolean"
+        },
+        "branch": {
+          "type": "string"
+        },
+        "snapshotId": {
+          "type": "string"
         },
         "policyApproval": {
           "type": "object",

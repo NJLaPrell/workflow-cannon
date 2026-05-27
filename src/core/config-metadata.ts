@@ -560,7 +560,9 @@ export function validatePersistedConfigDocument(
         k !== "strictValidation" &&
         k !== "deliveryEvidence" &&
         k !== "intakePolicy" &&
-        k !== "planningGenerationPolicy"
+        k !== "planningGenerationPolicy" &&
+        k !== "canonicalAuthority" &&
+        k !== "canonicalPublishQueue"
       ) {
         throw new Error(`config-invalid(${label}): unknown tasks.${k}`);
       }
@@ -584,6 +586,18 @@ export function validatePersistedConfigDocument(
     }
     if (t.planningGenerationPolicy !== undefined) {
       validateValueForMetadata(REGISTRY["tasks.planningGenerationPolicy"]!, t.planningGenerationPolicy);
+    }
+    if (t.canonicalAuthority !== undefined) {
+      validateValueForMetadata(REGISTRY["tasks.canonicalAuthority"]!, t.canonicalAuthority);
+    }
+    if (t.canonicalPublishQueue !== undefined) {
+      if (typeof t.canonicalPublishQueue !== "object" || t.canonicalPublishQueue === null || Array.isArray(t.canonicalPublishQueue)) {
+        throw new Error(`config-invalid(${label}): tasks.canonicalPublishQueue must be an object`);
+      }
+      const queue = t.canonicalPublishQueue as Record<string, unknown>;
+      if (queue.enabled !== undefined && typeof queue.enabled !== "boolean") {
+        throw new Error(`config-invalid(${label}): tasks.canonicalPublishQueue.enabled must be boolean`);
+      }
     }
     if (t.deliveryEvidence !== undefined) {
       if (typeof t.deliveryEvidence !== "object" || t.deliveryEvidence === null || Array.isArray(t.deliveryEvidence)) {

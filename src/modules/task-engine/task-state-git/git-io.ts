@@ -8,8 +8,13 @@ export type GitRunResult = {
   status: number | null;
 };
 
+const GIT_SPAWN_MAX_BUFFER_BYTES = 64 * 1024 * 1024;
+
 export function runGit(cwd: string, argv: string[]): GitRunResult {
-  const r = spawnSync("git", ["-C", cwd, ...argv], { encoding: "utf8" });
+  const r = spawnSync("git", ["-C", cwd, ...argv], {
+    encoding: "utf8",
+    maxBuffer: GIT_SPAWN_MAX_BUFFER_BYTES
+  });
   return {
     ok: r.status === 0,
     stdout: (r.stdout ?? "").trimEnd(),
@@ -71,7 +76,7 @@ export function gitFetchTaskStateBranch(
 
 export function gitShowText(cwd: string, ref: string, filePath: string): string | null {
   const r = runGit(cwd, ["show", `${ref}:${filePath}`]);
-  if (!r.ok) {
+  if (!r.stdout) {
     return null;
   }
   return r.stdout;

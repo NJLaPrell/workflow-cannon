@@ -24,6 +24,11 @@ export type TransitionRequest = {
    * (sqlite dual store only). Used for atomic phase journal attachments on `run-transition`.
    */
   beforePersistInSqliteTransaction?: () => void;
+  /**
+   * When false, validate and mutate the in-memory store only (no `save`). Used when git-event-log
+   * authority publishes canonical events before refreshing the SQLite projection cache.
+   */
+  persist?: boolean;
 };
 
 export type TransitionResult = {
@@ -154,7 +159,9 @@ export class TransitionService {
       this.store.addEvidence(unblockEvidence);
     }
 
-    if (this.hookBus?.isEnabled()) {
+    const shouldPersist = request.persist !== false;
+
+    if (shouldPersist && this.hookBus?.isEnabled()) {
       const persistGate = await this.hookBus.emitBeforeTaskStorePersist({
         taskId: request.taskId,
         fromState,
@@ -163,6 +170,10 @@ export class TransitionService {
       if (persistGate.denied) {
         throw new TaskEngineError("hook-denied", persistGate.denied.reason);
       }
+    }
+
+    if (!shouldPersist) {
+      return { evidence, autoUnblocked: autoUnblockResults };
     }
 
     await this.store.save(

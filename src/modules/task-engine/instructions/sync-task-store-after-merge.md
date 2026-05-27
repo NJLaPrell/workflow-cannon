@@ -4,6 +4,8 @@ agentCapsule|v=1|command=sync-task-store-after-merge|module=task-engine|schema_o
 
 # sync-task-store-after-merge
 
+**Legacy / recovery:** Prefer **`task-state-hydrate`** when `tasks.canonicalAuthority` is **`git-event-log`**. This command remains for feature-branch SQLite recovery only.
+
 Diff task-engine SQLite state between a **source** git ref (feature branch) and the **working-tree** target, then replay missing transitions idempotently (`clientMutationId` when present).
 
 ## Usage

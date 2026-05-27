@@ -50,6 +50,9 @@
         "task-state-hydrate",
         "task-state-init",
         "task-state-publish",
+        "task-state-snapshot",
+        "task-state-compact",
+        "task-state-migrate-baseline",
         "task-state-verify",
         "batch-transition",
         "block-task",
@@ -212,6 +215,15 @@
         },
         "task-state-publish": {
           "$ref": "#/$defs/contractTaskStatePublish"
+        },
+        "task-state-snapshot": {
+          "$ref": "#/$defs/contractTaskStateSnapshot"
+        },
+        "task-state-compact": {
+          "$ref": "#/$defs/contractTaskStateCompact"
+        },
+        "task-state-migrate-baseline": {
+          "$ref": "#/$defs/contractTaskStateMigrateBaseline"
         },
         "task-state-verify": {
           "$ref": "#/$defs/contractTaskStateStatus"
@@ -3327,6 +3339,49 @@
             }
           }
         }
+      ]
+    },
+    "contractTaskStateSnapshot": {
+      "allOf": [
+        { "$ref": "#/$defs/contractBase" },
+        {
+          "properties": {
+            "args": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "dryRun": { "type": "boolean" },
+                "branch": { "type": "string" },
+                "snapshotId": { "type": "string" },
+                "policyApproval": { "type": "object", "additionalProperties": true }
+              }
+            },
+            "responseData": { "type": "object", "additionalProperties": true }
+          }
+        }
+      ]
+    },
+    "contractTaskStateCompact": {
+      "allOf": [
+        { "$ref": "#/$defs/contractBase" },
+        {
+          "properties": {
+            "args": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "dryRun": { "type": "boolean" },
+                "branch": { "type": "string" }
+              }
+            },
+            "responseData": { "type": "object", "additionalProperties": true }
+          }
+        }
+      ]
+    },
+    "contractTaskStateMigrateBaseline": {
+      "allOf": [
+        { "$ref": "#/$defs/contractTaskStateInit" }
       ]
     },
     "contractTaskStatePublish": {
