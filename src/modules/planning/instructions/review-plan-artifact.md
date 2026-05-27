@@ -8,7 +8,7 @@ Run deterministic rubric checks (**A-RUBRIC** / **`PLANNER_REVIEW_RUBRIC.md`**) 
 
 **Contract:** repo-root **`PLANNER_COMMANDS.md`** §3 · **Rubric:** **`PLANNER_REVIEW_RUBRIC.md`** · **Agent runbook:** **`.ai/runbooks/plan-artifact-workflow.md`**
 
-**Handler status:** review engine is **WP-4** (tasks T100460+). Until then, invocations return **`plan-artifact-command-not-implemented`**; **`--schema-only`** and **`list-commands`** are authoritative for argv shape.
+**Handler status:** review engine and CLI handler ship in **WP-4** (core `reviewPlanArtifact` + this command).
 
 ## Usage
 
@@ -31,7 +31,8 @@ pnpm exec wk run review-plan-artifact '{"planId":"<uuid>","recordReview":true,"e
 | `version` | No | Default latest on disk / index. |
 | `artifact` | Yes* | Inline PlanArtifact v1 instead of load (*one of `planId` or `artifact`*). |
 | `profile` | No | `minimal` \| `refactor` \| `full-feature` \| `sprint-phase`; default from `identity.planningType`. |
-| `recordReview` | No | Default `false`. `true` sets `status: reviewed` and stores summary on index (Tier B). |
+| `waivers` | No | `{ code, rationale }[]` per **PLANNER_REVIEW_RUBRIC.md** §5.2 (slice coverage codes). |
+| `recordReview` | No | Default `false`. `true` writes `status: reviewed` as next artifact version (Tier B). |
 | `expectedPlanningGeneration` | When policy `require` | Required when `recordReview: true`. |
 | `policyApproval` | When `recordReview: true` | `{ "confirmed": true, "rationale": "…" }` on argv. |
 | `actor` | No | Actor for mutation metadata when `recordReview: true`. |
@@ -47,9 +48,7 @@ pnpm exec wk run review-plan-artifact '{"planId":"<uuid>","recordReview":true,"e
 | `plan-artifact-schema-invalid` | false | Loaded or inline artifact fails schema. |
 | `planning-generation-mismatch` | false | Stale `expectedPlanningGeneration` when `recordReview: true`. |
 | `policy-denied` | false | Missing/invalid `policyApproval` when `recordReview: true`. |
-| `plan-artifact-command-not-implemented` | false | Handler not shipped yet (WP-4.2+). |
-
-## Success `data` (when implemented)
+## Success `data`
 
 | Field | Description |
 | --- | --- |
