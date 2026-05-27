@@ -13,6 +13,10 @@ import { buildEvaluationContext } from "./evaluation-context-builder.js";
 import type { TaskEngineTaskRowSlice } from "./evaluation-context-builder.js";
 import type { CaeEvaluationContext } from "./evaluation-context-types.js";
 import { loadCaeRegistryForKit } from "./cae-registry-effective.js";
+import {
+  isPlanningSessionCaeCommand,
+  PLANNING_SESSION_CAE_MODULE_ID
+} from "./planning-session-scope.js";
 
 export type CaeCliPreflightOutcome = {
   shadowAttach: Record<string, unknown> | null;
@@ -145,7 +149,10 @@ function buildEvaluationContextForRun(
   commandArgs: Record<string, unknown>,
   router: ModuleCommandRouter
 ): CaeEvaluationContext {
-  const modId = router.describeCommand(subcommand)?.moduleId;
+  const described = router.describeCommand(subcommand)?.moduleId;
+  const modId =
+    described ??
+    (isPlanningSessionCaeCommand(subcommand) ? PLANNING_SESSION_CAE_MODULE_ID : undefined);
   const tid = pickTaskIdFromCommandArgs(commandArgs);
   const phase = String(getAtPath(effective, "kit.currentPhaseNumber") ?? "0");
   const hydratedTask = tid ? hydrateTaskRowForCae(workspacePath, effective, tid) : null;
@@ -248,7 +255,10 @@ export function runCaeCliPreflight(input: {
           doCount: count("do"),
           reviewCount: count("review"),
           shadowObservationCount: Array.isArray(shadowEntries) ? shadowEntries.length : 0
-        }
+        },
+        ...(isPlanningSessionCaeCommand(input.subcommand)
+          ? { planningSession: true, planningSessionCommand: input.subcommand }
+          : {})
       };
       return finalizeEnforce(
         input,

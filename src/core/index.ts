@@ -48,6 +48,13 @@ export {
 export { noopCaeTracePersistence, type CaeTracePersistencePort } from "./cae/cae-persistence-port.js";
 export { mergeCaeIntoCommandResult, runCaeCliPreflight } from "./cae/cae-run-preflight.js";
 export {
+  collectThinkArtifactIdsFromBundle,
+  isPlanningSessionCaeCommand,
+  PLANNING_SESSION_CAE_COMMANDS,
+  PLANNING_SESSION_CAE_MODULE_ID,
+  PLANNING_SESSION_DRAFT_REQUIRED_LENS_IDS
+} from "./cae/planning-session-scope.js";
+export {
   buildBaseConfigLayers,
   deepMerge,
   envToConfigOverlay,
