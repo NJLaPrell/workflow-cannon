@@ -330,7 +330,7 @@ draft-plan-artifact (persist)
 
 ## 10. Review rubric pointer (**A-RUBRIC**)
 
-Blocker/warning rules, sizing, goal↔WBS coverage, and profile-specific section requirements are specified in **`PLANNER_REVIEW_RUBRIC.md`** (T-A.4) or § **Review rubric** appendix when that file is split. `review-plan-artifact` must load rubric by `profile` without hard-coded strings in the handler.
+Blocker/warning rules, sizing, goal↔WBS coverage, and profile-specific section requirements: **[`PLANNER_REVIEW_RUBRIC.md`](./PLANNER_REVIEW_RUBRIC.md)**. `review-plan-artifact` must load rubric by `profile` without hard-coded strings in the handler.
 
 ---
 
