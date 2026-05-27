@@ -8,7 +8,7 @@ Materialize an **accepted** PlanArtifact v1 WBS into task-engine execution rows 
 
 **Contract:** repo-root **`PLANNER_COMMANDS.md`** §5 · **Schema:** **`PLANNER_SCHEMA.md`** §2.15–2.16 · **Agent runbook:** **`.ai/runbooks/plan-artifact-workflow.md`**
 
-**Handler status:** preview and persist orchestration ship in **WP-6** (`finalize-plan-to-phase` handler, T100471+).
+**Handler status:** dry-run preview ships in **WP-6.4** (T100471); persist path ships in **WP-6.5** (T100472+).
 
 ## Usage
 
