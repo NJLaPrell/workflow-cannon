@@ -511,13 +511,15 @@ workspace-kit run review-planning-execution-drafts '{"targetPhaseKey":"73","targ
 workspace-kit run persist-planning-execution-drafts '{"targetPhaseKey":"73","targetPhase":"Phase 73","desiredStatus":"ready","tasks":[...],"expectedPlanningGeneration":<n>,"planRef":"planning:new-feature:phase-73","clientMutationId":"phase-73-task-open"}'
 workspace-kit run list-wishlist '{}'
 workspace-kit run get-wishlist '{"wishlistId":"T42"}'
-# PlanArtifact lifecycle (handlers WP-3+; contracts in PLANNER_COMMANDS.md; runbook .ai/runbooks/plan-artifact-workflow.md):
+# PlanArtifact lifecycle (contracts in PLANNER_COMMANDS.md; runbook .ai/runbooks/plan-artifact-workflow.md):
 workspace-kit run draft-plan-artifact '{"persist":false,"artifact":{...}}'
 workspace-kit run draft-plan-artifact '{"persist":true,"artifact":{...},"expectedPlanningGeneration":<n>,"policyApproval":{"confirmed":true,"rationale":"persist plan draft"}}'
 workspace-kit run review-plan-artifact '{"planId":"<uuid>","profile":"full-feature"}'
 workspace-kit run accept-plan-artifact '{"planId":"<uuid>","approvalRecord":{"schemaVersion":1,"confirmed":true,"approvedVersion":1,"approvedAt":"2026-05-27T00:00:00.000Z","approvedBy":"operator@example.com","planRef":"plan-artifact:<uuid>"},"expectedPlanningGeneration":<n>,"policyApproval":{"confirmed":true,"rationale":"operator accepted plan"}}'
+# Tier C preview: validates accepted plan, phase proposal, WBS normalization, and task-batch review without writes.
 workspace-kit run finalize-plan-to-phase '{"planId":"<uuid>","dryRun":true}'
-workspace-kit run finalize-plan-to-phase '{"planId":"<uuid>","dryRun":false,"targetPhaseKey":"110","targetPhase":"Phase 110","desiredStatus":"ready","expectedPlanningGeneration":<n>,"policyApproval":{"confirmed":true,"rationale":"materialize accepted plan WBS"}}'
+# Tier B persist: delegates task creation to persist-planning-execution-drafts, then versions the PlanArtifact as finalized.
+workspace-kit run finalize-plan-to-phase '{"planId":"<uuid>","dryRun":false,"targetPhaseKey":"110","targetPhase":"Phase 110","desiredStatus":"ready","expectedPlanningGeneration":<n>,"clientMutationId":"finalize-<uuid>-phase-110","policyApproval":{"confirmed":true,"rationale":"materialize accepted plan WBS"}}'
 workspace-kit run explain-config '{}'
 workspace-kit run resolve-config '{}'
 workspace-kit run resolve-agent-guidance '{}'

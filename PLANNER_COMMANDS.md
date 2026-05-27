@@ -231,8 +231,8 @@ Normalize WBS → task drafts, run batch review, optionally persist tasks into a
 1. Load plan; assert `status === accepted` and `approvalRecord.approvedVersion === version`.
 2. For each selected WBS row: `normalizeWbsItemToTaskDraft()` → task row shape.
 3. Call **`review-planning-execution-drafts`** (or equivalent internal) on `tasks[]`.
-4. If `dryRun: true` — return preview + findings; set plan `status: finalized` only when `markFinalized: true` (optional argv, default false on dry-run).
-5. If `dryRun: false` — call **`persist-planning-execution-drafts`** with `planRef`, `planningType` from `identity`, provenance fields; update plan `status: finalized`.
+4. If `dryRun: true` — return preview + findings without task or plan-status writes.
+5. If `dryRun: false` — call **`persist-planning-execution-drafts`** with `planRef`, `planningType` from `identity`, provenance fields, idempotency, policy approval, and planning generation; update plan `status: finalized` after successful task persistence.
 
 ### 5.4 Response codes
 
