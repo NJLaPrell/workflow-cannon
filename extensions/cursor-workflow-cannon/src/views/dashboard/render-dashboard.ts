@@ -4012,12 +4012,79 @@ function renderStatusRollup(
   );
 }
 
+export type TaskStateSyncRenderState =
+  | "current"
+  | "syncing"
+  | "behind"
+  | "offline"
+  | "conflict";
+
+/** Task-state git projection posture for the Status tab (S4.3). */
+export function renderTaskStateSyncStatusHtml(taskStateProjection: unknown): string {
+  if (!taskStateProjection || typeof taskStateProjection !== "object") {
+    return "";
+  }
+  const proj = taskStateProjection as Record<string, unknown>;
+  const raw =
+    typeof proj.displayState === "string" && proj.displayState.trim()
+      ? proj.displayState.trim()
+      : "offline";
+  const state: TaskStateSyncRenderState =
+    raw === "syncing" ||
+    raw === "current" ||
+    raw === "behind" ||
+    raw === "offline" ||
+    raw === "conflict"
+      ? raw
+      : "offline";
+  const labels: Record<TaskStateSyncRenderState, string> = {
+    current: "Current",
+    syncing: "Syncing",
+    behind: "Behind",
+    offline: "Offline",
+    conflict: "Conflict"
+  };
+  const remediation =
+    typeof proj.remediation === "string" && proj.remediation.trim() ? proj.remediation.trim() : "";
+  const seq =
+    typeof proj.appliedSequence === "number" && Number.isFinite(proj.appliedSequence)
+      ? String(proj.appliedSequence)
+      : "—";
+  const commit =
+    typeof proj.sourceCommit === "string" && proj.sourceCommit.trim()
+      ? proj.sourceCommit.trim().slice(0, 12)
+      : "—";
+  const pillClass = "wc-task-state-pill wc-task-state-" + state;
+  return (
+    '<section class="dash-card" aria-label="Task-state sync">' +
+    "<p><b>Task-state sync</b></p>" +
+    '<p class="' +
+    escapeHtml(pillClass) +
+    '" role="status"><span class="wc-task-state-label">' +
+    escapeHtml(labels[state]) +
+    "</span></p>" +
+    '<div class="wc-status-kv-block">' +
+    '<div class="wc-status-kv"><span class="wc-status-kv-label">Applied sequence</span><span class="wc-status-kv-val">' +
+    escapeHtml(seq) +
+    "</span></div>" +
+    '<div class="wc-status-kv"><span class="wc-status-kv-label">Source commit</span><span class="wc-status-kv-val"><code>' +
+    escapeHtml(commit) +
+    "</code></span></div>" +
+    "</div>" +
+    (remediation
+      ? '<p class="muted wc-task-state-remediation">' + escapeHtml(remediation) + "</p>"
+      : "") +
+    "</section>"
+  );
+}
+
 /** Status tab: workspace identity, agent profile, and task counts from dashboard-summary data. */
 function renderStatusSectionHtml(
   d: Record<string, unknown>,
   ss: Record<string, unknown>,
   editorIntegration?: EditorIntegrationRenderState | null
 ): string {
+  const taskStateBlock = renderTaskStateSyncStatusHtml(d.taskStateProjection);
   const sys = (d.systemStatus as Record<string, unknown>) ?? {};
   const ident = (sys.identity as Record<string, unknown>) ?? {};
   const ag = (d.agentGuidance as Record<string, unknown> | null | undefined) ?? {};
@@ -4112,7 +4179,15 @@ function renderStatusSectionHtml(
     buildDashboardStateCountGridHtml(ss) +
     "</section>";
 
-  return agentCard + renderStatusEditorIntegrationSection(editorIntegration) + workspaceCard + planningCard + countsCard + renderEmbeddedStatusPanelHtml(d);
+  return (
+    taskStateBlock +
+    agentCard +
+    renderStatusEditorIntegrationSection(editorIntegration) +
+    workspaceCard +
+    planningCard +
+    countsCard +
+    renderEmbeddedStatusPanelHtml(d)
+  );
 }
 
 /**

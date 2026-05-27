@@ -20,7 +20,8 @@ import {
   lookupDashboardTaskPhaseKey,
   lookupProposedTaskPhaseKey,
   pickNextTaskInCurrentPhase,
-  renderPhaseCatalogOverviewSection
+  renderPhaseCatalogOverviewSection,
+  renderTaskStateSyncStatusHtml
 } from "../dist/views/dashboard/render-dashboard.js";
 import { buildPhaseCompleteReleaseChatPrompt } from "../dist/phase-complete-release-prompt.js";
 import { renderGuidanceAuthoringPanelInnerHtml } from "../dist/views/guidance/render-guidance-panel.js";
@@ -2285,6 +2286,22 @@ test("renderDashboardRootInnerHtml embeds planning wizard panel when provided", 
   );
   assert.match(html, /dash-planning-wizard/);
   assert.match(html, /wc-planning-type/);
+});
+
+test("renderTaskStateSyncStatusHtml shows display state and remediation", () => {
+  const html = renderTaskStateSyncStatusHtml({
+    schemaVersion: 1,
+    available: true,
+    displayState: "behind",
+    remediation: "Catch up from git.",
+    appliedSequence: 12,
+    sourceCommit: "abcdef123456"
+  });
+  assert.match(html, /Task-state sync/);
+  assert.match(html, /Behind/);
+  assert.match(html, /Catch up from git/);
+  assert.match(html, /Applied sequence/);
+  assert.match(html, />12</);
 });
 
 test("renderDashboardRootInnerHtml wishlist section shows pager when openTotalPages > 1", () => {

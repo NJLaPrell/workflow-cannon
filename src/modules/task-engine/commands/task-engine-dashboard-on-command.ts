@@ -316,7 +316,8 @@ export async function runDashboardSummaryCommand(
     : taskCheckpointsEmpty;
 
   const systemStatus = await buildDashboardSystemStatus(ctx, store, dualForStatus);
-  const taskStateProjection = buildDashboardTaskStateProjectionSummary(
+  const taskStateProjection = await buildDashboardTaskStateProjectionSummary(
+    ctx,
     sqliteDual?.getDatabase() ?? dualForStatus?.getDatabase()
   );
   const derivedAgentStatus = buildDashboardAgentStatus({
