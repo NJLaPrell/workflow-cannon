@@ -1,26 +1,26 @@
 {
   "ok": true,
   "code": "run-args-schema",
-  "command": "generate-document",
+  "command": "review-plan-artifact",
   "schema": {
     "type": "object",
     "additionalProperties": true,
-    "description": "Permissive fallback args schema for 'generate-document'. Use instructionPath for command-specific field guidance until a stricter schema is added."
+    "description": "Permissive fallback args schema for 'review-plan-artifact'. Use instructionPath for command-specific field guidance until a stricter schema is added."
   },
   "schemaSource": "manifest-permissive-fallback",
   "sampleArgs": {},
   "examples": [
     {
       "description": "Minimal argv example",
-      "argv": "workspace-kit run generate-document '{}'"
+      "argv": "workspace-kit run review-plan-artifact '{}'"
     }
   ],
-  "instructionPath": "src/modules/documentation/instructions/generate-document.md",
-  "moduleId": "documentation",
-  "description": "Generate a single document by type for .ai and docs/maintainers surfaces.",
+  "instructionPath": "src/modules/planning/instructions/review-plan-artifact.md",
+  "moduleId": "planning",
+  "description": "Run A-RUBRIC review on a PlanArtifact v1 (blockers, warnings, coverage).",
   "policy": {
     "sensitivity": "sensitive-with-dryrun",
-    "operationId": "doc.generate-document",
+    "operationId": "planning.review-plan-artifact",
     "jsonApprovalRequired": "when dryRun is false or omitted by command policy"
   },
   "planningGeneration": {
@@ -38,5 +38,5 @@
     "listCommands": "pnpm exec wk run --list-commands",
     "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
   },
-  "invocationId": "f1835f00-7a8e-4f47-9799-cd82a59dba53"
+  "invocationId": "18ad98ef-db1b-498e-815c-3437ce8f1078"
 }

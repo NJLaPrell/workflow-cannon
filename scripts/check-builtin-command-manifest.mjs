@@ -49,7 +49,8 @@ const KNOWN_POLICY_OPERATION_IDS = new Set([
   "project-memory.write",
   "project-memory.approve",
   "project-memory.prune",
-  "planning.draft-plan-artifact"
+  "planning.draft-plan-artifact",
+  "planning.review-plan-artifact"
 ]);
 
 const ALLOWED_SENSITIVITY = new Set(["non-sensitive", "sensitive", "sensitive-with-dryrun"]);
@@ -108,10 +109,11 @@ for (const row of manifest) {
       id !== "doc.document-project" &&
       id !== "doc.generate-document" &&
       id !== "skills.apply-skill" &&
-      id !== "planning.draft-plan-artifact"
+      id !== "planning.draft-plan-artifact" &&
+      id !== "planning.review-plan-artifact"
     ) {
       fail(
-        `Command '${row.name}': sensitive-with-dryrun is only valid for doc commands, skills.apply-skill, and planning.draft-plan-artifact (matches policy.ts dry-run / persist:false exceptions).`
+        `Command '${row.name}': sensitive-with-dryrun is only valid for doc commands, skills.apply-skill, planning.draft-plan-artifact, and planning.review-plan-artifact (matches policy.ts dry-run / Tier C exceptions).`
       );
     }
   }

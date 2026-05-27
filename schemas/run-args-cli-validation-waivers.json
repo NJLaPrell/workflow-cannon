@@ -13,6 +13,7 @@
     "generate-recommendations",
     "disable-plugin",
     "draft-plan-artifact",
+    "review-plan-artifact",
     "enable-plugin",
     "install-plugin",
     "ingest-transcripts",
