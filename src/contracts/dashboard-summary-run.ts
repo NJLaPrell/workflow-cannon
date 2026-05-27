@@ -233,6 +233,26 @@ export type DashboardPlanningStoreSummary = {
   databaseRelativePath: string;
 };
 
+/** Bounded PlanArtifact lifecycle pointer for dashboard Plan panels; full WBS stays in artifact storage. */
+export type DashboardPlanArtifactSummary = {
+  schemaVersion: 1;
+  count: number;
+  current: DashboardPlanArtifactRow;
+  recent: DashboardPlanArtifactRow[];
+};
+
+export type DashboardPlanArtifactRow = {
+  planId: string;
+  planRef: string;
+  version: number;
+  status: string;
+  title: string;
+  planningType: string;
+  updatedAt: string;
+  wbsRowCount: number;
+  openQuestionCount: number;
+};
+
 /**
  * Composed workspace posture for Editor status tab + CLI consumers — one read alongside other dashboard fields.
  * CAE trace hints remain on the merged CLI envelope (`data.cae`); `caeLines` mirrors `doctor` CAE posture text.
@@ -350,6 +370,8 @@ export type DashboardSummaryData = {
   taskStoreLastUpdated: string;
   workspaceStatus: Record<string, unknown> | null;
   planningSession: unknown;
+  /** Latest PlanArtifact lifecycle pointer, or null when no PlanArtifact has been persisted. */
+  planArtifact: DashboardPlanArtifactSummary | null;
   stateSummary: Record<string, unknown>;
   /** `transcript_churn` tasks in **`research`** (pipeline intake before **`synthesize-transcript-churn`**). */
   transcriptChurnResearchSummary: DashboardListSummary;
