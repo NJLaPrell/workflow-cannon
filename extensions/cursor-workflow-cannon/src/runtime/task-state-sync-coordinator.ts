@@ -4,6 +4,8 @@ export type TaskStateSyncCoordinatorDeps = {
   run: (command: string, args: Record<string, unknown>) => Promise<KitRunResult>;
   policyApproval: () => { confirmed: true; rationale: string };
   onSynced?: (result: TaskStateSyncCycleResult) => void;
+  /** Fired when a sync cycle starts (dashboard may show `syncing`). */
+  onSyncStart?: () => void;
   log?: (message: string) => void;
   debounceMs?: number;
   /** Background interval; omit or 0 to disable periodic sync. */
@@ -24,6 +26,11 @@ export type TaskStateSyncCycleResult = {
  */
 export class TaskStateSyncCoordinator {
   private inFlight: Promise<TaskStateSyncCycleResult> | undefined;
+
+  /** True while a sync cycle is running (dashboard may show `syncing`). */
+  isSyncing(): boolean {
+    return this.inFlight !== undefined;
+  }
   private debounceTimer: ReturnType<typeof setTimeout> | undefined;
   private intervalTimer: ReturnType<typeof setInterval> | undefined;
   private readonly debounceMs: number;
@@ -83,6 +90,7 @@ export class TaskStateSyncCoordinator {
 
   private async runCycle(reason: string): Promise<TaskStateSyncCycleResult> {
     this.deps.log?.(`task-state sync start (${reason})`);
+    this.deps.onSyncStart?.();
     const status = await this.deps.run("task-state-status", { fetch: true });
     if (!status.ok) {
       const result: TaskStateSyncCycleResult = {

@@ -299,6 +299,12 @@ export type DashboardCurrentPhaseSegments = {
   research: number;
 };
 
+export type DashboardTaskStateDisplayState =
+  | "current"
+  | "behind"
+  | "offline"
+  | "conflict";
+
 /** Canonical task-state projection cursor surfaced on dashboard-summary (read-only). */
 export type DashboardTaskStateProjectionSummary = {
   schemaVersion: 1;
@@ -309,6 +315,12 @@ export type DashboardTaskStateProjectionSummary = {
   sourceCommit: string | null;
   syncStatus: "empty" | "fresh" | "stale" | "rebuilding" | "corrupt" | null;
   updatedAt: string | null;
+  /** Operator-facing sync posture (extension may override to `syncing` while background sync runs). */
+  displayState: DashboardTaskStateDisplayState;
+  /** Short remediation when not `current`; null when healthy. */
+  remediation: string | null;
+  /** Git alignment from read-only `task-state-status` (never fetched on this path). */
+  gitSyncState: "current" | "behind" | "missing" | "conflict" | null;
 };
 
 /** Current workspace phase queue, progress, and release markers for dashboard cards. */

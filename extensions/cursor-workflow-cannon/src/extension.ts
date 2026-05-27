@@ -115,8 +115,12 @@ export function activate(context: vscode.ExtensionContext): void {
   let taskStateSync: TaskStateSyncCoordinator | undefined;
 
   if (client && folder) {
-    dashboard = new DashboardViewProvider(context.extensionUri, client, onKitStateChanged, () =>
-      kitStateEmitter.fire()
+    dashboard = new DashboardViewProvider(
+      context.extensionUri,
+      client,
+      onKitStateChanged,
+      () => kitStateEmitter.fire(),
+      () => taskStateSync?.isSyncing() ?? false
     );
     const watcher = new StateWatcher(
       folder,
@@ -129,6 +133,7 @@ export function activate(context: vscode.ExtensionContext): void {
     taskStateSync = new TaskStateSyncCoordinator({
       run: (command, args) => client.run(command, args),
       policyApproval: () => TASK_STATE_SYNC_POLICY_APPROVAL,
+      onSyncStart: () => kitStateEmitter.fire(),
       onSynced: (result) => {
         if (result.ok && (result.action === "hydrated" || result.action === "applied")) {
           kitStateEmitter.fire();

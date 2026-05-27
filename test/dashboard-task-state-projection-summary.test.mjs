@@ -46,6 +46,9 @@ test("dashboard-summary exposes taskStateProjection metadata from SQLite", async
   assert.equal(proj.sourceCommit, "deadbeef");
   assert.equal(proj.syncStatus, "stale");
   assert.equal(proj.updatedAt, "2026-05-27T00:10:00.000Z");
+  assert.equal(typeof proj.displayState, "string");
+  assert.ok("remediation" in proj);
+  assert.ok("gitSyncState" in proj);
 });
 
 test("dashboard-summary status projection retains taskStateProjection", async () => {

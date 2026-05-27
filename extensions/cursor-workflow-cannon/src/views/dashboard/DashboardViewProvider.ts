@@ -430,7 +430,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     private readonly extensionUri: vscode.Uri,
     private readonly client: CommandClient,
     private readonly onKitStateChanged: vscode.Event<void>,
-    private readonly notifyKitStateChanged: () => void
+    private readonly notifyKitStateChanged: () => void,
+    private readonly isTaskStateSyncInFlight?: () => boolean
   ) {
     this.refreshController = new DashboardRefreshController({
       executeRefresh: (mode, generation) => this.executeDashboardRefresh(mode, generation),
@@ -445,6 +446,34 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     onKitStateChanged(() => {
       void this.onKitStateChangedRefresh();
     });
+  }
+
+  private overlayTaskStateSyncForRender(data: Record<string, unknown>): Record<string, unknown> {
+    if (!this.isTaskStateSyncInFlight?.()) {
+      return data;
+    }
+    const proj = data.taskStateProjection;
+    if (!proj || typeof proj !== "object" || Array.isArray(proj)) {
+      return data;
+    }
+    return {
+      ...data,
+      taskStateProjection: {
+        ...(proj as Record<string, unknown>),
+        displayState: "syncing",
+        remediation: "Fetching and applying canonical task-state events from git…"
+      }
+    };
+  }
+
+  private wrapDashboardPayloadForRender(raw: Record<string, unknown>): Record<string, unknown> {
+    if (raw.ok !== true || !raw.data || typeof raw.data !== "object") {
+      return raw;
+    }
+    return {
+      ...raw,
+      data: this.overlayTaskStateSyncForRender(raw.data as Record<string, unknown>)
+    };
   }
 
   /**
@@ -1109,7 +1138,10 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
           projection: "status"
         })) as Record<string, unknown>;
         const editorIntegration = await resolveEditorIntegrationState();
-        html = renderDashboardStatusSectionInnerHtml(raw, editorIntegration);
+        html = renderDashboardStatusSectionInnerHtml(
+          this.wrapDashboardPayloadForRender(raw),
+          editorIntegration
+        );
       } else if (sectionId === "cae") {
         const caeSummary = await this.client.run("cae-authoring-summary", { schemaVersion: 1 });
         if (isKitRefreshRunAborted(caeSummary as Record<string, unknown>)) {
@@ -1354,7 +1386,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     try {
       const editorIntegration = await resolveEditorIntegrationState();
       rootInner = renderDashboardRootInnerHtml(
-        raw,
+        this.wrapDashboardPayloadForRender(raw as Record<string, unknown>),
         wizardPanel,
         editorIntegration,
         phaseJournal,
@@ -3579,7 +3611,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     try {
       const editorIntegration = await resolveEditorIntegrationState();
       rootInner = renderDashboardRootInnerHtml(
-        raw,
+        this.wrapDashboardPayloadForRender(raw as Record<string, unknown>),
         wizardPanel,
         editorIntegration,
         phaseJournal,
