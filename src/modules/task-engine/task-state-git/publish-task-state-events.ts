@@ -22,6 +22,7 @@ import {
   readTaskStateBranchLayout,
   segmentPathsThroughHead
 } from "./read-branch-layout.js";
+import { readRemoteTaskVersionMap } from "./remote-projection-versions.js";
 import { resolveEventSegmentRelativePath } from "./layout.js";
 
 export type PublishTaskStateEventsInput = {
@@ -258,7 +259,7 @@ export async function publishTaskStateEvents(
       };
     }
 
-    const remoteVersions = taskVersionMapFromProjection(replayed.result.projection);
+    const remoteVersions = readRemoteTaskVersionMap(input.workspacePath, resolved.ref, resolved.tipSha);
     const versionConflict = detectTaskVersionConflict({
       expectedTaskVersions: input.expectedTaskVersions,
       remoteVersions,
