@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import type Database from "better-sqlite3";
 import type { ModuleLifecycleContext } from "../../contracts/module-contract.js";
 import { persistModuleStateRow } from "../state/module-state-sidecar-migration.js";
 import { UnifiedStateDb } from "../state/unified-state-db.js";
@@ -73,6 +74,22 @@ export function getPlanArtifactStoragePaths(workspacePath: string, planId: strin
   };
 }
 
+export function upsertPlanArtifactIndexOnDatabase(
+  db: Database.Database,
+  moduleId: string,
+  index: PlanArtifactIndexStateV1
+): void {
+  const updatedAt = new Date().toISOString();
+  db.prepare(
+    `INSERT INTO workspace_module_state (module_id, state_schema_version, state_json, updated_at)
+     VALUES (?, ?, ?, ?)
+     ON CONFLICT(module_id) DO UPDATE SET
+       state_schema_version=excluded.state_schema_version,
+       state_json=excluded.state_json,
+       updated_at=excluded.updated_at`
+  ).run(moduleId, INDEX_STATE_SCHEMA, JSON.stringify(index), updatedAt);
+}
+
 function indexFromArtifact(artifact: PlanArtifactV1): PlanArtifactIndexStateV1 {
   return {
     schemaVersion: 1,
@@ -120,11 +137,18 @@ export function resolveLatestPlanArtifactVersion(workspacePath: string, planId: 
   return index?.currentVersion ?? null;
 }
 
+export type WritePlanArtifactVersionOptions = {
+  effectiveConfig?: Record<string, unknown>;
+  /** Reuse an open planning SQLite handle to avoid multi-connection `SQLITE_BUSY`. */
+  sqliteDb?: Database.Database;
+};
+
 export function writePlanArtifactVersion(
   workspacePath: string,
   artifact: PlanArtifactV1,
-  effectiveConfig?: Record<string, unknown>
+  options?: WritePlanArtifactVersionOptions
 ): PlanArtifactStoragePaths {
+  const effectiveConfig = options?.effectiveConfig;
   if (!isPlanArtifactV1(artifact)) {
     throw new Error("writePlanArtifactVersion requires a PlanArtifact v1 document");
   }
@@ -137,13 +161,17 @@ export function writePlanArtifactVersion(
   fs.renameSync(temp, target);
 
   const index = indexFromArtifact(artifact);
-  persistModuleStateRow({
-    workspacePath,
-    databaseRelativePath: dbRelativePath(workspacePath, effectiveConfig),
-    moduleId: paths.moduleId,
-    stateSchemaVersion: INDEX_STATE_SCHEMA,
-    state: index as unknown as Record<string, unknown>
-  });
+  if (options?.sqliteDb) {
+    upsertPlanArtifactIndexOnDatabase(options.sqliteDb, paths.moduleId, index);
+  } else {
+    persistModuleStateRow({
+      workspacePath,
+      databaseRelativePath: dbRelativePath(workspacePath, effectiveConfig),
+      moduleId: paths.moduleId,
+      stateSchemaVersion: INDEX_STATE_SCHEMA,
+      state: index as unknown as Record<string, unknown>
+    });
+  }
   return paths;
 }
 
@@ -188,7 +216,7 @@ export function readPlanArtifactIndex(
 export function writeNextPlanArtifactVersion(
   workspacePath: string,
   artifact: PlanArtifactV1,
-  effectiveConfig?: Record<string, unknown>
+  options?: WritePlanArtifactVersionOptions
 ): { artifact: PlanArtifactV1; paths: PlanArtifactStoragePaths } {
   const latest = resolveLatestPlanArtifactVersion(workspacePath, artifact.planId);
   const version = latest === null ? 1 : latest + 1;
@@ -197,7 +225,7 @@ export function writeNextPlanArtifactVersion(
     ...body,
     version
   };
-  const paths = writePlanArtifactVersion(workspacePath, full, effectiveConfig);
+  const paths = writePlanArtifactVersion(workspacePath, full, options);
   return { artifact: full, paths };
 }
 

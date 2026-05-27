@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import crypto from "node:crypto";
 import { constants } from "node:fs";
 import { access, mkdir, mkdtemp, readFile } from "node:fs/promises";
 import os from "node:os";
@@ -29,7 +30,7 @@ async function tmpDir(prefix = "planning-") {
   return mkdtemp(path.join(os.tmpdir(), prefix));
 }
 
-test("planningModule draft-plan-artifact persist:true still stub until WP-3.3", async () => {
+test("planningModule draft-plan-artifact persist:true writes artifact JSON", async () => {
   const workspace = await tmpDir();
   const artifact = JSON.parse(
     await readFile(
@@ -37,13 +38,34 @@ test("planningModule draft-plan-artifact persist:true still stub until WP-3.3", 
       "utf8"
     )
   );
+  const planId = crypto.randomUUID();
+  artifact.planId = planId;
+  artifact.planRef = `plan-artifact:${planId}`;
   const result = await planningModule.onCommand(
-    { name: "draft-plan-artifact", args: { persist: true, artifact } },
-    { runtimeVersion: "0.1", workspacePath: workspace }
+    {
+      name: "draft-plan-artifact",
+      args: {
+        persist: true,
+        artifact,
+        expectedPlanningGeneration: 0,
+        policyApproval: { confirmed: true, rationale: "test persist" }
+      }
+    },
+    { runtimeVersion: "0.1", workspacePath: workspace, effectiveConfig: SQLITE_CFG }
   );
-  assert.equal(result.ok, false);
-  assert.equal(result.code, "plan-artifact-command-not-implemented");
-  assert.ok(result.remediation?.instructionPath?.includes("draft-plan-artifact.md"));
+  assert.equal(result.ok, true);
+  assert.equal(result.code, "plan-artifact-draft-persisted");
+  assert.equal(result.data.planId, planId);
+  assert.equal(result.data.version, 1);
+  assert.ok(String(result.data.storagePath).includes(planId));
+  const stored = JSON.parse(
+    await readFile(
+      path.join(workspace, result.data.storagePath),
+      "utf8"
+    )
+  );
+  assert.equal(stored.planId, planId);
+  assert.equal(stored.version, 1);
 });
 
 test("planningModule list-planning-types returns typed workflow descriptors", async () => {
