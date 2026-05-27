@@ -57,6 +57,17 @@
           "type": "string",
           "default": "",
           "markdownDescription": "Path to `node` for running workspace-kit. Leave empty to use `WORKSPACE_KIT_NODE`, Workflow Cannon's Node 22 runtime markers through nvm, common install paths, then `node` on `PATH`. The extension does not use the attached project's `.node-version` / `.nvmrc` unless you explicitly point this setting or `WORKSPACE_KIT_NODE` at that Node."
+        },
+        "workflowCannon.taskStateSync.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Run background git task-state sync (fetch/hydrate/apply) on an interval. Dashboard reads stay read-only."
+        },
+        "workflowCannon.taskStateSync.intervalMinutes": {
+          "type": "number",
+          "default": 5,
+          "minimum": 0,
+          "description": "Minutes between background task-state sync cycles (0 disables the interval; explicit refresh still works when enabled)."
         }
       }
     },
@@ -108,6 +119,10 @@
       {
         "command": "workflowCannon.openGuidancePanel",
         "title": "Workflow Cannon: Open Guidance Authoring"
+      },
+      {
+        "command": "workflowCannon.syncTaskState",
+        "title": "Workflow Cannon: Sync Task State (Git)"
       }
     ]
   },
