@@ -105,6 +105,16 @@ export {
   type ValidatePlanArtifactSuccess
 } from "./validate-plan-artifact.js";
 export {
+  PLAN_ARTIFACT_PHASE_DESCRIPTION_MAX_WORDS,
+  PLAN_ARTIFACT_PHASE_KEY_RE,
+  countDescriptionWords,
+  resolvePlanArtifactPhaseProposal,
+  type PlanArtifactPhaseProposal,
+  type PlanArtifactPhaseProposalFinding,
+  type ResolvePlanArtifactPhaseProposalInput,
+  type ResolvePlanArtifactPhaseProposalResult
+} from "./resolve-plan-artifact-phase-proposal.js";
+export {
   resolvePlanArtifactReviewProfile,
   reviewPlanArtifact,
   type PlanArtifactCoverageMap,
