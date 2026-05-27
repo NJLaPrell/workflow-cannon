@@ -1108,6 +1108,15 @@
   },
   {
     "moduleId": "planning",
+    "name": "accept-plan-artifact",
+    "file": "accept-plan-artifact.md",
+    "description": "Record operator acceptance of a PlanArtifact v1 (approvalRecord, status accepted).",
+    "policyOperationId": "planning.accept-plan-artifact",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "planning",
     "name": "list-planning-types",
     "file": "list-planning-types.md",
     "description": "List supported planning workflow types and their intent.",

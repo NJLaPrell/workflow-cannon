@@ -59,7 +59,8 @@ export type PolicyOperationId =
   | "project-memory.approve"
   | "project-memory.prune"
   | "planning.draft-plan-artifact"
-  | "planning.review-plan-artifact";
+  | "planning.review-plan-artifact"
+  | "planning.accept-plan-artifact";
 
 function buildBuiltinCommandToOperation(): Record<string, PolicyOperationId | undefined> {
   const out: Record<string, PolicyOperationId | undefined> = {};
