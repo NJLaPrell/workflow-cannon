@@ -18,10 +18,28 @@ import {
 } from "./playbook-chat-prompts.js";
 import { confirmAndRunTransition } from "./run-transition-with-approval.js";
 import { kitRunTraceHooks, logWc } from "./runtime/workflow-cannon-log.js";
+import { TaskStateSyncCoordinator } from "./runtime/task-state-sync-coordinator.js";
 import { buildLeaseUiState, leaseActionLabel, type LeaseActionKind } from "./lease-status-ui.js";
+
 function readWorkflowCannonNodeSetting(): string | undefined {
   return vscode.workspace.getConfiguration("workflowCannon").get<string>("nodeExecutable")?.trim() || undefined;
 }
+
+function readTaskStateSyncSettings(): { enabled: boolean; intervalMs: number } {
+  const cfg = vscode.workspace.getConfiguration("workflowCannon");
+  const enabled = cfg.get<boolean>("taskStateSync.enabled") !== false;
+  const minutes = cfg.get<number>("taskStateSync.intervalMinutes");
+  const intervalMinutes = typeof minutes === "number" && Number.isFinite(minutes) && minutes >= 0 ? minutes : 5;
+  return {
+    enabled,
+    intervalMs: enabled && intervalMinutes > 0 ? intervalMinutes * 60_000 : 0
+  };
+}
+
+const TASK_STATE_SYNC_POLICY_APPROVAL = {
+  confirmed: true as const,
+  rationale: "VS Code extension background task-state sync (workflow-cannon)"
+};
 
 async function runLeaseAction(
   runtime: CommandClient,
@@ -94,6 +112,7 @@ export function activate(context: vscode.ExtensionContext): void {
   let dashboard: DashboardViewProvider | undefined;
   let guidancePanel: GuidancePanel | undefined;
   let statusDashboard: StatusDashboardPanel | undefined;
+  let taskStateSync: TaskStateSyncCoordinator | undefined;
 
   if (client && folder) {
     dashboard = new DashboardViewProvider(context.extensionUri, client, onKitStateChanged, () =>
@@ -106,6 +125,24 @@ export function activate(context: vscode.ExtensionContext): void {
     );
     watcher.start();
     context.subscriptions.push(watcher);
+    const taskStateSyncSettings = readTaskStateSyncSettings();
+    taskStateSync = new TaskStateSyncCoordinator({
+      run: (command, args) => client.run(command, args),
+      policyApproval: () => TASK_STATE_SYNC_POLICY_APPROVAL,
+      onSynced: (result) => {
+        if (result.ok && (result.action === "hydrated" || result.action === "applied")) {
+          kitStateEmitter.fire();
+        }
+      },
+      log: (message) => logWc("task-state-sync", message),
+      intervalMs: taskStateSyncSettings.intervalMs,
+      debounceMs: 2_000
+    });
+    if (taskStateSyncSettings.enabled) {
+      taskStateSync.start();
+      taskStateSync.requestSync("activate");
+    }
+    context.subscriptions.push({ dispose: () => taskStateSync?.stop() });
     guidancePanel = new GuidancePanel(context.extensionUri, client, onKitStateChanged, folder);
     statusDashboard = new StatusDashboardPanel(context.extensionUri, client, onKitStateChanged);
 
@@ -270,6 +307,30 @@ export function activate(context: vscode.ExtensionContext): void {
         return;
       }
       dashboard.refresh();
+    }),
+    vscode.commands.registerCommand("workflowCannon.syncTaskState", async () => {
+      if (!taskStateSync) {
+        void requireClient();
+        return;
+      }
+      const result = await taskStateSync.syncNow("command");
+      if (!result.ok) {
+        await vscode.window.showErrorMessage(
+          String(result.message ?? result.code ?? "Task-state sync failed")
+        );
+        return;
+      }
+      if (result.action === "skipped") {
+        await vscode.window.showWarningMessage(
+          String(result.message ?? "Task-state sync skipped (conflict)")
+        );
+        return;
+      }
+      await vscode.window.showInformationMessage(
+        result.action === "none"
+          ? "Task-state projection is already current"
+          : `Task-state sync complete (${result.action})`
+      );
     }),
     vscode.commands.registerCommand("workflowCannon.showReadyQueue", async () => {
       const runtime = requireClient();

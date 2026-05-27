@@ -6,7 +6,7 @@ agentCapsule|v=1|command=dashboard-summary|module=task-engine|schema_only=pnpm e
 
 Return a single JSON payload for dashboard / cockpit UIs: task counts, ready-queue preview, blocked summary, suggested next task, and (when present) a shallow parse of `docs/maintainers/data/workspace-kit-status.yaml`.
 
-Read-only. Does not mutate workspace state.
+Read-only. Does not mutate workspace state. Does **not** run `git fetch` — the VS Code extension **`TaskStateSyncCoordinator`** owns background fetch/hydrate/apply on an interval or via **Workflow Cannon: Sync Task State (Git)**.
 
 ## Usage
 
