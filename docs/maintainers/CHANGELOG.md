@@ -8,6 +8,22 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [0.99.12] - 2026-05-27
+
+Patch - **Phase 110 planner closeout** (PlanArtifact lifecycle, dashboard actions, release gates).
+
+### Added
+
+- PlanArtifact CLI golden-path coverage for draft, review, accept, finalize preview, finalize persist, and ready-task output.
+- Explicit PlanArtifact fixture CI gate via `test:plan-artifact-fixtures` and the `PlanArtifact fixture gate` CI step.
+- Planner traceability and full-test-sweep closeout artifacts for release evidence.
+
+### Changed
+
+- Dashboard PlanArtifact lifecycle controls now support reviewed, accepted, finalized, blocked, and open-question states with policy-tier wiring.
+- `build-plan` task output recommends the PlanArtifact flow as an additive next step while preserving compatibility.
+- README planner guidance now points phase-scoped work toward reviewed, accepted, and finalized PlanArtifacts.
+
 ## [0.99.11] - 2026-05-27
 
 Patch — **Phase 115 git canonical task state** (event log authority, snapshot/tail hydrate, publish admission).

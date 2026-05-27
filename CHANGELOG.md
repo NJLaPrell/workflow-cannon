@@ -8,6 +8,10 @@ This root file is intentionally pointer-only to avoid split release history.
 
 - See `docs/maintainers/CHANGELOG.md` for all release notes, migration notes, and historical entries.
 
+## [0.99.12] - 2026-05-27
+
+- **Phase 110 - planner closeout:** PlanArtifact lifecycle dashboard actions, CLI golden-path coverage, fixture CI gate, and planner release evidence.
+
 ## [0.99.11] - 2026-05-27
 
 - **Phase 115 — git canonical task state:** git-backed authoritative task history, snapshot/tail hydrate, publish/hydrate admission fixes, and phase task batch completion.
@@ -21,4 +25,4 @@ This root file is intentionally pointer-only to avoid split release history.
 - Patch release for task-store recovery and phase snapshot alignment after the phase 108/113 dashboard closeout sequence.
 - Captures phase 114/115 task-state event-log planning tasks in the task engine so maintainers can pick up the migration work from a fresh dashboard.
 
-Latest release: **v0.99.11** (Phase 115 git canonical task state; see canonical changelog). (Phase 114 task-state event log foundations; see canonical changelog).
+Latest release: **v0.99.12** (Phase 110 planner closeout; see canonical changelog).
