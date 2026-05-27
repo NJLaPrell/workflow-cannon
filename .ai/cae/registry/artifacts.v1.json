@@ -153,6 +153,86 @@
       "ref": { "path": ".ai/runbooks/agent-presentation-policy.md" },
       "title": "Agent presentation policy and scoped Guidance patterns",
       "tags": ["agent-presentation", "cae", "guidance", "runbook"]
+    },
+    {
+      "schemaVersion": 1,
+      "artifactId": "cae.doc.planning-lenses-index",
+      "artifactType": "policy-doc",
+      "ref": { "path": ".ai/cae/planning-lenses/README.md" },
+      "title": "CAE planning lenses index (A-CAE)",
+      "tags": ["cae", "planning", "plan-artifact", "a-cae"]
+    },
+    {
+      "schemaVersion": 1,
+      "artifactId": "cae.reasoning.planning-completeness",
+      "artifactType": "reasoning-template",
+      "ref": { "path": ".ai/cae/planning-lenses/completeness.md" },
+      "title": "Planning lens: completeness",
+      "tags": ["cae", "planning", "reasoning-template", "completeness"]
+    },
+    {
+      "schemaVersion": 1,
+      "artifactId": "cae.reasoning.planning-architecture",
+      "artifactType": "reasoning-template",
+      "ref": { "path": ".ai/cae/planning-lenses/architecture.md" },
+      "title": "Planning lens: architecture",
+      "tags": ["cae", "planning", "reasoning-template", "architecture"]
+    },
+    {
+      "schemaVersion": 1,
+      "artifactId": "cae.reasoning.planning-risk",
+      "artifactType": "reasoning-template",
+      "ref": { "path": ".ai/cae/planning-lenses/risk.md" },
+      "title": "Planning lens: risk",
+      "tags": ["cae", "planning", "reasoning-template", "risk"]
+    },
+    {
+      "schemaVersion": 1,
+      "artifactId": "cae.reasoning.planning-testing",
+      "artifactType": "reasoning-template",
+      "ref": { "path": ".ai/cae/planning-lenses/testing.md" },
+      "title": "Planning lens: testing",
+      "tags": ["cae", "planning", "reasoning-template", "testing"]
+    },
+    {
+      "schemaVersion": 1,
+      "artifactId": "cae.reasoning.planning-ux",
+      "artifactType": "reasoning-template",
+      "ref": { "path": ".ai/cae/planning-lenses/ux.md" },
+      "title": "Planning lens: UX",
+      "tags": ["cae", "planning", "reasoning-template", "ux"]
+    },
+    {
+      "schemaVersion": 1,
+      "artifactId": "cae.reasoning.planning-decomposition",
+      "artifactType": "reasoning-template",
+      "ref": { "path": ".ai/cae/planning-lenses/decomposition.md" },
+      "title": "Planning lens: decomposition",
+      "tags": ["cae", "planning", "reasoning-template", "decomposition"]
+    },
+    {
+      "schemaVersion": 1,
+      "artifactId": "cae.reasoning.planning-anti-patterns",
+      "artifactType": "reasoning-template",
+      "ref": { "path": ".ai/cae/planning-lenses/anti-patterns.md" },
+      "title": "Planning lens: anti-patterns",
+      "tags": ["cae", "planning", "reasoning-template", "anti-patterns"]
+    },
+    {
+      "schemaVersion": 1,
+      "artifactId": "cae.reasoning.planning-sizing",
+      "artifactType": "reasoning-template",
+      "ref": { "path": ".ai/cae/planning-lenses/sizing.md" },
+      "title": "Planning lens: sizing",
+      "tags": ["cae", "planning", "reasoning-template", "sizing"]
+    },
+    {
+      "schemaVersion": 1,
+      "artifactId": "cae.reasoning.planning-release-rollback",
+      "artifactType": "reasoning-template",
+      "ref": { "path": ".ai/cae/planning-lenses/release-rollback.md" },
+      "title": "Planning lens: release and rollback",
+      "tags": ["cae", "planning", "reasoning-template", "release"]
     }
   ]
 }
