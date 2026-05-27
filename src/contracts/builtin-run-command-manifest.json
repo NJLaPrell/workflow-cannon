@@ -1108,6 +1108,15 @@
   },
   {
     "moduleId": "planning",
+    "name": "finalize-plan-to-phase",
+    "file": "finalize-plan-to-phase.md",
+    "description": "Preview or persist accepted PlanArtifact WBS rows as phase tasks.",
+    "policyOperationId": "planning.finalize-plan-to-phase",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive-with-dryrun"
+  },
+  {
+    "moduleId": "planning",
     "name": "list-planning-types",
     "file": "list-planning-types.md",
     "description": "List supported planning workflow types and their intent.",
