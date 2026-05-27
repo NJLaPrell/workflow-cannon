@@ -8,7 +8,7 @@ Validate and optionally persist a **PlanArtifact v1** document (new `planId` or 
 
 **Contract:** repo-root **`PLANNER_COMMANDS.md`** §2 · **Schema:** **`PLANNER_SCHEMA.md`** · **Agent runbook:** **`.ai/runbooks/plan-artifact-workflow.md`**
 
-**Handler status:** persistence/validation implementation is **WP-3** (tasks T100456–T100457). Until then, invocations return **`plan-artifact-command-not-implemented`**; **`--schema-only`** and **`list-commands`** are authoritative for argv shape.
+**Handler status:** validate-only (`persist: false`) and persist (`persist: true`) are implemented (WP-3.2–3.3). **`--schema-only`** and **`list-commands`** remain authoritative for argv shape.
 
 ## Usage
 
@@ -45,7 +45,6 @@ pnpm exec wk run draft-plan-artifact '{"persist":true,"artifact":{...},"expected
 | `plan-artifact-version-conflict` | false | Supplied `version` ≠ `latest + 1`. |
 | `planning-generation-mismatch` | false | Stale `expectedPlanningGeneration`. |
 | `policy-denied` | false | Missing/invalid `policyApproval` on persist. |
-| `plan-artifact-command-not-implemented` | false | Handler not shipped yet (WP-3.3). |
 
 ## Storage (when implemented)
 

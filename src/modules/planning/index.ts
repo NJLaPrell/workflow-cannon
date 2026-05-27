@@ -27,9 +27,7 @@ import {
   getPlanningGenerationPolicy,
   planningStrictValidationEnabled
 } from "../task-engine/planning-config.js";
-import {
-  planningConcurrencySaveOpts
-} from "../task-engine/mutation-utils.js";
+import { planningConcurrencySaveOpts, readIdempotencyValue } from "../task-engine/mutation-utils.js";
 import {
   clearAgentActivityBestEffort,
   recordAgentActivityBestEffort
@@ -45,6 +43,16 @@ import {
 } from "./build-plan-output-helpers.js";
 import { buildTasksFromExecutionDrafts, nextTaskId } from "./build-plan-execution-drafts.js";
 import { validatePlanArtifactDraftInput } from "../../core/planning/validate-plan-artifact.js";
+import {
+  commitPlanArtifactDraftPersist,
+  planArtifactDraftPersistSuccessResult,
+  preludePlanArtifactDraftPersist
+} from "./persist-plan-artifact-draft.js";
+import { attachPolicyMeta } from "../task-engine/attach-planning-response-meta.js";
+import { planningGenPolicyGate } from "../task-engine/planning-generation-gate.js";
+import { TaskEngineError } from "../task-engine/transitions.js";
+
+const DRAFT_PLAN_ARTIFACT_INSTRUCTION = "src/modules/planning/instructions/draft-plan-artifact.md";
 
 async function recordBuildPlanActivity(
   ctx: Parameters<NonNullable<WorkflowModule["onCommand"]>>[1],
@@ -127,23 +135,79 @@ export const planningModule: WorkflowModule = {
         };
       }
       if (persist) {
-        return {
-          ok: false,
-          code: "plan-artifact-command-not-implemented",
-          message:
-            "draft-plan-artifact persistence is not implemented yet (WP-3.3); use persist:false to validate only.",
-          remediation: {
-            instructionPath: "src/modules/planning/instructions/draft-plan-artifact.md",
-            docPath: ".ai/runbooks/plan-artifact-workflow.md"
-          },
-          data: {
-            schemaVersion: 1,
-            responseSchemaVersion: 1,
-            planId: validation.artifact.planId,
-            version: validation.artifact.version,
-            planRef: validation.artifact.planRef
+        const stores = await openPlanningStores(ctx);
+        const pg = planningGenPolicyGate(
+          ctx,
+          args as Record<string, unknown>,
+          DRAFT_PLAN_ARTIFACT_INSTRUCTION,
+          stores.sqliteDual.getPlanningGeneration()
+        );
+        if (pg.block) {
+          return pg.block;
+        }
+        const clientMutationId = readIdempotencyValue(args as Record<string, unknown>);
+        const sqliteDb = stores.sqliteDual.getDatabase();
+        const prelude = preludePlanArtifactDraftPersist({
+          workspacePath: ctx.workspacePath,
+          artifact: validation.artifact,
+          artifactRaw,
+          clientMutationId,
+          effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined,
+          sqliteDb
+        });
+        if (prelude.kind === "conflict") {
+          return { ok: false, code: prelude.code, message: prelude.message };
+        }
+        if (prelude.kind === "replay") {
+          const replay = planArtifactDraftPersistSuccessResult({
+            code: "plan-artifact-draft-idempotent-replay",
+            artifact: prelude.artifact,
+            storagePath: prelude.storagePath,
+            replayed: true
+          });
+          attachPolicyMeta(
+            replay.data as Record<string, unknown>,
+            ctx,
+            stores.sqliteDual.getPlanningGeneration(),
+            pg.warnings
+          );
+          return replay;
+        }
+        let committed;
+        try {
+          stores.sqliteDual.withTransaction(() => {
+            committed = commitPlanArtifactDraftPersist({
+              workspacePath: ctx.workspacePath,
+              artifact: validation.artifact,
+              clientMutationId,
+              digest: prelude.digest,
+              effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined,
+              sqliteDb
+            });
+          }, planningConcurrencySaveOpts(args as Record<string, unknown>));
+        } catch (err) {
+          if (err instanceof TaskEngineError) {
+            const data =
+              err.code === "planning-generation-mismatch" && err.details
+                ? (err.details as Record<string, unknown>)
+                : undefined;
+            return { ok: false, code: err.code, message: err.message, data };
           }
-        };
+          throw err;
+        }
+        const persisted = planArtifactDraftPersistSuccessResult({
+          code: "plan-artifact-draft-persisted",
+          artifact: committed!.artifact,
+          storagePath: committed!.storagePath,
+          replayed: false
+        });
+        attachPolicyMeta(
+          persisted.data as Record<string, unknown>,
+          ctx,
+          stores.sqliteDual.getPlanningGeneration(),
+          pg.warnings
+        );
+        return persisted;
       }
       return {
         ok: true,
