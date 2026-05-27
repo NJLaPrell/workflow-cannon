@@ -92,3 +92,4 @@ export {
   type PlanArtifactIndexStateV1,
   type PlanArtifactStoragePaths
 } from "./plan-artifact-storage.js";
+export { renderPlanArtifactMarkdown } from "./render-plan-artifact-markdown.js";
