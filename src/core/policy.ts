@@ -60,7 +60,8 @@ export type PolicyOperationId =
   | "project-memory.prune"
   | "planning.draft-plan-artifact"
   | "planning.review-plan-artifact"
-  | "planning.accept-plan-artifact";
+  | "planning.accept-plan-artifact"
+  | "planning.finalize-plan-to-phase";
 
 function buildBuiltinCommandToOperation(): Record<string, PolicyOperationId | undefined> {
   const out: Record<string, PolicyOperationId | undefined> = {};
@@ -122,6 +123,7 @@ export function resolvePolicyOperationIdForCommand(
  * - `options.dryRun === true` (documentation generators), or
  * - `draft-plan-artifact` with `persist === false` (validate-only / Tier C).
  * - `review-plan-artifact` with `recordReview !== true` (findings-only / Tier C).
+ * - `finalize-plan-to-phase` with `dryRun !== false` (preview / Tier C; default dryRun is true).
  */
 export function isSensitiveModuleCommand(
   commandName: string,
@@ -136,6 +138,9 @@ export function isSensitiveModuleCommand(
       return false;
     }
     if (commandName === "review-plan-artifact" && args.recordReview !== true) {
+      return false;
+    }
+    if (commandName === "finalize-plan-to-phase" && args.dryRun !== false) {
       return false;
     }
     const options =
