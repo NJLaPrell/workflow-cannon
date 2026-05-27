@@ -1042,6 +1042,14 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
           await this.onAcceptPlanArtifact(planId, planRef, Math.floor(version));
         }
       }
+      if (msg?.type === "finalizePlanArtifact") {
+        const planId = typeof msg.planId === "string" ? msg.planId.trim() : "";
+        const versionRaw = typeof msg.version === "string" ? msg.version.trim() : "";
+        const version = Number(versionRaw);
+        if (planId && Number.isFinite(version) && version > 0) {
+          await this.onFinalizePlanArtifact(planId, Math.floor(version));
+        }
+      }
       if (msg?.type === "openTaskDetail") {
         const tid = typeof msg.taskId === "string" ? msg.taskId.trim() : "";
         if (tid.length > 0) {
@@ -2418,6 +2426,50 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
     await vscode.window.showInformationMessage(`Accepted plan ${planId}.`);
     await this.pushUpdate({ projection: "full", skipHeavyFetches: false });
+  }
+
+  private async onFinalizePlanArtifact(planId: string, version: number): Promise<void> {
+    const commonArgs = {
+      planId,
+      version,
+      desiredStatus: "ready",
+      ...expectedPlanningGenerationArgs()
+    };
+    const preview = await this.client.run("finalize-plan-to-phase", {
+      ...commonArgs,
+      dryRun: true
+    });
+    if (!preview.ok) {
+      await vscode.window.showErrorMessage(
+        `Plan finalize preview failed: ${(preview.message ?? preview.code ?? JSON.stringify(preview)).slice(0, 520)}`
+      );
+      return;
+    }
+    const r = await this.client.run("finalize-plan-to-phase", {
+      ...commonArgs,
+      dryRun: false,
+      policyApproval: dashboardPolicyApproval(
+        { workflowId: "plan-artifact", action: "finalize", command: "finalize-plan-to-phase" },
+        { humanRationale: "Finalize accepted PlanArtifact from Dashboard", phaseKey: null, taskId: null }
+      )
+    });
+    if (!r.ok) {
+      await vscode.window.showErrorMessage(
+        `Plan finalize failed: ${(r.message ?? r.code ?? JSON.stringify(r)).slice(0, 520)}`
+      );
+      return;
+    }
+    ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
+    const data = r.data && typeof r.data === "object" ? (r.data as Record<string, unknown>) : {};
+    const phaseKey = typeof data.phaseKey === "string" ? data.phaseKey.trim() : "";
+    const count = typeof data.count === "number" ? data.count : Number(data.count ?? 0);
+    await vscode.window.showInformationMessage(
+      `Finalized plan ${planId}${Number.isFinite(count) && count > 0 ? ` into ${count} task(s)` : ""}.`
+    );
+    await this.pushUpdate({ projection: "full", skipHeavyFetches: false });
+    if (phaseKey.length > 0) {
+      await this.view?.webview.postMessage({ type: "wcOpenQueueForPhase", phaseKey });
+    }
   }
 
   /**

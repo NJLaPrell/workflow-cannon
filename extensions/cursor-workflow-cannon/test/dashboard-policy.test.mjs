@@ -29,6 +29,13 @@ test("resolveDashboardPolicyTierRow returns routine PlanArtifact accept", () => 
   assert.equal(row.command, "accept-plan-artifact");
 });
 
+test("resolveDashboardPolicyTierRow returns routine PlanArtifact finalize", () => {
+  const row = tierMod.resolveDashboardPolicyTierRow("plan-artifact", "finalize");
+  assert.ok(row);
+  assert.equal(row.tier, "routine");
+  assert.equal(row.command, "finalize-plan-to-phase");
+});
+
 test("buildDashboardPolicyApproval auto rationale for routine path", () => {
   const out = approvalMod.buildDashboardPolicyApproval({
     channel: "dashboard",
