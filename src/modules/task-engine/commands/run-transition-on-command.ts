@@ -151,6 +151,7 @@ export async function runTransitionOnCommand(
         primary: result.evidence,
         autoUnblocked: result.autoUnblocked,
         store,
+        workspacePath: ctx.workspacePath,
         ctx: {
           commandName: "run-transition",
           moduleId: "task-engine",

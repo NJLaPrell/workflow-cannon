@@ -69,7 +69,8 @@ export async function finalizeCanonicalUpdateTask(input: {
       phaseKey: input.task.phaseKey,
       summary: input.task.summary,
       metadata: input.task.metadata
-    }
+    },
+    input.ctx.workspacePath
   );
   return commitCanonicalTaskStateEvents({
     ctx: input.ctx,

@@ -2,6 +2,10 @@ import type { ModuleCommandResult, ModuleLifecycleContext } from "../../../contr
 import { remoteBranchHeadSha, resolveTaskStateGitRef } from "../task-state-git/git-io.js";
 import { TASK_STATE_GIT_BRANCH } from "../task-state-git/constants.js";
 import { publishTaskStateEvents, taskIdsTouchedByEvent } from "../task-state-git/publish-task-state-events.js";
+import {
+  expectedVersionsForPublish,
+  readRemoteTaskVersionMap
+} from "../task-state-git/remote-projection-versions.js";
 import type { TaskStateEventV1 } from "../task-state-events/event-payloads.js";
 import type { OpenedPlanningStores } from "./planning-open.js";
 import { runTaskStateHydrate } from "./task-state-hydrate-runtime.js";
@@ -67,10 +71,13 @@ export async function commitCanonicalTaskStateEvents(
 
   const headSha =
     "missing" in resolved ? remoteBranchHeadSha(workspacePath, branch)! : resolved.tipSha;
-  const expectedTaskVersions = expectedTaskVersionsForTaskIds(
-    input.store,
-    touchedTaskIds(input.events)
-  );
+  const touched = touchedTaskIds(input.events);
+  const storeVersions = expectedTaskVersionsForTaskIds(input.store, touched);
+  const remoteVersions =
+    "missing" in resolved
+      ? new Map<string, number>()
+      : readRemoteTaskVersionMap(workspacePath, resolved.ref, resolved.tipSha);
+  const expectedTaskVersions = expectedVersionsForPublish(storeVersions, remoteVersions, touched);
 
   const publish = await publishTaskStateEvents({
     workspacePath,

@@ -10,6 +10,9 @@ import type {
 import { transitionEvidenceToTransitionedPayload } from "../task-state-events/event-payloads.js";
 import { TASK_STATE_EVENT_ENVELOPE_SCHEMA_VERSION } from "../task-state-events/types.js";
 import { taskVersionFromStore } from "./task-state-canonical-authority.js";
+import { readRemoteTaskVersionMap } from "../task-state-git/remote-projection-versions.js";
+import { resolveTaskStateGitRef } from "../task-state-git/git-io.js";
+import { TASK_STATE_GIT_BRANCH } from "../task-state-git/constants.js";
 import type { TaskStore } from "./store.js";
 
 export type DraftEventContext = {
@@ -63,19 +66,34 @@ function draftEnvelope(
   return event;
 }
 
+function resolveExpectedVersion(
+  taskId: string,
+  store: TaskStore,
+  workspacePath?: string
+): number | undefined {
+  if (workspacePath) {
+    const resolved = resolveTaskStateGitRef(workspacePath, TASK_STATE_GIT_BRANCH);
+    if (!("missing" in resolved)) {
+      const remote = readRemoteTaskVersionMap(workspacePath, resolved.ref, resolved.tipSha);
+      const rv = remote.get(taskId);
+      if (rv !== undefined) {
+        return rv;
+      }
+    }
+  }
+  const version = taskVersionFromStore(store, taskId);
+  return version > 0 ? version : undefined;
+}
+
 export function draftTransitionedEvent(
   evidence: TransitionEvidence,
   ctx: DraftEventContext,
-  store: TaskStore
+  store: TaskStore,
+  workspacePath?: string
 ): TaskStateEventV1 {
   const payload = transitionEvidenceToTransitionedPayload(evidence);
-  const version = taskVersionFromStore(store, payload.taskId);
-  return draftEnvelope(
-    "task.transitioned",
-    payload,
-    ctx,
-    version > 0 ? version : undefined
-  );
+  const version = resolveExpectedVersion(payload.taskId, store, workspacePath);
+  return draftEnvelope("task.transitioned", payload, ctx, version);
 }
 
 export function draftCreatedEvent(
@@ -96,15 +114,16 @@ export function draftUpdatedEvent(
   changedFields: string[],
   store: TaskStore,
   ctx: DraftEventContext,
-  values?: TaskUpdatedPayloadV1["values"]
+  values?: TaskUpdatedPayloadV1["values"],
+  workspacePath?: string
 ): TaskStateEventV1 {
-  const version = taskVersionFromStore(store, taskId);
+  const version = resolveExpectedVersion(taskId, store, workspacePath);
   const payload: TaskUpdatedPayloadV1 = {
     taskId,
     changedFields,
     ...(values ? { values } : {})
   };
-  return draftEnvelope("task.updated", payload, ctx, version > 0 ? version : undefined);
+  return draftEnvelope("task.updated", payload, ctx, version);
 }
 
 export function draftEventsFromTransitionResult(input: {
@@ -112,10 +131,18 @@ export function draftEventsFromTransitionResult(input: {
   autoUnblocked: TransitionEvidence[];
   ctx: DraftEventContext;
   store: TaskStore;
+  workspacePath?: string;
 }): TaskStateEventV1[] {
-  const events = [draftTransitionedEvent(input.primary, input.ctx, input.store)];
+  const events = [draftTransitionedEvent(input.primary, input.ctx, input.store, input.workspacePath)];
   for (const evidence of input.autoUnblocked) {
-    events.push(draftTransitionedEvent(evidence, { ...input.ctx, commandName: "run-transition" }, input.store));
+    events.push(
+      draftTransitionedEvent(
+        evidence,
+        { ...input.ctx, commandName: "run-transition" },
+        input.store,
+        input.workspacePath
+      )
+    );
   }
   return events;
 }
