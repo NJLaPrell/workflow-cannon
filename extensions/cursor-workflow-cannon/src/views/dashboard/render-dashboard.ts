@@ -3093,6 +3093,16 @@ function renderPlanArtifactDraftPanel(planArtifact: unknown): string {
         (canAccept ? "" : " disabled") +
         ">Accept</button>" +
         "</div>";
+  const finalizeActionHtml =
+    statusRaw === "accepted"
+      ? '<div class="wc-plan-artifact-actions">' +
+        '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="plan-artifact-finalize" data-plan-id="' +
+        escapeHtmlAttr(planId) +
+        '" data-plan-version="' +
+        escapeHtmlAttr(Number.isFinite(version) ? String(version) : "") +
+        '" title="Finalize this accepted plan into ready queue tasks">Finalize</button>' +
+        "</div>"
+      : "";
   return (
     '<section class="dash-card wc-plan-artifact" aria-label="Plan draft">' +
     '<div class="wc-plan-artifact-head">' +
@@ -3127,6 +3137,7 @@ function renderPlanArtifactDraftPanel(planArtifact: unknown): string {
     reviewHtml +
     wbsHtml +
     acceptActionHtml +
+    finalizeActionHtml +
     "</section>"
   );
 }
