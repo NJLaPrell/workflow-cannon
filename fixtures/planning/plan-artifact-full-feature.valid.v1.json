@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 1,
+  "planId": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+  "version": 3,
+  "planRef": "plan-artifact:7c9e6679-7425-40de-944b-e07fc1f90ae7",
+  "status": "reviewed",
+  "identity": {
+    "title": "PlanArtifact lifecycle in Dashboard",
+    "planningType": "new-feature",
+    "tags": ["planner", "dashboard"]
+  },
+  "goals": ["Operators complete draft→accept→finalize in Dashboard"],
+  "nonGoals": ["Replace build-plan in v1"],
+  "userStories": [
+    {
+      "id": "US-1",
+      "asA": "maintainer",
+      "iWant": "see WBS preview",
+      "soThat": "I can accept with confidence",
+      "priority": "must"
+    }
+  ],
+  "valueAssessment": {
+    "impact": "High — closes PLANNER Gap 7",
+    "confidence": "medium",
+    "rationale": "Depends on kit commands"
+  },
+  "riskAssessment": [
+    {
+      "id": "R1",
+      "description": "Dual UX with build-plan wizard",
+      "severity": "medium",
+      "mitigation": "A-COMPAT copy"
+    }
+  ],
+  "technicalImpact": {
+    "systemsTouched": ["extensions/cursor-workflow-cannon", "task-engine/dashboard-summary"],
+    "compatibilityNotes": "planningSession remains for interview resume"
+  },
+  "architecture": {
+    "overview": "Dashboard calls wk run; plan summary on dashboard-summary",
+    "decisions": [
+      {
+        "id": "D1",
+        "decision": "No extension-side SQLite",
+        "rationale": "PLANNER_ARCHITECTURE §6"
+      }
+    ]
+  },
+  "uiUxDirection": {
+    "hasUiChanges": true,
+    "summary": "Plan panel per A-UX mockups",
+    "mockupRefs": ["PLANNER_UX.md"]
+  },
+  "testingStrategy": {
+    "layers": ["unit", "extension"],
+    "criticalPaths": ["accept disabled until review pass"]
+  },
+  "implementationGuidance": ["Extend dashboard-summary before webview panels"],
+  "whatNotToDo": ["Do not embed review rubric in TypeScript strings only"],
+  "assumptions": ["A-UX approved before T-7.1"],
+  "openQuestions": ["Use strict accept on warnings?"],
+  "wbs": [
+    {
+      "wbsId": "WBS-1",
+      "path": "1",
+      "title": "Kit contract",
+      "goalMapping": ["Operators complete draft→accept→finalize in Dashboard"],
+      "suggestedTaskTitle": "dashboard-summary planArtifact contract",
+      "approach": "Extend projection",
+      "technicalScope": ["dashboard-summary-projection.ts"],
+      "acceptanceCriteria": ["Schema validates"],
+      "testingVerification": ["kit unit tests"],
+      "dependsOn": [],
+      "sizingConfidence": "medium",
+      "doneMeans": "T-7.1 complete",
+      "generatedTaskPayload": {
+        "title": "dashboard-summary planArtifact contract",
+        "approach": "Extend projection",
+        "technicalScope": ["dashboard-summary-projection.ts"],
+        "acceptanceCriteria": ["Schema validates"]
+      }
+    },
+    {
+      "wbsId": "WBS-2",
+      "path": "2",
+      "title": "Plan draft panel",
+      "goalMapping": ["Operators complete draft→accept→finalize in Dashboard"],
+      "suggestedTaskTitle": "Dashboard plan draft panel",
+      "approach": "Read-only render",
+      "technicalScope": ["render-dashboard.ts"],
+      "acceptanceCriteria": ["Fixture render test"],
+      "testingVerification": ["extension tests"],
+      "dependsOn": ["WBS-1"],
+      "sizingConfidence": "medium",
+      "doneMeans": "T-7.2 complete",
+      "generatedTaskPayload": {
+        "title": "Dashboard plan draft panel",
+        "approach": "Read-only render",
+        "technicalScope": ["render-dashboard.ts"],
+        "acceptanceCriteria": ["Fixture render test"]
+      }
+    }
+  ],
+  "phaseRecommendations": [
+    {
+      "phaseKey": "110",
+      "label": "Phase 110",
+      "rationale": "Planner tranche",
+      "isPrimary": true
+    }
+  ],
+  "provenance": {
+    "createdAt": "2026-05-27T05:00:00.000Z",
+    "updatedAt": "2026-05-27T06:30:00.000Z",
+    "createdBy": "NJLaPrell@gmail.com",
+    "source": "draft-plan-artifact"
+  }
+}
