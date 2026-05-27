@@ -58,7 +58,8 @@ export type PolicyOperationId =
   | "project-memory.write"
   | "project-memory.approve"
   | "project-memory.prune"
-  | "planning.draft-plan-artifact";
+  | "planning.draft-plan-artifact"
+  | "planning.review-plan-artifact";
 
 function buildBuiltinCommandToOperation(): Record<string, PolicyOperationId | undefined> {
   const out: Record<string, PolicyOperationId | undefined> = {};
@@ -119,6 +120,7 @@ export function resolvePolicyOperationIdForCommand(
  * `sensitive-with-dryrun` is waived when:
  * - `options.dryRun === true` (documentation generators), or
  * - `draft-plan-artifact` with `persist === false` (validate-only / Tier C).
+ * - `review-plan-artifact` with `recordReview !== true` (findings-only / Tier C).
  */
 export function isSensitiveModuleCommand(
   commandName: string,
@@ -130,6 +132,9 @@ export function isSensitiveModuleCommand(
   }
   if (sens === "sensitive-with-dryrun") {
     if (commandName === "draft-plan-artifact" && args.persist === false) {
+      return false;
+    }
+    if (commandName === "review-plan-artifact" && args.recordReview !== true) {
       return false;
     }
     const options =

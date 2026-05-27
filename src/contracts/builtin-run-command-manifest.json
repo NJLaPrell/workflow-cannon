@@ -1099,6 +1099,15 @@
   },
   {
     "moduleId": "planning",
+    "name": "review-plan-artifact",
+    "file": "review-plan-artifact.md",
+    "description": "Run A-RUBRIC review on a PlanArtifact v1 (blockers, warnings, coverage).",
+    "policyOperationId": "planning.review-plan-artifact",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive-with-dryrun"
+  },
+  {
+    "moduleId": "planning",
     "name": "list-planning-types",
     "file": "list-planning-types.md",
     "description": "List supported planning workflow types and their intent.",
