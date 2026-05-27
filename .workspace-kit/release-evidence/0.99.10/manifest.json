@@ -1,0 +1,410 @@
+{
+  "schemaVersion": 1,
+  "createdAt": "2026-05-27T01:25:58.653Z",
+  "releaseVersion": "0.99.10",
+  "packageName": "@workflow-cannon/workspace-kit",
+  "phaseKey": "114",
+  "git": {
+    "integrationBranch": "release/phase-114"
+  },
+  "approval": {
+    "actor": "NJLaPrell@gmail.com",
+    "timestamp": "2026-05-27T01:25:52.908Z",
+    "rationale": "Phase 114 closeout: validation green; operator authorized Complete & Release",
+    "scope": "phase-114 publish"
+  },
+  "releaseNotes": {
+    "source": "CHANGELOG.md",
+    "entries": [
+      "0.99.10 — Phase 114 task-state event log foundations"
+    ]
+  },
+  "validations": [
+    {
+      "command": "pnpm run build",
+      "conclusion": "success",
+      "source": "closeout-canonical"
+    },
+    {
+      "command": "pnpm run check",
+      "conclusion": "success",
+      "source": "closeout-canonical"
+    },
+    {
+      "command": "pnpm run test",
+      "conclusion": "success",
+      "source": "closeout-canonical"
+    },
+    {
+      "command": "pnpm run parity",
+      "conclusion": "success",
+      "source": "closeout-canonical"
+    },
+    {
+      "command": "node scripts/check-release-metadata.mjs",
+      "conclusion": "success",
+      "source": "closeout-canonical"
+    },
+    {
+      "command": "pnpm run pre-merge-gates",
+      "conclusion": "success",
+      "source": "closeout-canonical"
+    }
+  ],
+  "risks": [],
+  "publishArtifacts": [
+    {
+      "kind": "git-tag",
+      "ref": "v0.99.10",
+      "version": "0.99.10"
+    },
+    {
+      "kind": "npm",
+      "package": "@workflow-cannon/workspace-kit",
+      "version": "0.99.9",
+      "distTag": "latest"
+    }
+  ],
+  "taskDeliveryEvidence": [
+    {
+      "taskId": "T100498",
+      "title": "S0.1: Protect live SQLite from routine commits",
+      "phaseKey": "114",
+      "deliveryEvidence": {
+        "schemaVersion": 1,
+        "branchName": "feature/T100498-protect-live-sqlite",
+        "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/446",
+        "prNumber": 446,
+        "baseBranch": "release/phase-114",
+        "mergeSha": "4f9b5f5e18b3f7715e4d98740185132e8756a162",
+        "checks": [
+          {
+            "name": "pr-merged",
+            "conclusion": "success"
+          }
+        ],
+        "validationCommands": [
+          {
+            "command": "gh pr view 446 --json state",
+            "exitCode": 0
+          }
+        ]
+      },
+      "deliveryEvidenceSummary": {
+        "schemaVersion": 1,
+        "mode": null
+      },
+      "deliveryWaiver": null
+    },
+    {
+      "taskId": "T100499",
+      "title": "S0.2: Define non-authoritative exports",
+      "phaseKey": "114",
+      "deliveryEvidence": {
+        "schemaVersion": 1,
+        "branchName": "feature/T100499-non-authoritative-exports",
+        "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/447",
+        "prNumber": 447,
+        "baseBranch": "release/phase-114",
+        "mergeSha": "c868e53ff4cb5b67f6d6f6473cd9b0fbe3f827c2",
+        "checks": [
+          {
+            "name": "pr-merged",
+            "conclusion": "success"
+          }
+        ],
+        "validationCommands": [
+          {
+            "command": "gh pr view 447 --json state",
+            "exitCode": 0
+          }
+        ]
+      },
+      "deliveryEvidenceSummary": {
+        "schemaVersion": 1,
+        "mode": null
+      },
+      "deliveryWaiver": null
+    },
+    {
+      "taskId": "T100500",
+      "title": "S0.3: Add explicit DB backup and repair commands",
+      "phaseKey": "114",
+      "deliveryEvidence": {
+        "schemaVersion": 1,
+        "branchName": "feature/T100500-sqlite-backup-remediation",
+        "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/448",
+        "prNumber": 448,
+        "baseBranch": "release/phase-114",
+        "mergeSha": "bf6bfeb7d54e8dac8c86d8d9d1d462bb56b90bc9",
+        "checks": [
+          {
+            "name": "pr-merged",
+            "conclusion": "success"
+          }
+        ],
+        "validationCommands": [
+          {
+            "command": "gh pr view 448 --json state",
+            "exitCode": 0
+          }
+        ]
+      },
+      "deliveryEvidenceSummary": {
+        "schemaVersion": 1,
+        "mode": null
+      },
+      "deliveryWaiver": null
+    },
+    {
+      "taskId": "T100501",
+      "title": "S1.1: Define task event envelope",
+      "phaseKey": "114",
+      "deliveryEvidence": {
+        "schemaVersion": 1,
+        "branchName": "feature/T100501-task-event-envelope",
+        "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/449",
+        "prNumber": 449,
+        "baseBranch": "release/phase-114",
+        "mergeSha": "3fc75ad58dd23cd89f484f7bf0957e00fca6d38a",
+        "checks": [
+          {
+            "name": "pr-merged",
+            "conclusion": "success"
+          }
+        ],
+        "validationCommands": [
+          {
+            "command": "gh pr view 449 --json state",
+            "exitCode": 0
+          }
+        ]
+      },
+      "deliveryEvidenceSummary": {
+        "schemaVersion": 1,
+        "mode": null
+      },
+      "deliveryWaiver": null
+    },
+    {
+      "taskId": "T100502",
+      "title": "S1.2: Model lifecycle and mutation events",
+      "phaseKey": "114",
+      "deliveryEvidence": {
+        "schemaVersion": 1,
+        "branchName": "feature/T100502-lifecycle-mutation-events",
+        "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/450",
+        "prNumber": 450,
+        "baseBranch": "release/phase-114",
+        "mergeSha": "441cb56908c90cdd67cc9876af4e55bd93bf091c",
+        "checks": [
+          {
+            "name": "pr-merged",
+            "conclusion": "success"
+          }
+        ],
+        "validationCommands": [
+          {
+            "command": "gh pr view 450 --json state",
+            "exitCode": 0
+          }
+        ]
+      },
+      "deliveryEvidenceSummary": {
+        "schemaVersion": 1,
+        "mode": null
+      },
+      "deliveryWaiver": null
+    },
+    {
+      "taskId": "T100503",
+      "title": "S1.3: Build deterministic event applier",
+      "phaseKey": "114",
+      "deliveryEvidence": {
+        "schemaVersion": 1,
+        "branchName": "feature/T100503-deterministic-event-applier",
+        "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/451",
+        "prNumber": 451,
+        "baseBranch": "release/phase-114",
+        "mergeSha": "5fc361013836365805e136c1bd2d0dcdbec8ec0c",
+        "checks": [
+          {
+            "name": "pr-merged",
+            "conclusion": "success"
+          }
+        ],
+        "validationCommands": [
+          {
+            "command": "gh pr view 451 --json state",
+            "exitCode": 0
+          }
+        ]
+      },
+      "deliveryEvidenceSummary": {
+        "schemaVersion": 1,
+        "mode": null
+      },
+      "deliveryWaiver": null
+    },
+    {
+      "taskId": "T100504",
+      "title": "S1.4: Add event validation and compatibility tests",
+      "phaseKey": "114",
+      "deliveryEvidence": {
+        "schemaVersion": 1,
+        "branchName": "feature/T100504-event-validation-compatibility",
+        "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/452",
+        "prNumber": 452,
+        "baseBranch": "release/phase-114",
+        "mergeSha": "d1758cfbaa706030cfcdc9abda1a78d5c9942566",
+        "checks": [
+          {
+            "name": "pr-merged",
+            "conclusion": "success"
+          }
+        ],
+        "validationCommands": [
+          {
+            "command": "gh pr view 452 --json state",
+            "exitCode": 0
+          }
+        ]
+      },
+      "deliveryEvidenceSummary": {
+        "schemaVersion": 1,
+        "mode": null
+      },
+      "deliveryWaiver": null
+    },
+    {
+      "taskId": "T100505",
+      "title": "S2.1: Add projection metadata table",
+      "phaseKey": "114",
+      "deliveryEvidence": {
+        "schemaVersion": 1,
+        "branchName": "feature/T100505-projection-metadata-table",
+        "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/453",
+        "prNumber": 453,
+        "baseBranch": "release/phase-114",
+        "mergeSha": "c46ccd2747c0afb073faa16055ed969e76f48c54",
+        "checks": [
+          {
+            "name": "pr-merged",
+            "conclusion": "success"
+          }
+        ],
+        "validationCommands": [
+          {
+            "command": "gh pr view 453 --json state",
+            "exitCode": 0
+          }
+        ]
+      },
+      "deliveryEvidenceSummary": {
+        "schemaVersion": 1,
+        "mode": null
+      },
+      "deliveryWaiver": null
+    },
+    {
+      "taskId": "T100506",
+      "title": "S2.2: Implement rebuild-cache command",
+      "phaseKey": "114",
+      "deliveryEvidence": {
+        "schemaVersion": 1,
+        "branchName": "feature/T100506-rebuild-task-state-cache",
+        "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/454",
+        "prNumber": 454,
+        "baseBranch": "release/phase-114",
+        "mergeSha": "51dddf380edf06c71b02a73332b5240401525ff2",
+        "checks": [
+          {
+            "name": "pr-merged",
+            "conclusion": "success"
+          }
+        ],
+        "validationCommands": [
+          {
+            "command": "gh pr view 454 --json state",
+            "exitCode": 0
+          }
+        ]
+      },
+      "deliveryEvidenceSummary": {
+        "schemaVersion": 1,
+        "mode": null
+      },
+      "deliveryWaiver": null
+    },
+    {
+      "taskId": "T100507",
+      "title": "S2.3: Implement incremental apply-events command",
+      "phaseKey": "114",
+      "deliveryEvidence": {
+        "schemaVersion": 1,
+        "branchName": "feature/T100507-apply-task-state-events",
+        "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/455",
+        "prNumber": 455,
+        "baseBranch": "release/phase-114",
+        "mergeSha": "216894eb4ed164056f15a2ee2d37975b2c6d6120",
+        "checks": [
+          {
+            "name": "pr-merged",
+            "conclusion": "success"
+          }
+        ],
+        "validationCommands": [
+          {
+            "command": "gh pr view 455 --json state",
+            "exitCode": 0
+          }
+        ]
+      },
+      "deliveryEvidenceSummary": {
+        "schemaVersion": 1,
+        "mode": null
+      },
+      "deliveryWaiver": null
+    },
+    {
+      "taskId": "T100508",
+      "title": "S2.4: Add cache corruption repair path",
+      "phaseKey": "114",
+      "deliveryEvidence": {
+        "schemaVersion": 1,
+        "branchName": "feature/T100508-repair-task-state-cache",
+        "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/456",
+        "prNumber": 456,
+        "baseBranch": "release/phase-114",
+        "mergeSha": "8f74c4111dbef871c07b2bd4b763ba8505c0a6be",
+        "checks": [
+          {
+            "name": "pr-merged",
+            "conclusion": "success"
+          }
+        ],
+        "validationCommands": [
+          {
+            "command": "gh pr view 456 --json state",
+            "exitCode": 0
+          }
+        ]
+      },
+      "deliveryEvidenceSummary": {
+        "schemaVersion": 1,
+        "mode": null
+      },
+      "deliveryWaiver": null
+    }
+  ],
+  "followUpScan": {
+    "scannedAt": "2026-05-27T01:30:00.000Z",
+    "rationale": "phase-closeout-readiness passed; 11/11 phase 114 tasks completed"
+  },
+  "followUpTasks": [],
+  "followUpSummary": {
+    "count": 0,
+    "scannedAt": "2026-05-27T01:30:00.000Z",
+    "rationale": "phase-closeout-readiness passed; 11/11 phase 114 tasks completed"
+  }
+}
