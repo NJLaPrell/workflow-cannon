@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workflow-cannon.dev/schemas/planning/plan-artifact-wbs-item.v1.json",
+  "title": "PlanArtifact v1 WBS item",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "wbsId",
+    "title",
+    "goalMapping",
+    "suggestedTaskTitle",
+    "approach",
+    "technicalScope",
+    "acceptanceCriteria",
+    "testingVerification",
+    "dependsOn",
+    "sizingConfidence",
+    "doneMeans",
+    "generatedTaskPayload"
+  ],
+  "properties": {
+    "wbsId": { "type": "string", "minLength": 1 },
+    "path": { "type": "string" },
+    "title": { "type": "string", "minLength": 1 },
+    "goalMapping": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "suggestedTaskTitle": { "type": "string", "minLength": 1 },
+    "approach": { "type": "string", "minLength": 1 },
+    "technicalScope": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "minItems": 1
+    },
+    "acceptanceCriteria": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "minItems": 1
+    },
+    "testingVerification": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "minItems": 1
+    },
+    "dependsOn": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "recommendedPhase": { "type": "string" },
+    "recommendedOrder": { "type": "integer" },
+    "sizingConfidence": {
+      "type": "string",
+      "enum": ["high", "medium", "low"]
+    },
+    "riskNotes": { "type": "string" },
+    "doneMeans": { "type": "string", "minLength": 1 },
+    "generatedTaskPayload": {
+      "$ref": "#/$defs/generatedTaskPayload"
+    }
+  },
+  "$defs": {
+    "generatedTaskPayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["title", "approach", "technicalScope", "acceptanceCriteria"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^T[0-9]+$" },
+        "title": { "type": "string", "minLength": 1 },
+        "type": { "type": "string" },
+        "priority": { "type": "string", "enum": ["P1", "P2", "P3"] },
+        "phase": { "type": "string" },
+        "phaseKey": { "type": "string" },
+        "approach": { "type": "string", "minLength": 1 },
+        "technicalScope": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "minItems": 1
+        },
+        "acceptanceCriteria": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "minItems": 1
+        },
+        "dependsOn": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "status": { "type": "string", "enum": ["proposed", "ready"] }
+      }
+    }
+  }
+}
