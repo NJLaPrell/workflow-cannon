@@ -35,7 +35,7 @@ describe("plan-artifact WBS normalizer stub", () => {
   });
 
   it("normalizeWbsItemToTaskDraft returns persist-compatible draft", () => {
-    const wbs = minimalPlan.wbs[0];
+    const wbs = { ...minimalPlan.wbs[0], path: "1" };
     const result = normalizeWbsItemToTaskDraft(wbs, context);
     assert.equal(result.ok, true);
     if (!result.ok) return;
@@ -43,7 +43,11 @@ describe("plan-artifact WBS normalizer stub", () => {
     assert.ok(result.draft.phase?.includes("110"));
     assert.ok(result.draft.technicalScope.length > 0);
     assert.ok(result.draft.acceptanceCriteria.length > 0);
+    assert.equal(result.draft.metadata.planRef, minimalPlan.planRef);
+    assert.equal(result.draft.metadata.planningProvenance.wbsId, "WBS-1");
+    assert.equal(result.draft.metadata.planningProvenance.wbsPath, "1");
     assert.equal(result.planningProvenance.wbsId, "WBS-1");
+    assert.equal(result.planningProvenance.wbsPath, "1");
     assert.equal(result.planningProvenance.planRef, minimalPlan.planRef);
   });
 
