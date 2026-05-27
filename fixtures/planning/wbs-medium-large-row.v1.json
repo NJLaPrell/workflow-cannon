@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "planId": "b2c3d4e5-f6a7-4890-b123-456789abcdef",
+  "version": 1,
+  "planRef": "plan-artifact:b2c3d4e5-f6a7-4890-b123-456789abcdef",
+  "status": "draft",
+  "identity": {
+    "title": "Sizing fixture — medium confidence large WBS row",
+    "planningType": "change",
+    "summary": "RUBRIC-WBS-MEDIUM-LARGE review fixture"
+  },
+  "goals": ["Review engine warns on medium-confidence large WBS rows"],
+  "nonGoals": ["Dashboard UI"],
+  "valueAssessment": { "impact": "Test coverage", "confidence": "high" },
+  "riskAssessment": [],
+  "technicalImpact": { "systemsTouched": ["src/core/planning"] },
+  "testingStrategy": {
+    "layers": ["unit"],
+    "criticalPaths": ["reviewPlanArtifact sizing rules"]
+  },
+  "implementationGuidance": ["Use in test/review-plan-artifact-sizing.test.mjs"],
+  "whatNotToDo": ["Do not treat as production plan"],
+  "assumptions": ["Minimal profile sufficient for sizing-only assertions"],
+  "openQuestions": [],
+  "wbs": [
+    {
+      "wbsId": "WBS-1",
+      "title": "Medium-large row",
+      "goalMapping": ["Review engine warns on medium-confidence large WBS rows"],
+      "suggestedTaskTitle": "Medium-large row task",
+      "approach": "Nine combined scope and AC bullets with medium sizing",
+      "technicalScope": [
+        "scope bullet 01",
+        "scope bullet 02",
+        "scope bullet 03",
+        "scope bullet 04",
+        "scope bullet 05"
+      ],
+      "acceptanceCriteria": [
+        "acceptance criterion bullet one is long enough",
+        "acceptance criterion bullet two is long enough",
+        "acceptance criterion bullet three is long enough",
+        "acceptance criterion bullet four is long enough"
+      ],
+      "testingVerification": ["unit tests verify RUBRIC-WBS-MEDIUM-LARGE warning"],
+      "dependsOn": [],
+      "sizingConfidence": "medium",
+      "doneMeans": "Fixture documents RUBRIC-WBS-MEDIUM-LARGE warning for CI",
+      "generatedTaskPayload": {
+        "title": "Medium-large row task",
+        "approach": "Nine combined scope and AC bullets with medium sizing",
+        "technicalScope": ["scope bullet 01"],
+        "acceptanceCriteria": ["acceptance criterion bullet one is long enough"]
+      }
+    }
+  ],
+  "phaseRecommendations": [
+    { "phaseKey": "110", "label": "Phase 110", "rationale": "Planner tranche", "isPrimary": true }
+  ],
+  "provenance": {
+    "createdAt": "2026-05-27T15:00:00.000Z",
+    "updatedAt": "2026-05-27T15:00:00.000Z",
+    "createdBy": "fixture",
+    "source": "draft-plan-artifact"
+  }
+}

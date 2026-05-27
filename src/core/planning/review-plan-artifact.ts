@@ -593,7 +593,7 @@ export function reviewPlanArtifact(
   );
   blockers.push(...coverageBlockers);
 
-  const sizingFindings = warnings.filter(
+  const sizingFindings = [...blockers, ...warnings].filter(
     (f) => f.wbsId && f.code.startsWith("RUBRIC-WBS-")
   );
 
