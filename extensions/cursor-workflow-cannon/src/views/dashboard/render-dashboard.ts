@@ -3053,6 +3053,46 @@ function renderPlanArtifactDraftPanel(planArtifact: unknown): string {
         "</div>" +
         "</div>"
       : "";
+  const hasBlockingReviewFinding = reviewFindings.some((finding) => {
+    const findingRow = finding && typeof finding === "object" ? (finding as Record<string, unknown>) : {};
+    const severity = String(findingRow.severity ?? findingRow.level ?? "").trim().toLowerCase();
+    return severity === "blocker" || severity === "error";
+  });
+  const canAccept =
+    planId.length > 0 &&
+    planRef.length > 0 &&
+    Number.isFinite(version) &&
+    version > 0 &&
+    statusRaw === "reviewed" &&
+    !hasBlockingReviewFinding &&
+    Number.isFinite(openQuestions) &&
+    openQuestions === 0;
+  const acceptDisabledReason =
+    statusRaw !== "reviewed"
+      ? "Review must pass before accepting this plan."
+      : hasBlockingReviewFinding
+        ? "Review blockers must be resolved before accepting this plan."
+        : Number.isFinite(openQuestions) && openQuestions > 0
+          ? "Open questions must be resolved or deferred before accepting this plan."
+          : planId.length === 0 || planRef.length === 0 || !Number.isFinite(version) || version <= 0
+            ? "Plan identity is incomplete."
+            : "Accept this reviewed plan.";
+  const acceptActionHtml =
+    statusRaw === "accepted" || statusRaw === "finalized"
+      ? ""
+      : '<div class="wc-plan-artifact-actions">' +
+        '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="plan-artifact-accept" data-plan-id="' +
+        escapeHtmlAttr(planId) +
+        '" data-plan-ref="' +
+        escapeHtmlAttr(planRef) +
+        '" data-plan-version="' +
+        escapeHtmlAttr(Number.isFinite(version) ? String(version) : "") +
+        '" title="' +
+        escapeHtmlAttr(acceptDisabledReason) +
+        '"' +
+        (canAccept ? "" : " disabled") +
+        ">Accept</button>" +
+        "</div>";
   return (
     '<section class="dash-card wc-plan-artifact" aria-label="Plan draft">' +
     '<div class="wc-plan-artifact-head">' +
@@ -3086,6 +3126,7 @@ function renderPlanArtifactDraftPanel(planArtifact: unknown): string {
     "</div>" +
     reviewHtml +
     wbsHtml +
+    acceptActionHtml +
     "</section>"
   );
 }

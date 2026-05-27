@@ -1033,6 +1033,15 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
           await this.onDashboardAcceptProposedBatch(taskIds, label, phaseKey || undefined);
         }
       }
+      if (msg?.type === "acceptPlanArtifact") {
+        const planId = typeof msg.planId === "string" ? msg.planId.trim() : "";
+        const planRef = typeof msg.planRef === "string" ? msg.planRef.trim() : "";
+        const versionRaw = typeof msg.version === "string" ? msg.version.trim() : "";
+        const version = Number(versionRaw);
+        if (planId && planRef && Number.isFinite(version) && version > 0) {
+          await this.onAcceptPlanArtifact(planId, planRef, Math.floor(version));
+        }
+      }
       if (msg?.type === "openTaskDetail") {
         const tid = typeof msg.taskId === "string" ? msg.taskId.trim() : "";
         if (tid.length > 0) {
@@ -2379,6 +2388,36 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
     return { ok: true };
+  }
+
+  private async onAcceptPlanArtifact(planId: string, planRef: string, version: number): Promise<void> {
+    const approvedBy =
+      process.env.GIT_AUTHOR_EMAIL || process.env.USER || process.env.USERNAME || "dashboard-operator";
+    const r = await this.client.run("accept-plan-artifact", {
+      planId,
+      approvalRecord: {
+        schemaVersion: 1,
+        confirmed: true,
+        approvedVersion: version,
+        approvedAt: new Date().toISOString(),
+        approvedBy,
+        planRef
+      },
+      policyApproval: dashboardPolicyApproval(
+        { workflowId: "plan-artifact", action: "accept", command: "accept-plan-artifact" },
+        { humanRationale: "Accept reviewed PlanArtifact from Dashboard", phaseKey: null, taskId: null }
+      ),
+      ...expectedPlanningGenerationArgs()
+    });
+    if (!r.ok) {
+      await vscode.window.showErrorMessage(
+        `Plan accept failed: ${(r.message ?? r.code ?? JSON.stringify(r)).slice(0, 520)}`
+      );
+      return;
+    }
+    ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
+    await vscode.window.showInformationMessage(`Accepted plan ${planId}.`);
+    await this.pushUpdate({ projection: "full", skipHeavyFetches: false });
   }
 
   /**
@@ -4194,6 +4233,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     .wc-plan-artifact-stat b { font-variant-numeric: tabular-nums; }
     .wc-plan-artifact-label { color: var(--vscode-descriptionForeground, var(--vscode-foreground)); }
+    .wc-plan-artifact-actions { display: flex; justify-content: flex-end; gap: 6px; margin-top: 8px; }
     .wc-plan-subtitle { margin: 8px 0 4px 0; }
     .wc-plan-review-list, .wc-plan-wbs-list { display: flex; flex-direction: column; gap: 4px; }
     .wc-plan-review-row, .wc-plan-wbs-row {
