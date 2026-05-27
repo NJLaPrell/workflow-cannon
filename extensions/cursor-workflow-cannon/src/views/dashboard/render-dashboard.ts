@@ -2959,6 +2959,67 @@ function formatPlanningUpdatedAt(iso: string): string {
   }
 }
 
+function renderPlanArtifactDraftPanel(planArtifact: unknown): string {
+  if (!planArtifact || typeof planArtifact !== "object") {
+    return "";
+  }
+  const summary = planArtifact as Record<string, unknown>;
+  const current = summary.current;
+  if (!current || typeof current !== "object") {
+    return "";
+  }
+  const row = current as Record<string, unknown>;
+  const title = String(row.title ?? "").trim() || "Untitled Plan";
+  const planRef = String(row.planRef ?? "").trim();
+  const planId = String(row.planId ?? "").trim();
+  const statusRaw = String(row.status ?? "").trim();
+  const statusDisp = statusRaw.length > 0 ? humanizePlanningToken(statusRaw) : "Draft";
+  const planningTypeRaw = String(row.planningType ?? "").trim();
+  const planningType = planningTypeRaw.length > 0 ? humanizePlanningToken(planningTypeRaw) : "Planning";
+  const version = typeof row.version === "number" ? row.version : Number(row.version ?? 0);
+  const versionText = Number.isFinite(version) && version > 0 ? "v" + String(version) : "v?";
+  const wbsRows = typeof row.wbsRowCount === "number" ? row.wbsRowCount : Number(row.wbsRowCount ?? 0);
+  const openQuestions =
+    typeof row.openQuestionCount === "number" ? row.openQuestionCount : Number(row.openQuestionCount ?? 0);
+  const updatedAt = String(row.updatedAt ?? "").trim();
+  const updatedText = updatedAt.length > 0 ? formatPlanningUpdatedAt(updatedAt) : "—";
+  const heading = statusRaw === "draft" ? "Plan Draft" : "Plan Artifact";
+  const refLabel = planRef.length > 0 ? planRef : planId;
+  return (
+    '<section class="dash-card wc-plan-artifact" aria-label="Plan draft">' +
+    '<div class="wc-plan-artifact-head">' +
+    '<div class="wc-plan-artifact-main">' +
+    '<p class="wc-plan-artifact-title"><b>' +
+    escapeHtml(heading) +
+    "</b> · " +
+    escapeHtml(title) +
+    "</p>" +
+    '<p class="wc-plan-artifact-meta">' +
+    escapeHtml(planningType) +
+    " · " +
+    escapeHtml(versionText) +
+    (refLabel.length > 0 ? " · " + escapeHtml(refLabel) : "") +
+    "</p>" +
+    "</div>" +
+    '<span class="wc-plan-artifact-status">' +
+    escapeHtml(statusDisp) +
+    "</span>" +
+    "</div>" +
+    '<div class="wc-plan-artifact-stats" role="list">' +
+    '<span class="wc-plan-artifact-stat" role="listitem"><b>' +
+    escapeHtml(String(Number.isFinite(wbsRows) ? wbsRows : 0)) +
+    "</b> WBS rows</span>" +
+    '<span class="wc-plan-artifact-stat" role="listitem"><b>' +
+    escapeHtml(String(Number.isFinite(openQuestions) ? openQuestions : 0)) +
+    "</b> open questions</span>" +
+    '<span class="wc-plan-artifact-stat" role="listitem"><span class="wc-plan-artifact-label">Updated</span> ' +
+    escapeHtml(updatedText) +
+    "</span>" +
+    "</div>" +
+    "</section>"
+  );
+}
+
 function renderPlanningSession(ps: unknown, wizardPanel?: PlanningInterviewWizardPanel | null): string {
   const wizardHtml =
     wizardPanel !== undefined && wizardPanel !== null ? renderPlanningInterviewWizardPanel(wizardPanel) : "";
@@ -4810,7 +4871,7 @@ export function renderDashboardRootInnerHtml(
 
   const deferred = options?.deferredSections ?? new Set<DashboardSectionId>();
   const queueInner =
-    tasksBlock + wishlistSection + renderPlanningSession(planningSession, planningWizardPanel);
+    tasksBlock + wishlistSection + renderPlanArtifactDraftPanel(d.planArtifact) + renderPlanningSession(planningSession, planningWizardPanel);
   const phaseJournalInner = renderPhaseNotesOverviewSection(phaseJournal ?? null, d.phaseJournalStats);
 
   const overviewWrapped = wrapDashboardSection("overview", overviewContent, deferred.has("overview"));
