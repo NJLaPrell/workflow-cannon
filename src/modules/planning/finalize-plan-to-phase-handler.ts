@@ -9,12 +9,14 @@ import {
 } from "../../core/planning/index.js";
 import {
   readPlanArtifactVersion,
-  resolveLatestPlanArtifactVersion
+  resolveLatestPlanArtifactVersion,
+  writeNextPlanArtifactVersion
 } from "../../core/planning/plan-artifact-storage.js";
 import { openPlanningStores } from "../../core/planning/index.js";
 import { allocateNextTaskNumericId } from "../../core/planning/index.js";
 import { inferTaskPhaseKey } from "../task-engine/phase-resolution.js";
 import { reviewPlanningExecutionDraftGaps } from "../task-engine/planning-execution-draft-review.js";
+import { runTaskRowMutationCommands } from "../task-engine/commands/task-row-mutation-commands.js";
 import { buildTaskFromConversionPayload } from "../task-engine/mutation-utils.js";
 import type { TaskEntity, TaskStatus } from "../task-engine/types.js";
 import { attachPolicyMeta } from "../task-engine/attach-planning-response-meta.js";
@@ -67,8 +69,9 @@ function resolveApprovalTargetVersion(loaded: PlanArtifactV1): number {
   return loaded.version;
 }
 
-function buildReviewTasksForGaps(
+function buildFinalizeTasks(
   drafts: PlanningExecutionTaskDraft[],
+  wbsRows: PlanArtifactWbsItem[],
   existing: TaskEntity[],
   phaseKey: string,
   phaseLabel: string,
@@ -76,12 +79,38 @@ function buildReviewTasksForGaps(
 ): { ok: true; tasks: TaskEntity[] } | { ok: false; message: string } {
   const now = new Date().toISOString();
   let allocBase = [...existing];
-  const built: TaskEntity[] = [];
-  for (const draft of drafts) {
+  const assignedIds = new Map<string, string>();
+  const rowsWithIds = drafts.map((draft, index) => {
     const id = draft.id ?? allocateNextTaskNumericId(allocBase);
+    const wbsId = wbsRows[index]?.wbsId;
+    if (wbsId) {
+      assignedIds.set(wbsId, id);
+    }
+    const row = { ...draft, id };
+    allocBase = [
+      ...allocBase,
+      {
+        id,
+        title: draft.title,
+        type: draft.type ?? "workspace-kit",
+        status: desiredStatus,
+        createdAt: now,
+        updatedAt: now,
+        phase: phaseLabel,
+        phaseKey,
+        approach: draft.approach,
+        technicalScope: draft.technicalScope,
+        acceptanceCriteria: draft.acceptanceCriteria
+      }
+    ];
+    return row;
+  });
+
+  const built: TaskEntity[] = [];
+  for (const draft of rowsWithIds) {
     const row: Record<string, unknown> = {
       ...draft,
-      id,
+      dependsOn: draft.dependsOn?.map((dep) => assignedIds.get(dep) ?? dep),
       phase: phaseLabel,
       phaseKey,
       status: desiredStatus
@@ -97,7 +126,6 @@ function buildReviewTasksForGaps(
       phase: phaseLabel
     };
     built.push(task);
-    allocBase = [...allocBase, task];
   }
   return { ok: true, tasks: built };
 }
@@ -127,13 +155,6 @@ export async function runFinalizePlanToPhase(
   }
 
   const dryRun = args.dryRun !== false;
-  if (!dryRun) {
-    return {
-      ok: false,
-      code: "unsupported-command",
-      message: "finalize-plan-to-phase persist path ships in WP-6.5 (T100472+)"
-    };
-  }
 
   const stores = await openPlanningStores(ctx);
   const pg = planningGenPolicyGate(
@@ -309,8 +330,9 @@ export async function runFinalizePlanToPhase(
     desiredStatus
   );
 
-  const built = buildReviewTasksForGaps(
+  const built = buildFinalizeTasks(
     taskPreview,
+    wbsRows,
     stores.taskStore.getAllTasks(),
     proposal.phaseKey,
     proposal.label,
@@ -351,6 +373,108 @@ export async function runFinalizePlanToPhase(
         }
       }
     };
+  }
+
+  if (!dryRun) {
+    const persist = await runTaskRowMutationCommands(
+      {
+        name: "persist-planning-execution-drafts",
+        args: {
+          tasks: built.tasks,
+          planRef: loaded.planRef,
+          planningType: loaded.identity.planningType,
+          targetPhaseKey: proposal.phaseKey,
+          targetPhase: proposal.label,
+          desiredStatus,
+          expectedPlanningGeneration: args.expectedPlanningGeneration,
+          policyApproval: args.policyApproval,
+          clientMutationId: args.clientMutationId,
+          actor: args.actor
+        }
+      },
+      ctx,
+      stores,
+      stores.taskStore
+    );
+    if (!persist) {
+      return {
+        ok: false,
+        code: "unsupported-command",
+        message: "persist-planning-execution-drafts is unavailable"
+      };
+    }
+    if (!persist.ok) {
+      return persist;
+    }
+
+    const now = new Date().toISOString();
+    const finalized: PlanArtifactV1 = {
+      ...loaded,
+      status: "finalized",
+      taskGenerationPayloads: built.tasks.map((task) => ({
+        id: task.id,
+        title: task.title,
+        type: task.type,
+        priority: task.priority,
+        phase: task.phase,
+        phaseKey: task.phaseKey,
+        approach: task.approach ?? "",
+        technicalScope: task.technicalScope ?? [],
+        acceptanceCriteria: task.acceptanceCriteria ?? [],
+        dependsOn: task.dependsOn,
+        status: task.status === "ready" ? "ready" : "proposed"
+      })),
+      provenance: {
+        ...loaded.provenance,
+        updatedAt: now
+      }
+    };
+    const written = writeNextPlanArtifactVersion(ctx.workspacePath, finalized, {
+      effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined,
+      sqliteDb: stores.sqliteDual.getDatabase()
+    });
+    const persistData = (persist.data ?? {}) as Record<string, unknown>;
+    const result: ModuleCommandResult = {
+      ok: true,
+      code:
+        persist.code === "planning-execution-drafts-idempotent-replay"
+          ? "plan-artifact-finalize-idempotent-replay"
+          : "plan-artifact-finalize-persisted",
+      message: `Finalized plan ${planId} into ${built.tasks.length} task(s) for phase ${proposal.phaseKey}`,
+      data: {
+        schemaVersion: 1,
+        responseSchemaVersion: 1,
+        planId,
+        version: written.artifact.version,
+        planRef: loaded.planRef,
+        status: written.artifact.status,
+        dryRun: false,
+        phaseKey: proposal.phaseKey,
+        phaseProposal: proposal,
+        createdTasks: persistData.createdTasks,
+        count: persistData.count ?? built.tasks.length,
+        replayed: persistData.replayed === true,
+        storagePath: written.paths.artifactFileRelative(written.artifact.version),
+        delegatedCode: persist.code,
+        review: {
+          passed: true,
+          errorCount: 0,
+          warningCount: warningCount + phaseWarningCount,
+          findings: [...phaseFindings, ...batchFindings],
+          reviewProfile: "ux-cae-pre-persist-v1",
+          taskCount: built.tasks.length
+        },
+        planningGeneration: persistData.planningGeneration,
+        planningGenerationPolicy: persistData.planningGenerationPolicy
+      }
+    };
+    attachPolicyMeta(
+      result.data as Record<string, unknown>,
+      ctx,
+      stores.sqliteDual.getPlanningGeneration(),
+      pg.warnings
+    );
+    return result;
   }
 
   const result: ModuleCommandResult = {
