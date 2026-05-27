@@ -357,6 +357,8 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
       Object.keys(preserved).forEach(function(key) {
         var entry = preserved[key];
         if (!entry) return;
+        // Ready tasks change status often; replaying cached row HTML leaves completed work visible as open.
+        if (entry.category === 'ready') return;
         var bucket = root.querySelector(lazyQueueBucketSelector(entry.category, entry.phaseKey));
         if (!bucket || !bucketMetaMatches(bucket, entry)) return;
         var body = bucket.querySelector('.wc-lazy-bucket-body');
@@ -376,10 +378,15 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
   function reloadOpenLazyQueueBucketsAfterMetaChange(root, preserved) {
     if (!root) return;
     root.querySelectorAll('details.wc-lazy-queue-bucket[open]').forEach(function(d) {
-      var body = d.querySelector('.wc-lazy-bucket-body');
-      if (body && body.getAttribute('data-wc-lazy-loaded') === '1') return;
       var category = d.getAttribute('data-wc-queue-category') || '';
       var phaseKey = d.getAttribute('data-wc-phase-key') || '';
+      // Always refetch open Ready buckets after a queue patch (status transitions).
+      if (category === 'ready') {
+        requestLazyQueueBucketLoad(d);
+        return;
+      }
+      var body = d.querySelector('.wc-lazy-bucket-body');
+      if (body && body.getAttribute('data-wc-lazy-loaded') === '1') return;
       var entry = preserved && preserved[lazyBucketPreserveKey(category, phaseKey)];
       if (entry && bucketMetaMatches(d, entry) && entry.bodyHtml) return;
       requestLazyQueueBucketLoad(d);

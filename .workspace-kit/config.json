@@ -21,6 +21,8 @@
         "shadowPreflight": true
       }
     },
+    "currentPhaseLabel": "Phase 110",
+    "currentPhaseNumber": 110,
     "phaseDelivery": {
       "legacyDeliveredMaxOrdinal": 113
     }

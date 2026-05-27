@@ -71,6 +71,7 @@ export class DashboardRefreshController {
 
   notifyMutationEnd(): void {
     this.setSuppressed(false);
+    this.onDeferredCleared();
   }
 
   /** Schedule a refresh (debounced/coalesced). */
@@ -96,12 +97,10 @@ export class DashboardRefreshController {
 
   /** Immediate refresh (no debounce) — visibility, poll, post-mutation light refresh. */
   async pushNow(options?: { light?: boolean }): Promise<void> {
-    if (options?.light === true && this.pendingMode !== "full") {
-      this.pendingMode = "light";
-    } else if (options?.light !== true && this.pendingMode === "light") {
-      // keep light if already requested
-    } else if (options?.light === false) {
+    if (options?.light === false) {
       this.pendingMode = "full";
+    } else if (options?.light === true) {
+      this.pendingMode = this.pendingMode === "full" ? "full" : "light";
     }
     if (this.suppressed) {
       this.refreshAfterDeferred = true;
