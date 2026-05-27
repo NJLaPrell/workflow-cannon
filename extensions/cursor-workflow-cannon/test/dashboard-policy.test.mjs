@@ -22,6 +22,13 @@ test("resolveDashboardPolicyTierRow returns routine accept-single", () => {
   assert.equal(row.command, "run-transition");
 });
 
+test("resolveDashboardPolicyTierRow returns routine PlanArtifact accept", () => {
+  const row = tierMod.resolveDashboardPolicyTierRow("plan-artifact", "accept");
+  assert.ok(row);
+  assert.equal(row.tier, "routine");
+  assert.equal(row.command, "accept-plan-artifact");
+});
+
 test("buildDashboardPolicyApproval auto rationale for routine path", () => {
   const out = approvalMod.buildDashboardPolicyApproval({
     channel: "dashboard",
