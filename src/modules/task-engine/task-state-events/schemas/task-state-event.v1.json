@@ -36,6 +36,7 @@
               "recordedAt",
               "actor",
               "clientMutationId",
+              "expectedTaskVersion",
               "command",
               "workspace",
               "kind",

@@ -1,6 +1,11 @@
 import type { ModuleCommandResult, ModuleLifecycleContext } from "../../../contracts/module-contract.js";
 import { CLI_REMEDIATION_INSTRUCTIONS } from "../../../core/cli-remediation.js";
 import { validateTaskSkillAttachments } from "../../../core/skills/task-skill-validation.js";
+import { isGitTaskStateCanonicalAuthority } from "../persistence/task-state-canonical-authority.js";
+import {
+  finalizeCanonicalCreateTask,
+  finalizeCanonicalUpdateTask
+} from "../persistence/task-state-canonical-mutation-hook.js";
 import { attachPolicyMeta } from "../attach-planning-response-meta.js";
 import { collectUnknownFeatureSlugWarnings } from "../feature-slug-validation.js";
 import {
@@ -543,7 +548,26 @@ export async function runTaskRowMutationCommands(
     if (strictIssue) {
       return { ok: false, code: "strict-task-validation-failed", message: strictIssue };
     }
-    await store.save(planningConcurrencySaveOpts(args as Record<string, unknown>));
+    const gitCanonical = isGitTaskStateCanonicalAuthority(ctx);
+    if (!gitCanonical) {
+      await store.save(planningConcurrencySaveOpts(args as Record<string, unknown>));
+    }
+    const canonicalCreate = await finalizeCanonicalCreateTask({
+      ctx,
+      store,
+      planning,
+      task,
+      commandName: command.name,
+      clientMutationId,
+      actor,
+      policyApproval: args.policyApproval as { confirmed: boolean; rationale: string } | undefined
+    });
+    if (canonicalCreate && !canonicalCreate.ok) {
+      return canonicalCreate;
+    }
+    if (gitCanonical) {
+      await store.load();
+    }
     const createdData: Record<string, unknown> = { task };
     if (intakeCreate.intakePayload.enforcementMode !== "off") {
       createdData.taskIntake = intakeCreate.intakePayload;
@@ -1057,7 +1081,27 @@ export async function runTaskRowMutationCommands(
     if (strictIssue) {
       return { ok: false, code: "strict-task-validation-failed", message: strictIssue };
     }
-    await store.save(planningConcurrencySaveOpts(args as Record<string, unknown>));
+    const gitCanonicalUpd = isGitTaskStateCanonicalAuthority(ctx);
+    if (!gitCanonicalUpd) {
+      await store.save(planningConcurrencySaveOpts(args as Record<string, unknown>));
+    }
+    const canonicalUpd = await finalizeCanonicalUpdateTask({
+      ctx,
+      store,
+      planning,
+      task: updatedTask,
+      changedFields: Object.keys(updates),
+      commandName: "update-task",
+      clientMutationId,
+      actor,
+      policyApproval: args.policyApproval as { confirmed: boolean; rationale: string } | undefined
+    });
+    if (canonicalUpd && !canonicalUpd.ok) {
+      return canonicalUpd;
+    }
+    if (gitCanonicalUpd) {
+      await store.load();
+    }
     const updData: Record<string, unknown> = { task: updatedTask };
     attachPolicyMeta(updData, ctx, planning.sqliteDual.getPlanningGeneration(), [
       ...(pgUpd.warnings ?? []),

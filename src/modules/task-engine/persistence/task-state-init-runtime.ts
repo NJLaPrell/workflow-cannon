@@ -47,7 +47,7 @@ function maxEventSequence(events: TaskStateEventV1[]): {
   return { latestSequence, latestEventId };
 }
 
-function buildSnapshotContentFromSqlite(document: {
+export function buildSnapshotContentFromSqlite(document: {
   tasks: unknown[];
   transitionLog: unknown[];
   mutationLog?: unknown[];

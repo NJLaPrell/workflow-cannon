@@ -8,12 +8,29 @@ import {
   isGitRepository,
   resolveTaskStateGitRef
 } from "../task-state-git/git-io.js";
+import { gitShowText } from "../task-state-git/git-io.js";
+import {
+  resolveSnapshotContentRelativePath,
+  resolveSnapshotMetaRelativePath
+} from "../task-state-git/layout.js";
 import {
   readEventSegmentsJsonl,
   readTaskStateBranchLayout,
   segmentPathsThroughHead
 } from "../task-state-git/read-branch-layout.js";
+import {
+  documentFromSnapshotContent,
+  replayTailFromSnapshot,
+  type TaskStateSnapshotContentV1
+} from "../task-state-git/snapshot-projection.js";
+import { validateTaskStateGitSnapshotMeta } from "../task-state-git/validate-snapshot-meta.js";
+import { admitTaskStateEventStream } from "../task-state-events/event-admission.js";
 import { runRebuildTaskStateCache } from "./rebuild-task-state-cache-runtime.js";
+import {
+  openPlanningStoresForTaskStateCache,
+  persistTaskStateProjectionDocument,
+  upsertProjectionMetaAfterApply
+} from "./task-state-cache-runtime-shared.js";
 
 export async function runTaskStateHydrate(
   ctx: ModuleLifecycleContext,
@@ -115,22 +132,87 @@ export async function runTaskStateHydrate(
   const body = eventsRead.lines.length > 0 ? `${eventsRead.lines.join("\n")}\n` : "";
   fs.writeFileSync(logPath, body, "utf8");
 
-  const rebuild = await runRebuildTaskStateCache(ctx, {
-    eventLogRelativePath,
-    policyApproval: args.policyApproval
-  });
-
-  if (!rebuild.ok) {
-    return rebuild;
+  const rawEvents = eventsRead.lines.map((line) => JSON.parse(line) as unknown);
+  const admitted = admitTaskStateEventStream(rawEvents);
+  if (!admitted.ok) {
+    return {
+      ok: false,
+      code: "task-state-event-admission-rejected",
+      message: admitted.error.message,
+      data: { schemaVersion: 1, admissionCode: admitted.error.code }
+    };
   }
+
+  const snapshotId = layoutRead.layout.manifest.head.latestSnapshotId;
+  let hydrateMode: "full-replay" | "snapshot-plus-tail" = "full-replay";
+  let document: ReturnType<typeof documentFromSnapshotContent> | undefined;
+
+  if (snapshotId) {
+    const metaText = gitShowText(
+      ctx.workspacePath,
+      resolved.ref,
+      resolveSnapshotMetaRelativePath(snapshotId)
+    );
+    const contentText = gitShowText(
+      ctx.workspacePath,
+      resolved.ref,
+      resolveSnapshotContentRelativePath(snapshotId)
+    );
+    if (metaText && contentText) {
+      const metaParsed = validateTaskStateGitSnapshotMeta(JSON.parse(metaText) as unknown);
+      if (metaParsed.ok) {
+        const snapshotContent = JSON.parse(contentText) as TaskStateSnapshotContentV1;
+        const tailReplay = replayTailFromSnapshot({
+          snapshot: snapshotContent,
+          throughSequence: metaParsed.data.throughSequence,
+          tailEvents: admitted.events
+        });
+        if (tailReplay.ok) {
+          hydrateMode = "snapshot-plus-tail";
+          document = tailReplay.document;
+        }
+      }
+    }
+  }
+
+  if (hydrateMode === "full-replay") {
+    const rebuild = await runRebuildTaskStateCache(ctx, {
+      eventLogRelativePath,
+      policyApproval: args.policyApproval
+    });
+    if (!rebuild.ok) {
+      return rebuild;
+    }
+    return {
+      ok: true,
+      code: "task-state-hydrated",
+      message: "Hydrated local task-state cache from git branch and rebuilt projection",
+      data: {
+        ...preview,
+        hydrateMode,
+        rebuild: rebuild.data
+      }
+    };
+  }
+
+  const planning = await openPlanningStoresForTaskStateCache(ctx);
+  persistTaskStateProjectionDocument(planning, document!);
+  upsertProjectionMetaAfterApply(planning, {
+    appliedSequence: layoutRead.layout.manifest.head.latestSequence,
+    sourceCommit: resolved.tipSha,
+    syncStatus: "fresh",
+    updatedAt: new Date().toISOString()
+  });
 
   return {
     ok: true,
     code: "task-state-hydrated",
-    message: "Hydrated local task-state cache from git branch and rebuilt projection",
+    message: "Hydrated from latest snapshot plus tail events",
     data: {
       ...preview,
-      rebuild: rebuild.data
+      hydrateMode,
+      snapshotId,
+      taskCount: document!.tasks.length
     }
   };
 }

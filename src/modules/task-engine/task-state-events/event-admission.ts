@@ -86,6 +86,34 @@ function buildProjection(priorEvents: TaskStateEventV1[]):
   return { ok: true, projection };
 }
 
+function taskVersionForProjection(projection: TaskStateProjectionV1, taskId: string): number {
+  const rows = projection.taskVersions.filter((row) => row.taskId === taskId);
+  return rows.at(-1)?.version ?? 0;
+}
+
+function checkExpectedTaskVersion(
+  event: TaskStateEventV1,
+  projection: TaskStateProjectionV1
+): TaskStateEventAdmissionError | null {
+  const expected = (event as TaskStateEventV1 & { expectedTaskVersion?: number }).expectedTaskVersion;
+  if (expected === undefined) {
+    return null;
+  }
+  const taskId = payloadTaskId(event);
+  if (!taskId) {
+    return null;
+  }
+  const actual = taskVersionForProjection(projection, taskId);
+  if (actual !== expected) {
+    return {
+      code: "replay-conflict",
+      message: `expectedTaskVersion ${expected} does not match replayed version ${actual} for ${taskId}`,
+      details: ["stale-task-version"]
+    };
+  }
+  return null;
+}
+
 function checkLifecycleTransition(
   event: TaskStateEventV1,
   projection: TaskStateProjectionV1
@@ -209,6 +237,11 @@ export function admitTaskStateEvent(
   const lifecycleErr = checkLifecycleTransition(event, projectionResult.projection);
   if (lifecycleErr) {
     return { ok: false, error: lifecycleErr };
+  }
+
+  const versionErr = checkExpectedTaskVersion(event, projectionResult.projection);
+  if (versionErr) {
+    return { ok: false, error: versionErr };
   }
 
   const taskId = payloadTaskId(event);

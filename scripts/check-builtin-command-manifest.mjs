@@ -28,6 +28,8 @@ const KNOWN_POLICY_OPERATION_IDS = new Set([
   "tasks.task-state-hydrate",
   "tasks.task-state-init",
   "tasks.task-state-publish",
+  "tasks.task-state-snapshot",
+  "tasks.task-state-migrate-baseline",
   "tasks.synthesize-transcript-churn",
   "approvals.review-item",
   "improvement.generate-recommendations",
