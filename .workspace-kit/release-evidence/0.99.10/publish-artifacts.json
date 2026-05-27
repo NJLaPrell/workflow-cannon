@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "fragmentKind": "publishArtifacts",
+  "version": "0.99.10",
+  "publishArtifacts": [
+    {
+      "kind": "git-tag",
+      "ref": "v0.99.10",
+      "version": "0.99.10"
+    },
+    {
+      "kind": "npm",
+      "package": "@workflow-cannon/workspace-kit",
+      "version": "0.99.9",
+      "distTag": "latest"
+    }
+  ],
+  "degraded": [
+    "GitHub release not found for v0.99.10 (gh auth or unpublished)"
+  ]
+}
