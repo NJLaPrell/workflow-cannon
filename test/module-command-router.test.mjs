@@ -141,6 +141,7 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
     "task-persistence-readiness",
     "task-state-hydrate",
     "task-state-init",
+    "task-state-publish",
     "task-state-status",
     "task-state-verify",
     "unblock-task",

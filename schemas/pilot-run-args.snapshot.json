@@ -97,6 +97,7 @@
     "task-persistence-readiness",
     "task-state-hydrate",
     "task-state-init",
+    "task-state-publish",
     "task-state-status",
     "task-state-verify",
     "unblock-task",
@@ -1792,6 +1793,42 @@
         },
         "snapshotId": {
           "type": "string"
+        },
+        "policyApproval": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "task-state-publish": {
+      "type": "object",
+      "required": ["events", "expectedHeadSha", "expectedTaskVersions"],
+      "properties": {
+        "dryRun": {
+          "type": "boolean"
+        },
+        "events": {
+          "type": "array",
+          "minItems": 1
+        },
+        "expectedHeadSha": {
+          "type": "string"
+        },
+        "expectedTaskVersions": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer"
+          }
+        },
+        "branch": {
+          "type": "string"
+        },
+        "maxAttempts": {
+          "type": "integer"
+        },
+        "push": {
+          "type": "boolean"
         },
         "policyApproval": {
           "type": "object",
