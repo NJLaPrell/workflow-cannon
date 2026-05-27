@@ -281,6 +281,21 @@ T-8.2 → A-E2E ───────────────────→ WP-
 | T-0.1 | **Inventory planning surface area.** Grep and document touch points: `src/modules/planning/`, `src/core/planning/`, `build-plan` session file, wishlist artifact, `persist-planning-execution-drafts`, dashboard `planningSession`, extension planning wizard panel. | — | Read-only recon | **`A-INV`** written (table: path, role, gap note). |
 | T-0.2 | **Baseline health.** From repo root: `pnpm run wk doctor`, `pnpm run build`, `pnpm run test`. Record pre-existing failures separately. | — | Shell only | Baseline captured; doctor + build + test executed. |
 
+#### A-INV — planning surface inventory (T-0.1)
+
+| Path | Current role | Gap note vs `PLANNER.md` |
+| --- | --- | --- |
+| `src/modules/planning/index.ts` | Owns `build-plan` command flow, question handling, output shaping, and preview/delegation into task-engine draft persistence. | No first-class PlanArtifact lifecycle commands (`draft/review/accept/finalize`) yet; planning remains `build-plan` centric. |
+| `src/modules/planning/build-plan-execution-drafts.ts` | Normalizes multi-task execution drafts from planning answers for preview/persist flows. | WBS normalization is not yet modeled as PlanArtifact v1 with explicit provenance and review state. |
+| `src/modules/planning/build-plan-output-helpers.ts` | Produces planning snapshots, guidance, and CLI-facing output envelopes for `build-plan`. | Helpers target interview completion, not deterministic plan review rubric outcomes. |
+| `src/core/planning/build-plan-session-file.ts` | Persists and restores `build-plan` session snapshots used by dashboard resume and operator continuity. | Session snapshot tracks interview progress only; it is not an approved, versioned plan artifact source of truth. |
+| `src/modules/task-engine/instructions/review-planning-execution-drafts.md` | Defines review contract for execution-task draft batches before persistence. | Review shape focuses task rows; missing dedicated plan-level completeness checks from `PLANNER.md` (architecture/UI/risk/assumption coverage). |
+| `src/modules/task-engine/instructions/persist-planning-execution-drafts.md` | Persists execution drafts atomically into task-engine rows with planning metadata and concurrency guards. | Strong final materialization path exists, but no upstream accepted PlanArtifact gate currently enforces finalize prerequisites. |
+| `src/modules/task-engine/dashboard/dashboard-summary-projection.ts` | Builds dashboard summary payloads, including current planning-session snapshot surfaces consumed by the extension. | Dashboard payload does not yet expose full PlanArtifact lifecycle state (review findings, acceptance record, finalize preview). |
+| `extensions/cursor-workflow-cannon/src/views/dashboard/DashboardViewProvider.ts` | Extension host wiring for dashboard actions, including planning interview prompts and planning-generation cache integration. | Dashboard workflow is still interview/task oriented; no dedicated end-to-end PlanArtifact UX state machine yet. |
+| `extensions/cursor-workflow-cannon/src/views/dashboard/render-dashboard.ts` | Renders dashboard planning session and wizard panel UI sections shown to operators. | UI does not yet center on draft/review/accept/finalize lifecycle and WBS completeness surfaces called out in `PLANNER.md`. |
+| `extensions/cursor-workflow-cannon/src/views/dashboard/dashboard-webview-client.ts` | Handles webview interaction locks and dashboard patch/apply behavior for planning and other tabs. | Client lock model is ready for richer flows, but no PlanArtifact-specific interaction model is implemented yet. |
+
 ---
 
 ### WP-A — Human-reviewed decision artifacts (produce before heavy implementation)
