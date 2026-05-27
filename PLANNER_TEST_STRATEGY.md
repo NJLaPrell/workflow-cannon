@@ -76,6 +76,16 @@ test/fixtures/planning/                   # optional mirror for tests that cwd f
 
 **Human checklist (A-E2E, T-8.2):** Operator runs same steps in Dashboard; record pass/fail in phase journal — not required for CI green.
 
+### A-E2E human checklist draft
+
+- [ ] Draft: create or import a PlanArtifact and confirm the Dashboard Plan Draft panel shows title, status, open questions, review findings, and WBS preview.
+- [ ] Review: run `review-plan-artifact` or the equivalent dashboard flow and confirm blockers/warnings are visible before acceptance.
+- [ ] Accept: approve a reviewed, blocker-free PlanArtifact and confirm the dashboard hides Accept and exposes Finalize.
+- [ ] Blocked path: attempt finalize before accept and confirm `plan-artifact-not-accepted` is shown without creating tasks.
+- [ ] Finalize preview: dry-run finalize and confirm task preview rows and review status are present.
+- [ ] Finalize persist: persist finalize into a target phase and confirm ready Queue rows carry the PlanArtifact `planRef`.
+- [ ] Refresh: refresh dashboard summary and confirm `planArtifact.status` is `finalized` and the Queue can be filtered to the target phase.
+
 ---
 
 ## 5. Blocked-path cases (required)
