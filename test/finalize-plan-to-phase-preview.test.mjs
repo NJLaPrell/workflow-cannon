@@ -11,6 +11,7 @@ import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
 
 import { planningModule } from "../dist/index.js";
+import { readLatestPlanArtifact } from "../dist/core/planning/plan-artifact-storage.js";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const fixturesDir = path.join(repoRoot, "fixtures", "planning");
@@ -143,5 +144,51 @@ describe("finalize-plan-to-phase dry-run (T100471)", () => {
     assert.equal(preview.data.taskPreview.length, artifact.wbs.length);
     assert.equal(preview.data.review.passed, true);
     assert.equal(accepted.data.version, 2);
+  });
+
+  it("persists reviewed task drafts and marks the plan finalized (T100472)", async () => {
+    const workspace = await tmpWorkspace();
+    const artifact = freshArtifact(loadFixture("plan-artifact-full-feature.valid.v1.json"));
+    artifact.openQuestions = [];
+    enrichWbsForBatchReview(artifact);
+    const draft = await draftPersist(workspace, artifact);
+    const accepted = await acceptPlan(
+      workspace,
+      draft.data.planId,
+      artifact,
+      draft.data.planningGeneration ?? 0
+    );
+
+    const persisted = await planningModule.onCommand(
+      {
+        name: "finalize-plan-to-phase",
+        args: {
+          planId: draft.data.planId,
+          dryRun: false,
+          targetPhaseKey: "111",
+          targetPhase: "Phase 111",
+          desiredStatus: "ready",
+          expectedPlanningGeneration: accepted.data.planningGeneration,
+          clientMutationId: `finalize-${artifact.planId}`,
+          policyApproval: { confirmed: true, rationale: "persist finalize preview fixture" }
+        }
+      },
+      { runtimeVersion: "0.1", workspacePath: workspace, effectiveConfig: SQLITE_CFG }
+    );
+
+    assert.equal(persisted.ok, true, persisted.message);
+    assert.equal(persisted.code, "plan-artifact-finalize-persisted");
+    assert.equal(persisted.data.status, "finalized");
+    assert.equal(persisted.data.count, artifact.wbs.length);
+    assert.equal(persisted.data.createdTasks.length, artifact.wbs.length);
+    assert.equal(persisted.data.createdTasks[0].phaseKey, "111");
+    assert.equal(persisted.data.createdTasks[0].status, "ready");
+    assert.equal(persisted.data.createdTasks[0].metadata.planRef, artifact.planRef);
+    assert.equal(persisted.data.createdTasks[0].metadata.planningProvenance.planId, artifact.planId);
+    assert.equal(persisted.data.version, 3);
+
+    const latest = readLatestPlanArtifact(workspace, artifact.planId);
+    assert.equal(latest?.status, "finalized");
+    assert.equal(latest?.taskGenerationPayloads?.length, artifact.wbs.length);
   });
 });
