@@ -171,7 +171,7 @@ Extension webview
 
 - Dashboard **never** writes plan files or task SQLite directly.
 - Plan lifecycle actions are thin wrappers over the same commands agents use in CI/terminal.
-- `planningSession` remains for `build-plan` resume until **A-COMPAT** retires primary UX (v1: both surfaces may appear).
+- `planningSession` remains for `build-plan` resume; v1 keeps both surfaces per **§8 (A-COMPAT)**.
 
 **`dashboard-summary.planArtifact` (planned fields):** `planId`, `version`, `status` (draft \| reviewed \| accepted \| finalized), `reviewSummary`, `openQuestionCount`, `wbsCount`, `phaseRecommendation`, `approvalState`, `sizingFindingCount` — exact schema in **A-SCHEMA** + T-7.1.
 
@@ -185,16 +185,85 @@ Extension webview
 
 ---
 
-## 8. Compatibility (high level — full note in T-A.7 / A-COMPAT)
+## 8. Compatibility and migration (**A-COMPAT**)
 
-| Legacy path | v1 behavior |
+**Artifact:** This section satisfies **A-COMPAT** (T-A.7). **Status:** Draft for human review.  
+**Implementation:** T-8.1 (`build-plan` shim) executes these decisions after **A-COMPAT** approval.
+
+### 8.1 Principles
+
+| Principle | Decision |
 | --- | --- |
-| `build-plan` interview | Remains; session snapshot in module-state + sidecar migration path. |
-| Wishlist finalize from `build-plan` | Still creates wishlist intake rows when configured. |
-| Multi-task decomposition preview | Still returns `taskOutputs` for `persist-planning-execution-drafts`. |
-| Dashboard planning wizard | Continues to drive `build-plan`; parallel PlanArtifact panels added (WP-7). |
+| **No silent break** | Existing `build-plan` scripts, dashboard wizard flows, and `persist-planning-execution-drafts` callers keep working in v1. |
+| **Dual path, single execution truth** | PlanArtifact and `build-plan` may both produce tasks; Task Engine remains authoritative; tasks link via `metadata.planRef` / provenance. |
+| **Prefer PlanArtifact for serious plans** | Multi-WBS, rubric-gated, phase-scoped plans use the draft → review → accept → finalize pipeline. |
+| **Wizard demotion is copy-only in v1** | Dashboard does not remove the guided wizard; it adds PlanArtifact panels and states the preferred path in UI copy. |
 
-**Preferred path for serious plans:** draft → review → accept → finalize (PlanArtifact pipeline). README and dashboard copy should state this without breaking existing scripts.
+### 8.2 What stays (unchanged behavior)
+
+| Surface | Stays as-is in v1 | Notes |
+| --- | --- | --- |
+| **`workspace-kit run build-plan`** | Full interview, resume, `outputMode` variants | Command name, argv shape, and JSON response codes remain stable unless T-8.1 adds **additive** fields only. |
+| **Session snapshot** | `.workspace-kit/planning/build-plan-session.json` + module-state row | `readBuildPlanSession` / `persistBuildPlanSession` (`src/core/planning/build-plan-session-file.ts`). |
+| **`dashboard-summary.planningSession`** | Redacted session for extension | No answer payload in summary; used for resume chip / wizard state. |
+| **`persist-planning-execution-drafts`** | Batch task creation from drafts | Still the only path that writes task rows from planning previews (PlanArtifact finalize **delegates** here). |
+| **`review-planning-execution-drafts`** | Pre-persist UX-CAE review on task rows | Unchanged; distinct from `review-plan-artifact` (plan-level rubric). |
+| **Wishlist intake from `build-plan`** | When `planning.wishlist` / finalize config enabled | Wishlist rows are intake, not execution tasks; not replaced by PlanArtifact in v1. |
+| **CAE planning lenses on `build-plan`** | Advisory activations | Coexist with PlanArtifact lenses (WP-2); neither path removes the other. |
+
+### 8.3 What bridges (shim / shared infrastructure)
+
+| Bridge | Behavior |
+| --- | --- |
+| **`build-plan` → task preview** | `outputMode: tasks` / `executionTaskDrafts` continues to emit draft-shaped rows; operators still run `persist-planning-execution-drafts` with `policyApproval`. PlanArtifact **finalize** calls the same persist path after accept. |
+| **Shared normalizer** | `normalizeWbsItemToTaskDraft()` (WP-6.3) converts PlanArtifact WBS items to the same draft shape `build-plan` previews use, so one review/persist stack serves both. |
+| **Shared `planRef`** | Pattern `planning:{type}:{iso}` from `build-plan` preserved; PlanArtifact assigns `planRef` at draft persist and copies to generated tasks. |
+| **Storage family** | PlanArtifact index rows use the same `UnifiedStateDb` / `persistModuleStateRow` pattern as build-plan session (§3). |
+| **Dashboard** | WP-7 adds `planArtifact` beside `planningSession` in `dashboard-summary`; wizard buttons unchanged, new plan panel for lifecycle. |
+| **README / agent docs** | State PlanArtifact as **preferred** for phase-scoped WBS; `build-plan` documented as **quick interview / legacy compat** (T-8.1). |
+
+### 8.4 What deprecates (wording only in v1 — no removal)
+
+| Item | v1 deprecation stance | Target (post–Phase 110) |
+| --- | --- | --- |
+| **Primary planning UX = wizard only** | Demoted in copy; not removed | Dashboard defaults may open PlanArtifact panel first after **A-UX** + operator feedback. |
+| **`build-plan` as sole source of phase WBS** | Discouraged for large plans | No argv removal until a major version with migration note. |
+| **Ad-hoc task JSON in chat** | Unchanged policy | Still not canonical; PlanArtifact reinforces structured source. |
+| **Repo-root planner markdown as runtime store** | `PLANNER_*.md` remain **design** artifacts only | Never read by CLI for mutations. |
+
+**Explicit non-deprecation in v1:** Removing `build-plan`, deleting `planningSession` from `dashboard-summary`, or breaking `test/planning-module.test.mjs` expectations.
+
+### 8.5 Operator-facing migration map
+
+```text
+Today (pre–PlanArtifact)                    v1 (both available)
+─────────────────────────────────────────────────────────────────
+build-plan interview → task preview    →    Same OR draft-plan-artifact → … → finalize
+persist-planning-execution-drafts      →    Same (both paths end here)
+Dashboard wizard                       →    Wizard + Plan lifecycle panel
+planningSession in summary             →    planningSession + planArtifact (when draft exists)
+```
+
+**When to use which:**
+
+| Operator goal | Use |
+| --- | --- |
+| Quick guided interview, single feature, familiar flow | `build-plan` + persist drafts |
+| Phase-scoped WBS, rubric, accept gate, provenance | PlanArtifact pipeline |
+| Wishlist-only intake | `build-plan` wishlist finalize (unchanged) |
+
+### 8.6 T-8.1 implementation checklist (after **A-COMPAT** approval)
+
+- [ ] `build-plan` tests in `test/planning-module.test.mjs` remain green.
+- [ ] Optional response field: `recommendedNextCommands[]` pointing to `draft-plan-artifact` when `outputMode` implies multi-task WBS (additive only).
+- [ ] Extension: wizard help text links to plan panel; no route removal.
+- [ ] No change to wishlist module contracts without separate task.
+
+### 8.7 Exit criteria (**A-COMPAT**)
+
+- [ ] Maintainer confirms no unintended breaking change for existing workspaces.
+- [ ] **A-UX** mockups align with dual-surface dashboard (T100443).
+- [ ] T-8.1 may start after sign-off.
 
 ---
 
