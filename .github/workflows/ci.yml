@@ -51,6 +51,9 @@ jobs:
       - name: Test
         run: pnpm run test:run
 
+      - name: PlanArtifact fixture gate
+        run: pnpm run test:plan-artifact-fixtures
+
       - name: Plugin fixture smoke (list-plugins / inspect-plugin)
         run: node scripts/ci-plugin-fixture-smoke.mjs
 
