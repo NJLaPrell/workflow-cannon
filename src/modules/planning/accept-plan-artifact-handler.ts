@@ -99,6 +99,14 @@ function parseVersion(raw: unknown): number | undefined {
   return undefined;
 }
 
+/** Version the approval record refers to (draft row), not the storage row after accept bumps version. */
+function resolveApprovalTargetVersion(loaded: PlanArtifactV1): number {
+  if (loaded.status === "accepted" && loaded.approvalRecord?.approvedVersion !== undefined) {
+    return loaded.approvalRecord.approvedVersion;
+  }
+  return loaded.version;
+}
+
 function sqliteDbRelativePath(workspacePath: string, effectiveConfig?: Record<string, unknown>): string {
   return planningSqliteDatabaseRelativePath({
     runtimeVersion: "0",
@@ -290,16 +298,18 @@ export async function runAcceptPlanArtifact(
     };
   }
 
-  if (approvalRecord.approvedVersion !== loaded.version) {
+  const approvalTargetVersion = resolveApprovalTargetVersion(loaded);
+  if (approvalRecord.approvedVersion !== approvalTargetVersion) {
     return {
       ok: false,
       code: "plan-artifact-version-mismatch",
-      message: `approvalRecord.approvedVersion ${approvalRecord.approvedVersion} does not match artifact version ${loaded.version}`,
+      message: `approvalRecord.approvedVersion ${approvalRecord.approvedVersion} does not match approval target version ${approvalTargetVersion}`,
       data: {
         schemaVersion: 1,
         responseSchemaVersion: 1,
         planId,
         version: loaded.version,
+        approvalTargetVersion,
         approvedVersion: approvalRecord.approvedVersion
       }
     };
@@ -314,7 +324,11 @@ export async function runAcceptPlanArtifact(
     };
   }
 
-  const digest = acceptPlanArtifactPersistDigest(planId, loaded.version, approvalRecord);
+  const digest = acceptPlanArtifactPersistDigest(
+    planId,
+    approvalRecord.approvedVersion,
+    approvalRecord
+  );
   const sqliteDb = stores.sqliteDual.getDatabase();
   const effectiveConfig = ctx.effectiveConfig as Record<string, unknown> | undefined;
 
@@ -342,7 +356,7 @@ export async function runAcceptPlanArtifact(
     loaded.status === "accepted" &&
     loaded.approvalRecord?.confirmed === true &&
     loaded.approvalRecord.approvedVersion === approvalRecord.approvedVersion &&
-    acceptPlanArtifactPersistDigest(planId, loaded.version, {
+    acceptPlanArtifactPersistDigest(planId, loaded.approvalRecord.approvedVersion, {
       schemaVersion: 1,
       confirmed: true,
       approvedVersion: loaded.approvalRecord.approvedVersion,
