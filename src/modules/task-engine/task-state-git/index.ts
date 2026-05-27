@@ -55,3 +55,17 @@ export {
   verifyTaskStateLayoutInWorkspace,
   verifyTaskStateLayoutOnDisk
 } from "./verify-layout.js";
+export {
+  GitTaskEventStore,
+  assignEventSequences,
+  detectTaskVersionConflict,
+  publishTaskStateEvents,
+  taskIdsTouchedByEvent,
+  taskVersionMapFromProjection
+} from "./publish-task-state-events.js";
+export type {
+  PublishTaskStateEventsFailure,
+  PublishTaskStateEventsInput,
+  PublishTaskStateEventsResult,
+  PublishTaskStateEventsSuccess
+} from "./publish-task-state-events.js";

@@ -27,6 +27,7 @@ const KNOWN_POLICY_OPERATION_IDS = new Set([
   "tasks.repair-task-state-cache",
   "tasks.task-state-hydrate",
   "tasks.task-state-init",
+  "tasks.task-state-publish",
   "tasks.synthesize-transcript-churn",
   "approvals.review-item",
   "improvement.generate-recommendations",

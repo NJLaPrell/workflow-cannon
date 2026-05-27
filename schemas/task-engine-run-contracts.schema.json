@@ -49,6 +49,7 @@
         "task-state-status",
         "task-state-hydrate",
         "task-state-init",
+        "task-state-publish",
         "task-state-verify",
         "batch-transition",
         "block-task",
@@ -208,6 +209,9 @@
         },
         "task-state-init": {
           "$ref": "#/$defs/contractTaskStateInit"
+        },
+        "task-state-publish": {
+          "$ref": "#/$defs/contractTaskStatePublish"
         },
         "task-state-verify": {
           "$ref": "#/$defs/contractTaskStateStatus"
@@ -3314,6 +3318,37 @@
                 "push": { "type": "boolean" },
                 "branch": { "type": "string" },
                 "snapshotId": { "type": "string" },
+                "policyApproval": { "type": "object", "additionalProperties": true }
+              }
+            },
+            "responseData": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          }
+        }
+      ]
+    },
+    "contractTaskStatePublish": {
+      "allOf": [
+        { "$ref": "#/$defs/contractBase" },
+        {
+          "properties": {
+            "args": {
+              "type": "object",
+              "additionalProperties": true,
+              "required": ["events", "expectedHeadSha", "expectedTaskVersions"],
+              "properties": {
+                "dryRun": { "type": "boolean" },
+                "events": { "type": "array", "minItems": 1 },
+                "expectedHeadSha": { "type": "string" },
+                "expectedTaskVersions": {
+                  "type": "object",
+                  "additionalProperties": { "type": "integer" }
+                },
+                "branch": { "type": "string" },
+                "maxAttempts": { "type": "integer" },
+                "push": { "type": "boolean" },
                 "policyApproval": { "type": "object", "additionalProperties": true }
               }
             },

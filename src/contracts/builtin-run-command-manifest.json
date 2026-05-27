@@ -990,6 +990,15 @@
   },
   {
     "moduleId": "task-engine",
+    "name": "task-state-publish",
+    "file": "task-state-publish.md",
+    "description": "Publish canonical task-state events to the git branch with optimistic push and conflict detection.",
+    "policyOperationId": "tasks.task-state-publish",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "task-engine",
     "name": "list-module-states",
     "file": "list-module-states.md",
     "description": "List unified SQLite module-state rows for diagnostics and migration verification.",
