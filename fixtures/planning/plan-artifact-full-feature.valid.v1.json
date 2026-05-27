@@ -65,7 +65,10 @@
       "wbsId": "WBS-1",
       "path": "1",
       "title": "Kit contract",
-      "goalMapping": ["Operators complete draft→accept→finalize in Dashboard"],
+      "goalMapping": [
+        "Operators complete draft→accept→finalize in Dashboard",
+        "US-1"
+      ],
       "suggestedTaskTitle": "dashboard-summary planArtifact contract",
       "approach": "Extend projection",
       "technicalScope": ["dashboard-summary-projection.ts"],

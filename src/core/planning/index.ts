@@ -104,3 +104,14 @@ export {
   type ValidatePlanArtifactResult,
   type ValidatePlanArtifactSuccess
 } from "./validate-plan-artifact.js";
+export {
+  resolvePlanArtifactReviewProfile,
+  reviewPlanArtifact,
+  type PlanArtifactCoverageMap,
+  type PlanArtifactCoverageSliceStatus,
+  type PlanArtifactReviewFinding,
+  type PlanArtifactReviewSeverity,
+  type PlanArtifactReviewWaiver,
+  type ReviewPlanArtifactOptions,
+  type ReviewPlanArtifactResult
+} from "./review-plan-artifact.js";
