@@ -22,7 +22,7 @@ import {
   readTaskStateBranchLayout,
   segmentPathsThroughHead
 } from "./read-branch-layout.js";
-import { readRemoteTaskVersionMap } from "./remote-projection-versions.js";
+import { readRemoteSnapshotProjection, readRemoteTaskVersionMap } from "./remote-projection-versions.js";
 import { resolveEventSegmentRelativePath } from "./layout.js";
 
 export type PublishTaskStateEventsInput = {
@@ -283,8 +283,15 @@ export async function publishTaskStateEvents(
 
     const headMoved = resolved.tipSha !== expectedHeadSha;
     const publishedEvents = assignEventSequences(input.events, layoutRead.layout.manifest.head);
-    const merged = [...remoteLoaded.events, ...publishedEvents];
-    const admitted = admitTaskStateEventStream(merged);
+    const initialProjection = readRemoteSnapshotProjection(
+      input.workspacePath,
+      resolved.ref,
+      resolved.tipSha
+    );
+    const admitted = admitTaskStateEventStream(publishedEvents, {
+      priorEvents: remoteLoaded.events,
+      initialProjection: initialProjection ?? undefined
+    });
     if (!admitted.ok) {
       return {
         ok: false,

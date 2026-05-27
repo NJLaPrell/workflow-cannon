@@ -27,6 +27,8 @@ export type TaskStateEventAdmissionError = {
 export type TaskStateEventAdmissionContext = {
   /** Events already admitted to the canonical stream (in sequence order). */
   priorEvents?: TaskStateEventV1[];
+  /** When the branch stores a bootstrap snapshot with no tail events yet, seed replay from snapshot. */
+  initialProjection?: TaskStateProjectionV1;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -65,10 +67,25 @@ function checkIdempotency(
   return null;
 }
 
-function buildProjection(priorEvents: TaskStateEventV1[]):
+function cloneProjection(projection: TaskStateProjectionV1): TaskStateProjectionV1 {
+  return {
+    ...projection,
+    tasksById: { ...projection.tasksById },
+    transitionLog: [...projection.transitionLog],
+    mutationLog: [...projection.mutationLog],
+    taskVersions: [...projection.taskVersions]
+  };
+}
+
+function buildProjection(
+  priorEvents: TaskStateEventV1[],
+  initialProjection?: TaskStateProjectionV1
+):
   | { ok: true; projection: TaskStateProjectionV1 }
   | { ok: false; error: TaskStateEventAdmissionError } {
-  let projection = createEmptyTaskStateProjection();
+  let projection = initialProjection
+    ? cloneProjection(initialProjection)
+    : createEmptyTaskStateProjection();
   for (const prior of priorEvents) {
     const applied = applyTaskStateEvent(projection, prior);
     if (!applied.ok) {
@@ -224,7 +241,7 @@ export function admitTaskStateEvent(
     return { ok: false, error: idempotencyErr };
   }
 
-  const projectionResult = buildProjection(priorEvents);
+  const projectionResult = buildProjection(priorEvents, context.initialProjection);
   if (!projectionResult.ok) {
     return { ok: false, error: projectionResult.error };
   }
@@ -265,7 +282,7 @@ export function admitTaskStateEvent(
 /** Admit a batch in deterministic sequence order (mutates nothing; validates append chain). */
 export function admitTaskStateEventStream(
   inputs: unknown[],
-  options?: { priorEvents?: TaskStateEventV1[] }
+  options?: { priorEvents?: TaskStateEventV1[]; initialProjection?: TaskStateProjectionV1 }
 ): { ok: true; events: TaskStateEventV1[] } | { ok: false; error: TaskStateEventAdmissionError } {
   const admitted: TaskStateEventV1[] = [...(options?.priorEvents ?? [])];
   const toAppend = [...inputs].sort((a, b) => {
@@ -278,7 +295,10 @@ export function admitTaskStateEventStream(
   });
 
   for (const input of toAppend) {
-    const result = admitTaskStateEvent(input, { priorEvents: admitted });
+    const result = admitTaskStateEvent(input, {
+      priorEvents: admitted,
+      initialProjection: options?.initialProjection
+    });
     if (!result.ok) {
       return result;
     }

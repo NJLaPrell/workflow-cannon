@@ -40,8 +40,6 @@ export function projectionFromSnapshotContent(content: TaskStateSnapshotContentV
       recordedAt: document.lastUpdated
     });
   }
-  const maxSeq = projection.transitionLog.length + projection.mutationLog.length;
-  projection.lastEventSequence = maxSeq;
   return projection;
 }
 
@@ -53,6 +51,7 @@ export function replayTailFromSnapshot(input: {
   | { ok: true; document: TaskStoreDocument; projection: TaskStateProjectionV1 }
   | { ok: false; code: string; message: string } {
   let projection = projectionFromSnapshotContent(input.snapshot);
+  projection.lastEventSequence = input.throughSequence;
   const tail = input.tailEvents
     .filter((e) => e.sequence > input.throughSequence)
     .sort((a, b) => a.sequence - b.sequence);

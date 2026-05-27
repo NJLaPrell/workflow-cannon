@@ -6,17 +6,17 @@ import { replayTailFromSnapshot, type TaskStateSnapshotContentV1 } from "./snaps
 import { validateTaskStateGitSnapshotMeta } from "./validate-snapshot-meta.js";
 import { admitTaskStateEventStream } from "../task-state-events/event-admission.js";
 import { replayTaskStateEvents } from "../task-state-events/event-applier.js";
+import type { TaskStateProjectionV1 } from "../task-state-events/projection-types.js";
 
-export function readRemoteTaskVersionMap(
+export function readRemoteSnapshotProjection(
   workspacePath: string,
   ref: string,
   tipSha: string
-): Map<string, number> {
+): TaskStateProjectionV1 | null {
   const layoutRead = readTaskStateBranchLayout(workspacePath, ref, tipSha);
   if (!layoutRead.ok) {
-    return new Map();
+    return null;
   }
-
   const segmentPaths = layoutRead.layout.eventSegmentPaths;
   const eventsRead = readEventSegmentsJsonl(workspacePath, ref, segmentPaths);
   const rawEvents =
@@ -27,34 +27,42 @@ export function readRemoteTaskVersionMap(
   const events = admitted.ok ? admitted.events : [];
 
   const snapshotId = layoutRead.layout.manifest.head.latestSnapshotId;
-  if (snapshotId) {
-    const metaText = gitShowText(workspacePath, ref, resolveSnapshotMetaRelativePath(snapshotId));
-    const contentText = gitShowText(workspacePath, ref, resolveSnapshotContentRelativePath(snapshotId));
-    if (metaText && contentText) {
-      const metaParsed = validateTaskStateGitSnapshotMeta(JSON.parse(metaText) as unknown);
-      if (metaParsed.ok) {
-        const snapshotContent = JSON.parse(contentText) as TaskStateSnapshotContentV1;
-        const tailReplay = replayTailFromSnapshot({
-          snapshot: snapshotContent,
-          throughSequence: metaParsed.data.throughSequence,
-          tailEvents: events
-        });
-        if (tailReplay.ok) {
-          return taskVersionMapFromProjection(tailReplay.projection);
-        }
-      }
+  if (!snapshotId) {
+    if (events.length === 0) {
+      return null;
     }
+    const replayed = replayTaskStateEvents(events);
+    return replayed.ok ? replayed.result.projection : null;
   }
 
-  if (events.length === 0) {
-    return new Map();
+  const metaText = gitShowText(workspacePath, ref, resolveSnapshotMetaRelativePath(snapshotId));
+  const contentText = gitShowText(workspacePath, ref, resolveSnapshotContentRelativePath(snapshotId));
+  if (!metaText || !contentText) {
+    return null;
   }
+  const metaParsed = validateTaskStateGitSnapshotMeta(JSON.parse(metaText) as unknown);
+  if (!metaParsed.ok) {
+    return null;
+  }
+  const snapshotContent = JSON.parse(contentText) as TaskStateSnapshotContentV1;
+  const tailReplay = replayTailFromSnapshot({
+    snapshot: snapshotContent,
+    throughSequence: metaParsed.data.throughSequence,
+    tailEvents: events
+  });
+  return tailReplay.ok ? tailReplay.projection : null;
+}
 
-  const replayed = replayTaskStateEvents(events);
-  if (!replayed.ok) {
+export function readRemoteTaskVersionMap(
+  workspacePath: string,
+  ref: string,
+  tipSha: string
+): Map<string, number> {
+  const projection = readRemoteSnapshotProjection(workspacePath, ref, tipSha);
+  if (!projection) {
     return new Map();
   }
-  return taskVersionMapFromProjection(replayed.result.projection);
+  return taskVersionMapFromProjection(projection);
 }
 
 export function expectedVersionsForPublish(
