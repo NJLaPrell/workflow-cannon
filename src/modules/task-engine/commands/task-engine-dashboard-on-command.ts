@@ -20,6 +20,7 @@ import {
 import { buildDashboardDependencyOverview } from "../dashboard/dashboard-dependency-overview.js";
 import { buildDashboardPhaseBucketsForTasks } from "../dashboard/dashboard-phase-buckets.js";
 import { readBuildPlanSession, toDashboardPlanningSession } from "../../../core/planning/build-plan-session-file.js";
+import { listPlanArtifactSummaries } from "../../../core/planning/plan-artifact-storage.js";
 import { dashboardOnboardingTemperamentLabel } from "../../agent-behavior/onboarding-temperament-label.js";
 import { loadBehaviorWorkspaceState } from "../../agent-behavior/persistence.js";
 import { BehaviorProfileStore } from "../../agent-behavior/store.js";
@@ -60,6 +61,33 @@ import {
   parseDashboardSummaryProjection
 } from "../dashboard/dashboard-summary-projection.js";
 import { buildDashboardTaskStateProjectionSummary } from "../dashboard/build-dashboard-task-state-projection.js";
+
+function buildDashboardPlanArtifactSummary(ctx: ModuleLifecycleContext): DashboardSummaryData["planArtifact"] {
+  const summaries = listPlanArtifactSummaries(
+    ctx.workspacePath,
+    ctx.effectiveConfig as Record<string, unknown> | undefined
+  );
+  if (summaries.length === 0) {
+    return null;
+  }
+  const rows = summaries.slice(0, 5).map((summary) => ({
+    planId: summary.planId,
+    planRef: summary.planRef,
+    version: summary.currentVersion,
+    status: summary.status,
+    title: summary.title,
+    planningType: summary.planningType,
+    updatedAt: summary.updatedAt,
+    wbsRowCount: summary.wbsRowCount,
+    openQuestionCount: summary.openQuestionCount
+  }));
+  return {
+    schemaVersion: 1,
+    count: summaries.length,
+    current: rows[0]!,
+    recent: rows
+  };
+}
 
 /** Parse optional `dashboard-summary` argv for wishlist table paging (extension + CLI). */
 export function parseDashboardWishlistPaging(args?: Record<string, unknown>): {
@@ -158,6 +186,7 @@ export async function runDashboardSummaryCommand(
       ctx.effectiveConfig as Record<string, unknown> | undefined
     )
   );
+  const planArtifact = buildDashboardPlanArtifactSummary(ctx);
 
   const dashboardPhaseTop = 15;
   const toProposedRow = (t: (typeof tasks)[0]) => projectDashboardTaskRow(t, enrich, { includePriority: false });
@@ -412,6 +441,7 @@ export async function runDashboardSummaryCommand(
     taskStoreLastUpdated: store.getLastUpdated(),
     workspaceStatus,
     planningSession,
+    planArtifact,
     stateSummary: suggestion.stateSummary,
     transcriptChurnResearchSummary: {
       schemaVersion: 1 as const,
