@@ -48,6 +48,7 @@ import {
   planArtifactDraftPersistSuccessResult,
   preludePlanArtifactDraftPersist
 } from "./persist-plan-artifact-draft.js";
+import { runReviewPlanArtifact } from "./review-plan-artifact-handler.js";
 import { attachPolicyMeta } from "../task-engine/attach-planning-response-meta.js";
 import { planningGenPolicyGate } from "../task-engine/planning-generation-gate.js";
 import { TaskEngineError } from "../task-engine/transitions.js";
@@ -103,34 +104,11 @@ export const planningModule: WorkflowModule = {
   },
   async onCommand(command, ctx) {
     if (command.name === "review-plan-artifact") {
-      const args = command.args ?? {};
-      const hasPlanId = typeof args.planId === "string" && args.planId.trim().length > 0;
-      const artifactRaw = args.artifact;
-      const hasArtifact =
-        artifactRaw && typeof artifactRaw === "object" && !Array.isArray(artifactRaw);
-      if (!hasPlanId && !hasArtifact) {
-        return {
-          ok: false,
-          code: "invalid-run-args",
-          message: "review-plan-artifact requires planId or artifact"
-        };
-      }
-      return {
-        ok: false,
-        code: "plan-artifact-command-not-implemented",
-        message:
-          "review-plan-artifact rubric engine is not implemented yet (WP-4.2); schema-only and instruction are authoritative.",
-        remediation: {
-          instructionPath: REVIEW_PLAN_ARTIFACT_INSTRUCTION,
-          docPath: ".ai/runbooks/plan-artifact-workflow.md"
-        },
-        data: {
-          schemaVersion: 1,
-          responseSchemaVersion: 1,
-          planId: hasPlanId ? args.planId : undefined,
-          recordReview: args.recordReview === true
-        }
-      };
+      return runReviewPlanArtifact(
+        (command.args ?? {}) as Record<string, unknown>,
+        ctx,
+        REVIEW_PLAN_ARTIFACT_INSTRUCTION
+      );
     }
 
     if (command.name === "draft-plan-artifact") {

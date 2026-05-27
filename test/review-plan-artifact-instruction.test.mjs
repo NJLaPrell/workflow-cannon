@@ -51,7 +51,7 @@ describe("review-plan-artifact instruction (T100459)", () => {
     assert.equal(isSensitiveModuleCommand("review-plan-artifact", { recordReview: true }), true);
   });
 
-  it("stub handler validates planId or artifact argv", async () => {
+  it("handler validates planId or artifact argv", async () => {
     const missing = await planningModule.onCommand(
       { name: "review-plan-artifact", args: {} },
       { runtimeVersion: "0.1", workspacePath: root }
@@ -59,15 +59,14 @@ describe("review-plan-artifact instruction (T100459)", () => {
     assert.equal(missing.ok, false);
     assert.equal(missing.code, "invalid-run-args");
 
-    const stub = await planningModule.onCommand(
+    const notFound = await planningModule.onCommand(
       {
         name: "review-plan-artifact",
-        args: { planId: "550e8400-e29b-41d4-a716-446655440000" }
+        args: { planId: "550e8400-e29b-41d4-a716-446655440000", profile: "minimal" }
       },
       { runtimeVersion: "0.1", workspacePath: root }
     );
-    assert.equal(stub.ok, false);
-    assert.equal(stub.code, "plan-artifact-command-not-implemented");
-    assert.ok(stub.remediation?.instructionPath?.includes("review-plan-artifact.md"));
+    assert.equal(notFound.ok, false);
+    assert.equal(notFound.code, "plan-artifact-not-found");
   });
 });
