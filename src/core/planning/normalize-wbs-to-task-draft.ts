@@ -20,6 +20,7 @@ export type PlanningExecutionTaskDraft = {
   acceptanceCriteria: string[];
   dependsOn?: string[];
   status?: "proposed" | "ready";
+  metadata?: Record<string, unknown>;
 };
 
 export type NormalizeWbsToTaskDraftContext = {
@@ -182,6 +183,16 @@ export function normalizeWbsItemToTaskDraft(
     (typeof payload.phase === "string" && payload.phase.trim()) ||
     (phaseKey ? phaseLabelFromKey(phaseKey) : context.defaultPhase);
 
+  const planningProvenance = {
+    planId: context.planId,
+    planVersion: context.planVersion,
+    wbsId: wbs.wbsId,
+    wbsPath: wbs.path,
+    planRef: context.planRef,
+    planningType: context.planningType,
+    source: "normalize-wbs-to-task-draft" as const
+  };
+
   const draft: PlanningExecutionTaskDraft = {
     id: typeof payload.id === "string" && /^T\d+$/.test(payload.id.trim()) ? payload.id.trim() : undefined,
     title: payload.title.trim(),
@@ -193,20 +204,16 @@ export function normalizeWbsItemToTaskDraft(
     technicalScope: [...payload.technicalScope],
     acceptanceCriteria: [...payload.acceptanceCriteria],
     dependsOn: wbs.dependsOn.length > 0 ? [...wbs.dependsOn] : payload.dependsOn ? [...payload.dependsOn] : undefined,
-    status: payload.status ?? context.defaultStatus ?? "proposed"
+    status: payload.status ?? context.defaultStatus ?? "proposed",
+    metadata: {
+      planRef: context.planRef,
+      planningProvenance
+    }
   };
 
   return {
     ok: true,
     draft,
-    planningProvenance: {
-      planId: context.planId,
-      planVersion: context.planVersion,
-      wbsId: wbs.wbsId,
-      wbsPath: wbs.path,
-      planRef: context.planRef,
-      planningType: context.planningType,
-      source: "normalize-wbs-to-task-draft"
-    }
+    planningProvenance
   };
 }

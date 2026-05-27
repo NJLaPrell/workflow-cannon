@@ -226,6 +226,9 @@ export function buildTaskFromConversionPayload(
     technicalScope,
     acceptanceCriteria
   };
+  if (row.metadata && typeof row.metadata === "object" && !Array.isArray(row.metadata)) {
+    task.metadata = { ...(row.metadata as Record<string, unknown>) };
+  }
   return { ok: true, task };
 }
 
