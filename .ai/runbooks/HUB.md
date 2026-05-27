@@ -15,6 +15,8 @@ Symptom → **one** `.ai/runbooks/*.md` target (agents: prefer this table over d
 | Response templates | [`response-templates.md`](./response-templates.md) |
 | Agent presentation policy | [`agent-presentation-policy.md`](./agent-presentation-policy.md) |
 | Wishlist workflow | [`wishlist-workflow.md`](./wishlist-workflow.md) |
+| PlanArtifact v1 (draft → review → accept → finalize) | [`plan-artifact-workflow.md`](./plan-artifact-workflow.md) |
+| Legacy planning interview (`build-plan`) | [`planning-workflow.md`](./planning-workflow.md) |
 | Subagent registry | [`subagent-registry.md`](./subagent-registry.md) |
 | Principal architectural review themes (cold start) | [`principal-architectural-review-themes.md`](./principal-architectural-review-themes.md) |
 | Task persistence operator | [`task-persistence-operator.md`](./task-persistence-operator.md) |
