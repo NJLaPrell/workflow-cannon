@@ -59,6 +59,7 @@ import {
   finalizeDashboardSummaryProjection,
   parseDashboardSummaryProjection
 } from "../dashboard/dashboard-summary-projection.js";
+import { buildDashboardTaskStateProjectionSummary } from "../dashboard/build-dashboard-task-state-projection.js";
 
 /** Parse optional `dashboard-summary` argv for wishlist table paging (extension + CLI). */
 export function parseDashboardWishlistPaging(args?: Record<string, unknown>): {
@@ -315,6 +316,9 @@ export async function runDashboardSummaryCommand(
     : taskCheckpointsEmpty;
 
   const systemStatus = await buildDashboardSystemStatus(ctx, store, dualForStatus);
+  const taskStateProjection = buildDashboardTaskStateProjectionSummary(
+    sqliteDual?.getDatabase() ?? dualForStatus?.getDatabase()
+  );
   const derivedAgentStatus = buildDashboardAgentStatus({
     now: systemStatus.generatedAt,
     tasks,
@@ -491,6 +495,7 @@ export async function runDashboardSummaryCommand(
     subagentRegistry,
     taskCheckpoints,
     systemStatus,
+    taskStateProjection,
     agentStatus,
     currentPhaseDelivery,
     deliveredPhaseKeys,

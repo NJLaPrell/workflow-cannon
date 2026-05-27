@@ -299,6 +299,18 @@ export type DashboardCurrentPhaseSegments = {
   research: number;
 };
 
+/** Canonical task-state projection cursor surfaced on dashboard-summary (read-only). */
+export type DashboardTaskStateProjectionSummary = {
+  schemaVersion: 1;
+  /** False when `kit_task_state_projection_meta` is absent (kit SQLite user_version < 28). */
+  available: boolean;
+  backend: "git-event-log" | "sqlite-relational" | null;
+  appliedSequence: number | null;
+  sourceCommit: string | null;
+  syncStatus: "empty" | "fresh" | "stale" | "rebuilding" | "corrupt" | null;
+  updatedAt: string | null;
+};
+
 /** Current workspace phase queue, progress, and release markers for dashboard cards. */
 export type DashboardCurrentPhaseDelivery = {
   schemaVersion: 2;
@@ -393,6 +405,8 @@ export type DashboardSummaryData = {
   taskCheckpoints: DashboardTaskCheckpointsSummary;
   /** Phase/drift, doctor contract, module activation, CAE lines — status tab aggregate (Phase 79+). */
   systemStatus: DashboardSystemStatus;
+  /** Local SQLite projection of the canonical git task-state event log (Phase 115 S4.1+). */
+  taskStateProjection: DashboardTaskStateProjectionSummary;
   /** Conservative, read-only WC Agent status derived from dashboard/task state (Phase 81+). */
   agentStatus: DashboardAgentStatusSummary;
   /** Phase Readiness Complete & Release gating — closeout audit + release/rollover detection. */
