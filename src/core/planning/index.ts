@@ -67,3 +67,13 @@ export {
   type PlanArtifactV1,
   type PlanArtifactWbsItem
 } from "./plan-artifact-v1.js";
+export {
+  isPlanArtifactWbsItem,
+  normalizeWbsItemToTaskDraft,
+  validatePlanArtifactWbsItemShape,
+  type NormalizeWbsToTaskDraftContext,
+  type NormalizeWbsToTaskDraftResult,
+  type PlanningExecutionTaskDraft,
+  type WbsShapeFinding,
+  type WbsShapeGuardResult
+} from "./normalize-wbs-to-task-draft.js";
