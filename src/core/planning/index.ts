@@ -77,3 +77,18 @@ export {
   type WbsShapeFinding,
   type WbsShapeGuardResult
 } from "./normalize-wbs-to-task-draft.js";
+export {
+  PLAN_ARTIFACT_MODULE_ID_PREFIX,
+  PLAN_ARTIFACT_ROOT_REL,
+  getPlanArtifactStoragePaths,
+  listPlanArtifactSummaries,
+  planArtifactModuleId,
+  readLatestPlanArtifact,
+  readPlanArtifactIndex,
+  readPlanArtifactVersion,
+  resolveLatestPlanArtifactVersion,
+  writeNextPlanArtifactVersion,
+  writePlanArtifactVersion,
+  type PlanArtifactIndexStateV1,
+  type PlanArtifactStoragePaths
+} from "./plan-artifact-storage.js";
