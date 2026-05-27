@@ -330,7 +330,14 @@ test("renderDashboardRootInnerHtml renders PlanArtifact draft panel", () => {
           planningType: "new-feature",
           updatedAt: "2026-05-27T17:00:00.000Z",
           wbsRowCount: 4,
-          openQuestionCount: 2
+          openQuestionCount: 2,
+          reviewFindings: [
+            { severity: "warning", message: "Acceptance criteria need verification detail", path: "wbs[1]" }
+          ],
+          wbsPreview: [
+            { wbsId: "WBS-1", path: "1", title: "Kit contract", recommendedPhase: "Phase 110" },
+            { wbsId: "WBS-2", path: "2", title: "Plan draft panel", recommendedPhase: "Phase 110" }
+          ]
         },
         recent: []
       },
@@ -347,6 +354,12 @@ test("renderDashboardRootInnerHtml renders PlanArtifact draft panel", () => {
   assert.match(html, /<b>4<\/b> WBS rows/);
   assert.match(html, /<b>2<\/b> open questions/);
   assert.match(html, /Draft/);
+  assert.match(html, /Review Findings/);
+  assert.match(html, /Acceptance criteria need verification detail/);
+  assert.match(html, /wbs\[1\]/);
+  assert.match(html, /WBS Preview/);
+  assert.match(html, /WBS-1 · 1/);
+  assert.match(html, /Kit contract/);
 });
 
 test("renderDashboardRootInnerHtml renders phase roster deliverables inline edit affordances", () => {

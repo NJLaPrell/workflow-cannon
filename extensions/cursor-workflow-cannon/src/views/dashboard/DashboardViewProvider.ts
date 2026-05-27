@@ -4194,6 +4194,27 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     .wc-plan-artifact-stat b { font-variant-numeric: tabular-nums; }
     .wc-plan-artifact-label { color: var(--vscode-descriptionForeground, var(--vscode-foreground)); }
+    .wc-plan-subtitle { margin: 8px 0 4px 0; }
+    .wc-plan-review-list, .wc-plan-wbs-list { display: flex; flex-direction: column; gap: 4px; }
+    .wc-plan-review-row, .wc-plan-wbs-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 4px 6px;
+      border-radius: 4px;
+      background: var(--vscode-textCodeBlock-background);
+      min-width: 0;
+    }
+    .wc-plan-review-severity, .wc-plan-wbs-phase {
+      flex-shrink: 0;
+      color: var(--vscode-descriptionForeground, var(--vscode-foreground));
+      font-size: 10px;
+      font-weight: 600;
+    }
+    .wc-plan-review-message, .wc-plan-wbs-title { min-width: 0; overflow-wrap: anywhere; }
+    .wc-plan-review-path { color: var(--vscode-descriptionForeground, var(--vscode-foreground)); font-size: 10px; }
+    .wc-plan-review-pass { margin: 8px 0 0 0; color: var(--vscode-testing-iconPassed, #4ec9b0); }
     .ok { color: var(--vscode-testing-iconPassed); }
     .bad { color: var(--vscode-errorForeground); }
     .phase-stack { margin: 4px 0 8px 0; }

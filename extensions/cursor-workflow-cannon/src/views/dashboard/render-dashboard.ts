@@ -2985,6 +2985,74 @@ function renderPlanArtifactDraftPanel(planArtifact: unknown): string {
   const updatedText = updatedAt.length > 0 ? formatPlanningUpdatedAt(updatedAt) : "—";
   const heading = statusRaw === "draft" ? "Plan Draft" : "Plan Artifact";
   const refLabel = planRef.length > 0 ? planRef : planId;
+  const reviewFindings = Array.isArray(row.reviewFindings)
+    ? row.reviewFindings
+    : Array.isArray(summary.reviewFindings)
+      ? summary.reviewFindings
+      : [];
+  const wbsPreview = Array.isArray(row.wbsPreview)
+    ? row.wbsPreview
+    : Array.isArray(summary.wbsPreview)
+      ? summary.wbsPreview
+      : [];
+  const reviewHtml =
+    reviewFindings.length > 0
+      ? '<div class="wc-plan-review" aria-label="Plan review findings">' +
+        '<p class="wc-plan-subtitle"><b>Review Findings</b></p>' +
+        '<div class="wc-plan-review-list" role="list">' +
+        reviewFindings
+          .slice(0, 5)
+          .map((finding) => {
+            const findingRow = finding && typeof finding === "object" ? (finding as Record<string, unknown>) : {};
+            const severity = String(findingRow.severity ?? findingRow.level ?? "info").trim() || "info";
+            const message = String(findingRow.message ?? findingRow.title ?? findingRow.code ?? "Finding").trim();
+            const pathText = String(findingRow.path ?? findingRow.field ?? "").trim();
+            return (
+              '<div class="wc-plan-review-row" role="listitem">' +
+              '<span class="wc-plan-review-severity">' +
+              escapeHtml(humanizePlanningToken(severity)) +
+              "</span>" +
+              '<span class="wc-plan-review-message">' +
+              escapeHtml(message) +
+              (pathText.length > 0 ? ' <span class="wc-plan-review-path">' + escapeHtml(pathText) + "</span>" : "") +
+              "</span>" +
+              "</div>"
+            );
+          })
+          .join("") +
+        "</div>" +
+        "</div>"
+      : statusRaw === "reviewed" || statusRaw === "accepted" || statusRaw === "finalized"
+        ? '<p class="wc-plan-review-pass"><b>Review Passed</b></p>'
+        : "";
+  const wbsHtml =
+    wbsPreview.length > 0
+      ? '<div class="wc-plan-wbs" aria-label="WBS preview">' +
+        '<p class="wc-plan-subtitle"><b>WBS Preview</b></p>' +
+        '<div class="wc-plan-wbs-list" role="list">' +
+        wbsPreview
+          .slice(0, 5)
+          .map((item) => {
+            const itemRow = item && typeof item === "object" ? (item as Record<string, unknown>) : {};
+            const itemId = String(itemRow.wbsId ?? itemRow.id ?? "").trim();
+            const itemPath = String(itemRow.path ?? "").trim();
+            const itemTitle = String(itemRow.title ?? itemRow.suggestedTaskTitle ?? "Untitled WBS item").trim();
+            const itemPhase = String(itemRow.recommendedPhase ?? itemRow.phaseKey ?? "").trim();
+            const prefix = [itemId, itemPath].filter((value) => value.length > 0).join(" · ");
+            return (
+              '<div class="wc-plan-wbs-row" role="listitem">' +
+              '<span class="wc-plan-wbs-title">' +
+              (prefix.length > 0 ? '<b>' + escapeHtml(prefix) + "</b> · " : "") +
+              escapeHtml(itemTitle) +
+              "</span>" +
+              (itemPhase.length > 0 ? '<span class="wc-plan-wbs-phase">' + escapeHtml(itemPhase) + "</span>" : "") +
+              "</div>"
+            );
+          })
+          .join("") +
+        "</div>" +
+        "</div>"
+      : "";
   return (
     '<section class="dash-card wc-plan-artifact" aria-label="Plan draft">' +
     '<div class="wc-plan-artifact-head">' +
@@ -3016,6 +3084,8 @@ function renderPlanArtifactDraftPanel(planArtifact: unknown): string {
     escapeHtml(updatedText) +
     "</span>" +
     "</div>" +
+    reviewHtml +
+    wbsHtml +
     "</section>"
   );
 }
