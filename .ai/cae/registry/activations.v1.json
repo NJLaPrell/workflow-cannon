@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "description": "CAE activation definitions seed (T858). Rows validate against schemas/cae/activation-definition.schema.json; artifactIds must exist in artifacts.v1.json.",
+  "description": "CAE activation definitions seed (T858). Planning session bundles (T100452 / PLANNER Step 2) bind plan commands to cae.reasoning.planning-* lenses.",
   "activations": [
     {
       "schemaVersion": 1,
@@ -216,6 +216,236 @@
       },
       "artifactRefs": [{ "artifactId": "cae.playbook.improvement-discovery" }],
       "acknowledgement": { "strength": "recommend", "token": "improvement-discovery-agent-failure" },
+      "flags": { "advisoryOnly": true, "shadowEligible": true }
+    },
+    {
+      "schemaVersion": 1,
+      "activationId": "cae.activation.think.planning-session-draft",
+      "family": "think",
+      "lifecycleState": "active",
+      "priority": 74,
+      "scope": {
+        "conditions": [{ "kind": "commandName", "match": "exact", "value": "draft-plan-artifact" }]
+      },
+      "artifactRefs": [
+        { "artifactId": "cae.doc.planning-lenses-index" },
+        { "artifactId": "cae.reasoning.planning-completeness" },
+        { "artifactId": "cae.reasoning.planning-architecture" },
+        { "artifactId": "cae.reasoning.planning-risk" },
+        { "artifactId": "cae.reasoning.planning-testing" },
+        { "artifactId": "cae.reasoning.planning-ux" },
+        { "artifactId": "cae.reasoning.planning-decomposition" },
+        { "artifactId": "cae.reasoning.planning-anti-patterns" },
+        { "artifactId": "cae.reasoning.planning-sizing" },
+        { "artifactId": "cae.reasoning.planning-release-rollback" }
+      ],
+      "flags": { "advisoryOnly": true, "shadowEligible": true }
+    },
+    {
+      "schemaVersion": 1,
+      "activationId": "cae.activation.think.planning-session-review",
+      "family": "think",
+      "lifecycleState": "active",
+      "priority": 74,
+      "scope": {
+        "conditions": [{ "kind": "commandName", "match": "exact", "value": "review-plan-artifact" }]
+      },
+      "artifactRefs": [
+        { "artifactId": "cae.doc.planning-lenses-index" },
+        { "artifactId": "cae.reasoning.planning-completeness" },
+        { "artifactId": "cae.reasoning.planning-architecture" },
+        { "artifactId": "cae.reasoning.planning-risk" },
+        { "artifactId": "cae.reasoning.planning-testing" },
+        { "artifactId": "cae.reasoning.planning-ux" },
+        { "artifactId": "cae.reasoning.planning-decomposition" },
+        { "artifactId": "cae.reasoning.planning-anti-patterns" },
+        { "artifactId": "cae.reasoning.planning-sizing" },
+        { "artifactId": "cae.reasoning.planning-release-rollback" }
+      ],
+      "flags": { "advisoryOnly": true, "shadowEligible": true }
+    },
+    {
+      "schemaVersion": 1,
+      "activationId": "cae.activation.think.planning-session-accept",
+      "family": "think",
+      "lifecycleState": "active",
+      "priority": 74,
+      "scope": {
+        "conditions": [{ "kind": "commandName", "match": "exact", "value": "accept-plan-artifact" }]
+      },
+      "artifactRefs": [
+        { "artifactId": "cae.doc.planning-lenses-index" },
+        { "artifactId": "cae.reasoning.planning-completeness" },
+        { "artifactId": "cae.reasoning.planning-risk" },
+        { "artifactId": "cae.reasoning.planning-testing" },
+        { "artifactId": "cae.reasoning.planning-release-rollback" }
+      ],
+      "flags": { "advisoryOnly": true, "shadowEligible": true }
+    },
+    {
+      "schemaVersion": 1,
+      "activationId": "cae.activation.think.planning-session-finalize",
+      "family": "think",
+      "lifecycleState": "active",
+      "priority": 74,
+      "scope": {
+        "conditions": [{ "kind": "commandName", "match": "exact", "value": "finalize-plan-to-phase" }]
+      },
+      "artifactRefs": [
+        { "artifactId": "cae.doc.planning-lenses-index" },
+        { "artifactId": "cae.reasoning.planning-completeness" },
+        { "artifactId": "cae.reasoning.planning-sizing" },
+        { "artifactId": "cae.reasoning.planning-decomposition" },
+        { "artifactId": "cae.reasoning.planning-release-rollback" }
+      ],
+      "flags": { "advisoryOnly": true, "shadowEligible": true }
+    },
+    {
+      "schemaVersion": 1,
+      "activationId": "cae.activation.think.planning-bundle-feature",
+      "family": "think",
+      "lifecycleState": "active",
+      "priority": 72,
+      "scope": {
+        "conditions": [
+          { "kind": "commandName", "match": "exact", "value": "build-plan" },
+          { "kind": "commandArgEquals", "path": "planningType", "value": "new-feature" }
+        ]
+      },
+      "artifactRefs": [
+        { "artifactId": "cae.doc.planning-lenses-index" },
+        { "artifactId": "cae.reasoning.planning-completeness" },
+        { "artifactId": "cae.reasoning.planning-architecture" },
+        { "artifactId": "cae.reasoning.planning-decomposition" },
+        { "artifactId": "cae.reasoning.planning-sizing" }
+      ],
+      "flags": { "advisoryOnly": true, "shadowEligible": true }
+    },
+    {
+      "schemaVersion": 1,
+      "activationId": "cae.activation.think.planning-bundle-change-refactor",
+      "family": "think",
+      "lifecycleState": "active",
+      "priority": 72,
+      "scope": {
+        "conditions": [
+          { "kind": "commandName", "match": "exact", "value": "build-plan" },
+          { "kind": "commandArgEquals", "path": "planningType", "value": "change" }
+        ]
+      },
+      "artifactRefs": [
+        { "artifactId": "cae.doc.planning-lenses-index" },
+        { "artifactId": "cae.reasoning.planning-completeness" },
+        { "artifactId": "cae.reasoning.planning-architecture" },
+        { "artifactId": "cae.reasoning.planning-risk" },
+        { "artifactId": "cae.reasoning.planning-anti-patterns" }
+      ],
+      "flags": { "advisoryOnly": true, "shadowEligible": true }
+    },
+    {
+      "schemaVersion": 1,
+      "activationId": "cae.activation.think.planning-bundle-ui",
+      "family": "think",
+      "lifecycleState": "active",
+      "priority": 72,
+      "scope": {
+        "conditions": [
+          { "kind": "commandName", "match": "exact", "value": "build-plan" },
+          { "kind": "commandArgEquals", "path": "planningType", "value": "new-feature" }
+        ]
+      },
+      "artifactRefs": [
+        { "artifactId": "cae.reasoning.planning-ux" },
+        { "artifactId": "cae.reasoning.planning-completeness" }
+      ],
+      "flags": { "advisoryOnly": true, "shadowEligible": true }
+    },
+    {
+      "schemaVersion": 1,
+      "activationId": "cae.activation.think.planning-bundle-risk-review",
+      "family": "think",
+      "lifecycleState": "active",
+      "priority": 72,
+      "scope": {
+        "conditions": [{ "kind": "commandName", "match": "exact", "value": "build-plan" }]
+      },
+      "artifactRefs": [
+        { "artifactId": "cae.reasoning.planning-risk" },
+        { "artifactId": "cae.reasoning.planning-release-rollback" }
+      ],
+      "flags": { "advisoryOnly": true, "shadowEligible": true }
+    },
+    {
+      "schemaVersion": 1,
+      "activationId": "cae.activation.think.planning-bundle-test-strategy",
+      "family": "think",
+      "lifecycleState": "active",
+      "priority": 72,
+      "scope": {
+        "conditions": [{ "kind": "commandName", "match": "exact", "value": "build-plan" }]
+      },
+      "artifactRefs": [{ "artifactId": "cae.reasoning.planning-testing" }],
+      "flags": { "advisoryOnly": true, "shadowEligible": true }
+    },
+    {
+      "schemaVersion": 1,
+      "activationId": "cae.activation.think.planning-bundle-task-decomposition",
+      "family": "think",
+      "lifecycleState": "active",
+      "priority": 72,
+      "scope": {
+        "conditions": [
+          { "kind": "commandName", "match": "exact", "value": "build-plan" },
+          { "kind": "commandArgEquals", "path": "planningType", "value": "task-breakdown" }
+        ]
+      },
+      "artifactRefs": [
+        { "artifactId": "cae.reasoning.planning-decomposition" },
+        { "artifactId": "cae.reasoning.planning-completeness" }
+      ],
+      "flags": { "advisoryOnly": true, "shadowEligible": true }
+    },
+    {
+      "schemaVersion": 1,
+      "activationId": "cae.activation.think.planning-bundle-wbs-sizing",
+      "family": "think",
+      "lifecycleState": "active",
+      "priority": 72,
+      "scope": {
+        "conditions": [{ "kind": "commandName", "match": "exact", "value": "build-plan" }]
+      },
+      "artifactRefs": [{ "artifactId": "cae.reasoning.planning-sizing" }],
+      "flags": { "advisoryOnly": true, "shadowEligible": true }
+    },
+    {
+      "schemaVersion": 1,
+      "activationId": "cae.activation.think.planning-bundle-anti-patterns",
+      "family": "think",
+      "lifecycleState": "active",
+      "priority": 72,
+      "scope": {
+        "conditions": [{ "kind": "commandName", "match": "exact", "value": "build-plan" }]
+      },
+      "artifactRefs": [
+        { "artifactId": "cae.reasoning.planning-anti-patterns" },
+        { "artifactId": "cae.reasoning.planning-completeness" }
+      ],
+      "flags": { "advisoryOnly": true, "shadowEligible": true }
+    },
+    {
+      "schemaVersion": 1,
+      "activationId": "cae.activation.think.planning-build-plan-core",
+      "family": "think",
+      "lifecycleState": "active",
+      "priority": 71,
+      "scope": {
+        "conditions": [{ "kind": "commandName", "match": "exact", "value": "build-plan" }]
+      },
+      "artifactRefs": [
+        { "artifactId": "cae.doc.planning-lenses-index" },
+        { "artifactId": "cae.reasoning.planning-completeness" },
+        { "artifactId": "cae.reasoning.planning-anti-patterns" }
+      ],
       "flags": { "advisoryOnly": true, "shadowEligible": true }
     }
   ]

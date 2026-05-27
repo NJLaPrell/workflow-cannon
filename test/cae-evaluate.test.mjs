@@ -122,6 +122,68 @@ describe("CAE evaluateActivationBundle (T860)", () => {
     );
   });
 
+  it("planning bundles surface cae.reasoning.planning-* for build-plan and draft-plan-artifact", () => {
+    const base = {
+      schemaVersion: 1,
+      task: { taskId: "T000", status: "ready", phaseKey: "110" },
+      workspace: {
+        currentKitPhase: "110",
+        nextKitPhase: "111",
+        workspaceRootFingerprint: "sha256:testplanningbundles"
+      },
+      governance: {
+        policyApprovalRequired: false,
+        approvalTierHint: "none",
+        policySurface: "run-json"
+      },
+      queue: { readyQueueDepth: 0, suggestedNextTaskId: null },
+      mapSignals: null
+    };
+    const regRes = loadCaeRegistry(root);
+    assert.equal(regRes.ok, true);
+
+    const buildPlanCtx = {
+      ...base,
+      command: {
+        name: "build-plan",
+        moduleId: "planning",
+        argvSummary: '{"planningType":"new-feature"}',
+        argHints: { planningType: "new-feature" }
+      }
+    };
+    const { bundle: buildBundle } = evaluateActivationBundle(buildPlanCtx, regRes.value, {
+      evalMode: "live"
+    });
+    const thinkBuild =
+      buildBundle.families.think?.flatMap((row) => row.artifactIds ?? []) ?? [];
+    assert.ok(
+      thinkBuild.includes("cae.reasoning.planning-architecture"),
+      "feature bundle should include architecture lens for build-plan new-feature"
+    );
+    assert.ok(
+      thinkBuild.includes("cae.reasoning.planning-ux"),
+      "ui bundle should include ux lens for build-plan new-feature"
+    );
+
+    const draftCtx = {
+      ...base,
+      command: {
+        name: "draft-plan-artifact",
+        moduleId: "planning",
+        argvSummary: "{}"
+      }
+    };
+    const { bundle: draftBundle } = evaluateActivationBundle(draftCtx, regRes.value, {
+      evalMode: "live"
+    });
+    const thinkDraft =
+      draftBundle.families.think?.flatMap((row) => row.artifactIds ?? []) ?? [];
+    assert.ok(
+      thinkDraft.includes("cae.reasoning.planning-completeness"),
+      "draft-plan-artifact session should include completeness lens"
+    );
+  });
+
   it("agentFailureSignal activation surfaces improvement-discovery when recentToolFailures threshold met", () => {
     const ctx = {
       schemaVersion: 1,
