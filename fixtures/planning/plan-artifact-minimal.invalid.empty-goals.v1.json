@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "planId": "550e8400-e29b-41d4-a716-446655440001",
+  "version": 1,
+  "planRef": "plan-artifact:550e8400-e29b-41d4-a716-446655440001",
+  "status": "draft",
+  "identity": {
+    "title": "Invalid draft — empty goals",
+    "planningType": "change",
+    "summary": "Blocked-path B1 fixture for draft-plan-artifact"
+  },
+  "goals": [],
+  "nonGoals": [],
+  "valueAssessment": { "impact": "test", "confidence": "high" },
+  "riskAssessment": [],
+  "technicalImpact": { "systemsTouched": ["test"] },
+  "testingStrategy": { "layers": ["unit"], "criticalPaths": ["reject empty goals"] },
+  "implementationGuidance": ["Should fail validation"],
+  "whatNotToDo": [],
+  "assumptions": [],
+  "openQuestions": [],
+  "wbs": [
+    {
+      "wbsId": "WBS-1",
+      "title": "Placeholder row",
+      "goalMapping": ["x"],
+      "suggestedTaskTitle": "x",
+      "approach": "x",
+      "technicalScope": ["x"],
+      "acceptanceCriteria": ["x"],
+      "testingVerification": ["x"],
+      "dependsOn": [],
+      "sizingConfidence": "low",
+      "doneMeans": "x",
+      "generatedTaskPayload": {
+        "title": "x",
+        "approach": "x",
+        "technicalScope": ["x"],
+        "acceptanceCriteria": ["x"]
+      }
+    }
+  ],
+  "phaseRecommendations": [
+    { "phaseKey": "110", "label": "Phase 110", "rationale": "test", "isPrimary": true }
+  ],
+  "provenance": {
+    "createdAt": "2026-05-27T06:00:00.000Z",
+    "updatedAt": "2026-05-27T06:00:00.000Z",
+    "createdBy": "agent",
+    "source": "draft-plan-artifact"
+  }
+}

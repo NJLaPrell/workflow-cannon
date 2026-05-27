@@ -168,20 +168,12 @@ export function preludePlanArtifactDraftPersist(args: {
 }): PlanArtifactDraftPersistPrelude {
   const { workspacePath, artifact, artifactRaw, clientMutationId, effectiveConfig, sqliteDb } = args;
   const targetVersion = resolveNextPlanArtifactVersion(workspacePath, artifact.planId);
-  const suppliedVersion = userSuppliedPlanArtifactVersion(artifactRaw);
-  if (suppliedVersion !== undefined && suppliedVersion !== targetVersion) {
-    return {
-      kind: "conflict",
-      code: "plan-artifact-version-conflict",
-      message: `artifact.version ${suppliedVersion} does not match next version ${targetVersion} for plan ${artifact.planId}`
-    };
-  }
 
-  const digest = planArtifactDraftPersistDigest(artifact, targetVersion);
   if (clientMutationId) {
     const prior = readIdempotencyRecord(workspacePath, clientMutationId, effectiveConfig, sqliteDb);
     if (prior) {
-      if (prior.payloadDigest !== digest) {
+      const replayDigest = planArtifactDraftPersistDigest(artifact, prior.version);
+      if (prior.payloadDigest !== replayDigest) {
         return {
           kind: "conflict",
           code: "idempotency-key-conflict",
@@ -203,6 +195,16 @@ export function preludePlanArtifactDraftPersist(args: {
     }
   }
 
+  const suppliedVersion = userSuppliedPlanArtifactVersion(artifactRaw);
+  if (suppliedVersion !== undefined && suppliedVersion !== targetVersion) {
+    return {
+      kind: "conflict",
+      code: "plan-artifact-version-conflict",
+      message: `artifact.version ${suppliedVersion} does not match next version ${targetVersion} for plan ${artifact.planId}`
+    };
+  }
+
+  const digest = planArtifactDraftPersistDigest(artifact, targetVersion);
   return { kind: "commit", targetVersion, digest };
 }
 
