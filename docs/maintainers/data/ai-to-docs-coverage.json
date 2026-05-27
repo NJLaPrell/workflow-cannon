@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "description": "Source (.ai) \u2192 human render (docs/maintainers). Regenerate list when adding paths; drift + orphan checks consume this file.",
+  "description": "Source (.ai) → human render (docs/maintainers). Regenerate list when adding paths; drift + orphan checks consume this file.",
   "mappings": [
     {
       "source": ".ai/playbooks/README.md",
@@ -209,6 +209,10 @@
     {
       "source": ".ai/workbooks/transcript-automation-baseline.md",
       "output": "docs/maintainers/workbooks/transcript-automation-baseline.md"
+    },
+    {
+      "source": ".ai/runbooks/plan-artifact-workflow.md",
+      "output": "docs/maintainers/runbooks/plan-artifact-workflow.md"
     }
   ]
 }
