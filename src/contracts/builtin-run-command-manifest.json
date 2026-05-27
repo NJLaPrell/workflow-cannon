@@ -956,6 +956,75 @@
   },
   {
     "moduleId": "task-engine",
+    "name": "task-state-status",
+    "file": "task-state-status.md",
+    "description": "Read-only sync state vs canonical workflow-cannon/task-state git branch (current/behind/missing/conflict).",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "task-state-hydrate",
+    "file": "task-state-hydrate.md",
+    "description": "Fetch canonical task-state branch, materialize JSONL locally, and rebuild SQLite projection.",
+    "policyOperationId": "tasks.task-state-hydrate",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "task-state-init",
+    "file": "task-state-init.md",
+    "description": "Bootstrap workflow-cannon/task-state from SQLite: manifest, snapshot, event segment; refuses overwrite unless approved.",
+    "policyOperationId": "tasks.task-state-init",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "task-state-verify",
+    "file": "task-state-verify.md",
+    "description": "Verify task-state manifest, snapshot hashes, and event log sequence/parent/schema integrity.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "task-state-publish",
+    "file": "task-state-publish.md",
+    "description": "Publish canonical task-state events to the git branch with optimistic push and conflict detection.",
+    "policyOperationId": "tasks.task-state-publish",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "task-state-snapshot",
+    "file": "task-state-snapshot.md",
+    "description": "Create a snapshot of the SQLite task projection on the canonical task-state git branch.",
+    "policyOperationId": "tasks.task-state-snapshot",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "task-state-compact",
+    "file": "task-state-compact.md",
+    "description": "Dry-run retention/compaction plan for canonical task-state event history.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "task-state-migrate-baseline",
+    "file": "task-state-migrate-baseline.md",
+    "description": "One-shot SQLite-to-git baseline migration with count/hash survival report.",
+    "policyOperationId": "tasks.task-state-migrate-baseline",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "task-engine",
     "name": "list-module-states",
     "file": "list-module-states.md",
     "description": "List unified SQLite module-state rows for diagnostics and migration verification.",

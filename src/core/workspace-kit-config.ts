@@ -98,6 +98,7 @@ export const KIT_CONFIG_DEFAULTS: Record<string, unknown> = {
   tasks: {
     storeRelativePath: ".workspace-kit/tasks/state.json",
     persistenceBackend: "sqlite",
+    canonicalAuthority: "sqlite",
     sqliteDatabaseRelativePath: ".workspace-kit/tasks/workspace-kit.db",
     strictValidation: false,
     intakePolicy: {

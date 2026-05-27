@@ -25,6 +25,9 @@ import { TransitionService } from "../service.js";
 import { TaskEngineError } from "../transitions.js";
 import { recordTaskTransitionActivityBestEffort } from "../agent-activity-recorder.js";
 import { waitForWorkspaceEditLease } from "../workspace-edit-lease-commands-runtime.js";
+import { isGitTaskStateCanonicalAuthority } from "../persistence/task-state-canonical-authority.js";
+import { commitCanonicalTaskStateEvents } from "../persistence/task-state-canonical-commit.js";
+import { draftEventsFromTransitionResult } from "../persistence/task-state-event-draft.js";
 
 function readKitUserVersion(db: { pragma: (name: string, options?: { simple: boolean }) => unknown }): number {
   const raw = db.pragma("user_version", { simple: true });
@@ -131,6 +134,7 @@ export async function runTransitionOnCommand(
           }
         : undefined;
 
+    const gitCanonical = isGitTaskStateCanonicalAuthority(ctx);
     const result = await service.runTransition({
       taskId,
       action,
@@ -138,8 +142,38 @@ export async function runTransitionOnCommand(
       expectedPlanningGeneration,
       clientMutationId,
       transitionArgs: args as Record<string, unknown>,
-      beforePersistInSqliteTransaction
+      beforePersistInSqliteTransaction,
+      persist: !gitCanonical
     });
+
+    if (gitCanonical && !result.replayed) {
+      const drafts = draftEventsFromTransitionResult({
+        primary: result.evidence,
+        autoUnblocked: result.autoUnblocked,
+        store,
+        workspacePath: ctx.workspacePath,
+        ctx: {
+          commandName: "run-transition",
+          moduleId: "task-engine",
+          actorId: actor,
+          clientMutationId,
+          phaseKey: transitionTask?.phaseKey ?? undefined
+        }
+      });
+      const canonical = await commitCanonicalTaskStateEvents({
+        ctx,
+        store,
+        planning,
+        events: drafts,
+        policyApproval: args.policyApproval as { confirmed: boolean; rationale: string } | undefined
+      });
+      if (canonical && !canonical.ok) {
+        const data: Record<string, unknown> = { ...(canonical.data as Record<string, unknown>) };
+        attachPolicyMeta(data, ctx, planning.sqliteDual.getPlanningGeneration(), pgTransition.warnings);
+        return { ...canonical, data };
+      }
+      await store.load();
+    }
     if (!result.replayed && result.evidence.toState === "completed") {
       maybeSpawnTranscriptHookAfterCompletion(
         ctx.workspacePath,

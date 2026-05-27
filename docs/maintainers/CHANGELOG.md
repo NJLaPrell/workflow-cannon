@@ -8,6 +8,21 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [0.99.11] - 2026-05-27
+
+Patch — **Phase 115 git canonical task state** (event log authority, snapshot/tail hydrate, publish admission).
+
+### Added
+
+- `tasks.canonicalAuthority`: `git-event-log` with `workflow-cannon/task-state` branch, bootstrap snapshot, and JSONL event segments.
+- Commands: `task-state-snapshot`, `task-state-compact`, `task-state-migrate-baseline`, `task-state-hydrate`; doctor shadow compare when git authority is active.
+- Remote projection reads seed lifecycle admission from bootstrap snapshot; guard results stripped to schema shape on publish.
+
+### Changed
+
+- `run-transition`, `create-task`, and `update-task` publish canonical events then hydrate SQLite projection; `sync-task-store-after-merge` marked legacy.
+- Phase 115 execution tasks T100509–T100527 completed (batch delivery PR #467).
+
 ## [0.99.8] - 2026-05-26
 
 Patch — **Phase 113 dashboard intent coordinator** (snapshot-driven drawer UX, mutation holds, lazy-load merge).

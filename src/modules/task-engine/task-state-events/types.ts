@@ -44,6 +44,11 @@ export type TaskStateEventEnvelopeV1 = {
   recordedAt: string;
   actor: TaskStateEventActorV1;
   clientMutationId?: string;
+  /**
+   * Optimistic concurrency: version the writer observed for the primary task in this event
+   * (mutating kinds only). Must match replayed projection version or admission rejects.
+   */
+  expectedTaskVersion?: number;
   command: TaskStateEventCommandMetadataV1;
   workspace?: TaskStateEventWorkspaceIdentityV1;
 };

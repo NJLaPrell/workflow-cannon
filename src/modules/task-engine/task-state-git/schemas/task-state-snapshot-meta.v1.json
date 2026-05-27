@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workflow-cannon.dev/schemas/task-state-snapshot-meta.v1.json",
+  "title": "TaskStateGitSnapshotMetaV1",
+  "description": "Snapshot metadata under task-state/snapshots/*.meta.json with integrity hashes.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "snapshotId",
+    "throughSequence",
+    "throughEventId",
+    "recordedAt",
+    "contentPath",
+    "contentDigest"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "snapshotId": { "type": "string", "minLength": 1, "pattern": "^[a-zA-Z0-9._-]+$" },
+    "throughSequence": { "type": "integer", "minimum": 0 },
+    "throughEventId": { "type": "string", "minLength": 1 },
+    "recordedAt": { "type": "string", "format": "date-time" },
+    "contentPath": { "type": "string", "minLength": 1 },
+    "contentDigest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "taskCount": { "type": "integer", "minimum": 0 }
+  }
+}

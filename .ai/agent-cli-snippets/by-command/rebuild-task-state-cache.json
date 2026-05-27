@@ -30,9 +30,9 @@
   "moduleId": "task-engine",
   "description": "Rebuild disposable SQLite task projection from canonical task-state event log JSONL.",
   "policy": {
-    "sensitivity": "sensitive-with-dryrun",
-    "operationId": null,
-    "jsonApprovalRequired": "when dryRun is false or omitted by command policy"
+    "sensitivity": "sensitive",
+    "operationId": "tasks.rebuild-task-state-cache",
+    "jsonApprovalRequired": true
   },
   "planningGeneration": {
     "cliPrelude": false,
@@ -49,5 +49,5 @@
     "listCommands": "pnpm exec wk run --list-commands",
     "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
   },
-  "invocationId": "88e99e5d-a478-4d50-954f-5b81ab815ef0"
+  "invocationId": "e5e8dbdf-9b79-471c-8eea-859fb7e927ef"
 }

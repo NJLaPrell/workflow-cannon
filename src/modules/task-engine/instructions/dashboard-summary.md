@@ -6,7 +6,7 @@ agentCapsule|v=1|command=dashboard-summary|module=task-engine|schema_only=pnpm e
 
 Return a single JSON payload for dashboard / cockpit UIs: task counts, ready-queue preview, blocked summary, suggested next task, and (when present) a shallow parse of `docs/maintainers/data/workspace-kit-status.yaml`.
 
-Read-only. Does not mutate workspace state.
+Read-only. Does not mutate workspace state. Does **not** run `git fetch` — the VS Code extension **`TaskStateSyncCoordinator`** owns background fetch/hydrate/apply on an interval or via **Workflow Cannon: Sync Task State (Git)**.
 
 ## Usage
 
@@ -35,6 +35,7 @@ Also accepts standard invocation `config` / `actor` overlays where applicable.
 | Field | Description |
 | --- | --- |
 | `schemaVersion` | **`7`** adds **`agentStatus`** (schema-versioned derived WC Agent status). **`6`** adds **`systemStatus.identity`** (project/package/workspace-kit versions) and **`systemStatus.planningStore`** (SQLite path). **`5`** adds **`systemStatus`** (phase/drift slice, doctor contract issues, module activation ids, CAE posture lines). **`4`** was identical without **`systemStatus`**. **`3`** adds **`subagentRegistry`**; **`2`** added **`teamExecution`**; older clients must tolerate unknown fields |
+| `taskStateProjection` | `{ schemaVersion: 1, available, backend, appliedSequence, sourceCommit, syncStatus, updatedAt, displayState, remediation, gitSyncState }` — read-only cursor + git alignment (`task-state-status` with **no** fetch); `displayState` is **`current`**, **`behind`**, **`offline`**, or **`conflict`** (extension may overlay **`syncing`** while background sync runs) |
 | `dashboardProjection` | When set, names the section slice (`full`, `overview`, `queue`, `status`). Omitted or **`full`** on default aggregate responses. |
 | `taskStoreLastUpdated` | ISO timestamp from task store document |
 | `workspaceStatus` | `{ currentKitPhase, nextKitPhase, activeFocus, lastUpdated, blockers[], pendingDecisions[], nextAgentActions[] }` shallow-parse from `workspace-kit-status.yaml`; file-missing yields `null` |

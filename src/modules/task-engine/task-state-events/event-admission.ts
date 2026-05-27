@@ -27,6 +27,8 @@ export type TaskStateEventAdmissionError = {
 export type TaskStateEventAdmissionContext = {
   /** Events already admitted to the canonical stream (in sequence order). */
   priorEvents?: TaskStateEventV1[];
+  /** When the branch stores a bootstrap snapshot with no tail events yet, seed replay from snapshot. */
+  initialProjection?: TaskStateProjectionV1;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -65,10 +67,25 @@ function checkIdempotency(
   return null;
 }
 
-function buildProjection(priorEvents: TaskStateEventV1[]):
+function cloneProjection(projection: TaskStateProjectionV1): TaskStateProjectionV1 {
+  return {
+    ...projection,
+    tasksById: { ...projection.tasksById },
+    transitionLog: [...projection.transitionLog],
+    mutationLog: [...projection.mutationLog],
+    taskVersions: [...projection.taskVersions]
+  };
+}
+
+function buildProjection(
+  priorEvents: TaskStateEventV1[],
+  initialProjection?: TaskStateProjectionV1
+):
   | { ok: true; projection: TaskStateProjectionV1 }
   | { ok: false; error: TaskStateEventAdmissionError } {
-  let projection = createEmptyTaskStateProjection();
+  let projection = initialProjection
+    ? cloneProjection(initialProjection)
+    : createEmptyTaskStateProjection();
   for (const prior of priorEvents) {
     const applied = applyTaskStateEvent(projection, prior);
     if (!applied.ok) {
@@ -84,6 +101,34 @@ function buildProjection(priorEvents: TaskStateEventV1[]):
     projection = applied.projection;
   }
   return { ok: true, projection };
+}
+
+function taskVersionForProjection(projection: TaskStateProjectionV1, taskId: string): number {
+  const rows = projection.taskVersions.filter((row) => row.taskId === taskId);
+  return rows.at(-1)?.version ?? 0;
+}
+
+function checkExpectedTaskVersion(
+  event: TaskStateEventV1,
+  projection: TaskStateProjectionV1
+): TaskStateEventAdmissionError | null {
+  const expected = (event as TaskStateEventV1 & { expectedTaskVersion?: number }).expectedTaskVersion;
+  if (expected === undefined) {
+    return null;
+  }
+  const taskId = payloadTaskId(event);
+  if (!taskId) {
+    return null;
+  }
+  const actual = taskVersionForProjection(projection, taskId);
+  if (actual !== expected) {
+    return {
+      code: "replay-conflict",
+      message: `expectedTaskVersion ${expected} does not match replayed version ${actual} for ${taskId}`,
+      details: ["stale-task-version"]
+    };
+  }
+  return null;
 }
 
 function checkLifecycleTransition(
@@ -196,7 +241,7 @@ export function admitTaskStateEvent(
     return { ok: false, error: idempotencyErr };
   }
 
-  const projectionResult = buildProjection(priorEvents);
+  const projectionResult = buildProjection(priorEvents, context.initialProjection);
   if (!projectionResult.ok) {
     return { ok: false, error: projectionResult.error };
   }
@@ -209,6 +254,11 @@ export function admitTaskStateEvent(
   const lifecycleErr = checkLifecycleTransition(event, projectionResult.projection);
   if (lifecycleErr) {
     return { ok: false, error: lifecycleErr };
+  }
+
+  const versionErr = checkExpectedTaskVersion(event, projectionResult.projection);
+  if (versionErr) {
+    return { ok: false, error: versionErr };
   }
 
   const taskId = payloadTaskId(event);
@@ -232,7 +282,7 @@ export function admitTaskStateEvent(
 /** Admit a batch in deterministic sequence order (mutates nothing; validates append chain). */
 export function admitTaskStateEventStream(
   inputs: unknown[],
-  options?: { priorEvents?: TaskStateEventV1[] }
+  options?: { priorEvents?: TaskStateEventV1[]; initialProjection?: TaskStateProjectionV1 }
 ): { ok: true; events: TaskStateEventV1[] } | { ok: false; error: TaskStateEventAdmissionError } {
   const admitted: TaskStateEventV1[] = [...(options?.priorEvents ?? [])];
   const toAppend = [...inputs].sort((a, b) => {
@@ -245,7 +295,10 @@ export function admitTaskStateEventStream(
   });
 
   for (const input of toAppend) {
-    const result = admitTaskStateEvent(input, { priorEvents: admitted });
+    const result = admitTaskStateEvent(input, {
+      priorEvents: admitted,
+      initialProjection: options?.initialProjection
+    });
     if (!result.ok) {
       return result;
     }

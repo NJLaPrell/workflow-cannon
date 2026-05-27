@@ -207,7 +207,7 @@ export async function validatePlanningPersistenceForDoctor(
       if (remoteSha && localSha && remoteSha !== localSha) {
         issues.push({
           path: relDisplay,
-          reason: `task-store-git-divergence: working-tree blob SHA ${localSha.slice(0, 12)} differs from ${integrationRef} (${remoteSha.slice(0, 12)}); run wk run sync-task-store-after-merge after merging feature branches`
+          reason: `task-store-git-divergence: working-tree blob SHA ${localSha.slice(0, 12)} differs from ${integrationRef} (${remoteSha.slice(0, 12)}); prefer wk run task-state-hydrate (canonical git-event-log) or legacy wk run sync-task-store-after-merge for recovery`
         });
       }
     }

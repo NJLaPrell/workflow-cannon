@@ -46,6 +46,14 @@
         "backup-planning-sqlite",
         "rebuild-task-state-cache",
         "repair-task-state-cache",
+        "task-state-status",
+        "task-state-hydrate",
+        "task-state-init",
+        "task-state-publish",
+        "task-state-snapshot",
+        "task-state-compact",
+        "task-state-migrate-baseline",
+        "task-state-verify",
         "batch-transition",
         "block-task",
         "check-task-store-commit",
@@ -195,6 +203,30 @@
         },
         "repair-task-state-cache": {
           "$ref": "#/$defs/contractRepairTaskStateCache"
+        },
+        "task-state-status": {
+          "$ref": "#/$defs/contractTaskStateStatus"
+        },
+        "task-state-hydrate": {
+          "$ref": "#/$defs/contractTaskStateHydrate"
+        },
+        "task-state-init": {
+          "$ref": "#/$defs/contractTaskStateInit"
+        },
+        "task-state-publish": {
+          "$ref": "#/$defs/contractTaskStatePublish"
+        },
+        "task-state-snapshot": {
+          "$ref": "#/$defs/contractTaskStateSnapshot"
+        },
+        "task-state-compact": {
+          "$ref": "#/$defs/contractTaskStateCompact"
+        },
+        "task-state-migrate-baseline": {
+          "$ref": "#/$defs/contractTaskStateMigrateBaseline"
+        },
+        "task-state-verify": {
+          "$ref": "#/$defs/contractTaskStateStatus"
         },
         "batch-transition": {
           "$ref": "#/$defs/contractBatchTransition"
@@ -3227,6 +3259,157 @@
                   "additionalProperties": true
                 }
               }
+            }
+          }
+        }
+      ]
+    },
+    "contractTaskStateStatus": {
+      "allOf": [
+        { "$ref": "#/$defs/contractBase" },
+        {
+          "properties": {
+            "args": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "fetch": { "type": "boolean" },
+                "branch": { "type": "string" }
+              }
+            },
+            "responseData": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "schemaVersion": { "const": 1 },
+                "syncState": {
+                  "type": "string",
+                  "enum": ["current", "behind", "missing", "conflict"]
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "contractTaskStateHydrate": {
+      "allOf": [
+        { "$ref": "#/$defs/contractBase" },
+        {
+          "properties": {
+            "args": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "dryRun": { "type": "boolean" },
+                "fetch": { "type": "boolean" },
+                "branch": { "type": "string" },
+                "eventLogRelativePath": { "type": "string" },
+                "policyApproval": { "type": "object", "additionalProperties": true }
+              }
+            },
+            "responseData": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          }
+        }
+      ]
+    },
+    "contractTaskStateInit": {
+      "allOf": [
+        { "$ref": "#/$defs/contractBase" },
+        {
+          "properties": {
+            "args": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "dryRun": { "type": "boolean" },
+                "overwriteExisting": { "type": "boolean" },
+                "push": { "type": "boolean" },
+                "branch": { "type": "string" },
+                "snapshotId": { "type": "string" },
+                "policyApproval": { "type": "object", "additionalProperties": true }
+              }
+            },
+            "responseData": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          }
+        }
+      ]
+    },
+    "contractTaskStateSnapshot": {
+      "allOf": [
+        { "$ref": "#/$defs/contractBase" },
+        {
+          "properties": {
+            "args": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "dryRun": { "type": "boolean" },
+                "branch": { "type": "string" },
+                "snapshotId": { "type": "string" },
+                "policyApproval": { "type": "object", "additionalProperties": true }
+              }
+            },
+            "responseData": { "type": "object", "additionalProperties": true }
+          }
+        }
+      ]
+    },
+    "contractTaskStateCompact": {
+      "allOf": [
+        { "$ref": "#/$defs/contractBase" },
+        {
+          "properties": {
+            "args": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "dryRun": { "type": "boolean" },
+                "branch": { "type": "string" }
+              }
+            },
+            "responseData": { "type": "object", "additionalProperties": true }
+          }
+        }
+      ]
+    },
+    "contractTaskStateMigrateBaseline": {
+      "allOf": [
+        { "$ref": "#/$defs/contractTaskStateInit" }
+      ]
+    },
+    "contractTaskStatePublish": {
+      "allOf": [
+        { "$ref": "#/$defs/contractBase" },
+        {
+          "properties": {
+            "args": {
+              "type": "object",
+              "additionalProperties": true,
+              "required": ["events", "expectedHeadSha", "expectedTaskVersions"],
+              "properties": {
+                "dryRun": { "type": "boolean" },
+                "events": { "type": "array", "minItems": 1 },
+                "expectedHeadSha": { "type": "string" },
+                "expectedTaskVersions": {
+                  "type": "object",
+                  "additionalProperties": { "type": "integer" }
+                },
+                "branch": { "type": "string" },
+                "maxAttempts": { "type": "integer" },
+                "push": { "type": "boolean" },
+                "policyApproval": { "type": "object", "additionalProperties": true }
+              }
+            },
+            "responseData": {
+              "type": "object",
+              "additionalProperties": true
             }
           }
         }

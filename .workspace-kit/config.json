@@ -46,6 +46,7 @@
       }
     },
     "persistenceBackend": "sqlite",
+    "canonicalAuthority": "git-event-log",
     "planningGenerationPolicy": "require",
     "sqliteDatabaseRelativePath": ".workspace-kit/tasks/workspace-kit.db"
   }

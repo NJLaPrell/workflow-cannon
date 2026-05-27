@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-05-26T21:19:54.853Z",
+  "generatedAt": "2026-05-27T04:08:35.690Z",
   "commands": [
     {
       "name": "accept-improvement",
@@ -1015,6 +1015,46 @@
     {
       "name": "task-persistence-readiness",
       "path": ".ai/agent-cli-snippets/by-command/task-persistence-readiness.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "task-state-compact",
+      "path": ".ai/agent-cli-snippets/by-command/task-state-compact.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "task-state-hydrate",
+      "path": ".ai/agent-cli-snippets/by-command/task-state-hydrate.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "task-state-init",
+      "path": ".ai/agent-cli-snippets/by-command/task-state-init.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "task-state-migrate-baseline",
+      "path": ".ai/agent-cli-snippets/by-command/task-state-migrate-baseline.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "task-state-publish",
+      "path": ".ai/agent-cli-snippets/by-command/task-state-publish.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "task-state-snapshot",
+      "path": ".ai/agent-cli-snippets/by-command/task-state-snapshot.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "task-state-status",
+      "path": ".ai/agent-cli-snippets/by-command/task-state-status.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "task-state-verify",
+      "path": ".ai/agent-cli-snippets/by-command/task-state-verify.json",
       "moduleId": "task-engine"
     },
     {

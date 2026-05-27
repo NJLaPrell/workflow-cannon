@@ -75,6 +75,7 @@ export function finalizeDashboardSummaryProjection(
     workspaceStatus: data.workspaceStatus,
     stateSummary: data.stateSummary,
     executionPlanningScope: data.executionPlanningScope,
+    taskStateProjection: data.taskStateProjection,
     dashboardProjection: projection
   } satisfies Partial<DashboardSummaryData>;
 
@@ -116,6 +117,7 @@ export function finalizeDashboardSummaryProjection(
       subagentRegistry: data.subagentRegistry,
       taskCheckpoints: data.taskCheckpoints,
       systemStatus: data.systemStatus,
+      taskStateProjection: data.taskStateProjection,
       agentStatus: data.agentStatus,
       currentPhaseDelivery: data.currentPhaseDelivery,
       deliveredPhaseKeys: data.deliveredPhaseKeys,
@@ -154,6 +156,7 @@ export function finalizeDashboardSummaryProjection(
       subagentRegistry: data.subagentRegistry,
       taskCheckpoints: data.taskCheckpoints,
       systemStatus: data.systemStatus,
+      taskStateProjection: data.taskStateProjection,
       agentStatus: data.agentStatus,
       currentPhaseDelivery: data.currentPhaseDelivery,
       deliveredPhaseKeys: data.deliveredPhaseKeys,
@@ -192,6 +195,7 @@ export function finalizeDashboardSummaryProjection(
     subagentRegistry: data.subagentRegistry,
     taskCheckpoints: data.taskCheckpoints,
     systemStatus: data.systemStatus,
+    taskStateProjection: data.taskStateProjection,
     agentStatus: data.agentStatus,
     currentPhaseDelivery: data.currentPhaseDelivery,
     deliveredPhaseKeys: data.deliveredPhaseKeys,
