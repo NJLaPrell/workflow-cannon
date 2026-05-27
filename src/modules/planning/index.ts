@@ -27,9 +27,7 @@ import {
   getPlanningGenerationPolicy,
   planningStrictValidationEnabled
 } from "../task-engine/planning-config.js";
-import {
-  planningConcurrencySaveOpts
-} from "../task-engine/mutation-utils.js";
+import { planningConcurrencySaveOpts, readIdempotencyValue } from "../task-engine/mutation-utils.js";
 import {
   clearAgentActivityBestEffort,
   recordAgentActivityBestEffort
@@ -37,6 +35,7 @@ import {
 import { validateTaskSetForStrictMode } from "../task-engine/strict-task-validation.js";
 import {
   buildScoringHints,
+  buildPlanArtifactRecommendedNextCommands,
   findMissingAnsweredQuestions,
   persistInterviewSnapshot,
   resolveOutputMode,
@@ -44,6 +43,24 @@ import {
   type PlanningOutputMode
 } from "./build-plan-output-helpers.js";
 import { buildTasksFromExecutionDrafts, nextTaskId } from "./build-plan-execution-drafts.js";
+import { validatePlanArtifactDraftInput } from "../../core/planning/validate-plan-artifact.js";
+import {
+  commitPlanArtifactDraftPersist,
+  planArtifactDraftPersistSuccessResult,
+  preludePlanArtifactDraftPersist
+} from "./persist-plan-artifact-draft.js";
+import { runReviewPlanArtifact } from "./review-plan-artifact-handler.js";
+import { runAcceptPlanArtifact } from "./accept-plan-artifact-handler.js";
+import { runFinalizePlanToPhase } from "./finalize-plan-to-phase-handler.js";
+import { attachPolicyMeta } from "../task-engine/attach-planning-response-meta.js";
+import { planningGenPolicyGate } from "../task-engine/planning-generation-gate.js";
+import { TaskEngineError } from "../task-engine/transitions.js";
+
+const DRAFT_PLAN_ARTIFACT_INSTRUCTION = "src/modules/planning/instructions/draft-plan-artifact.md";
+const REVIEW_PLAN_ARTIFACT_INSTRUCTION = "src/modules/planning/instructions/review-plan-artifact.md";
+const ACCEPT_PLAN_ARTIFACT_INSTRUCTION = "src/modules/planning/instructions/accept-plan-artifact.md";
+const FINALIZE_PLAN_TO_PHASE_INSTRUCTION =
+  "src/modules/planning/instructions/finalize-plan-to-phase.md";
 
 async function recordBuildPlanActivity(
   ctx: Parameters<NonNullable<WorkflowModule["onCommand"]>>[1],
@@ -92,6 +109,153 @@ export const planningModule: WorkflowModule = {
     }
   },
   async onCommand(command, ctx) {
+    if (command.name === "review-plan-artifact") {
+      return runReviewPlanArtifact(
+        (command.args ?? {}) as Record<string, unknown>,
+        ctx,
+        REVIEW_PLAN_ARTIFACT_INSTRUCTION
+      );
+    }
+
+    if (command.name === "accept-plan-artifact") {
+      return runAcceptPlanArtifact(
+        (command.args ?? {}) as Record<string, unknown>,
+        ctx,
+        ACCEPT_PLAN_ARTIFACT_INSTRUCTION
+      );
+    }
+
+    if (command.name === "finalize-plan-to-phase") {
+      return runFinalizePlanToPhase(
+        (command.args ?? {}) as Record<string, unknown>,
+        ctx,
+        FINALIZE_PLAN_TO_PHASE_INSTRUCTION
+      );
+    }
+
+    if (command.name === "draft-plan-artifact") {
+      const args = command.args ?? {};
+      const artifactRaw = args.artifact;
+      if (!artifactRaw || typeof artifactRaw !== "object" || Array.isArray(artifactRaw)) {
+        return {
+          ok: false,
+          code: "invalid-run-args",
+          message: "draft-plan-artifact requires a non-null artifact object"
+        };
+      }
+      const persist = args.persist !== false;
+      const importSource =
+        args.importSource === "import-build-plan" || args.importSource === "import-wishlist"
+          ? args.importSource
+          : undefined;
+      const validation = validatePlanArtifactDraftInput(artifactRaw, {
+        workspaceRoot: ctx.workspacePath,
+        planId: typeof args.planId === "string" ? args.planId : undefined,
+        importSource,
+        actor: typeof args.actor === "string" ? args.actor : undefined
+      });
+      if (!validation.ok) {
+        return {
+          ok: false,
+          code: "plan-artifact-schema-invalid",
+          message: "PlanArtifact validation failed",
+          data: {
+            schemaVersion: 1,
+            responseSchemaVersion: 1,
+            errors: validation.errors
+          }
+        };
+      }
+      if (persist) {
+        const stores = await openPlanningStores(ctx);
+        const pg = planningGenPolicyGate(
+          ctx,
+          args as Record<string, unknown>,
+          DRAFT_PLAN_ARTIFACT_INSTRUCTION,
+          stores.sqliteDual.getPlanningGeneration()
+        );
+        if (pg.block) {
+          return pg.block;
+        }
+        const clientMutationId = readIdempotencyValue(args as Record<string, unknown>);
+        const sqliteDb = stores.sqliteDual.getDatabase();
+        const prelude = preludePlanArtifactDraftPersist({
+          workspacePath: ctx.workspacePath,
+          artifact: validation.artifact,
+          artifactRaw,
+          clientMutationId,
+          effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined,
+          sqliteDb
+        });
+        if (prelude.kind === "conflict") {
+          return { ok: false, code: prelude.code, message: prelude.message };
+        }
+        if (prelude.kind === "replay") {
+          const replay = planArtifactDraftPersistSuccessResult({
+            code: "plan-artifact-draft-idempotent-replay",
+            artifact: prelude.artifact,
+            storagePath: prelude.storagePath,
+            replayed: true
+          });
+          attachPolicyMeta(
+            replay.data as Record<string, unknown>,
+            ctx,
+            stores.sqliteDual.getPlanningGeneration(),
+            pg.warnings
+          );
+          return replay;
+        }
+        let committed;
+        try {
+          stores.sqliteDual.withTransaction(() => {
+            committed = commitPlanArtifactDraftPersist({
+              workspacePath: ctx.workspacePath,
+              artifact: validation.artifact,
+              clientMutationId,
+              digest: prelude.digest,
+              effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined,
+              sqliteDb
+            });
+          }, planningConcurrencySaveOpts(args as Record<string, unknown>));
+        } catch (err) {
+          if (err instanceof TaskEngineError) {
+            const data =
+              err.code === "planning-generation-mismatch" && err.details
+                ? (err.details as Record<string, unknown>)
+                : undefined;
+            return { ok: false, code: err.code, message: err.message, data };
+          }
+          throw err;
+        }
+        const persisted = planArtifactDraftPersistSuccessResult({
+          code: "plan-artifact-draft-persisted",
+          artifact: committed!.artifact,
+          storagePath: committed!.storagePath,
+          replayed: false
+        });
+        attachPolicyMeta(
+          persisted.data as Record<string, unknown>,
+          ctx,
+          stores.sqliteDual.getPlanningGeneration(),
+          pg.warnings
+        );
+        return persisted;
+      }
+      return {
+        ok: true,
+        code: "plan-artifact-draft-validated",
+        message: "PlanArtifact draft validated",
+        data: {
+          schemaVersion: 1,
+          responseSchemaVersion: 1,
+          planId: validation.artifact.planId,
+          version: validation.artifact.version,
+          planRef: validation.artifact.planRef,
+          status: validation.artifact.status
+        }
+      };
+    }
+
     if (command.name === "list-planning-types") {
       return {
         ok: true,
@@ -355,6 +519,7 @@ export const planningModule: WorkflowModule = {
       if (outputMode === "tasks") {
         const persistTasks = args.persistTasks === true;
         const executionDraftsRaw = args.executionTaskDrafts;
+        const recommendedNextCommands = buildPlanArtifactRecommendedNextCommands({ outputMode });
         const useDraftDecomposition =
           finalize === true &&
           Array.isArray(executionDraftsRaw) &&
@@ -429,6 +594,7 @@ export const planningModule: WorkflowModule = {
               scoringHints,
               capturedAnswers: answers,
               artifact,
+              recommendedNextCommands,
               taskOutputs: built.tasks,
               planningDecomposition: {
                 schemaVersion: 1,
@@ -560,6 +726,7 @@ export const planningModule: WorkflowModule = {
             scoringHints,
             capturedAnswers: answers,
             artifact,
+            recommendedNextCommands,
             taskOutputs: [task],
             provenance: {
               planRef,

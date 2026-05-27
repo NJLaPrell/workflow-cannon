@@ -1,12 +1,17 @@
 import assert from "node:assert/strict";
+import crypto from "node:crypto";
 import { constants } from "node:fs";
 import { access, mkdir, mkdtemp, readFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 
+import { fileURLToPath } from "node:url";
+
 import { planningModule, taskEngineModule } from "../dist/index.js";
 import { readBuildPlanSession } from "../dist/core/planning/build-plan-session-file.js";
+
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 import { TaskStore } from "../dist/modules/task-engine/persistence/store.js";
 import { SqliteDualPlanningStore } from "../dist/modules/task-engine/persistence/sqlite-dual-planning.js";
 
@@ -24,6 +29,44 @@ async function loadSqliteTaskStore(workspace) {
 async function tmpDir(prefix = "planning-") {
   return mkdtemp(path.join(os.tmpdir(), prefix));
 }
+
+test("planningModule draft-plan-artifact persist:true writes artifact JSON", async () => {
+  const workspace = await tmpDir();
+  const artifact = JSON.parse(
+    await readFile(
+      path.join(repoRoot, "fixtures/planning/plan-artifact-minimal.valid.v1.json"),
+      "utf8"
+    )
+  );
+  const planId = crypto.randomUUID();
+  artifact.planId = planId;
+  artifact.planRef = `plan-artifact:${planId}`;
+  const result = await planningModule.onCommand(
+    {
+      name: "draft-plan-artifact",
+      args: {
+        persist: true,
+        artifact,
+        expectedPlanningGeneration: 0,
+        policyApproval: { confirmed: true, rationale: "test persist" }
+      }
+    },
+    { runtimeVersion: "0.1", workspacePath: workspace, effectiveConfig: SQLITE_CFG }
+  );
+  assert.equal(result.ok, true);
+  assert.equal(result.code, "plan-artifact-draft-persisted");
+  assert.equal(result.data.planId, planId);
+  assert.equal(result.data.version, 1);
+  assert.ok(String(result.data.storagePath).includes(planId));
+  const stored = JSON.parse(
+    await readFile(
+      path.join(workspace, result.data.storagePath),
+      "utf8"
+    )
+  );
+  assert.equal(stored.planId, planId);
+  assert.equal(stored.version, 1);
+});
 
 test("planningModule list-planning-types returns typed workflow descriptors", async () => {
   const workspace = await tmpDir();
@@ -208,6 +251,8 @@ test("planningModule build-plan supports tasks output mode branch", async () => 
   assert.ok(Array.isArray(result.data.taskOutputs));
   assert.equal(result.data.taskOutputs.length, 1);
   assert.equal(typeof result.data.provenance.planRef, "string");
+  assert.equal(result.data.recommendedNextCommands[0].command, "draft-plan-artifact");
+  assert.equal(result.data.recommendedNextCommands[0].argsTemplate.importSource, "import-build-plan");
 });
 
 test("planningModule build-plan finalize with executionTaskDrafts emits multi-task envelope", async () => {
@@ -256,6 +301,7 @@ test("planningModule build-plan finalize with executionTaskDrafts emits multi-ta
   assert.equal(first.data.taskOutputs[1].id, "T999");
   assert.equal(first.data.planningDecomposition.schemaVersion, 1);
   assert.equal(first.data.planningDecomposition.convertWishlistTaskRowCompatible, true);
+  assert.equal(first.data.recommendedNextCommands[0].command, "draft-plan-artifact");
 
   const second = await planningModule.onCommand(
     {
@@ -472,6 +518,7 @@ test("planningModule build-plan can persist tasks in tasks output mode", async (
   );
   assert.equal(result.ok, true);
   assert.equal(result.code, "planning-task-output-created");
+  assert.equal(result.data.recommendedNextCommands[0].command, "draft-plan-artifact");
   const outputTaskId = result.data.taskOutputs[0].id;
   const taskStore = await loadSqliteTaskStore(workspace);
   const created = taskStore.getTask(outputTaskId);

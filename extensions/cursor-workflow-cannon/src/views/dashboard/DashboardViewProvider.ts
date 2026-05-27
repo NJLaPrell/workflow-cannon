@@ -1033,6 +1033,23 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
           await this.onDashboardAcceptProposedBatch(taskIds, label, phaseKey || undefined);
         }
       }
+      if (msg?.type === "acceptPlanArtifact") {
+        const planId = typeof msg.planId === "string" ? msg.planId.trim() : "";
+        const planRef = typeof msg.planRef === "string" ? msg.planRef.trim() : "";
+        const versionRaw = typeof msg.version === "string" ? msg.version.trim() : "";
+        const version = Number(versionRaw);
+        if (planId && planRef && Number.isFinite(version) && version > 0) {
+          await this.onAcceptPlanArtifact(planId, planRef, Math.floor(version));
+        }
+      }
+      if (msg?.type === "finalizePlanArtifact") {
+        const planId = typeof msg.planId === "string" ? msg.planId.trim() : "";
+        const versionRaw = typeof msg.version === "string" ? msg.version.trim() : "";
+        const version = Number(versionRaw);
+        if (planId && Number.isFinite(version) && version > 0) {
+          await this.onFinalizePlanArtifact(planId, Math.floor(version));
+        }
+      }
       if (msg?.type === "openTaskDetail") {
         const tid = typeof msg.taskId === "string" ? msg.taskId.trim() : "";
         if (tid.length > 0) {
@@ -2379,6 +2396,80 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
     return { ok: true };
+  }
+
+  private async onAcceptPlanArtifact(planId: string, planRef: string, version: number): Promise<void> {
+    const approvedBy =
+      process.env.GIT_AUTHOR_EMAIL || process.env.USER || process.env.USERNAME || "dashboard-operator";
+    const r = await this.client.run("accept-plan-artifact", {
+      planId,
+      approvalRecord: {
+        schemaVersion: 1,
+        confirmed: true,
+        approvedVersion: version,
+        approvedAt: new Date().toISOString(),
+        approvedBy,
+        planRef
+      },
+      policyApproval: dashboardPolicyApproval(
+        { workflowId: "plan-artifact", action: "accept", command: "accept-plan-artifact" },
+        { humanRationale: "Accept reviewed PlanArtifact from Dashboard", phaseKey: null, taskId: null }
+      ),
+      ...expectedPlanningGenerationArgs()
+    });
+    if (!r.ok) {
+      await vscode.window.showErrorMessage(
+        `Plan accept failed: ${(r.message ?? r.code ?? JSON.stringify(r)).slice(0, 520)}`
+      );
+      return;
+    }
+    ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
+    await vscode.window.showInformationMessage(`Accepted plan ${planId}.`);
+    await this.pushUpdate({ projection: "full", skipHeavyFetches: false });
+  }
+
+  private async onFinalizePlanArtifact(planId: string, version: number): Promise<void> {
+    const commonArgs = {
+      planId,
+      version,
+      desiredStatus: "ready",
+      ...expectedPlanningGenerationArgs()
+    };
+    const preview = await this.client.run("finalize-plan-to-phase", {
+      ...commonArgs,
+      dryRun: true
+    });
+    if (!preview.ok) {
+      await vscode.window.showErrorMessage(
+        `Plan finalize preview failed: ${(preview.message ?? preview.code ?? JSON.stringify(preview)).slice(0, 520)}`
+      );
+      return;
+    }
+    const r = await this.client.run("finalize-plan-to-phase", {
+      ...commonArgs,
+      dryRun: false,
+      policyApproval: dashboardPolicyApproval(
+        { workflowId: "plan-artifact", action: "finalize", command: "finalize-plan-to-phase" },
+        { humanRationale: "Finalize accepted PlanArtifact from Dashboard", phaseKey: null, taskId: null }
+      )
+    });
+    if (!r.ok) {
+      await vscode.window.showErrorMessage(
+        `Plan finalize failed: ${(r.message ?? r.code ?? JSON.stringify(r)).slice(0, 520)}`
+      );
+      return;
+    }
+    ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
+    const data = r.data && typeof r.data === "object" ? (r.data as Record<string, unknown>) : {};
+    const phaseKey = typeof data.phaseKey === "string" ? data.phaseKey.trim() : "";
+    const count = typeof data.count === "number" ? data.count : Number(data.count ?? 0);
+    await vscode.window.showInformationMessage(
+      `Finalized plan ${planId}${Number.isFinite(count) && count > 0 ? ` into ${count} task(s)` : ""}.`
+    );
+    await this.pushUpdate({ projection: "full", skipHeavyFetches: false });
+    if (phaseKey.length > 0) {
+      await this.view?.webview.postMessage({ type: "wcOpenQueueForPhase", phaseKey });
+    }
   }
 
   /**
@@ -4157,6 +4248,65 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     .dash-planning-wizard-actions {
       margin: 0;
     }
+    .wc-plan-artifact-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin: 0 0 8px 0;
+    }
+    .wc-plan-artifact-main { min-width: 0; flex: 1; }
+    .wc-plan-artifact-title { margin: 0; overflow-wrap: anywhere; }
+    .wc-plan-artifact-meta { margin: 2px 0 0 0; color: var(--vscode-descriptionForeground, var(--vscode-foreground)); font-size: 11px; overflow-wrap: anywhere; }
+    .wc-plan-artifact-status {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      border-radius: 7px;
+      border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.35));
+      background: var(--vscode-textCodeBlock-background);
+      color: var(--vscode-textLink-foreground, #4fc1ff);
+      font-size: 10px;
+      font-weight: 600;
+      line-height: 1.3;
+    }
+    .wc-plan-artifact-stats { display: flex; flex-wrap: wrap; gap: 6px; align-items: stretch; }
+    .wc-plan-artifact-stat {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 6px;
+      border-radius: 6px;
+      border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.35));
+      background: var(--vscode-textCodeBlock-background);
+      font-size: 11px;
+      min-width: 0;
+    }
+    .wc-plan-artifact-stat b { font-variant-numeric: tabular-nums; }
+    .wc-plan-artifact-label { color: var(--vscode-descriptionForeground, var(--vscode-foreground)); }
+    .wc-plan-artifact-actions { display: flex; justify-content: flex-end; gap: 6px; margin-top: 8px; }
+    .wc-plan-subtitle { margin: 8px 0 4px 0; }
+    .wc-plan-review-list, .wc-plan-wbs-list { display: flex; flex-direction: column; gap: 4px; }
+    .wc-plan-review-row, .wc-plan-wbs-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 4px 6px;
+      border-radius: 4px;
+      background: var(--vscode-textCodeBlock-background);
+      min-width: 0;
+    }
+    .wc-plan-review-severity, .wc-plan-wbs-phase {
+      flex-shrink: 0;
+      color: var(--vscode-descriptionForeground, var(--vscode-foreground));
+      font-size: 10px;
+      font-weight: 600;
+    }
+    .wc-plan-review-message, .wc-plan-wbs-title { min-width: 0; overflow-wrap: anywhere; }
+    .wc-plan-review-path { color: var(--vscode-descriptionForeground, var(--vscode-foreground)); font-size: 10px; }
+    .wc-plan-review-pass { margin: 8px 0 0 0; color: var(--vscode-testing-iconPassed, #4ec9b0); }
     .ok { color: var(--vscode-testing-iconPassed); }
     .bad { color: var(--vscode-errorForeground); }
     .phase-stack { margin: 4px 0 8px 0; }

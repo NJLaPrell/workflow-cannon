@@ -1937,6 +1937,7 @@ test("taskEngineModule onCommand dashboard-summary returns stable shape", async 
   assert.ok(Array.isArray(d.wishlist.openTop));
   assert.equal(d.wishlist.openTop.length, 0);
   assert.equal(d.planningSession, null);
+  assert.equal(d.planArtifact, null);
   assert.equal(d.readyImprovementsSummary.schemaVersion, 1);
   assert.equal(d.readyImprovementsSummary.count, 0);
   assert.ok(Array.isArray(d.readyImprovementsSummary.phaseBuckets));
@@ -1998,6 +1999,49 @@ test("taskEngineModule onCommand dashboard-summary returns stable shape", async 
   assert.ok(Array.isArray(d.approvalQueue.policyArtifacts));
   assert.ok(Array.isArray(d.pastPhaseNotes));
   assert.equal(d.pastPhaseNotes.length, 0);
+});
+
+test("taskEngineModule dashboard-summary exposes latest PlanArtifact summary", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, () => {});
+  const fixturePath = path.join(
+    path.dirname(fileURLToPath(import.meta.url)),
+    "..",
+    "fixtures",
+    "planning",
+    "plan-artifact-full-feature.valid.v1.json"
+  );
+  const artifact = JSON.parse(await readFile(fixturePath, "utf8"));
+  artifact.openQuestions = [];
+  artifact.status = "draft";
+  artifact.version = 1;
+  const ctx = sqliteTaskEngineCtx(workspace);
+  const draft = await planningModule.onCommand(
+    {
+      name: "draft-plan-artifact",
+      args: {
+        persist: true,
+        artifact,
+        expectedPlanningGeneration: 1,
+        policyApproval: { confirmed: true, rationale: "dashboard planArtifact summary fixture" }
+      }
+    },
+    ctx
+  );
+  assert.equal(draft.ok, true, draft.message);
+
+  const result = await taskEngineModule.onCommand({ name: "dashboard-summary", args: {} }, ctx);
+  assert.equal(result.ok, true);
+  assert.equal(result.data.planArtifact.schemaVersion, 1);
+  assert.equal(result.data.planArtifact.count, 1);
+  assert.equal(result.data.planArtifact.current.planId, artifact.planId);
+  assert.equal(result.data.planArtifact.current.planRef, artifact.planRef);
+  assert.equal(result.data.planArtifact.current.status, "draft");
+  assert.equal(result.data.planArtifact.current.title, artifact.identity.title);
+  assert.equal(result.data.planArtifact.current.planningType, artifact.identity.planningType);
+  assert.equal(result.data.planArtifact.current.wbsRowCount, artifact.wbs.length);
+  assert.equal(result.data.planArtifact.current.openQuestionCount, 0);
+  assert.equal(result.data.planArtifact.recent.length, 1);
 });
 
 test("taskEngineModule dashboard-summary agentStatus falls back to awaiting instruction", async () => {

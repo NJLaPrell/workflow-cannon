@@ -1090,6 +1090,42 @@
   },
   {
     "moduleId": "planning",
+    "name": "draft-plan-artifact",
+    "file": "draft-plan-artifact.md",
+    "description": "Validate and optionally persist a PlanArtifact v1 draft.",
+    "policyOperationId": "planning.draft-plan-artifact",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive-with-dryrun"
+  },
+  {
+    "moduleId": "planning",
+    "name": "review-plan-artifact",
+    "file": "review-plan-artifact.md",
+    "description": "Run A-RUBRIC review on a PlanArtifact v1 (blockers, warnings, coverage).",
+    "policyOperationId": "planning.review-plan-artifact",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive-with-dryrun"
+  },
+  {
+    "moduleId": "planning",
+    "name": "accept-plan-artifact",
+    "file": "accept-plan-artifact.md",
+    "description": "Record operator acceptance of a PlanArtifact v1 (approvalRecord, status accepted).",
+    "policyOperationId": "planning.accept-plan-artifact",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "planning",
+    "name": "finalize-plan-to-phase",
+    "file": "finalize-plan-to-phase.md",
+    "description": "Preview or persist WBS task drafts from an accepted PlanArtifact v1 into a target phase.",
+    "policyOperationId": "planning.finalize-plan-to-phase",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive-with-dryrun"
+  },
+  {
+    "moduleId": "planning",
     "name": "list-planning-types",
     "file": "list-planning-types.md",
     "description": "List supported planning workflow types and their intent.",

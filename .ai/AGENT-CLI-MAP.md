@@ -60,6 +60,10 @@ For a **net-new consumer project**, attach Workflow Cannon first: install `@work
 
 **Dashboard:** Routine drawer actions auto-fill structured `policyApproval.rationale`; elevated paths require operator text. Agents invoking **`wk run` from the terminal** must still pass explicit JSON rationale — see [`.ai/POLICY-APPROVAL.md`](./POLICY-APPROVAL.md) → **Workflow Cannon Dashboard**.
 
+## PlanArtifact v1 (planning module)
+
+Runbook: [`.ai/runbooks/plan-artifact-workflow.md`](./runbooks/plan-artifact-workflow.md). Contracts: repo-root **`PLANNER_COMMANDS.md`**. Copy-paste ladder: [`.ai/AGENT-CLI-MAP.extended.md`](./AGENT-CLI-MAP.extended.md) → *PlanArtifact lifecycle*. Validate-only: `pnpm exec wk run draft-plan-artifact '{"persist":false,"artifact":{...}}'`. Finalize preview is Tier C: `pnpm exec wk run finalize-plan-to-phase '{"planId":"<uuid>","dryRun":true}'`. Finalize persist is Tier B and needs JSON `policyApproval` + `expectedPlanningGeneration`: `pnpm exec wk run finalize-plan-to-phase '{"planId":"<uuid>","dryRun":false,"targetPhaseKey":"110","targetPhase":"Phase 110","desiredStatus":"ready","expectedPlanningGeneration":<n>,"policyApproval":{"confirmed":true,"rationale":"materialize accepted plan WBS"}}'`. Confirm handlers with **`pnpm exec wk run --list-commands`**.
+
 ## Maintainer delivery (one `T###` → `release/phase-<N>`)
 
 Playbook: [`.ai/playbooks/task-to-phase-branch.md`](./playbooks/task-to-phase-branch.md) — branch from phase branch, PR, merge, **`run-transition`** **`complete`** with evidence.

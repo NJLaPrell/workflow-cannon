@@ -111,6 +111,28 @@ export function toCliGuidance(args: {
   };
 }
 
+export function buildPlanArtifactRecommendedNextCommands(args: {
+  outputMode: PlanningOutputMode;
+}): Array<Record<string, unknown>> {
+  if (args.outputMode !== "tasks") {
+    return [];
+  }
+  return [
+    {
+      schemaVersion: 1,
+      command: "draft-plan-artifact",
+      reason: "Use PlanArtifact for phase-scoped WBS work that needs review, accept, and finalize gates.",
+      argsTemplate: {
+        persist: false,
+        importSource: "import-build-plan",
+        artifact: {
+          schemaVersion: 1
+        }
+      }
+    }
+  ];
+}
+
 export async function persistInterviewSnapshot(
   workspacePath: string,
   effectiveConfig: Record<string, unknown> | undefined,

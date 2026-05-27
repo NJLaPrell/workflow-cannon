@@ -500,6 +500,32 @@
         }
       }
     },
+    "dashboardPlanArtifactRow": {
+      "type": "object",
+      "required": [
+        "planId",
+        "planRef",
+        "version",
+        "status",
+        "title",
+        "planningType",
+        "updatedAt",
+        "wbsRowCount",
+        "openQuestionCount"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "planId": { "type": "string", "minLength": 1 },
+        "planRef": { "type": "string", "minLength": 1 },
+        "version": { "type": "integer", "minimum": 1 },
+        "status": { "type": "string", "minLength": 1 },
+        "title": { "type": "string", "minLength": 1 },
+        "planningType": { "type": "string", "minLength": 1 },
+        "updatedAt": { "type": "string" },
+        "wbsRowCount": { "type": "integer", "minimum": 0 },
+        "openQuestionCount": { "type": "integer", "minimum": 0 }
+      }
+    },
     "contractAgentMutationPlan": {
       "allOf": [
         {
@@ -2983,6 +3009,7 @@
                 "taskStoreLastUpdated",
                 "workspaceStatus",
                 "planningSession",
+                "planArtifact",
                 "stateSummary",
                 "readyQueueTop",
                 "readyQueueCount",
@@ -3123,6 +3150,37 @@
                     "resumeCli"
                   ],
                   "additionalProperties": true
+                },
+                "planArtifact": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "required": [
+                    "schemaVersion",
+                    "count",
+                    "current",
+                    "recent"
+                  ],
+                  "additionalProperties": true,
+                  "properties": {
+                    "schemaVersion": {
+                      "const": 1
+                    },
+                    "count": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "current": {
+                      "$ref": "#/$defs/dashboardPlanArtifactRow"
+                    },
+                    "recent": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/$defs/dashboardPlanArtifactRow"
+                      }
+                    }
+                  }
                 }
               }
             }

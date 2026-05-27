@@ -4,6 +4,8 @@
 
 Operational guide for the Phase 17 planning module.
 
+**PlanArtifact v1** (structured plan + WBS → phase tasks) uses [`.ai/runbooks/plan-artifact-workflow.md`](./plan-artifact-workflow.md) — not this interview/wishlist path.
+
 ## Intent
 
 Use the planning module to run guided interviews and produce a wishlist artifact (`W###`) for future decomposition, **or** (with `outputMode:"tasks"`) preview / persist **execution** task rows. Multi-task materialization uses **`build-plan`** `executionTaskDrafts` + **`persist-planning-execution-drafts`** (see **`.ai/AGENT-CLI-MAP.md`** ladder); single-task artifact synthesis can still use `persistTasks:true` on **`build-plan`** when drafts are omitted. Wishlist-driven decomposition remains in [`.ai/runbooks/wishlist-workflow.md`](./wishlist-workflow.md) (**`convert-wishlist`**).

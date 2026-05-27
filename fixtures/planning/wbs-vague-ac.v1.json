@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "planId": "c3d4e5f6-a7b8-4901-c234-56789abcdef0",
+  "version": 1,
+  "planRef": "plan-artifact:c3d4e5f6-a7b8-4901-c234-56789abcdef0",
+  "status": "draft",
+  "identity": {
+    "title": "Sizing fixture — vague acceptance criteria",
+    "planningType": "change",
+    "summary": "RUBRIC-WBS-VAGUE-AC and RUBRIC-WBS-VAGUE-DONE review fixture"
+  },
+  "goals": ["Review engine warns on vague WBS acceptance criteria"],
+  "nonGoals": ["Dashboard UI"],
+  "valueAssessment": { "impact": "Test coverage", "confidence": "high" },
+  "riskAssessment": [],
+  "technicalImpact": { "systemsTouched": ["src/core/planning"] },
+  "testingStrategy": {
+    "layers": ["unit"],
+    "criticalPaths": ["reviewPlanArtifact vague AC rules"]
+  },
+  "implementationGuidance": ["Use in test/review-plan-artifact-sizing.test.mjs"],
+  "whatNotToDo": ["Do not treat as production plan"],
+  "assumptions": ["Minimal profile sufficient for vague-AC assertions"],
+  "openQuestions": [],
+  "wbs": [
+    {
+      "wbsId": "WBS-1",
+      "title": "Vague AC row",
+      "goalMapping": ["Review engine warns on vague WBS acceptance criteria"],
+      "suggestedTaskTitle": "Vague AC task",
+      "approach": "Use weak acceptance criteria and short doneMeans",
+      "technicalScope": ["src/core/planning/review-plan-artifact.ts"],
+      "acceptanceCriteria": ["done", "works"],
+      "testingVerification": ["unit test covers vague AC detection"],
+      "dependsOn": [],
+      "sizingConfidence": "high",
+      "doneMeans": "Too short",
+      "generatedTaskPayload": {
+        "title": "Vague AC task",
+        "approach": "Use weak acceptance criteria and short doneMeans",
+        "technicalScope": ["src/core/planning/review-plan-artifact.ts"],
+        "acceptanceCriteria": ["done"]
+      }
+    }
+  ],
+  "phaseRecommendations": [
+    { "phaseKey": "110", "label": "Phase 110", "rationale": "Planner tranche", "isPrimary": true }
+  ],
+  "provenance": {
+    "createdAt": "2026-05-27T15:00:00.000Z",
+    "updatedAt": "2026-05-27T15:00:00.000Z",
+    "createdBy": "fixture",
+    "source": "draft-plan-artifact"
+  }
+}

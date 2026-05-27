@@ -1,0 +1,74 @@
+<!--
+agentCapsule|v=1|command=review-plan-artifact|module=planning|schema_only=pnpm exec wk run review-plan-artifact --schema-only '{}'
+-->
+
+# review-plan-artifact
+
+Run deterministic rubric checks (**A-RUBRIC** / **`PLANNER_REVIEW_RUBRIC.md`**) on a PlanArtifact v1; return blockers, warnings, and coverage map. Does not change plan `status` unless `recordReview: true`.
+
+**Contract:** repo-root **`PLANNER_COMMANDS.md`** §3 · **Rubric:** **`PLANNER_REVIEW_RUBRIC.md`** · **Agent runbook:** **`.ai/runbooks/plan-artifact-workflow.md`**
+
+**Handler status:** review engine and CLI handler ship in **WP-4** (core `reviewPlanArtifact` + this command).
+
+## Usage
+
+```bash
+# Review stored plan (Tier C — no policyApproval when recordReview is false)
+pnpm exec wk run review-plan-artifact '{"planId":"<uuid>","profile":"full-feature"}'
+
+# Review inline artifact (validate + rubric)
+pnpm exec wk run review-plan-artifact '{"artifact":{...},"profile":"minimal"}'
+
+# Record reviewed status on index (Tier B)
+pnpm exec wk run review-plan-artifact '{"planId":"<uuid>","recordReview":true,"expectedPlanningGeneration":<n>,"policyApproval":{"confirmed":true,"rationale":"operator recorded rubric review"}}'
+```
+
+## Arguments
+
+| Field | Required | Description |
+| --- | --- | --- |
+| `planId` | Yes* | Load stored artifact from `.workspace-kit/planning/plan-artifacts/`. |
+| `version` | No | Default latest on disk / index. |
+| `artifact` | Yes* | Inline PlanArtifact v1 instead of load (*one of `planId` or `artifact`*). |
+| `profile` | No | `minimal` \| `refactor` \| `full-feature` \| `sprint-phase`; default from `identity.planningType`. |
+| `waivers` | No | `{ code, rationale }[]` per **PLANNER_REVIEW_RUBRIC.md** §5.2 (slice coverage codes). |
+| `recordReview` | No | Default `false`. `true` writes `status: reviewed` as next artifact version (Tier B). |
+| `expectedPlanningGeneration` | When policy `require` | Required when `recordReview: true`. |
+| `policyApproval` | When `recordReview: true` | `{ "confirmed": true, "rationale": "…" }` on argv. |
+| `actor` | No | Actor for mutation metadata when `recordReview: true`. |
+| `config` | No | Invocation-local config override. |
+
+## Response codes (normative)
+
+| Code | `ok` | Meaning |
+| --- | --- | --- |
+| `plan-artifact-review-complete` | true | Findings returned; `data.passed` is true (zero blockers). |
+| `plan-artifact-review-blocked` | true | Review ran; blockers present (`data.passed: false`). |
+| `plan-artifact-not-found` | false | Unknown `planId` / `version`. |
+| `plan-artifact-schema-invalid` | false | Loaded or inline artifact fails schema. |
+| `planning-generation-mismatch` | false | Stale `expectedPlanningGeneration` when `recordReview: true`. |
+| `policy-denied` | false | Missing/invalid `policyApproval` when `recordReview: true`. |
+## Success `data`
+
+| Field | Description |
+| --- | --- |
+| `passed` | Boolean — no blockers. |
+| `profile` | Profile used for rubric rules. |
+| `blockers` | `{ code, message, path?, wbsId? }[]` |
+| `warnings` | Same shape as blockers. |
+| `coverageMap` | Goals/stories ↔ WBS coverage. |
+| `sizingFindings` | Per-WBS sizing issues. |
+| `openQuestionCount` | Integer. |
+
+## Fixtures
+
+- `fixtures/planning/plan-artifact-minimal.valid.v1.json`
+- `fixtures/planning/plan-artifact-full-feature.valid.v1.json`
+- `fixtures/planning/plan-artifact-minimal.invalid.empty-goals.v1.json` (schema-invalid)
+
+## Related
+
+- `draft-plan-artifact` — validate/persist draft (WP-3)
+- `accept-plan-artifact` — operator acceptance gate (WP-5)
+- `finalize-plan-to-phase` — WBS → tasks (WP-6)
+- CAE planning lenses activate on this command name when CAE shadow preflight runs.

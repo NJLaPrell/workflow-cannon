@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "planId": "a1b2c3d4-e5f6-4789-a012-3456789abcde",
+  "version": 1,
+  "planRef": "plan-artifact:a1b2c3d4-e5f6-4789-a012-3456789abcde",
+  "status": "draft",
+  "identity": {
+    "title": "Sizing fixture — low confidence oversized WBS row",
+    "planningType": "change",
+    "summary": "RUBRIC-WBS-LOW-SIZING-OVERSIZE review fixture"
+  },
+  "goals": ["Review engine flags low-confidence oversized WBS rows"],
+  "nonGoals": ["Dashboard UI"],
+  "valueAssessment": { "impact": "Test coverage", "confidence": "high" },
+  "riskAssessment": [],
+  "technicalImpact": { "systemsTouched": ["src/core/planning"] },
+  "testingStrategy": {
+    "layers": ["unit"],
+    "criticalPaths": ["reviewPlanArtifact sizing rules"]
+  },
+  "implementationGuidance": ["Use in test/review-plan-artifact-sizing.test.mjs"],
+  "whatNotToDo": ["Do not treat as production plan"],
+  "assumptions": ["Minimal profile sufficient for sizing-only assertions"],
+  "openQuestions": [],
+  "wbs": [
+    {
+      "wbsId": "WBS-1",
+      "title": "Oversized low-confidence row",
+      "goalMapping": ["Review engine flags low-confidence oversized WBS rows"],
+      "suggestedTaskTitle": "Oversized row task",
+      "approach": "Pack scope and AC bullets beyond low-confidence threshold",
+      "technicalScope": [
+        "scope bullet 01",
+        "scope bullet 02",
+        "scope bullet 03",
+        "scope bullet 04",
+        "scope bullet 05",
+        "scope bullet 06",
+        "scope bullet 07"
+      ],
+      "acceptanceCriteria": [
+        "acceptance criterion bullet one is long enough",
+        "acceptance criterion bullet two is long enough",
+        "acceptance criterion bullet three is long enough",
+        "acceptance criterion bullet four is long enough",
+        "acceptance criterion bullet five is long enough",
+        "acceptance criterion bullet six is long enough"
+      ],
+      "testingVerification": ["unit tests in review-plan-artifact-sizing.test.mjs"],
+      "dependsOn": [],
+      "sizingConfidence": "low",
+      "doneMeans": "Fixture documents RUBRIC-WBS-LOW-SIZING-OVERSIZE for CI",
+      "generatedTaskPayload": {
+        "title": "Oversized row task",
+        "approach": "Pack scope and AC bullets beyond low-confidence threshold",
+        "technicalScope": ["scope bullet 01"],
+        "acceptanceCriteria": ["acceptance criterion bullet one is long enough"]
+      }
+    }
+  ],
+  "phaseRecommendations": [
+    { "phaseKey": "110", "label": "Phase 110", "rationale": "Planner tranche", "isPrimary": true }
+  ],
+  "provenance": {
+    "createdAt": "2026-05-27T15:00:00.000Z",
+    "updatedAt": "2026-05-27T15:00:00.000Z",
+    "createdBy": "fixture",
+    "source": "draft-plan-artifact"
+  }
+}

@@ -2959,6 +2959,189 @@ function formatPlanningUpdatedAt(iso: string): string {
   }
 }
 
+function renderPlanArtifactDraftPanel(planArtifact: unknown): string {
+  if (!planArtifact || typeof planArtifact !== "object") {
+    return "";
+  }
+  const summary = planArtifact as Record<string, unknown>;
+  const current = summary.current;
+  if (!current || typeof current !== "object") {
+    return "";
+  }
+  const row = current as Record<string, unknown>;
+  const title = String(row.title ?? "").trim() || "Untitled Plan";
+  const planRef = String(row.planRef ?? "").trim();
+  const planId = String(row.planId ?? "").trim();
+  const statusRaw = String(row.status ?? "").trim();
+  const statusDisp = statusRaw.length > 0 ? humanizePlanningToken(statusRaw) : "Draft";
+  const planningTypeRaw = String(row.planningType ?? "").trim();
+  const planningType = planningTypeRaw.length > 0 ? humanizePlanningToken(planningTypeRaw) : "Planning";
+  const version = typeof row.version === "number" ? row.version : Number(row.version ?? 0);
+  const versionText = Number.isFinite(version) && version > 0 ? "v" + String(version) : "v?";
+  const wbsRows = typeof row.wbsRowCount === "number" ? row.wbsRowCount : Number(row.wbsRowCount ?? 0);
+  const openQuestions =
+    typeof row.openQuestionCount === "number" ? row.openQuestionCount : Number(row.openQuestionCount ?? 0);
+  const updatedAt = String(row.updatedAt ?? "").trim();
+  const updatedText = updatedAt.length > 0 ? formatPlanningUpdatedAt(updatedAt) : "—";
+  const heading = statusRaw === "draft" ? "Plan Draft" : "Plan Artifact";
+  const refLabel = planRef.length > 0 ? planRef : planId;
+  const reviewFindings = Array.isArray(row.reviewFindings)
+    ? row.reviewFindings
+    : Array.isArray(summary.reviewFindings)
+      ? summary.reviewFindings
+      : [];
+  const wbsPreview = Array.isArray(row.wbsPreview)
+    ? row.wbsPreview
+    : Array.isArray(summary.wbsPreview)
+      ? summary.wbsPreview
+      : [];
+  const reviewHtml =
+    reviewFindings.length > 0
+      ? '<div class="wc-plan-review" aria-label="Plan review findings">' +
+        '<p class="wc-plan-subtitle"><b>Review Findings</b></p>' +
+        '<div class="wc-plan-review-list" role="list">' +
+        reviewFindings
+          .slice(0, 5)
+          .map((finding) => {
+            const findingRow = finding && typeof finding === "object" ? (finding as Record<string, unknown>) : {};
+            const severity = String(findingRow.severity ?? findingRow.level ?? "info").trim() || "info";
+            const message = String(findingRow.message ?? findingRow.title ?? findingRow.code ?? "Finding").trim();
+            const pathText = String(findingRow.path ?? findingRow.field ?? "").trim();
+            return (
+              '<div class="wc-plan-review-row" role="listitem">' +
+              '<span class="wc-plan-review-severity">' +
+              escapeHtml(humanizePlanningToken(severity)) +
+              "</span>" +
+              '<span class="wc-plan-review-message">' +
+              escapeHtml(message) +
+              (pathText.length > 0 ? ' <span class="wc-plan-review-path">' + escapeHtml(pathText) + "</span>" : "") +
+              "</span>" +
+              "</div>"
+            );
+          })
+          .join("") +
+        "</div>" +
+        "</div>"
+      : statusRaw === "reviewed" || statusRaw === "accepted" || statusRaw === "finalized"
+        ? '<p class="wc-plan-review-pass"><b>Review Passed</b></p>'
+        : "";
+  const wbsHtml =
+    wbsPreview.length > 0
+      ? '<div class="wc-plan-wbs" aria-label="WBS preview">' +
+        '<p class="wc-plan-subtitle"><b>WBS Preview</b></p>' +
+        '<div class="wc-plan-wbs-list" role="list">' +
+        wbsPreview
+          .slice(0, 5)
+          .map((item) => {
+            const itemRow = item && typeof item === "object" ? (item as Record<string, unknown>) : {};
+            const itemId = String(itemRow.wbsId ?? itemRow.id ?? "").trim();
+            const itemPath = String(itemRow.path ?? "").trim();
+            const itemTitle = String(itemRow.title ?? itemRow.suggestedTaskTitle ?? "Untitled WBS item").trim();
+            const itemPhase = String(itemRow.recommendedPhase ?? itemRow.phaseKey ?? "").trim();
+            const prefix = [itemId, itemPath].filter((value) => value.length > 0).join(" · ");
+            return (
+              '<div class="wc-plan-wbs-row" role="listitem">' +
+              '<span class="wc-plan-wbs-title">' +
+              (prefix.length > 0 ? '<b>' + escapeHtml(prefix) + "</b> · " : "") +
+              escapeHtml(itemTitle) +
+              "</span>" +
+              (itemPhase.length > 0 ? '<span class="wc-plan-wbs-phase">' + escapeHtml(itemPhase) + "</span>" : "") +
+              "</div>"
+            );
+          })
+          .join("") +
+        "</div>" +
+        "</div>"
+      : "";
+  const hasBlockingReviewFinding = reviewFindings.some((finding) => {
+    const findingRow = finding && typeof finding === "object" ? (finding as Record<string, unknown>) : {};
+    const severity = String(findingRow.severity ?? findingRow.level ?? "").trim().toLowerCase();
+    return severity === "blocker" || severity === "error";
+  });
+  const canAccept =
+    planId.length > 0 &&
+    planRef.length > 0 &&
+    Number.isFinite(version) &&
+    version > 0 &&
+    statusRaw === "reviewed" &&
+    !hasBlockingReviewFinding &&
+    Number.isFinite(openQuestions) &&
+    openQuestions === 0;
+  const acceptDisabledReason =
+    statusRaw !== "reviewed"
+      ? "Review must pass before accepting this plan."
+      : hasBlockingReviewFinding
+        ? "Review blockers must be resolved before accepting this plan."
+        : Number.isFinite(openQuestions) && openQuestions > 0
+          ? "Open questions must be resolved or deferred before accepting this plan."
+          : planId.length === 0 || planRef.length === 0 || !Number.isFinite(version) || version <= 0
+            ? "Plan identity is incomplete."
+            : "Accept this reviewed plan.";
+  const acceptActionHtml =
+    statusRaw === "accepted" || statusRaw === "finalized"
+      ? ""
+      : '<div class="wc-plan-artifact-actions">' +
+        '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="plan-artifact-accept" data-plan-id="' +
+        escapeHtmlAttr(planId) +
+        '" data-plan-ref="' +
+        escapeHtmlAttr(planRef) +
+        '" data-plan-version="' +
+        escapeHtmlAttr(Number.isFinite(version) ? String(version) : "") +
+        '" title="' +
+        escapeHtmlAttr(acceptDisabledReason) +
+        '"' +
+        (canAccept ? "" : " disabled") +
+        ">Accept</button>" +
+        "</div>";
+  const finalizeActionHtml =
+    statusRaw === "accepted"
+      ? '<div class="wc-plan-artifact-actions">' +
+        '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="plan-artifact-finalize" data-plan-id="' +
+        escapeHtmlAttr(planId) +
+        '" data-plan-version="' +
+        escapeHtmlAttr(Number.isFinite(version) ? String(version) : "") +
+        '" title="Finalize this accepted plan into ready queue tasks">Finalize</button>' +
+        "</div>"
+      : "";
+  return (
+    '<section class="dash-card wc-plan-artifact" aria-label="Plan draft">' +
+    '<div class="wc-plan-artifact-head">' +
+    '<div class="wc-plan-artifact-main">' +
+    '<p class="wc-plan-artifact-title"><b>' +
+    escapeHtml(heading) +
+    "</b> · " +
+    escapeHtml(title) +
+    "</p>" +
+    '<p class="wc-plan-artifact-meta">' +
+    escapeHtml(planningType) +
+    " · " +
+    escapeHtml(versionText) +
+    (refLabel.length > 0 ? " · " + escapeHtml(refLabel) : "") +
+    "</p>" +
+    "</div>" +
+    '<span class="wc-plan-artifact-status">' +
+    escapeHtml(statusDisp) +
+    "</span>" +
+    "</div>" +
+    '<div class="wc-plan-artifact-stats" role="list">' +
+    '<span class="wc-plan-artifact-stat" role="listitem"><b>' +
+    escapeHtml(String(Number.isFinite(wbsRows) ? wbsRows : 0)) +
+    "</b> WBS rows</span>" +
+    '<span class="wc-plan-artifact-stat" role="listitem"><b>' +
+    escapeHtml(String(Number.isFinite(openQuestions) ? openQuestions : 0)) +
+    "</b> open questions</span>" +
+    '<span class="wc-plan-artifact-stat" role="listitem"><span class="wc-plan-artifact-label">Updated</span> ' +
+    escapeHtml(updatedText) +
+    "</span>" +
+    "</div>" +
+    reviewHtml +
+    wbsHtml +
+    acceptActionHtml +
+    finalizeActionHtml +
+    "</section>"
+  );
+}
+
 function renderPlanningSession(ps: unknown, wizardPanel?: PlanningInterviewWizardPanel | null): string {
   const wizardHtml =
     wizardPanel !== undefined && wizardPanel !== null ? renderPlanningInterviewWizardPanel(wizardPanel) : "";
@@ -4810,7 +4993,7 @@ export function renderDashboardRootInnerHtml(
 
   const deferred = options?.deferredSections ?? new Set<DashboardSectionId>();
   const queueInner =
-    tasksBlock + wishlistSection + renderPlanningSession(planningSession, planningWizardPanel);
+    tasksBlock + wishlistSection + renderPlanArtifactDraftPanel(d.planArtifact) + renderPlanningSession(planningSession, planningWizardPanel);
   const phaseJournalInner = renderPhaseNotesOverviewSection(phaseJournal ?? null, d.phaseJournalStats);
 
   const overviewWrapped = wrapDashboardSection("overview", overviewContent, deferred.has("overview"));

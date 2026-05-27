@@ -301,6 +301,248 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.doesNotMatch(html, /Suggested Next/i);
 });
 
+test("renderDashboardRootInnerHtml renders PlanArtifact draft panel", () => {
+  const html = renderDashboardRootInnerHtml({
+    ok: true,
+    data: {
+      stateSummary: { ready: 0, proposed: 0, blocked: 0, completed: 0 },
+      readyImprovementsSummary: { schemaVersion: 1, count: 0, top: [], phaseBuckets: [] },
+      readyExecutionSummary: { schemaVersion: 1, count: 0, top: [], phaseBuckets: [] },
+      proposedImprovementsSummary: { schemaVersion: 1, count: 0, top: [], phaseBuckets: [] },
+      proposedExecutionSummary: { schemaVersion: 1, count: 0, top: [], phaseBuckets: [] },
+      blockedSummary: { count: 0, top: [], phaseBuckets: [] },
+      transcriptChurnResearchSummary: { schemaVersion: 1, count: 0, top: [], phaseBuckets: [] },
+      completedSummary: { schemaVersion: 1, count: 0, top: [], phaseBuckets: [] },
+      cancelledSummary: { schemaVersion: 1, count: 0, top: [], phaseBuckets: [] },
+      wishlist: { schemaVersion: 1, openCount: 0, totalCount: 0, openTop: [] },
+      workspaceStatus: { currentKitPhase: "110", nextKitPhase: "111" },
+      suggestedNext: null,
+      planningSession: null,
+      planArtifact: {
+        schemaVersion: 1,
+        count: 1,
+        current: {
+          planId: "plan-123",
+          planRef: "PLANNER_TASKS.md",
+          version: 1,
+          status: "draft",
+          title: "Dashboard lifecycle",
+          planningType: "new-feature",
+          updatedAt: "2026-05-27T17:00:00.000Z",
+          wbsRowCount: 4,
+          openQuestionCount: 2,
+          reviewFindings: [
+            { severity: "warning", message: "Acceptance criteria need verification detail", path: "wbs[1]" }
+          ],
+          wbsPreview: [
+            { wbsId: "WBS-1", path: "1", title: "Kit contract", recommendedPhase: "Phase 110" },
+            { wbsId: "WBS-2", path: "2", title: "Plan draft panel", recommendedPhase: "Phase 110" }
+          ]
+        },
+        recent: []
+      },
+      blockingAnalysis: [],
+      dependencyOverview: { schemaVersion: 1, nodes: [], edges: [] }
+    }
+  });
+
+  assert.match(html, /wc-plan-artifact/);
+  assert.match(html, /Plan Draft/);
+  assert.match(html, /Dashboard lifecycle/);
+  assert.match(html, /New Feature/);
+  assert.match(html, /PLANNER_TASKS.md/);
+  assert.match(html, /<b>4<\/b> WBS rows/);
+  assert.match(html, /<b>2<\/b> open questions/);
+  assert.match(html, /Draft/);
+  assert.match(html, /Review Findings/);
+  assert.match(html, /Acceptance criteria need verification detail/);
+  assert.match(html, /wbs\[1\]/);
+  assert.match(html, /WBS Preview/);
+  assert.match(html, /WBS-1 · 1/);
+  assert.match(html, /Kit contract/);
+  assert.match(html, /data-wc-action="plan-artifact-accept"/);
+  assert.match(html, /Review must pass before accepting this plan/);
+  assert.match(html, /<button[^>]+data-wc-action="plan-artifact-accept"[^>]+disabled/);
+});
+
+test("renderDashboardRootInnerHtml enables PlanArtifact accept after review pass", () => {
+  const html = renderDashboardRootInnerHtml({
+    ok: true,
+    data: {
+      workspaceStatus: { activeFocus: "Planning" },
+      stateSummary: { proposed: 0, ready: 0, in_progress: 0, completed: 0, total: 0 },
+      planningSession: null,
+      planArtifact: {
+        count: 1,
+        current: {
+          planId: "plan-accepted-ready",
+          planRef: "plan-artifact:plan-accepted-ready",
+          title: "Reviewed plan",
+          status: "reviewed",
+          planningType: "change",
+          version: 3,
+          updatedAt: "2026-05-27T17:00:00.000Z",
+          wbsRowCount: 2,
+          openQuestionCount: 0,
+          reviewFindings: []
+        },
+        recent: []
+      },
+      readyExecutionSummary: { count: 0, top: [] },
+      readyImprovementsSummary: { count: 0, top: [] },
+      proposedExecutionSummary: { count: 0, top: [] },
+      proposedImprovementsSummary: { count: 0, top: [] },
+      transcriptChurnResearchSummary: { count: 0, top: [] },
+      wishlistSummary: { count: 0, top: [] }
+    }
+  });
+  assert.match(html, /Review Passed/);
+  assert.match(html, /data-wc-action="plan-artifact-accept"/);
+  assert.match(html, /data-plan-id="plan-accepted-ready"/);
+  assert.match(html, /data-plan-ref="plan-artifact:plan-accepted-ready"/);
+  assert.match(html, /data-plan-version="3"/);
+  const button = html.match(/<button[^>]+data-wc-action="plan-artifact-accept"[^>]*>/)?.[0] ?? "";
+  assert.doesNotMatch(button, /disabled/);
+});
+
+test("renderDashboardRootInnerHtml shows PlanArtifact finalize after accept", () => {
+  const html = renderDashboardRootInnerHtml({
+    ok: true,
+    data: {
+      workspaceStatus: { activeFocus: "Planning" },
+      stateSummary: { proposed: 0, ready: 0, in_progress: 0, completed: 0, total: 0 },
+      planningSession: null,
+      planArtifact: {
+        count: 1,
+        current: {
+          planId: "plan-ready-to-finalize",
+          planRef: "plan-artifact:plan-ready-to-finalize",
+          title: "Accepted plan",
+          status: "accepted",
+          planningType: "change",
+          version: 4,
+          updatedAt: "2026-05-27T17:00:00.000Z",
+          wbsRowCount: 2,
+          openQuestionCount: 0
+        },
+        recent: []
+      },
+      readyExecutionSummary: { count: 0, top: [] },
+      readyImprovementsSummary: { count: 0, top: [] },
+      proposedExecutionSummary: { count: 0, top: [] },
+      proposedImprovementsSummary: { count: 0, top: [] },
+      transcriptChurnResearchSummary: { count: 0, top: [] },
+      wishlistSummary: { count: 0, top: [] }
+    }
+  });
+  assert.doesNotMatch(html, /data-wc-action="plan-artifact-accept"/);
+  assert.match(html, /data-wc-action="plan-artifact-finalize"/);
+  assert.match(html, /data-plan-id="plan-ready-to-finalize"/);
+  assert.match(html, /data-plan-version="4"/);
+});
+
+test("renderDashboardRootInnerHtml blocks PlanArtifact accept with blockers or open questions", () => {
+  const baseData = {
+    workspaceStatus: { activeFocus: "Planning" },
+    stateSummary: { proposed: 0, ready: 0, in_progress: 0, completed: 0, total: 0 },
+    planningSession: null,
+    readyExecutionSummary: { count: 0, top: [] },
+    readyImprovementsSummary: { count: 0, top: [] },
+    proposedExecutionSummary: { count: 0, top: [] },
+    proposedImprovementsSummary: { count: 0, top: [] },
+    transcriptChurnResearchSummary: { count: 0, top: [] },
+    wishlistSummary: { count: 0, top: [] }
+  };
+
+  const blockerHtml = renderDashboardRootInnerHtml({
+    ok: true,
+    data: {
+      ...baseData,
+      planArtifact: {
+        count: 1,
+        current: {
+          planId: "plan-review-blocked",
+          planRef: "plan-artifact:plan-review-blocked",
+          title: "Reviewed plan with blockers",
+          status: "reviewed",
+          planningType: "change",
+          version: 5,
+          updatedAt: "2026-05-27T17:00:00.000Z",
+          wbsRowCount: 1,
+          openQuestionCount: 0,
+          reviewFindings: [{ severity: "error", message: "Resolve this before accept" }]
+        },
+        recent: []
+      }
+    }
+  });
+  const blockerButton = blockerHtml.match(/<button[^>]+data-wc-action="plan-artifact-accept"[^>]*>/)?.[0] ?? "";
+  assert.match(blockerButton, /disabled/);
+  assert.match(blockerHtml, /Review blockers must be resolved before accepting this plan/);
+
+  const openQuestionsHtml = renderDashboardRootInnerHtml({
+    ok: true,
+    data: {
+      ...baseData,
+      planArtifact: {
+        count: 1,
+        current: {
+          planId: "plan-open-questions",
+          planRef: "plan-artifact:plan-open-questions",
+          title: "Reviewed plan with questions",
+          status: "reviewed",
+          planningType: "change",
+          version: 6,
+          updatedAt: "2026-05-27T17:00:00.000Z",
+          wbsRowCount: 1,
+          openQuestionCount: 1,
+          reviewFindings: []
+        },
+        recent: []
+      }
+    }
+  });
+  const openQuestionsButton = openQuestionsHtml.match(/<button[^>]+data-wc-action="plan-artifact-accept"[^>]*>/)?.[0] ?? "";
+  assert.match(openQuestionsButton, /disabled/);
+  assert.match(openQuestionsHtml, /Open questions must be resolved or deferred before accepting this plan/);
+});
+
+test("renderDashboardRootInnerHtml hides PlanArtifact lifecycle actions after finalize", () => {
+  const html = renderDashboardRootInnerHtml({
+    ok: true,
+    data: {
+      workspaceStatus: { activeFocus: "Planning" },
+      stateSummary: { proposed: 0, ready: 0, in_progress: 0, completed: 0, total: 0 },
+      planningSession: null,
+      planArtifact: {
+        count: 1,
+        current: {
+          planId: "plan-finalized",
+          planRef: "plan-artifact:plan-finalized",
+          title: "Finalized plan",
+          status: "finalized",
+          planningType: "change",
+          version: 7,
+          updatedAt: "2026-05-27T17:00:00.000Z",
+          wbsRowCount: 2,
+          openQuestionCount: 0,
+          reviewFindings: []
+        },
+        recent: []
+      },
+      readyExecutionSummary: { count: 0, top: [] },
+      readyImprovementsSummary: { count: 0, top: [] },
+      proposedExecutionSummary: { count: 0, top: [] },
+      proposedImprovementsSummary: { count: 0, top: [] },
+      transcriptChurnResearchSummary: { count: 0, top: [] },
+      wishlistSummary: { count: 0, top: [] }
+    }
+  });
+  assert.match(html, /Finalized/);
+  assert.doesNotMatch(html, /data-wc-action="plan-artifact-accept"/);
+  assert.doesNotMatch(html, /data-wc-action="plan-artifact-finalize"/);
+});
+
 test("renderDashboardRootInnerHtml renders phase roster deliverables inline edit affordances", () => {
   const html = renderDashboardRootInnerHtml({
     ok: true,

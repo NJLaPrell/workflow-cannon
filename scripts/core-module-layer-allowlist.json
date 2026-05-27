@@ -78,6 +78,11 @@
       "rationale": "In-flight build-plan session snapshots persist in workspace_module_state via the canonical planning DB path."
     },
     {
+      "file": "src/core/planning/plan-artifact-storage.ts",
+      "specifier": "../../modules/task-engine/planning-config.js",
+      "rationale": "PlanArtifact index rows persist in workspace_module_state via the canonical planning DB path (A-ARCH §3)."
+    },
+    {
       "file": "src/core/state/kit-policy-traces-sqlite.ts",
       "specifier": "../../modules/task-engine/planning-config.js",
       "rationale": "Policy trace events persist in kit_policy_traces using the same unified SQLite path as planning."

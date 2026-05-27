@@ -1,0 +1,42 @@
+{
+  "ok": true,
+  "code": "run-args-schema",
+  "command": "accept-plan-artifact",
+  "schema": {
+    "type": "object",
+    "additionalProperties": true,
+    "description": "Permissive fallback args schema for 'accept-plan-artifact'. Use instructionPath for command-specific field guidance until a stricter schema is added."
+  },
+  "schemaSource": "manifest-permissive-fallback",
+  "sampleArgs": {},
+  "examples": [
+    {
+      "description": "Minimal argv example",
+      "argv": "workspace-kit run accept-plan-artifact '{}'"
+    }
+  ],
+  "instructionPath": "src/modules/planning/instructions/accept-plan-artifact.md",
+  "moduleId": "planning",
+  "description": "Record operator acceptance of a PlanArtifact v1 (approvalRecord, status accepted).",
+  "policy": {
+    "sensitivity": "sensitive",
+    "operationId": "planning.accept-plan-artifact",
+    "jsonApprovalRequired": true
+  },
+  "planningGeneration": {
+    "cliPrelude": false,
+    "expectedPlanningGeneration": "not required by CLI prelude"
+  },
+  "idempotency": {
+    "clientMutationId": false
+  },
+  "responseTemplate": {
+    "defaultResponseTemplateId": "default"
+  },
+  "remediationContract": ".ai/runbooks/agent-task-engine-ergonomics.md",
+  "discovery": {
+    "listCommands": "pnpm exec wk run --list-commands",
+    "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
+  },
+  "invocationId": "e104791a-71ff-468c-b04f-a9cf843e75ce"
+}

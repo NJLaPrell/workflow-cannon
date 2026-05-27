@@ -73,6 +73,7 @@ export function finalizeDashboardSummaryProjection(
     planningGenerationPolicy: data.planningGenerationPolicy,
     taskStoreLastUpdated: data.taskStoreLastUpdated,
     workspaceStatus: data.workspaceStatus,
+    planArtifact: data.planArtifact,
     stateSummary: data.stateSummary,
     executionPlanningScope: data.executionPlanningScope,
     taskStateProjection: data.taskStateProjection,
@@ -83,6 +84,7 @@ export function finalizeDashboardSummaryProjection(
     return {
       ...base,
       planningSession: null,
+      planArtifact: data.planArtifact,
       transcriptChurnResearchSummary: emptyListSummary(),
       proposedImprovementsSummary: emptyListSummary(),
       proposedExecutionSummary: emptyListSummary(),
@@ -133,6 +135,7 @@ export function finalizeDashboardSummaryProjection(
     return {
       ...base,
       planningSession: data.planningSession,
+      planArtifact: data.planArtifact,
       transcriptChurnResearchSummary: data.transcriptChurnResearchSummary,
       proposedImprovementsSummary: data.proposedImprovementsSummary,
       proposedExecutionSummary: data.proposedExecutionSummary,
@@ -172,6 +175,7 @@ export function finalizeDashboardSummaryProjection(
   return {
     ...base,
     planningSession: data.planningSession,
+    planArtifact: data.planArtifact,
     transcriptChurnResearchSummary: emptyListSummary(),
     proposedImprovementsSummary: emptyListSummary(),
     proposedExecutionSummary: emptyListSummary(),

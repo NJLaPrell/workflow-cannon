@@ -39,3 +39,89 @@ export {
   type BuildPlanSessionSnapshotV1,
   type DashboardPlanningSessionV1
 } from "./build-plan-session-file.js";
+export {
+  PLAN_ARTIFACT_SCHEMA_VERSION,
+  isPlanArtifactSchemaVersion,
+  isPlanArtifactV1,
+  type PlanArtifactApprovalRecord,
+  type PlanArtifactArchitecture,
+  type PlanArtifactArchitectureDecision,
+  type PlanArtifactConfidence,
+  type PlanArtifactGeneratedTaskPayload,
+  type PlanArtifactIdentity,
+  type PlanArtifactPhaseRecommendation,
+  type PlanArtifactPlanningType,
+  type PlanArtifactProvenance,
+  type PlanArtifactProvenanceSource,
+  type PlanArtifactReviewProfile,
+  type PlanArtifactRiskItem,
+  type PlanArtifactRiskSeverity,
+  type PlanArtifactSchemaVersion,
+  type PlanArtifactStatus,
+  type PlanArtifactTechnicalImpact,
+  type PlanArtifactTestingStrategy,
+  type PlanArtifactUiUxDirection,
+  type PlanArtifactUserStory,
+  type PlanArtifactUserStoryPriority,
+  type PlanArtifactValueAssessment,
+  type PlanArtifactV1,
+  type PlanArtifactWbsItem
+} from "./plan-artifact-v1.js";
+export {
+  isPlanArtifactWbsItem,
+  normalizeWbsItemToTaskDraft,
+  validatePlanArtifactWbsItemShape,
+  type NormalizeWbsToTaskDraftContext,
+  type NormalizeWbsToTaskDraftResult,
+  type PlanningExecutionTaskDraft,
+  type WbsShapeFinding,
+  type WbsShapeGuardResult
+} from "./normalize-wbs-to-task-draft.js";
+export {
+  PLAN_ARTIFACT_MODULE_ID_PREFIX,
+  PLAN_ARTIFACT_ROOT_REL,
+  getPlanArtifactStoragePaths,
+  listPlanArtifactSummaries,
+  planArtifactModuleId,
+  readLatestPlanArtifact,
+  readPlanArtifactIndex,
+  readPlanArtifactVersion,
+  resolveLatestPlanArtifactVersion,
+  writeNextPlanArtifactVersion,
+  writePlanArtifactVersion,
+  type PlanArtifactIndexStateV1,
+  type PlanArtifactStoragePaths
+} from "./plan-artifact-storage.js";
+export { renderPlanArtifactMarkdown } from "./render-plan-artifact-markdown.js";
+export {
+  formatPlanArtifactInstancePath,
+  normalizePlanArtifactDraft,
+  validatePlanArtifactDocument,
+  validatePlanArtifactDraftInput,
+  type NormalizePlanArtifactDraftOptions,
+  type PlanArtifactValidationError,
+  type ValidatePlanArtifactFailure,
+  type ValidatePlanArtifactResult,
+  type ValidatePlanArtifactSuccess
+} from "./validate-plan-artifact.js";
+export {
+  PLAN_ARTIFACT_PHASE_DESCRIPTION_MAX_WORDS,
+  PLAN_ARTIFACT_PHASE_KEY_RE,
+  countDescriptionWords,
+  resolvePlanArtifactPhaseProposal,
+  type PlanArtifactPhaseProposal,
+  type PlanArtifactPhaseProposalFinding,
+  type ResolvePlanArtifactPhaseProposalInput,
+  type ResolvePlanArtifactPhaseProposalResult
+} from "./resolve-plan-artifact-phase-proposal.js";
+export {
+  resolvePlanArtifactReviewProfile,
+  reviewPlanArtifact,
+  type PlanArtifactCoverageMap,
+  type PlanArtifactCoverageSliceStatus,
+  type PlanArtifactReviewFinding,
+  type PlanArtifactReviewSeverity,
+  type PlanArtifactReviewWaiver,
+  type ReviewPlanArtifactOptions,
+  type ReviewPlanArtifactResult
+} from "./review-plan-artifact.js";

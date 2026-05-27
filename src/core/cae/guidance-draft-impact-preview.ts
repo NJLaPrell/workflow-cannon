@@ -10,6 +10,10 @@ import {
   type BuiltinRunCommandManifestRow
 } from "../../contracts/builtin-run-command-manifest.js";
 import { evaluateActivationBundle } from "./cae-evaluate.js";
+import {
+  isPlanningSessionCaeCommand,
+  PLANNING_SESSION_CAE_MODULE_ID
+} from "./planning-session-scope.js";
 import type { CaeEvaluateMode } from "./cae-evaluate.js";
 import {
   countReadyTasksInPlanningSqlite,
@@ -322,7 +326,9 @@ export function buildPreviewEvaluationContext(opts: {
 }): CaeEvaluationContext {
   const commandName = opts.commandName;
   const taskId = opts.taskId?.trim()?.length ? opts.taskId.trim() : undefined;
-  const moduleId = resolveBuiltinModuleId(commandName, opts.moduleId);
+  const moduleId = isPlanningSessionCaeCommand(commandName)
+    ? PLANNING_SESSION_CAE_MODULE_ID
+    : resolveBuiltinModuleId(commandName, opts.moduleId);
   const commandArgs = opts.commandArgs ?? {};
   const hydratedTask = taskId ? hydrateTaskRowForCae(opts.workspacePath, opts.effective, taskId) : null;
   const syntheticTaskRow: TaskEngineTaskRowSlice | undefined = taskId
