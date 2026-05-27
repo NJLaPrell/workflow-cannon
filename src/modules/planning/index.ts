@@ -92,6 +92,19 @@ export const planningModule: WorkflowModule = {
     }
   },
   async onCommand(command, ctx) {
+    if (command.name === "draft-plan-artifact") {
+      return {
+        ok: false,
+        code: "plan-artifact-command-not-implemented",
+        message:
+          "draft-plan-artifact persistence is not implemented yet (WP-3.3); use --schema-only for argv shape.",
+        remediation: {
+          instructionPath: "src/modules/planning/instructions/draft-plan-artifact.md",
+          docPath: ".ai/runbooks/plan-artifact-workflow.md"
+        }
+      };
+    }
+
     if (command.name === "list-planning-types") {
       return {
         ok: true,

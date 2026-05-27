@@ -1090,6 +1090,15 @@
   },
   {
     "moduleId": "planning",
+    "name": "draft-plan-artifact",
+    "file": "draft-plan-artifact.md",
+    "description": "Validate and optionally persist a PlanArtifact v1 draft.",
+    "policyOperationId": "planning.draft-plan-artifact",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive-with-dryrun"
+  },
+  {
+    "moduleId": "planning",
     "name": "list-planning-types",
     "file": "list-planning-types.md",
     "description": "List supported planning workflow types and their intent.",

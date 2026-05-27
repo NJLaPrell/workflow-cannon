@@ -62,7 +62,7 @@ For a **net-new consumer project**, attach Workflow Cannon first: install `@work
 
 ## PlanArtifact v1 (planning module)
 
-Runbook: [`.ai/runbooks/plan-artifact-workflow.md`](./runbooks/plan-artifact-workflow.md). Contracts: repo-root **`PLANNER_COMMANDS.md`**. Copy-paste ladder: [`.ai/AGENT-CLI-MAP.extended.md`](./AGENT-CLI-MAP.extended.md) → *PlanArtifact lifecycle*. Confirm handlers with **`pnpm exec wk run --list-commands`** (WP-3+).
+Runbook: [`.ai/runbooks/plan-artifact-workflow.md`](./runbooks/plan-artifact-workflow.md). Contracts: repo-root **`PLANNER_COMMANDS.md`**. Copy-paste ladder: [`.ai/AGENT-CLI-MAP.extended.md`](./AGENT-CLI-MAP.extended.md) → *PlanArtifact lifecycle*. Validate-only: `pnpm exec wk run draft-plan-artifact '{"persist":false,"artifact":{...}}'`. Confirm handlers with **`pnpm exec wk run --list-commands`** (WP-3+).
 
 ## Maintainer delivery (one `T###` → `release/phase-<N>`)
 

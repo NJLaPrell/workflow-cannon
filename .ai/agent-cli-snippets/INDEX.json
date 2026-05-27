@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-05-27T04:08:35.690Z",
+  "generatedAt": "2026-05-27T13:54:46.058Z",
   "commands": [
     {
       "name": "accept-improvement",
@@ -481,6 +481,11 @@
       "name": "document-project",
       "path": ".ai/agent-cli-snippets/by-command/document-project.json",
       "moduleId": "documentation"
+    },
+    {
+      "name": "draft-plan-artifact",
+      "path": ".ai/agent-cli-snippets/by-command/draft-plan-artifact.json",
+      "moduleId": "planning"
     },
     {
       "name": "enable-plugin",

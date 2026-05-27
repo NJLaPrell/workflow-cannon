@@ -25,6 +25,17 @@ async function tmpDir(prefix = "planning-") {
   return mkdtemp(path.join(os.tmpdir(), prefix));
 }
 
+test("planningModule draft-plan-artifact is listed; handler stub until WP-3.3", async () => {
+  const workspace = await tmpDir();
+  const result = await planningModule.onCommand(
+    { name: "draft-plan-artifact", args: { persist: false, artifact: { schemaVersion: 1 } } },
+    { runtimeVersion: "0.1", workspacePath: workspace }
+  );
+  assert.equal(result.ok, false);
+  assert.equal(result.code, "plan-artifact-command-not-implemented");
+  assert.ok(result.remediation?.instructionPath?.includes("draft-plan-artifact.md"));
+});
+
 test("planningModule list-planning-types returns typed workflow descriptors", async () => {
   const workspace = await tmpDir();
   const result = await planningModule.onCommand(

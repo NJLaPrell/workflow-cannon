@@ -48,7 +48,8 @@ const KNOWN_POLICY_OPERATION_IDS = new Set([
   "task-engine.workspace-edit-lease",
   "project-memory.write",
   "project-memory.approve",
-  "project-memory.prune"
+  "project-memory.prune",
+  "planning.draft-plan-artifact"
 ]);
 
 const ALLOWED_SENSITIVITY = new Set(["non-sensitive", "sensitive", "sensitive-with-dryrun"]);
@@ -106,10 +107,11 @@ for (const row of manifest) {
     if (
       id !== "doc.document-project" &&
       id !== "doc.generate-document" &&
-      id !== "skills.apply-skill"
+      id !== "skills.apply-skill" &&
+      id !== "planning.draft-plan-artifact"
     ) {
       fail(
-        `Command '${row.name}': sensitive-with-dryrun is only valid for doc commands and skills.apply-skill (matches policy.ts dryRun exception).`
+        `Command '${row.name}': sensitive-with-dryrun is only valid for doc commands, skills.apply-skill, and planning.draft-plan-artifact (matches policy.ts dry-run / persist:false exceptions).`
       );
     }
   }

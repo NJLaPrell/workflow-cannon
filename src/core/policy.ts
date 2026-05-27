@@ -57,7 +57,8 @@ export type PolicyOperationId =
   | "task-engine.workspace-edit-lease"
   | "project-memory.write"
   | "project-memory.approve"
-  | "project-memory.prune";
+  | "project-memory.prune"
+  | "planning.draft-plan-artifact";
 
 function buildBuiltinCommandToOperation(): Record<string, PolicyOperationId | undefined> {
   const out: Record<string, PolicyOperationId | undefined> = {};
@@ -115,7 +116,9 @@ export function resolvePolicyOperationIdForCommand(
 
 /**
  * Sensitive per shipped manifest `policySensitivity`.
- * `sensitive-with-dryrun` (documentation generators) is waived when `options.dryRun === true`.
+ * `sensitive-with-dryrun` is waived when:
+ * - `options.dryRun === true` (documentation generators), or
+ * - `draft-plan-artifact` with `persist === false` (validate-only / Tier C).
  */
 export function isSensitiveModuleCommand(
   commandName: string,
@@ -126,6 +129,9 @@ export function isSensitiveModuleCommand(
     return false;
   }
   if (sens === "sensitive-with-dryrun") {
+    if (commandName === "draft-plan-artifact" && args.persist === false) {
+      return false;
+    }
     const options =
       typeof args.options === "object" && args.options !== null
         ? (args.options as Record<string, unknown>)
