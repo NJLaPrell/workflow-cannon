@@ -71,6 +71,31 @@ test("queue section patch preserves lazy bucket bodies when meta matches", () =>
   assert.match(src, /__wcRestoringLazyBuckets/);
 });
 
+test("overview section patch restores phase readiness and progress rollup expand state", () => {
+  const src = fs.readFileSync(path.join(srcDir, "dashboard-webview-client.ts"), "utf8");
+  assert.match(src, /sectionId === 'overview'/);
+  assert.match(
+    src,
+    /sectionId === 'overview'[\s\S]*capturePhaseCardCollapseState[\s\S]*restorePhaseCardCollapseState/
+  );
+});
+
+test("dashboard webview signals ready and host hydrates eager sections", () => {
+  const clientSrc = fs.readFileSync(path.join(srcDir, "dashboard-webview-client.ts"), "utf8");
+  const providerSrc = fs.readFileSync(path.join(srcDir, "DashboardViewProvider.ts"), "utf8");
+  assert.match(clientSrc, /dashboardWebviewReady/);
+  assert.match(providerSrc, /onDashboardWebviewReady/);
+  assert.match(providerSrc, /pendingDashboardRootHtml/);
+  assert.match(providerSrc, /postEagerSectionPatchesFromRootInner/);
+  assert.match(providerSrc, /hydrateEagerDashboardSections/);
+  assert.match(providerSrc, /ensureEagerDashboardHydrated/);
+  assert.match(providerSrc, /scheduleEagerHydrateRetry/);
+  assert.match(
+    providerSrc,
+    /postEagerSectionPatchesFromRootInner[\s\S]*wcReplaceRoot/
+  );
+});
+
 test("lazy queue bucket details expose task id meta for preservation", () => {
   const src = fs.readFileSync(path.join(srcDir, "render-dashboard.ts"), "utf8");
   assert.match(src, /data-wc-bucket-task-ids/);

@@ -797,14 +797,143 @@ function renderContextHelpIcon(helpText: string, ariaLabel = "About this section
   );
 }
 
+export type OverviewStatPillCounts = {
+  ready: number;
+  proposed: number;
+  blocked: number;
+  done: number;
+  human: number;
+  /** Set when counts are scoped to workspace current phase (Queue pill navigation). */
+  phaseScopeKey: string | null;
+};
+
+/** Leading numeric phase key for matching workspace phase to rollups (`"Phase 14"` → `"14"`). */
+export function parseLeadingPhaseDigits(raw: string): string {
+  const trimmed = String(raw ?? "").trim();
+  const m = trimmed.match(/(\d+)/);
+  return m ? m[1]! : trimmed;
+}
+
+function phaseKeysMatch(a: string | null | undefined, b: string | null | undefined): boolean {
+  const da = parseLeadingPhaseDigits(String(a ?? ""));
+  const db = parseLeadingPhaseDigits(String(b ?? ""));
+  return da.length > 0 && db.length > 0 && da === db;
+}
+
+function countInPhaseBuckets(buckets: unknown, phaseDigits: string): number {
+  if (!Array.isArray(buckets) || phaseDigits.length === 0) {
+    return 0;
+  }
+  let total = 0;
+  for (const raw of buckets) {
+    if (!raw || typeof raw !== "object") {
+      continue;
+    }
+    const b = raw as { phaseKey?: unknown; count?: unknown };
+    const pkRaw = b.phaseKey;
+    const pk =
+      pkRaw === null || pkRaw === undefined
+        ? ""
+        : parseLeadingPhaseDigits(String(pkRaw).trim());
+    if (pk === phaseDigits) {
+      total += typeof b.count === "number" && Number.isFinite(b.count) ? b.count : 0;
+    }
+  }
+  return total;
+}
+
+function sumPhaseBucketCountsFromSummaries(
+  d: Record<string, unknown>,
+  phaseDigits: string
+): Pick<OverviewStatPillCounts, "ready" | "proposed" | "blocked" | "done"> {
+  const ris = (d.readyImprovementsSummary as Record<string, unknown> | undefined) ?? {};
+  const res = (d.readyExecutionSummary as Record<string, unknown> | undefined) ?? {};
+  const readyMerged = mergeReadyQueueRollupSummaries(ris, res);
+  const pis = (d.proposedImprovementsSummary as Record<string, unknown> | undefined) ?? {};
+  const pes = (d.proposedExecutionSummary as Record<string, unknown> | undefined) ?? {};
+  const blocked = (d.blockedSummary as Record<string, unknown> | undefined) ?? {};
+  const completed = (d.completedSummary as Record<string, unknown> | undefined) ?? {};
+  return {
+    ready: countInPhaseBuckets(readyMerged.phaseBuckets, phaseDigits),
+    proposed:
+      countInPhaseBuckets(pis.phaseBuckets, phaseDigits) +
+      countInPhaseBuckets(pes.phaseBuckets, phaseDigits),
+    blocked: countInPhaseBuckets(blocked.phaseBuckets, phaseDigits),
+    done: countInPhaseBuckets(completed.phaseBuckets, phaseDigits)
+  };
+}
+
+/** Overview stat pill counts — workspace-wide when no current phase, else current phase only. */
+export function computeOverviewStatPillCounts(
+  d: Record<string, unknown>,
+  ws: Record<string, unknown> | null | undefined
+): OverviewStatPillCounts {
+  const curPhase = workspaceCurrentPhaseKey(ws);
+  const phaseDigits = curPhase.length > 0 ? parseLeadingPhaseDigits(curPhase) : "";
+  const humanGatesSummary = (d.humanGatesSummary as Record<string, unknown> | undefined) ?? {};
+  const humanFromSummary = () =>
+    typeof humanGatesSummary.count === "number" ? humanGatesSummary.count : 0;
+
+  if (phaseDigits.length === 0) {
+    const ris = (d.readyImprovementsSummary as Record<string, unknown> | undefined) ?? {};
+    const res = (d.readyExecutionSummary as Record<string, unknown> | undefined) ?? {};
+    const readyMerged = mergeReadyQueueRollupSummaries(ris, res);
+    const pis = (d.proposedImprovementsSummary as Record<string, unknown> | undefined) ?? {};
+    const pes = (d.proposedExecutionSummary as Record<string, unknown> | undefined) ?? {};
+    const blockedSummary = (d.blockedSummary as Record<string, unknown> | undefined) ?? {};
+    const completedSummary = (d.completedSummary as Record<string, unknown> | undefined) ?? {};
+    return {
+      ready: readyMerged.count,
+      proposed: (typeof pis.count === "number" ? pis.count : 0) + (typeof pes.count === "number" ? pes.count : 0),
+      blocked: typeof blockedSummary.count === "number" ? blockedSummary.count : 0,
+      done:
+        typeof completedSummary?.count === "number" ? (completedSummary.count as number) : 0,
+      human: humanFromSummary(),
+      phaseScopeKey: null
+    };
+  }
+
+  const snapshot = normalizePhaseSnapshot(d.currentPhaseDelivery, ws ?? null);
+  if (snapshot && phaseKeysMatch(snapshot.phaseKey, phaseDigits)) {
+    const hgPhase =
+      humanGatesSummary.phaseKey != null
+        ? parseLeadingPhaseDigits(String(humanGatesSummary.phaseKey))
+        : phaseDigits;
+    const human =
+      hgPhase.length === 0 || hgPhase === phaseDigits ? humanFromSummary() : 0;
+    return {
+      ready: snapshot.queue.ready,
+      proposed: snapshot.queue.proposed,
+      blocked: snapshot.queue.blocked,
+      done: snapshot.segments.completed,
+      human,
+      phaseScopeKey: phaseDigits
+    };
+  }
+
+  const fromBuckets = sumPhaseBucketCountsFromSummaries(d, phaseDigits);
+  const hgPhase =
+    humanGatesSummary.phaseKey != null
+      ? parseLeadingPhaseDigits(String(humanGatesSummary.phaseKey))
+      : phaseDigits;
+  const human = hgPhase.length === 0 || hgPhase === phaseDigits ? humanFromSummary() : 0;
+  return {
+    ...fromBuckets,
+    human,
+    phaseScopeKey: phaseDigits
+  };
+}
+
 /** 5-pill stat row: Ready / Proposed / Blocked / Done / Human — single line on Overview. */
-function renderStatPills(
-  readyTotal: number,
-  proposedTotal: number,
-  blockedTotal: number,
-  doneTotal: number,
-  humanTotal: number
-): string {
+function renderStatPills(counts: OverviewStatPillCounts): string {
+  const { ready: readyTotal, proposed: proposedTotal, blocked: blockedTotal, done: doneTotal, human: humanTotal, phaseScopeKey } =
+    counts;
+  const phaseAttr =
+    phaseScopeKey && phaseScopeKey.length > 0
+      ? ' data-wc-pill-phase="' + escapeHtmlAttr(phaseScopeKey) + '"'
+      : "";
+  const phaseTitleSuffix =
+    phaseScopeKey && phaseScopeKey.length > 0 ? " (phase " + phaseScopeKey + ")" : "";
   const pills: Array<{ label: string; n: number; cls: string; numCls?: string }> = [
     { label: "Ready", n: readyTotal, cls: "wc-pill-ready" },
     { label: "Proposed", n: proposedTotal, cls: "wc-pill-proposed" },
@@ -829,8 +958,11 @@ function renderStatPills(
           p.cls +
           '" data-wc-pill-nav="task-engine" data-wc-pill-filter="' +
           escapeHtmlAttr(filter) +
-          '" title="Open Queue tab — ' +
+          '"' +
+          phaseAttr +
+          ' title="Open Queue tab — ' +
           escapeHtmlAttr(p.label) +
+          phaseTitleSuffix +
           '">' +
           '<span class="wc-stat-num' +
           (p.numCls ? " " + p.numCls : "") +
@@ -4012,12 +4144,79 @@ function renderStatusRollup(
   );
 }
 
+export type TaskStateSyncRenderState =
+  | "current"
+  | "syncing"
+  | "behind"
+  | "offline"
+  | "conflict";
+
+/** Task-state git projection posture for the Status tab (S4.3). */
+export function renderTaskStateSyncStatusHtml(taskStateProjection: unknown): string {
+  if (!taskStateProjection || typeof taskStateProjection !== "object") {
+    return "";
+  }
+  const proj = taskStateProjection as Record<string, unknown>;
+  const raw =
+    typeof proj.displayState === "string" && proj.displayState.trim()
+      ? proj.displayState.trim()
+      : "offline";
+  const state: TaskStateSyncRenderState =
+    raw === "syncing" ||
+    raw === "current" ||
+    raw === "behind" ||
+    raw === "offline" ||
+    raw === "conflict"
+      ? raw
+      : "offline";
+  const labels: Record<TaskStateSyncRenderState, string> = {
+    current: "Current",
+    syncing: "Syncing",
+    behind: "Behind",
+    offline: "Offline",
+    conflict: "Conflict"
+  };
+  const remediation =
+    typeof proj.remediation === "string" && proj.remediation.trim() ? proj.remediation.trim() : "";
+  const seq =
+    typeof proj.appliedSequence === "number" && Number.isFinite(proj.appliedSequence)
+      ? String(proj.appliedSequence)
+      : "—";
+  const commit =
+    typeof proj.sourceCommit === "string" && proj.sourceCommit.trim()
+      ? proj.sourceCommit.trim().slice(0, 12)
+      : "—";
+  const pillClass = "wc-task-state-pill wc-task-state-" + state;
+  return (
+    '<section class="dash-card" aria-label="Task-state sync">' +
+    "<p><b>Task-state sync</b></p>" +
+    '<p class="' +
+    escapeHtml(pillClass) +
+    '" role="status"><span class="wc-task-state-label">' +
+    escapeHtml(labels[state]) +
+    "</span></p>" +
+    '<div class="wc-status-kv-block">' +
+    '<div class="wc-status-kv"><span class="wc-status-kv-label">Applied sequence</span><span class="wc-status-kv-val">' +
+    escapeHtml(seq) +
+    "</span></div>" +
+    '<div class="wc-status-kv"><span class="wc-status-kv-label">Source commit</span><span class="wc-status-kv-val"><code>' +
+    escapeHtml(commit) +
+    "</code></span></div>" +
+    "</div>" +
+    (remediation
+      ? '<p class="muted wc-task-state-remediation">' + escapeHtml(remediation) + "</p>"
+      : "") +
+    "</section>"
+  );
+}
+
 /** Status tab: workspace identity, agent profile, and task counts from dashboard-summary data. */
 function renderStatusSectionHtml(
   d: Record<string, unknown>,
   ss: Record<string, unknown>,
   editorIntegration?: EditorIntegrationRenderState | null
 ): string {
+  const taskStateBlock = renderTaskStateSyncStatusHtml(d.taskStateProjection);
   const sys = (d.systemStatus as Record<string, unknown>) ?? {};
   const ident = (sys.identity as Record<string, unknown>) ?? {};
   const ag = (d.agentGuidance as Record<string, unknown> | null | undefined) ?? {};
@@ -4112,7 +4311,15 @@ function renderStatusSectionHtml(
     buildDashboardStateCountGridHtml(ss) +
     "</section>";
 
-  return agentCard + renderStatusEditorIntegrationSection(editorIntegration) + workspaceCard + planningCard + countsCard + renderEmbeddedStatusPanelHtml(d);
+  return (
+    taskStateBlock +
+    agentCard +
+    renderStatusEditorIntegrationSection(editorIntegration) +
+    workspaceCard +
+    planningCard +
+    countsCard +
+    renderEmbeddedStatusPanelHtml(d)
+  );
 }
 
 /**
@@ -4689,22 +4896,12 @@ export function renderDashboardRootInnerHtml(
     phaseWorkCandidates
   });
 
-  const totalReadyCount = readyCount;
-  const totalProposedCount = piCount + peCount;
-  const totalBlockedCount = Number(blockedSummary.count ?? 0);
-  const totalDoneCount =
-    typeof (d.completedSummary as Record<string, unknown> | undefined)?.count === "number"
-      ? ((d.completedSummary as Record<string, unknown>).count as number)
-      : 0;
+  const statPillCounts = computeOverviewStatPillCounts(d, ws);
+  const totalReadyCount = statPillCounts.ready;
+  const totalBlockedCount = statPillCounts.blocked;
 
   const overviewContent =
-    renderStatPills(
-      totalReadyCount,
-      totalProposedCount,
-      totalBlockedCount,
-      totalDoneCount,
-      humanGatesCount
-    ) +
+    renderStatPills(statPillCounts) +
     renderAgentStatusBanner(d) +
     recNextCard +
     renderPhaseReadinessCard(ws as Record<string, unknown> | null, phaseSnapshot) +

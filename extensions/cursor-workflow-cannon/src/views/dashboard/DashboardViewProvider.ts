@@ -418,6 +418,16 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   /** Cached CAE tab HTML for light dashboard refreshes. */
   private lastEmbeddedCaePanelHtml: string | null = null;
 
+  /** Last rendered `#root` innerHTML — replayed if the webview was not listening yet (initial open). */
+  private pendingDashboardRootHtml: string | null = null;
+
+  private eagerHydrateRetryTimer: ReturnType<typeof setTimeout> | undefined;
+
+  private static readonly EAGER_DASHBOARD_SECTIONS: readonly DashboardSectionId[] = [
+    "overview",
+    "queue"
+  ];
+
   /** Options consumed by the next `pushUpdateOnce` (projection / light refresh). */
   private pendingPushUpdateOptions:
     | { light?: boolean; projection?: "full" | "overview"; skipHeavyFetches?: boolean }
@@ -430,7 +440,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     private readonly extensionUri: vscode.Uri,
     private readonly client: CommandClient,
     private readonly onKitStateChanged: vscode.Event<void>,
-    private readonly notifyKitStateChanged: () => void
+    private readonly notifyKitStateChanged: () => void,
+    private readonly isTaskStateSyncInFlight?: () => boolean
   ) {
     this.refreshController = new DashboardRefreshController({
       executeRefresh: (mode, generation) => this.executeDashboardRefresh(mode, generation),
@@ -447,6 +458,34 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     });
   }
 
+  private overlayTaskStateSyncForRender(data: Record<string, unknown>): Record<string, unknown> {
+    if (!this.isTaskStateSyncInFlight?.()) {
+      return data;
+    }
+    const proj = data.taskStateProjection;
+    if (!proj || typeof proj !== "object" || Array.isArray(proj)) {
+      return data;
+    }
+    return {
+      ...data,
+      taskStateProjection: {
+        ...(proj as Record<string, unknown>),
+        displayState: "syncing",
+        remediation: "Fetching and applying canonical task-state events from git…"
+      }
+    };
+  }
+
+  private wrapDashboardPayloadForRender(raw: Record<string, unknown>): Record<string, unknown> {
+    if (raw.ok !== true || !raw.data || typeof raw.data !== "object") {
+      return raw;
+    }
+    return {
+      ...raw,
+      data: this.overlayTaskStateSyncForRender(raw.data as Record<string, unknown>)
+    };
+  }
+
   /**
    * Kit file watcher refresh — never full `wcReplaceRoot` (that wipes lazy queue rows).
    * Patches visible sections only; queue uses content fingerprint to no-op when unchanged.
@@ -460,9 +499,14 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     if (this.isDashboardRefreshDeferred()) {
       this.refreshController.markDeferredRefreshNeeded();
+      this.scheduleEagerHydrateRetry();
       return;
     }
     const updateSequence = this.refreshController.currentGeneration();
+    if (!this.hydratedDashboardSections.has("overview")) {
+      await this.hydrateEagerDashboardSections(updateSequence);
+      return;
+    }
     if (this.activeDashboardTab === "task-engine") {
       if (this.hydratedDashboardSections.has("queue")) {
         await this.patchQueueSectionFromKitState(updateSequence);
@@ -553,6 +597,10 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         if (source.length > 0) {
           this.setDashboardUiInteraction(source, msg.active === true);
         }
+        return;
+      }
+      if (msg?.type === "dashboardWebviewReady") {
+        void this.onDashboardWebviewReady(webview);
         return;
       }
       if (msg?.type === "refresh") {
@@ -1041,6 +1089,11 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }, 45_000);
     webviewView.onDidDispose(() => {
       this.dashboardRootShellReady = false;
+      this.pendingDashboardRootHtml = null;
+      if (this.eagerHydrateRetryTimer) {
+        clearTimeout(this.eagerHydrateRetryTimer);
+        this.eagerHydrateRetryTimer = undefined;
+      }
       this.hydratedDashboardSections.clear();
       this.staleDashboardSections.clear();
       this.webviewMessageDisposable?.dispose();
@@ -1109,7 +1162,10 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
           projection: "status"
         })) as Record<string, unknown>;
         const editorIntegration = await resolveEditorIntegrationState();
-        html = renderDashboardStatusSectionInnerHtml(raw, editorIntegration);
+        html = renderDashboardStatusSectionInnerHtml(
+          this.wrapDashboardPayloadForRender(raw),
+          editorIntegration
+        );
       } else if (sectionId === "cae") {
         const caeSummary = await this.client.run("cae-authoring-summary", { schemaVersion: 1 });
         if (isKitRefreshRunAborted(caeSummary as Record<string, unknown>)) {
@@ -1300,6 +1356,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         projection: "full"
       })) as DashboardSummaryCommandSuccess | Record<string, unknown>;
       if (isKitRefreshRunAborted(raw as Record<string, unknown>)) {
+        this.scheduleEagerHydrateRetry();
         return;
       }
     } catch (e) {
@@ -1307,6 +1364,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         "dashboard",
         `patchDashboardSectionsFromSummary failed: ${e instanceof Error ? e.message : String(e)}`
       );
+      this.scheduleEagerHydrateRetry();
       return;
     }
     if (
@@ -1354,7 +1412,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     try {
       const editorIntegration = await resolveEditorIntegrationState();
       rootInner = renderDashboardRootInnerHtml(
-        raw,
+        this.wrapDashboardPayloadForRender(raw as Record<string, unknown>),
         wizardPanel,
         editorIntegration,
         phaseJournal,
@@ -2267,6 +2325,82 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   private endDashboardMutationRefreshHold(): void {
     this.refreshController.notifyMutationEnd();
     this.client.setRefreshPaused(false);
+    this.refreshController.onDeferredCleared();
+  }
+
+  /** Patch Overview + Queue into the shell without replacing `#root` (reliable first paint). */
+  private async postEagerSectionPatchesFromRootInner(rootInner: string): Promise<void> {
+    for (const sectionId of DashboardViewProvider.EAGER_DASHBOARD_SECTIONS) {
+      const inner = extractDashboardSectionInnerHtml(rootInner, sectionId);
+      if (inner == null) {
+        continue;
+      }
+      await this.postSectionPatch(sectionId, inner, "ready");
+      this.hydratedDashboardSections.add(sectionId);
+      this.staleDashboardSections.delete(sectionId);
+    }
+  }
+
+  /** Fetch `dashboard-summary` and patch eager sections when the shell is still on placeholders. */
+  private async hydrateEagerDashboardSections(updateSequence?: number): Promise<void> {
+    if (!this.view) {
+      return;
+    }
+    const needed = DashboardViewProvider.EAGER_DASHBOARD_SECTIONS.filter(
+      (id) => !this.hydratedDashboardSections.has(id)
+    );
+    if (needed.length === 0) {
+      return;
+    }
+    logWc("dashboard", `hydrateEagerDashboardSections: ${needed.join(",")}`);
+    await this.patchDashboardSectionsFromSummary(needed, updateSequence);
+  }
+
+  /** Called when kit churn finishes while the dashboard may still show shell placeholders. */
+  ensureEagerDashboardHydrated(): void {
+    if (!this.view || this.hydratedDashboardSections.has("overview")) {
+      return;
+    }
+    void this.hydrateEagerDashboardSections();
+  }
+
+  private scheduleEagerHydrateRetry(): void {
+    if (!this.view || this.hydratedDashboardSections.has("overview")) {
+      return;
+    }
+    if (this.eagerHydrateRetryTimer) {
+      clearTimeout(this.eagerHydrateRetryTimer);
+    }
+    this.eagerHydrateRetryTimer = setTimeout(() => {
+      this.eagerHydrateRetryTimer = undefined;
+      if (!this.view || this.hydratedDashboardSections.has("overview")) {
+        return;
+      }
+      logWc("dashboard", "scheduleEagerHydrateRetry: hydrate");
+      void this.hydrateEagerDashboardSections();
+    }, 450);
+  }
+
+  /** Webview bootstrap finished — patch eager sections and replay root HTML if needed. */
+  private async onDashboardWebviewReady(webview: vscode.Webview): Promise<void> {
+    if (this.pendingDashboardRootHtml) {
+      const html = this.pendingDashboardRootHtml;
+      await this.postEagerSectionPatchesFromRootInner(html);
+      try {
+        await webview.postMessage({ type: "wcReplaceRoot", html });
+        logWc("dashboard", "onDashboardWebviewReady: patched eager sections + wcReplaceRoot");
+      } catch (e) {
+        logWc(
+          "dashboard",
+          `onDashboardWebviewReady replay failed: ${e instanceof Error ? e.message : String(e)}`
+        );
+      }
+      return;
+    }
+    if (!this.hydratedDashboardSections.has("overview")) {
+      logWc("dashboard", "onDashboardWebviewReady: hydrate eager sections");
+      await this.hydrateEagerDashboardSections();
+    }
   }
 
   /** Hold dashboard refresh while a drawer mutating batch runs (accept-all, etc.). */
@@ -3372,6 +3506,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     if (this.dashboardInteractionLocks.size === 0) {
       this.refreshController.onDeferredCleared();
+      this.ensureEagerDashboardHydrated();
     }
   }
 
@@ -3390,6 +3525,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     const skipHeavyFetches = refreshOptions?.skipHeavyFetches === true;
     if (this.isDashboardRefreshDeferred()) {
       this.refreshController.markDeferredRefreshNeeded();
+      this.scheduleEagerHydrateRetry();
       this.dashboardCoordinator?.emitSnapshot();
       logWc("dashboard", "pushUpdate deferred (UI interaction lock active)");
       return;
@@ -3416,6 +3552,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       })) as DashboardSummaryCommandSuccess | Record<string, unknown>;
       if (isKitRefreshRunAborted(raw as Record<string, unknown>)) {
         logWc("dashboard", "pushUpdate aborted (refresh paused or preempted)");
+        this.refreshController.markDeferredRefreshNeeded();
+        this.scheduleEagerHydrateRetry();
         return;
       }
       if (isWishlistPagingArgRejection(raw as Record<string, unknown>)) {
@@ -3424,6 +3562,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         raw = (await this.client.run("dashboard-summary", { projection: summaryProjection })) as DashboardSummaryCommandSuccess | Record<string, unknown>;
         if (isKitRefreshRunAborted(raw as Record<string, unknown>)) {
           logWc("dashboard", "pushUpdate aborted (refresh paused or preempted)");
+          this.refreshController.markDeferredRefreshNeeded();
+          this.scheduleEagerHydrateRetry();
           return;
         }
       }
@@ -3579,7 +3719,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     try {
       const editorIntegration = await resolveEditorIntegrationState();
       rootInner = renderDashboardRootInnerHtml(
-        raw,
+        this.wrapDashboardPayloadForRender(raw as Record<string, unknown>),
         wizardPanel,
         editorIntegration,
         phaseJournal,
@@ -3616,10 +3756,14 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       return;
     }
     try {
+      this.pendingDashboardRootHtml = rootInner;
+      // Shell-first: patch eager sections before full replace so first paint survives message races.
+      await this.postEagerSectionPatchesFromRootInner(rootInner);
       // Full-root refresh stays the compatibility path while section slices land (T100396+).
       await webview.postMessage({ type: "wcReplaceRoot", html: rootInner });
     } catch (e) {
       logWc("dashboard", `pushUpdate render failed: ${e instanceof Error ? e.message : String(e)}`);
+      this.scheduleEagerHydrateRetry();
     }
     } finally {
       this.setDashboardRefreshBusy(false);

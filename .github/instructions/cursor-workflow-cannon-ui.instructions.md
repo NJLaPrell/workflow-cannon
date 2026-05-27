@@ -20,7 +20,7 @@ Audience: agents only. Apply these rules verbatim when writing or modifying webv
 | R7 | Surface backgrounds |
 | R8 | Buttons (canonical system, legacy alias map) |
 | R9 | Form controls |
-| R10 | Component vocabulary (card, section, KV, chip, stat, tag, tab-badge, callout, row) |
+| R10 | Component vocabulary (card, section, rollup panel, KV, chip, stat, tag, tab-badge, callout, row) |
 | R11 | Drawer (markup contract, behaviors, field kinds) |
 | R12 | Dashboard refresh contract |
 | R13 | Accessibility |
@@ -260,6 +260,12 @@ R10.2 Collapsible section — `.wc-section` (alias `details.status-section`):
 - Intent set via `data-wc-intent="success|info|warning|danger|neutral"` (alias for the existing `data-wc-filter` values).
 - Empty variant: add class `wc-section-empty` (`opacity: 0.32; pointer-events: none`).
 
+R10.10 Rollup panel (custom collapse, not `<details>`) — e.g. Phase Readiness / Phase Progress on Overview:
+- Header MUST be a `<button type="button">` with `aria-expanded`, `aria-controls`, and `data-wc-action="…-toggle"`.
+- Body MUST be a sibling container referenced by `aria-controls` / `id`.
+- Collapsed state MUST use a stable modifier class (e.g. `wc-cae-readiness-collapsed`, `wc-phase-progress-collapsed`); server HTML defaults to collapsed.
+- Expanded/collapsed state MUST survive dashboard refresh: persist in the webview client (`sessionStorage` or equivalent) and restore after every `wcReplaceRoot` and every `wcSectionPatch` that replaces the hosting section (see **R12.4**).
+
 R10.3 KV row — `.wc-kv` containing `.wc-kv-label` and `.wc-kv-val`. Container uses `.wc-kv-block`. Mirrors current `.wc-status-kv*`.
 
 R10.4 Filter chip — `.wc-chip` (alias `.wc-filter-chip`):
@@ -309,9 +315,11 @@ R11.5 Field kinds are `text | textarea | select | summary` (`DrawerFormField` un
 
 R12.1 First load installs the full HTML; subsequent updates MUST swap only `#root` via `postMessage` so `<details open>` state is preserved (`dashboardRootShellReady` flag in [DashboardViewProvider.ts](../../extensions/cursor-workflow-cannon/src/views/dashboard/DashboardViewProvider.ts)). Clear footer refresh busy state (`setButtonBusy`) when applying `wcReplaceRoot` (R18.3).
 
-R12.2 Every collapsible whose state must survive a refresh MUST carry `data-wc-track="<stable-id>"` (use the `wcTrackAttr` helper).
+R12.2 Every native `<details>` collapsible whose state must survive a refresh MUST carry `data-wc-track="<stable-id>"` (use the `wcTrackAttr` helper). The webview client reopens tracked details after `wcReplaceRoot`; queue section patches preserve them via `captureQueueSectionUiState` / `restoreQueueSectionUiState`.
 
 R12.3 Embedded panel HTML coming from another renderer (e.g. `renderStatusTabInnerHtml`) MUST be passed through an id-namespacing helper (`namespaceEmbeddedCaePanelHtml` pattern) before insertion to avoid duplicate `id` attributes.
+
+R12.4 Rollup panels (R10.10) and any other non-`<details>` expand/collapse UI MUST preserve user-expanded state across refresh the same way: capture before DOM replacement, restore after. `applyReplaceRootHtml` and `applySectionPatch` for sections that contain rollups (e.g. `overview` for phase readiness/progress) MUST call the shared restore helpers — do not re-render server HTML alone and leave rollups collapsed.
 
 ## R13. Accessibility
 

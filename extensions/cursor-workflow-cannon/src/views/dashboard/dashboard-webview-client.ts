@@ -398,6 +398,10 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
       restoreQueueSectionUiState(root, preservedQueue);
       applyQueueFilters(root);
       reloadOpenLazyQueueBucketsAfterMetaChange(root, preservedQueue.lazyBuckets);
+    } else if (sectionId === 'overview' && typeof html === 'string' && html.length > 0) {
+      capturePhaseCardCollapseState(root);
+      el.innerHTML = html;
+      restorePhaseCardCollapseState(root);
     } else if (typeof html === 'string' && html.length > 0) {
       el.innerHTML = html;
     }
@@ -956,6 +960,8 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
   restorePhaseCardCollapseState(document.getElementById('root'));
   applyQueueFilters(document.getElementById('root'));
 
+  vscode.postMessage({ type: 'dashboardWebviewReady' });
+
   document.addEventListener('click', function(ev) {
     var dh = document.getElementById('wc-drawer-host');
     if (!dh || dh.classList.contains('wc-drawer-host--hidden')) return;
@@ -1016,8 +1022,10 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
     if (t.classList.contains('wc-stat-pill')) {
       var navTab = t.getAttribute('data-wc-pill-nav');
       var navFilter = t.getAttribute('data-wc-pill-filter') || 'all';
+      var navPhase = (t.getAttribute('data-wc-pill-phase') || '').trim();
       if (navTab) applyTab(navTab);
       activeFilter = navFilter;
+      activePhaseFilter = navPhase.length > 0 ? navPhase : (navFilter === 'all' ? 'all' : activePhaseFilter);
       applyQueueFilters(rootEl);
       return;
     }

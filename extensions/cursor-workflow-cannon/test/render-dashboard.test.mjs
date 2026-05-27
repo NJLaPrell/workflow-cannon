@@ -20,7 +20,9 @@ import {
   lookupDashboardTaskPhaseKey,
   lookupProposedTaskPhaseKey,
   pickNextTaskInCurrentPhase,
-  renderPhaseCatalogOverviewSection
+  renderPhaseCatalogOverviewSection,
+  renderTaskStateSyncStatusHtml,
+  computeOverviewStatPillCounts
 } from "../dist/views/dashboard/render-dashboard.js";
 import { buildPhaseCompleteReleaseChatPrompt } from "../dist/phase-complete-release-prompt.js";
 import { renderGuidanceAuthoringPanelInnerHtml } from "../dist/views/guidance/render-guidance-panel.js";
@@ -2436,6 +2438,47 @@ test("Phase Readiness shows phase-scoped ready counts not workspace ready total"
   assert.match(html, /Tasks ready to pick up/);
   assert.match(html, /5 ready · 2 in progress/);
   assert.doesNotMatch(html, /71 ready/);
+});
+
+test("computeOverviewStatPillCounts scopes to current phase delivery queue", () => {
+  const payload = readinessDashboardPayload({
+    currentPhaseDelivery: phaseDeliveryFixture({
+      queue: { ready: 4, proposed: 2, blocked: 1, inProgress: 0, research: 0 },
+      segments: {
+        completed: 9,
+        cancelled: 0,
+        inProgress: 0,
+        ready: 0,
+        proposed: 0,
+        blocked: 0,
+        research: 0
+      }
+    })
+  });
+  const d = payload.data;
+  const counts = computeOverviewStatPillCounts(d, d.workspaceStatus);
+  assert.equal(counts.ready, 4);
+  assert.equal(counts.proposed, 2);
+  assert.equal(counts.blocked, 1);
+  assert.equal(counts.done, 9);
+  assert.equal(counts.phaseScopeKey, "100");
+});
+
+test("computeOverviewStatPillCounts uses workspace totals when no current phase", () => {
+  const payload = readinessDashboardPayload();
+  const d = payload.data;
+  d.workspaceStatus = { ...d.workspaceStatus, currentKitPhase: "" };
+  const counts = computeOverviewStatPillCounts(d, d.workspaceStatus);
+  assert.equal(counts.ready, 71);
+  assert.equal(counts.phaseScopeKey, null);
+});
+
+test("Overview stat pills render phase-scoped counts and queue navigation phase", () => {
+  const html = renderDashboardRootInnerHtml(readinessDashboardPayload());
+  const overview = overviewPanelHtml(html);
+  assert.match(overview, /data-wc-pill-phase="100"/);
+  assert.match(overview, /wc-pill-ready[\s\S]*?wc-stat-num">5</);
+  assert.doesNotMatch(overview, /wc-stat-num">71</);
 });
 
 test("Phase Readiness score is 100% when phase delivery has started", () => {
