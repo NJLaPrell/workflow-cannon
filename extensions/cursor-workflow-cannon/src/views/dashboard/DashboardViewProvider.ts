@@ -1960,13 +1960,13 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         }
       }
       this.notifyKitStateChanged();
-      await vscode.window.showInformationMessage(`Workspace phase set to ${targetKey}.`);
     } finally {
       this.endDashboardMutationRefreshHold();
     }
     await this.view?.webview.postMessage({ type: "wcReleaseRefreshBlock" });
-    await this.applyDashboardMutationInvalidation("overview");
-    await this.pushUpdate({ projection: "full", skipHeavyFetches: false });
+    await this.applyDashboardMutationInvalidation("workspace-wide");
+    await this.pushUpdate({ projection: "full", skipHeavyFetches: false, light: false });
+    await vscode.window.showInformationMessage(`Workspace phase set to ${targetKey}.`);
   }
 
   /** Clear workspace current phase after delivery closeout (update-workspace-status). */

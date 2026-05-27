@@ -79,6 +79,18 @@ test("dashboard roster start and mark complete pause refresh during kit mutation
   assert.match(providerSrc, /onMarkPhaseComplete[\s\S]*beginDashboardMutationRefreshHold/);
 });
 
+test("dashboard roster start forces full workspace-wide refresh after set-current-phase", () => {
+  assert.match(
+    providerSrc,
+    /onStartPhaseFromRoster[\s\S]*applyDashboardMutationInvalidation\("workspace-wide"\)/
+  );
+  assert.match(
+    providerSrc,
+    /onStartPhaseFromRoster[\s\S]*pushUpdate\(\{ projection: "full", skipHeavyFetches: false, light: false \}\)/
+  );
+  assert.match(refreshControllerSrc, /notifyMutationEnd\(\): void \{[\s\S]*onDeferredCleared/);
+});
+
 test("dashboard refresh button busy state comes from wcHostSnapshot (T100497)", () => {
   assert.match(webviewClientSrc, /function setButtonBusy\(el, busy, label\)/);
   assert.match(webviewClientSrc, /buildHostSnapshotApplierScript/);

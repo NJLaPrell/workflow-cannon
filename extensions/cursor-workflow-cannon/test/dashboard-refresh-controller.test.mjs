@@ -46,3 +46,19 @@ test("DashboardRefreshController bumps generation on mutation start", () => {
   assert.ok(controller.currentGeneration() > before);
   assert.equal(controller.isSuppressed(), true);
 });
+
+test("DashboardRefreshController notifyMutationEnd flushes deferred refresh", async () => {
+  let runs = 0;
+  const controller = new DashboardRefreshController({
+    executeRefresh: async () => {
+      runs += 1;
+    },
+    isDeferred: () => false
+  });
+  controller.notifyMutationStart();
+  await controller.pushNow();
+  assert.equal(runs, 0);
+  controller.notifyMutationEnd();
+  await new Promise((r) => setTimeout(r, 0));
+  assert.equal(runs, 1);
+});
