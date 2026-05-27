@@ -14,6 +14,7 @@ import { runRebuildTaskStateCache } from "../persistence/rebuild-task-state-cach
 import { runTaskStateHydrate } from "../persistence/task-state-hydrate-runtime.js";
 import { runTaskStateInit } from "../persistence/task-state-init-runtime.js";
 import { runTaskStateStatus } from "../persistence/task-state-status-runtime.js";
+import { runTaskStateVerify } from "../persistence/task-state-verify-runtime.js";
 import { runGetKitPersistenceMap } from "../persistence/kit-persistence-map-runtime.js";
 import { runTaskPersistenceReadiness } from "../persistence/task-persistence-readiness.js";
 import { planningSqliteDatabaseRelativePath } from "../planning-config.js";
@@ -72,6 +73,9 @@ export async function routeTaskEngineBeforeOpenPlanningStores(
   }
   if (command.name === "task-state-init") {
     return runTaskStateInit(ctx, args as Record<string, unknown>);
+  }
+  if (command.name === "task-state-verify") {
+    return runTaskStateVerify(ctx, args as Record<string, unknown>);
   }
   if (command.name === "get-kit-persistence-map") {
     return runGetKitPersistenceMap(ctx);

@@ -98,6 +98,7 @@
     "task-state-hydrate",
     "task-state-init",
     "task-state-status",
+    "task-state-verify",
     "unblock-task",
     "uninstall-git-hooks",
     "update-phase-note",
@@ -1800,6 +1801,18 @@
       "additionalProperties": true
     },
     "task-state-status": {
+      "type": "object",
+      "properties": {
+        "fetch": {
+          "type": "boolean"
+        },
+        "branch": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    },
+    "task-state-verify": {
       "type": "object",
       "properties": {
         "fetch": {

@@ -142,6 +142,7 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
     "task-state-hydrate",
     "task-state-init",
     "task-state-status",
+    "task-state-verify",
     "unblock-task",
     "uninstall-git-hooks",
     "update-behavior-profile",
