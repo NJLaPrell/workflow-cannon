@@ -39,3 +39,31 @@ export {
   type BuildPlanSessionSnapshotV1,
   type DashboardPlanningSessionV1
 } from "./build-plan-session-file.js";
+export {
+  PLAN_ARTIFACT_SCHEMA_VERSION,
+  isPlanArtifactSchemaVersion,
+  isPlanArtifactV1,
+  type PlanArtifactApprovalRecord,
+  type PlanArtifactArchitecture,
+  type PlanArtifactArchitectureDecision,
+  type PlanArtifactConfidence,
+  type PlanArtifactGeneratedTaskPayload,
+  type PlanArtifactIdentity,
+  type PlanArtifactPhaseRecommendation,
+  type PlanArtifactPlanningType,
+  type PlanArtifactProvenance,
+  type PlanArtifactProvenanceSource,
+  type PlanArtifactReviewProfile,
+  type PlanArtifactRiskItem,
+  type PlanArtifactRiskSeverity,
+  type PlanArtifactSchemaVersion,
+  type PlanArtifactStatus,
+  type PlanArtifactTechnicalImpact,
+  type PlanArtifactTestingStrategy,
+  type PlanArtifactUiUxDirection,
+  type PlanArtifactUserStory,
+  type PlanArtifactUserStoryPriority,
+  type PlanArtifactValueAssessment,
+  type PlanArtifactV1,
+  type PlanArtifactWbsItem
+} from "./plan-artifact-v1.js";
