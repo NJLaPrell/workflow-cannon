@@ -5,8 +5,12 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 
+import { fileURLToPath } from "node:url";
+
 import { planningModule, taskEngineModule } from "../dist/index.js";
 import { readBuildPlanSession } from "../dist/core/planning/build-plan-session-file.js";
+
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 import { TaskStore } from "../dist/modules/task-engine/persistence/store.js";
 import { SqliteDualPlanningStore } from "../dist/modules/task-engine/persistence/sqlite-dual-planning.js";
 
@@ -25,10 +29,16 @@ async function tmpDir(prefix = "planning-") {
   return mkdtemp(path.join(os.tmpdir(), prefix));
 }
 
-test("planningModule draft-plan-artifact is listed; handler stub until WP-3.3", async () => {
+test("planningModule draft-plan-artifact persist:true still stub until WP-3.3", async () => {
   const workspace = await tmpDir();
+  const artifact = JSON.parse(
+    await readFile(
+      path.join(repoRoot, "fixtures/planning/plan-artifact-minimal.valid.v1.json"),
+      "utf8"
+    )
+  );
   const result = await planningModule.onCommand(
-    { name: "draft-plan-artifact", args: { persist: false, artifact: { schemaVersion: 1 } } },
+    { name: "draft-plan-artifact", args: { persist: true, artifact } },
     { runtimeVersion: "0.1", workspacePath: workspace }
   );
   assert.equal(result.ok, false);

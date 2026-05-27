@@ -44,6 +44,7 @@ import {
   type PlanningOutputMode
 } from "./build-plan-output-helpers.js";
 import { buildTasksFromExecutionDrafts, nextTaskId } from "./build-plan-execution-drafts.js";
+import { validatePlanArtifactDraftInput } from "../../core/planning/validate-plan-artifact.js";
 
 async function recordBuildPlanActivity(
   ctx: Parameters<NonNullable<WorkflowModule["onCommand"]>>[1],
@@ -93,14 +94,68 @@ export const planningModule: WorkflowModule = {
   },
   async onCommand(command, ctx) {
     if (command.name === "draft-plan-artifact") {
+      const args = command.args ?? {};
+      const artifactRaw = args.artifact;
+      if (!artifactRaw || typeof artifactRaw !== "object" || Array.isArray(artifactRaw)) {
+        return {
+          ok: false,
+          code: "invalid-run-args",
+          message: "draft-plan-artifact requires a non-null artifact object"
+        };
+      }
+      const persist = args.persist !== false;
+      const importSource =
+        args.importSource === "import-build-plan" || args.importSource === "import-wishlist"
+          ? args.importSource
+          : undefined;
+      const validation = validatePlanArtifactDraftInput(artifactRaw, {
+        workspaceRoot: ctx.workspacePath,
+        planId: typeof args.planId === "string" ? args.planId : undefined,
+        importSource,
+        actor: typeof args.actor === "string" ? args.actor : undefined
+      });
+      if (!validation.ok) {
+        return {
+          ok: false,
+          code: "plan-artifact-schema-invalid",
+          message: "PlanArtifact validation failed",
+          data: {
+            schemaVersion: 1,
+            responseSchemaVersion: 1,
+            errors: validation.errors
+          }
+        };
+      }
+      if (persist) {
+        return {
+          ok: false,
+          code: "plan-artifact-command-not-implemented",
+          message:
+            "draft-plan-artifact persistence is not implemented yet (WP-3.3); use persist:false to validate only.",
+          remediation: {
+            instructionPath: "src/modules/planning/instructions/draft-plan-artifact.md",
+            docPath: ".ai/runbooks/plan-artifact-workflow.md"
+          },
+          data: {
+            schemaVersion: 1,
+            responseSchemaVersion: 1,
+            planId: validation.artifact.planId,
+            version: validation.artifact.version,
+            planRef: validation.artifact.planRef
+          }
+        };
+      }
       return {
-        ok: false,
-        code: "plan-artifact-command-not-implemented",
-        message:
-          "draft-plan-artifact persistence is not implemented yet (WP-3.3); use --schema-only for argv shape.",
-        remediation: {
-          instructionPath: "src/modules/planning/instructions/draft-plan-artifact.md",
-          docPath: ".ai/runbooks/plan-artifact-workflow.md"
+        ok: true,
+        code: "plan-artifact-draft-validated",
+        message: "PlanArtifact draft validated",
+        data: {
+          schemaVersion: 1,
+          responseSchemaVersion: 1,
+          planId: validation.artifact.planId,
+          version: validation.artifact.version,
+          planRef: validation.artifact.planRef,
+          status: validation.artifact.status
         }
       };
     }

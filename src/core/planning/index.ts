@@ -93,3 +93,14 @@ export {
   type PlanArtifactStoragePaths
 } from "./plan-artifact-storage.js";
 export { renderPlanArtifactMarkdown } from "./render-plan-artifact-markdown.js";
+export {
+  formatPlanArtifactInstancePath,
+  normalizePlanArtifactDraft,
+  validatePlanArtifactDocument,
+  validatePlanArtifactDraftInput,
+  type NormalizePlanArtifactDraftOptions,
+  type PlanArtifactValidationError,
+  type ValidatePlanArtifactFailure,
+  type ValidatePlanArtifactResult,
+  type ValidatePlanArtifactSuccess
+} from "./validate-plan-artifact.js";
