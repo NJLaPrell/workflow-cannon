@@ -146,16 +146,16 @@ Follow existing extension test style (`render-dashboard.test.mjs`, `command-clie
 | --- | --- | --- |
 | **PR CI** (`pnpm run test`) | Every PR to `release/phase-*` | All unit + integration + extension tests; includes existing `planning-module.test.mjs`. |
 | **`pnpm run check`** | Same | Schema/manifest consistency; no plan-specific stage until WP-1.2 lands — then add `check-plan-artifact-schema` script (T-8.4). |
-| **T-8.4 release gate** | Phase closeout | New script validates `fixtures/planning/*.json` against schema in CI. |
+| **T-8.4 release gate** | Phase closeout | `pnpm run test:plan-artifact-fixtures` validates `fixtures/planning/*.json` and runs PlanArtifact fixture/E2E tests in CI. |
 | **Parity / release-readiness** | `main` / phase merge | Unchanged; planner must not break parity smoke. |
 
 **Proposed check script (T-8.4):**
 
 ```bash
-node scripts/check-plan-artifact-fixtures.mjs
+pnpm run test:plan-artifact-fixtures
 ```
 
-Fails if any committed fixture under `fixtures/planning/` is invalid or golden files drift without review.
+Fails if any committed fixture under `fixtures/planning/` violates its filename convention (`*.valid.*`/default must pass, `*.invalid.*` must fail) or if the PlanArtifact fixture/E2E tests regress.
 
 ---
 
