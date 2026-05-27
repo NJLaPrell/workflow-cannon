@@ -1,119 +1,100 @@
-import type { ModuleCommandResult } from "../../contracts/module-contract.js";
-import type { ModuleLifecycleContext } from "../../contracts/module-contract.js";
+import type { ModuleCommandResult, ModuleLifecycleContext } from "../../contracts/module-contract.js";
+import type { PlanArtifactV1 } from "../../core/planning/plan-artifact-v1.js";
 import {
   normalizeWbsItemToTaskDraft,
-  type PlanningExecutionTaskDraft,
-  type PlanArtifactV1,
-  type PlanArtifactWbsItem,
-  resolvePlanArtifactPhaseProposal
-} from "../../core/planning/index.js";
-import {
+  openPlanningStores,
   readPlanArtifactVersion,
-  resolveLatestPlanArtifactVersion
-} from "../../core/planning/plan-artifact-storage.js";
-import { openPlanningStores } from "../../core/planning/index.js";
-import { allocateNextTaskNumericId } from "../../core/planning/index.js";
-import { inferTaskPhaseKey } from "../task-engine/phase-resolution.js";
-import { reviewPlanningExecutionDraftGaps } from "../task-engine/planning-execution-draft-review.js";
-import { buildTaskFromConversionPayload } from "../task-engine/mutation-utils.js";
-import type { TaskEntity, TaskStatus } from "../task-engine/types.js";
-import { attachPolicyMeta } from "../task-engine/attach-planning-response-meta.js";
+  resolveLatestPlanArtifactVersion,
+  resolvePlanArtifactPhaseProposal,
+  type PlanningExecutionTaskDraft
+} from "../../core/planning/index.js";
+import { maxNumericTaskIdFromIds } from "./build-plan-execution-drafts.js";
+import { runTaskRowMutationCommands } from "../task-engine/commands/task-row-mutation-commands.js";
+import type { TaskEntity } from "../task-engine/types.js";
 import { planningGenPolicyGate } from "../task-engine/planning-generation-gate.js";
 
-const ACTIVE_PHASE_TASK_STATUSES = new Set<TaskStatus>([
-  "ready",
-  "in_progress",
-  "blocked",
-  "awaiting_review",
-  "awaiting_policy_approval",
-  "awaiting_external_decision"
-]);
+const TERMINAL_TASK_STATUSES = new Set(["completed", "cancelled", "canceled", "deferred", "archived"]);
 
 function parseVersion(raw: unknown): number | undefined {
-  if (typeof raw === "number" && Number.isInteger(raw) && raw >= 1) {
-    return raw;
-  }
+  if (typeof raw === "number" && Number.isInteger(raw) && raw >= 1) return raw;
+  if (typeof raw === "string" && /^\d+$/.test(raw.trim())) return Number(raw.trim());
   return undefined;
 }
 
-function parseWbsFilter(raw: unknown): Set<string> | undefined {
-  if (!Array.isArray(raw) || raw.length === 0) {
-    return undefined;
+function parseStringArray(raw: unknown, field: string): { ok: true; values: string[] } | { ok: false; result: ModuleCommandResult } {
+  if (raw === undefined) return { ok: true, values: [] };
+  if (!Array.isArray(raw)) {
+    return { ok: false, result: { ok: false, code: "invalid-run-args", message: `${field} must be an array of strings` } };
   }
-  const ids = raw
-    .filter((x): x is string => typeof x === "string" && x.trim().length > 0)
-    .map((x) => x.trim());
-  return ids.length > 0 ? new Set(ids) : undefined;
+  const values = raw.filter((x): x is string => typeof x === "string").map((x) => x.trim()).filter(Boolean);
+  if (values.length !== raw.length) {
+    return { ok: false, result: { ok: false, code: "invalid-run-args", message: `${field} must contain only non-empty strings` } };
+  }
+  return { ok: true, values };
 }
 
-function collectActivePhaseKeys(tasks: TaskEntity[]): string[] {
-  const keys = new Set<string>();
-  for (const task of tasks) {
-    if (!ACTIVE_PHASE_TASK_STATUSES.has(task.status)) {
-      continue;
+function taskIsActive(task: TaskEntity): boolean {
+  return !TERMINAL_TASK_STATUSES.has(String(task.status));
+}
+
+function selectedWbsRows(artifact: PlanArtifactV1, wbsFilter: string[]): PlanArtifactV1["wbs"] {
+  if (wbsFilter.length === 0) return artifact.wbs;
+  const wanted = new Set(wbsFilter);
+  return artifact.wbs.filter((row) => wanted.has(row.wbsId) || (row.path ? wanted.has(row.path) : false));
+}
+
+function allocatePreviewIds(drafts: PlanningExecutionTaskDraft[], existingTasks: TaskEntity[]): PlanningExecutionTaskDraft[] {
+  const existingIds = new Set(existingTasks.map((task) => task.id));
+  const assigned = new Set<string>();
+  let next = maxNumericTaskIdFromIds(existingIds);
+  return drafts.map((draft) => {
+    const requested = typeof draft.id === "string" && /^T\d+$/.test(draft.id.trim()) ? draft.id.trim() : undefined;
+    let id = requested;
+    if (!id || existingIds.has(id) || assigned.has(id)) {
+      do {
+        next += 1;
+        id = `T${next}`;
+      } while (existingIds.has(id) || assigned.has(id));
     }
-    const key = inferTaskPhaseKey(task);
-    if (key) {
-      keys.add(key);
-    }
-  }
-  return [...keys];
+    assigned.add(id);
+    return { ...draft, id };
+  });
 }
 
-function resolveApprovalTargetVersion(loaded: PlanArtifactV1): number {
-  if (loaded.status === "accepted" && loaded.approvalRecord?.approvedVersion !== undefined) {
-    return loaded.approvalRecord.approvedVersion;
-  }
-  return loaded.version;
-}
-
-function buildReviewTasksForGaps(
+function remapWbsDependencies(
   drafts: PlanningExecutionTaskDraft[],
-  existing: TaskEntity[],
-  phaseKey: string,
-  phaseLabel: string,
-  desiredStatus: "proposed" | "ready"
-): { ok: true; tasks: TaskEntity[] } | { ok: false; message: string } {
-  const now = new Date().toISOString();
-  let allocBase = [...existing];
-  const built: TaskEntity[] = [];
-  for (const draft of drafts) {
-    const id = draft.id ?? allocateNextTaskNumericId(allocBase);
-    const row: Record<string, unknown> = {
-      ...draft,
-      id,
-      phase: phaseLabel,
-      phaseKey,
-      status: desiredStatus
-    };
-    const bt = buildTaskFromConversionPayload(row, now);
-    if (!bt.ok) {
-      return { ok: false, message: bt.message };
-    }
-    const task: TaskEntity = {
-      ...bt.task,
-      status: desiredStatus,
-      phaseKey,
-      phase: phaseLabel
-    };
-    built.push(task);
-    allocBase = [...allocBase, task];
-  }
-  return { ok: true, tasks: built };
-}
-
-function applyResolvedPhaseToDrafts(
-  drafts: PlanningExecutionTaskDraft[],
-  phaseKey: string,
-  phaseLabel: string,
-  desiredStatus: "proposed" | "ready"
+  wbsToTaskId: Map<string, string>
 ): PlanningExecutionTaskDraft[] {
-  return drafts.map((d) => ({
-    ...d,
-    phaseKey,
-    phase: phaseLabel,
-    status: desiredStatus
-  }));
+  return drafts.map((draft) => {
+    const dependsOn = draft.dependsOn?.map((dep) => wbsToTaskId.get(dep) ?? dep);
+    return dependsOn ? { ...draft, dependsOn } : draft;
+  });
+}
+
+function assertAcceptedArtifact(artifact: PlanArtifactV1): ModuleCommandResult | null {
+  if (artifact.status !== "accepted") {
+    return {
+      ok: false,
+      code: "plan-artifact-not-accepted",
+      message: `PlanArtifact ${artifact.planId} is not accepted (status: ${artifact.status})`,
+      data: {
+        schemaVersion: 1,
+        responseSchemaVersion: 1,
+        planId: artifact.planId,
+        version: artifact.version,
+        status: artifact.status
+      }
+    };
+  }
+  if (artifact.approvalRecord?.confirmed !== true || artifact.approvalRecord.planRef !== artifact.planRef) {
+    return {
+      ok: false,
+      code: "plan-artifact-not-accepted",
+      message: `PlanArtifact ${artifact.planId} is missing a confirmed approval record`,
+      data: { schemaVersion: 1, responseSchemaVersion: 1, planId: artifact.planId, version: artifact.version }
+    };
+  }
+  return null;
 }
 
 export async function runFinalizePlanToPhase(
@@ -127,23 +108,9 @@ export async function runFinalizePlanToPhase(
   }
 
   const dryRun = args.dryRun !== false;
-  if (!dryRun) {
-    return {
-      ok: false,
-      code: "unsupported-command",
-      message: "finalize-plan-to-phase persist path ships in WP-6.5 (T100472+)"
-    };
-  }
-
-  const stores = await openPlanningStores(ctx);
-  const pg = planningGenPolicyGate(
-    ctx,
-    args,
-    instructionPath,
-    stores.sqliteDual.getPlanningGeneration()
-  );
-  if (pg.block) {
-    return pg.block;
+  const requestedVersion = parseVersion(args.version);
+  if (args.version !== undefined && requestedVersion === undefined) {
+    return { ok: false, code: "invalid-run-args", message: "version must be a positive integer" };
   }
 
   const latestVersion = resolveLatestPlanArtifactVersion(ctx.workspacePath, planId);
@@ -155,234 +122,162 @@ export async function runFinalizePlanToPhase(
       data: { schemaVersion: 1, responseSchemaVersion: 1, planId }
     };
   }
-
-  const requestedVersion = parseVersion(args.version);
-  const targetVersion = requestedVersion ?? latestVersion;
-  const loaded = readPlanArtifactVersion(ctx.workspacePath, planId, targetVersion);
-  if (!loaded) {
-    return {
-      ok: false,
-      code: "plan-artifact-not-found",
-      message: `PlanArtifact ${planId} version ${targetVersion} not found`,
-      data: { schemaVersion: 1, responseSchemaVersion: 1, planId, version: targetVersion }
-    };
-  }
-
   if (requestedVersion !== undefined && requestedVersion !== latestVersion) {
     return {
       ok: false,
       code: "plan-artifact-version-mismatch",
       message: `Requested version ${requestedVersion} is not the latest (${latestVersion})`,
-      data: {
-        schemaVersion: 1,
-        responseSchemaVersion: 1,
-        planId,
-        version: requestedVersion,
-        latestVersion
-      }
+      data: { schemaVersion: 1, responseSchemaVersion: 1, planId, version: requestedVersion, latestVersion }
     };
   }
 
-  if (loaded.status !== "accepted") {
+  const loaded = readPlanArtifactVersion(ctx.workspacePath, planId, latestVersion);
+  if (!loaded) {
     return {
       ok: false,
-      code: "plan-artifact-not-accepted",
-      message: `PlanArtifact ${planId} is not accepted (status: ${loaded.status})`,
-      data: {
-        schemaVersion: 1,
-        responseSchemaVersion: 1,
-        planId,
-        version: loaded.version,
-        status: loaded.status
-      }
+      code: "plan-artifact-not-found",
+      message: `PlanArtifact ${planId} version ${latestVersion} not found`,
+      data: { schemaVersion: 1, responseSchemaVersion: 1, planId, version: latestVersion }
     };
   }
 
-  const approvalTarget = resolveApprovalTargetVersion(loaded);
-  if (loaded.approvalRecord?.approvedVersion !== undefined && loaded.approvalRecord.approvedVersion !== approvalTarget) {
+  const acceptedBlock = assertAcceptedArtifact(loaded);
+  if (acceptedBlock) return acceptedBlock;
+
+  const wbsFilter = parseStringArray(args.wbsFilter, "wbsFilter");
+  if (!wbsFilter.ok) return wbsFilter.result;
+
+  const stores = await openPlanningStores(ctx);
+  if (!dryRun) {
+    const pg = planningGenPolicyGate(ctx, args, instructionPath, stores.sqliteDual.getPlanningGeneration());
+    if (pg.block) return pg.block;
     return {
       ok: false,
-      code: "plan-artifact-not-accepted",
-      message: `PlanArtifact ${planId} approval pin is inconsistent`,
-      data: { schemaVersion: 1, responseSchemaVersion: 1, planId, version: loaded.version }
+      code: "unsupported-command",
+      message: "finalize-plan-to-phase persist path ships in T100472; dryRun preview is available"
     };
   }
 
-  const desiredStatus: "proposed" | "ready" =
-    args.desiredStatus === "proposed" ? "proposed" : "ready";
-
-  const phaseResolved = resolvePlanArtifactPhaseProposal({
+  const existingTasks = stores.taskStore.getAllTasks();
+  const activePhaseKeys = Array.from(
+    new Set(existingTasks.filter(taskIsActive).map((task) => task.phaseKey).filter((key): key is string => typeof key === "string" && key.trim().length > 0))
+  ).sort();
+  const phase = resolvePlanArtifactPhaseProposal({
     targetPhaseKey: typeof args.targetPhaseKey === "string" ? args.targetPhaseKey : undefined,
     targetPhase: typeof args.targetPhase === "string" ? args.targetPhase : undefined,
-    phaseShortDescription:
-      typeof args.phaseShortDescription === "string" ? args.phaseShortDescription : undefined,
+    preferredPhaseKey: typeof args.preferredPhaseKey === "string" ? args.preferredPhaseKey : undefined,
+    phaseShortDescription: typeof args.phaseShortDescription === "string" ? args.phaseShortDescription : undefined,
     phaseRecommendations: loaded.phaseRecommendations,
-    activePhaseKeys: collectActivePhaseKeys(stores.taskStore.getAllTasks()),
+    activePhaseKeys,
     allowPhaseKeyCollision: args.allowPhaseKeyCollision === true,
     strict: args.strict !== false
   });
-
-  if (!phaseResolved.ok) {
+  if (!phase.ok) {
     return {
       ok: false,
-      code: "plan-artifact-finalize-review-failed",
-      message: "Finalize blocked: phase proposal could not be resolved",
-      data: {
-        schemaVersion: 1,
-        responseSchemaVersion: 1,
-        planId,
-        version: loaded.version,
-        phaseFindings: phaseResolved.findings
-      }
+      code: phase.code,
+      message: "Finalize blocked by phase proposal findings",
+      data: { schemaVersion: 1, responseSchemaVersion: 1, planId, version: loaded.version, findings: phase.findings }
     };
   }
 
-  const { proposal, findings: phaseFindings } = phaseResolved;
-  const wbsFilter = parseWbsFilter(args.wbsFilter);
-  const wbsRows: PlanArtifactWbsItem[] = wbsFilter
-    ? loaded.wbs.filter((row) => wbsFilter.has(row.wbsId))
-    : loaded.wbs;
-
-  if (wbsRows.length === 0) {
-    return {
-      ok: false,
-      code: "plan-artifact-finalize-review-failed",
-      message: "Finalize blocked: no WBS rows selected",
-      data: {
-        schemaVersion: 1,
-        responseSchemaVersion: 1,
-        planId,
-        version: loaded.version,
-        wbsFilter: wbsFilter ? [...wbsFilter] : undefined
-      }
-    };
+  const desiredStatus = args.desiredStatus === "proposed" ? "proposed" : "ready";
+  if (args.desiredStatus !== undefined && args.desiredStatus !== "proposed" && args.desiredStatus !== "ready") {
+    return { ok: false, code: "invalid-run-args", message: "desiredStatus must be 'proposed' or 'ready'" };
   }
 
-  const normContext = {
-    planRef: loaded.planRef,
+  const selected = selectedWbsRows(loaded, wbsFilter.values);
+  if (selected.length === 0) {
+    return { ok: false, code: "invalid-run-args", message: "wbsFilter did not match any WBS rows" };
+  }
+
+  const normalized: PlanningExecutionTaskDraft[] = [];
+  const provenanceRows: Record<string, unknown>[] = [];
+  for (const row of selected) {
+    const result = normalizeWbsItemToTaskDraft(row, {
+      planRef: loaded.planRef,
+      planId: loaded.planId,
+      planVersion: loaded.version,
+      planningType: loaded.identity.planningType,
+      defaultPhase: phase.proposal.label,
+      defaultPhaseKey: phase.proposal.phaseKey,
+      defaultStatus: desiredStatus
+    });
+    if (!result.ok) {
+      return {
+        ok: false,
+        code: "plan-artifact-finalize-review-failed",
+        message: `WBS row ${row.wbsId} is not task-draft compatible`,
+        data: { schemaVersion: 1, responseSchemaVersion: 1, planId, version: loaded.version, findings: result.findings }
+      };
+    }
+    normalized.push(result.draft);
+    provenanceRows.push(result.planningProvenance as unknown as Record<string, unknown>);
+  }
+
+  const withIds = allocatePreviewIds(normalized, existingTasks);
+  const wbsToTaskId = new Map<string, string>();
+  selected.forEach((row, index) => {
+    const taskId = withIds[index]?.id;
+    if (taskId) wbsToTaskId.set(row.wbsId, taskId);
+  });
+  const taskPreview = remapWbsDependencies(withIds, wbsToTaskId);
+
+  const review = await runTaskRowMutationCommands(
+    {
+      name: "review-planning-execution-drafts",
+      args: {
+        tasks: taskPreview,
+        planRef: loaded.planRef,
+        planningType: loaded.identity.planningType,
+        targetPhaseKey: phase.proposal.phaseKey,
+        targetPhase: phase.proposal.label,
+        desiredStatus
+      }
+    },
+    ctx,
+    stores,
+    stores.taskStore
+  );
+  if (!review) {
+    return { ok: false, code: "unsupported-command", message: "review-planning-execution-drafts is unavailable" };
+  }
+
+  const data: Record<string, unknown> = {
+    schemaVersion: 1,
+    responseSchemaVersion: 1,
     planId: loaded.planId,
-    planVersion: approvalTarget,
-    planningType: loaded.identity.planningType,
-    defaultPhase: proposal.label,
-    defaultPhaseKey: proposal.phaseKey,
-    defaultStatus: desiredStatus
+    version: loaded.version,
+    planRef: loaded.planRef,
+    dryRun: true,
+    persisted: false,
+    phaseKey: phase.proposal.phaseKey,
+    targetPhase: phase.proposal.label,
+    phaseProposal: phase.proposal,
+    phaseProposalSource: phase.source,
+    phaseFindings: phase.findings,
+    desiredStatus,
+    wbsFilter: wbsFilter.values,
+    taskPreview,
+    taskGenerationPayloads: taskPreview,
+    planningProvenance: provenanceRows,
+    review: review.data ?? { code: review.code, ok: review.ok },
+    reviewCode: review.code
   };
 
-  const wbsFindings: Array<Record<string, unknown>> = [];
-  const rawDrafts: PlanningExecutionTaskDraft[] = [];
-  for (const row of wbsRows) {
-    const normalized = normalizeWbsItemToTaskDraft(row, normContext);
-    if (!normalized.ok) {
-      for (const f of normalized.findings) {
-        wbsFindings.push({
-          code: f.code,
-          severity: "error",
-          wbsId: row.wbsId,
-          message: f.message,
-          field: f.field
-        });
-      }
-      continue;
-    }
-    rawDrafts.push(normalized.draft);
-  }
-
-  if (wbsFindings.length > 0) {
+  if (!review.ok || review.code === "planning-execution-drafts-review-findings") {
     return {
       ok: false,
       code: "plan-artifact-finalize-review-failed",
-      message: "Finalize blocked: WBS normalization failed",
-      data: {
-        schemaVersion: 1,
-        responseSchemaVersion: 1,
-        planId,
-        version: loaded.version,
-        wbsFindings
-      }
+      message: review.message ?? "Finalize preview review failed",
+      data
     };
   }
 
-  const taskPreview = applyResolvedPhaseToDrafts(
-    rawDrafts,
-    proposal.phaseKey,
-    proposal.label,
-    desiredStatus
-  );
-
-  const built = buildReviewTasksForGaps(
-    taskPreview,
-    stores.taskStore.getAllTasks(),
-    proposal.phaseKey,
-    proposal.label,
-    desiredStatus
-  );
-  if (!built.ok) {
-    return {
-      ok: false,
-      code: "plan-artifact-finalize-review-failed",
-      message: built.message,
-      data: { schemaVersion: 1, responseSchemaVersion: 1, planId, version: loaded.version }
-    };
-  }
-
-  const batchFindings = reviewPlanningExecutionDraftGaps(built.tasks);
-  const errorCount = batchFindings.filter((f) => f.severity === "error").length;
-  const warningCount = batchFindings.filter((f) => f.severity === "warning").length;
-  const phaseWarningCount = phaseFindings.filter((f) => f.severity === "warning").length;
-
-  if (errorCount > 0 || phaseFindings.some((f) => f.severity === "blocker")) {
-    return {
-      ok: false,
-      code: "plan-artifact-finalize-review-failed",
-      message: "Finalize blocked: task batch review has blockers",
-      data: {
-        schemaVersion: 1,
-        responseSchemaVersion: 1,
-        planId,
-        version: loaded.version,
-        phaseKey: proposal.phaseKey,
-        phaseProposal: proposal,
-        review: {
-          passed: false,
-          errorCount,
-          warningCount: warningCount + phaseWarningCount,
-          findings: [...phaseFindings, ...batchFindings, ...wbsFindings],
-          reviewProfile: "ux-cae-pre-persist-v1"
-        }
-      }
-    };
-  }
-
-  const result: ModuleCommandResult = {
+  return {
     ok: true,
     code: "plan-artifact-finalize-preview",
-    message: `Finalize preview: ${taskPreview.length} task draft(s) for phase ${proposal.phaseKey}`,
-    data: {
-      schemaVersion: 1,
-      responseSchemaVersion: 1,
-      planId,
-      version: loaded.version,
-      dryRun: true,
-      phaseKey: proposal.phaseKey,
-      phaseProposal: proposal,
-      taskPreview,
-      taskGenerationPayloads: taskPreview,
-      review: {
-        passed: true,
-        errorCount: 0,
-        warningCount: warningCount + phaseWarningCount,
-        findings: [...phaseFindings, ...batchFindings],
-        reviewProfile: "ux-cae-pre-persist-v1",
-        taskCount: taskPreview.length
-      },
-      phaseResolutionSource: phaseResolved.source
-    }
+    message: `Finalize preview generated ${taskPreview.length} task draft(s) for ${phase.proposal.label}`,
+    data
   };
-  attachPolicyMeta(
-    result.data as Record<string, unknown>,
-    ctx,
-    stores.sqliteDual.getPlanningGeneration(),
-    pg.warnings
-  );
-  return result;
 }
