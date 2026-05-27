@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "planId": "550e8400-e29b-41d4-a716-446655440000",
+  "version": 1,
+  "planRef": "plan-artifact:550e8400-e29b-41d4-a716-446655440000",
+  "status": "draft",
+  "identity": {
+    "title": "Add plan artifact JSON schema file",
+    "planningType": "change",
+    "summary": "Introduce schemas/planning/plan-artifact.v1.schema.json"
+  },
+  "goals": ["PlanArtifact v1 validates in CI"],
+  "nonGoals": ["Dashboard UI"],
+  "valueAssessment": { "impact": "Unblocks command implementation", "confidence": "high" },
+  "riskAssessment": [],
+  "technicalImpact": { "systemsTouched": ["src/core/planning", "schemas/planning"] },
+  "testingStrategy": {
+    "layers": ["unit"],
+    "criticalPaths": ["schema validates minimal fixture"]
+  },
+  "implementationGuidance": ["Mirror fields in PLANNER_SCHEMA.md"],
+  "whatNotToDo": ["Do not hand-edit task store for plan status"],
+  "assumptions": ["A-SCHEMA approved before WP-1 coding"],
+  "openQuestions": [],
+  "wbs": [
+    {
+      "wbsId": "WBS-1",
+      "title": "Add JSON Schema",
+      "goalMapping": ["PlanArtifact v1 validates in CI"],
+      "suggestedTaskTitle": "Add plan-artifact.v1.schema.json",
+      "approach": "Author schema from PLANNER_SCHEMA.md",
+      "technicalScope": ["schemas/planning/plan-artifact.v1.schema.json"],
+      "acceptanceCriteria": ["Minimal fixture passes validation"],
+      "testingVerification": ["test/plan-artifact-schema.test.mjs"],
+      "dependsOn": [],
+      "sizingConfidence": "medium",
+      "doneMeans": "Schema file committed and referenced in WP-1.2",
+      "generatedTaskPayload": {
+        "title": "Add plan-artifact.v1.schema.json",
+        "approach": "Author schema from PLANNER_SCHEMA.md",
+        "technicalScope": ["schemas/planning/plan-artifact.v1.schema.json"],
+        "acceptanceCriteria": ["Minimal fixture passes validation"]
+      }
+    }
+  ],
+  "phaseRecommendations": [
+    { "phaseKey": "110", "label": "Phase 110", "rationale": "Current planner phase", "isPrimary": true }
+  ],
+  "provenance": {
+    "createdAt": "2026-05-27T06:00:00.000Z",
+    "updatedAt": "2026-05-27T06:00:00.000Z",
+    "createdBy": "agent",
+    "source": "draft-plan-artifact"
+  }
+}
