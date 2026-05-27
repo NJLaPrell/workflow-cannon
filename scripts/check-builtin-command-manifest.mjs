@@ -50,7 +50,8 @@ const KNOWN_POLICY_OPERATION_IDS = new Set([
   "project-memory.approve",
   "project-memory.prune",
   "planning.draft-plan-artifact",
-  "planning.review-plan-artifact"
+  "planning.review-plan-artifact",
+  "planning.accept-plan-artifact"
 ]);
 
 const ALLOWED_SENSITIVITY = new Set(["non-sensitive", "sensitive", "sensitive-with-dryrun"]);
