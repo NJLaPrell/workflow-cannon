@@ -301,6 +301,54 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.doesNotMatch(html, /Suggested Next/i);
 });
 
+test("renderDashboardRootInnerHtml renders PlanArtifact draft panel", () => {
+  const html = renderDashboardRootInnerHtml({
+    ok: true,
+    data: {
+      stateSummary: { ready: 0, proposed: 0, blocked: 0, completed: 0 },
+      readyImprovementsSummary: { schemaVersion: 1, count: 0, top: [], phaseBuckets: [] },
+      readyExecutionSummary: { schemaVersion: 1, count: 0, top: [], phaseBuckets: [] },
+      proposedImprovementsSummary: { schemaVersion: 1, count: 0, top: [], phaseBuckets: [] },
+      proposedExecutionSummary: { schemaVersion: 1, count: 0, top: [], phaseBuckets: [] },
+      blockedSummary: { count: 0, top: [], phaseBuckets: [] },
+      transcriptChurnResearchSummary: { schemaVersion: 1, count: 0, top: [], phaseBuckets: [] },
+      completedSummary: { schemaVersion: 1, count: 0, top: [], phaseBuckets: [] },
+      cancelledSummary: { schemaVersion: 1, count: 0, top: [], phaseBuckets: [] },
+      wishlist: { schemaVersion: 1, openCount: 0, totalCount: 0, openTop: [] },
+      workspaceStatus: { currentKitPhase: "110", nextKitPhase: "111" },
+      suggestedNext: null,
+      planningSession: null,
+      planArtifact: {
+        schemaVersion: 1,
+        count: 1,
+        current: {
+          planId: "plan-123",
+          planRef: "PLANNER_TASKS.md",
+          version: 1,
+          status: "draft",
+          title: "Dashboard lifecycle",
+          planningType: "new-feature",
+          updatedAt: "2026-05-27T17:00:00.000Z",
+          wbsRowCount: 4,
+          openQuestionCount: 2
+        },
+        recent: []
+      },
+      blockingAnalysis: [],
+      dependencyOverview: { schemaVersion: 1, nodes: [], edges: [] }
+    }
+  });
+
+  assert.match(html, /wc-plan-artifact/);
+  assert.match(html, /Plan Draft/);
+  assert.match(html, /Dashboard lifecycle/);
+  assert.match(html, /New Feature/);
+  assert.match(html, /PLANNER_TASKS.md/);
+  assert.match(html, /<b>4<\/b> WBS rows/);
+  assert.match(html, /<b>2<\/b> open questions/);
+  assert.match(html, /Draft/);
+});
+
 test("renderDashboardRootInnerHtml renders phase roster deliverables inline edit affordances", () => {
   const html = renderDashboardRootInnerHtml({
     ok: true,

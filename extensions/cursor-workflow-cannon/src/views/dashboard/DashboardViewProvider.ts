@@ -4157,6 +4157,43 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     .dash-planning-wizard-actions {
       margin: 0;
     }
+    .wc-plan-artifact-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin: 0 0 8px 0;
+    }
+    .wc-plan-artifact-main { min-width: 0; flex: 1; }
+    .wc-plan-artifact-title { margin: 0; overflow-wrap: anywhere; }
+    .wc-plan-artifact-meta { margin: 2px 0 0 0; color: var(--vscode-descriptionForeground, var(--vscode-foreground)); font-size: 11px; overflow-wrap: anywhere; }
+    .wc-plan-artifact-status {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      border-radius: 7px;
+      border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.35));
+      background: var(--vscode-textCodeBlock-background);
+      color: var(--vscode-textLink-foreground, #4fc1ff);
+      font-size: 10px;
+      font-weight: 600;
+      line-height: 1.3;
+    }
+    .wc-plan-artifact-stats { display: flex; flex-wrap: wrap; gap: 6px; align-items: stretch; }
+    .wc-plan-artifact-stat {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 6px;
+      border-radius: 6px;
+      border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.35));
+      background: var(--vscode-textCodeBlock-background);
+      font-size: 11px;
+      min-width: 0;
+    }
+    .wc-plan-artifact-stat b { font-variant-numeric: tabular-nums; }
+    .wc-plan-artifact-label { color: var(--vscode-descriptionForeground, var(--vscode-foreground)); }
     .ok { color: var(--vscode-testing-iconPassed); }
     .bad { color: var(--vscode-errorForeground); }
     .phase-stack { margin: 4px 0 8px 0; }
