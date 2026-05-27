@@ -50,6 +50,10 @@ import {
 } from "./persist-plan-artifact-draft.js";
 import { runReviewPlanArtifact } from "./review-plan-artifact-handler.js";
 import { runAcceptPlanArtifact } from "./accept-plan-artifact-handler.js";
+import {
+  readPlanArtifactVersion,
+  resolveLatestPlanArtifactVersion
+} from "../../core/planning/plan-artifact-storage.js";
 import { attachPolicyMeta } from "../task-engine/attach-planning-response-meta.js";
 import { planningGenPolicyGate } from "../task-engine/planning-generation-gate.js";
 import { TaskEngineError } from "../task-engine/transitions.js";
@@ -57,6 +61,8 @@ import { TaskEngineError } from "../task-engine/transitions.js";
 const DRAFT_PLAN_ARTIFACT_INSTRUCTION = "src/modules/planning/instructions/draft-plan-artifact.md";
 const REVIEW_PLAN_ARTIFACT_INSTRUCTION = "src/modules/planning/instructions/review-plan-artifact.md";
 const ACCEPT_PLAN_ARTIFACT_INSTRUCTION = "src/modules/planning/instructions/accept-plan-artifact.md";
+const FINALIZE_PLAN_TO_PHASE_INSTRUCTION =
+  "src/modules/planning/instructions/finalize-plan-to-phase.md";
 
 async function recordBuildPlanActivity(
   ctx: Parameters<NonNullable<WorkflowModule["onCommand"]>>[1],
@@ -119,6 +125,69 @@ export const planningModule: WorkflowModule = {
         ctx,
         ACCEPT_PLAN_ARTIFACT_INSTRUCTION
       );
+    }
+
+    if (command.name === "finalize-plan-to-phase") {
+      const args = (command.args ?? {}) as Record<string, unknown>;
+      const planId = typeof args.planId === "string" ? args.planId.trim() : "";
+      if (!planId) {
+        return {
+          ok: false,
+          code: "invalid-run-args",
+          message: "finalize-plan-to-phase requires planId"
+        };
+      }
+      const dryRun = args.dryRun !== false;
+      if (!dryRun) {
+        const stores = await openPlanningStores(ctx);
+        const pg = planningGenPolicyGate(
+          ctx,
+          args,
+          FINALIZE_PLAN_TO_PHASE_INSTRUCTION,
+          stores.sqliteDual.getPlanningGeneration()
+        );
+        if (pg.block) {
+          return pg.block;
+        }
+      }
+      const latestVersion = resolveLatestPlanArtifactVersion(ctx.workspacePath, planId);
+      if (latestVersion === null) {
+        return {
+          ok: false,
+          code: "plan-artifact-not-found",
+          message: `PlanArtifact ${planId} not found`,
+          data: { schemaVersion: 1, responseSchemaVersion: 1, planId }
+        };
+      }
+      const loaded = readPlanArtifactVersion(ctx.workspacePath, planId, latestVersion);
+      if (!loaded) {
+        return {
+          ok: false,
+          code: "plan-artifact-not-found",
+          message: `PlanArtifact ${planId} version ${latestVersion} not found`,
+          data: { schemaVersion: 1, responseSchemaVersion: 1, planId, version: latestVersion }
+        };
+      }
+      if (loaded.status !== "accepted") {
+        return {
+          ok: false,
+          code: "plan-artifact-not-accepted",
+          message: `PlanArtifact ${planId} is not accepted (status: ${loaded.status})`,
+          data: {
+            schemaVersion: 1,
+            responseSchemaVersion: 1,
+            planId,
+            version: loaded.version,
+            status: loaded.status
+          }
+        };
+      }
+      return {
+        ok: false,
+        code: "unsupported-command",
+        message:
+          "finalize-plan-to-phase preview/persist handler ships in WP-6 (T100471+); instruction and argv guards are wired"
+      };
     }
 
     if (command.name === "draft-plan-artifact") {

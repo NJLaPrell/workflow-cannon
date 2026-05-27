@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-05-27T15:46:15.895Z",
+  "generatedAt": "2026-05-27T16:11:06.606Z",
   "commands": [
     {
       "name": "accept-improvement",
@@ -531,6 +531,11 @@
       "name": "export-workspace-status",
       "path": ".ai/agent-cli-snippets/by-command/export-workspace-status.json",
       "moduleId": "task-engine"
+    },
+    {
+      "name": "finalize-plan-to-phase",
+      "path": ".ai/agent-cli-snippets/by-command/finalize-plan-to-phase.json",
+      "moduleId": "planning"
     },
     {
       "name": "generate-document",

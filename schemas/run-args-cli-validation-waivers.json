@@ -15,6 +15,7 @@
     "draft-plan-artifact",
     "review-plan-artifact",
     "accept-plan-artifact",
+    "finalize-plan-to-phase",
     "enable-plugin",
     "install-plugin",
     "ingest-transcripts",
