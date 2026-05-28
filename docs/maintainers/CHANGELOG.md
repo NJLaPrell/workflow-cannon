@@ -8,6 +8,21 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [0.99.15] - 2026-05-28
+
+Patch - **Phase 116 Planner-chat provenance closeout** (idea provenance, planner-chat playbook/prompt seed, and CAE registry coverage).
+
+### Added
+
+- PlanArtifact provenance now accepts `sourceIdeaId` and `previousPlanArtifacts` so Ideas-to-plan workflows can preserve their originating idea and superseded plan artifacts.
+- Planner-chat playbook guidance and a reusable dashboard prompt builder seed idea context, provenance requirements, and policy references for chat-driven draft planning.
+- CAE registry seed coverage for the planner-chat playbook keeps the Ideas-to-plan workflow discoverable as a shipped artifact.
+
+### Changed
+
+- Draft PlanArtifact persistence coverage now round-trips idea provenance fields through the artifact store.
+- Dashboard Ideas planning prompts now have a structured shared builder ready for host wiring instead of ad hoc inline prompt text.
+
 ## [0.99.14] - 2026-05-28
 
 Patch - **Phase 116 Dashboard Complete & Release** (Ideas planner-chat resume, PlanArtifact dashboard lifecycle wiring, and closeout E2E coverage).
