@@ -31,6 +31,7 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
   var pendingReplaceRootHtml = null;
   var hostSnapshot = null;
   var pendingSectionPatches = {};
+  var draggedIdeaRow = null;
 
   /** Locks that defer wcReplaceRoot (editing deliverables, drawer, phase filter open, etc.). */
   function isLocalUiLocked() {
@@ -144,6 +145,151 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
     el.disabled = false;
     var original = el.getAttribute('data-wc-original-html');
     if (original) el.innerHTML = original;
+  }
+
+  function setIdeasCreateStatus(form, message, isError) {
+    if (!form) return;
+    var status = form.querySelector('[data-wc-ideas-create-status]');
+    if (!status) return;
+    status.textContent = message || '';
+    if (isError) status.setAttribute('data-wc-error', '1');
+    else status.removeAttribute('data-wc-error');
+  }
+
+  function setIdeasCreateBusy(form, busy) {
+    if (!form) return;
+    var button = form.querySelector('[data-wc-action="idea-create"]');
+    if (button) setButtonBusy(button, busy, 'Saving...');
+    form.querySelectorAll('input, textarea, button').forEach(function(el) {
+      el.disabled = !!busy;
+    });
+  }
+
+  function submitIdeaCreate(form) {
+    if (!form) return;
+    var titleEl = form.querySelector('[data-wc-idea-title]');
+    var noteEl = form.querySelector('[data-wc-idea-note]');
+    var title = titleEl && titleEl.value != null ? String(titleEl.value).trim() : '';
+    var note = noteEl && noteEl.value != null ? String(noteEl.value).trim() : '';
+    if (!title) {
+      setIdeasCreateStatus(form, 'Title required.', true);
+      if (titleEl && titleEl.focus) titleEl.focus();
+      return;
+    }
+    setIdeasCreateStatus(form, '', false);
+    setIdeasCreateBusy(form, true);
+    vscode.postMessage({ type: 'createIdea', title: title, note: note });
+  }
+
+  function ideaRowFor(el) {
+    return el && el.closest ? el.closest('[data-wc-idea-id]') : null;
+  }
+
+  function setIdeaRowStatus(row, message, isError) {
+    if (!row) return;
+    var status = row.querySelector('[data-wc-idea-row-status]');
+    if (!status) return;
+    status.textContent = message || '';
+    if (isError) status.setAttribute('data-wc-error', '1');
+    else status.removeAttribute('data-wc-error');
+  }
+
+  function setIdeaRowBusy(row, busy, label) {
+    if (!row) return;
+    var save = row.querySelector('[data-wc-action="idea-update"]');
+    var del = row.querySelector('[data-wc-action="idea-delete"]');
+    var plan = row.querySelector('[data-wc-action="idea-plan"]');
+    if (save) setButtonBusy(save, !!busy, label || 'Saving...');
+    if (del) del.disabled = !!busy;
+    if (plan) setButtonBusy(plan, !!busy, label || 'Saving...');
+    row.querySelectorAll('[data-wc-ideas-edit-form] input, [data-wc-ideas-edit-form] textarea, [data-wc-ideas-edit-form] button').forEach(function(el) {
+      el.disabled = !!busy;
+    });
+  }
+
+  function submitIdeaPlan(row) {
+    if (!row) return;
+    var ideaId = (row.getAttribute('data-wc-idea-id') || '').trim();
+    if (!ideaId) return;
+    setIdeaRowBusy(row, true, 'Opening...');
+    vscode.postMessage({type:'prefillIdeaPlanningChat',ideaId:ideaId,title:row.getAttribute('data-wc-idea-title')||'',note:row.getAttribute('data-wc-idea-note')||''});
+  }
+
+  function setIdeaEditMode(row, editing) {
+    if (!row) return;
+    var form = row.querySelector('[data-wc-ideas-edit-form]');
+    var title = row.querySelector('[data-wc-idea-edit-title]');
+    var note = row.querySelector('[data-wc-idea-edit-note]');
+    if (title) title.value = row.getAttribute('data-wc-idea-title') || '';
+    if (note) note.value = row.getAttribute('data-wc-idea-note') || '';
+    if (form) form.hidden = !editing;
+    setIdeaRowStatus(row, '', false);
+    if (editing && title && title.focus) title.focus();
+  }
+
+  function submitIdeaUpdate(row) {
+    if (!row) return;
+    var ideaId = (row.getAttribute('data-wc-idea-id') || '').trim();
+    var titleEl = row.querySelector('[data-wc-idea-edit-title]');
+    var noteEl = row.querySelector('[data-wc-idea-edit-note]');
+    var title = titleEl && titleEl.value != null ? String(titleEl.value).trim() : '';
+    var note = noteEl && noteEl.value != null ? String(noteEl.value).trim() : '';
+    if (!ideaId) return;
+    if (!title) {
+      setIdeaRowStatus(row, 'Title required.', true);
+      if (titleEl && titleEl.focus) titleEl.focus();
+      return;
+    }
+    setIdeaRowBusy(row, true, 'Saving...');
+    vscode.postMessage({ type: 'updateIdea', ideaId: ideaId, title: title, note: note });
+  }
+
+  function submitIdeaDelete(row) {
+    if (!row) return;
+    var ideaId = (row.getAttribute('data-wc-idea-id') || '').trim();
+    if (!ideaId) return;
+    setIdeaRowBusy(row, true, 'Deleting...');
+    vscode.postMessage({ type: 'deleteIdea', ideaId: ideaId });
+  }
+
+  function showIdeasToast(message, undo) {
+    var toast = document.querySelector('[data-wc-ideas-toast]');
+    if (!toast) return;
+    toast.textContent = message || '';
+    if (undo) {
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'wc-btn wc-btn-sm wc-btn-secondary';
+      btn.setAttribute('data-wc-action', 'idea-undo-delete');
+      btn.textContent = 'Undo';
+      toast.appendChild(document.createTextNode(' '));
+      toast.appendChild(btn);
+    }
+    toast.hidden = false;
+  }
+
+  function ideaListFor(row) {
+    return row && row.closest ? row.closest('[data-wc-ideas-list]') : null;
+  }
+
+  function ideaRowAfterPointer(list, y) {
+    if (!list) return null;
+    var rows = Array.prototype.slice.call(list.querySelectorAll('[data-wc-idea-id]:not(.wc-ideas-row-dragging)'));
+    for (var i = 0; i < rows.length; i++) {
+      var box = rows[i].getBoundingClientRect();
+      if (y < box.top + box.height / 2) return rows[i];
+    }
+    return null;
+  }
+
+  function submitIdeaReorder(list) {
+    if (!list) return;
+    var ids = Array.prototype.slice.call(list.querySelectorAll('[data-wc-idea-id]'))
+      .map(function(row) { return (row.getAttribute('data-wc-idea-id') || '').trim(); })
+      .filter(function(id) { return id.length > 0; });
+    if (ids.length < 2) return;
+    showIdeasToast('Saving order...', false);
+    vscode.postMessage({ type: 'reorderIdeas', ideaIds: ids });
   }
 
   function capturePhaseDeliverablesEditState(root) {
@@ -790,6 +936,36 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
       applyHostSnapshot(m.snapshot);
       return;
     }
+    if (m && m.type === 'wcIdeaCreateResult') {
+      var ideaForm = document.querySelector('[data-wc-ideas-create-form]');
+      if (!ideaForm) return;
+      setIdeasCreateBusy(ideaForm, false);
+      if (m.ok === true) {
+        var ideaTitle = ideaForm.querySelector('[data-wc-idea-title]');
+        var ideaNote = ideaForm.querySelector('[data-wc-idea-note]');
+        if (ideaTitle) ideaTitle.value = '';
+        if (ideaNote) ideaNote.value = '';
+        setIdeasCreateStatus(ideaForm, 'Saved.', false);
+      } else {
+        setIdeasCreateStatus(ideaForm, typeof m.message === 'string' ? m.message : 'Unable to save idea.', true);
+      }
+      return;
+    }
+    if (m && m.type === 'wcIdeaMutationResult') {
+      var op = typeof m.operation === 'string' ? m.operation : '';
+      var mutRow = typeof m.ideaId === 'string' ? document.querySelector('[data-wc-idea-id="' + m.ideaId.replace(/"/g, '\\"') + '"]') : null;
+      if (mutRow) setIdeaRowBusy(mutRow, false);
+      if (m.ok !== true) {
+        if (mutRow) setIdeaRowStatus(mutRow, typeof m.message === 'string' ? m.message : 'Unable to save idea.', true);
+        else showIdeasToast(typeof m.message === 'string' ? m.message : 'Unable to save idea.', false);
+        return;
+      }
+      if (op === 'delete') showIdeasToast('Idea deleted.', true);
+      else if (op === 'undo-delete') showIdeasToast('Idea restored.', false);
+      else if (op === 'reorder') showIdeasToast('Ideas reordered.', false);
+      else if (op === 'plan') showIdeasToast('Planning chat opened.', false);
+      return;
+    }
     if (m && m.type === 'wcPhaseDeliverablesSaved') {
       var savedPk = typeof m.phaseKey === 'string' ? m.phaseKey.trim() : '';
       if (savedPk) {
@@ -1186,18 +1362,43 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
       return;
     }
     if (act === 'wishlist-view') { var wv = (t.getAttribute('data-wishlist-id') || '').trim(); if (wv) vscode.postMessage({type:'openWishlistDetail',wishlistId:wv}); return; }
+    if (act === 'idea-create') { submitIdeaCreate(t.closest('[data-wc-ideas-create-form]')); return; }
+    if (act === 'idea-edit') { setIdeaEditMode(ideaRowFor(t), true); return; }
+    if (act === 'idea-edit-cancel') { setIdeaEditMode(ideaRowFor(t), false); return; }
+    if (act === 'idea-update') { submitIdeaUpdate(ideaRowFor(t)); return; }
+    if (act === 'idea-delete') { submitIdeaDelete(ideaRowFor(t)); return; }
+    if (act === 'idea-plan') { submitIdeaPlan(ideaRowFor(t)); return; }
+    if (act === 'idea-undo-delete') { vscode.postMessage({type:'undoDeleteIdea'}); return; }
     if (act === 'planning-new-plan') { vscode.postMessage({type:'prefillPlanningInterviewChat'}); return; }
     if (act === 'planning-resume-chat') { var rc = (t.getAttribute('data-resume-cli') || '').trim(); vscode.postMessage({type:'prefillPlanningResumeChat',resumeCli:rc}); return; }
     if (act === 'planning-discard') { vscode.postMessage({type:'planningDiscard'}); return; }
     if (act === 'planning-wizard-start') { var sel = document.getElementById('wc-planning-type'); var pt = sel && sel.value ? String(sel.value).trim() : ''; if (pt) vscode.postMessage({type:'planningWizardStart',planningType:pt}); return; }
     if (act === 'planning-wizard-submit') { var ta = document.getElementById('wc-planning-answer'); var txt = ta && typeof ta.value === 'string' ? ta.value.trim() : ''; vscode.postMessage({type:'planningWizardSubmit',answer:txt}); return; }
     if (act === 'planning-wizard-cancel') { vscode.postMessage({type:'planningWizardCancel'}); return; }
+    if (act === 'plan-artifact-review') { var revPlanId=(t.getAttribute('data-plan-id')||'').trim(); var revPlanVersion=(t.getAttribute('data-plan-version')||'').trim(); if(revPlanId&&revPlanVersion)vscode.postMessage({type:'reviewPlanArtifact',planId:revPlanId,version:revPlanVersion}); return; }
     if (act === 'plan-artifact-accept') { var planId=(t.getAttribute('data-plan-id')||'').trim(); var planRef=(t.getAttribute('data-plan-ref')||'').trim(); var planVersion=(t.getAttribute('data-plan-version')||'').trim(); if(planId&&planRef&&planVersion)vscode.postMessage({type:'acceptPlanArtifact',planId:planId,planRef:planRef,version:planVersion}); return; }
     if (act === 'plan-artifact-finalize') { var finPlanId=(t.getAttribute('data-plan-id')||'').trim(); var finPlanVersion=(t.getAttribute('data-plan-version')||'').trim(); if(finPlanId&&finPlanVersion)vscode.postMessage({type:'finalizePlanArtifact',planId:finPlanId,version:finPlanVersion}); return; }
     if (act === 'planning-wizard-dismiss') { vscode.postMessage({type:'planningWizardDismiss'});return;}if(act==="collaboration-hub"){vscode.postMessage({type:"prefillCollaborationHubChat"});return;}if(act==="deliver-phase-prompt"){var kp=(t.getAttribute("data-wc-kit-phase")||"").trim();vscode.postMessage({type:"prefillDeliverPhaseChat",kitPhase:kp});return;}if(act==="add-wishlist-item"){vscode.postMessage({type:"addWishlistItem"});return;}if(act==="generate-features-chat"){vscode.postMessage({type:"prefillGenerateFeaturesChat"});return;}if(act==="transcript-churn-research-chat"){var tcTid=(t.getAttribute("data-task-id")||"").trim();vscode.postMessage({type:"prefillTranscriptChurnResearchChat",taskId:tcTid});return;}if(act==="wishlist-chat"){var wid=t.getAttribute("data-wishlist-id")||"";vscode.postMessage({type:"prefillWishlistChat",wishlistId:wid});return;}if(act==="wishlist-page"){var wpp=parseInt(String(t.getAttribute("data-wishlist-page")||"0"),10);if(!Number.isNaN(wpp)&&wpp>=0)vscode.postMessage({type:"wishlistPage",page:wpp});return;}if(act==="wishlist-decline"){var wlTid=(t.getAttribute("data-task-id")||"").trim();if(wlTid)vscode.postMessage({type:"dashboardTransition",taskId:wlTid,action:"reject",transitionKind:"wishlist"});return;}if(act==="phase-complete-release"){var ph=(t.getAttribute("data-wc-phase-phrase")||"").trim();var pk=(t.getAttribute("data-wc-phase-key")||"").trim();var ids=(t.getAttribute("data-wc-phase-task-ids")||"").trim();var wcur=(t.getAttribute("data-wc-workspace-current-phase")||"").trim();var wnxt=(t.getAttribute("data-wc-workspace-next-phase")||"").trim();var rscope=(t.getAttribute("data-wc-release-scope")||"").trim();vscode.postMessage({type:"prefillPhaseCompleteReleaseChat",phasePhrase:ph,phaseKey:pk,seededTaskIdsCsv:ids,workspaceCurrentPhase:wcur,workspaceNextPhase:wnxt,scope:rscope==="current"?"current":rscope==="bucket"?"bucket":undefined});return;}if(act==="proposed-imp-accept-phase"||act==="proposed-exe-accept-phase"){var batch=(t.getAttribute("data-proposed-task-ids")||"").trim();var cat=act==="proposed-exe-accept-phase"?"execution":"improvement";var dpk=(t.getAttribute("data-proposed-phase-key")||"").trim();vscode.postMessage({type:"dashboardAcceptProposedPhase",category:cat,taskIds:batch,phaseKey:dpk});return;}if(act==="phase-notes-chat"){vscode.postMessage({type:"prefillPhaseNotesDiscoveryChat"});return;}if(act==="phase-note-add"){vscode.postMessage({type:"addPhaseNote"});return;}if(act==="phase-note-dismiss"){var dpn=(t.getAttribute("data-note-id")||"").trim();var dpp=(t.getAttribute("data-note-priority")||"").trim();if(dpn)vscode.postMessage({type:"dismissPhaseNote",noteId:dpn,priority:dpp});return;}if(act==="phase-note-convert"){var cpn=(t.getAttribute("data-note-id")||"").trim();if(cpn)vscode.postMessage({type:"convertPhaseNote",noteId:cpn});return;}if(act==="phase-notes-propose-persist"){vscode.postMessage({type:"persistPhaseNoteProposals"});return;}if(act==="register-phase-catalog"){vscode.postMessage({type:"registerPhaseCatalogEntry"});return;}if(act==="phase-mark-complete"){var markPk=(t.getAttribute("data-wc-phase-key")||"").trim();if(markPk)vscode.postMessage({type:"markPhaseComplete",phaseKey:markPk});return;}if(act==="phase-roster-start"){var rosterPk=(t.getAttribute("data-wc-phase-key")||"").trim();if(rosterPk)vscode.postMessage({type:"startPhaseFromRoster",phaseKey:rosterPk});return;}if(act==="team-assignment-register"){vscode.postMessage({type:"registerTeamAssignment"});return;}if(act==="team-execution-chat"){vscode.postMessage({type:"prefillTeamExecutionChat"});return;}if(act==="team-assignment-handoff"){var teamAid=(t.getAttribute("data-assignment-id")||"").trim();var teamWid=(t.getAttribute("data-worker-id")||"").trim();if(teamAid&&teamWid)vscode.postMessage({type:"submitTeamHandoff",assignmentId:teamAid,workerId:teamWid});return;}if(act==="team-assignment-reconcile"){var teamAid2=(t.getAttribute("data-assignment-id")||"").trim();var teamSid=(t.getAttribute("data-supervisor-id")||"").trim();if(teamAid2&&teamSid)vscode.postMessage({type:"reconcileTeamAssignment",assignmentId:teamAid2,supervisorId:teamSid});return;}if(act==="team-assignment-block"){var teamAid3=(t.getAttribute("data-assignment-id")||"").trim();var teamSid2=(t.getAttribute("data-supervisor-id")||"").trim();if(teamAid3&&teamSid2)vscode.postMessage({type:"blockTeamAssignment",assignmentId:teamAid3,supervisorId:teamSid2});return;}if(act==="team-assignment-cancel"){var teamAid4=(t.getAttribute("data-assignment-id")||"").trim();var teamSid3=(t.getAttribute("data-supervisor-id")||"").trim();if(teamAid4)vscode.postMessage({type:"cancelTeamAssignment",assignmentId:teamAid4,supervisorId:teamSid3});return;}if(act==="subagent-register"){vscode.postMessage({type:"registerSubagent"});return;}if(act==="subagent-registry-chat"){vscode.postMessage({type:"prefillSubagentRegistryChat"});return;}if(act==="subagent-spawn"){var subId=(t.getAttribute("data-subagent-id")||"").trim();vscode.postMessage({type:"spawnSubagent",subagentId:subId});return;}if(act==="subagent-session-close"){var subSid=(t.getAttribute("data-session-id")||"").trim();var subDef=(t.getAttribute("data-definition-id")||"").trim();if(subSid&&subDef)vscode.postMessage({type:"closeSubagentSession",sessionId:subSid,definitionId:subDef});return;}if(act==="subagent-retire"){var subRet=(t.getAttribute("data-subagent-id")||"").trim();vscode.postMessage({type:"retireSubagent",subagentId:subRet});return;}if(act==="checkpoint-create-head"){vscode.postMessage({type:"createCheckpoint",mode:"head"});return;}if(act==="checkpoint-create-stash"){vscode.postMessage({type:"createCheckpoint",mode:"stash"});return;}if(act==="checkpoint-recovery-chat"){vscode.postMessage({type:"prefillTaskCheckpointsRecoveryChat"});return;}if(act==="checkpoint-compare"){var ckptCmp=(t.getAttribute("data-checkpoint-id")||"").trim();if(ckptCmp)vscode.postMessage({type:"compareCheckpoint",checkpointId:ckptCmp});return;}if(act==="checkpoint-rewind"){var ckptRw=(t.getAttribute("data-checkpoint-id")||"").trim();var ckptRk=(t.getAttribute("data-ref-kind")||"").trim();var ckptTid=(t.getAttribute("data-task-id")||"").trim();if(ckptRw)vscode.postMessage({type:"rewindCheckpoint",checkpointId:ckptRw,refKind:ckptRk,taskId:ckptTid});return;}if(act==="approval-inbox-chat"){vscode.postMessage({type:"prefillPolicyApprovalInboxChat"});return;}if(act==="approval-review-accept"){var apTid=(t.getAttribute("data-task-id")||"").trim();var apTit=(t.getAttribute("data-task-title")||"").trim();if(apTid)vscode.postMessage({type:"reviewApprovalItem",taskId:apTid,title:apTit,decision:"accept"});return;}if(act==="approval-review-decline"){var apTid2=(t.getAttribute("data-task-id")||"").trim();var apTit2=(t.getAttribute("data-task-title")||"").trim();if(apTid2)vscode.postMessage({type:"reviewApprovalItem",taskId:apTid2,title:apTit2,decision:"decline"});return;}if(act==="approval-review-accept-edited"){var apTid3=(t.getAttribute("data-task-id")||"").trim();var apTit3=(t.getAttribute("data-task-title")||"").trim();if(apTid3)vscode.postMessage({type:"reviewApprovalItem",taskId:apTid3,title:apTit3,decision:"accept_edited"});return;}if(act==="queue-bucket-load-more"){var loadCat=(t.getAttribute("data-wc-queue-category")||"").trim();var loadCursor=(t.getAttribute("data-wc-queue-cursor")||"").trim();var loadBucket=t.closest("details.wc-lazy-queue-bucket");if(loadCat&&loadCursor&&loadBucket)requestLazyQueueBucketLoad(loadBucket,loadCursor);return;}if(act==="assign-phase"){var apTid=(t.getAttribute("data-task-id")||"").trim();if(apTid)vscode.postMessage({type:"assignTaskPhase",taskId:apTid});return;}var tid=(t.getAttribute("data-task-id")||"").trim();if(act==="task-detail"){if(tid)vscode.postMessage({type:"openTaskDetail",taskId:tid});return;}if(act==="task-comments-view"){if(tid)vscode.postMessage({type:"viewTaskComments",taskId:tid});return;}if(act==="task-comment-add"){if(tid)vscode.postMessage({type:"addTaskComment",taskId:tid});return;}if(act==="proposed-imp-accept"||act==="proposed-exe-accept"){vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"accept"});return;}if(act==="human-gate-resume-ready"){if(tid)vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"resume_ready",transitionKind:"human-gate"});return;}if(act==="human-gate-resume-work"){if(tid)vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"resume_work",transitionKind:"human-gate"});return;}if(act==="proposed-imp-decline"||act==="proposed-exe-decline"){vscode.postMessage({type:"dashboardTransition",taskId:tid,action:"reject"});return;}});
 
   if (rootEl) rootEl.addEventListener('keydown', function(ev) {
     var target = ev.target;
+    if (target && target.matches && target.matches('[data-wc-idea-title]') && ev.key === 'Enter') {
+      ev.preventDefault();
+      submitIdeaCreate(target.closest('[data-wc-ideas-create-form]'));
+      return;
+    }
+    if (target && target.matches && target.matches('[data-wc-idea-edit-title]')) {
+      if (ev.key === 'Enter') {
+        ev.preventDefault();
+        submitIdeaUpdate(ideaRowFor(target));
+        return;
+      }
+      if (ev.key === 'Escape') {
+        ev.preventDefault();
+        setIdeaEditMode(ideaRowFor(target), false);
+        return;
+      }
+    }
     if (!target || !target.classList || !target.classList.contains('dash-phase-deliverables-input')) return;
     if (ev.key === 'Enter') {
       ev.preventDefault();
@@ -1216,6 +1417,40 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
       togglePhaseDeliverablesEdit(row, false);
       setUiInteraction('phase-deliverables', false);
     }
+  });
+  if (rootEl) rootEl.addEventListener('dragstart', function(ev) {
+    var target = ev.target;
+    if (target && target.closest && target.closest('button, input, textarea')) return;
+    var row = ideaRowFor(target);
+    if (!row) return;
+    draggedIdeaRow = row;
+    row.classList.add('wc-ideas-row-dragging');
+    if (ev.dataTransfer) {
+      ev.dataTransfer.effectAllowed = 'move';
+      ev.dataTransfer.setData('text/plain', row.getAttribute('data-wc-idea-id') || '');
+    }
+  });
+  if (rootEl) rootEl.addEventListener('dragover', function(ev) {
+    if (!draggedIdeaRow) return;
+    var overRow = ideaRowFor(ev.target);
+    var list = ideaListFor(overRow || draggedIdeaRow);
+    if (!list) return;
+    ev.preventDefault();
+    var after = ideaRowAfterPointer(list, ev.clientY || 0);
+    if (!after) list.appendChild(draggedIdeaRow);
+    else if (after !== draggedIdeaRow) list.insertBefore(draggedIdeaRow, after);
+  });
+  if (rootEl) rootEl.addEventListener('drop', function(ev) {
+    if (!draggedIdeaRow) return;
+    ev.preventDefault();
+    var list = ideaListFor(draggedIdeaRow);
+    draggedIdeaRow.classList.remove('wc-ideas-row-dragging');
+    draggedIdeaRow = null;
+    submitIdeaReorder(list);
+  });
+  if (rootEl) rootEl.addEventListener('dragend', function() {
+    if (draggedIdeaRow) draggedIdeaRow.classList.remove('wc-ideas-row-dragging');
+    draggedIdeaRow = null;
   });
   if (rootEl) rootEl.addEventListener('change', function(ev) {
     var target = ev.target;

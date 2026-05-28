@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-05-27T16:11:06.606Z",
+  "generatedAt": "2026-05-28T05:28:00.847Z",
   "commands": [
     {
       "name": "accept-improvement",
@@ -428,6 +428,11 @@
       "moduleId": "checkpoints"
     },
     {
+      "name": "create-idea",
+      "path": ".ai/agent-cli-snippets/by-command/create-idea.json",
+      "moduleId": "ideas"
+    },
+    {
       "name": "create-task",
       "path": ".ai/agent-cli-snippets/by-command/create-task.json",
       "moduleId": "task-engine"
@@ -451,6 +456,11 @@
       "name": "delete-behavior-profile",
       "path": ".ai/agent-cli-snippets/by-command/delete-behavior-profile.json",
       "moduleId": "agent-behavior"
+    },
+    {
+      "name": "delete-idea",
+      "path": ".ai/agent-cli-snippets/by-command/delete-idea.json",
+      "moduleId": "ideas"
     },
     {
       "name": "demote-task",
@@ -561,6 +571,11 @@
       "name": "get-dependency-graph",
       "path": ".ai/agent-cli-snippets/by-command/get-dependency-graph.json",
       "moduleId": "task-engine"
+    },
+    {
+      "name": "get-idea",
+      "path": ".ai/agent-cli-snippets/by-command/get-idea.json",
+      "moduleId": "ideas"
     },
     {
       "name": "get-kit-persistence-map",
@@ -711,6 +726,11 @@
       "name": "list-features",
       "path": ".ai/agent-cli-snippets/by-command/list-features.json",
       "moduleId": "task-engine"
+    },
+    {
+      "name": "list-ideas",
+      "path": ".ai/agent-cli-snippets/by-command/list-ideas.json",
+      "moduleId": "ideas"
     },
     {
       "name": "list-memory",
@@ -896,6 +916,11 @@
       "name": "remove-dependency",
       "path": ".ai/agent-cli-snippets/by-command/remove-dependency.json",
       "moduleId": "task-engine"
+    },
+    {
+      "name": "reorder-ideas",
+      "path": ".ai/agent-cli-snippets/by-command/reorder-ideas.json",
+      "moduleId": "ideas"
     },
     {
       "name": "repair-task-state-cache",
@@ -1096,6 +1121,11 @@
       "name": "update-behavior-profile",
       "path": ".ai/agent-cli-snippets/by-command/update-behavior-profile.json",
       "moduleId": "agent-behavior"
+    },
+    {
+      "name": "update-idea",
+      "path": ".ai/agent-cli-snippets/by-command/update-idea.json",
+      "moduleId": "ideas"
     },
     {
       "name": "update-phase-note",

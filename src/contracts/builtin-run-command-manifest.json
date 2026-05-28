@@ -1268,6 +1268,58 @@
     "policySensitivity": "sensitive"
   },
   {
+    "moduleId": "ideas",
+    "name": "create-idea",
+    "file": "create-idea.md",
+    "description": "Create a lightweight operator idea in kit SQLite for later planner-chat workflows.",
+    "policyOperationId": "ideas.persist",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "ideas",
+    "name": "get-idea",
+    "file": "get-idea.md",
+    "description": "Read one lightweight operator idea by I### id.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "ideas",
+    "name": "list-ideas",
+    "file": "list-ideas.md",
+    "description": "List lightweight operator ideas in sort order, optionally filtered by status.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "ideas",
+    "name": "update-idea",
+    "file": "update-idea.md",
+    "description": "Update a lightweight operator idea in kit SQLite.",
+    "policyOperationId": "ideas.persist",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "ideas",
+    "name": "delete-idea",
+    "file": "delete-idea.md",
+    "description": "Delete a lightweight operator idea from kit SQLite.",
+    "policyOperationId": "ideas.persist",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "ideas",
+    "name": "reorder-ideas",
+    "file": "reorder-ideas.md",
+    "description": "Replace the sort order for all lightweight operator ideas.",
+    "policyOperationId": "ideas.persist",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
     "moduleId": "team-execution",
     "name": "list-assignments",
     "file": "list-assignments.md",

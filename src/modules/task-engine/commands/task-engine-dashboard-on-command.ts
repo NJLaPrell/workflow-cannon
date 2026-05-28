@@ -5,6 +5,7 @@ import type {
   DashboardTaskCheckpointsSummary,
   DashboardTeamExecutionSummary
 } from "../../../contracts/dashboard-summary-run.js";
+import { listIdeas } from "../../ideas/idea-store.js";
 import { summarizeCheckpointsForDashboard } from "../../checkpoints/checkpoint-store.js";
 import { summarizeSubagentsForDashboard } from "../../subagents/subagent-store.js";
 import { summarizeTeamAssignmentsForDashboard } from "../../team-execution/assignment-store.js";
@@ -24,6 +25,7 @@ import { listPlanArtifactSummaries } from "../../../core/planning/plan-artifact-
 import { dashboardOnboardingTemperamentLabel } from "../../agent-behavior/onboarding-temperament-label.js";
 import { loadBehaviorWorkspaceState } from "../../agent-behavior/persistence.js";
 import { BehaviorProfileStore } from "../../agent-behavior/store.js";
+import { listPlanningChatSessions } from "../../ideas/planning-chat-session.js";
 import {
   findWishlistIntakeTaskByLegacyOrTaskId,
   isWishlistIntakeTask,
@@ -87,6 +89,61 @@ function buildDashboardPlanArtifactSummary(ctx: ModuleLifecycleContext): Dashboa
     current: rows[0]!,
     recent: rows
   };
+}
+
+function buildDashboardIdeasSummary(
+  sqliteDual: SqliteDualPlanningStore | undefined,
+  needsQueueRollups: boolean
+): DashboardSummaryData["ideas"] {
+  if (!needsQueueRollups || !sqliteDual) {
+    return {
+      schemaVersion: 1,
+      available: false,
+      totalCount: 0,
+      openCount: 0,
+      planningCount: 0,
+      plannedCount: 0,
+      top: []
+    };
+  }
+  try {
+    const ideas = listIdeas(sqliteDual.getDatabase());
+    const sessions = new Map(listPlanningChatSessions(sqliteDual.getDatabase()).map((session) => [session.ideaId, session]));
+    return {
+      schemaVersion: 1,
+      available: true,
+      totalCount: ideas.length,
+      openCount: ideas.filter((idea) => idea.status === "open").length,
+      planningCount: ideas.filter((idea) => idea.status === "planning").length,
+      plannedCount: ideas.filter((idea) => idea.status === "planned").length,
+      top: ideas.slice(0, 15).map((idea) => {
+        const session = sessions.get(idea.id);
+        if (!session) {
+          return idea;
+        }
+        return {
+          ...idea,
+          planningChatSession: {
+            schemaVersion: 1,
+            ideaId: session.ideaId,
+            status: session.status,
+            updatedAt: session.updatedAt,
+            ...(session.resumePrompt ? { resumePrompt: session.resumePrompt } : {})
+          }
+        };
+      })
+    };
+  } catch {
+    return {
+      schemaVersion: 1,
+      available: false,
+      totalCount: 0,
+      openCount: 0,
+      planningCount: 0,
+      plannedCount: 0,
+      top: []
+    };
+  }
 }
 
 /** Parse optional `dashboard-summary` argv for wishlist table paging (extension + CLI). */
@@ -158,6 +215,7 @@ export async function runDashboardSummaryCommand(
       taskId
     };
   });
+  const ideas = buildDashboardIdeasSummary(sqliteDual, needsQueueRollups);
 
   const slimListRow = (t: (typeof tasks)[0]) => projectDashboardTaskRow(t, enrich, { includePriority: false });
   const blockedTasks = needsQueueRollups
@@ -490,6 +548,7 @@ export async function runDashboardSummaryCommand(
       openTotalPages: wishlistTotalPages,
       openTop: wishlistOpenTop
     },
+    ideas,
     blockedSummary: {
       count: blockedTasks.length,
       top: blockedTop,

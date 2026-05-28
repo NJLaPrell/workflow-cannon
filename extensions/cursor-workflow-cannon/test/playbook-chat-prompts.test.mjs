@@ -8,6 +8,7 @@ import {
   buildPhaseNotesDiscoveryPrompt,
   buildPlanningInterviewPrompt,
   buildPlanningInterviewResumePrompt,
+  buildPlannerChatPrompt,
   buildTaskToPhaseBranchPrompt,
   buildTranscriptChurnResearchPrompt
 } from "../dist/playbook-chat-prompts.js";
@@ -33,6 +34,27 @@ test("buildGenerateFeaturesPrompt references slash and wishlist intake playbook"
   const p = buildGenerateFeaturesPrompt();
   assert.match(p, /\/generate-features/);
   assert.match(p, /\.ai\/playbooks\/wishlist-intake-to-execution\.md/);
+});
+
+test("buildPlannerChatPrompt references planner-chat playbook and provenance", () => {
+  const p = buildPlannerChatPrompt();
+  assert.match(p, /planner-chat/);
+  assert.match(p, /\.ai\/playbooks\/planner-chat\.md/);
+  assert.match(p, /sourceIdeaId/);
+  assert.match(p, /previousPlanArtifacts/);
+});
+
+test("buildPlannerChatPrompt includes idea context when provided", () => {
+  const p = buildPlannerChatPrompt({
+    ideaId: "I42",
+    title: "Better planner flow",
+    note: "Ask one decision at a time.",
+    previousPlanArtifacts: ["plan-artifact:old-1"]
+  });
+  assert.match(p, /\*\*I42\*\*/);
+  assert.match(p, /\*\*Better planner flow\*\*/);
+  assert.match(p, /Ask one decision at a time\./);
+  assert.match(p, /\*\*plan-artifact:old-1\*\*/);
 });
 
 test("buildImprovementTriagePrompt references playbook id and path", () => {

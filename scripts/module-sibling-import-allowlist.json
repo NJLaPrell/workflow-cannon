@@ -17,38 +17,50 @@
     {
       "file": "src/modules/task-engine/commands/task-engine-dashboard-on-command.ts",
       "line": "8",
+      "importLine": "import { listIdeas } from \"../../ideas/idea-store.js\";",
+      "rationale": "Dashboard summary aggregates operator ideas from the ideas store for queue UI."
+    },
+    {
+      "file": "src/modules/task-engine/commands/task-engine-dashboard-on-command.ts",
+      "line": "9",
       "importLine": "import { summarizeCheckpointsForDashboard } from \"../../checkpoints/checkpoint-store.js\";",
       "rationale": "Dashboard summary aggregates task-linked checkpoints for recovery UI."
     },
     {
       "file": "src/modules/task-engine/commands/task-engine-dashboard-on-command.ts",
-      "line": "9",
+      "line": "10",
       "importLine": "import { summarizeSubagentsForDashboard } from \"../../subagents/subagent-store.js\";",
       "rationale": "Dashboard summary aggregates subagent registry; future façade TBD."
     },
     {
       "file": "src/modules/task-engine/commands/task-engine-dashboard-on-command.ts",
-      "line": "10",
+      "line": "11",
       "importLine": "import { summarizeTeamAssignmentsForDashboard } from \"../../team-execution/assignment-store.js\";",
       "rationale": "Dashboard summary aggregates team assignments."
     },
     {
       "file": "src/modules/task-engine/commands/task-engine-dashboard-on-command.ts",
-      "line": "24",
+      "line": "25",
       "importLine": "import { dashboardOnboardingTemperamentLabel } from \"../../agent-behavior/onboarding-temperament-label.js\";",
       "rationale": "Guidance dashboard reads behavior profile label."
     },
     {
       "file": "src/modules/task-engine/commands/task-engine-dashboard-on-command.ts",
-      "line": "25",
+      "line": "26",
       "importLine": "import { loadBehaviorWorkspaceState } from \"../../agent-behavior/persistence.js\";",
       "rationale": "Guidance dashboard reads behavior workspace state."
     },
     {
       "file": "src/modules/task-engine/commands/task-engine-dashboard-on-command.ts",
-      "line": "26",
+      "line": "27",
       "importLine": "import { BehaviorProfileStore } from \"../../agent-behavior/store.js\";",
       "rationale": "Guidance dashboard resolves effective behavior profile."
+    },
+    {
+      "file": "src/modules/task-engine/commands/task-engine-dashboard-on-command.ts",
+      "line": "28",
+      "importLine": "import { listPlanningChatSessions } from \"../../ideas/planning-chat-session.js\";",
+      "rationale": "Dashboard summary annotates Ideas rows with active planner-chat resume sessions."
     },
     {
       "file": "src/modules/task-engine/persistence/export-feature-taxonomy-json-runtime.ts",

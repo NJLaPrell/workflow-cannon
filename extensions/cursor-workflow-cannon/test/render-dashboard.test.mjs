@@ -137,6 +137,70 @@ test("renderDashboardRootInnerHtml shows error JSON when ok is false", () => {
   assert.match(html, /bad/);
 });
 
+test("renderDashboardRootInnerHtml places ideas second in the overview stack", () => {
+  const html = renderDashboardRootInnerHtml({
+    ok: true,
+    data: {
+      stateSummary: {},
+      workspaceStatus: {},
+      ideas: {
+        schemaVersion: 1,
+        available: true,
+        totalCount: 1,
+        openCount: 1,
+        planningCount: 0,
+        plannedCount: 0,
+        top: [{ id: "I1", title: "Draft a better dashboard", status: "open", previousPlanArtifacts: [] }]
+      }
+    }
+  });
+  const overviewIdx = html.indexOf('data-wc-section="overview"');
+  const ideasIdx = html.indexOf('data-wc-section="ideas"');
+  const queueIdx = html.indexOf('data-wc-section="queue"');
+  assert.ok(overviewIdx >= 0, "overview section expected");
+  assert.ok(ideasIdx > overviewIdx, "ideas section should follow overview");
+  assert.ok(queueIdx > ideasIdx, "queue section should remain after overview tab stack");
+  assert.match(html, /Draft a better dashboard/);
+  assert.match(html, /Open 1 · Planning 0 · Planned 0 · Total 1/);
+  assert.match(html, /data-wc-ideas-create-form="1"/);
+  assert.match(html, /data-wc-action="idea-create"/);
+  assert.match(html, /data-wc-idea-title="1"/);
+  assert.match(html, /data-wc-idea-note="1"/);
+  assert.match(html, /wc-ideas-drag-handle/);
+  assert.match(html, /data-wc-action="idea-edit"/);
+  assert.match(html, /data-wc-action="idea-delete"/);
+  assert.match(html, /data-wc-action="idea-update"/);
+  assert.match(html, /data-wc-action="idea-plan"/);
+  assert.match(html, /Plan this/);
+  assert.match(html, /data-wc-ideas-toast="1"/);
+  assert.match(html, /data-wc-ideas-edit-form="1"/);
+  assert.match(html, /data-wc-ideas-list="1"/);
+  assert.match(html, /draggable="true"/);
+  assert.match(html, /Drag to reorder/);
+});
+
+test("renderDashboardRootInnerHtml truncates long idea notes", () => {
+  const longNote = "A".repeat(220);
+  const html = renderDashboardRootInnerHtml({
+    ok: true,
+    data: {
+      stateSummary: {},
+      workspaceStatus: {},
+      ideas: {
+        available: true,
+        totalCount: 1,
+        openCount: 1,
+        planningCount: 0,
+        plannedCount: 0,
+        top: [{ id: "I2", title: "Capture note", note: longNote, status: "open" }]
+      }
+    }
+  });
+  const visibleNote = html.match(/data-wc-idea-note-view="1">([\s\S]*?)<\/p>/)?.[1] ?? "";
+  assert.match(visibleNote, /A{157}\.{3}/);
+  assert.doesNotMatch(visibleNote, new RegExp(`A{${longNote.length}}`));
+});
+
 test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () => {
   const fixturePath = path.join(__dirname, "../docs/fixtures/dashboard-summary.example.json");
   const fixture = JSON.parse(readFileSync(fixturePath, "utf8"));

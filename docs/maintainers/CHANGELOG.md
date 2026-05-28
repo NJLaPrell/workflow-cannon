@@ -8,6 +8,21 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [0.99.14] - 2026-05-28
+
+Patch - **Phase 116 Dashboard Complete & Release** (Ideas planner-chat resume, PlanArtifact dashboard lifecycle wiring, and closeout E2E coverage).
+
+### Added
+
+- Dashboard Ideas rows can open planner-chat for a selected idea, persist a resumable planning-chat session, and show Resume planning when that session is active.
+- PlanArtifact dashboard controls now wire Review, Accept, and Finalize through the host-side `wk run` paths with dashboard policy approval and current-phase targeting.
+- Dashboard PlanArtifact regression coverage for happy path, blocker rejection, matching active resume sessions, and zero raw CLI prompt assertions.
+
+### Changed
+
+- Accept and finalize flows refresh planning generation before mutating so dashboard actions stay aligned with the task engine projection.
+- Phase 116 task delivery evidence now covers the full dashboard completion sequence through PRs #537-#541.
+
 ## [0.99.13] - 2026-05-27
 
 Patch - **Phase 116 Ideas module foundation** (SQLite-backed idea records and task-state closeout repair).

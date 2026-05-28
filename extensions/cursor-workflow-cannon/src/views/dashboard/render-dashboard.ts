@@ -1876,6 +1876,114 @@ function renderWishlistOpenList(items: unknown): string {
   );
 }
 
+function renderDashboardIdeasSectionInnerHtml(rawIdeas: unknown): string {
+  const ideas = rawIdeas && typeof rawIdeas === "object" ? (rawIdeas as Record<string, unknown>) : {};
+  const available = ideas.available === true;
+  const top = Array.isArray(ideas.top) ? ideas.top.slice(0, 5) : [];
+  const openCount = Number(ideas.openCount ?? 0);
+  const planningCount = Number(ideas.planningCount ?? 0);
+  const plannedCount = Number(ideas.plannedCount ?? 0);
+  const totalCount = Number(ideas.totalCount ?? top.length);
+  const rows = top
+    .map((item) => {
+      if (!item || typeof item !== "object") {
+        return "";
+      }
+      const row = item as Record<string, unknown>;
+      const id = String(row.id ?? "").trim();
+      const title = String(row.title ?? id).trim();
+      const note = typeof row.note === "string" ? row.note.trim() : "";
+      const status = String(row.status ?? "open").trim();
+      const planningChatSession = row.planningChatSession && typeof row.planningChatSession === "object"
+        ? (row.planningChatSession as Record<string, unknown>)
+        : null;
+      const hasPlanningChatSession = planningChatSession?.status === "active" && planningChatSession.ideaId === id;
+      const displayNote = note.length > 160 ? note.slice(0, 157).trimEnd() + "..." : note;
+      const idAttr = escapeHtmlAttr(id);
+      const titleAttr = escapeHtmlAttr(title);
+      const noteAttr = escapeHtmlAttr(note);
+      if (!title) {
+        return "";
+      }
+      return (
+        '<div class="wc-ideas-row" draggable="true" data-wc-idea-id="' +
+        idAttr +
+        '" data-wc-idea-title="' +
+        titleAttr +
+        '" data-wc-idea-note="' +
+        noteAttr +
+        '">' +
+        '<div class="wc-ideas-row-view">' +
+        '<span class="wc-ideas-drag-handle" aria-hidden="true" title="Drag to reorder">::</span>' +
+        '<div class="wc-ideas-row-main"><b data-wc-idea-title-view="1">' +
+        escapeHtml(title) +
+        "</b>" +
+        (id ? " <code>" + escapeHtml(id) + "</code>" : "") +
+        (displayNote ? '<p class="muted" data-wc-idea-note-view="1">' + escapeHtml(displayNote) + "</p>" : "") +
+        "</div>" +
+        '<span class="wc-tag">' +
+        escapeHtml(status) +
+        "</span>" +
+        '<span class="wc-ideas-row-actions">' +
+        '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="idea-plan">' +
+        (hasPlanningChatSession ? "Resume planning &rarr;" : "Plan this") +
+        "</button>" +
+        '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="idea-edit">Edit</button>' +
+        '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="idea-delete">Delete</button>' +
+        "</span>" +
+        "</div>" +
+        '<div class="wc-ideas-edit-form" data-wc-ideas-edit-form="1" hidden>' +
+        '<input class="wc-input" data-wc-idea-edit-title="1" type="text" maxlength="180" value="' +
+        titleAttr +
+        '" aria-label="Idea title" />' +
+        '<textarea class="wc-textarea" data-wc-idea-edit-note="1" rows="2" maxlength="1200" aria-label="Idea note">' +
+        escapeHtml(note) +
+        "</textarea>" +
+        '<div class="wc-ideas-create-actions">' +
+        '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="idea-update">Save</button>' +
+        '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="idea-edit-cancel">Cancel</button>' +
+        '<span class="muted wc-ideas-row-status" data-wc-idea-row-status="1" role="status" aria-live="polite"></span>' +
+        "</div>" +
+        "</div>" +
+        "</div>"
+      );
+    })
+    .filter((row) => row.length > 0)
+    .join("");
+  const body = !available
+    ? '<p class="muted">Ideas unavailable.</p>'
+    : rows.length === 0
+      ? '<p class="muted">No ideas yet.</p>'
+      : '<div class="wc-ideas-list" data-wc-ideas-list="1">' + rows + "</div>";
+  const form = available
+    ? '<form class="wc-ideas-create-form" data-wc-ideas-create-form="1">' +
+      '<label class="wc-field-label" for="wc-idea-title">New idea</label>' +
+      '<input id="wc-idea-title" class="wc-input" data-wc-idea-title="1" type="text" required maxlength="180" placeholder="Title" autocomplete="off" />' +
+      '<textarea class="wc-textarea" data-wc-idea-note="1" rows="2" maxlength="1200" placeholder="Optional note"></textarea>' +
+      '<div class="wc-ideas-create-actions">' +
+      '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="idea-create">Add idea</button>' +
+      '<span class="muted wc-ideas-create-status" data-wc-ideas-create-status="1" role="status" aria-live="polite"></span>' +
+      "</div>" +
+      "</form>"
+    : "";
+  return (
+    '<section class="dash-card wc-ideas-section" aria-label="Ideas">' +
+    "<p><b>Ideas</b> · Open " +
+    escapeHtml(String(openCount)) +
+    " · Planning " +
+    escapeHtml(String(planningCount)) +
+    " · Planned " +
+    escapeHtml(String(plannedCount)) +
+    " · Total " +
+    escapeHtml(String(totalCount)) +
+    "</p>" +
+    '<div class="wc-ideas-toast" data-wc-ideas-toast="1" role="status" aria-live="polite" hidden></div>' +
+    body +
+    form +
+    "</section>"
+  );
+}
+
 function renderWishlistPager(openPage: number, openTotalPages: number): string {
   if (openTotalPages <= 1) {
     return "";
@@ -3077,6 +3185,18 @@ function renderPlanArtifactDraftPanel(planArtifact: unknown): string {
           : planId.length === 0 || planRef.length === 0 || !Number.isFinite(version) || version <= 0
             ? "Plan identity is incomplete."
             : "Accept this reviewed plan.";
+  const reviewActionHtml =
+    statusRaw === "draft"
+      ? '<div class="wc-plan-artifact-actions">' +
+        '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="plan-artifact-review" data-plan-id="' +
+        escapeHtmlAttr(planId) +
+        '" data-plan-version="' +
+        escapeHtmlAttr(Number.isFinite(version) ? String(version) : "") +
+        '" title="Review this draft plan with the PlanArtifact rubric"' +
+        (planId.length > 0 && Number.isFinite(version) && version > 0 ? "" : " disabled") +
+        ">Review</button>" +
+        "</div>"
+      : "";
   const acceptActionHtml =
     statusRaw === "accepted" || statusRaw === "finalized"
       ? ""
@@ -3136,6 +3256,7 @@ function renderPlanArtifactDraftPanel(planArtifact: unknown): string {
     "</div>" +
     reviewHtml +
     wbsHtml +
+    reviewActionHtml +
     acceptActionHtml +
     finalizeActionHtml +
     "</section>"
@@ -4997,6 +5118,11 @@ export function renderDashboardRootInnerHtml(
   const phaseJournalInner = renderPhaseNotesOverviewSection(phaseJournal ?? null, d.phaseJournalStats);
 
   const overviewWrapped = wrapDashboardSection("overview", overviewContent, deferred.has("overview"));
+  const ideasWrapped = wrapDashboardSection(
+    "ideas",
+    renderDashboardIdeasSectionInnerHtml(d.ideas),
+    deferred.has("ideas")
+  );
   const queueWrapped = wrapDashboardSection("queue", queueInner, deferred.has("queue"));
   const phaseJournalWrapped = wrapDashboardSection(
     "phase-journal",
@@ -5036,7 +5162,7 @@ export function renderDashboardRootInnerHtml(
     '<button type="button" class="wc-tab-btn" role="tab" data-wc-tab="config">Config</button>' +
     '<button type="button" class="wc-tab-btn" role="tab" data-wc-tab="cae">CAE</button>' +
     "</div>" +
-    '<div class="wc-tab-panel" data-wc-tab="overview" role="tabpanel">' + overviewWrapped + "</div>" +
+    '<div class="wc-tab-panel" data-wc-tab="overview" role="tabpanel">' + overviewWrapped + ideasWrapped + "</div>" +
     '<div class="wc-tab-panel" data-wc-tab="task-engine" role="tabpanel" style="display:none">' +
     taskEngineContent +
     "</div>" +

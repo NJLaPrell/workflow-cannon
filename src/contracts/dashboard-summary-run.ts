@@ -37,6 +37,35 @@ export type DashboardWishlistRow = {
   taskId: string;
 };
 
+export type DashboardIdeaRow = {
+  id: string;
+  title: string;
+  note?: string;
+  status: "open" | "planning" | "planned";
+  sortOrder: number;
+  linkedPlanArtifact?: string;
+  previousPlanArtifacts: string[];
+  createdAt: string;
+  updatedAt: string;
+  planningChatSession?: {
+    schemaVersion: 1;
+    ideaId: string;
+    status: "active";
+    updatedAt: string;
+    resumePrompt?: string;
+  };
+};
+
+export type DashboardIdeasSummary = {
+  schemaVersion: 1;
+  available: boolean;
+  totalCount: number;
+  openCount: number;
+  planningCount: number;
+  plannedCount: number;
+  top: DashboardIdeaRow[];
+};
+
 export type DashboardBlockedRow = {
   taskId?: string;
   blockedBy?: string[];
@@ -399,6 +428,8 @@ export type DashboardSummaryData = {
     openTotalPages: number;
     openTop: DashboardWishlistRow[];
   };
+  /** Lightweight operator ideas from `workflow_ideas`, ordered for dashboard display. */
+  ideas: DashboardIdeasSummary;
   blockedSummary: {
     count: number;
     top: DashboardBlockedRow[];

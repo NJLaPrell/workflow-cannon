@@ -81,6 +81,30 @@ describe("draft-plan-artifact fixtures (T100458)", () => {
     assert.ok((latest?.wbs.length ?? 0) > 0);
   });
 
+  it("round-trips idea provenance fields", async () => {
+    const workspace = await tmpWorkspace();
+    const artifact = freshDraftArtifact(loadFixture("plan-artifact-minimal.valid.v1.json"));
+    artifact.provenance = {
+      ...artifact.provenance,
+      sourceIdeaId: "I100540",
+      previousPlanArtifacts: ["plan-artifact:older-1", "plan-artifact:older-2"]
+    };
+
+    const result = await planningModule.onCommand(
+      { name: "draft-plan-artifact", args: persistArgs(artifact) },
+      { runtimeVersion: "0.1", workspacePath: workspace, effectiveConfig: SQLITE_CFG }
+    );
+
+    assert.equal(result.ok, true);
+    assert.equal(result.code, "plan-artifact-draft-persisted");
+    const latest = readLatestPlanArtifact(workspace, artifact.planId);
+    assert.equal(latest?.provenance.sourceIdeaId, "I100540");
+    assert.deepEqual(latest?.provenance.previousPlanArtifacts, [
+      "plan-artifact:older-1",
+      "plan-artifact:older-2"
+    ]);
+  });
+
   it("rejects dedicated invalid.empty-goals fixture (B1)", async () => {
     const workspace = await tmpWorkspace();
     const artifact = loadFixture("plan-artifact-minimal.invalid.empty-goals.v1.json");

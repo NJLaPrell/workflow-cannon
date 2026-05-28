@@ -49,6 +49,7 @@ export type PolicyOperationId =
   | "plugins.persist"
   | "subagents.persist"
   | "team-execution.persist"
+  | "ideas.persist"
   | "checkpoints.persist"
   | "checkpoints.rewind"
   | "context-activation.cae-satisfy-ack"
