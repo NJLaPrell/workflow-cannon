@@ -167,6 +167,8 @@ At least one entry; exactly one should have `isPrimary: true` when multiple phas
 | `source` | enum | Yes | `draft-plan-artifact` \| `import-build-plan` \| `import-wishlist` |
 | `chatSessionRef` | string | No | Opaque id, not full transcript. |
 | `parentPlanId` | string | No | When forked from prior plan. |
+| `sourceIdeaId` | string | No | Idea id that seeded the plan artifact, when the plan originates from an Ideas row. |
+| `previousPlanArtifacts` | string[] | No | Prior plan artifact refs or ids superseded or carried forward for the same idea. |
 
 ---
 

@@ -287,6 +287,11 @@
         },
         "chatSessionRef": { "type": "string" },
         "parentPlanId": { "type": "string" },
+        "sourceIdeaId": { "type": "string", "minLength": 1 },
+        "previousPlanArtifacts": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
         "sourceAnswers": {
           "type": "object",
           "additionalProperties": { "type": "string" }
