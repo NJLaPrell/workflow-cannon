@@ -28,6 +28,14 @@
     },
     {
       "schemaVersion": 1,
+      "artifactId": "cae.playbook.planner-chat",
+      "artifactType": "playbook",
+      "ref": { "path": ".ai/playbooks/planner-chat.md" },
+      "title": "Planner chat playbook",
+      "tags": ["cae", "ideas", "plan-artifact", "playbook"]
+    },
+    {
+      "schemaVersion": 1,
       "artifactId": "cae.playbook.phase-closeout",
       "artifactType": "playbook",
       "ref": { "path": ".ai/playbooks/phase-closeout-and-release.md" },
