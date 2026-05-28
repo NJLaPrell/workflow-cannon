@@ -20,10 +20,10 @@
     "contentFilePattern": "snapshots/{snapshotId}.json"
   },
   "head": {
-    "latestSequence": 323,
-    "latestEventId": "evt-583567d7-c160-40a5-af07-3783c8d0b9a2",
+    "latestSequence": 324,
+    "latestEventId": "evt-156139e6-3d7c-4047-b28b-9e88e6bb25d5",
     "latestSegmentPath": "task-state/events/0000000000.jsonl",
     "latestSnapshotId": "phase116-reconcile-post-duplicate-20260528"
   },
-  "manifestDigest": "31b2667aa60f5ff6857a8f8a1d0326b731282363fe368cf181cf110bd280ba90"
+  "manifestDigest": "096bf2e0cd02ad836f679b4eeca7bef0c6d64e8506b8863585d9a5cba4641335"
 }
