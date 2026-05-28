@@ -1876,6 +1876,64 @@ function renderWishlistOpenList(items: unknown): string {
   );
 }
 
+function renderDashboardIdeasSectionInnerHtml(rawIdeas: unknown): string {
+  const ideas = rawIdeas && typeof rawIdeas === "object" ? (rawIdeas as Record<string, unknown>) : {};
+  const available = ideas.available === true;
+  const top = Array.isArray(ideas.top) ? ideas.top.slice(0, 5) : [];
+  const openCount = Number(ideas.openCount ?? 0);
+  const planningCount = Number(ideas.planningCount ?? 0);
+  const plannedCount = Number(ideas.plannedCount ?? 0);
+  const totalCount = Number(ideas.totalCount ?? top.length);
+  const rows = top
+    .map((item) => {
+      if (!item || typeof item !== "object") {
+        return "";
+      }
+      const row = item as Record<string, unknown>;
+      const id = String(row.id ?? "").trim();
+      const title = String(row.title ?? id).trim();
+      const note = typeof row.note === "string" ? row.note.trim() : "";
+      const status = String(row.status ?? "open").trim();
+      if (!title) {
+        return "";
+      }
+      return (
+        '<div class="wc-ideas-row">' +
+        '<div class="wc-ideas-row-main"><b>' +
+        escapeHtml(title) +
+        "</b>" +
+        (id ? " <code>" + escapeHtml(id) + "</code>" : "") +
+        (note ? '<p class="muted">' + escapeHtml(note) + "</p>" : "") +
+        "</div>" +
+        '<span class="wc-tag">' +
+        escapeHtml(status) +
+        "</span>" +
+        "</div>"
+      );
+    })
+    .filter((row) => row.length > 0)
+    .join("");
+  const body = !available
+    ? '<p class="muted">Ideas unavailable.</p>'
+    : rows.length === 0
+      ? '<p class="muted">No ideas yet.</p>'
+      : '<div class="wc-ideas-list">' + rows + "</div>";
+  return (
+    '<section class="dash-card wc-ideas-section" aria-label="Ideas">' +
+    "<p><b>Ideas</b> · Open " +
+    escapeHtml(String(openCount)) +
+    " · Planning " +
+    escapeHtml(String(planningCount)) +
+    " · Planned " +
+    escapeHtml(String(plannedCount)) +
+    " · Total " +
+    escapeHtml(String(totalCount)) +
+    "</p>" +
+    body +
+    "</section>"
+  );
+}
+
 function renderWishlistPager(openPage: number, openTotalPages: number): string {
   if (openTotalPages <= 1) {
     return "";
@@ -4997,6 +5055,11 @@ export function renderDashboardRootInnerHtml(
   const phaseJournalInner = renderPhaseNotesOverviewSection(phaseJournal ?? null, d.phaseJournalStats);
 
   const overviewWrapped = wrapDashboardSection("overview", overviewContent, deferred.has("overview"));
+  const ideasWrapped = wrapDashboardSection(
+    "ideas",
+    renderDashboardIdeasSectionInnerHtml(d.ideas),
+    deferred.has("ideas")
+  );
   const queueWrapped = wrapDashboardSection("queue", queueInner, deferred.has("queue"));
   const phaseJournalWrapped = wrapDashboardSection(
     "phase-journal",
@@ -5036,7 +5099,7 @@ export function renderDashboardRootInnerHtml(
     '<button type="button" class="wc-tab-btn" role="tab" data-wc-tab="config">Config</button>' +
     '<button type="button" class="wc-tab-btn" role="tab" data-wc-tab="cae">CAE</button>' +
     "</div>" +
-    '<div class="wc-tab-panel" data-wc-tab="overview" role="tabpanel">' + overviewWrapped + "</div>" +
+    '<div class="wc-tab-panel" data-wc-tab="overview" role="tabpanel">' + overviewWrapped + ideasWrapped + "</div>" +
     '<div class="wc-tab-panel" data-wc-tab="task-engine" role="tabpanel" style="display:none">' +
     taskEngineContent +
     "</div>" +

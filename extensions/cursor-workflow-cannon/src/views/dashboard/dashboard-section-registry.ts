@@ -10,6 +10,7 @@
 
 export type DashboardSectionId =
   | "overview"
+  | "ideas"
   | "queue"
   | "phase-journal"
   | "status"
@@ -40,6 +41,14 @@ export const DASHBOARD_SECTION_REGISTRY: readonly DashboardSectionDescriptor[] =
     refreshPolicy: "eager",
     ttlMs: 45_000,
     commandArgs: { slice: "overview" }
+  },
+  {
+    id: "ideas",
+    tabId: "overview",
+    renderTarget: '[data-wc-section="ideas"]',
+    refreshPolicy: "eager",
+    ttlMs: 45_000,
+    commandArgs: { slice: "ideas" }
   },
   {
     id: "queue",

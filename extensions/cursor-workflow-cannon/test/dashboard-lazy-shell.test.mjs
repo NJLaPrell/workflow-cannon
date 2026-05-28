@@ -39,10 +39,14 @@ test("renderDashboardShellInnerHtml includes loading placeholders for every regi
   }
 });
 
-test("dashboard section registry lists overview, queue, phase journal, status, config, cae", () => {
-  assert.equal(DASHBOARD_SECTION_REGISTRY.length, 6);
+test("dashboard section registry lists overview, ideas, queue, phase journal, status, config, cae", () => {
+  assert.equal(DASHBOARD_SECTION_REGISTRY.length, 7);
   const ids = DASHBOARD_SECTION_REGISTRY.map((s) => s.id).sort();
-  assert.deepEqual(ids, ["cae", "config", "overview", "phase-journal", "queue", "status"]);
+  assert.deepEqual(ids, ["cae", "config", "ideas", "overview", "phase-journal", "queue", "status"]);
+  const ideas = DASHBOARD_SECTION_REGISTRY.find((s) => s.id === "ideas");
+  assert.equal(ideas?.tabId, "overview");
+  assert.equal(ideas?.refreshPolicy, "eager");
+  assert.equal(ideas?.ttlMs, 45_000);
 });
 
 test("DashboardViewProvider paints shell before pushUpdate (T100395)", () => {

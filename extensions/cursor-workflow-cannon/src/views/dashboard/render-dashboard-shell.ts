@@ -20,6 +20,7 @@ function sectionStatusCopy(state: DashboardSectionLoadState): string {
 
 const SECTION_LABELS: Record<DashboardSectionId, string> = {
   overview: "Overview",
+  ideas: "Ideas",
   queue: "Task queue",
   "phase-journal": "Phase journal",
   status: "Workspace status",
@@ -57,6 +58,7 @@ function renderSectionPlaceholder(
 /** Inner HTML for `#root` before any kit read completes — tab chrome + section placeholders only. */
 export function renderDashboardShellInnerHtml(): string {
   const overview = renderDashboardSectionPlaceholder("overview");
+  const ideas = renderDashboardSectionPlaceholder("ideas");
   const queue = renderDashboardSectionPlaceholder("queue");
   const phaseJournal = renderDashboardSectionPlaceholder("phase-journal");
   const status = renderDashboardSectionPlaceholder("status");
@@ -74,6 +76,7 @@ export function renderDashboardShellInnerHtml(): string {
     "</div>" +
     '<div class="wc-tab-panel" data-wc-tab="overview" role="tabpanel">' +
     overview +
+    ideas +
     "</div>" +
     '<div class="wc-tab-panel" data-wc-tab="task-engine" role="tabpanel" style="display:none">' +
     queue +

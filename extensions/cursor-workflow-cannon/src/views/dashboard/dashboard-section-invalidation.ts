@@ -9,6 +9,7 @@ import { lookupDashboardSection } from "./dashboard-section-registry.js";
 /** Coarse mutation buckets → dashboard sections that may need patch or stale marking (T100399). */
 export type DashboardMutationKind =
   | "task-queue"
+  | "ideas"
   | "overview"
   | "phase-journal"
   | "status"
@@ -18,12 +19,13 @@ export type DashboardMutationKind =
 
 const MUTATION_SECTIONS: Readonly<Record<DashboardMutationKind, readonly DashboardSectionId[]>> = {
   "task-queue": ["queue", "overview"],
+  ideas: ["ideas", "overview"],
   overview: ["overview"],
   "phase-journal": ["phase-journal", "queue"],
   status: ["status"],
   config: ["config"],
   cae: ["cae"],
-  "workspace-wide": ["overview", "queue", "phase-journal", "status", "config", "cae"]
+  "workspace-wide": ["overview", "ideas", "queue", "phase-journal", "status", "config", "cae"]
 };
 
 export function dashboardSectionsForMutation(kind: DashboardMutationKind): readonly DashboardSectionId[] {
