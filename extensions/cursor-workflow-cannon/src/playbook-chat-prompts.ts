@@ -4,6 +4,9 @@
  */
 
 import { buildWishlistIntakeAgentPrompt } from "./wishlist-chat-prompt.js";
+import { buildPlannerChatPrompt } from "./planner-chat-prompt.js";
+
+export { buildPlannerChatPrompt };
 
 /** Same text the operator would type for slash **`/generate-features`** (dashboard button prefills this in a new chat). */
 export const GENERATE_FEATURES_SLASH_TEXT = "/generate-features";
