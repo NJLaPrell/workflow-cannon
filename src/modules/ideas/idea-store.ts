@@ -97,6 +97,14 @@ export type CreateIdeaInput = {
   previousPlanArtifacts?: string[];
 };
 
+export type UpdateIdeaInput = {
+  title?: string;
+  note?: string | null;
+  status?: IdeaStatus;
+  linkedPlanArtifact?: string | null;
+  previousPlanArtifacts?: string[];
+};
+
 export function createIdea(db: Sqlite.Database, input: CreateIdeaInput, nowIso: string): IdeaRecord {
   const id = allocateNextIdeaId(db);
   const sortOrder = nextSortOrder(db);
@@ -137,4 +145,72 @@ export function createIdea(db: Sqlite.Database, input: CreateIdeaInput, nowIso: 
 export function getIdea(db: Sqlite.Database, ideaId: string): IdeaRecord | null {
   const row = db.prepare("SELECT * FROM workflow_ideas WHERE id = ?").get(ideaId) as IdeaRow | undefined;
   return row ? toIdeaRecord(row) : null;
+}
+
+export function listIdeas(db: Sqlite.Database, status?: IdeaStatus): IdeaRecord[] {
+  const rows = status
+    ? (db
+        .prepare("SELECT * FROM workflow_ideas WHERE status = ? ORDER BY sort_order ASC, id ASC")
+        .all(status) as IdeaRow[])
+    : (db.prepare("SELECT * FROM workflow_ideas ORDER BY sort_order ASC, id ASC").all() as IdeaRow[]);
+  return rows.map(toIdeaRecord);
+}
+
+export function updateIdea(
+  db: Sqlite.Database,
+  ideaId: string,
+  input: UpdateIdeaInput,
+  nowIso: string
+): IdeaRecord | null {
+  const existing = getIdea(db, ideaId);
+  if (!existing) {
+    return null;
+  }
+  db.prepare(
+    `UPDATE workflow_ideas
+        SET title = @title,
+            note = @note,
+            status = @status,
+            linked_plan_artifact = @linked_plan_artifact,
+            previous_plan_artifacts_json = @previous_plan_artifacts_json,
+            updated_at = @updated_at
+      WHERE id = @id`
+  ).run({
+    id: ideaId,
+    title: input.title ?? existing.title,
+    note: input.note === undefined ? existing.note ?? null : input.note,
+    status: input.status ?? existing.status,
+    linked_plan_artifact:
+      input.linkedPlanArtifact === undefined ? existing.linkedPlanArtifact ?? null : input.linkedPlanArtifact,
+    previous_plan_artifacts_json: JSON.stringify(input.previousPlanArtifacts ?? existing.previousPlanArtifacts),
+    updated_at: nowIso
+  });
+  return getIdea(db, ideaId);
+}
+
+export function deleteIdea(db: Sqlite.Database, ideaId: string): IdeaRecord | null {
+  const existing = getIdea(db, ideaId);
+  if (!existing) {
+    return null;
+  }
+  db.prepare("DELETE FROM workflow_ideas WHERE id = ?").run(ideaId);
+  return existing;
+}
+
+export function reorderIdeas(db: Sqlite.Database, ideaIds: string[], nowIso: string): IdeaRecord[] | null {
+  const current = listIdeas(db);
+  const currentIds = current.map((idea) => idea.id);
+  if (ideaIds.length !== currentIds.length) {
+    return null;
+  }
+  const currentSet = new Set(currentIds);
+  const nextSet = new Set(ideaIds);
+  if (nextSet.size !== ideaIds.length || currentIds.some((id) => !nextSet.has(id)) || ideaIds.some((id) => !currentSet.has(id))) {
+    return null;
+  }
+  const update = db.prepare("UPDATE workflow_ideas SET sort_order = ?, updated_at = ? WHERE id = ?");
+  db.transaction(() => {
+    ideaIds.forEach((id, index) => update.run(index, nowIso, id));
+  })();
+  return listIdeas(db);
 }
