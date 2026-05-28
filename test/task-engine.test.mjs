@@ -32,7 +32,8 @@ import {
   appendPolicyTrace,
   classifyKitStatePath,
   buildTaskPersistenceReadinessReport,
-  planningModule
+  planningModule,
+  ideasModule
 } from "../dist/index.js";
 import { setAgentActivityLease } from "../dist/modules/task-engine/agent-activity-store.js";
 import { buildAgentActivityLabel } from "../dist/modules/task-engine/agent-activity-recorder.js";
@@ -2388,6 +2389,53 @@ test("taskEngineModule dashboard-summary wishlist paging clamps page and slices 
   assert.equal(p99.ok, true);
   assert.equal(p99.data.wishlist.openPage, 1);
   assert.equal(p99.data.wishlist.openTop.length, 1);
+});
+
+test("taskEngineModule dashboard-summary emits ideas slice", async () => {
+  const workspace = await tmpDir();
+  const ctx = sqliteTaskEngineCtx(workspace);
+
+  const first = await ideasModule.onCommand(
+    { name: "create-idea", args: { title: "Open idea", note: "Keep visible" } },
+    ctx
+  );
+  assert.equal(first.ok, true, first.message);
+  const second = await ideasModule.onCommand(
+    { name: "create-idea", args: { title: "Planning idea", status: "planning" } },
+    ctx
+  );
+  assert.equal(second.ok, true, second.message);
+  const third = await ideasModule.onCommand(
+    { name: "create-idea", args: { title: "Planned idea", status: "planned" } },
+    ctx
+  );
+  assert.equal(third.ok, true, third.message);
+
+  const summary = await taskEngineModule.onCommand({ name: "dashboard-summary", args: {} }, ctx);
+  assert.equal(summary.ok, true, summary.message);
+  assert.equal(summary.data.ideas.schemaVersion, 1);
+  assert.equal(summary.data.ideas.available, true);
+  assert.equal(summary.data.ideas.totalCount, 3);
+  assert.equal(summary.data.ideas.openCount, 1);
+  assert.equal(summary.data.ideas.planningCount, 1);
+  assert.equal(summary.data.ideas.plannedCount, 1);
+  assert.deepEqual(
+    summary.data.ideas.top.map((idea) => [idea.id, idea.title, idea.status]),
+    [
+      [first.data.idea.id, "Open idea", "open"],
+      [second.data.idea.id, "Planning idea", "planning"],
+      [third.data.idea.id, "Planned idea", "planned"]
+    ]
+  );
+
+  const overview = await taskEngineModule.onCommand(
+    { name: "dashboard-summary", args: { projection: "overview" } },
+    ctx
+  );
+  assert.equal(overview.ok, true, overview.message);
+  assert.equal(overview.data.ideas.available, false);
+  assert.equal(overview.data.ideas.totalCount, 0);
+  assert.deepEqual(overview.data.ideas.top, []);
 });
 
 test("taskEngineModule dashboard-summary agentGuidance reflects effective config tier", async () => {
