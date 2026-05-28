@@ -8,6 +8,7 @@
     "cancel-assignment",
     "close-subagent-session",
     "create-checkpoint",
+    "create-idea",
     "document-project",
     "generate-document",
     "generate-recommendations",

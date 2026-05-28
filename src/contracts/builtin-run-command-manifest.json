@@ -1268,6 +1268,23 @@
     "policySensitivity": "sensitive"
   },
   {
+    "moduleId": "ideas",
+    "name": "create-idea",
+    "file": "create-idea.md",
+    "description": "Create a lightweight operator idea in kit SQLite for later planner-chat workflows.",
+    "policyOperationId": "ideas.persist",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "ideas",
+    "name": "get-idea",
+    "file": "get-idea.md",
+    "description": "Read one lightweight operator idea by I### id.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
     "moduleId": "team-execution",
     "name": "list-assignments",
     "file": "list-assignments.md",
