@@ -9,7 +9,12 @@ artifacts/
 # CAE program stubs live under tasks/cae/artifacts/ (not repo-root build artifacts)
 !tasks/cae/artifacts/
 !tasks/cae/artifacts/**
-# SQLite WAL sidecars (main .db may be tracked for this repo’s task store)
+# Machine-local runtime stamp (regenerate: pnpm exec wk init)
+.workspace-kit/runtime.json
+# Task store: canonical history on branch workflow-cannon/task-state (git-event-log); local projection only
+.workspace-kit/tasks/workspace-kit.db
+.workspace-kit/tasks/task-state-events.jsonl
+.workspace-kit/tasks/*.db.bak*
 .workspace-kit/tasks/*.db-wal
 .workspace-kit/tasks/*.db-shm
 # Optional: omit policy traces from VCS (remove if you want traces committed)
