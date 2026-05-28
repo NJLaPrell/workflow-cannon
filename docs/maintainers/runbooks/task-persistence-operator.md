@@ -37,7 +37,17 @@ Single place to answer: **where is data?**, **how do I import legacy JSON?**, an
 
 See **`docs/maintainers/runbooks/json-to-sqlite-one-shot-upgrade.md`**.
 
-## 4) Parity expectations
+## 4) `git-event-log` authority (parallel agents / phase closeout)
+
+When **`tasks.canonicalAuthority`** is **`git-event-log`**:
+
+- **Do not** commit **`.workspace-kit/tasks/workspace-kit.db`** or **`task-state-events.jsonl`** on routine PRs or phase closeout.
+- **Do** publish to **`workflow-cannon/task-state`** and **hydrate** after **`git pull`** — full loop: [`.ai/runbooks/task-state-git-operator.md`](./task-state-git-operator.md).
+- Phase closeout rules: [`.ai/playbooks/phase-closeout-and-release.md`](../playbooks/phase-closeout-and-release.md) § **3a**.
+
+Default package config remains **`sqlite`** until a workspace sets **`git-event-log`** in **`.workspace-kit/config.json`**.
+
+## 5) Parity expectations
 
 Maintainers validate SQLite paths via tests and **`pnpm run parity`**; avoid hand-editing the DB except documented recovery.
 

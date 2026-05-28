@@ -60,7 +60,16 @@ export function admitRemoteEventStream(
       }
     };
   }
-  const admitted = admitTaskStateEventStream(rawEvents, {
+  const tailEvents = rawEvents.filter((event) => {
+    return (
+      event !== null &&
+      typeof event === "object" &&
+      !Array.isArray(event) &&
+      typeof (event as { sequence?: unknown }).sequence === "number" &&
+      (event as { sequence: number }).sequence > snapshotRead.throughSequence
+    );
+  });
+  const admitted = admitTaskStateEventStream(tailEvents, {
     initialProjection: projectionFromSnapshotContent(snapshotRead.content)
   });
   return admitted.ok ? admitted : { ok: false, error: admitted.error };

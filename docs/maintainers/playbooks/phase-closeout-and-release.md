@@ -21,7 +21,7 @@ This file is an **ordered checklist**. Canonical prose lives in the linked docs 
 2. `workspace-kit run get-next-actions '{}'`
 3. Optional: `workspace-kit run list-tasks '{}'` filtered as needed.
 
-Do **not** infer task `status` from chat memory — the configured task store (default SQLite `.workspace-kit/tasks/workspace-kit.db`) is authoritative.
+Do **not** infer task `status` from chat memory — use **`workspace-kit run`** against the configured task store. When **`tasks.canonicalAuthority`** is **`git-event-log`**, canonical history is on branch **`workflow-cannon/task-state`**; local **`.workspace-kit/tasks/workspace-kit.db`** is a projection (hydrate after pull — § **3a**).
 
 ## 2) Finish remaining phase work (delivery loop)
 
@@ -66,6 +66,43 @@ workspace-kit run convert-phase-note-to-task '{"noteId":"<uuid>","expectedPlanni
 **PR review integrity:** Prefer **follow-up commits** on task branches over amend + force-push after review. `pre-merge-gates` includes `check-pr-history-rewritten` (`pr-history-rewritten` when the PR head diverges from the latest approving review commit).
 
 **CI wait (agents):** Use the headless recipes in [`task-to-phase-branch.md`](./task-to-phase-branch.md) § **5a** — not `gh pr checks --watch`. For phase→`main` PRs, the same poll/`gh run watch` patterns apply before merge.
+
+## 3a) Canonical task state (`git-event-log`) — do not commit SQLite blobs on closeout
+
+When **`tasks.canonicalAuthority`** is **`git-event-log`** (Workflow Cannon maintainer workspace default in **`.workspace-kit/config.json`**), phase closeout **must not** treat **`.workspace-kit/tasks/workspace-kit.db`** or **`.workspace-kit/tasks/task-state-events.jsonl`** as VCS deliverables on **`main`** or **`release/phase-<N>`**.
+
+**Before** opening the phase→`main` PR (on **`release/phase-<N>`** tip):
+
+1. Publish outstanding task-engine mutations to canonical git (normal `wk run` paths with **`git-event-log`** publish events on success, or explicit publish when repairing):
+
+   ```bash
+   pnpm exec wk run task-state-status '{"fetch":true}'
+   ```
+
+   Resolve **`behind`** / **`conflict`** with **`task-state-hydrate`** and/or **`task-state-publish`** per [`.ai/runbooks/task-state-git-operator.md`](../runbooks/task-state-git-operator.md).
+
+2. Verify remote layout:
+
+   ```bash
+   pnpm exec wk run task-state-verify '{"source":"git","branch":"workflow-cannon/task-state"}'
+   ```
+
+3. Push **`workflow-cannon/task-state`** so **`origin/workflow-cannon/task-state`** matches what operators will hydrate.
+
+**On the phase→`main` PR:**
+
+- **Do not** add or refresh commits that change **`.workspace-kit/tasks/workspace-kit.db`** or **`task-state-events.jsonl`** as “queue export” or closeout evidence.
+- **Do** keep maintainer exports that remain policy-backed (for example **`docs/maintainers/data/workspace-kit-status.yaml`** via **`set-current-phase`** / **`update-workspace-status`** when your closeout task requires them) — those are not the task queue.
+
+**After** merge to **`main`**, every operator and agent:
+
+```bash
+git pull origin main
+git checkout -- .workspace-kit/tasks/workspace-kit.db .workspace-kit/tasks/task-state-events.jsonl 2>/dev/null || true
+pnpm exec wk run task-state-hydrate '{"fetch":true,"policyApproval":{"confirmed":true,"rationale":"reconcile after phase merge to main"}}'
+```
+
+**Recovery-only exception:** committing a SQLite blob requires **`.workspace-kit/policy/task-store-sqlite-commit-approval.json`** and **`check-task-store-commit`** — see [`.ai/runbooks/task-state-git-operator.md`](../runbooks/task-state-git-operator.md) § Recovery-only.
 
 ## 4) Human gate — stop before publish
 

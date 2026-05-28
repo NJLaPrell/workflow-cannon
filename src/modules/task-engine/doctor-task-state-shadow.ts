@@ -7,11 +7,44 @@ import { planningSqliteDatabaseRelativePath } from "./planning-config.js";
 import { readTaskStateEventLogJsonl } from "./task-state-events/task-state-event-log-io.js";
 import { replayTaskStateEvents } from "./task-state-events/event-applier.js";
 import { admitTaskStateEventStream } from "./task-state-events/event-admission.js";
+import {
+  readTaskStateProjectionMeta,
+  taskStateProjectionMetaTableAvailable
+} from "./persistence/task-state-projection-meta-store.js";
 
 export type DoctorTaskStateShadowIssue = { path: string; reason: string };
 
 function statusMap(tasks: Array<{ id: string; status: string }>): Map<string, string> {
   return new Map(tasks.map((t) => [t.id, t.status]));
+}
+
+function maxRawSequence(events: unknown[]): number {
+  let max = 0;
+  for (const event of events) {
+    if (
+      event !== null &&
+      typeof event === "object" &&
+      !Array.isArray(event) &&
+      typeof (event as { sequence?: unknown }).sequence === "number" &&
+      (event as { sequence: number }).sequence > max
+    ) {
+      max = (event as { sequence: number }).sequence;
+    }
+  }
+  return max;
+}
+
+function projectionFreshThroughLog(db: InstanceType<typeof DatabaseCtor>, rawEvents: unknown[]): boolean {
+  if (!taskStateProjectionMetaTableAvailable(db)) {
+    return false;
+  }
+  const meta = readTaskStateProjectionMeta(db);
+  return Boolean(
+    meta &&
+      meta.syncStatus === "fresh" &&
+      meta.appliedSequence >= maxRawSequence(rawEvents) &&
+      rawEvents.length > 0
+  );
 }
 
 export async function collectDoctorTaskStateShadowIssues(
@@ -26,24 +59,6 @@ export async function collectDoctorTaskStateShadowIssues(
   const rawEvents = readTaskStateEventLogJsonl(cwd);
   if (rawEvents.length === 0) {
     return [];
-  }
-
-  const admitted = admitTaskStateEventStream(rawEvents);
-  if (!admitted.ok) {
-    issues.push({
-      path: ".workspace-kit/tasks/task-state-events.jsonl",
-      reason: `shadow-admission-failed: ${admitted.error.message}`
-    });
-    return issues;
-  }
-
-  const replayed = replayTaskStateEvents(admitted.events);
-  if (!replayed.ok) {
-    issues.push({
-      path: ".workspace-kit/tasks/task-state-events.jsonl",
-      reason: `shadow-replay-failed: ${replayed.error.message}`
-    });
-    return issues;
   }
 
   let Database: typeof DatabaseCtor;
@@ -69,6 +84,30 @@ export async function collectDoctorTaskStateShadowIssues(
   }
 
   try {
+    const admitted = admitTaskStateEventStream(rawEvents);
+    if (!admitted.ok) {
+      if (projectionFreshThroughLog(db, rawEvents)) {
+        return issues;
+      }
+      issues.push({
+        path: ".workspace-kit/tasks/task-state-events.jsonl",
+        reason: `shadow-admission-failed: ${admitted.error.message}`
+      });
+      return issues;
+    }
+
+    const replayed = replayTaskStateEvents(admitted.events);
+    if (!replayed.ok) {
+      if (projectionFreshThroughLog(db, rawEvents)) {
+        return issues;
+      }
+      issues.push({
+        path: ".workspace-kit/tasks/task-state-events.jsonl",
+        reason: `shadow-replay-failed: ${replayed.error.message}`
+      });
+      return issues;
+    }
+
     const rows = db
       .prepare("SELECT id, status FROM task_engine_tasks WHERE archived = 0")
       .all() as Array<{ id: string; status: string }>;
