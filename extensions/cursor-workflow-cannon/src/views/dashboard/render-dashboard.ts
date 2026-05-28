@@ -3256,6 +3256,7 @@ function renderPlanArtifactDraftPanel(planArtifact: unknown): string {
     "</div>" +
     reviewHtml +
     wbsHtml +
+    reviewActionHtml +
     acceptActionHtml +
     finalizeActionHtml +
     "</section>"
@@ -3473,7 +3474,6 @@ function renderTeamExecutionSection(team: unknown): string {
     "</p>";
   if (!avail) {
     return (
-    reviewActionHtml +
       '<section class="dash-card" aria-label="Team execution">' +
       "<p><b>Team Assignments</b></p>" +
       '<p class="muted">Team execution data is unavailable.</p>' +
