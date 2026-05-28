@@ -20,6 +20,8 @@ Symptom → **one** `.ai/runbooks/*.md` target (agents: prefer this table over d
 | Subagent registry | [`subagent-registry.md`](./subagent-registry.md) |
 | Principal architectural review themes (cold start) | [`principal-architectural-review-themes.md`](./principal-architectural-review-themes.md) |
 | Task persistence operator | [`task-persistence-operator.md`](./task-persistence-operator.md) |
+| `git pull` / dirty `workspace-kit.db` / task-state hydrate | [`task-state-git-operator.md`](./task-state-git-operator.md) |
+| Phase closeout + task store on `main` | [`phase-closeout-and-release.md`](../playbooks/phase-closeout-and-release.md) § **3a** |
 | Agent onboarding / guidance | [`agent-guidance-onboarding.md`](./agent-guidance-onboarding.md), [`agent-playbooks.md`](./agent-playbooks.md) |
 
 For **playbooks** (ordered procedure docs), use [`.ai/playbooks/README.md`](../playbooks/README.md).
