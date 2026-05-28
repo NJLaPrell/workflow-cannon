@@ -1,0 +1,1060 @@
+{
+  "schemaVersion": 1,
+  "createdAt": "2026-05-28T15:53:06.512Z",
+  "releaseVersion": "0.99.14",
+  "packageName": "@workflow-cannon/workspace-kit",
+  "phaseKey": "116",
+  "git": {
+    "phaseBranch": "release/phase-116",
+    "phaseBranchHead": "4ced02a5",
+    "mainMergeCommit": "f67cc38f",
+    "phaseToMainPr": "https://github.com/NJLaPrell/workflow-cannon/pull/542",
+    "tag": "v0.99.14"
+  },
+  "approval": {
+    "actor": "Nick LaPrell <njlaprell@gmail.com>",
+    "timestamp": "2026-05-28T15:33:29Z",
+    "scope": "Phase 116 release prep and merge to main; npm publish remains gated on explicit final chat confirmation.",
+    "rationale": "Operator authorized Dashboard Complete & Release closeout; release evidence and validation gates are being assembled before publish automation."
+  },
+  "releaseNotes": {
+    "source": "docs/maintainers/CHANGELOG.md#0.99.14",
+    "entries": [
+      "Dashboard Ideas rows can open planner-chat for a selected idea, persist a resumable planning-chat session, and show Resume planning when active.",
+      "PlanArtifact dashboard controls wire Review, Accept, and Finalize through host-side wk run paths with dashboard policy approval and current-phase targeting.",
+      "Dashboard PlanArtifact regression coverage now covers happy path, blocker rejection, matching active resume sessions, and zero raw CLI prompt assertions."
+    ]
+  },
+  "validations": [
+    {
+      "command": "pnpm run build",
+      "status": "pass",
+      "artifact": "artifacts/phase-116-release-build.log"
+    },
+    {
+      "command": "pnpm run check",
+      "status": "pass",
+      "artifact": "artifacts/phase-116-release-check.log"
+    },
+    {
+      "command": "pnpm run check-release-metadata",
+      "status": "pass",
+      "artifact": "artifacts/phase-116-release-metadata-check.log"
+    },
+    {
+      "command": "pnpm run test",
+      "status": "pass",
+      "artifact": "artifacts/phase-116-test-closeout.log"
+    },
+    {
+      "command": "pnpm run parity",
+      "status": "pass",
+      "artifact": "artifacts/parity-evidence.json"
+    },
+    {
+      "command": "pnpm run pre-merge-gates",
+      "status": "pass",
+      "artifact": "artifacts/phase-116-release-pre-merge-gates.log"
+    },
+    {
+      "command": "pnpm exec wk run phase-closeout-readiness '{\"phaseKey\":\"116\"}'",
+      "status": "pass",
+      "artifact": "artifacts/phase-116-closeout-readiness-after-T100548.json"
+    },
+    {
+      "command": "pnpm exec wk run phase-delivery-preflight '{\"phaseKey\":\"116\",\"baseRef\":\"origin/release/phase-116\"}'",
+      "status": "pass",
+      "artifact": "artifacts/phase-116-delivery-preflight.json"
+    },
+    {
+      "command": "pnpm exec wk run task-state-status '{\"fetch\":true}'",
+      "status": "pass",
+      "artifact": "artifacts/phase-116-task-state-status.json"
+    },
+    {
+      "command": "pnpm exec wk run task-state-verify '{\"fetch\":true,\"branch\":\"workflow-cannon/task-state\"}'",
+      "status": "pass",
+      "artifact": "artifacts/phase-116-task-state-verify.json"
+    }
+  ],
+  "risks": [
+    {
+      "category": "publish-gate",
+      "level": "pending",
+      "note": "npm publish automation has not been run; operator requested one final chat confirmation before pnpm run publish:npm."
+    },
+    {
+      "category": "migration",
+      "level": "none-known",
+      "note": "Phase 116 Dashboard Complete & Release adds dashboard wiring and tests; no package migration steps are known."
+    }
+  ],
+  "publishArtifacts": [
+    {
+      "type": "npm-publish-workflow",
+      "status": "pending",
+      "note": "Run pnpm run publish:npm only after explicit final chat confirmation."
+    },
+    {
+      "type": "npm-package",
+      "status": "pending",
+      "name": "@workflow-cannon/workspace-kit",
+      "version": "0.99.14"
+    },
+    {
+      "type": "git-tag",
+      "status": "pending",
+      "tag": "v0.99.14"
+    }
+  ],
+  "taskDeliveryEvidence": [
+    {
+      "taskId": "T100528",
+      "title": "Ideas module: scaffold table, schema, registry",
+      "phaseKey": "116",
+      "deliveryEvidence": {
+        "schemaVersion": 1,
+        "branchName": "feature/T100528-ideas-module-scaffold",
+        "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/521",
+        "prNumber": 521,
+        "baseBranch": "release/phase-116",
+        "mergeSha": "7417b6a1a0d23c9fce0ad26c92c71a8ddea5f5cd",
+        "checks": [
+          {
+            "name": "test",
+            "conclusion": "success"
+          },
+          {
+            "name": "release-readiness",
+            "conclusion": "skipped"
+          },
+          {
+            "name": "parity",
+            "conclusion": "skipped"
+          }
+        ],
+        "validationCommands": [
+          {
+            "command": "pnpm run build",
+            "exitCode": 0
+          },
+          {
+            "command": "pnpm check",
+            "exitCode": 0
+          },
+          {
+            "command": "pnpm exec node --test test/module-registry.test.mjs test/workspace-kit-sqlite.test.mjs test/idea-schema.test.mjs",
+            "exitCode": 0
+          },
+          {
+            "command": "pnpm run test",
+            "exitCode": 0
+          }
+        ]
+      },
+      "deliveryEvidenceSummary": {
+        "schemaVersion": 1,
+        "mode": null
+      },
+      "deliveryWaiver": null
+    },
+    {
+      "taskId": "T100529",
+      "title": "Ideas: create-idea + get-idea + unit tests",
+      "phaseKey": "116",
+      "deliveryEvidence": {
+        "schemaVersion": 1,
+        "branchName": "feature/T100529-ideas-create-get",
+        "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/524",
+        "prNumber": 524,
+        "baseBranch": "release/phase-116",
+        "mergeSha": "912ab515743519dffce95da947ac4b35a35fbe85",
+        "checks": [
+          {
+            "name": "test",
+            "conclusion": "success",
+            "detailsUrl": "https://github.com/NJLaPrell/workflow-cannon/actions/runs/26556189660/job/78228435525"
+          },
+          {
+            "name": "release-readiness",
+            "conclusion": "skipped",
+            "detailsUrl": "https://github.com/NJLaPrell/workflow-cannon/actions/runs/26556189660/job/78228576531"
+          },
+          {
+            "name": "parity",
+            "conclusion": "skipped",
+            "detailsUrl": "https://github.com/NJLaPrell/workflow-cannon/actions/runs/26556189660/job/78228576448"
+          }
+        ],
+        "validationCommands": [
+          {
+            "command": "pnpm exec node --test test/ideas-module.test.mjs",
+            "exitCode": 0
+          }
+        ]
+      },
+      "deliveryEvidenceSummary": {
+        "schemaVersion": 1,
+        "mode": null
+      },
+      "deliveryWaiver": null
+    },
+    {
+      "taskId": "T100530",
+      "title": "Ideas: list/update/delete/reorder verbs + tests",
+      "phaseKey": "116",
+      "deliveryEvidence": {
+        "schemaVersion": 1,
+        "branchName": "feature/T100530-ideas-list-update-delete-reorder-verbs-tests",
+        "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/525",
+        "prNumber": 525,
+        "baseBranch": "release/phase-116",
+        "mergeSha": "59e127173de7e2c9cbdf679c4f9318e503bed33a",
+        "checks": [
+          {
+            "name": "test",
+            "conclusion": "success",
+            "detailsUrl": "https://github.com/NJLaPrell/workflow-cannon/actions/runs/26556750242/job/78230120481"
+          },
+          {
+            "name": "release-readiness",
+            "conclusion": "skipped",
+            "detailsUrl": "https://github.com/NJLaPrell/workflow-cannon/actions/runs/26556750242/job/78230263387"
+          },
+          {
+            "name": "parity",
+            "conclusion": "skipped",
+            "detailsUrl": "https://github.com/NJLaPrell/workflow-cannon/actions/runs/26556750242/job/78230263422"
+          }
+        ],
+        "validationCommands": [
+          {
+            "command": "pnpm run build && pnpm exec node --test test/module-command-router.test.mjs test/ideas-module.test.mjs",
+            "exitCode": 0
+          },
+          {
+            "command": "pnpm run check",
+            "exitCode": 0
+          }
+        ]
+      },
+      "deliveryEvidenceSummary": {
+        "schemaVersion": 1,
+        "mode": null
+      },
+      "deliveryWaiver": null
+    },
+    {
+      "taskId": "T100531",
+      "title": "dashboard-summary emits ideas slice",
+      "phaseKey": "116",
+      "deliveryEvidence": {
+        "schemaVersion": 1,
+        "branchName": "feature/T100531-dashboard-summary-ideas-slice",
+        "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/526",
+        "prNumber": 526,
+        "baseBranch": "release/phase-116",
+        "mergeSha": "4e5e29d0310c8fe0325c6b03d943ccbef54a42e9",
+        "checks": [
+          {
+            "name": "test",
+            "conclusion": "success",
+            "detailsUrl": "https://github.com/NJLaPrell/workflow-cannon/actions/runs/26556961317/job/78230750664"
+          },
+          {
+            "name": "parity",
+            "conclusion": "skipped",
+            "detailsUrl": "https://github.com/NJLaPrell/workflow-cannon/actions/runs/26556961317/job/78230904552"
+          },
+          {
+            "name": "release-readiness",
+            "conclusion": "skipped",
+            "detailsUrl": "https://github.com/NJLaPrell/workflow-cannon/actions/runs/26556961317/job/78230904657"
+          }
+        ],
+        "validationCommands": [
+          {
+            "command": "pnpm run build && pnpm exec node --test test/task-engine.test.mjs test/ideas-module.test.mjs",
+            "exitCode": 0
+          },
+          {
+            "command": "pnpm run check",
+            "exitCode": 0
+          }
+        ]
+      },
+      "deliveryEvidenceSummary": {
+        "schemaVersion": 1,
+        "mode": null
+      },
+      "deliveryWaiver": null
+    },
+    {
+      "taskId": "T100532",
+      "title": "Register ideas dashboard section + invalidation",
+      "phaseKey": "116",
+      "deliveryEvidence": {
+        "schemaVersion": 1,
+        "branchName": "feature/T100532-ideas-dashboard-section-invalidation",
+        "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/527",
+        "prNumber": 527,
+        "baseBranch": "release/phase-116",
+        "mergeSha": "7a7d2fddce678e65371173259319fb8743ef96a7",
+        "checks": [
+          {
+            "name": "test",
+            "conclusion": "success",
+            "detailsUrl": "https://github.com/NJLaPrell/workflow-cannon/actions/runs/26557498306/job/78232345613"
+          },
+          {
+            "name": "parity",
+            "conclusion": "skipped",
+            "detailsUrl": "https://github.com/NJLaPrell/workflow-cannon/actions/runs/26557498306/job/78232517690"
+          },
+          {
+            "name": "release-readiness",
+            "conclusion": "skipped",
+            "detailsUrl": "https://github.com/NJLaPrell/workflow-cannon/actions/runs/26557498306/job/78232517726"
+          }
+        ],
+        "validationCommands": [
+          {
+            "command": "pnpm --dir extensions/cursor-workflow-cannon run compile && pnpm --dir extensions/cursor-workflow-cannon exec node --test test/dashboard-lazy-shell.test.mjs test/dashboard-section-invalidation.test.mjs test/render-dashboard.test.mjs",
+            "exitCode": 0
+          },
+          {
+            "command": "pnpm run build && pnpm run check",
+            "exitCode": 0
+          }
+        ]
+      },
+      "deliveryEvidenceSummary": {
+        "schemaVersion": 1,
+        "mode": null
+      },
+      "deliveryWaiver": null
+    },
+    {
+      "taskId": "T100533",
+      "title": "Webview Ideas card: render + inline create",
+      "phaseKey": "116",
+      "deliveryEvidence": {
+        "schemaVersion": 2,
+        "mode": "github-pr",
+        "branchName": "feature/T100533-webview-ideas-card-inline-create",
+        "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/528",
+        "prNumber": 528,
+        "baseBranch": "release/phase-116",
+        "mergeSha": "daa86b41bb9ab2dd030fe698068c24ac0a3685f1",
+        "checks": [
+          {
+            "name": "test",
+            "conclusion": "success"
+          }
+        ],
+        "validationCommands": [
+          {
+            "command": "pnpm --dir extensions/cursor-workflow-cannon run compile",
+            "exitCode": 0
+          },
+          {
+            "command": "pnpm --dir extensions/cursor-workflow-cannon exec node --test test/render-dashboard.test.mjs test/dashboard-webview-client.test.mjs test/dashboard-policy.test.mjs",
+            "exitCode": 0
+          },
+          {
+            "command": "pnpm run build",
+            "exitCode": 0
+          },
+          {
+            "command": "pnpm run check",
+            "exitCode": 0
+          }
+        ]
+      },
+      "deliveryEvidenceSummary": {
+        "schemaVersion": 2,
+        "mode": "github-pr"
+      },
+      "deliveryWaiver": null
+    },
+    {
+      "taskId": "T100534",
+      "title": "Webview: inline edit + hard-delete + undo toast",
+      "phaseKey": "116",
+      "deliveryEvidence": {
+        "schemaVersion": 2,
+        "mode": "github-pr",
+        "branchName": "feature/T100534-ideas-inline-edit-delete-undo",
+        "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/529",
+        "prNumber": 529,
+        "baseBranch": "release/phase-116",
+        "mergeSha": "8f674ab435728d0546c0dceb06a8b2739bb22c69",
+        "checks": [
+          {
+            "name": "test",
+            "conclusion": "success"
+          }
+        ],
+        "validationCommands": [
+          {
+            "command": "pnpm --dir extensions/cursor-workflow-cannon run compile",
+            "exitCode": 0
+          },
+          {
+            "command": "pnpm --dir extensions/cursor-workflow-cannon exec node --test test/render-dashboard.test.mjs test/dashboard-webview-client.test.mjs test/dashboard-policy.test.mjs",
+            "exitCode": 0
+          },
+          {
+            "command": "pnpm run build",
+            "exitCode": 0
+          },
+          {
+            "command": "pnpm run check",
+            "exitCode": 0
+          }
+        ]
+      },
+      "deliveryEvidenceSummary": {
+        "schemaVersion": 2,
+        "mode": "github-pr"
+      },
+      "deliveryWaiver": null
+    },
+    {
+      "taskId": "T100535",
+      "title": "Webview: drag-to-reorder wired to reorder-ideas",
+      "phaseKey": "116",
+      "deliveryEvidence": {
+        "schemaVersion": 2,
+        "mode": "github-pr",
+        "branchName": "feature/T100535-ideas-drag-reorder",
+        "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/530",
+        "prNumber": 530,
+        "baseBranch": "release/phase-116",
+        "mergeSha": "8caeb3ee76ba25105746c60a6952dea1416d107c",
+        "checks": [
+          {
+            "name": "test",
+            "conclusion": "success"
+          }
+        ],
+        "validationCommands": [
+          {
+            "command": "pnpm --dir extensions/cursor-workflow-cannon run compile",
+            "exitCode": 0
+          },
+          {
+            "command": "pnpm --dir extensions/cursor-workflow-cannon exec node --test test/render-dashboard.test.mjs test/dashboard-webview-client.test.mjs test/dashboard-policy.test.mjs",
+            "exitCode": 0
+          },
+          {
+            "command": "pnpm run build",
+            "exitCode": 0
+          },
+          {
+            "command": "pnpm run check",
+            "exitCode": 0
+          }
+        ]
+      },
+      "deliveryEvidenceSummary": {
+        "schemaVersion": 2,
+        "mode": "github-pr"
+      },
+      "deliveryWaiver": null
+    },
+    {
+      "taskId": "T100536",
+      "title": "Plan this button stub on Ideas card",
+      "phaseKey": "116",
+      "deliveryEvidence": {
+        "schemaVersion": 2,
+        "mode": "github-pr",
+        "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/531",
+        "prNumber": 531,
+        "branchName": "feature/T100536-ideas-plan-this-stub",
+        "baseBranch": "release/phase-116",
+        "mergeSha": "fe35d1f7b5bab6010d9a4d91d2aaa29378d3d2c7",
+        "checks": [
+          {
+            "name": "test",
+            "conclusion": "success"
+          }
+        ],
+        "validationCommands": [
+          {
+            "command": "pnpm --dir extensions/cursor-workflow-cannon run compile",
+            "result": "success"
+          },
+          {
+            "command": "pnpm --dir extensions/cursor-workflow-cannon exec node --test test/render-dashboard.test.mjs test/dashboard-webview-client.test.mjs test/dashboard-policy.test.mjs",
+            "result": "success"
+          },
+          {
+            "command": "pnpm run build",
+            "result": "success"
+          },
+          {
+            "command": "pnpm run check",
+            "result": "success"
+          }
+        ]
+      },
+      "deliveryEvidenceSummary": {
+        "schemaVersion": 2,
+        "mode": "github-pr"
+      },
+      "deliveryWaiver": null
+    },
+    {
+      "taskId": "T100537",
+      "title": "Milestone A pre-merge gates",
+      "phaseKey": "116",
+      "deliveryEvidence": null,
+      "deliveryEvidenceSummary": {
+        "schemaVersion": null,
+        "mode": null
+      },
+      "deliveryWaiver": {
+        "schemaVersion": 1,
+        "actor": "GitHub Copilot",
+        "rationale": "Validation-only Milestone A gate on release/phase-116; no code PR applies. Captured successful build, check, test, and pre-merge-gates output in artifacts/phase-116-T100537-validation.log at commit fe35d1f7b5bab6010d9a4d91d2aaa29378d3d2c7.",
+        "timestamp": "2026-05-28T07:02:10.000Z",
+        "scope": "T100537"
+      }
+    },
+    {
+      "taskId": "T100538",
+      "title": "Spike: register dummy playbook via CAE end-to-end",
+      "phaseKey": "116",
+      "deliveryEvidence": null,
+      "deliveryEvidenceSummary": {
+        "schemaVersion": null,
+        "mode": null
+      },
+      "deliveryWaiver": {
+        "schemaVersion": 1,
+        "actor": "GitHub Copilot",
+        "rationale": "Validation spike only; no code PR applies. T100538 exercised CAE dummy playbook create/list/get/activate/evaluate/retire cleanup paths with inline CAE mutation approval and registry validation evidence captured under artifacts/phase-116-T100538-*.json.",
+        "timestamp": "2026-05-28T07:09:52.000Z",
+        "scope": "T100538"
+      }
+    },
+    {
+      "taskId": "T100539",
+      "title": "Plan artifact schema: sourceIdeaId + previousPlanArtifacts[]",
+      "phaseKey": "116",
+      "deliveryEvidence": {
+        "schemaVersion": 2,
+        "mode": "github-pr",
+        "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/532",
+        "prNumber": 532,
+        "branchName": "feature/T100539-plan-artifact-provenance-schema",
+        "baseBranch": "release/phase-116",
+        "mergeSha": "1ddca55dbef3b83cbbdd5c3498c5c012ca308318",
+        "checks": [
+          {
+            "name": "test",
+            "conclusion": "success"
+          }
+        ],
+        "validationCommands": [
+          {
+            "command": "pnpm run build",
+            "result": "success"
+          },
+          {
+            "command": "node --test test/plan-artifact-schema.test.mjs test/plan-artifact-draft-validation.test.mjs test/plan-artifact-schema.test.mjs",
+            "result": "success"
+          },
+          {
+            "command": "git diff --check",
+            "result": "success"
+          },
+          {
+            "command": "pnpm run check",
+            "result": "success"
+          }
+        ]
+      },
+      "deliveryEvidenceSummary": {
+        "schemaVersion": 2,
+        "mode": "github-pr"
+      },
+      "deliveryWaiver": null
+    },
+    {
+      "taskId": "T100540",
+      "title": "Unit test: draft-plan-artifact round-trips new provenance fields",
+      "phaseKey": "116",
+      "deliveryEvidence": {
+        "schemaVersion": 2,
+        "mode": "github-pr",
+        "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/533",
+        "prNumber": 533,
+        "branchName": "feature/T100540-plan-artifact-provenance-roundtrip",
+        "baseBranch": "release/phase-116",
+        "mergeSha": "182f591869dc3541500f4d315be2298400086e53",
+        "checks": [
+          {
+            "name": "test",
+            "conclusion": "success"
+          }
+        ],
+        "validationCommands": [
+          {
+            "command": "pnpm run build",
+            "result": "success"
+          },
+          {
+            "command": "node --test test/plan-artifact-draft.test.mjs test/plan-artifact-schema.test.mjs test/plan-artifact-draft-validation.test.mjs",
+            "result": "success"
+          },
+          {
+            "command": "git diff --check",
+            "result": "success"
+          },
+          {
+            "command": "pnpm run check",
+            "result": "success"
+          }
+        ]
+      },
+      "deliveryEvidenceSummary": {
+        "schemaVersion": 2,
+        "mode": "github-pr"
+      },
+      "deliveryWaiver": null
+    },
+    {
+      "taskId": "T100541",
+      "title": "Author .ai/playbooks/planner-chat.md to spec",
+      "phaseKey": "116",
+      "deliveryEvidence": {
+        "schemaVersion": 2,
+        "mode": "github-pr",
+        "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/534",
+        "prNumber": 534,
+        "branchName": "feature/T100541-planner-chat-playbook",
+        "baseBranch": "release/phase-116",
+        "mergeSha": "e74947d09ce31807488a04749378ca148c9f4209",
+        "checks": [
+          {
+            "name": "test",
+            "conclusion": "success"
+          }
+        ],
+        "validationCommands": [
+          {
+            "command": "pnpm run generate-maintainer-docs-from-ai",
+            "result": "success"
+          },
+          {
+            "command": "git diff --check",
+            "result": "success"
+          },
+          {
+            "command": "pnpm run check",
+            "result": "success"
+          }
+        ]
+      },
+      "deliveryEvidenceSummary": {
+        "schemaVersion": 2,
+        "mode": "github-pr"
+      },
+      "deliveryWaiver": null
+    },
+    {
+      "taskId": "T100542",
+      "title": "Register planner-chat playbook as CAE artifact",
+      "phaseKey": "116",
+      "deliveryEvidence": {
+        "schemaVersion": 2,
+        "mode": "github-pr",
+        "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/535",
+        "prNumber": 535,
+        "branchName": "feature/T100542-register-planner-chat-cae",
+        "baseBranch": "release/phase-116",
+        "mergeSha": "1025e6b5a3a2945b2b974d826d944733dd690645",
+        "checks": [
+          {
+            "name": "test",
+            "conclusion": "success"
+          }
+        ],
+        "validationCommands": [
+          {
+            "command": "pnpm exec wk run cae-create-workspace-artifact ... (authoring path smoke; retired temporary workspace artifact afterward)",
+            "result": "success"
+          },
+          {
+            "command": "pnpm exec wk run cae-create-artifact ...",
+            "result": "success"
+          },
+          {
+            "command": "pnpm exec wk run cae-list-artifacts ...",
+            "result": "success"
+          },
+          {
+            "command": "pnpm exec wk run cae-get-artifact ...",
+            "result": "success"
+          },
+          {
+            "command": "pnpm exec wk run cae-registry-validate ...",
+            "result": "success"
+          },
+          {
+            "command": "git diff --check",
+            "result": "success"
+          },
+          {
+            "command": "pnpm run check",
+            "result": "success"
+          }
+        ]
+      },
+      "deliveryEvidenceSummary": {
+        "schemaVersion": 2,
+        "mode": "github-pr"
+      },
+      "deliveryWaiver": null
+    },
+    {
+      "taskId": "T100543",
+      "title": "buildPlannerChatPrompt + playbook-chat-prompts wiring",
+      "phaseKey": "116",
+      "deliveryEvidence": {
+        "schemaVersion": 2,
+        "mode": "github-pr",
+        "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/536",
+        "prNumber": 536,
+        "branchName": "feature/T100543-planner-chat-prompt",
+        "baseBranch": "release/phase-116",
+        "mergeSha": "4fc9d0d25c4dcb1a09442db04a90d3279ad39481",
+        "checks": [
+          {
+            "name": "test",
+            "conclusion": "success"
+          }
+        ],
+        "validationCommands": [
+          {
+            "command": "pnpm --dir extensions/cursor-workflow-cannon run compile",
+            "result": "success"
+          },
+          {
+            "command": "pnpm --dir extensions/cursor-workflow-cannon exec node --test test/playbook-chat-prompts.test.mjs test/wishlist-chat-prompt.test.mjs",
+            "result": "success"
+          },
+          {
+            "command": "git diff --check",
+            "result": "success"
+          },
+          {
+            "command": "pnpm run check",
+            "result": "success"
+          }
+        ]
+      },
+      "deliveryEvidenceSummary": {
+        "schemaVersion": 2,
+        "mode": "github-pr"
+      },
+      "deliveryWaiver": null
+    },
+    {
+      "taskId": "T100544",
+      "title": "Wire Plan this -> Composer; status open->planning",
+      "phaseKey": "116",
+      "deliveryEvidence": {
+        "schemaVersion": 1,
+        "branchName": "feature/T100544-wire-plan-this-composer-status-open-planning",
+        "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/537",
+        "prNumber": 537,
+        "baseBranch": "release/phase-116",
+        "mergeSha": "8a1031116892e5fba5c5d44492b45958d1b57b8c",
+        "checks": [
+          {
+            "name": "test",
+            "conclusion": "success"
+          },
+          {
+            "name": "release-readiness",
+            "conclusion": "skipped"
+          },
+          {
+            "name": "parity",
+            "conclusion": "skipped"
+          }
+        ],
+        "validationCommands": [
+          {
+            "command": "pnpm run build",
+            "exitCode": 0
+          },
+          {
+            "command": "pnpm run check",
+            "exitCode": 0
+          }
+        ]
+      },
+      "deliveryEvidenceSummary": {
+        "schemaVersion": 1,
+        "mode": null
+      },
+      "deliveryWaiver": null
+    },
+    {
+      "taskId": "T100545",
+      "title": "Persist planning-chat session row; Resume button",
+      "phaseKey": "116",
+      "deliveryEvidence": {
+        "schemaVersion": 1,
+        "branchName": "feature/T100545-planning-chat-session-resume",
+        "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/538",
+        "prNumber": 538,
+        "baseBranch": "release/phase-116",
+        "mergeSha": "09c8c6f7cac5dfbd13c98914b76056f64ddf7347",
+        "checks": [
+          {
+            "name": "test",
+            "conclusion": "success"
+          },
+          {
+            "name": "release-readiness",
+            "conclusion": "skipped"
+          },
+          {
+            "name": "parity",
+            "conclusion": "skipped"
+          }
+        ],
+        "validationCommands": [
+          {
+            "command": "pnpm run build",
+            "exitCode": 0
+          },
+          {
+            "command": "pnpm run check",
+            "exitCode": 0
+          }
+        ]
+      },
+      "deliveryEvidenceSummary": {
+        "schemaVersion": 1,
+        "mode": null
+      },
+      "deliveryWaiver": null
+    },
+    {
+      "taskId": "T100546",
+      "title": "Wire draft->review->accept->phase->convert against real CLIs",
+      "phaseKey": "116",
+      "deliveryEvidence": {
+        "schemaVersion": 1,
+        "branchName": "feature/T100546-plan-artifact-cli-wiring",
+        "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/539",
+        "prNumber": 539,
+        "baseBranch": "release/phase-116",
+        "mergeSha": "5ce8be8c861e43ecabb1cd0fa22e7e6f202c816d",
+        "checks": [
+          {
+            "name": "test",
+            "conclusion": "success"
+          },
+          {
+            "name": "release-readiness",
+            "conclusion": "skipped"
+          },
+          {
+            "name": "parity",
+            "conclusion": "skipped"
+          }
+        ],
+        "validationCommands": [
+          {
+            "command": "pnpm run build",
+            "exitCode": 0
+          },
+          {
+            "command": "pnpm --filter cursor-workflow-cannon run check",
+            "exitCode": 0
+          },
+          {
+            "command": "pnpm run check",
+            "exitCode": 0
+          }
+        ]
+      },
+      "deliveryEvidenceSummary": {
+        "schemaVersion": 1,
+        "mode": null
+      },
+      "deliveryWaiver": null
+    },
+    {
+      "taskId": "T100547",
+      "title": "E2E happy-path test (zero-CLI-prompt assertion)",
+      "phaseKey": "116",
+      "deliveryEvidence": {
+        "schemaVersion": 1,
+        "branchName": "feature/T100547-planner-happy-path-e2e-test",
+        "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/540",
+        "prNumber": 540,
+        "baseBranch": "release/phase-116",
+        "headSha": "88004d6462d16541d60bd0a2e4759fb5b462feea",
+        "mergeSha": "5154dcfa0ef1a4734e305bbc4719021908b7cc35",
+        "checks": [
+          {
+            "name": "test",
+            "conclusion": "success"
+          },
+          {
+            "name": "release-readiness",
+            "conclusion": "skipped"
+          },
+          {
+            "name": "parity",
+            "conclusion": "skipped"
+          }
+        ],
+        "validationCommands": [
+          {
+            "command": "pnpm --filter cursor-workflow-cannon run compile && node --test extensions/cursor-workflow-cannon/test/dashboard-plan-artifact-happy-path.test.mjs",
+            "exitCode": 0
+          },
+          {
+            "command": "pnpm run build",
+            "exitCode": 0
+          },
+          {
+            "command": "pnpm --filter cursor-workflow-cannon run check",
+            "exitCode": 0
+          },
+          {
+            "command": "pnpm run check",
+            "exitCode": 0
+          }
+        ]
+      },
+      "deliveryEvidenceSummary": {
+        "schemaVersion": 1,
+        "mode": null
+      },
+      "deliveryWaiver": null
+    },
+    {
+      "taskId": "T100548",
+      "title": "E2E rejection-and-resume tests",
+      "phaseKey": "116",
+      "deliveryEvidence": {
+        "schemaVersion": 1,
+        "branchName": "feature/T100548-planner-rejection-resume-tests",
+        "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/541",
+        "prNumber": 541,
+        "baseBranch": "release/phase-116",
+        "headSha": "bf11ac410899ec02b18eabee5cf646ca91bdebd7",
+        "mergeSha": "3333e34fd8b91a521a4921785fc6126e0758421f",
+        "checks": [
+          {
+            "name": "test",
+            "conclusion": "success"
+          },
+          {
+            "name": "release-readiness",
+            "conclusion": "skipped"
+          },
+          {
+            "name": "parity",
+            "conclusion": "skipped"
+          }
+        ],
+        "validationCommands": [
+          {
+            "command": "pnpm --filter cursor-workflow-cannon run compile && node --test extensions/cursor-workflow-cannon/test/dashboard-plan-artifact-happy-path.test.mjs",
+            "exitCode": 0
+          },
+          {
+            "command": "pnpm run build",
+            "exitCode": 0
+          },
+          {
+            "command": "pnpm --filter cursor-workflow-cannon run check",
+            "exitCode": 0
+          },
+          {
+            "command": "pnpm run check",
+            "exitCode": 0
+          }
+        ]
+      },
+      "deliveryEvidenceSummary": {
+        "schemaVersion": 1,
+        "mode": null
+      },
+      "deliveryWaiver": null
+    },
+    {
+      "taskId": "T100549",
+      "title": "Milestone B pre-merge gates",
+      "phaseKey": "116",
+      "deliveryEvidence": {
+        "schemaVersion": 1,
+        "branchName": "feature/T100549-milestone-b-pre-merge-gates",
+        "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/520",
+        "prNumber": 520,
+        "baseBranch": "release/phase-116",
+        "mergeSha": "884a838a",
+        "checks": [
+          {
+            "name": "CI / test",
+            "conclusion": "success",
+            "runId": 26548053170
+          }
+        ],
+        "validationCommands": [
+          {
+            "command": "pnpm run build",
+            "exitCode": 0
+          },
+          {
+            "command": "pnpm check",
+            "exitCode": 0
+          },
+          {
+            "command": "pnpm test",
+            "exitCode": 0
+          },
+          {
+            "command": "pnpm parity",
+            "exitCode": 0
+          },
+          {
+            "command": "pnpm run pre-merge-gates",
+            "exitCode": 0
+          },
+          {
+            "command": "CI run 26548053170",
+            "exitCode": 0
+          }
+        ]
+      },
+      "deliveryEvidenceSummary": {
+        "schemaVersion": 1,
+        "mode": null
+      },
+      "deliveryWaiver": null
+    }
+  ],
+  "followUpScan": {
+    "scannedAt": "2026-05-28T15:33:29Z",
+    "rationale": "Phase closeout readiness passed with zero unfinished tasks; list-phase-notes for Phase 116 returned no notes; no follow-up tasks were identified for this release."
+  },
+  "followUpTasks": [],
+  "followUpSummary": {
+    "count": 0,
+    "scannedAt": "2026-05-28T15:33:29Z",
+    "rationale": "Phase closeout readiness passed with zero unfinished tasks; list-phase-notes for Phase 116 returned no notes; no follow-up tasks were identified for this release."
+  }
+}
