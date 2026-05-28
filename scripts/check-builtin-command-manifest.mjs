@@ -40,6 +40,7 @@ const KNOWN_POLICY_OPERATION_IDS = new Set([
   "plugins.persist",
   "subagents.persist",
   "team-execution.persist",
+  "ideas.persist",
   "checkpoints.persist",
   "checkpoints.rewind",
   "context-activation.cae-satisfy-ack",

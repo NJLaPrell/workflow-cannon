@@ -68,6 +68,11 @@ Runbook: [`.ai/runbooks/plan-artifact-workflow.md`](./runbooks/plan-artifact-wor
 
 Playbook: [`.ai/playbooks/task-to-phase-branch.md`](./playbooks/task-to-phase-branch.md) — branch from phase branch, PR, merge, **`run-transition`** **`complete`** with evidence.
 
+## Ideas capture
+
+- `pnpm exec wk run create-idea '{"title":"Try planner chat from Ideas","policyApproval":{"confirmed":true,"rationale":"capture operator idea"}}'`
+- `pnpm exec wk run get-idea '{"ideaId":"I001"}'`
+
 ## Contract: no hand-editing lifecycle in the task store
 
 Use **`workspace-kit run run-transition`** (and related commands). Do not edit SQLite/JSON task stores for routine status motion.

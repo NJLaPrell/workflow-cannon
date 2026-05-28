@@ -10,6 +10,8 @@ import {
   documentationModule,
   formatUnknownCommandMessage,
   getAtPath,
+  ideasModule,
+  planningModule,
   taskEngineModule,
   workspaceConfigModule
 } from "../dist/index.js";
@@ -24,6 +26,8 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
     workspaceConfigModule,
     documentationModule,
     agentBehaviorModule,
+    ideasModule,
+    planningModule,
     taskEngineModule
   ]);
   const router = new ModuleCommandRouter(registry);
@@ -31,6 +35,7 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
   const commandNames = router.listCommands().map((command) => command.name);
   assert.deepEqual(commandNames, [
     "accept-improvement",
+    "accept-plan-artifact",
     "add-dependency",
     "add-phase-note",
     "agent-bootstrap",
@@ -44,6 +49,7 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
     "backup-planning-sqlite",
     "batch-transition",
     "block-task",
+    "build-plan",
     "check-task-store-commit",
     "claim-next-task",
     "claim-workspace-edit-lease",
@@ -55,6 +61,7 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
     "convert-phase-note-to-task",
     "convert-wishlist",
     "create-behavior-profile",
+    "create-idea",
     "create-task",
     "create-task-from-plan",
     "create-wishlist",
@@ -66,15 +73,19 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
     "diff-behavior-profiles",
     "dismiss-phase-note",
     "document-project",
+    "draft-plan-artifact",
     "explain-behavior-profiles",
     "explain-config",
+    "explain-planning-rules",
     "explain-task-engine-model",
     "export-feature-taxonomy-json",
     "export-workspace-status",
+    "finalize-plan-to-phase",
     "generate-document",
     "get-behavior-profile",
     "get-blocked-summary",
     "get-dependency-graph",
+    "get-idea",
     "get-kit-persistence-map",
     "get-last-output",
     "get-module-state",
@@ -99,6 +110,7 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
     "list-module-states",
     "list-phase-catalog",
     "list-phase-notes",
+    "list-planning-types",
     "list-tasks",
     "list-wishlist",
     "migrate-task-persistence",
@@ -127,6 +139,7 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
     "resolve-config",
     "resolve-maintainer-delivery-policy",
     "resolve-task-intake-policy",
+    "review-plan-artifact",
     "review-planning-execution-drafts",
     "run-transition",
     "set-active-behavior-profile",

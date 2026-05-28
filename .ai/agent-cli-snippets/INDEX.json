@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-05-27T16:11:06.606Z",
+  "generatedAt": "2026-05-28T05:13:09.514Z",
   "commands": [
     {
       "name": "accept-improvement",
@@ -428,6 +428,11 @@
       "moduleId": "checkpoints"
     },
     {
+      "name": "create-idea",
+      "path": ".ai/agent-cli-snippets/by-command/create-idea.json",
+      "moduleId": "ideas"
+    },
+    {
       "name": "create-task",
       "path": ".ai/agent-cli-snippets/by-command/create-task.json",
       "moduleId": "task-engine"
@@ -561,6 +566,11 @@
       "name": "get-dependency-graph",
       "path": ".ai/agent-cli-snippets/by-command/get-dependency-graph.json",
       "moduleId": "task-engine"
+    },
+    {
+      "name": "get-idea",
+      "path": ".ai/agent-cli-snippets/by-command/get-idea.json",
+      "moduleId": "ideas"
     },
     {
       "name": "get-kit-persistence-map",
