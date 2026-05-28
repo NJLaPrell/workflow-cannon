@@ -1,0 +1,103 @@
+{
+  "schemaVersion": 1,
+  "createdAt": "2026-05-28T02:49:36.433Z",
+  "releaseVersion": "0.99.13",
+  "packageName": "@workflow-cannon/workspace-kit",
+  "phaseKey": "116",
+  "git": {
+    "integrationBranch": "main",
+    "releaseBranch": "release/phase-116",
+    "headSha": "6eed90c4ae43813a3cd73802e7b0d8e5c920d93f",
+    "releasePr": "https://github.com/NJLaPrell/workflow-cannon/pull/522",
+    "publishHotfixPr": "https://github.com/NJLaPrell/workflow-cannon/pull/523"
+  },
+  "approval": {
+    "actor": "operator via chat",
+    "timestamp": "2026-05-28T02:33:00.000Z",
+    "rationale": "Phase 116 closeout approved in chat after readiness, release PR CI, and local gates passed.",
+    "scope": "phase-116 publish @workflow-cannon/workspace-kit@0.99.13 dist-tag latest"
+  },
+  "releaseNotes": {
+    "source": "docs/maintainers/CHANGELOG.md",
+    "entries": [
+      "0.99.13 - Phase 116 Ideas module foundation and task-state closeout repair"
+    ]
+  },
+  "validations": [
+    {
+      "command": "pnpm run build",
+      "conclusion": "success",
+      "source": "closeout-canonical"
+    },
+    {
+      "command": "pnpm run check",
+      "conclusion": "success",
+      "source": "closeout-canonical"
+    },
+    {
+      "command": "pnpm run test",
+      "conclusion": "success",
+      "source": "closeout-canonical"
+    },
+    {
+      "command": "pnpm run parity",
+      "conclusion": "success",
+      "source": "closeout-canonical"
+    },
+    {
+      "command": "node scripts/check-release-metadata.mjs",
+      "conclusion": "success",
+      "source": "closeout-canonical"
+    },
+    {
+      "command": "pnpm run pre-merge-gates",
+      "conclusion": "success",
+      "source": "closeout-canonical"
+    }
+  ],
+  "risks": [
+    {
+      "kind": "sqlite-migration",
+      "summary": "KIT_SQLITE_USER_VERSION v29 adds workflow_ideas for DB-backed ideas.",
+      "mitigation": "Migration and idempotence covered by workspace-kit SQLite tests."
+    },
+    {
+      "kind": "publish-workflow-scope",
+      "summary": "publish-npm.yml publishes npm but does not create a GitHub release or git tag.",
+      "mitigation": "npm latest and successful Actions run recorded as publish evidence."
+    },
+    {
+      "kind": "ci-fixture-isolation",
+      "summary": "First publish attempt failed because CAE SQLite tests depended on ambient local registry state.",
+      "mitigation": "PR #523 seeds CAE registry fixtures in temporary workspaces; PR CI and full local pnpm test passed."
+    }
+  ],
+  "publishArtifacts": [
+    {
+      "kind": "npm",
+      "package": "@workflow-cannon/workspace-kit",
+      "version": "0.99.13",
+      "distTag": "latest",
+      "verifiedBy": "npm view @workflow-cannon/workspace-kit@0.99.13 version dist-tags --json"
+    },
+    {
+      "kind": "github-actions-run",
+      "workflow": "publish-npm.yml",
+      "runId": 26551422892,
+      "url": "https://github.com/NJLaPrell/workflow-cannon/actions/runs/26551422892",
+      "headSha": "6eed90c4ae43813a3cd73802e7b0d8e5c920d93f",
+      "conclusion": "success"
+    }
+  ],
+  "taskDeliveryEvidence": [],
+  "followUpScan": {
+    "scannedAt": "2026-05-28T02:49:35.448Z",
+    "rationale": "Phase 116 readiness and delivery preflight passed with remainingCount 0; no phase notes were outstanding. Publish retry blocker was resolved by PR #523 before successful npm publish."
+  },
+  "followUpTasks": [],
+  "followUpSummary": {
+    "count": 0,
+    "scannedAt": "2026-05-28T02:49:35.448Z",
+    "rationale": "Phase 116 readiness and delivery preflight passed with remainingCount 0; no phase notes were outstanding. Publish retry blocker was resolved by PR #523 before successful npm publish."
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "fragmentKind": "approval",
+  "approval": {
+    "actor": "operator via chat",
+    "timestamp": "2026-05-28T02:33:00.000Z",
+    "rationale": "Phase 116 closeout approved in chat after readiness, release PR CI, and local gates passed.",
+    "scope": "phase-116 publish @workflow-cannon/workspace-kit@0.99.13 dist-tag latest"
+  }
+}

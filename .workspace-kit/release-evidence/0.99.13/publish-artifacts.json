@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "fragmentKind": "publishArtifacts",
+  "version": "0.99.13",
+  "publishArtifacts": [
+    {
+      "kind": "npm",
+      "package": "@workflow-cannon/workspace-kit",
+      "version": "0.99.13",
+      "distTag": "latest",
+      "verifiedBy": "npm view @workflow-cannon/workspace-kit@0.99.13 version dist-tags --json"
+    },
+    {
+      "kind": "github-actions-run",
+      "workflow": "publish-npm.yml",
+      "runId": 26551422892,
+      "url": "https://github.com/NJLaPrell/workflow-cannon/actions/runs/26551422892",
+      "headSha": "6eed90c4ae43813a3cd73802e7b0d8e5c920d93f",
+      "conclusion": "success"
+    }
+  ],
+  "degraded": [
+    "publish-npm.yml publishes npm only; no v0.99.13 GitHub release or git tag was created."
+  ]
+}

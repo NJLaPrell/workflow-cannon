@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "fragmentKind": "validations",
+  "phaseKey": "116",
+  "validations": [
+    {
+      "command": "pnpm run build",
+      "conclusion": "success",
+      "source": "closeout-canonical"
+    },
+    {
+      "command": "pnpm run check",
+      "conclusion": "success",
+      "source": "closeout-canonical"
+    },
+    {
+      "command": "pnpm run test",
+      "conclusion": "success",
+      "source": "closeout-canonical"
+    },
+    {
+      "command": "pnpm run parity",
+      "conclusion": "success",
+      "source": "closeout-canonical"
+    },
+    {
+      "command": "node scripts/check-release-metadata.mjs",
+      "conclusion": "success",
+      "source": "closeout-canonical"
+    },
+    {
+      "command": "pnpm run pre-merge-gates",
+      "conclusion": "success",
+      "source": "closeout-canonical"
+    }
+  ],
+  "source": "closeout-canonical"
+}
