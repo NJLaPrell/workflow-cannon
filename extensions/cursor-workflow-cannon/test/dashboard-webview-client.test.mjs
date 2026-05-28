@@ -16,6 +16,9 @@ test("buildDashboardWebviewBootstrapScript returns drawer + refresh client", () 
   assert.match(script, /applyHostSnapshot/);
   assert.match(script, /wcHostSnapshot/);
   assert.match(script, /wcReinitEmbeddedCae/);
+  assert.match(script, /type: 'createIdea'/);
+  assert.match(script, /wcIdeaCreateResult/);
+  assert.match(script, /data-wc-idea-title/);
   assert.doesNotMatch(readFileSync(path.join(__dirname, "../src/views/dashboard/DashboardViewProvider.ts"), "utf8"), /function setDrawerBusy\(busy, label\)/);
 });
 

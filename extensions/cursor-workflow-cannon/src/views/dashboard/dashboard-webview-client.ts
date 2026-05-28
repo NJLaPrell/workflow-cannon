@@ -146,6 +146,40 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
     if (original) el.innerHTML = original;
   }
 
+  function setIdeasCreateStatus(form, message, isError) {
+    if (!form) return;
+    var status = form.querySelector('[data-wc-ideas-create-status]');
+    if (!status) return;
+    status.textContent = message || '';
+    if (isError) status.setAttribute('data-wc-error', '1');
+    else status.removeAttribute('data-wc-error');
+  }
+
+  function setIdeasCreateBusy(form, busy) {
+    if (!form) return;
+    var button = form.querySelector('[data-wc-action="idea-create"]');
+    if (button) setButtonBusy(button, busy, 'Saving...');
+    form.querySelectorAll('input, textarea, button').forEach(function(el) {
+      el.disabled = !!busy;
+    });
+  }
+
+  function submitIdeaCreate(form) {
+    if (!form) return;
+    var titleEl = form.querySelector('[data-wc-idea-title]');
+    var noteEl = form.querySelector('[data-wc-idea-note]');
+    var title = titleEl && titleEl.value != null ? String(titleEl.value).trim() : '';
+    var note = noteEl && noteEl.value != null ? String(noteEl.value).trim() : '';
+    if (!title) {
+      setIdeasCreateStatus(form, 'Title required.', true);
+      if (titleEl && titleEl.focus) titleEl.focus();
+      return;
+    }
+    setIdeasCreateStatus(form, '', false);
+    setIdeasCreateBusy(form, true);
+    vscode.postMessage({ type: 'createIdea', title: title, note: note });
+  }
+
   function capturePhaseDeliverablesEditState(root) {
     if (!root) return null;
     var rows = root.querySelectorAll('[data-wc-phase-row]');
@@ -790,6 +824,21 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
       applyHostSnapshot(m.snapshot);
       return;
     }
+    if (m && m.type === 'wcIdeaCreateResult') {
+      var ideaForm = document.querySelector('[data-wc-ideas-create-form]');
+      if (!ideaForm) return;
+      setIdeasCreateBusy(ideaForm, false);
+      if (m.ok === true) {
+        var ideaTitle = ideaForm.querySelector('[data-wc-idea-title]');
+        var ideaNote = ideaForm.querySelector('[data-wc-idea-note]');
+        if (ideaTitle) ideaTitle.value = '';
+        if (ideaNote) ideaNote.value = '';
+        setIdeasCreateStatus(ideaForm, 'Saved.', false);
+      } else {
+        setIdeasCreateStatus(ideaForm, typeof m.message === 'string' ? m.message : 'Unable to save idea.', true);
+      }
+      return;
+    }
     if (m && m.type === 'wcPhaseDeliverablesSaved') {
       var savedPk = typeof m.phaseKey === 'string' ? m.phaseKey.trim() : '';
       if (savedPk) {
@@ -1186,6 +1235,7 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
       return;
     }
     if (act === 'wishlist-view') { var wv = (t.getAttribute('data-wishlist-id') || '').trim(); if (wv) vscode.postMessage({type:'openWishlistDetail',wishlistId:wv}); return; }
+    if (act === 'idea-create') { submitIdeaCreate(t.closest('[data-wc-ideas-create-form]')); return; }
     if (act === 'planning-new-plan') { vscode.postMessage({type:'prefillPlanningInterviewChat'}); return; }
     if (act === 'planning-resume-chat') { var rc = (t.getAttribute('data-resume-cli') || '').trim(); vscode.postMessage({type:'prefillPlanningResumeChat',resumeCli:rc}); return; }
     if (act === 'planning-discard') { vscode.postMessage({type:'planningDiscard'}); return; }
@@ -1198,6 +1248,11 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
 
   if (rootEl) rootEl.addEventListener('keydown', function(ev) {
     var target = ev.target;
+    if (target && target.matches && target.matches('[data-wc-idea-title]') && ev.key === 'Enter') {
+      ev.preventDefault();
+      submitIdeaCreate(target.closest('[data-wc-ideas-create-form]'));
+      return;
+    }
     if (!target || !target.classList || !target.classList.contains('dash-phase-deliverables-input')) return;
     if (ev.key === 'Enter') {
       ev.preventDefault();
