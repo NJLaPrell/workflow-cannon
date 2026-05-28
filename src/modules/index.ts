@@ -5,6 +5,7 @@ import type { WorkflowModule } from "../contracts/module-contract.js";
 import { agentBehaviorModule } from "./agent-behavior/index.js";
 import { approvalsModule } from "./approvals/index.js";
 import { documentationModule } from "./documentation/index.js";
+import { ideasModule } from "./ideas/index.js";
 import { improvementModule } from "./improvement/index.js";
 import { planningModule } from "./planning/index.js";
 import { pluginsModule } from "./plugins/index.js";
@@ -28,6 +29,7 @@ export const defaultRegistryModules: WorkflowModule[] = [
   taskEngineModule,
   checkpointsModule,
   contextActivationModule,
+  ideasModule,
   projectMemoryModule,
   approvalsModule,
   planningModule,
@@ -43,6 +45,7 @@ export {
 } from "./agent-behavior/index.js";
 export { approvalsModule } from "./approvals/index.js";
 export { documentationModule } from "./documentation/index.js";
+export { ideasModule } from "./ideas/index.js";
 export type {
   DocumentationConflict,
   DocumentationGenerateOptions,
