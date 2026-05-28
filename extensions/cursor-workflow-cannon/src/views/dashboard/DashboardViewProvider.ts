@@ -8,6 +8,7 @@ import {
   ingestPlanningMetaFromData
 } from "../../planning-generation-cache.js";
 import { buildWishlistIntakeAgentPrompt } from "../../wishlist-chat-prompt.js";
+import { buildPlannerChatPrompt } from "../../planner-chat-prompt.js";
 import { buildPhaseCompleteReleaseChatPrompt } from "../../phase-complete-release-prompt.js";
 import {
   GENERATE_FEATURES_SLASH_TEXT,
@@ -2438,17 +2439,36 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   }
 
   private async onPrefillIdeaPlanningChat(ideaId: string, title: string, note: string): Promise<void> {
-    const subject = title.length > 0 ? title : ideaId.length > 0 ? ideaId : "this idea";
-    const lines = [
-      "Plan this Workflow Cannon idea into a draft plan artifact.",
-      "",
-      `Idea: ${subject}`,
-      ideaId.length > 0 ? `Idea id: ${ideaId}` : "",
-      note.length > 0 ? `Note: ${note}` : "",
-      "",
-      "Use the planner-chat workflow. Keep the idea linked to any proposed plan artifact."
-    ].filter((line) => line.length > 0);
-    await prefillCursorChat(lines.join("\n"), { newChat: true });
+    if (ideaId.length === 0) {
+      await this.view?.webview.postMessage({
+        type: "wcIdeaMutationResult",
+        operation: "plan",
+        ideaId,
+        ok: false,
+        message: "Idea id required."
+      });
+      return;
+    }
+    const out = await this.client.run("update-idea", {
+      ideaId,
+      status: "planning",
+      policyApproval: dashboardPolicyApproval(
+        { workflowId: "ideas", action: "plan", command: "update-idea" },
+        {}
+      )
+    });
+    if (!out.ok) {
+      const message = (out.message ?? String(out.code ?? "update-idea failed")).slice(0, 900);
+      await this.view?.webview.postMessage({ type: "wcIdeaMutationResult", operation: "plan", ideaId, ok: false, message });
+      return;
+    }
+    ingestPlanningMetaFromData(out.data as Record<string, unknown> | undefined);
+    this.notifyKitStateChanged();
+    await this.applyDashboardMutationInvalidation("ideas");
+
+    const prompt = buildPlannerChatPrompt({ ideaId, title, note });
+    await prefillCursorChat(prompt, { newChat: true });
+    await this.view?.webview.postMessage({ type: "wcIdeaMutationResult", operation: "plan", ideaId, ok: true });
   }
 
   private async onTaskCommentsComingSoon(taskId: string, mode: "view" | "add"): Promise<void> {

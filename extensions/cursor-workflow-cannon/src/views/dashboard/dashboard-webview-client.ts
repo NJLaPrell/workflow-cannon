@@ -198,11 +198,21 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
     if (!row) return;
     var save = row.querySelector('[data-wc-action="idea-update"]');
     var del = row.querySelector('[data-wc-action="idea-delete"]');
+    var plan = row.querySelector('[data-wc-action="idea-plan"]');
     if (save) setButtonBusy(save, !!busy, label || 'Saving...');
     if (del) del.disabled = !!busy;
+    if (plan) setButtonBusy(plan, !!busy, label || 'Saving...');
     row.querySelectorAll('[data-wc-ideas-edit-form] input, [data-wc-ideas-edit-form] textarea, [data-wc-ideas-edit-form] button').forEach(function(el) {
       el.disabled = !!busy;
     });
+  }
+
+  function submitIdeaPlan(row) {
+    if (!row) return;
+    var ideaId = (row.getAttribute('data-wc-idea-id') || '').trim();
+    if (!ideaId) return;
+    setIdeaRowBusy(row, true, 'Opening...');
+    vscode.postMessage({type:'prefillIdeaPlanningChat',ideaId:ideaId,title:row.getAttribute('data-wc-idea-title')||'',note:row.getAttribute('data-wc-idea-note')||''});
   }
 
   function setIdeaEditMode(row, editing) {
@@ -953,6 +963,7 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
       if (op === 'delete') showIdeasToast('Idea deleted.', true);
       else if (op === 'undo-delete') showIdeasToast('Idea restored.', false);
       else if (op === 'reorder') showIdeasToast('Ideas reordered.', false);
+      else if (op === 'plan') showIdeasToast('Planning chat opened.', false);
       return;
     }
     if (m && m.type === 'wcPhaseDeliverablesSaved') {
@@ -1356,7 +1367,7 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
     if (act === 'idea-edit-cancel') { setIdeaEditMode(ideaRowFor(t), false); return; }
     if (act === 'idea-update') { submitIdeaUpdate(ideaRowFor(t)); return; }
     if (act === 'idea-delete') { submitIdeaDelete(ideaRowFor(t)); return; }
-    if (act === 'idea-plan') { var planRow = ideaRowFor(t); if (planRow) vscode.postMessage({type:'prefillIdeaPlanningChat',ideaId:planRow.getAttribute('data-wc-idea-id')||'',title:planRow.getAttribute('data-wc-idea-title')||'',note:planRow.getAttribute('data-wc-idea-note')||''}); return; }
+    if (act === 'idea-plan') { submitIdeaPlan(ideaRowFor(t)); return; }
     if (act === 'idea-undo-delete') { vscode.postMessage({type:'undoDeleteIdea'}); return; }
     if (act === 'planning-new-plan') { vscode.postMessage({type:'prefillPlanningInterviewChat'}); return; }
     if (act === 'planning-resume-chat') { var rc = (t.getAttribute('data-resume-cli') || '').trim(); vscode.postMessage({type:'prefillPlanningResumeChat',resumeCli:rc}); return; }
