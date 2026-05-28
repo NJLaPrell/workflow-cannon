@@ -36,6 +36,7 @@ Use the **filename stem** as the stable id.
 | `improvement-scout` | [`improvement-scout.md`](./improvement-scout.md) | Bounded scout pass: lenses, target zones, stems, adversarial step, evidence floor; pairs with read-only **`scout-report`** |
 | `improvement-triage-top-three` | [`improvement-triage-top-three.md`](./improvement-triage-top-three.md) | Analyze **`improvement`** backlog; promote **≤3** best **`proposed`** → **`ready`** (Tier A **`accept`**) |
 | `wishlist-intake-to-execution` | [`wishlist-intake-to-execution.md`](./wishlist-intake-to-execution.md) | Rank wishlist ideation, confirm timing, clarify scope, pick target phase, run **`convert-wishlist`** with planning-generation hygiene |
+| `planner-chat` | [`planner-chat.md`](./planner-chat.md) | Turn an Ideas row into a PlanArtifact through chat: draft, review, accept, phase/task creation, provenance, and resume/error handling |
 | `skill-attachments` | [`skill-attachments.md`](./skill-attachments.md) | Attach **`metadata.skillIds`** to execution tasks using discovered pack ids |
 | `workspace-kit-chat-onboarding` | [`workspace-kit-chat-onboarding.md`](./workspace-kit-chat-onboarding.md) | Cursor **`/onboarding`**: tavern flow; numbered **Your Role** / **Agent Temperament**; save each step |
 | `workspace-kit-chat-behavior-interview` | [`workspace-kit-chat-behavior-interview.md`](./workspace-kit-chat-behavior-interview.md) | Cursor **`/behavior-interview`**: scribe’s quiz; six questions; **`interview-behavior-profile`** |
