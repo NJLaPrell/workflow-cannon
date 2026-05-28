@@ -1049,6 +1049,8 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
     applyReplaceRootHtml(m.html);
   });
 
+  vscode.postMessage({ type: 'dashboardWebviewReady' });
+
   var contextHelpPopover = document.getElementById('wc-context-help-popover');
   var contextHelpHideTimer = null;
   var contextHelpActiveEl = null;

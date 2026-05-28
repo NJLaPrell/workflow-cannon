@@ -147,3 +147,97 @@ test("assign-task-phase and clear-task-phase publish durable canonical events", 
   assert.equal(status.data.remoteLatestSequence, 2);
   assert.equal(status.data.localAppliedSequence, 2);
 });
+
+test("apply-task-batch publishes rich task fields that survive hydrate", async () => {
+  const { canonicalCtx } = await seedCanonicalWorkspace();
+
+  const applied = await taskEngineModule.onCommand(
+    {
+      name: "apply-task-batch",
+      args: {
+        ops: [
+          {
+            kind: "create-task",
+            payload: {
+              id: "T778",
+              allocateId: false,
+              title: "Rich canonical task",
+              type: "workspace-kit",
+              status: "ready",
+              priority: "P1",
+              dependsOn: ["T777"],
+              phase: "Phase 118",
+              phaseKey: "118",
+              summary: "Exercise rich canonical create replay",
+              description: "Created through apply-task-batch with non-minimal fields",
+              risk: "Hydrate must not drop rich fields",
+              ownership: "task-engine",
+              approach: "Publish complete canonical values",
+              technicalScope: ["canonical event drafting", "hydrate replay"],
+              acceptanceCriteria: ["Rich fields survive hydrate", "Dependency edges survive hydrate"],
+              metadata: { planRef: "CI-EDGE" }
+            }
+          },
+          {
+            kind: "update-task",
+            payload: {
+              taskId: "T777",
+              updates: {
+                title: "Canonical phase task updated",
+                dependsOn: ["T778"]
+              }
+            }
+          }
+        ],
+        policyApproval: { confirmed: true, rationale: "publish canonical apply-task-batch regression" }
+      }
+    },
+    canonicalCtx
+  );
+  assert.equal(applied.ok, true, applied.message);
+  assert.equal(applied.code, "apply-task-batch-applied");
+
+  const hydrate = await taskEngineModule.onCommand(
+    {
+      name: "task-state-hydrate",
+      args: {
+        fetch: false,
+        policyApproval: { confirmed: true, rationale: "verify rich apply-task-batch fields survive hydrate" }
+      }
+    },
+    canonicalCtx
+  );
+  assert.equal(hydrate.ok, true, hydrate.message);
+
+  const rich = await taskEngineModule.onCommand({ name: "get-task", args: { taskId: "T778" } }, canonicalCtx);
+  assert.equal(rich.ok, true, rich.message);
+  assert.equal(rich.data.task.priority, "P1");
+  assert.deepEqual(rich.data.task.dependsOn, ["T777"]);
+  assert.equal(rich.data.task.phaseKey, "118");
+  assert.equal(rich.data.task.phase, "Phase 118");
+  assert.equal(rich.data.task.summary, "Exercise rich canonical create replay");
+  assert.equal(rich.data.task.description, "Created through apply-task-batch with non-minimal fields");
+  assert.equal(rich.data.task.risk, "Hydrate must not drop rich fields");
+  assert.equal(rich.data.task.ownership, "task-engine");
+  assert.equal(rich.data.task.approach, "Publish complete canonical values");
+  assert.deepEqual(rich.data.task.technicalScope, ["canonical event drafting", "hydrate replay"]);
+  assert.deepEqual(rich.data.task.acceptanceCriteria, [
+    "Rich fields survive hydrate",
+    "Dependency edges survive hydrate"
+  ]);
+  assert.equal(rich.data.task.metadata.planRef, "CI-EDGE");
+
+  const updated = await taskEngineModule.onCommand({ name: "get-task", args: { taskId: "T777" } }, canonicalCtx);
+  assert.equal(updated.ok, true, updated.message);
+  assert.equal(updated.data.task.title, "Canonical phase task updated");
+  assert.deepEqual(updated.data.task.dependsOn, ["T778"]);
+
+  const status = await taskEngineModule.onCommand(
+    { name: "task-state-status", args: { fetch: false } },
+    canonicalCtx
+  );
+  assert.equal(status.ok, true, status.message);
+  assert.equal(status.data.syncState, "current");
+  assert.equal(status.data.remoteLatestSequence, 3);
+  assert.equal(status.data.localAppliedSequence, 3);
+});

@@ -27,7 +27,11 @@ import { TRANSCRIPT_CHURN_TASK_TYPE } from "../transcript-churn.js";
 import { evaluateIntakeForCreate, readIntakeModuleIdFromArgs } from "../task-intake-mutation-policy.js";
 import { isGitTaskStateCanonicalAuthority } from "../persistence/task-state-canonical-authority.js";
 import { commitCanonicalTaskStateEvents } from "../persistence/task-state-canonical-commit.js";
-import { draftCreatedEvent, draftUpdatedEvent } from "../persistence/task-state-event-draft.js";
+import {
+  draftCreatedTaskEvents,
+  draftUpdatedEvent,
+  taskUpdatedValuesForChangedFields
+} from "../persistence/task-state-event-draft.js";
 import type { TaskStateEventV1 } from "../task-state-events/event-payloads.js";
 
 const PHASE_KEY_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
@@ -530,9 +534,9 @@ export async function runApplyTaskBatchCommand(
       moduleId: "task-engine",
       actorId: actor
     };
-    const events: TaskStateEventV1[] = staged.map((s) => {
+    const events: TaskStateEventV1[] = staged.flatMap((s) => {
       if (s.kind === "create") {
-        return draftCreatedEvent(s.task, {
+        return draftCreatedTaskEvents(s.task, {
           ...draftCtx,
           clientMutationId:
             typeof (s.task.metadata as Record<string, unknown> | undefined)?.clientMutationId === "string"
@@ -541,21 +545,13 @@ export async function runApplyTaskBatchCommand(
           phaseKey: s.task.phaseKey
         });
       }
+      const values = taskUpdatedValuesForChangedFields(s.task, s.updatedFields);
       return draftUpdatedEvent(
         s.task.id,
         s.updatedFields,
         store,
         { ...draftCtx, phaseKey: s.task.phaseKey },
-        {
-          title: s.task.title,
-          type: s.task.type,
-          status: s.task.status,
-          priority: s.task.priority,
-          phase: s.task.phase,
-          phaseKey: s.task.phaseKey,
-          summary: s.task.summary,
-          metadata: s.task.metadata
-        },
+        values,
         ctx.workspacePath
       );
     });

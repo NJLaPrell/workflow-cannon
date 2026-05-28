@@ -598,6 +598,10 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         await webview.postMessage({ type: "wcReleaseRefreshBlock" });
         await this.pushUpdate({ projection: "full", skipHeavyFetches: false });
       }
+      if (msg?.type === "dashboardWebviewReady") {
+        await this.pushUpdate({ projection: "overview", skipHeavyFetches: true });
+        return;
+      }
       if (msg?.type === "dashboardTabActivated") {
         const tabId = typeof (msg as { tabId?: unknown }).tabId === "string" ? (msg as { tabId: string }).tabId : "";
         if (tabId.length > 0) {

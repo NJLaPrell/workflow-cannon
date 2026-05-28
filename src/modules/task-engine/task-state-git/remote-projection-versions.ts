@@ -129,19 +129,14 @@ export function readRemoteTaskVersionMap(
 }
 
 export function expectedVersionsForPublish(
-  storeVersions: Record<string, number>,
+  _storeVersions: Record<string, number>,
   remoteVersions: Map<string, number>,
   taskIds: Iterable<string>
 ): Record<string, number> {
   const out: Record<string, number> = {};
   for (const taskId of taskIds) {
     const remote = remoteVersions.get(taskId);
-    if (remote !== undefined) {
-      out[taskId] = remote;
-      continue;
-    }
-    const local = storeVersions[taskId];
-    out[taskId] = typeof local === "number" ? local : 0;
+    out[taskId] = remote !== undefined ? remote : 0;
   }
   return out;
 }

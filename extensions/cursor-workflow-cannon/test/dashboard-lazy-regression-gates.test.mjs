@@ -33,6 +33,14 @@ test("initial pushUpdate uses overview projection with skipHeavyFetches", () => 
   assert.match(resolveBlock, /pushUpdate\(\{ projection: "overview", skipHeavyFetches: true \}\)/);
 });
 
+test("dashboard webview ready handshake retries initial hydration", () => {
+  const providerSrc = fs.readFileSync(providerPath, "utf8");
+  const webviewSrc = readSrc("dashboard-webview-client.ts");
+  assert.match(webviewSrc, /dashboardWebviewReady/);
+  assert.match(providerSrc, /msg\?\.type === "dashboardWebviewReady"/);
+  assert.match(providerSrc, /pushUpdate\(\{ projection: "overview", skipHeavyFetches: true \}\)/);
+});
+
 function taskEnginePanelHtml(html) {
   const taskEngineStart = html.indexOf('<div class="wc-tab-panel" data-wc-tab="task-engine"');
   const statusStart = html.indexOf('<div class="wc-tab-panel" data-wc-tab="status"', taskEngineStart);

@@ -25,6 +25,79 @@ export type DraftEventContext = {
   gitHeadSha?: string;
 };
 
+const TASK_UPDATED_VALUE_FIELDS = [
+  "title",
+  "type",
+  "status",
+  "priority",
+  "summary",
+  "description",
+  "risk",
+  "approach",
+  "dependsOn",
+  "unblocks",
+  "technicalScope",
+  "acceptanceCriteria",
+  "features",
+  "ownership",
+  "phase",
+  "phaseKey",
+  "metadata"
+] as const;
+
+const TASK_RICH_CREATE_UPDATED_VALUE_FIELDS = TASK_UPDATED_VALUE_FIELDS.filter(
+  (field) => field !== "title" && field !== "type" && field !== "status"
+);
+
+type TaskUpdatedValueField = (typeof TASK_UPDATED_VALUE_FIELDS)[number];
+type TaskUpdatedValues = NonNullable<TaskUpdatedPayloadV1["values"]>;
+
+function setTaskUpdatedValue(
+  values: TaskUpdatedValues,
+  task: TaskEntity,
+  field: TaskUpdatedValueField,
+  includeClears: boolean
+): void {
+  const value = task[field];
+  if (field === "phase" || field === "phaseKey") {
+    if (value !== undefined) {
+      values[field] = String(value);
+    } else if (includeClears) {
+      values[field] = null;
+    }
+    return;
+  }
+  if (value !== undefined) {
+    (values as Record<string, unknown>)[field] = value;
+  }
+}
+
+function taskUpdatedValuesFromFields(
+  task: TaskEntity,
+  fields: readonly TaskUpdatedValueField[],
+  options?: { includeClears?: boolean }
+): TaskUpdatedPayloadV1["values"] {
+  const values: TaskUpdatedPayloadV1["values"] = {};
+  for (const field of fields) {
+    setTaskUpdatedValue(values, task, field, options?.includeClears === true);
+  }
+  return Object.keys(values).length > 0 ? values : undefined;
+}
+
+export function taskUpdatedValuesForChangedFields(
+  task: TaskEntity,
+  changedFields: readonly string[]
+): TaskUpdatedPayloadV1["values"] {
+  const fields = TASK_UPDATED_VALUE_FIELDS.filter((field) => changedFields.includes(field));
+  return taskUpdatedValuesFromFields(task, fields, { includeClears: true });
+}
+
+export function taskUpdatedValuesForRichCreate(
+  task: TaskEntity
+): TaskUpdatedPayloadV1["values"] {
+  return taskUpdatedValuesFromFields(task, TASK_RICH_CREATE_UPDATED_VALUE_FIELDS);
+}
+
 function baseActor(ctx: DraftEventContext): TaskStateEventV1["actor"] {
   return { id: ctx.actorId?.trim() || "workspace-kit", source: "system" };
 }
@@ -107,6 +180,24 @@ export function draftCreatedEvent(
     type: task.type
   };
   return draftEnvelope("task.created", payload, ctx);
+}
+
+export function draftCreatedTaskEvents(
+  task: TaskEntity,
+  ctx: DraftEventContext
+): TaskStateEventV1[] {
+  const created = draftCreatedEvent(task, ctx);
+  const values = taskUpdatedValuesForRichCreate(task);
+  if (!values) {
+    return [created];
+  }
+  const changedFields = Object.keys(values);
+  const payload: TaskUpdatedPayloadV1 = {
+    taskId: task.id,
+    changedFields,
+    values
+  };
+  return [created, draftEnvelope("task.updated", payload, ctx, 1)];
 }
 
 export function draftUpdatedEvent(

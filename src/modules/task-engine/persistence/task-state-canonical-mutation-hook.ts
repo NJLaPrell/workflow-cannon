@@ -1,11 +1,14 @@
 import type { ModuleCommandResult, ModuleLifecycleContext } from "../../../contracts/module-contract.js";
 import type { TaskEntity } from "../types.js";
-import type { TaskUpdatedPayloadV1 } from "../task-state-events/event-payloads.js";
 import type { OpenedPlanningStores } from "./planning-open.js";
 import type { TaskStore } from "./store.js";
 import { isGitTaskStateCanonicalAuthority } from "./task-state-canonical-authority.js";
 import { commitCanonicalTaskStateEvents } from "./task-state-canonical-commit.js";
-import { draftCreatedEvent, draftUpdatedEvent } from "./task-state-event-draft.js";
+import {
+  draftCreatedTaskEvents,
+  draftUpdatedEvent,
+  taskUpdatedValuesForChangedFields
+} from "./task-state-event-draft.js";
 
 export async function finalizeCanonicalCreateTask(input: {
   ctx: ModuleLifecycleContext;
@@ -20,7 +23,7 @@ export async function finalizeCanonicalCreateTask(input: {
   if (!isGitTaskStateCanonicalAuthority(input.ctx)) {
     return null;
   }
-  const event = draftCreatedEvent(input.task, {
+  const events = draftCreatedTaskEvents(input.task, {
     commandName: input.commandName,
     moduleId: "task-engine",
     actorId: input.actor,
@@ -31,7 +34,7 @@ export async function finalizeCanonicalCreateTask(input: {
     ctx: input.ctx,
     store: input.store,
     planning: input.planning,
-    events: [event],
+    events,
     policyApproval: input.policyApproval
   });
 }
@@ -50,22 +53,7 @@ export async function finalizeCanonicalUpdateTask(input: {
   if (!isGitTaskStateCanonicalAuthority(input.ctx)) {
     return null;
   }
-  const values: TaskUpdatedPayloadV1["values"] = {
-    title: input.task.title,
-    type: input.task.type,
-    status: input.task.status,
-    priority: input.task.priority,
-    phase: input.task.phase,
-    phaseKey: input.task.phaseKey,
-    summary: input.task.summary,
-    metadata: input.task.metadata
-  };
-  if (input.changedFields.includes("phase") && input.task.phase === undefined) {
-    values.phase = null;
-  }
-  if (input.changedFields.includes("phaseKey") && input.task.phaseKey === undefined) {
-    values.phaseKey = null;
-  }
+  const values = taskUpdatedValuesForChangedFields(input.task, input.changedFields);
   const event = draftUpdatedEvent(
     input.task.id,
     input.changedFields,
