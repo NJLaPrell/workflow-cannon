@@ -14,6 +14,7 @@ import {
   updateIdea,
   parseIdeaStatus
 } from "./idea-store.js";
+import { persistPlanningChatSession } from "./planning-chat-session.js";
 
 function attachPlanningMeta(
   data: Record<string, unknown>,
@@ -182,12 +183,24 @@ export const ideasModule: WorkflowModule = {
           message: "update-idea previousPlanArtifacts must be an array of non-empty strings"
         };
       }
-      const idea = updateIdea(
-        db,
-        ideaId,
-        { title, note, status, linkedPlanArtifact, previousPlanArtifacts },
-        new Date().toISOString()
-      );
+      const nowIso = new Date().toISOString();
+      let idea = null as ReturnType<typeof updateIdea>;
+      db.transaction(() => {
+        idea = updateIdea(
+          db,
+          ideaId,
+          { title, note, status, linkedPlanArtifact, previousPlanArtifacts },
+          nowIso
+        );
+        const resumePrompt = cleanString(args.planningChatPrompt ?? args.resumePrompt);
+        if (idea && status === "planning") {
+          persistPlanningChatSession(
+            db,
+            { ideaId: idea.id, title: idea.title, note: idea.note, resumePrompt },
+            nowIso
+          );
+        }
+      })();
       if (!idea) {
         return { ok: false, code: "idea-not-found", message: `Idea ${ideaId} was not found` };
       }

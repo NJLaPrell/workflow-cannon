@@ -47,6 +47,13 @@ export type DashboardIdeaRow = {
   previousPlanArtifacts: string[];
   createdAt: string;
   updatedAt: string;
+  planningChatSession?: {
+    schemaVersion: 1;
+    ideaId: string;
+    status: "active";
+    updatedAt: string;
+    resumePrompt?: string;
+  };
 };
 
 export type DashboardIdeasSummary = {
