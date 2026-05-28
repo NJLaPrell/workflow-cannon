@@ -183,6 +183,10 @@
       "output": "docs/maintainers/runbooks/task-persistence-operator.md"
     },
     {
+      "source": ".ai/runbooks/task-state-git-operator.md",
+      "output": "docs/maintainers/runbooks/task-state-git-operator.md"
+    },
+    {
       "source": ".ai/runbooks/transcript-ingestion-operations.md",
       "output": "docs/maintainers/runbooks/transcript-ingestion-operations.md"
     },

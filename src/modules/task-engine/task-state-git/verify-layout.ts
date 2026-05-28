@@ -2,9 +2,14 @@ import fs from "node:fs";
 import path from "node:path";
 import { admitTaskStateEventStream } from "../task-state-events/event-admission.js";
 import type { TaskStateEventV1 } from "../task-state-events/event-payloads.js";
+import { validateTaskStateEvent } from "../task-state-events/validate-event.js";
 import { TASK_STATE_MANIFEST_RELATIVE, TASK_STATE_ROOT_DIR } from "./constants.js";
 import { digestTaskStateCanonicalJson } from "./integrity.js";
 import { resolveSnapshotContentRelativePath, resolveSnapshotMetaRelativePath } from "./layout.js";
+import {
+  projectionFromSnapshotContent,
+  type TaskStateSnapshotContentV1
+} from "./snapshot-projection.js";
 import type { TaskStateGitSnapshotMetaV1 } from "./types.js";
 import {
   computeManifestDigest,
@@ -81,15 +86,50 @@ function admissionCodeToFindingCode(code: string): TaskStateVerifyFindingCode {
   }
 }
 
-function verifyEventChain(events: TaskStateEventV1[], findings: TaskStateVerifyFinding[]): void {
+function verifyRawEventSchemas(rawEvents: unknown[], findings: TaskStateVerifyFinding[]): void {
+  for (const event of rawEvents) {
+    if (
+      event !== null &&
+      typeof event === "object" &&
+      !Array.isArray(event) &&
+      (event as { schemaVersion?: unknown }).schemaVersion !== 1
+    ) {
+      findings.push({
+        code: "event-unsupported-schema-version",
+        message: `schemaVersion ${String((event as { schemaVersion?: unknown }).schemaVersion)} is not supported (expected 1)`
+      });
+      continue;
+    }
+    const validated = validateTaskStateEvent(event);
+    if (!validated.ok) {
+      findings.push({
+        code: "event-schema-validation-failed",
+        message: "event failed JSON schema validation",
+        path: validated.errors.join("; ")
+      });
+    }
+  }
+}
+
+type EventChainBaseline = {
+  throughSequence: number;
+  throughEventId: string | null;
+};
+
+function verifyEventChain(
+  events: TaskStateEventV1[],
+  findings: TaskStateVerifyFinding[],
+  baseline?: EventChainBaseline
+): void {
   if (events.length === 0) {
     return;
   }
 
   const bySequence = [...events].sort((a, b) => a.sequence - b.sequence || a.eventId.localeCompare(b.eventId));
   const maxSequence = bySequence.at(-1)?.sequence ?? 0;
+  const firstExpectedSequence = baseline ? baseline.throughSequence + 1 : 0;
 
-  for (let expected = 0; expected <= maxSequence; expected++) {
+  for (let expected = firstExpectedSequence; expected <= maxSequence; expected++) {
     if (!bySequence.some((event) => event.sequence === expected)) {
       findings.push({
         code: "event-sequence-gap",
@@ -104,7 +144,20 @@ function verifyEventChain(events: TaskStateEventV1[], findings: TaskStateVerifyF
   }
 
   for (const event of bySequence) {
-    if (event.sequence === 0) {
+    if (baseline && event.sequence <= baseline.throughSequence) {
+      continue;
+    }
+    if (baseline && event.sequence === firstExpectedSequence) {
+      const allowedParentIds = new Set<string | null>([baseline.throughEventId, null]);
+      if (!allowedParentIds.has(event.parentEventId)) {
+        findings.push({
+          code: "event-parent-mismatch",
+          message: `Event ${event.eventId} (sequence ${event.sequence}) parentEventId ${String(event.parentEventId)} expected ${String(baseline.throughEventId)}`
+        });
+      }
+      continue;
+    }
+    if (!baseline && event.sequence === 0) {
       if (event.parentEventId !== null) {
         findings.push({
           code: "event-parent-mismatch",
@@ -128,7 +181,7 @@ function verifySnapshot(
   layoutRoot: string,
   snapshotId: string,
   findings: TaskStateVerifyFinding[]
-): void {
+): { meta: TaskStateGitSnapshotMetaV1; content: TaskStateSnapshotContentV1 } | null {
   const metaRel = resolveSnapshotMetaRelativePath(snapshotId);
   const metaAbs = path.join(layoutRoot, metaRel);
   const metaText = readUtf8(metaAbs);
@@ -138,7 +191,7 @@ function verifySnapshot(
       message: `Missing snapshot metadata at ${metaRel}`,
       path: metaRel
     });
-    return;
+    return null;
   }
   let metaParsed: unknown;
   try {
@@ -149,7 +202,7 @@ function verifySnapshot(
       message: `Snapshot metadata is not valid JSON at ${metaRel}`,
       path: metaRel
     });
-    return;
+    return null;
   }
   const metaValidated = validateTaskStateGitSnapshotMeta(metaParsed);
   if (!metaValidated.ok) {
@@ -158,7 +211,7 @@ function verifySnapshot(
       message: metaValidated.errors.join("; "),
       path: metaRel
     });
-    return;
+    return null;
   }
   const meta = metaValidated.data as TaskStateGitSnapshotMetaV1;
   const contentRel = meta.contentPath.startsWith(`${TASK_STATE_ROOT_DIR}/`)
@@ -172,7 +225,7 @@ function verifySnapshot(
       message: `Missing snapshot content at ${contentRel}`,
       path: contentRel
     });
-    return;
+    return null;
   }
   let contentParsed: unknown;
   try {
@@ -183,7 +236,7 @@ function verifySnapshot(
       message: `Snapshot content is not valid JSON at ${contentRel}`,
       path: contentRel
     });
-    return;
+    return null;
   }
   const digest = digestTaskStateCanonicalJson(contentParsed);
   if (digest !== meta.contentDigest) {
@@ -193,6 +246,7 @@ function verifySnapshot(
       path: contentRel
     });
   }
+  return { meta, content: contentParsed as TaskStateSnapshotContentV1 };
 }
 
 /** Verify on-disk layout under `<workspace>/task-state/` (or explicit layout root). */
@@ -277,8 +331,26 @@ export function verifyTaskStateLayoutOnDisk(layoutRoot: string): TaskStateVerify
     rawEvents.push(...lines.values);
   }
 
+  const snapshotId = manifest.head.latestSnapshotId;
+  const snapshot = snapshotId ? verifySnapshot(layoutRoot, snapshotId, findings) : null;
+  verifyRawEventSchemas(rawEvents, findings);
+  const admissionEvents = snapshot
+    ? rawEvents.filter((event) => {
+        return (
+          event !== null &&
+          typeof event === "object" &&
+          !Array.isArray(event) &&
+          typeof (event as { sequence?: unknown }).sequence === "number" &&
+          (event as { sequence: number }).sequence > snapshot.meta.throughSequence
+        );
+      })
+    : rawEvents;
+
   let parsedEvents: TaskStateEventV1[] = [];
-  const admitted = admitTaskStateEventStream(rawEvents);
+  const admitted = admitTaskStateEventStream(
+    admissionEvents,
+    snapshot ? { initialProjection: projectionFromSnapshotContent(snapshot.content) } : undefined
+  );
   if (!admitted.ok) {
     findings.push({
       code: admissionCodeToFindingCode(admitted.error.code),
@@ -287,21 +359,34 @@ export function verifyTaskStateLayoutOnDisk(layoutRoot: string): TaskStateVerify
     });
   } else {
     parsedEvents = admitted.events;
-    verifyEventChain(parsedEvents, findings);
+    verifyEventChain(
+      parsedEvents,
+      findings,
+      snapshot
+        ? {
+            throughSequence: snapshot.meta.throughSequence,
+            throughEventId: snapshot.meta.throughEventId
+          }
+        : undefined
+    );
   }
 
-  const maxSequence =
-    parsedEvents.length > 0 ? Math.max(...parsedEvents.map((event) => event.sequence)) : 0;
+  const rawEventSequences = rawEvents
+    .map((event) =>
+      event !== null &&
+      typeof event === "object" &&
+      !Array.isArray(event) &&
+      typeof (event as { sequence?: unknown }).sequence === "number"
+        ? (event as { sequence: number }).sequence
+        : null
+    )
+    .filter((sequence): sequence is number => sequence !== null);
+  const maxSequence = Math.max(snapshot?.meta.throughSequence ?? 0, ...rawEventSequences, 0);
   if (manifest.head.latestSequence !== maxSequence) {
     findings.push({
       code: "event-head-sequence-mismatch",
       message: `Manifest head.latestSequence ${manifest.head.latestSequence} does not match event tail ${maxSequence}`
     });
-  }
-
-  const snapshotId = manifest.head.latestSnapshotId;
-  if (snapshotId) {
-    verifySnapshot(layoutRoot, snapshotId, findings);
   }
 
   return finalize(findings);
