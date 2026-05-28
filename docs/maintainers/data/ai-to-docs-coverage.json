@@ -23,6 +23,10 @@
       "output": "docs/maintainers/playbooks/phase-closeout-and-release.md"
     },
     {
+      "source": ".ai/playbooks/planner-chat.md",
+      "output": "docs/maintainers/playbooks/planner-chat.md"
+    },
+    {
       "source": ".ai/playbooks/skill-attachments.md",
       "output": "docs/maintainers/playbooks/skill-attachments.md"
     },

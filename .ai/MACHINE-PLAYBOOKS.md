@@ -66,6 +66,12 @@ Full checklist: **`.ai/playbooks/wishlist-intake-to-execution.md`**.
 
 Cursor slash: **`/generate-features`** → **`.cursor/commands/generate-features.md`**.
 
+## Planner chat (Ideas → PlanArtifact)
+
+Use **`planner-chat`** when an Ideas row should become a draft/reviewed/accepted PlanArtifact and, optionally, executable phase tasks. Preserve Ideas provenance (`sourceIdeaId`, `previousPlanArtifacts`), ask one planning decision at a time, keep CLI details out of normal user-facing chat, and leave the session resumable on rejection or partial progress.
+
+Full checklist: **`.ai/playbooks/planner-chat.md`**.
+
 Agents attach the **`.ai/playbooks/...`** path; rendered copies under **`docs/maintainers/playbooks/`** are for humans after **`pnpm run generate-maintainer-docs-from-ai`** (see playbook **Agent paths vs maintainer-rendered mirrors**).
 
 Optional Cursor rule: `.cursor/rules/playbook-wishlist-intake-to-execution.mdc`.
