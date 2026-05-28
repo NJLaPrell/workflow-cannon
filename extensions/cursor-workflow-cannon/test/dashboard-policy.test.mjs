@@ -36,6 +36,13 @@ test("resolveDashboardPolicyTierRow returns routine PlanArtifact finalize", () =
   assert.equal(row.command, "finalize-plan-to-phase");
 });
 
+test("resolveDashboardPolicyTierRow returns routine Ideas create", () => {
+  const row = tierMod.resolveDashboardPolicyTierRow("ideas", "create");
+  assert.ok(row);
+  assert.equal(row.tier, "routine");
+  assert.equal(row.command, "create-idea");
+});
+
 test("buildDashboardPolicyApproval auto rationale for routine path", () => {
   const out = approvalMod.buildDashboardPolicyApproval({
     channel: "dashboard",
@@ -50,6 +57,19 @@ test("buildDashboardPolicyApproval auto rationale for routine path", () => {
   assert.match(out.rationale, /workflow=review-approval-item/);
   assert.match(out.rationale, /tier=routine/);
   assert.match(out.rationale, /taskId=T100391/);
+});
+
+test("buildDashboardPolicyApproval auto rationale for Ideas create", () => {
+  const out = approvalMod.buildDashboardPolicyApproval({
+    channel: "dashboard",
+    workflowId: "ideas",
+    action: "create",
+    command: "create-idea"
+  });
+  assert.equal(out.confirmed, true);
+  assert.match(out.rationale, /workflow=ideas/);
+  assert.match(out.rationale, /command=create-idea/);
+  assert.match(out.rationale, /tier=routine/);
 });
 
 test("elevated path requires humanRationale", () => {

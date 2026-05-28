@@ -662,6 +662,11 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       if (msg?.type === "addWishlistItem") {
         await this.openAddWishlistDrawer();
       }
+      if (msg?.type === "createIdea") {
+        const title = typeof msg.title === "string" ? msg.title.trim() : "";
+        const note = typeof msg.note === "string" ? msg.note.trim() : "";
+        await this.onCreateIdeaFromDashboard(title, note);
+      }
       if (msg?.type === "prefillImprovementTriageChat") {
         const raw = msg?.taskId;
         const taskId = typeof raw === "string" ? raw.trim() : "";
@@ -2217,6 +2222,37 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     const html = renderDrawerFormHtml(buildAddWishlistDrawerSpec());
     this.dashboardDrawerSession = { kind: "add-wishlist" };
     await this.postWcDrawerOpen(html);
+  }
+
+  private async onCreateIdeaFromDashboard(title: string, note: string): Promise<void> {
+    if (title.length === 0) {
+      await this.view?.webview.postMessage({
+        type: "wcIdeaCreateResult",
+        ok: false,
+        message: "Title required."
+      });
+      return;
+    }
+    const args: Record<string, unknown> = {
+      title,
+      policyApproval: dashboardPolicyApproval(
+        { workflowId: "ideas", action: "create", command: "create-idea" },
+        {}
+      )
+    };
+    if (note.length > 0) {
+      args.note = note;
+    }
+    const out = await this.client.run("create-idea", args);
+    if (!out.ok) {
+      const message = (out.message ?? String(out.code ?? "create-idea failed")).slice(0, 900);
+      await this.view?.webview.postMessage({ type: "wcIdeaCreateResult", ok: false, message });
+      return;
+    }
+    ingestPlanningMetaFromData(out.data as Record<string, unknown> | undefined);
+    await this.view?.webview.postMessage({ type: "wcIdeaCreateResult", ok: true });
+    this.notifyKitStateChanged();
+    await this.applyDashboardMutationInvalidation("ideas");
   }
 
   private async onTaskCommentsComingSoon(taskId: string, mode: "view" | "add"): Promise<void> {
@@ -3920,6 +3956,54 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       line-height: 1.2;
       white-space: nowrap;
       overflow: hidden;
+    }
+    .wc-ideas-list {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin: 6px 0 8px;
+    }
+    .wc-ideas-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 6px;
+      padding: 4px 6px;
+      border-radius: 4px;
+      background: var(--vscode-textCodeBlock-background);
+      border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.35));
+    }
+    .wc-ideas-row-main {
+      flex: 1;
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+    .wc-ideas-row-main p {
+      margin-top: 2px;
+    }
+    .wc-ideas-drag-handle {
+      flex: 0 0 auto;
+      color: var(--vscode-descriptionForeground, var(--vscode-foreground));
+      font-family: var(--vscode-editor-font-family);
+      font-size: 11px;
+      line-height: 1.4;
+      opacity: 0.65;
+      padding-top: 2px;
+    }
+    .wc-ideas-create-form {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-top: 8px;
+    }
+    .wc-ideas-create-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .wc-ideas-create-status[data-wc-error="1"] {
+      color: var(--vscode-errorForeground, #f44747);
+      opacity: 1;
     }
     .dash-task-row-body {
       display: flex;

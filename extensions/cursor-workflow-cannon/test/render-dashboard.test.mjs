@@ -162,6 +162,32 @@ test("renderDashboardRootInnerHtml places ideas second in the overview stack", (
   assert.ok(queueIdx > ideasIdx, "queue section should remain after overview tab stack");
   assert.match(html, /Draft a better dashboard/);
   assert.match(html, /Open 1 · Planning 0 · Planned 0 · Total 1/);
+  assert.match(html, /data-wc-ideas-create-form="1"/);
+  assert.match(html, /data-wc-action="idea-create"/);
+  assert.match(html, /data-wc-idea-title="1"/);
+  assert.match(html, /data-wc-idea-note="1"/);
+  assert.match(html, /wc-ideas-drag-handle/);
+});
+
+test("renderDashboardRootInnerHtml truncates long idea notes", () => {
+  const longNote = "A".repeat(220);
+  const html = renderDashboardRootInnerHtml({
+    ok: true,
+    data: {
+      stateSummary: {},
+      workspaceStatus: {},
+      ideas: {
+        available: true,
+        totalCount: 1,
+        openCount: 1,
+        planningCount: 0,
+        plannedCount: 0,
+        top: [{ id: "I2", title: "Capture note", note: longNote, status: "open" }]
+      }
+    }
+  });
+  assert.match(html, /A{157}\.{3}/);
+  assert.doesNotMatch(html, new RegExp(`A{${longNote.length}}`));
 });
 
 test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () => {

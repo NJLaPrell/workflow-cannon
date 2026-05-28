@@ -1894,16 +1894,20 @@ function renderDashboardIdeasSectionInnerHtml(rawIdeas: unknown): string {
       const title = String(row.title ?? id).trim();
       const note = typeof row.note === "string" ? row.note.trim() : "";
       const status = String(row.status ?? "open").trim();
+      const displayNote = note.length > 160 ? note.slice(0, 157).trimEnd() + "..." : note;
       if (!title) {
         return "";
       }
       return (
-        '<div class="wc-ideas-row">' +
+        '<div class="wc-ideas-row" data-wc-idea-id="' +
+        escapeHtmlAttr(id) +
+        '">' +
+        '<span class="wc-ideas-drag-handle" aria-hidden="true">::</span>' +
         '<div class="wc-ideas-row-main"><b>' +
         escapeHtml(title) +
         "</b>" +
         (id ? " <code>" + escapeHtml(id) + "</code>" : "") +
-        (note ? '<p class="muted">' + escapeHtml(note) + "</p>" : "") +
+        (displayNote ? '<p class="muted">' + escapeHtml(displayNote) + "</p>" : "") +
         "</div>" +
         '<span class="wc-tag">' +
         escapeHtml(status) +
@@ -1918,6 +1922,17 @@ function renderDashboardIdeasSectionInnerHtml(rawIdeas: unknown): string {
     : rows.length === 0
       ? '<p class="muted">No ideas yet.</p>'
       : '<div class="wc-ideas-list">' + rows + "</div>";
+  const form = available
+    ? '<form class="wc-ideas-create-form" data-wc-ideas-create-form="1">' +
+      '<label class="wc-field-label" for="wc-idea-title">New idea</label>' +
+      '<input id="wc-idea-title" class="wc-input" data-wc-idea-title="1" type="text" required maxlength="180" placeholder="Title" autocomplete="off" />' +
+      '<textarea class="wc-textarea" data-wc-idea-note="1" rows="2" maxlength="1200" placeholder="Optional note"></textarea>' +
+      '<div class="wc-ideas-create-actions">' +
+      '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="idea-create">Add idea</button>' +
+      '<span class="muted wc-ideas-create-status" data-wc-ideas-create-status="1" role="status" aria-live="polite"></span>' +
+      "</div>" +
+      "</form>"
+    : "";
   return (
     '<section class="dash-card wc-ideas-section" aria-label="Ideas">' +
     "<p><b>Ideas</b> · Open " +
@@ -1930,6 +1945,7 @@ function renderDashboardIdeasSectionInnerHtml(rawIdeas: unknown): string {
     escapeHtml(String(totalCount)) +
     "</p>" +
     body +
+    form +
     "</section>"
   );
 }
