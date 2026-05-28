@@ -10,6 +10,7 @@ export type ModuleCapability =
   | "skills"
   | "plugins"
   | "subagents"
+  | "ideas"
   | "team-execution"
   | "checkpoints"
   | "project-memory";

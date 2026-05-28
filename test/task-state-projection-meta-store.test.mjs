@@ -5,20 +5,20 @@ import path from "node:path";
 import { mkdtemp } from "node:fs/promises";
 import Database from "better-sqlite3";
 
-import { prepareKitSqliteDatabase } from "../dist/core/state/workspace-kit-sqlite.js";
+import { KIT_SQLITE_USER_VERSION, prepareKitSqliteDatabase } from "../dist/core/state/workspace-kit-sqlite.js";
 import {
   readTaskStateProjectionMeta,
   taskStateProjectionMetaTableAvailable,
   upsertTaskStateProjectionMeta
 } from "../dist/modules/task-engine/persistence/task-state-projection-meta-store.js";
 
-test("migration v28 creates projection metadata singleton with required fields", async () => {
+test("migration creates projection metadata singleton with required fields", async () => {
   const workspace = await mkdtemp(path.join(os.tmpdir(), "wk-proj-meta-"));
   const dbPath = path.join(workspace, "kit.db");
   const db = new Database(dbPath);
   try {
     prepareKitSqliteDatabase(db);
-    assert.equal(db.pragma("user_version", { simple: true }), 28);
+    assert.equal(db.pragma("user_version", { simple: true }), KIT_SQLITE_USER_VERSION);
     assert.equal(taskStateProjectionMetaTableAvailable(db), true);
     const meta = readTaskStateProjectionMeta(db);
     assert.ok(meta);

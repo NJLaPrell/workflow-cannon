@@ -10,7 +10,7 @@ type SqliteDatabase = InstanceType<typeof Database>;
  */
 
 /** Bump and add a migration step in `migrateKitSqliteSchema` when DDL changes. Exposed for doctor / list-module-states. */
-export const KIT_SQLITE_USER_VERSION = 28;
+export const KIT_SQLITE_USER_VERSION = 29;
 
 export const TASK_ENGINE_TASKS_TABLE = "task_engine_tasks";
 export const TASK_ENGINE_DEPENDENCIES_TABLE = "task_engine_dependencies";
@@ -1116,6 +1116,29 @@ CREATE INDEX idx_kit_run_log_command ON kit_run_log(command);
 `);
 }
 
+/** Ideas capture table for planner-chat workflows (Phase 116 / T100528). */
+function migrateV28ToV29(db: SqliteDatabase): void {
+  if (tableExists(db, "workflow_ideas")) {
+    return;
+  }
+  db.exec(`
+CREATE TABLE workflow_ideas (
+  id TEXT PRIMARY KEY NOT NULL,
+  title TEXT NOT NULL,
+  note TEXT,
+  status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'planning', 'planned')),
+  sort_order INTEGER NOT NULL,
+  linked_plan_artifact TEXT,
+  previous_plan_artifacts_json TEXT NOT NULL DEFAULT '[]',
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE INDEX idx_workflow_ideas_status ON workflow_ideas(status);
+CREATE INDEX idx_workflow_ideas_sort_order ON workflow_ideas(sort_order);
+CREATE INDEX idx_workflow_ideas_linked_plan_artifact ON workflow_ideas(linked_plan_artifact);
+`);
+}
+
 /**
  * Shared SQLite setup for workspace-kit.db: pragmas, centralized user_version migrations.
  * Call after `new Database(path)` for every open (read/write).
@@ -1272,6 +1295,11 @@ function migrateKitSqliteSchema(db: SqliteDatabase): void {
     migrateV27ToV28(db);
     db.pragma("user_version = 28");
     current = 28;
+  }
+  if (current < 29) {
+    migrateV28ToV29(db);
+    db.pragma("user_version = 29");
+    current = 29;
   }
 }
 
