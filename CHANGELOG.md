@@ -8,6 +8,10 @@ This root file is intentionally pointer-only to avoid split release history.
 
 - See `docs/maintainers/CHANGELOG.md` for all release notes, migration notes, and historical entries.
 
+## [0.99.15] - 2026-05-28
+
+- **Phase 116 - Planner-chat provenance closeout:** PlanArtifact idea provenance fields, planner-chat playbook/prompt seed, and CAE playbook registry coverage for Ideas-to-plan workflows.
+
 ## [0.99.14] - 2026-05-28
 
 - **Phase 116 - Dashboard Complete & Release:** Ideas planner-chat resume, PlanArtifact dashboard Review/Accept/Finalize host wiring, and dashboard E2E coverage for happy path plus rejection/resume states.
@@ -33,4 +37,4 @@ This root file is intentionally pointer-only to avoid split release history.
 - Patch release for task-store recovery and phase snapshot alignment after the phase 108/113 dashboard closeout sequence.
 - Captures phase 114/115 task-state event-log planning tasks in the task engine so maintainers can pick up the migration work from a fresh dashboard.
 
-Latest release: **v0.99.14** (Phase 116 Dashboard Complete & Release; see canonical changelog).
+Latest release: **v0.99.15** (Phase 116 Planner-chat provenance closeout; see canonical changelog).
