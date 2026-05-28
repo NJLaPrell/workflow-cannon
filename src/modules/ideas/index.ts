@@ -6,8 +6,12 @@ import { TaskEngineError } from "../task-engine/transitions.js";
 import {
   assertIdeasKitSchema,
   createIdea,
+  deleteIdea,
   getIdea,
   isIdeaId,
+  listIdeas,
+  reorderIdeas,
+  updateIdea,
   parseIdeaStatus
 } from "./idea-store.js";
 
@@ -34,6 +38,13 @@ function cleanStringArray(raw: unknown): string[] | undefined {
     return undefined;
   }
   return raw.map((value) => value.trim());
+}
+
+function cleanNullableString(raw: unknown): string | null | undefined {
+  if (raw === null) {
+    return null;
+  }
+  return cleanString(raw);
 }
 
 export const ideasModule: WorkflowModule = {
@@ -124,6 +135,97 @@ export const ideasModule: WorkflowModule = {
       const data: Record<string, unknown> = { responseSchemaVersion: 1, idea };
       attachPlanningMeta(data, ctx, planningGeneration);
       return { ok: true, code: "idea-retrieved", message: `Idea ${idea.id}`, data };
+    }
+
+    if (command.name === "list-ideas") {
+      const status = args.status === undefined ? undefined : parseIdeaStatus(args.status);
+      if (args.status !== undefined && !status) {
+        return { ok: false, code: "invalid-args", message: "list-ideas status must be one of open | planning | planned" };
+      }
+      const ideas = listIdeas(db, status);
+      const data: Record<string, unknown> = { responseSchemaVersion: 1, ideas, count: ideas.length };
+      attachPlanningMeta(data, ctx, planningGeneration);
+      return { ok: true, code: "ideas-listed", message: `${ideas.length} idea(s)`, data };
+    }
+
+    if (command.name === "update-idea") {
+      const ideaId = cleanString(args.ideaId ?? args.id);
+      if (!ideaId || !isIdeaId(ideaId)) {
+        return { ok: false, code: "invalid-args", message: "update-idea requires ideaId shaped like I001" };
+      }
+      const title = args.title === undefined ? undefined : cleanString(args.title);
+      if (args.title !== undefined && !title) {
+        return { ok: false, code: "invalid-args", message: "update-idea title must be a non-empty string" };
+      }
+      const note = args.note === undefined ? undefined : cleanNullableString(args.note);
+      if (args.note !== undefined && note === undefined) {
+        return { ok: false, code: "invalid-args", message: "update-idea note must be a non-empty string or null" };
+      }
+      const status = args.status === undefined ? undefined : parseIdeaStatus(args.status);
+      if (args.status !== undefined && !status) {
+        return { ok: false, code: "invalid-args", message: "update-idea status must be one of open | planning | planned" };
+      }
+      const linkedPlanArtifact =
+        args.linkedPlanArtifact === undefined ? undefined : cleanNullableString(args.linkedPlanArtifact);
+      if (args.linkedPlanArtifact !== undefined && linkedPlanArtifact === undefined) {
+        return {
+          ok: false,
+          code: "invalid-args",
+          message: "update-idea linkedPlanArtifact must be a non-empty string or null"
+        };
+      }
+      const previousPlanArtifacts = cleanStringArray(args.previousPlanArtifacts);
+      if (args.previousPlanArtifacts !== undefined && !previousPlanArtifacts) {
+        return {
+          ok: false,
+          code: "invalid-args",
+          message: "update-idea previousPlanArtifacts must be an array of non-empty strings"
+        };
+      }
+      const idea = updateIdea(
+        db,
+        ideaId,
+        { title, note, status, linkedPlanArtifact, previousPlanArtifacts },
+        new Date().toISOString()
+      );
+      if (!idea) {
+        return { ok: false, code: "idea-not-found", message: `Idea ${ideaId} was not found` };
+      }
+      const data: Record<string, unknown> = { responseSchemaVersion: 1, idea };
+      attachPlanningMeta(data, ctx, planningGeneration);
+      return { ok: true, code: "idea-updated", message: `Idea ${idea.id} updated`, data };
+    }
+
+    if (command.name === "delete-idea") {
+      const ideaId = cleanString(args.ideaId ?? args.id);
+      if (!ideaId || !isIdeaId(ideaId)) {
+        return { ok: false, code: "invalid-args", message: "delete-idea requires ideaId shaped like I001" };
+      }
+      const idea = deleteIdea(db, ideaId);
+      if (!idea) {
+        return { ok: false, code: "idea-not-found", message: `Idea ${ideaId} was not found` };
+      }
+      const data: Record<string, unknown> = { responseSchemaVersion: 1, idea, deleted: true };
+      attachPlanningMeta(data, ctx, planningGeneration);
+      return { ok: true, code: "idea-deleted", message: `Idea ${idea.id} deleted`, data };
+    }
+
+    if (command.name === "reorder-ideas") {
+      const ideaIds = cleanStringArray(args.ideaIds ?? args.ids);
+      if (!ideaIds || ideaIds.length === 0 || ideaIds.some((id) => !isIdeaId(id))) {
+        return { ok: false, code: "invalid-args", message: "reorder-ideas requires ideaIds shaped like I001" };
+      }
+      const ideas = reorderIdeas(db, ideaIds, new Date().toISOString());
+      if (!ideas) {
+        return {
+          ok: false,
+          code: "invalid-args",
+          message: "reorder-ideas ideaIds must contain each existing idea exactly once"
+        };
+      }
+      const data: Record<string, unknown> = { responseSchemaVersion: 1, ideas, count: ideas.length };
+      attachPlanningMeta(data, ctx, planningGeneration);
+      return { ok: true, code: "ideas-reordered", message: `${ideas.length} idea(s) reordered`, data };
     }
 
     return { ok: false, code: "unknown-command", message: `ideas does not implement ${command.name}` };
