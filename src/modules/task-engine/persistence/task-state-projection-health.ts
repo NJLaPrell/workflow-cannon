@@ -41,6 +41,22 @@ function maxSequence(events: TaskStateEventV1[]): number {
   return max;
 }
 
+function maxRawSequence(events: unknown[]): number {
+  let max = 0;
+  for (const event of events) {
+    if (
+      event !== null &&
+      typeof event === "object" &&
+      !Array.isArray(event) &&
+      typeof (event as { sequence?: unknown }).sequence === "number" &&
+      (event as { sequence: number }).sequence > max
+    ) {
+      max = (event as { sequence: number }).sequence;
+    }
+  }
+  return max;
+}
+
 export function evaluateTaskStateProjectionHealth(
   workspacePath: string,
   db: Database.Database,
@@ -63,8 +79,21 @@ export function evaluateTaskStateProjectionHealth(
   const appliedSequence = meta?.appliedSequence ?? 0;
   const syncStatus = meta?.syncStatus ?? null;
   const raw = readTaskStateEventLogJsonl(workspacePath, eventLogRelativePath);
+  const rawMaxSequence = maxRawSequence(raw);
   const admitted = admitTaskStateEventStream(raw);
   if (!admitted.ok) {
+    if (syncStatus === "fresh" && appliedSequence >= rawMaxSequence && rawMaxSequence > 0) {
+      return {
+        schemaVersion: 1,
+        code: "projection-fresh",
+        message: `Projection metadata is fresh through sequence ${appliedSequence}; local JSONL requires snapshot seed for standalone replay`,
+        appliedSequence,
+        logMaxSequence: rawMaxSequence,
+        logEventCount: raw.length,
+        syncStatus,
+        recommendedCommand: null
+      };
+    }
     return {
       schemaVersion: 1,
       code: "event-log-admission-failed",

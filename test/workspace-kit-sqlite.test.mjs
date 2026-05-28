@@ -38,6 +38,22 @@ test("prepareKitSqliteDatabase applies user_version and baseline tables", async 
     assert.ok(names.includes("phase_note_task_suggestions"));
     assert.ok(names.includes("kit_agent_activity_leases"));
     assert.ok(names.includes("kit_task_state_projection_meta"));
+    assert.ok(names.includes("workflow_ideas"));
+    const ideaColumns = db
+      .prepare("PRAGMA table_info(workflow_ideas)")
+      .all()
+      .map((r) => r.name);
+    assert.deepEqual(ideaColumns, [
+      "id",
+      "title",
+      "note",
+      "status",
+      "sort_order",
+      "linked_plan_artifact",
+      "previous_plan_artifacts_json",
+      "created_at",
+      "updated_at"
+    ]);
     const qc = db.prepare("PRAGMA quick_check").all();
     assert.equal(qc.length, 1);
     const cell = Object.values(qc[0])[0];

@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workflow-cannon.dev/schemas/idea.schema.json",
+  "title": "Workflow Idea",
+  "description": "Lightweight idea record captured before planner-chat turns it into a plan artifact or task batch.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "title", "status", "sortOrder", "createdAt", "updatedAt"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^I[0-9]+$"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "note": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["open", "planning", "planned"]
+    },
+    "sortOrder": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "linkedPlanArtifact": {
+      "type": "string",
+      "minLength": 1
+    },
+    "previousPlanArtifacts": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updatedAt": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

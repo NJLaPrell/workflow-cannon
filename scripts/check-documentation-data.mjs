@@ -45,9 +45,12 @@ if (!tr.ok) {
 const docTaxonomyJsonOnly =
   process.env.WORKSPACE_KIT_DOC_TAXONOMY_JSON_ONLY === "1" ||
   process.env.WORKSPACE_KIT_DOC_TAXONOMY_JSON_ONLY === "true";
+const docTaxonomySqlite =
+  process.env.WORKSPACE_KIT_DOC_TAXONOMY_SQLITE === "1" ||
+  process.env.WORKSPACE_KIT_DOC_TAXONOMY_SQLITE === "true";
 const planningDbAbs = path.join(root, ".workspace-kit/tasks/workspace-kit.db");
 const roadmapRenderOpts =
-  !docTaxonomyJsonOnly && existsSync(planningDbAbs)
+  !docTaxonomyJsonOnly && docTaxonomySqlite && existsSync(planningDbAbs)
     ? { planningDatabaseAbsolutePath: planningDbAbs }
     : undefined;
 

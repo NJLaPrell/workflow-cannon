@@ -9,10 +9,11 @@
  */
 
 import { spawnSync } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, mkdirSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import Database from "better-sqlite3";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const cli = path.join(root, "dist", "cli.js");
@@ -23,15 +24,21 @@ function distUrl(rel) {
 
 async function ensureSqliteRegistrySeededFromJson(workspaceRoot) {
   const effective = {};
-  const { openKitSqliteReadWrite, caeRegistryTablesReady, getActiveCaeRegistryVersionId } = await import(
+  const { planningSqliteDatabaseRelativePath } = await import(distUrl("dist/modules/task-engine/planning-config.js"));
+  const { prepareKitSqliteDatabase } = await import(distUrl("dist/core/state/kit-sqlite/planning-sqlite-kernel.js"));
+  const { caeRegistryTablesReady, getActiveCaeRegistryVersionId } = await import(
     distUrl("dist/core/cae/cae-kit-sqlite.js")
   );
   const { loadCaeRegistry } = await import(distUrl("dist/core/cae/cae-registry-load.js"));
   const { replaceActiveCaeRegistryFromLoaded } = await import(distUrl("dist/core/cae/cae-registry-sqlite.js"));
 
-  const db = openKitSqliteReadWrite(workspaceRoot, effective);
-  if (!db) return;
+  const dbRelativePath = planningSqliteDatabaseRelativePath({ workspacePath: workspaceRoot, effectiveConfig: effective });
+  const dbPath = path.join(workspaceRoot, dbRelativePath);
+  mkdirSync(path.dirname(dbPath), { recursive: true });
+
+  const db = new Database(dbPath);
   try {
+    prepareKitSqliteDatabase(db);
     if (!caeRegistryTablesReady(db)) return;
     if (getActiveCaeRegistryVersionId(db)) return;
     const seed = loadCaeRegistry(workspaceRoot);

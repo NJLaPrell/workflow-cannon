@@ -8,6 +8,21 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [0.99.13] - 2026-05-27
+
+Patch - **Phase 116 Ideas module foundation** (SQLite-backed idea records and task-state closeout repair).
+
+### Added
+
+- `ideas` module registration and capability surface for the default Workflow Cannon module bundle.
+- Kit SQLite migration v29 with the `workflow_ideas` table for DB-backed idea capture (`I###` ids, title/note/status ordering, plan artifact links, and provenance history JSON).
+- `schemas/idea.schema.json` plus schema and SQLite migration tests for the Ideas scaffold.
+
+### Fixed
+
+- Repaired Phase 116/117 task phase assignments after the planner-created batch lost row-level phase placement, allowing Phase 116 closeout readiness to reflect the real queue state.
+- Snapshot-backed task-state verification and release-gate stability fixes carried forward from the Phase 116 closeout path.
+
 ## [0.99.12] - 2026-05-27
 
 Patch - **Phase 110 planner closeout** (PlanArtifact lifecycle, dashboard actions, release gates).
