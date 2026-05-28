@@ -31,6 +31,7 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
   var pendingReplaceRootHtml = null;
   var hostSnapshot = null;
   var pendingSectionPatches = {};
+  var draggedIdeaRow = null;
 
   /** Locks that defer wcReplaceRoot (editing deliverables, drawer, phase filter open, etc.). */
   function isLocalUiLocked() {
@@ -255,6 +256,30 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
       toast.appendChild(btn);
     }
     toast.hidden = false;
+  }
+
+  function ideaListFor(row) {
+    return row && row.closest ? row.closest('[data-wc-ideas-list]') : null;
+  }
+
+  function ideaRowAfterPointer(list, y) {
+    if (!list) return null;
+    var rows = Array.prototype.slice.call(list.querySelectorAll('[data-wc-idea-id]:not(.wc-ideas-row-dragging)'));
+    for (var i = 0; i < rows.length; i++) {
+      var box = rows[i].getBoundingClientRect();
+      if (y < box.top + box.height / 2) return rows[i];
+    }
+    return null;
+  }
+
+  function submitIdeaReorder(list) {
+    if (!list) return;
+    var ids = Array.prototype.slice.call(list.querySelectorAll('[data-wc-idea-id]'))
+      .map(function(row) { return (row.getAttribute('data-wc-idea-id') || '').trim(); })
+      .filter(function(id) { return id.length > 0; });
+    if (ids.length < 2) return;
+    showIdeasToast('Saving order...', false);
+    vscode.postMessage({ type: 'reorderIdeas', ideaIds: ids });
   }
 
   function capturePhaseDeliverablesEditState(root) {
@@ -927,6 +952,7 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
       }
       if (op === 'delete') showIdeasToast('Idea deleted.', true);
       else if (op === 'undo-delete') showIdeasToast('Idea restored.', false);
+      else if (op === 'reorder') showIdeasToast('Ideas reordered.', false);
       return;
     }
     if (m && m.type === 'wcPhaseDeliverablesSaved') {
@@ -1378,6 +1404,40 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
       togglePhaseDeliverablesEdit(row, false);
       setUiInteraction('phase-deliverables', false);
     }
+  });
+  if (rootEl) rootEl.addEventListener('dragstart', function(ev) {
+    var target = ev.target;
+    if (target && target.closest && target.closest('button, input, textarea')) return;
+    var row = ideaRowFor(target);
+    if (!row) return;
+    draggedIdeaRow = row;
+    row.classList.add('wc-ideas-row-dragging');
+    if (ev.dataTransfer) {
+      ev.dataTransfer.effectAllowed = 'move';
+      ev.dataTransfer.setData('text/plain', row.getAttribute('data-wc-idea-id') || '');
+    }
+  });
+  if (rootEl) rootEl.addEventListener('dragover', function(ev) {
+    if (!draggedIdeaRow) return;
+    var overRow = ideaRowFor(ev.target);
+    var list = ideaListFor(overRow || draggedIdeaRow);
+    if (!list) return;
+    ev.preventDefault();
+    var after = ideaRowAfterPointer(list, ev.clientY || 0);
+    if (!after) list.appendChild(draggedIdeaRow);
+    else if (after !== draggedIdeaRow) list.insertBefore(draggedIdeaRow, after);
+  });
+  if (rootEl) rootEl.addEventListener('drop', function(ev) {
+    if (!draggedIdeaRow) return;
+    ev.preventDefault();
+    var list = ideaListFor(draggedIdeaRow);
+    draggedIdeaRow.classList.remove('wc-ideas-row-dragging');
+    draggedIdeaRow = null;
+    submitIdeaReorder(list);
+  });
+  if (rootEl) rootEl.addEventListener('dragend', function() {
+    if (draggedIdeaRow) draggedIdeaRow.classList.remove('wc-ideas-row-dragging');
+    draggedIdeaRow = null;
   });
   if (rootEl) rootEl.addEventListener('change', function(ev) {
     var target = ev.target;

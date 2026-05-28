@@ -683,6 +683,13 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       if (msg?.type === "undoDeleteIdea") {
         await this.onUndoDeleteIdeaFromDashboard();
       }
+      if (msg?.type === "reorderIdeas") {
+        const rawIds = Array.isArray(msg.ideaIds) ? msg.ideaIds : [];
+        const ideaIds = rawIds
+          .map((value: unknown) => (typeof value === "string" ? value.trim() : ""))
+          .filter((value: string) => value.length > 0);
+        await this.onReorderIdeasFromDashboard(ideaIds);
+      }
       if (msg?.type === "prefillImprovementTriageChat") {
         const raw = msg?.taskId;
         const taskId = typeof raw === "string" ? raw.trim() : "";
@@ -2373,6 +2380,55 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     this.notifyKitStateChanged();
     await this.applyDashboardMutationInvalidation("ideas");
     await this.view?.webview.postMessage({ type: "wcIdeaMutationResult", operation: "undo-delete", ok: true });
+  }
+
+  private async onReorderIdeasFromDashboard(visibleIdeaIds: string[]): Promise<void> {
+    const orderedVisible = [...new Set(visibleIdeaIds.map((id) => id.trim()).filter((id) => id.length > 0))];
+    if (orderedVisible.length < 2) {
+      await this.view?.webview.postMessage({ type: "wcIdeaMutationResult", operation: "reorder", ok: false, message: "At least two ideas are required to reorder." });
+      return;
+    }
+    const listed = await this.client.run("list-ideas", {});
+    if (!listed.ok) {
+      const message = (listed.message ?? String(listed.code ?? "list-ideas failed")).slice(0, 900);
+      await this.view?.webview.postMessage({ type: "wcIdeaMutationResult", operation: "reorder", ok: false, message });
+      return;
+    }
+    const data = listed.data && typeof listed.data === "object" ? (listed.data as Record<string, unknown>) : {};
+    const allIdeas = Array.isArray(data.ideas) ? data.ideas : [];
+    const currentIds = allIdeas
+      .map((idea) => {
+        if (!idea || typeof idea !== "object") {
+          return "";
+        }
+        const id = (idea as Record<string, unknown>).id;
+        return typeof id === "string" ? id.trim() : "";
+      })
+      .filter((id) => id.length > 0);
+    const current = new Set(currentIds);
+    const ordered = orderedVisible.filter((id) => current.has(id));
+    const remaining = currentIds.filter((id) => !ordered.includes(id));
+    const ideaIds = [...ordered, ...remaining];
+    if (ideaIds.length !== currentIds.length || ordered.length < 2) {
+      await this.view?.webview.postMessage({ type: "wcIdeaMutationResult", operation: "reorder", ok: false, message: "Idea order changed; refresh and try again." });
+      return;
+    }
+    const out = await this.client.run("reorder-ideas", {
+      ideaIds,
+      policyApproval: dashboardPolicyApproval(
+        { workflowId: "ideas", action: "reorder", command: "reorder-ideas" },
+        {}
+      )
+    });
+    if (!out.ok) {
+      const message = (out.message ?? String(out.code ?? "reorder-ideas failed")).slice(0, 900);
+      await this.view?.webview.postMessage({ type: "wcIdeaMutationResult", operation: "reorder", ok: false, message });
+      return;
+    }
+    ingestPlanningMetaFromData(out.data as Record<string, unknown> | undefined);
+    this.notifyKitStateChanged();
+    await this.applyDashboardMutationInvalidation("ideas");
+    await this.view?.webview.postMessage({ type: "wcIdeaMutationResult", operation: "reorder", ok: true });
   }
 
   private async onTaskCommentsComingSoon(taskId: string, mode: "view" | "add"): Promise<void> {
@@ -4093,6 +4149,10 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       background: var(--vscode-textCodeBlock-background);
       border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.35));
     }
+    .wc-ideas-row-dragging {
+      opacity: 0.55;
+      border-color: var(--vscode-focusBorder);
+    }
     .wc-ideas-row-view {
       display: flex;
       align-items: flex-start;
@@ -4115,6 +4175,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       line-height: 1.4;
       opacity: 0.65;
       padding-top: 2px;
+      cursor: grab;
     }
     .wc-ideas-row-actions {
       display: flex;
