@@ -14,8 +14,8 @@
   "approval": {
     "actor": "Nick LaPrell <njlaprell@gmail.com>",
     "timestamp": "2026-05-28T15:33:29Z",
-    "scope": "Phase 116 release prep and merge to main; npm publish remains gated on explicit final chat confirmation.",
-    "rationale": "Operator authorized Dashboard Complete & Release closeout; release evidence and validation gates are being assembled before publish automation."
+    "scope": "Phase 116 release prep, merge to main, GitHub release, and npm publish for @workflow-cannon/workspace-kit@0.99.14 dist-tag latest.",
+    "rationale": "Operator authorized Dashboard Complete & Release closeout and explicitly approved publish in chat after readiness, CI, and release validation passed."
   },
   "releaseNotes": {
     "source": "docs/maintainers/CHANGELOG.md#0.99.14",
@@ -80,8 +80,8 @@
   "risks": [
     {
       "category": "publish-gate",
-      "level": "pending",
-      "note": "npm publish automation has not been run; operator requested one final chat confirmation before pnpm run publish:npm."
+      "level": "resolved",
+      "note": "Operator explicitly approved publish in chat; publish-npm.yml completed successfully and npm latest now resolves to 0.99.14."
     },
     {
       "category": "migration",
@@ -91,20 +91,30 @@
   ],
   "publishArtifacts": [
     {
-      "type": "npm-publish-workflow",
-      "status": "pending",
-      "note": "Run pnpm run publish:npm only after explicit final chat confirmation."
-    },
-    {
-      "type": "npm-package",
-      "status": "pending",
-      "name": "@workflow-cannon/workspace-kit",
+      "kind": "git-tag",
+      "ref": "v0.99.14",
       "version": "0.99.14"
     },
     {
-      "type": "git-tag",
-      "status": "pending",
-      "tag": "v0.99.14"
+      "kind": "github-release",
+      "url": "https://github.com/NJLaPrell/workflow-cannon/releases/tag/v0.99.14",
+      "tagName": "v0.99.14",
+      "publishedAt": "2026-05-28T16:03:20Z"
+    },
+    {
+      "kind": "npm",
+      "package": "@workflow-cannon/workspace-kit",
+      "version": "0.99.14",
+      "distTag": "latest",
+      "tarball": "https://registry.npmjs.org/@workflow-cannon/workspace-kit/-/workspace-kit-0.99.14.tgz"
+    },
+    {
+      "kind": "github-actions-run",
+      "workflow": "publish-npm.yml",
+      "runId": 26586198976,
+      "url": "https://github.com/NJLaPrell/workflow-cannon/actions/runs/26586198976",
+      "headSha": "b3b058b1a5313a4232dcc1df7c8543ad373b4be6",
+      "conclusion": "success"
     }
   ],
   "taskDeliveryEvidence": [
