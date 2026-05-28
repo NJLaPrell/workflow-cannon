@@ -3185,6 +3185,18 @@ function renderPlanArtifactDraftPanel(planArtifact: unknown): string {
           : planId.length === 0 || planRef.length === 0 || !Number.isFinite(version) || version <= 0
             ? "Plan identity is incomplete."
             : "Accept this reviewed plan.";
+  const reviewActionHtml =
+    statusRaw === "draft"
+      ? '<div class="wc-plan-artifact-actions">' +
+        '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="plan-artifact-review" data-plan-id="' +
+        escapeHtmlAttr(planId) +
+        '" data-plan-version="' +
+        escapeHtmlAttr(Number.isFinite(version) ? String(version) : "") +
+        '" title="Review this draft plan with the PlanArtifact rubric"' +
+        (planId.length > 0 && Number.isFinite(version) && version > 0 ? "" : " disabled") +
+        ">Review</button>" +
+        "</div>"
+      : "";
   const acceptActionHtml =
     statusRaw === "accepted" || statusRaw === "finalized"
       ? ""
@@ -3244,6 +3256,7 @@ function renderPlanArtifactDraftPanel(planArtifact: unknown): string {
     "</div>" +
     reviewHtml +
     wbsHtml +
+    reviewActionHtml +
     acceptActionHtml +
     finalizeActionHtml +
     "</section>"

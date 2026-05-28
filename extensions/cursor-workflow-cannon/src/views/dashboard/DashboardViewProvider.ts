@@ -1081,6 +1081,14 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
           await this.onAcceptPlanArtifact(planId, planRef, Math.floor(version));
         }
       }
+      if (msg?.type === "reviewPlanArtifact") {
+        const planId = typeof msg.planId === "string" ? msg.planId.trim() : "";
+        const versionRaw = typeof msg.version === "string" ? msg.version.trim() : "";
+        const version = Number(versionRaw);
+        if (planId && Number.isFinite(version) && version > 0) {
+          await this.onReviewPlanArtifact(planId, Math.floor(version));
+        }
+      }
       if (msg?.type === "finalizePlanArtifact") {
         const planId = typeof msg.planId === "string" ? msg.planId.trim() : "";
         const versionRaw = typeof msg.version === "string" ? msg.version.trim() : "";
@@ -2675,6 +2683,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   }
 
   private async onAcceptPlanArtifact(planId: string, planRef: string, version: number): Promise<void> {
+    await this.ingestPlanningGenFromDashboard();
     const approvedBy =
       process.env.GIT_AUTHOR_EMAIL || process.env.USER || process.env.USERNAME || "dashboard-operator";
     const r = await this.client.run("accept-plan-artifact", {
@@ -2704,11 +2713,44 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     await this.pushUpdate({ projection: "full", skipHeavyFetches: false });
   }
 
+  private async onReviewPlanArtifact(planId: string, version: number): Promise<void> {
+    await this.ingestPlanningGenFromDashboard();
+    const r = await this.client.run("review-plan-artifact", {
+      planId,
+      version,
+      recordReview: true,
+      policyApproval: dashboardPolicyApproval(
+        { workflowId: "plan-artifact", action: "review", command: "review-plan-artifact" },
+        { humanRationale: "Record PlanArtifact review from Dashboard", phaseKey: null, taskId: null }
+      ),
+      ...expectedPlanningGenerationArgs()
+    });
+    if (!r.ok) {
+      await vscode.window.showErrorMessage(
+        `Plan review failed: ${(r.message ?? r.code ?? JSON.stringify(r)).slice(0, 520)}`
+      );
+      return;
+    }
+    ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
+    const data = r.data && typeof r.data === "object" ? (r.data as Record<string, unknown>) : {};
+    const passed = data.passed === true;
+    await vscode.window.showInformationMessage(
+      passed ? `Reviewed plan ${planId}.` : `Reviewed plan ${planId}; findings need attention.`
+    );
+    await this.pushUpdate({ projection: "full", skipHeavyFetches: false });
+  }
+
   private async onFinalizePlanArtifact(planId: string, version: number): Promise<void> {
+    await this.ingestPlanningGenFromDashboard();
+    const targetPhaseKey = this.inferPhaseKeyForKitPhaseNoteFromDashboard();
+    const phaseArgs = targetPhaseKey
+      ? { targetPhaseKey, targetPhase: `Phase ${targetPhaseKey}` }
+      : {};
     const commonArgs = {
       planId,
       version,
       desiredStatus: "ready",
+      ...phaseArgs,
       ...expectedPlanningGenerationArgs()
     };
     const preview = await this.client.run("finalize-plan-to-phase", {
