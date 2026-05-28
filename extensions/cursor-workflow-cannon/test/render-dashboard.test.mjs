@@ -137,6 +137,33 @@ test("renderDashboardRootInnerHtml shows error JSON when ok is false", () => {
   assert.match(html, /bad/);
 });
 
+test("renderDashboardRootInnerHtml places ideas second in the overview stack", () => {
+  const html = renderDashboardRootInnerHtml({
+    ok: true,
+    data: {
+      stateSummary: {},
+      workspaceStatus: {},
+      ideas: {
+        schemaVersion: 1,
+        available: true,
+        totalCount: 1,
+        openCount: 1,
+        planningCount: 0,
+        plannedCount: 0,
+        top: [{ id: "I1", title: "Draft a better dashboard", status: "open", previousPlanArtifacts: [] }]
+      }
+    }
+  });
+  const overviewIdx = html.indexOf('data-wc-section="overview"');
+  const ideasIdx = html.indexOf('data-wc-section="ideas"');
+  const queueIdx = html.indexOf('data-wc-section="queue"');
+  assert.ok(overviewIdx >= 0, "overview section expected");
+  assert.ok(ideasIdx > overviewIdx, "ideas section should follow overview");
+  assert.ok(queueIdx > ideasIdx, "queue section should remain after overview tab stack");
+  assert.match(html, /Draft a better dashboard/);
+  assert.match(html, /Open 1 · Planning 0 · Planned 0 · Total 1/);
+});
+
 test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () => {
   const fixturePath = path.join(__dirname, "../docs/fixtures/dashboard-summary.example.json");
   const fixture = JSON.parse(readFileSync(fixturePath, "utf8"));
