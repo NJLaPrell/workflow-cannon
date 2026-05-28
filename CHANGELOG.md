@@ -8,6 +8,10 @@ This root file is intentionally pointer-only to avoid split release history.
 
 - See `docs/maintainers/CHANGELOG.md` for all release notes, migration notes, and historical entries.
 
+## [0.99.14] - 2026-05-28
+
+- **Phase 116 - Dashboard Complete & Release:** Ideas planner-chat resume, PlanArtifact dashboard Review/Accept/Finalize host wiring, and dashboard E2E coverage for happy path plus rejection/resume states.
+
 ## [0.99.13] - 2026-05-27
 
 - **Phase 116 - Ideas module foundation:** SQLite-backed `workflow_ideas` table, default `ideas` module registration, idea record schema, and Phase 116 task-state assignment repair.
@@ -29,4 +33,4 @@ This root file is intentionally pointer-only to avoid split release history.
 - Patch release for task-store recovery and phase snapshot alignment after the phase 108/113 dashboard closeout sequence.
 - Captures phase 114/115 task-state event-log planning tasks in the task engine so maintainers can pick up the migration work from a fresh dashboard.
 
-Latest release: **v0.99.13** (Phase 116 Ideas module foundation; see canonical changelog).
+Latest release: **v0.99.14** (Phase 116 Dashboard Complete & Release; see canonical changelog).

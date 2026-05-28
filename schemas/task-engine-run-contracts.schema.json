@@ -16,7 +16,7 @@
       "const": 1
     },
     "packageVersion": {
-      "const": "0.99.13",
+      "const": "0.99.14",
       "description": "Must match package.json version."
     },
     "moduleId": {
