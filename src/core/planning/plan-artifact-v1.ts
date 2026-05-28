@@ -171,6 +171,8 @@ export type PlanArtifactProvenance = {
   source: PlanArtifactProvenanceSource;
   chatSessionRef?: string;
   parentPlanId?: string;
+  sourceIdeaId?: string;
+  previousPlanArtifacts?: string[];
   /** Optional audit payload; dashboard should redact (A-SCHEMA §9). */
   sourceAnswers?: Record<string, string>;
 };

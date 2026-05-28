@@ -57,4 +57,22 @@ describe("plan-artifact.v1 JSON Schema", () => {
     doc.schemaVersion = 2;
     assert.equal(validate(doc), false);
   });
+
+  it("accepts idea provenance fields", () => {
+    const doc = JSON.parse(
+      fs.readFileSync(path.join(fixturesDir, "plan-artifact-minimal.valid.v1.json"), "utf8")
+    );
+    doc.provenance.sourceIdeaId = "I123";
+    doc.provenance.previousPlanArtifacts = ["plan-artifact:old-1", "plan-artifact:old-2"];
+    assert.equal(validate(doc), true, validate.errors?.map((e) => e.message).join("; "));
+  });
+
+  it("rejects empty idea provenance values", () => {
+    const doc = JSON.parse(
+      fs.readFileSync(path.join(fixturesDir, "plan-artifact-minimal.valid.v1.json"), "utf8")
+    );
+    doc.provenance.sourceIdeaId = "";
+    doc.provenance.previousPlanArtifacts = [""];
+    assert.equal(validate(doc), false);
+  });
 });
