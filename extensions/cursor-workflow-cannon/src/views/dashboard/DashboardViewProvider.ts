@@ -2449,9 +2449,11 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       });
       return;
     }
+    const prompt = buildPlannerChatPrompt({ ideaId, title, note });
     const out = await this.client.run("update-idea", {
       ideaId,
       status: "planning",
+      planningChatPrompt: prompt,
       policyApproval: dashboardPolicyApproval(
         { workflowId: "ideas", action: "plan", command: "update-idea" },
         {}
@@ -2466,7 +2468,6 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     this.notifyKitStateChanged();
     await this.applyDashboardMutationInvalidation("ideas");
 
-    const prompt = buildPlannerChatPrompt({ ideaId, title, note });
     await prefillCursorChat(prompt, { newChat: true });
     await this.view?.webview.postMessage({ type: "wcIdeaMutationResult", operation: "plan", ideaId, ok: true });
   }

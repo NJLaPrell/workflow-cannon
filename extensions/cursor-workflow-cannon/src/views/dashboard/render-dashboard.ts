@@ -1894,6 +1894,10 @@ function renderDashboardIdeasSectionInnerHtml(rawIdeas: unknown): string {
       const title = String(row.title ?? id).trim();
       const note = typeof row.note === "string" ? row.note.trim() : "";
       const status = String(row.status ?? "open").trim();
+      const planningChatSession = row.planningChatSession && typeof row.planningChatSession === "object"
+        ? (row.planningChatSession as Record<string, unknown>)
+        : null;
+      const hasPlanningChatSession = planningChatSession?.status === "active" && planningChatSession.ideaId === id;
       const displayNote = note.length > 160 ? note.slice(0, 157).trimEnd() + "..." : note;
       const idAttr = escapeHtmlAttr(id);
       const titleAttr = escapeHtmlAttr(title);
@@ -1921,7 +1925,9 @@ function renderDashboardIdeasSectionInnerHtml(rawIdeas: unknown): string {
         escapeHtml(status) +
         "</span>" +
         '<span class="wc-ideas-row-actions">' +
-        '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="idea-plan">Plan this</button>' +
+        '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="idea-plan">' +
+        (hasPlanningChatSession ? "Resume planning &rarr;" : "Plan this") +
+        "</button>" +
         '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="idea-edit">Edit</button>' +
         '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="idea-delete">Delete</button>' +
         "</span>" +

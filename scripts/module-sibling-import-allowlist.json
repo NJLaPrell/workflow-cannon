@@ -57,6 +57,12 @@
       "rationale": "Guidance dashboard resolves effective behavior profile."
     },
     {
+      "file": "src/modules/task-engine/commands/task-engine-dashboard-on-command.ts",
+      "line": "28",
+      "importLine": "import { listPlanningChatSessions } from \"../../ideas/planning-chat-session.js\";",
+      "rationale": "Dashboard summary annotates Ideas rows with active planner-chat resume sessions."
+    },
+    {
       "file": "src/modules/task-engine/persistence/export-feature-taxonomy-json-runtime.ts",
       "line": "4",
       "importLine": "import { isPathWithinRoot } from \"../../documentation/runtime-config.js\";",
