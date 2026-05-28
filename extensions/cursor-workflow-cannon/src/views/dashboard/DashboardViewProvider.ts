@@ -690,6 +690,12 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
           .filter((value: string) => value.length > 0);
         await this.onReorderIdeasFromDashboard(ideaIds);
       }
+      if (msg?.type === "prefillIdeaPlanningChat") {
+        const ideaId = typeof msg.ideaId === "string" ? msg.ideaId.trim() : "";
+        const title = typeof msg.title === "string" ? msg.title.trim() : "";
+        const note = typeof msg.note === "string" ? msg.note.trim() : "";
+        await this.onPrefillIdeaPlanningChat(ideaId, title, note);
+      }
       if (msg?.type === "prefillImprovementTriageChat") {
         const raw = msg?.taskId;
         const taskId = typeof raw === "string" ? raw.trim() : "";
@@ -2429,6 +2435,20 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     this.notifyKitStateChanged();
     await this.applyDashboardMutationInvalidation("ideas");
     await this.view?.webview.postMessage({ type: "wcIdeaMutationResult", operation: "reorder", ok: true });
+  }
+
+  private async onPrefillIdeaPlanningChat(ideaId: string, title: string, note: string): Promise<void> {
+    const subject = title.length > 0 ? title : ideaId.length > 0 ? ideaId : "this idea";
+    const lines = [
+      "Plan this Workflow Cannon idea into a draft plan artifact.",
+      "",
+      `Idea: ${subject}`,
+      ideaId.length > 0 ? `Idea id: ${ideaId}` : "",
+      note.length > 0 ? `Note: ${note}` : "",
+      "",
+      "Use the planner-chat workflow. Keep the idea linked to any proposed plan artifact."
+    ].filter((line) => line.length > 0);
+    await prefillCursorChat(lines.join("\n"), { newChat: true });
   }
 
   private async onTaskCommentsComingSoon(taskId: string, mode: "view" | "add"): Promise<void> {

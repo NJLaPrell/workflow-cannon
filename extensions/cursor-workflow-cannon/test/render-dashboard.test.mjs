@@ -170,6 +170,8 @@ test("renderDashboardRootInnerHtml places ideas second in the overview stack", (
   assert.match(html, /data-wc-action="idea-edit"/);
   assert.match(html, /data-wc-action="idea-delete"/);
   assert.match(html, /data-wc-action="idea-update"/);
+  assert.match(html, /data-wc-action="idea-plan"/);
+  assert.match(html, /Plan this/);
   assert.match(html, /data-wc-ideas-toast="1"/);
   assert.match(html, /data-wc-ideas-edit-form="1"/);
   assert.match(html, /data-wc-ideas-list="1"/);

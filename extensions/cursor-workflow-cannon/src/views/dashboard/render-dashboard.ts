@@ -1921,6 +1921,7 @@ function renderDashboardIdeasSectionInnerHtml(rawIdeas: unknown): string {
         escapeHtml(status) +
         "</span>" +
         '<span class="wc-ideas-row-actions">' +
+        '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="idea-plan">Plan this</button>' +
         '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="idea-edit">Edit</button>' +
         '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="idea-delete">Delete</button>' +
         "</span>" +
