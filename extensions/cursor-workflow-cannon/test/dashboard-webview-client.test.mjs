@@ -21,6 +21,7 @@ test("buildDashboardWebviewBootstrapScript returns drawer + refresh client", () 
   assert.match(script, /type: 'deleteIdea'/);
   assert.match(script, /type:'undoDeleteIdea'/);
   assert.match(script, /type: 'reorderIdeas'/);
+  assert.match(script, /prefillIdeaPlanningChat/);
   assert.match(script, /wcIdeaCreateResult/);
   assert.match(script, /wcIdeaMutationResult/);
   assert.match(script, /data-wc-idea-title/);

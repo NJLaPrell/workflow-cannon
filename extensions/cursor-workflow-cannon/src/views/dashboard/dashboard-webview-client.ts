@@ -1356,6 +1356,7 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
     if (act === 'idea-edit-cancel') { setIdeaEditMode(ideaRowFor(t), false); return; }
     if (act === 'idea-update') { submitIdeaUpdate(ideaRowFor(t)); return; }
     if (act === 'idea-delete') { submitIdeaDelete(ideaRowFor(t)); return; }
+    if (act === 'idea-plan') { var planRow = ideaRowFor(t); if (planRow) vscode.postMessage({type:'prefillIdeaPlanningChat',ideaId:planRow.getAttribute('data-wc-idea-id')||'',title:planRow.getAttribute('data-wc-idea-title')||'',note:planRow.getAttribute('data-wc-idea-note')||''}); return; }
     if (act === 'idea-undo-delete') { vscode.postMessage({type:'undoDeleteIdea'}); return; }
     if (act === 'planning-new-plan') { vscode.postMessage({type:'prefillPlanningInterviewChat'}); return; }
     if (act === 'planning-resume-chat') { var rc = (t.getAttribute('data-resume-cli') || '').trim(); vscode.postMessage({type:'prefillPlanningResumeChat',resumeCli:rc}); return; }
