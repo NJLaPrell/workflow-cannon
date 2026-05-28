@@ -5,18 +5,13 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { contextActivationModule } from "../dist/index.js";
-
-const root = process.cwd();
-const eff = {
-  tasks: { sqliteDatabaseRelativePath: ".workspace-kit/tasks/workspace-kit.db" },
-  kit: { cae: { registryStore: "sqlite" } }
-};
-const ctx = { runtimeVersion: "0.1", workspacePath: root, effectiveConfig: eff };
+import { seededCaeEffective, workspaceWithSeededCaeRegistry } from "./cae-test-utils.mjs";
 
 test("cae-list-artifacts ok against SQLite registry", async () => {
+  const workspacePath = await workspaceWithSeededCaeRegistry("wk-cae-sqlite-smoke-");
   const r = await contextActivationModule.onCommand(
     { name: "cae-list-artifacts", args: { schemaVersion: 1, limit: 5 } },
-    ctx
+    { runtimeVersion: "0.1", workspacePath, effectiveConfig: seededCaeEffective() }
   );
   assert.equal(r.ok, true);
   assert.ok(Array.isArray(r.data.artifactIds));
@@ -24,7 +19,11 @@ test("cae-list-artifacts ok against SQLite registry", async () => {
 });
 
 test("cae-health includes registry counts when registry ok", async () => {
-  const r = await contextActivationModule.onCommand({ name: "cae-health", args: { schemaVersion: 1 } }, ctx);
+  const workspacePath = await workspaceWithSeededCaeRegistry("wk-cae-sqlite-smoke-");
+  const r = await contextActivationModule.onCommand(
+    { name: "cae-health", args: { schemaVersion: 1 } },
+    { runtimeVersion: "0.1", workspacePath, effectiveConfig: seededCaeEffective() }
+  );
   assert.equal(r.ok, true);
   if (r.data.registryStatus === "ok") {
     assert.ok(typeof r.data.artifactCount === "number");

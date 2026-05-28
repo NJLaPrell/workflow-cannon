@@ -10,8 +10,7 @@ import {
   defaultRegistryModules,
   workspaceConfigModule
 } from "../dist/index.js";
-
-const root = process.cwd();
+import { seededCaeEffective, workspaceWithSeededCaeRegistry } from "./cae-test-utils.mjs";
 
 describe("context-activation module (T861)", () => {
   it("registers cae-list-artifacts on default registry", () => {
@@ -22,12 +21,13 @@ describe("context-activation module (T861)", () => {
   });
 
   it("cae-list-artifacts returns artifact ids", async () => {
+    const workspacePath = await workspaceWithSeededCaeRegistry("wk-cae-module-");
     const registry = new ModuleRegistry([workspaceConfigModule, contextActivationModule]);
     const router = new ModuleCommandRouter(registry);
     const res = await router.execute(
       "cae-list-artifacts",
       { schemaVersion: 1, limit: 5 },
-      { runtimeVersion: "0.1", workspacePath: root, moduleRegistry: registry }
+      { runtimeVersion: "0.1", workspacePath, moduleRegistry: registry, effectiveConfig: seededCaeEffective() }
     );
     assert.equal(res.ok, true);
     assert.equal(res.code, "cae-list-artifacts-ok");
@@ -37,12 +37,13 @@ describe("context-activation module (T861)", () => {
   });
 
   it("cae-get-artifact returns one row", async () => {
+    const workspacePath = await workspaceWithSeededCaeRegistry("wk-cae-module-");
     const registry = new ModuleRegistry([workspaceConfigModule, contextActivationModule]);
     const router = new ModuleCommandRouter(registry);
     const res = await router.execute(
       "cae-get-artifact",
       { schemaVersion: 1, artifactId: "cae.playbook.machine-playbooks" },
-      { runtimeVersion: "0.1", workspacePath: root, moduleRegistry: registry }
+      { runtimeVersion: "0.1", workspacePath, moduleRegistry: registry, effectiveConfig: seededCaeEffective() }
     );
     assert.equal(res.ok, true);
     assert.equal(res.code, "cae-get-artifact-ok");
