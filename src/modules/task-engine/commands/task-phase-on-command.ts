@@ -34,6 +34,7 @@ export async function resolveTaskPhaseCommands(
     const r = await runAssignTaskPhase({
       store,
       ctx,
+      planning,
       strictValidationError,
       actor,
       rawArgs: args as Record<string, unknown>,
@@ -55,6 +56,7 @@ export async function resolveTaskPhaseCommands(
     const r = await runClearTaskPhase({
       store,
       ctx,
+      planning,
       strictValidationError,
       actor,
       rawArgs: args as Record<string, unknown>

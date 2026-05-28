@@ -1,5 +1,6 @@
 import type { ModuleCommandResult, ModuleLifecycleContext } from "../../../contracts/module-contract.js";
 import type { TaskEntity } from "../types.js";
+import type { TaskUpdatedPayloadV1 } from "../task-state-events/event-payloads.js";
 import type { OpenedPlanningStores } from "./planning-open.js";
 import type { TaskStore } from "./store.js";
 import { isGitTaskStateCanonicalAuthority } from "./task-state-canonical-authority.js";
@@ -49,6 +50,22 @@ export async function finalizeCanonicalUpdateTask(input: {
   if (!isGitTaskStateCanonicalAuthority(input.ctx)) {
     return null;
   }
+  const values: TaskUpdatedPayloadV1["values"] = {
+    title: input.task.title,
+    type: input.task.type,
+    status: input.task.status,
+    priority: input.task.priority,
+    phase: input.task.phase,
+    phaseKey: input.task.phaseKey,
+    summary: input.task.summary,
+    metadata: input.task.metadata
+  };
+  if (input.changedFields.includes("phase") && input.task.phase === undefined) {
+    values.phase = null;
+  }
+  if (input.changedFields.includes("phaseKey") && input.task.phaseKey === undefined) {
+    values.phaseKey = null;
+  }
   const event = draftUpdatedEvent(
     input.task.id,
     input.changedFields,
@@ -60,16 +77,7 @@ export async function finalizeCanonicalUpdateTask(input: {
       clientMutationId: input.clientMutationId,
       phaseKey: input.task.phaseKey
     },
-    {
-      title: input.task.title,
-      type: input.task.type,
-      status: input.task.status,
-      priority: input.task.priority,
-      phase: input.task.phase,
-      phaseKey: input.task.phaseKey,
-      summary: input.task.summary,
-      metadata: input.task.metadata
-    },
+    values,
     input.ctx.workspacePath
   );
   return commitCanonicalTaskStateEvents({

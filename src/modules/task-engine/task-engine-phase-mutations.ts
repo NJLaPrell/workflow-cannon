@@ -1,5 +1,8 @@
 import type { ModuleCommandResult, ModuleLifecycleContext } from "../../contracts/module-contract.js";
+import type { OpenedPlanningStores } from "./persistence/planning-open.js";
 import type { TaskStore } from "./persistence/store.js";
+import { isGitTaskStateCanonicalAuthority } from "./persistence/task-state-canonical-authority.js";
+import { finalizeCanonicalUpdateTask } from "./persistence/task-state-canonical-mutation-hook.js";
 import type { TaskEntity } from "./types.js";
 import {
   digestPayload,
@@ -30,13 +33,14 @@ function validatePhaseKey(raw: string): string | null {
 export async function runAssignTaskPhase(args: {
   store: TaskStore;
   ctx: ModuleLifecycleContext;
+  planning: OpenedPlanningStores;
   strictValidationError: (store: TaskStore, effective: Record<string, unknown> | undefined) => string | null;
   actor: string | undefined;
   rawArgs: Record<string, unknown>;
   /** Canonical workspace kit phase (digits). When set with numeric phaseKey, assignments sort-before-current are rejected. */
   canonicalWorkspacePhaseKey?: string | null;
 }): Promise<ModuleCommandResult> {
-  const { store, ctx, strictValidationError, actor, rawArgs, canonicalWorkspacePhaseKey } = args;
+  const { store, ctx, planning, strictValidationError, actor, rawArgs, canonicalWorkspacePhaseKey } = args;
   const taskId = typeof rawArgs.taskId === "string" ? rawArgs.taskId.trim() : "";
   const pkRaw = typeof rawArgs.phaseKey === "string" ? rawArgs.phaseKey : "";
   const phaseKey = validatePhaseKey(pkRaw);
@@ -129,7 +133,27 @@ export async function runAssignTaskPhase(args: {
   if (strictIssue) {
     return { ok: false, code: "strict-task-validation-failed", message: strictIssue };
   }
-  await store.save(planningConcurrencySaveOpts(rawArgs));
+  const gitCanonical = isGitTaskStateCanonicalAuthority(ctx);
+  if (!gitCanonical) {
+    await store.save(planningConcurrencySaveOpts(rawArgs));
+  }
+  const canonicalUpdate = await finalizeCanonicalUpdateTask({
+    ctx,
+    store,
+    planning,
+    task: updatedTask,
+    changedFields: ["phase", "phaseKey"],
+    commandName: "assign-task-phase",
+    clientMutationId,
+    actor,
+    policyApproval: rawArgs.policyApproval as { confirmed: boolean; rationale: string } | undefined
+  });
+  if (canonicalUpdate && !canonicalUpdate.ok) {
+    return canonicalUpdate;
+  }
+  if (gitCanonical) {
+    await store.load();
+  }
   const assignData: Record<string, unknown> = { task: updatedTask };
   mergePlanningGenerationPolicyWarnings(assignData, assignGate.warnings);
   return {
@@ -143,11 +167,12 @@ export async function runAssignTaskPhase(args: {
 export async function runClearTaskPhase(args: {
   store: TaskStore;
   ctx: ModuleLifecycleContext;
+  planning: OpenedPlanningStores;
   strictValidationError: (store: TaskStore, effective: Record<string, unknown> | undefined) => string | null;
   actor: string | undefined;
   rawArgs: Record<string, unknown>;
 }): Promise<ModuleCommandResult> {
-  const { store, ctx, strictValidationError, actor, rawArgs } = args;
+  const { store, ctx, planning, strictValidationError, actor, rawArgs } = args;
   const taskId = typeof rawArgs.taskId === "string" ? rawArgs.taskId.trim() : "";
   if (!taskId) {
     return { ok: false, code: "invalid-task-schema", message: "clear-task-phase requires taskId" };
@@ -208,7 +233,27 @@ export async function runClearTaskPhase(args: {
   if (strictIssue) {
     return { ok: false, code: "strict-task-validation-failed", message: strictIssue };
   }
-  await store.save(planningConcurrencySaveOpts(rawArgs));
+  const gitCanonical = isGitTaskStateCanonicalAuthority(ctx);
+  if (!gitCanonical) {
+    await store.save(planningConcurrencySaveOpts(rawArgs));
+  }
+  const canonicalUpdate = await finalizeCanonicalUpdateTask({
+    ctx,
+    store,
+    planning,
+    task: updatedTask,
+    changedFields: ["phase", "phaseKey"],
+    commandName: "clear-task-phase",
+    clientMutationId,
+    actor,
+    policyApproval: rawArgs.policyApproval as { confirmed: boolean; rationale: string } | undefined
+  });
+  if (canonicalUpdate && !canonicalUpdate.ok) {
+    return canonicalUpdate;
+  }
+  if (gitCanonical) {
+    await store.load();
+  }
   const clearData: Record<string, unknown> = { task: updatedTask };
   mergePlanningGenerationPolicyWarnings(clearData, clearGate.warnings);
   return {

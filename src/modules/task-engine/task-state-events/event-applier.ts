@@ -132,6 +132,12 @@ function mergeTaskUpdate(task: TaskEntity, values: TaskUpdatedPayloadV1["values"
     return;
   }
   const { metadata, ...scalar } = values;
+  for (const field of ["phase", "phaseKey"] as const) {
+    if (scalar[field] === null) {
+      delete task[field];
+      delete scalar[field];
+    }
+  }
   Object.assign(task, scalar);
   if (metadata && typeof metadata === "object" && !Array.isArray(metadata)) {
     task.metadata = { ...(task.metadata ?? {}), ...metadata };

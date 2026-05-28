@@ -34,8 +34,6 @@ export type TaskUpdatedPayloadV1 = {
       | "type"
       | "status"
       | "priority"
-      | "phase"
-      | "phaseKey"
       | "summary"
       | "description"
       | "risk"
@@ -50,6 +48,8 @@ export type TaskUpdatedPayloadV1 = {
       | "ownership"
     >
   > & {
+    phase?: TaskEntity["phase"] | null;
+    phaseKey?: TaskEntity["phaseKey"] | null;
     metadata?: Record<string, unknown>;
   };
 };
