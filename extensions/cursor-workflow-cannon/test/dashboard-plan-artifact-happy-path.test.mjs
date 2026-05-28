@@ -6,7 +6,15 @@ import { renderDashboardRootInnerHtml } from "../dist/views/dashboard/render-das
 
 const RAW_CLI_INVOCATION = /(?:pnpm\s+exec\s+wk|workspace-kit)\s+run\s+[a-z][\w-]+\s+[`'"]\{/i;
 
-function summaryWithPlan(status) {
+function summaryWithPlan(status, options = {}) {
+  const planningChatSession = options.planningChatSession === undefined
+    ? {
+        ideaId: "I-plan-1",
+        status: "active",
+        title: "Ship a dashboard planning loop",
+        updatedAt: "2026-05-28T00:00:00.000Z"
+      }
+    : options.planningChatSession;
   return {
     ok: true,
     data: {
@@ -26,12 +34,7 @@ function summaryWithPlan(status) {
             status: "planning",
             note: "PlanArtifact happy path",
             previousPlanArtifacts: [],
-            planningChatSession: {
-              ideaId: "I-plan-1",
-              status: "active",
-              title: "Ship a dashboard planning loop",
-              updatedAt: "2026-05-28T00:00:00.000Z"
-            }
+            ...(planningChatSession ? { planningChatSession } : {})
           }
         ]
       },
@@ -47,7 +50,8 @@ function summaryWithPlan(status) {
           planningType: "feature",
           updatedAt: "2026-05-28T00:00:00.000Z",
           wbsRowCount: 3,
-          openQuestionCount: 0
+          openQuestionCount: 0,
+          ...(options.current ?? {})
         },
         recent: []
       }
@@ -84,4 +88,56 @@ test("planner-chat prefill prompt avoids copy-paste wk run invocations", () => {
   assert.match(prompt, /planner-chat/);
   assert.match(prompt, /provenance\.sourceIdeaId/);
   assert.doesNotMatch(prompt, RAW_CLI_INVOCATION);
+});
+
+test("PlanArtifact rejection blocks accept while preserving planning resume", () => {
+  const html = renderDashboardRootInnerHtml(
+    summaryWithPlan("reviewed", {
+      current: {
+        reviewFindings: [
+          {
+            severity: "blocker",
+            message: "Acceptance criteria are not tied to WBS tasks.",
+            path: "wbs[1].acceptanceCriteria"
+          }
+        ]
+      }
+    })
+  );
+
+  assert.match(html, /Review Findings/);
+  assert.match(html, /Acceptance criteria are not tied to WBS tasks\./);
+  assert.match(html, /Review blockers must be resolved before accepting this plan\./);
+  assert.match(html, /data-wc-action="plan-artifact-accept"[^>]* disabled/);
+  assert.doesNotMatch(html, /data-wc-action="plan-artifact-finalize"/);
+  assert.match(html, />Resume planning &rarr;<\/button>/);
+  assert.doesNotMatch(html, RAW_CLI_INVOCATION);
+});
+
+test("Ideas row resume requires the matching active planning-chat session", () => {
+  const inactiveHtml = renderDashboardRootInnerHtml(
+    summaryWithPlan("draft", {
+      planningChatSession: {
+        ideaId: "I-plan-1",
+        status: "closed",
+        title: "Ship a dashboard planning loop",
+        updatedAt: "2026-05-28T00:00:00.000Z"
+      }
+    })
+  );
+  assert.match(inactiveHtml, />Plan this<\/button>/);
+  assert.doesNotMatch(inactiveHtml, />Resume planning &rarr;<\/button>/);
+
+  const mismatchedHtml = renderDashboardRootInnerHtml(
+    summaryWithPlan("draft", {
+      planningChatSession: {
+        ideaId: "I-other",
+        status: "active",
+        title: "Different idea",
+        updatedAt: "2026-05-28T00:00:00.000Z"
+      }
+    })
+  );
+  assert.match(mismatchedHtml, />Plan this<\/button>/);
+  assert.doesNotMatch(mismatchedHtml, />Resume planning &rarr;<\/button>/);
 });
