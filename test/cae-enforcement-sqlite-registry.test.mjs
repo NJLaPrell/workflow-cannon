@@ -13,10 +13,10 @@ import {
   pluginsModule,
   taskEngineModule
 } from "../dist/index.js";
+import { seededCaeEffective, workspaceWithSeededCaeRegistry } from "./cae-test-utils.mjs";
 
-const root = process.cwd();
-
-test("runCaeCliPreflight enforcement sees SQLite registry and can deny enable-plugin (pilot allowlist)", () => {
+test("runCaeCliPreflight enforcement sees SQLite registry and can deny enable-plugin (pilot allowlist)", async () => {
+  const workspacePath = await workspaceWithSeededCaeRegistry("wk-cae-preflight-");
   const registry = new ModuleRegistry([
     workspaceConfigModule,
     contextActivationModule,
@@ -25,19 +25,14 @@ test("runCaeCliPreflight enforcement sees SQLite registry and can deny enable-pl
   ]);
   const router = new ModuleCommandRouter(registry);
   const r = runCaeCliPreflight({
-    workspacePath: root,
-    effective: {
-      kit: {
-        currentPhaseNumber: 70,
-        cae: {
-          enabled: true,
-          registryStore: "sqlite",
-          runtime: { shadowPreflight: true },
-          enforcement: { enabled: true }
-        }
+    workspacePath,
+    effective: seededCaeEffective({
+      cae: {
+        runtime: { shadowPreflight: true },
+        enforcement: { enabled: true }
       },
-      tasks: { sqliteDatabaseRelativePath: ".workspace-kit/tasks/workspace-kit.db" }
-    },
+      kit: { currentPhaseNumber: 70 }
+    }),
     subcommand: "enable-plugin",
     commandArgs: { schemaVersion: 1, pluginId: "x" },
     router

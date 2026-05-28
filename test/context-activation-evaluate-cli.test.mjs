@@ -12,6 +12,7 @@ import {
   contextActivationModule,
   workspaceConfigModule
 } from "../dist/index.js";
+import { seededCaeEffective, workspaceWithSeededCaeRegistry } from "./cae-test-utils.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const minimalCtx = JSON.parse(
@@ -20,9 +21,15 @@ const minimalCtx = JSON.parse(
 
 describe("context-activation evaluate CLI (T862)", () => {
   it("cae-evaluate stores trace for cae-get-trace", async () => {
+    const workspacePath = await workspaceWithSeededCaeRegistry("wk-cae-evaluate-cli-");
     const registry = new ModuleRegistry([workspaceConfigModule, contextActivationModule]);
     const router = new ModuleCommandRouter(registry);
-    const ctx = { runtimeVersion: "0.1", workspacePath: root, moduleRegistry: registry, effectiveConfig: {} };
+    const ctx = {
+      runtimeVersion: "0.1",
+      workspacePath,
+      moduleRegistry: registry,
+      effectiveConfig: seededCaeEffective()
+    };
 
     const ev = await router.execute(
       "cae-evaluate",
@@ -41,12 +48,13 @@ describe("context-activation evaluate CLI (T862)", () => {
   });
 
   it("cae-health returns registry ok", async () => {
+    const workspacePath = await workspaceWithSeededCaeRegistry("wk-cae-health-");
     const registry = new ModuleRegistry([workspaceConfigModule, contextActivationModule]);
     const router = new ModuleCommandRouter(registry);
     const res = await router.execute(
       "cae-health",
       { schemaVersion: 1 },
-      { runtimeVersion: "0.1", workspacePath: root, moduleRegistry: registry, effectiveConfig: {} }
+      { runtimeVersion: "0.1", workspacePath, moduleRegistry: registry, effectiveConfig: seededCaeEffective() }
     );
     assert.equal(res.ok, true);
     assert.equal(res.code, "cae-health-ok");
