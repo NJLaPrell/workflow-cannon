@@ -167,6 +167,11 @@ test("renderDashboardRootInnerHtml places ideas second in the overview stack", (
   assert.match(html, /data-wc-idea-title="1"/);
   assert.match(html, /data-wc-idea-note="1"/);
   assert.match(html, /wc-ideas-drag-handle/);
+  assert.match(html, /data-wc-action="idea-edit"/);
+  assert.match(html, /data-wc-action="idea-delete"/);
+  assert.match(html, /data-wc-action="idea-update"/);
+  assert.match(html, /data-wc-ideas-toast="1"/);
+  assert.match(html, /data-wc-ideas-edit-form="1"/);
 });
 
 test("renderDashboardRootInnerHtml truncates long idea notes", () => {
@@ -186,8 +191,9 @@ test("renderDashboardRootInnerHtml truncates long idea notes", () => {
       }
     }
   });
-  assert.match(html, /A{157}\.{3}/);
-  assert.doesNotMatch(html, new RegExp(`A{${longNote.length}}`));
+  const visibleNote = html.match(/data-wc-idea-note-view="1">([\s\S]*?)<\/p>/)?.[1] ?? "";
+  assert.match(visibleNote, /A{157}\.{3}/);
+  assert.doesNotMatch(visibleNote, new RegExp(`A{${longNote.length}}`));
 });
 
 test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () => {

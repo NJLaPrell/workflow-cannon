@@ -402,6 +402,9 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   /** 0-based page for wishlist rows in `dashboard-summary` (5 per page). */
   private wishlistPage = 0;
 
+  /** Last deleted Idea row, retained for the webview undo action. */
+  private lastDeletedIdeaForUndo: Record<string, unknown> | null = null;
+
   private planningWizard: DashboardPlanningWizardState = { kind: "idle" };
 
   /** In-webview drawer session (register catalog, dismiss phase note, …). */
@@ -666,6 +669,19 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         const title = typeof msg.title === "string" ? msg.title.trim() : "";
         const note = typeof msg.note === "string" ? msg.note.trim() : "";
         await this.onCreateIdeaFromDashboard(title, note);
+      }
+      if (msg?.type === "updateIdea") {
+        const ideaId = typeof msg.ideaId === "string" ? msg.ideaId.trim() : "";
+        const title = typeof msg.title === "string" ? msg.title.trim() : "";
+        const note = typeof msg.note === "string" ? msg.note.trim() : "";
+        await this.onUpdateIdeaFromDashboard(ideaId, title, note);
+      }
+      if (msg?.type === "deleteIdea") {
+        const ideaId = typeof msg.ideaId === "string" ? msg.ideaId.trim() : "";
+        await this.onDeleteIdeaFromDashboard(ideaId);
+      }
+      if (msg?.type === "undoDeleteIdea") {
+        await this.onUndoDeleteIdeaFromDashboard();
       }
       if (msg?.type === "prefillImprovementTriageChat") {
         const raw = msg?.taskId;
@@ -2253,6 +2269,110 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     await this.view?.webview.postMessage({ type: "wcIdeaCreateResult", ok: true });
     this.notifyKitStateChanged();
     await this.applyDashboardMutationInvalidation("ideas");
+  }
+
+  private async onUpdateIdeaFromDashboard(ideaId: string, title: string, note: string): Promise<void> {
+    if (ideaId.length === 0 || title.length === 0) {
+      await this.view?.webview.postMessage({
+        type: "wcIdeaMutationResult",
+        operation: "update",
+        ideaId,
+        ok: false,
+        message: ideaId.length === 0 ? "Idea id required." : "Title required."
+      });
+      return;
+    }
+    const out = await this.client.run("update-idea", {
+      ideaId,
+      title,
+      note: note.length > 0 ? note : null,
+      policyApproval: dashboardPolicyApproval(
+        { workflowId: "ideas", action: "update", command: "update-idea" },
+        {}
+      )
+    });
+    if (!out.ok) {
+      const message = (out.message ?? String(out.code ?? "update-idea failed")).slice(0, 900);
+      await this.view?.webview.postMessage({ type: "wcIdeaMutationResult", operation: "update", ideaId, ok: false, message });
+      return;
+    }
+    ingestPlanningMetaFromData(out.data as Record<string, unknown> | undefined);
+    this.notifyKitStateChanged();
+    await this.applyDashboardMutationInvalidation("ideas");
+    await this.view?.webview.postMessage({ type: "wcIdeaMutationResult", operation: "update", ideaId, ok: true });
+  }
+
+  private async onDeleteIdeaFromDashboard(ideaId: string): Promise<void> {
+    if (ideaId.length === 0) {
+      await this.view?.webview.postMessage({ type: "wcIdeaMutationResult", operation: "delete", ideaId, ok: false, message: "Idea id required." });
+      return;
+    }
+    const out = await this.client.run("delete-idea", {
+      ideaId,
+      policyApproval: dashboardPolicyApproval(
+        { workflowId: "ideas", action: "delete", command: "delete-idea" },
+        {}
+      )
+    });
+    if (!out.ok) {
+      const message = (out.message ?? String(out.code ?? "delete-idea failed")).slice(0, 900);
+      await this.view?.webview.postMessage({ type: "wcIdeaMutationResult", operation: "delete", ideaId, ok: false, message });
+      return;
+    }
+    const data = out.data && typeof out.data === "object" ? (out.data as Record<string, unknown>) : {};
+    this.lastDeletedIdeaForUndo = data.idea && typeof data.idea === "object" ? (data.idea as Record<string, unknown>) : null;
+    ingestPlanningMetaFromData(data);
+    this.notifyKitStateChanged();
+    await this.applyDashboardMutationInvalidation("ideas");
+    await this.view?.webview.postMessage({ type: "wcIdeaMutationResult", operation: "delete", ideaId, ok: true });
+  }
+
+  private async onUndoDeleteIdeaFromDashboard(): Promise<void> {
+    const idea = this.lastDeletedIdeaForUndo;
+    if (!idea) {
+      await this.view?.webview.postMessage({ type: "wcIdeaMutationResult", operation: "undo-delete", ok: false, message: "No deleted idea to restore." });
+      return;
+    }
+    const title = typeof idea.title === "string" ? idea.title.trim() : "";
+    if (title.length === 0) {
+      await this.view?.webview.postMessage({ type: "wcIdeaMutationResult", operation: "undo-delete", ok: false, message: "Deleted idea cannot be restored." });
+      return;
+    }
+    const args: Record<string, unknown> = {
+      title,
+      policyApproval: dashboardPolicyApproval(
+        { workflowId: "ideas", action: "create", command: "create-idea" },
+        {}
+      )
+    };
+    const note = typeof idea.note === "string" ? idea.note.trim() : "";
+    if (note.length > 0) {
+      args.note = note;
+    }
+    const status = typeof idea.status === "string" ? idea.status.trim() : "";
+    if (status.length > 0) {
+      args.status = status;
+    }
+    const linkedPlanArtifact = typeof idea.linkedPlanArtifact === "string" ? idea.linkedPlanArtifact.trim() : "";
+    if (linkedPlanArtifact.length > 0) {
+      args.linkedPlanArtifact = linkedPlanArtifact;
+    }
+    if (Array.isArray(idea.previousPlanArtifacts)) {
+      args.previousPlanArtifacts = idea.previousPlanArtifacts.filter(
+        (value): value is string => typeof value === "string" && value.trim().length > 0
+      );
+    }
+    const out = await this.client.run("create-idea", args);
+    if (!out.ok) {
+      const message = (out.message ?? String(out.code ?? "create-idea failed")).slice(0, 900);
+      await this.view?.webview.postMessage({ type: "wcIdeaMutationResult", operation: "undo-delete", ok: false, message });
+      return;
+    }
+    this.lastDeletedIdeaForUndo = null;
+    ingestPlanningMetaFromData(out.data as Record<string, unknown> | undefined);
+    this.notifyKitStateChanged();
+    await this.applyDashboardMutationInvalidation("ideas");
+    await this.view?.webview.postMessage({ type: "wcIdeaMutationResult", operation: "undo-delete", ok: true });
   }
 
   private async onTaskCommentsComingSoon(taskId: string, mode: "view" | "add"): Promise<void> {
@@ -3965,12 +4085,19 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     .wc-ideas-row {
       display: flex;
+      flex-direction: column;
       align-items: flex-start;
       gap: 6px;
       padding: 4px 6px;
       border-radius: 4px;
       background: var(--vscode-textCodeBlock-background);
       border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.35));
+    }
+    .wc-ideas-row-view {
+      display: flex;
+      align-items: flex-start;
+      gap: 6px;
+      width: 100%;
     }
     .wc-ideas-row-main {
       flex: 1;
@@ -3989,6 +4116,35 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       opacity: 0.65;
       padding-top: 2px;
     }
+    .wc-ideas-row-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      justify-content: flex-end;
+    }
+    .wc-ideas-edit-form {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      width: 100%;
+    }
+    .wc-ideas-edit-form[hidden] {
+      display: none;
+    }
+    .wc-ideas-toast {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+      padding: 4px 6px;
+      margin: 6px 0 8px;
+      border-radius: 4px;
+      background: var(--vscode-toolbar-hoverBackground, rgba(127,127,127,.10));
+      border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.35));
+    }
+    .wc-ideas-toast[hidden] {
+      display: none;
+    }
     .wc-ideas-create-form {
       display: flex;
       flex-direction: column;
@@ -4002,6 +4158,10 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       flex-wrap: wrap;
     }
     .wc-ideas-create-status[data-wc-error="1"] {
+      color: var(--vscode-errorForeground, #f44747);
+      opacity: 1;
+    }
+    .wc-ideas-row-status[data-wc-error="1"] {
       color: var(--vscode-errorForeground, #f44747);
       opacity: 1;
     }

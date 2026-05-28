@@ -1895,23 +1895,49 @@ function renderDashboardIdeasSectionInnerHtml(rawIdeas: unknown): string {
       const note = typeof row.note === "string" ? row.note.trim() : "";
       const status = String(row.status ?? "open").trim();
       const displayNote = note.length > 160 ? note.slice(0, 157).trimEnd() + "..." : note;
+      const idAttr = escapeHtmlAttr(id);
+      const titleAttr = escapeHtmlAttr(title);
+      const noteAttr = escapeHtmlAttr(note);
       if (!title) {
         return "";
       }
       return (
         '<div class="wc-ideas-row" data-wc-idea-id="' +
-        escapeHtmlAttr(id) +
+        idAttr +
+        '" data-wc-idea-title="' +
+        titleAttr +
+        '" data-wc-idea-note="' +
+        noteAttr +
         '">' +
+        '<div class="wc-ideas-row-view">' +
         '<span class="wc-ideas-drag-handle" aria-hidden="true">::</span>' +
-        '<div class="wc-ideas-row-main"><b>' +
+        '<div class="wc-ideas-row-main"><b data-wc-idea-title-view="1">' +
         escapeHtml(title) +
         "</b>" +
         (id ? " <code>" + escapeHtml(id) + "</code>" : "") +
-        (displayNote ? '<p class="muted">' + escapeHtml(displayNote) + "</p>" : "") +
+        (displayNote ? '<p class="muted" data-wc-idea-note-view="1">' + escapeHtml(displayNote) + "</p>" : "") +
         "</div>" +
         '<span class="wc-tag">' +
         escapeHtml(status) +
         "</span>" +
+        '<span class="wc-ideas-row-actions">' +
+        '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="idea-edit">Edit</button>' +
+        '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="idea-delete">Delete</button>' +
+        "</span>" +
+        "</div>" +
+        '<div class="wc-ideas-edit-form" data-wc-ideas-edit-form="1" hidden>' +
+        '<input class="wc-input" data-wc-idea-edit-title="1" type="text" maxlength="180" value="' +
+        titleAttr +
+        '" aria-label="Idea title" />' +
+        '<textarea class="wc-textarea" data-wc-idea-edit-note="1" rows="2" maxlength="1200" aria-label="Idea note">' +
+        escapeHtml(note) +
+        "</textarea>" +
+        '<div class="wc-ideas-create-actions">' +
+        '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="idea-update">Save</button>' +
+        '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="idea-edit-cancel">Cancel</button>' +
+        '<span class="muted wc-ideas-row-status" data-wc-idea-row-status="1" role="status" aria-live="polite"></span>' +
+        "</div>" +
+        "</div>" +
         "</div>"
       );
     })
@@ -1944,6 +1970,7 @@ function renderDashboardIdeasSectionInnerHtml(rawIdeas: unknown): string {
     " · Total " +
     escapeHtml(String(totalCount)) +
     "</p>" +
+    '<div class="wc-ideas-toast" data-wc-ideas-toast="1" role="status" aria-live="polite" hidden></div>' +
     body +
     form +
     "</section>"
