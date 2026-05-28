@@ -20,10 +20,13 @@ test("buildDashboardWebviewBootstrapScript returns drawer + refresh client", () 
   assert.match(script, /type: 'updateIdea'/);
   assert.match(script, /type: 'deleteIdea'/);
   assert.match(script, /type:'undoDeleteIdea'/);
+  assert.match(script, /type: 'reorderIdeas'/);
   assert.match(script, /wcIdeaCreateResult/);
   assert.match(script, /wcIdeaMutationResult/);
   assert.match(script, /data-wc-idea-title/);
   assert.match(script, /idea-undo-delete/);
+  assert.match(script, /dragstart/);
+  assert.match(script, /drop/);
   assert.doesNotMatch(readFileSync(path.join(__dirname, "../src/views/dashboard/DashboardViewProvider.ts"), "utf8"), /function setDrawerBusy\(busy, label\)/);
 });
 

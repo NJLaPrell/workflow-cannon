@@ -1902,7 +1902,7 @@ function renderDashboardIdeasSectionInnerHtml(rawIdeas: unknown): string {
         return "";
       }
       return (
-        '<div class="wc-ideas-row" data-wc-idea-id="' +
+        '<div class="wc-ideas-row" draggable="true" data-wc-idea-id="' +
         idAttr +
         '" data-wc-idea-title="' +
         titleAttr +
@@ -1910,7 +1910,7 @@ function renderDashboardIdeasSectionInnerHtml(rawIdeas: unknown): string {
         noteAttr +
         '">' +
         '<div class="wc-ideas-row-view">' +
-        '<span class="wc-ideas-drag-handle" aria-hidden="true">::</span>' +
+        '<span class="wc-ideas-drag-handle" aria-hidden="true" title="Drag to reorder">::</span>' +
         '<div class="wc-ideas-row-main"><b data-wc-idea-title-view="1">' +
         escapeHtml(title) +
         "</b>" +
@@ -1947,7 +1947,7 @@ function renderDashboardIdeasSectionInnerHtml(rawIdeas: unknown): string {
     ? '<p class="muted">Ideas unavailable.</p>'
     : rows.length === 0
       ? '<p class="muted">No ideas yet.</p>'
-      : '<div class="wc-ideas-list">' + rows + "</div>";
+      : '<div class="wc-ideas-list" data-wc-ideas-list="1">' + rows + "</div>";
   const form = available
     ? '<form class="wc-ideas-create-form" data-wc-ideas-create-form="1">' +
       '<label class="wc-field-label" for="wc-idea-title">New idea</label>' +

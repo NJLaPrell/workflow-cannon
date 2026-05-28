@@ -172,6 +172,9 @@ test("renderDashboardRootInnerHtml places ideas second in the overview stack", (
   assert.match(html, /data-wc-action="idea-update"/);
   assert.match(html, /data-wc-ideas-toast="1"/);
   assert.match(html, /data-wc-ideas-edit-form="1"/);
+  assert.match(html, /data-wc-ideas-list="1"/);
+  assert.match(html, /draggable="true"/);
+  assert.match(html, /Drag to reorder/);
 });
 
 test("renderDashboardRootInnerHtml truncates long idea notes", () => {
