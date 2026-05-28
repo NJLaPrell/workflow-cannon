@@ -16,6 +16,22 @@ export function ingestPlanningMetaFromData(data: Record<string, unknown> | undef
   }
 }
 
+/**
+ * Refresh the cached planning_generation from a `planning-generation-mismatch` error payload.
+ * Returns true when the cache was updated (and a single retry is therefore worth attempting).
+ */
+export function ingestPlanningGenerationFromMismatch(data: unknown): boolean {
+  if (!data || typeof data !== "object") {
+    return false;
+  }
+  const current = (data as Record<string, unknown>).currentPlanningGeneration;
+  if (typeof current === "number" && Number.isInteger(current) && current >= 0) {
+    lastGeneration = current;
+    return true;
+  }
+  return false;
+}
+
 /** Args to merge onto mutating `workspace-kit run` JSON when policy is require. */
 export function expectedPlanningGenerationArgs(): { expectedPlanningGeneration: number } | Record<string, never> {
   if (lastPolicy !== "require" || lastGeneration === undefined) {

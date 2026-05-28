@@ -1,8 +1,12 @@
 import * as vscode from "vscode";
 import type { DashboardSummaryCommandSuccess } from "@workflow-cannon/workspace-kit/contracts/dashboard-summary-run";
 import { prefillCursorChat, resolveEditorIntegrationState } from "../../cursor-chat-prefill.js";
-import type { CommandClient } from "../../runtime/command-client.js";
-import { expectedPlanningGenerationArgs, ingestPlanningMetaFromData } from "../../planning-generation-cache.js";
+import type { CommandClient, KitRunResult } from "../../runtime/command-client.js";
+import {
+  expectedPlanningGenerationArgs,
+  ingestPlanningGenerationFromMismatch,
+  ingestPlanningMetaFromData
+} from "../../planning-generation-cache.js";
 import { buildWishlistIntakeAgentPrompt } from "../../wishlist-chat-prompt.js";
 import { buildPhaseCompleteReleaseChatPrompt } from "../../phase-complete-release-prompt.js";
 import {
@@ -2362,6 +2366,26 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   }
 
   /**
+   * Run a planning-generation-gated mutation, automatically retrying once after a
+   * `planning-generation-mismatch` by adopting the freshly reported generation.
+   * Mitigates races where a background hydrate/apply bumps the generation between
+   * sequential dashboard mutations (e.g., accept → assign-task-phase).
+   */
+  private async runMutationWithGenerationRetry(
+    command: string,
+    baseArgs: Record<string, unknown>
+  ): Promise<KitRunResult> {
+    const first = await this.client.run(command, { ...baseArgs, ...expectedPlanningGenerationArgs() });
+    if (first.ok || first.code !== "planning-generation-mismatch") {
+      return first;
+    }
+    if (!ingestPlanningGenerationFromMismatch(first.data)) {
+      return first;
+    }
+    return this.client.run(command, { ...baseArgs, ...expectedPlanningGenerationArgs() });
+  }
+
+  /**
    * `proposed` → `ready` when needed; no-op when the task is already `ready` (stale queue row or repeat submit).
    */
   private async ensureTaskAcceptedFromProposed(
@@ -2379,14 +2403,13 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         message: `Task ${taskId} is ${status ?? "unknown"}; accept only applies from proposed.`
       };
     }
-    const r = await this.client.run("run-transition", {
+    const r = await this.runMutationWithGenerationRetry("run-transition", {
       taskId,
       action: "accept",
       policyApproval: dashboardPolicyApproval(
         { workflowId: "accept-proposed", action: policyMeta.action, command: "run-transition" },
         { taskId, phaseKey }
-      ),
-      ...expectedPlanningGenerationArgs()
+      )
     });
     if (!r.ok) {
       return {
@@ -2508,10 +2531,9 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         return false;
       }
       this.setDrawerMutationProgress(`Assigning ${taskId} → phase ${phaseKey}…`);
-      const r2 = await this.client.run("assign-task-phase", {
+      const r2 = await this.runMutationWithGenerationRetry("assign-task-phase", {
         taskId,
-        phaseKey,
-        ...expectedPlanningGenerationArgs()
+        phaseKey
       });
       if (!r2.ok) {
         this.closeDashboardDrawer();
@@ -2542,10 +2564,9 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         continue;
       }
       this.setDrawerMutationProgress(`Assigning ${taskId} → phase ${phaseKey} (${step} of ${total})…`);
-      const r2 = await this.client.run("assign-task-phase", {
+      const r2 = await this.runMutationWithGenerationRetry("assign-task-phase", {
         taskId,
-        phaseKey,
-        ...expectedPlanningGenerationArgs()
+        phaseKey
       });
       if (!r2.ok) {
         failures.push(`${taskId} assign: ${(r2.message ?? r2.code ?? JSON.stringify(r2)).slice(0, 180)}`);

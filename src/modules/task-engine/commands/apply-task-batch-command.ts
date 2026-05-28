@@ -25,6 +25,10 @@ import { validateTaskSkillAttachments } from "../../../core/skills/task-skill-va
 import { validateTaskSetForStrictMode } from "../strict-task-validation.js";
 import { TRANSCRIPT_CHURN_TASK_TYPE } from "../transcript-churn.js";
 import { evaluateIntakeForCreate, readIntakeModuleIdFromArgs } from "../task-intake-mutation-policy.js";
+import { isGitTaskStateCanonicalAuthority } from "../persistence/task-state-canonical-authority.js";
+import { commitCanonicalTaskStateEvents } from "../persistence/task-state-canonical-commit.js";
+import { draftCreatedEvent, draftUpdatedEvent } from "../persistence/task-state-event-draft.js";
+import type { TaskStateEventV1 } from "../task-state-events/event-payloads.js";
 
 const PHASE_KEY_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
 
@@ -514,6 +518,58 @@ export async function runApplyTaskBatchCommand(
     : null;
   if (strictAfter) {
     return { ok: false, code: "strict-task-validation-failed", message: strictAfter };
+  }
+
+  // Publish task-state events for all staged ops in a single canonical commit.
+  // Without this step, the SQLite projection drifts ahead of the canonical
+  // git event log, bricking subsequent run-transition / create-task writes
+  // with `task-state-stale-version` until the cache is rebuilt.
+  if (isGitTaskStateCanonicalAuthority(ctx)) {
+    const draftCtx = {
+      commandName: "apply-task-batch",
+      moduleId: "task-engine",
+      actorId: actor
+    };
+    const events: TaskStateEventV1[] = staged.map((s) => {
+      if (s.kind === "create") {
+        return draftCreatedEvent(s.task, {
+          ...draftCtx,
+          clientMutationId:
+            typeof (s.task.metadata as Record<string, unknown> | undefined)?.clientMutationId === "string"
+              ? ((s.task.metadata as Record<string, unknown>).clientMutationId as string)
+              : undefined,
+          phaseKey: s.task.phaseKey
+        });
+      }
+      return draftUpdatedEvent(
+        s.task.id,
+        s.updatedFields,
+        store,
+        { ...draftCtx, phaseKey: s.task.phaseKey },
+        {
+          title: s.task.title,
+          type: s.task.type,
+          status: s.task.status,
+          priority: s.task.priority,
+          phase: s.task.phase,
+          phaseKey: s.task.phaseKey,
+          summary: s.task.summary,
+          metadata: s.task.metadata
+        },
+        ctx.workspacePath
+      );
+    });
+    const canonical = await commitCanonicalTaskStateEvents({
+      ctx,
+      store,
+      planning,
+      events,
+      policyApproval: args.policyApproval as { confirmed: boolean; rationale: string } | undefined
+    });
+    if (canonical && !canonical.ok) {
+      return canonical;
+    }
+    await store.load();
   }
 
   const data: Record<string, unknown> = {
