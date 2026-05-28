@@ -43,6 +43,17 @@ test("resolveDashboardPolicyTierRow returns routine Ideas create", () => {
   assert.equal(row.command, "create-idea");
 });
 
+test("resolveDashboardPolicyTierRow returns routine Ideas update/delete", () => {
+  const update = tierMod.resolveDashboardPolicyTierRow("ideas", "update");
+  const del = tierMod.resolveDashboardPolicyTierRow("ideas", "delete");
+  assert.ok(update);
+  assert.ok(del);
+  assert.equal(update.tier, "routine");
+  assert.equal(update.command, "update-idea");
+  assert.equal(del.tier, "routine");
+  assert.equal(del.command, "delete-idea");
+});
+
 test("buildDashboardPolicyApproval auto rationale for routine path", () => {
   const out = approvalMod.buildDashboardPolicyApproval({
     channel: "dashboard",
@@ -70,6 +81,19 @@ test("buildDashboardPolicyApproval auto rationale for Ideas create", () => {
   assert.match(out.rationale, /workflow=ideas/);
   assert.match(out.rationale, /command=create-idea/);
   assert.match(out.rationale, /tier=routine/);
+});
+
+test("buildDashboardPolicyApproval auto rationale for Ideas delete", () => {
+  const out = approvalMod.buildDashboardPolicyApproval({
+    channel: "dashboard",
+    workflowId: "ideas",
+    action: "delete",
+    command: "delete-idea"
+  });
+  assert.equal(out.confirmed, true);
+  assert.match(out.rationale, /workflow=ideas/);
+  assert.match(out.rationale, /command=delete-idea/);
+  assert.match(out.rationale, /action=delete/);
 });
 
 test("elevated path requires humanRationale", () => {

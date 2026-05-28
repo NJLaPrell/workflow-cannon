@@ -180,6 +180,83 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
     vscode.postMessage({ type: 'createIdea', title: title, note: note });
   }
 
+  function ideaRowFor(el) {
+    return el && el.closest ? el.closest('[data-wc-idea-id]') : null;
+  }
+
+  function setIdeaRowStatus(row, message, isError) {
+    if (!row) return;
+    var status = row.querySelector('[data-wc-idea-row-status]');
+    if (!status) return;
+    status.textContent = message || '';
+    if (isError) status.setAttribute('data-wc-error', '1');
+    else status.removeAttribute('data-wc-error');
+  }
+
+  function setIdeaRowBusy(row, busy, label) {
+    if (!row) return;
+    var save = row.querySelector('[data-wc-action="idea-update"]');
+    var del = row.querySelector('[data-wc-action="idea-delete"]');
+    if (save) setButtonBusy(save, !!busy, label || 'Saving...');
+    if (del) del.disabled = !!busy;
+    row.querySelectorAll('[data-wc-ideas-edit-form] input, [data-wc-ideas-edit-form] textarea, [data-wc-ideas-edit-form] button').forEach(function(el) {
+      el.disabled = !!busy;
+    });
+  }
+
+  function setIdeaEditMode(row, editing) {
+    if (!row) return;
+    var form = row.querySelector('[data-wc-ideas-edit-form]');
+    var title = row.querySelector('[data-wc-idea-edit-title]');
+    var note = row.querySelector('[data-wc-idea-edit-note]');
+    if (title) title.value = row.getAttribute('data-wc-idea-title') || '';
+    if (note) note.value = row.getAttribute('data-wc-idea-note') || '';
+    if (form) form.hidden = !editing;
+    setIdeaRowStatus(row, '', false);
+    if (editing && title && title.focus) title.focus();
+  }
+
+  function submitIdeaUpdate(row) {
+    if (!row) return;
+    var ideaId = (row.getAttribute('data-wc-idea-id') || '').trim();
+    var titleEl = row.querySelector('[data-wc-idea-edit-title]');
+    var noteEl = row.querySelector('[data-wc-idea-edit-note]');
+    var title = titleEl && titleEl.value != null ? String(titleEl.value).trim() : '';
+    var note = noteEl && noteEl.value != null ? String(noteEl.value).trim() : '';
+    if (!ideaId) return;
+    if (!title) {
+      setIdeaRowStatus(row, 'Title required.', true);
+      if (titleEl && titleEl.focus) titleEl.focus();
+      return;
+    }
+    setIdeaRowBusy(row, true, 'Saving...');
+    vscode.postMessage({ type: 'updateIdea', ideaId: ideaId, title: title, note: note });
+  }
+
+  function submitIdeaDelete(row) {
+    if (!row) return;
+    var ideaId = (row.getAttribute('data-wc-idea-id') || '').trim();
+    if (!ideaId) return;
+    setIdeaRowBusy(row, true, 'Deleting...');
+    vscode.postMessage({ type: 'deleteIdea', ideaId: ideaId });
+  }
+
+  function showIdeasToast(message, undo) {
+    var toast = document.querySelector('[data-wc-ideas-toast]');
+    if (!toast) return;
+    toast.textContent = message || '';
+    if (undo) {
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'wc-btn wc-btn-sm wc-btn-secondary';
+      btn.setAttribute('data-wc-action', 'idea-undo-delete');
+      btn.textContent = 'Undo';
+      toast.appendChild(document.createTextNode(' '));
+      toast.appendChild(btn);
+    }
+    toast.hidden = false;
+  }
+
   function capturePhaseDeliverablesEditState(root) {
     if (!root) return null;
     var rows = root.querySelectorAll('[data-wc-phase-row]');
@@ -839,6 +916,19 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
       }
       return;
     }
+    if (m && m.type === 'wcIdeaMutationResult') {
+      var op = typeof m.operation === 'string' ? m.operation : '';
+      var mutRow = typeof m.ideaId === 'string' ? document.querySelector('[data-wc-idea-id="' + m.ideaId.replace(/"/g, '\\"') + '"]') : null;
+      if (mutRow) setIdeaRowBusy(mutRow, false);
+      if (m.ok !== true) {
+        if (mutRow) setIdeaRowStatus(mutRow, typeof m.message === 'string' ? m.message : 'Unable to save idea.', true);
+        else showIdeasToast(typeof m.message === 'string' ? m.message : 'Unable to save idea.', false);
+        return;
+      }
+      if (op === 'delete') showIdeasToast('Idea deleted.', true);
+      else if (op === 'undo-delete') showIdeasToast('Idea restored.', false);
+      return;
+    }
     if (m && m.type === 'wcPhaseDeliverablesSaved') {
       var savedPk = typeof m.phaseKey === 'string' ? m.phaseKey.trim() : '';
       if (savedPk) {
@@ -1236,6 +1326,11 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
     }
     if (act === 'wishlist-view') { var wv = (t.getAttribute('data-wishlist-id') || '').trim(); if (wv) vscode.postMessage({type:'openWishlistDetail',wishlistId:wv}); return; }
     if (act === 'idea-create') { submitIdeaCreate(t.closest('[data-wc-ideas-create-form]')); return; }
+    if (act === 'idea-edit') { setIdeaEditMode(ideaRowFor(t), true); return; }
+    if (act === 'idea-edit-cancel') { setIdeaEditMode(ideaRowFor(t), false); return; }
+    if (act === 'idea-update') { submitIdeaUpdate(ideaRowFor(t)); return; }
+    if (act === 'idea-delete') { submitIdeaDelete(ideaRowFor(t)); return; }
+    if (act === 'idea-undo-delete') { vscode.postMessage({type:'undoDeleteIdea'}); return; }
     if (act === 'planning-new-plan') { vscode.postMessage({type:'prefillPlanningInterviewChat'}); return; }
     if (act === 'planning-resume-chat') { var rc = (t.getAttribute('data-resume-cli') || '').trim(); vscode.postMessage({type:'prefillPlanningResumeChat',resumeCli:rc}); return; }
     if (act === 'planning-discard') { vscode.postMessage({type:'planningDiscard'}); return; }
@@ -1252,6 +1347,18 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
       ev.preventDefault();
       submitIdeaCreate(target.closest('[data-wc-ideas-create-form]'));
       return;
+    }
+    if (target && target.matches && target.matches('[data-wc-idea-edit-title]')) {
+      if (ev.key === 'Enter') {
+        ev.preventDefault();
+        submitIdeaUpdate(ideaRowFor(target));
+        return;
+      }
+      if (ev.key === 'Escape') {
+        ev.preventDefault();
+        setIdeaEditMode(ideaRowFor(target), false);
+        return;
+      }
     }
     if (!target || !target.classList || !target.classList.contains('dash-phase-deliverables-input')) return;
     if (ev.key === 'Enter') {

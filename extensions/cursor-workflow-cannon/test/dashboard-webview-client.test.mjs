@@ -17,8 +17,13 @@ test("buildDashboardWebviewBootstrapScript returns drawer + refresh client", () 
   assert.match(script, /wcHostSnapshot/);
   assert.match(script, /wcReinitEmbeddedCae/);
   assert.match(script, /type: 'createIdea'/);
+  assert.match(script, /type: 'updateIdea'/);
+  assert.match(script, /type: 'deleteIdea'/);
+  assert.match(script, /type:'undoDeleteIdea'/);
   assert.match(script, /wcIdeaCreateResult/);
+  assert.match(script, /wcIdeaMutationResult/);
   assert.match(script, /data-wc-idea-title/);
+  assert.match(script, /idea-undo-delete/);
   assert.doesNotMatch(readFileSync(path.join(__dirname, "../src/views/dashboard/DashboardViewProvider.ts"), "utf8"), /function setDrawerBusy\(busy, label\)/);
 });
 
