@@ -52,6 +52,7 @@
         "task-state-publish",
         "task-state-snapshot",
         "task-state-compact",
+        "planning-state-migrate-baseline",
         "task-state-migrate-baseline",
         "task-state-verify",
         "batch-transition",
@@ -221,6 +222,9 @@
         },
         "task-state-compact": {
           "$ref": "#/$defs/contractTaskStateCompact"
+        },
+        "planning-state-migrate-baseline": {
+          "$ref": "#/$defs/contractTaskStateMigrateBaseline"
         },
         "task-state-migrate-baseline": {
           "$ref": "#/$defs/contractTaskStateMigrateBaseline"

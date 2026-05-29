@@ -19,6 +19,7 @@ import { runTaskStatePublish } from "../persistence/task-state-publish-runtime.j
 import { runTaskStateSnapshot } from "../persistence/task-state-snapshot-runtime.js";
 import { runTaskStateCompact } from "../persistence/task-state-compact-runtime.js";
 import { runTaskStateMigrateBaseline } from "../persistence/task-state-migrate-baseline-runtime.js";
+import { runPlanningStateMigrateBaseline } from "../persistence/planning-state-migrate-baseline-runtime.js";
 import { runGetKitPersistenceMap } from "../persistence/kit-persistence-map-runtime.js";
 import { runTaskPersistenceReadiness } from "../persistence/task-persistence-readiness.js";
 import { planningSqliteDatabaseRelativePath } from "../planning-config.js";
@@ -92,6 +93,9 @@ export async function routeTaskEngineBeforeOpenPlanningStores(
   }
   if (command.name === "task-state-migrate-baseline") {
     return runTaskStateMigrateBaseline(ctx, args as Record<string, unknown>);
+  }
+  if (command.name === "planning-state-migrate-baseline") {
+    return runPlanningStateMigrateBaseline(ctx, args as Record<string, unknown>);
   }
   if (command.name === "get-kit-persistence-map") {
     return runGetKitPersistenceMap(ctx);

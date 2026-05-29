@@ -22,7 +22,10 @@ for (const row of manifestRows) {
 }
 
 /** Instruction-adjacent markdown that is not a `workspace-kit run` subcommand catalog entry. */
-const ORPHAN_CHECK_ALLOWLIST = new Set(["documentation/documentation-maintainer.md"]);
+const ORPHAN_CHECK_ALLOWLIST = new Set([
+  "documentation/documentation-maintainer.md",
+  "task-engine/planning-state-events.md"
+]);
 
 const errors = [];
 

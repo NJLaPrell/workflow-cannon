@@ -39,6 +39,7 @@ export type PolicyOperationId =
   | "tasks.task-state-publish"
   | "tasks.task-state-snapshot"
   | "tasks.task-state-migrate-baseline"
+  | "tasks.planning-state-migrate-baseline"
   | "tasks.synthesize-transcript-churn"
   | "approvals.review-item"
   | "improvement.generate-recommendations"

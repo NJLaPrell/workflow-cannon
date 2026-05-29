@@ -1016,6 +1016,15 @@
   },
   {
     "moduleId": "task-engine",
+    "name": "planning-state-migrate-baseline",
+    "file": "planning-state-migrate-baseline.md",
+    "description": "Seed planning.* genesis events from local phase catalog and workspace status SQLite.",
+    "policyOperationId": "tasks.planning-state-migrate-baseline",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "task-engine",
     "name": "task-state-migrate-baseline",
     "file": "task-state-migrate-baseline.md",
     "description": "One-shot SQLite-to-git baseline migration with count/hash survival report.",

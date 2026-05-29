@@ -6,7 +6,10 @@ import {
   expectedVersionsForPublish,
   readRemoteTaskVersionMap
 } from "../task-state-git/remote-projection-versions.js";
+import type { CanonicalStateEventV1 } from "../task-state-events/canonical-state-events.js";
+import { isTaskStateEvent } from "../task-state-events/canonical-state-events.js";
 import type { TaskStateEventV1 } from "../task-state-events/event-payloads.js";
+import type { PlanningStateEventV1 } from "../task-state-events/planning-event-payloads.js";
 import type { OpenedPlanningStores } from "./planning-open.js";
 import { runTaskStateHydrate } from "./task-state-hydrate-runtime.js";
 import type { TaskStore } from "./store.js";
@@ -21,14 +24,22 @@ export type CanonicalCommitInput = {
   store: TaskStore;
   planning?: OpenedPlanningStores;
   events: TaskStateEventV1[];
+  planningEvents?: PlanningStateEventV1[];
   policyApproval?: { confirmed: boolean; rationale: string };
   /** When false, publish only (no local SQLite projection refresh). */
   applyProjection?: boolean;
 };
 
-function touchedTaskIds(events: TaskStateEventV1[]): Set<string> {
+function allPublishEvents(input: CanonicalCommitInput): CanonicalStateEventV1[] {
+  return [...input.events, ...(input.planningEvents ?? [])];
+}
+
+function touchedTaskIds(events: CanonicalStateEventV1[]): Set<string> {
   const ids = new Set<string>();
   for (const event of events) {
+    if (!isTaskStateEvent(event)) {
+      continue;
+    }
     for (const id of taskIdsTouchedByEvent(event)) {
       ids.add(id);
     }
@@ -71,7 +82,7 @@ export async function commitCanonicalTaskStateEvents(
 
   const headSha =
     "missing" in resolved ? remoteBranchHeadSha(workspacePath, branch)! : resolved.tipSha;
-  const touched = touchedTaskIds(input.events);
+  const touched = touchedTaskIds(allPublishEvents(input));
   const storeVersions = expectedTaskVersionsForTaskIds(input.store, touched);
   const remoteVersions =
     "missing" in resolved
@@ -82,7 +93,7 @@ export async function commitCanonicalTaskStateEvents(
   const publish = await publishTaskStateEvents({
     workspacePath,
     branch,
-    events: input.events,
+    events: allPublishEvents(input),
     expectedHeadSha: headSha,
     expectedTaskVersions,
     push: true

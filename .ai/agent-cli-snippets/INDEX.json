@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-05-28T05:28:00.847Z",
+  "generatedAt": "2026-05-29T13:48:04.871Z",
   "commands": [
     {
       "name": "accept-improvement",
@@ -830,6 +830,11 @@
     {
       "name": "phase-status",
       "path": ".ai/agent-cli-snippets/by-command/phase-status.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "planning-state-migrate-baseline",
+      "path": ".ai/agent-cli-snippets/by-command/planning-state-migrate-baseline.json",
       "moduleId": "task-engine"
     },
     {

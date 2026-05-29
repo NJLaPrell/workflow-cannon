@@ -1,6 +1,13 @@
 import { getTransitionAction, isTransitionAllowed } from "../transitions.js";
 import type { TaskStateEventKindV1, TaskStateEventV1, TaskTransitionedPayloadV1 } from "./event-payloads.js";
 import {
+  admitCanonicalStateEvent,
+  admitCanonicalStateEventStream,
+  type CanonicalEventAdmissionError
+} from "./canonical-event-admission.js";
+import type { CanonicalStateEventV1 } from "./canonical-state-events.js";
+import { isPlanningStateEventKind } from "./planning-event-payloads.js";
+import {
   TASK_STATE_EVENT_LOG_SUPPORTED_KINDS,
   TASK_STATE_EVENT_LOG_SUPPORTED_SCHEMA_VERSION
 } from "./event-admission-policy.js";
@@ -211,6 +218,11 @@ export function admitTaskStateEvent(
   }
 
   const kindRaw = input.kind;
+  if (typeof kindRaw === "string" && isPlanningStateEventKind(kindRaw)) {
+    return admitCanonicalStateEvent(input, context as { priorEvents?: CanonicalStateEventV1[] }) as
+      | { ok: true; event: TaskStateEventV1 }
+      | { ok: false; error: TaskStateEventAdmissionError };
+  }
   if (typeof kindRaw === "string" && !TASK_STATE_EVENT_LOG_SUPPORTED_KINDS.includes(kindRaw as TaskStateEventKindV1)) {
     return {
       ok: false,
@@ -284,26 +296,27 @@ export function admitTaskStateEventStream(
   inputs: unknown[],
   options?: { priorEvents?: TaskStateEventV1[]; initialProjection?: TaskStateProjectionV1 }
 ): { ok: true; events: TaskStateEventV1[] } | { ok: false; error: TaskStateEventAdmissionError } {
-  const admitted: TaskStateEventV1[] = [...(options?.priorEvents ?? [])];
-  const toAppend = [...inputs].sort((a, b) => {
-    const sa = isRecord(a) && typeof a.sequence === "number" ? a.sequence : 0;
-    const sb = isRecord(b) && typeof b.sequence === "number" ? b.sequence : 0;
-    if (sa !== sb) return sa - sb;
-    const ea = isRecord(a) && typeof a.eventId === "string" ? a.eventId : "";
-    const eb = isRecord(b) && typeof b.eventId === "string" ? b.eventId : "";
-    return ea.localeCompare(eb);
+  const result = admitCanonicalStateEventStream(inputs, {
+    priorEvents: options?.priorEvents as CanonicalStateEventV1[] | undefined,
+    initialTaskProjection: options?.initialProjection
   });
-
-  for (const input of toAppend) {
-    const result = admitTaskStateEvent(input, {
-      priorEvents: admitted,
-      initialProjection: options?.initialProjection
-    });
-    if (!result.ok) {
-      return result;
-    }
-    admitted.push(result.event);
+  if (!result.ok) {
+    return {
+      ok: false,
+      error: mapCanonicalAdmissionError(result.error)
+    };
   }
+  return { ok: true, events: result.events as TaskStateEventV1[] };
+}
 
-  return { ok: true, events: admitted.slice(options?.priorEvents?.length ?? 0) };
+function mapCanonicalAdmissionError(error: CanonicalEventAdmissionError): TaskStateEventAdmissionError {
+  const code =
+    error.code === "workspace-revision-mismatch"
+      ? "replay-conflict"
+      : (error.code as TaskStateEventAdmissionError["code"]);
+  return {
+    code,
+    message: error.message,
+    details: error.details
+  };
 }

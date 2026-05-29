@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "eventId": "tse.20260529T120002Z.catalog-removed-fixture",
+  "sequence": 2,
+  "parentEventId": "tse.20260529T120001Z.catalog-upsert-fixture",
+  "recordedAt": "2026-05-29T12:00:02.000Z",
+  "actor": { "id": "system", "source": "system" },
+  "command": { "name": "upsert-phase-catalog-entry", "moduleId": "task-engine" },
+  "kind": "planning.phase_catalog.removed",
+  "payload": {
+    "phaseKey": "118"
+  }
+}
