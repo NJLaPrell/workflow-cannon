@@ -9,8 +9,13 @@ import { inferTaskPhaseKey, parseKitPhaseNumberFromYaml, resolveCanonicalPhase }
 import { TaskEngineError } from "./transitions.js";
 import { buildPhaseJournalStatusSummary } from "./phase-journal/phase-journal-summary.js";
 import { digestPayload, readIdempotencyValue } from "./mutation-utils.js";
+import { commitCanonicalPlanningEvents } from "./persistence/planning-canonical-mutation-hook.js";
+import { draftPlanningWorkspaceStatusUpdatedEvent } from "./persistence/planning-event-draft.js";
+import { openPlanningStores } from "./persistence/planning-open.js";
+import { isGitTaskStateCanonicalAuthority } from "./persistence/task-state-canonical-authority.js";
 import type { TaskEntity, TaskStatus } from "./types.js";
 import {
+  applyWorkspaceStatusPatchInMemory,
   findWorkspaceStatusEventByClientMutationId,
   formatWorkspaceStatusDbExportYaml,
   kitWorkspaceStatusPublicToSnapshot,
@@ -21,6 +26,7 @@ import {
   workspaceStatusTableAvailable,
   writeWorkspaceStatusDbExport,
   WORKSPACE_STATUS_DB_EXPORT_RELATIVE,
+  type KitWorkspaceStatusPublic,
   type WorkspaceStatusUpdatePatch
 } from "./persistence/workspace-status-store.js";
 
@@ -493,23 +499,72 @@ export async function runUpdateWorkspaceStatus(
     }
     const clearedCurrent =
       Object.hasOwn(patch, "currentKitPhase") && patch.currentKitPhase === null;
-    const { beforeRevision, afterRevision } = patchWorkspaceStatus(db, {
-      expectedWorkspaceRevision: revRaw,
-      patch,
-      actor,
-      command,
-      details:
-        clearedCurrent && before.currentKitPhase
-          ? { previousCurrentKitPhase: before.currentKitPhase }
-          : undefined
-    });
-    const after = readKitWorkspaceStatusRow(db);
-    if (!after) {
-      return {
-        ok: false,
-        code: "storage-read-error",
-        message: "update-workspace-status wrote but could not re-read workspace status"
-      };
+    const gitCanonical = isGitTaskStateCanonicalAuthority(ctx);
+    let beforeRevision: number;
+    let afterRevision: number;
+    let after: KitWorkspaceStatusPublic;
+
+    if (gitCanonical) {
+      const planning = await openPlanningStores(ctx);
+      const store = planning.taskStore;
+      const payloadDigest = digestPayload({ command, expectedWorkspaceRevision: revRaw, patch });
+      const clientMutationId = readIdempotencyValue(args);
+      const plannedAfter = applyWorkspaceStatusPatchInMemory(before, patch);
+      const event = draftPlanningWorkspaceStatusUpdatedEvent({
+        patch,
+        before,
+        after: plannedAfter,
+        payloadDigest,
+        ctx: {
+          commandName: command,
+          moduleId: "task-engine",
+          actorId: actor ?? undefined,
+          clientMutationId
+        }
+      });
+      const canonical = await commitCanonicalPlanningEvents({
+        ctx,
+        store,
+        planning,
+        events: [event],
+        policyApproval: args.policyApproval as { confirmed: boolean; rationale: string } | undefined
+      });
+      if (canonical && !canonical.ok) {
+        return canonical;
+      }
+      const reread = readKitWorkspaceStatusRow(db);
+      if (!reread) {
+        return {
+          ok: false,
+          code: "storage-read-error",
+          message: "update-workspace-status canonical path could not re-read workspace status"
+        };
+      }
+      beforeRevision = before.workspaceRevision;
+      afterRevision = reread.workspaceRevision;
+      after = reread;
+    } else {
+      const patched = patchWorkspaceStatus(db, {
+        expectedWorkspaceRevision: revRaw,
+        patch,
+        actor,
+        command,
+        details:
+          clearedCurrent && before.currentKitPhase
+            ? { previousCurrentKitPhase: before.currentKitPhase }
+            : undefined
+      });
+      beforeRevision = patched.beforeRevision;
+      afterRevision = patched.afterRevision;
+      const reread = readKitWorkspaceStatusRow(db);
+      if (!reread) {
+        return {
+          ok: false,
+          code: "storage-read-error",
+          message: "update-workspace-status wrote but could not re-read workspace status"
+        };
+      }
+      after = reread;
     }
 
     let exportStatus: Record<string, unknown> | undefined;

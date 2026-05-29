@@ -31,6 +31,8 @@ import {
   persistTaskStateProjectionDocument,
   upsertProjectionMetaAfterApply
 } from "./task-state-cache-runtime-shared.js";
+import { replayCanonicalStateEvents } from "../task-state-events/canonical-replay.js";
+import { persistPlanningProjectionToSqlite } from "../task-state-events/planning-sqlite-persist.js";
 
 export async function runTaskStateHydrate(
   ctx: ModuleLifecycleContext,
@@ -202,6 +204,13 @@ export async function runTaskStateHydrate(
 
   const planning = await openPlanningStoresForTaskStateCache(ctx);
   persistTaskStateProjectionDocument(planning, document!);
+  const planningReplay = replayCanonicalStateEvents(admitted.events);
+  if (planningReplay.ok) {
+    persistPlanningProjectionToSqlite(
+      planning.sqliteDual.getDatabase(),
+      planningReplay.result.planningProjection
+    );
+  }
   upsertProjectionMetaAfterApply(planning, {
     appliedSequence: layoutRead.layout.manifest.head.latestSequence,
     sourceCommit: resolved.tipSha,

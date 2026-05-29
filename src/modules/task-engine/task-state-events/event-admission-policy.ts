@@ -1,11 +1,12 @@
 import type { TaskStateEventKindV1 } from "./event-payloads.js";
+import { PLANNING_STATE_EVENT_KINDS, type PlanningStateEventKindV1 } from "./planning-event-payloads.js";
 
-/** Envelope + payload schema generation admitted to the canonical git log (Phase 114 S1). */
+/** Envelope + payload schema generation admitted to the canonical git log (Phase 114 S1 + Phase 119 planning). */
 export const TASK_STATE_EVENT_LOG_SUPPORTED_SCHEMA_VERSION = 1 as const;
 
 /** Explicit versioning policy for operators and agents (machine canon). */
 export const TASK_STATE_EVENT_LOG_SCHEMA_POLICY =
-  "Append only events with envelope.schemaVersion === 1 and kind in TASK_STATE_EVENT_LOG_SUPPORTED_KINDS. " +
+  "Append only events with envelope.schemaVersion === 1 and kind in CANONICAL_STATE_EVENT_LOG_SUPPORTED_KINDS. " +
   "Reject unknown kinds, unsupported schemaVersion, duplicate clientMutationId in the same stream, " +
   "and lifecycle transitions that disagree with replayed task status or workspace-kit transition table. " +
   "Future schema bumps require a new log segment or migration runbook — do not coerce v2+ into v1 validators.";
@@ -16,3 +17,15 @@ export const TASK_STATE_EVENT_LOG_SUPPORTED_KINDS: readonly TaskStateEventKindV1
   "task.transitioned",
   "task.batch_applied"
 ] as const;
+
+export const PLANNING_STATE_EVENT_LOG_SUPPORTED_KINDS: readonly PlanningStateEventKindV1[] =
+  PLANNING_STATE_EVENT_KINDS;
+
+export const CANONICAL_STATE_EVENT_LOG_SUPPORTED_KINDS: readonly string[] = [
+  ...TASK_STATE_EVENT_LOG_SUPPORTED_KINDS,
+  ...PLANNING_STATE_EVENT_LOG_SUPPORTED_KINDS
+] as const;
+
+export function isSupportedCanonicalEventKind(kind: string): boolean {
+  return (CANONICAL_STATE_EVENT_LOG_SUPPORTED_KINDS as readonly string[]).includes(kind);
+}

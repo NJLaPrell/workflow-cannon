@@ -143,6 +143,24 @@ export type WorkspaceStatusUpdatePatch = {
   nextAgentActions?: string[];
 };
 
+export function applyWorkspaceStatusPatchInMemory(
+  cur: KitWorkspaceStatusPublic,
+  patch: WorkspaceStatusUpdatePatch
+): KitWorkspaceStatusPublic {
+  const now = new Date().toISOString();
+  return {
+    workspaceRevision: cur.workspaceRevision + 1,
+    currentKitPhase: Object.hasOwn(patch, "currentKitPhase") ? patch.currentKitPhase! : cur.currentKitPhase,
+    nextKitPhase: Object.hasOwn(patch, "nextKitPhase") ? patch.nextKitPhase! : cur.nextKitPhase,
+    activeFocus: Object.hasOwn(patch, "activeFocus") ? patch.activeFocus! : cur.activeFocus,
+    lastUpdated: Object.hasOwn(patch, "lastUpdated") ? patch.lastUpdated! : cur.lastUpdated,
+    blockers: patch.blockers !== undefined ? patch.blockers : cur.blockers,
+    pendingDecisions: patch.pendingDecisions !== undefined ? patch.pendingDecisions : cur.pendingDecisions,
+    nextAgentActions: patch.nextAgentActions !== undefined ? patch.nextAgentActions : cur.nextAgentActions,
+    updatedAt: now
+  };
+}
+
 /**
  * Replace workspace status from a full YAML snapshot (e.g. after phase-snapshot file write).
  * Bumps revision and appends an audit event.

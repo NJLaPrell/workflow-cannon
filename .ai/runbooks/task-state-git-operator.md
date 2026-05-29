@@ -55,6 +55,17 @@ Routine **`git pull`** on **`main`** must **not** require merging a teammate’s
 - **`pnpm exec wk run check-task-store-commit '{}'`** — fails if live SQLite is **staged** without approval (also surfaced in **`doctor`**).
 - Legacy recovery on a feature branch only: **`sync-task-store-after-merge`** or **`task-state-hydrate`** — prefer hydrate when authority is **`git-event-log`**.
 
+### Phase 119 — planning canonical sync (catalog + workspace status)
+
+When **`tasks.canonicalAuthority`** is **`git-event-log`**, these domains publish **`planning.*`** events on the same **`workflow-cannon/task-state`** stream as **`task.*`**:
+
+- **`kit_phase_catalog`** — `planning.phase_catalog.upserted` / `.removed` (via **`upsert-phase-catalog-entry`**)
+- **`kit_workspace_status`** — `planning.workspace_status.updated` (via **`update-workspace-status`**, **`set-current-phase`** where wired)
+
+**Hydrate** / **rebuild-task-state-cache** replays planning events into SQLite in shared sequence order. **Doctor** surfaces planning projection drift as an advisory hint (run **`task-state-hydrate`**).
+
+One-time seed when the remote log lacks planning events: **`planning-state-migrate-baseline`** (dry-run first; **`overwriteExisting:true`** only with operator intent). Instruction: **`src/modules/task-engine/instructions/planning-state-events.md`**.
+
 ---
 
 ## Phase closeout / merge to `main`

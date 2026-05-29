@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "eventId": "tse.20260529T120003Z.workspace-status-fixture",
+  "sequence": 3,
+  "parentEventId": "tse.20260529T120002Z.catalog-removed-fixture",
+  "recordedAt": "2026-05-29T12:00:03.000Z",
+  "actor": { "id": "system", "source": "system" },
+  "expectedWorkspaceRevision": 69,
+  "command": { "name": "update-workspace-status", "moduleId": "task-engine" },
+  "kind": "planning.workspace_status.updated",
+  "payload": {
+    "patch": {
+      "activeFocus": "Phase 119 — planning git sync"
+    },
+    "after": {
+      "workspaceRevision": 70,
+      "currentKitPhase": "119",
+      "nextKitPhase": "116",
+      "activeFocus": "Phase 119 — planning git sync",
+      "lastUpdated": "2026-05-29T06:55:18.092Z",
+      "blockers": [],
+      "pendingDecisions": [],
+      "nextAgentActions": ["Open Queue tab and pick up ready work for this phase"],
+      "updatedAt": "2026-05-29T12:00:03.000Z"
+    }
+  }
+}

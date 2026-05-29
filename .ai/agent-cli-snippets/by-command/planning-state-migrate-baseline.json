@@ -1,0 +1,40 @@
+{
+  "ok": true,
+  "code": "run-args-schema",
+  "command": "planning-state-migrate-baseline",
+  "schema": {
+    "type": "object"
+  },
+  "schemaSource": "pilot-run-args-snapshot",
+  "sampleArgs": {},
+  "examples": [
+    {
+      "description": "Minimal argv example",
+      "argv": "workspace-kit run planning-state-migrate-baseline '{}'"
+    }
+  ],
+  "instructionPath": "src/modules/task-engine/instructions/planning-state-migrate-baseline.md",
+  "moduleId": "task-engine",
+  "description": "Seed planning.* genesis events from local phase catalog and workspace status SQLite.",
+  "policy": {
+    "sensitivity": "sensitive",
+    "operationId": "tasks.planning-state-migrate-baseline",
+    "jsonApprovalRequired": true
+  },
+  "planningGeneration": {
+    "cliPrelude": false,
+    "expectedPlanningGeneration": "not required by CLI prelude"
+  },
+  "idempotency": {
+    "clientMutationId": false
+  },
+  "responseTemplate": {
+    "defaultResponseTemplateId": "default"
+  },
+  "remediationContract": ".ai/runbooks/agent-task-engine-ergonomics.md",
+  "discovery": {
+    "listCommands": "pnpm exec wk run --list-commands",
+    "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
+  },
+  "invocationId": "04945c7b-476d-4352-a934-76e50cc4862f"
+}

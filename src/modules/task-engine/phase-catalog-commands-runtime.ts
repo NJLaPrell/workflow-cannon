@@ -12,6 +12,12 @@ import {
   readIdempotencyValue,
   readOptionalExpectedPlanningGeneration
 } from "./mutation-utils.js";
+import { commitCanonicalPlanningEvents } from "./persistence/planning-canonical-mutation-hook.js";
+import {
+  draftPlanningPhaseCatalogRemovedEvent,
+  draftPlanningPhaseCatalogUpsertedEvent
+} from "./persistence/planning-event-draft.js";
+import { isGitTaskStateCanonicalAuthority } from "./persistence/task-state-canonical-authority.js";
 import type { OpenedPlanningStores } from "./persistence/planning-open.js";
 import type { TaskStore } from "./persistence/store.js";
 import {
@@ -252,25 +258,57 @@ export async function runUpsertPhaseCatalogEntry(
   }
 
   try {
-    store.addMutationEvidence(
-      mutationEvidence("upsert-phase-catalog-entry", phaseKey, actor, {
-        phaseKey,
-        remove,
-        shortDescription: nextShort,
-        clientMutationId,
-        payloadDigest
-      })
-    );
-    await store.save({
-      expectedPlanningGeneration: readOptionalExpectedPlanningGeneration(rawArgs),
-      beforePersistInSqliteTransaction: () => {
-        if (remove) {
-          deletePhaseCatalogRow(db, phaseKey);
-        } else {
-          upsertPhaseCatalogRow(db, phaseKey, nextShort, nowIso());
+    const gitCanonical = isGitTaskStateCanonicalAuthority(ctx);
+    const draftCtx = {
+      commandName: "upsert-phase-catalog-entry",
+      moduleId: "task-engine",
+      actorId: actor,
+      clientMutationId,
+      phaseKey
+    };
+    const updatedAt = nowIso();
+    const planningEvent = remove
+      ? draftPlanningPhaseCatalogRemovedEvent({ phaseKey, ctx: draftCtx })
+      : draftPlanningPhaseCatalogUpsertedEvent({
+          phaseKey,
+          shortDescription: nextShort,
+          updatedAt,
+          ctx: draftCtx
+        });
+
+    if (!gitCanonical) {
+      store.addMutationEvidence(
+        mutationEvidence("upsert-phase-catalog-entry", phaseKey, actor, {
+          phaseKey,
+          remove,
+          shortDescription: nextShort,
+          clientMutationId,
+          payloadDigest
+        })
+      );
+      await store.save({
+        expectedPlanningGeneration: readOptionalExpectedPlanningGeneration(rawArgs),
+        beforePersistInSqliteTransaction: () => {
+          if (remove) {
+            deletePhaseCatalogRow(db, phaseKey);
+          } else {
+            upsertPhaseCatalogRow(db, phaseKey, nextShort, updatedAt);
+          }
         }
-      },
-    });
+      });
+    } else {
+      const canonical = await commitCanonicalPlanningEvents({
+        ctx,
+        store,
+        planning,
+        events: [planningEvent],
+        policyApproval: rawArgs.policyApproval as { confirmed: boolean; rationale: string } | undefined
+      });
+      if (canonical && !canonical.ok) {
+        return canonical;
+      }
+      await store.load();
+    }
     if (clientMutationId) {
       phaseCatalogMutationCache.set(
         phaseCatalogMutationCacheKey(ctx.workspacePath, phaseKey, clientMutationId),

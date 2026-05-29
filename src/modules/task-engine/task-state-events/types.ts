@@ -49,6 +49,11 @@ export type TaskStateEventEnvelopeV1 = {
    * (mutating kinds only). Must match replayed projection version or admission rejects.
    */
   expectedTaskVersion?: number;
+  /**
+   * Optimistic concurrency for planning.workspace_status.updated events.
+   * Must match replayed workspace revision or admission rejects.
+   */
+  expectedWorkspaceRevision?: number;
   command: TaskStateEventCommandMetadataV1;
   workspace?: TaskStateEventWorkspaceIdentityV1;
 };
