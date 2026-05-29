@@ -1,3 +1,5 @@
+<!-- GENERATED FROM .ai/runbooks/phase-closeout-ordering-recovery.md — edit that file; do not hand-edit this render (see docs/maintainers/adrs/ADR-ai-canonical-maintainer-docs-pipeline.md) -->
+
 # Phase closeout ordering recovery
 
 **Use when:** Workspace **`currentKitPhase`** points at phase **N**, but git **`main`** (or the phase roster) already shows **later** phases shipped, or **`origin/release/phase-<N>`** never existed.
