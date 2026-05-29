@@ -79,6 +79,8 @@ export type PlanningWorkspaceStatusUpdatedPayloadV1 = {
     updatedAt: string;
   };
   payloadDigest?: string;
+  /** When workspace rolls off a phase (set-current-phase / phase clear). Drives roster Delivered tags after git hydrate. */
+  previousCurrentKitPhase?: string | null;
 };
 
 export type PlanningPhaseNoteEventRefV1 = {

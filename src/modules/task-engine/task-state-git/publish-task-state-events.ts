@@ -27,7 +27,8 @@ import {
 import {
   admitRemoteEventStream,
   readRemoteSnapshotProjection,
-  readRemoteTaskVersionMap
+  readRemoteTaskVersionMap,
+  replayPlanningProjectionFromRawEvents
 } from "./remote-projection-versions.js";
 import { resolveEventSegmentRelativePath } from "./layout.js";
 
@@ -133,7 +134,7 @@ function loadRemoteEvents(
   ref: string,
   manifest: TaskStateGitManifestV1,
   eventSegmentPaths: string[]
-): { ok: true; events: CanonicalStateEventV1[] } | PublishTaskStateEventsFailure {
+): { ok: true; events: CanonicalStateEventV1[]; rawEvents: unknown[] } | PublishTaskStateEventsFailure {
   const paths =
     eventSegmentPaths.length > 0 ? eventSegmentPaths : segmentPathsThroughHead(manifest);
   const read = readEventSegmentsJsonl(workspacePath, ref, paths);
@@ -150,7 +151,7 @@ function loadRemoteEvents(
       data: { admissionCode: admitted.error.code }
     };
   }
-  return { ok: true, events: admitted.events };
+  return { ok: true, events: admitted.events, rawEvents: raw };
 }
 
 const DEFAULT_EVENTS_PER_SEGMENT = 10_000;
@@ -288,11 +289,13 @@ export async function publishTaskStateEvents(
       resolved.ref,
       resolved.tipSha
     );
+    const initialPlanningProjection = replayPlanningProjectionFromRawEvents(remoteLoaded.rawEvents);
     // `readRemoteSnapshotProjection` already replays the remote tail on the bootstrap snapshot.
     // Seeding admission with both that head projection and `remoteLoaded.events` would replay tail twice.
     const admitted = admitCanonicalStateEventStream(publishedEvents, {
       priorEvents: headProjection ? [] : remoteLoaded.events,
-      initialTaskProjection: headProjection ?? undefined
+      initialTaskProjection: headProjection ?? undefined,
+      initialPlanningProjection
     });
     if (!admitted.ok) {
       return {

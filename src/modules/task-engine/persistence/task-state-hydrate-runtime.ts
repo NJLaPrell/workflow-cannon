@@ -31,7 +31,9 @@ import {
   persistTaskStateProjectionDocument,
   upsertProjectionMetaAfterApply
 } from "./task-state-cache-runtime-shared.js";
-import { replayCanonicalStateEvents } from "../task-state-events/canonical-replay.js";
+import type { CanonicalStateEventV1 } from "../task-state-events/canonical-state-events.js";
+import { isTaskStateEvent } from "../task-state-events/canonical-state-events.js";
+import { replayPlanningEventsFromCanonical } from "../task-state-events/canonical-replay.js";
 import { persistPlanningProjectionToSqlite } from "../task-state-events/planning-sqlite-persist.js";
 import { enabledPlanningSyncDomainSet } from "./planning-canonical-sync-domains.js";
 
@@ -173,7 +175,7 @@ export async function runTaskStateHydrate(
         const tailReplay = replayTailFromSnapshot({
           snapshot: snapshotContent,
           throughSequence: metaParsed.data.throughSequence,
-          tailEvents: admitted.events
+          tailEvents: admitted.events.filter(isTaskStateEvent)
         });
         if (tailReplay.ok) {
           hydrateMode = "snapshot-plus-tail";
@@ -206,14 +208,22 @@ export async function runTaskStateHydrate(
   const planning = await openPlanningStoresForTaskStateCache(ctx);
   persistTaskStateProjectionDocument(planning, document!);
   const enabledDomains = enabledPlanningSyncDomainSet(ctx);
-  const planningReplay = replayCanonicalStateEvents(admitted.events, { enabledDomains });
-  if (planningReplay.ok) {
-    persistPlanningProjectionToSqlite(
-      planning.sqliteDual.getDatabase(),
-      planningReplay.result.planningProjection,
-      { enabledDomains }
-    );
+  const planningReplay = replayPlanningEventsFromCanonical(rawEvents as CanonicalStateEventV1[], {
+    enabledDomains
+  });
+  if (!planningReplay.ok) {
+    return {
+      ok: false,
+      code: "planning-state-hydrate-failed",
+      message: `Planning projection replay failed: ${planningReplay.error.message}`,
+      data: { schemaVersion: 1, eventId: planningReplay.error.eventId, hydrateMode, snapshotId }
+    };
   }
+  persistPlanningProjectionToSqlite(
+    planning.sqliteDual.getDatabase(),
+    planningReplay.projection,
+    { enabledDomains }
+  );
   upsertProjectionMetaAfterApply(planning, {
     appliedSequence: layoutRead.layout.manifest.head.latestSequence,
     sourceCommit: resolved.tipSha,

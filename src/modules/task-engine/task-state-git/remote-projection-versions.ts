@@ -12,8 +12,17 @@ import {
   admitTaskStateEventStream,
   type TaskStateEventAdmissionError
 } from "../task-state-events/event-admission.js";
+import { admitCanonicalStateEventStream } from "../task-state-events/canonical-event-admission.js";
+import type { CanonicalStateEventV1 } from "../task-state-events/canonical-state-events.js";
+import { isTaskStateEvent } from "../task-state-events/canonical-state-events.js";
 import { replayTaskStateEvents } from "../task-state-events/event-applier.js";
 import type { TaskStateEventV1 } from "../task-state-events/event-payloads.js";
+import {
+  createEmptyPlanningStateProjection,
+  replayPlanningStateEvents
+} from "../task-state-events/planning-event-applier.js";
+import { isPlanningStateEventKind, type PlanningStateEventV1 } from "../task-state-events/planning-event-payloads.js";
+import type { PlanningStateProjectionV1 } from "../task-state-events/planning-projection-types.js";
 import type { TaskStateProjectionV1 } from "../task-state-events/projection-types.js";
 import type { TaskStateGitManifestV1 } from "./types.js";
 
@@ -38,17 +47,48 @@ function readSnapshotContent(
   };
 }
 
+/** Replay planning.* events from the full remote JSONL (not snapshot tail only). */
+export function replayPlanningProjectionFromRawEvents(rawEvents: unknown[]): PlanningStateProjectionV1 {
+  const planningEvents = rawEvents.filter((event): event is PlanningStateEventV1 => {
+    return (
+      event !== null &&
+      typeof event === "object" &&
+      !Array.isArray(event) &&
+      typeof (event as { kind?: unknown }).kind === "string" &&
+      isPlanningStateEventKind(String((event as { kind: string }).kind))
+    );
+  });
+  if (planningEvents.length === 0) {
+    return createEmptyPlanningStateProjection();
+  }
+  const replayed = replayPlanningStateEvents(planningEvents);
+  return replayed.ok ? replayed.projection : createEmptyPlanningStateProjection();
+}
+
 /** Admit remote JSONL events; lifecycle events require the bootstrap snapshot as replay seed. */
 export function admitRemoteEventStream(
   workspacePath: string,
   ref: string,
   manifest: TaskStateGitManifestV1,
   rawEvents: unknown[]
-): { ok: true; events: TaskStateEventV1[] } | { ok: false; error: TaskStateEventAdmissionError } {
+): { ok: true; events: CanonicalStateEventV1[] } | { ok: false; error: TaskStateEventAdmissionError } {
   const snapshotId = manifest.head.latestSnapshotId;
   if (!snapshotId) {
-    const admitted = admitTaskStateEventStream(rawEvents);
-    return admitted.ok ? admitted : { ok: false, error: admitted.error };
+    const admitted = admitCanonicalStateEventStream(rawEvents, {
+      initialPlanningProjection: replayPlanningProjectionFromRawEvents([])
+    });
+    if (!admitted.ok) {
+      return {
+        ok: false,
+        error: {
+          code:
+            admitted.error.code === "workspace-revision-mismatch" ? "replay-conflict" : (admitted.error.code as TaskStateEventAdmissionError["code"]),
+          message: admitted.error.message,
+          details: admitted.error.details
+        }
+      };
+    }
+    return { ok: true, events: admitted.events };
   }
   const snapshotRead = readSnapshotContent(workspacePath, ref, snapshotId);
   if (!snapshotRead.ok) {
@@ -60,19 +100,41 @@ export function admitRemoteEventStream(
       }
     };
   }
+  const throughSequence = snapshotRead.throughSequence;
+  const historicalEvents = rawEvents.filter((event) => {
+    return (
+      event !== null &&
+      typeof event === "object" &&
+      !Array.isArray(event) &&
+      typeof (event as { sequence?: unknown }).sequence === "number" &&
+      (event as { sequence: number }).sequence <= throughSequence
+    );
+  });
   const tailEvents = rawEvents.filter((event) => {
     return (
       event !== null &&
       typeof event === "object" &&
       !Array.isArray(event) &&
       typeof (event as { sequence?: unknown }).sequence === "number" &&
-      (event as { sequence: number }).sequence > snapshotRead.throughSequence
+      (event as { sequence: number }).sequence > throughSequence
     );
   });
-  const admitted = admitTaskStateEventStream(tailEvents, {
-    initialProjection: projectionFromSnapshotContent(snapshotRead.content)
+  const admitted = admitCanonicalStateEventStream(tailEvents, {
+    initialTaskProjection: projectionFromSnapshotContent(snapshotRead.content),
+    initialPlanningProjection: replayPlanningProjectionFromRawEvents(historicalEvents)
   });
-  return admitted.ok ? admitted : { ok: false, error: admitted.error };
+  if (!admitted.ok) {
+    return {
+      ok: false,
+      error: {
+        code:
+          admitted.error.code === "workspace-revision-mismatch" ? "replay-conflict" : (admitted.error.code as TaskStateEventAdmissionError["code"]),
+        message: admitted.error.message,
+        details: admitted.error.details
+      }
+    };
+  }
+  return { ok: true, events: admitted.events };
 }
 
 export function readRemoteSnapshotProjection(
@@ -111,7 +173,7 @@ export function readRemoteSnapshotProjection(
   const tailReplay = replayTailFromSnapshot({
     snapshot: snapshotRead.content,
     throughSequence: snapshotRead.throughSequence,
-    tailEvents: events
+    tailEvents: events.filter(isTaskStateEvent)
   });
   return tailReplay.ok ? tailReplay.projection : null;
 }
