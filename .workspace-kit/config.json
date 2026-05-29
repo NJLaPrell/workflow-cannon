@@ -21,10 +21,8 @@
         "shadowPreflight": true
       }
     },
-    "currentPhaseLabel": "Phase 118",
-    "currentPhaseNumber": 118,
     "phaseDelivery": {
-      "legacyDeliveredMaxOrdinal": 113
+      "legacyDeliveredMaxOrdinal": 118
     }
   },
   "tasks": {
