@@ -22,7 +22,10 @@ const PLANNING_GOLDEN = [
   "golden-planning-workspace-status-updated.v1.json",
   "golden-planning-phase-note-created.v1.json",
   "golden-planning-phase-note-archived.v1.json",
-  "golden-planning-phase-note-suggestion-created.v1.json"
+  "golden-planning-phase-note-suggestion-created.v1.json",
+  "golden-planning-idea-created.v1.json",
+  "golden-planning-idea-updated.v1.json",
+  "golden-planning-idea-removed.v1.json"
 ];
 
 test("planning golden fixtures validate", () => {
@@ -56,6 +59,7 @@ test("workspace status replay requires matching expectedWorkspaceRevision", () =
     phaseCatalogByKey: {},
     phaseNotesById: {},
     phaseNoteSuggestionsById: {},
+    ideasById: {},
     workspaceStatus: {
       workspaceRevision: 69,
       currentKitPhase: "119",
@@ -71,6 +75,7 @@ test("workspace status replay requires matching expectedWorkspaceRevision", () =
     appliedWorkspaceMutationIds: new Set(),
     appliedNoteIdempotencyKeys: new Set(),
     appliedSuggestionMutationIds: new Set(),
+    appliedIdeaMutationIds: new Set(),
     lastEventSequence: 0,
     lastUpdated: "1970-01-01T00:00:00.000Z"
   };
@@ -187,5 +192,67 @@ CREATE TABLE phase_note_task_suggestions (
   assert.equal(noteCount, 1);
   assert.equal(refCount, 1);
   assert.equal(suggestionCount, 1);
+  db.close();
+});
+
+test("idea replay create/update/remove produces expected projection", () => {
+  const created = JSON.parse(
+    fs.readFileSync(path.join(fixturesDir, "golden-planning-idea-created.v1.json"), "utf8")
+  );
+  const updated = JSON.parse(
+    fs.readFileSync(path.join(fixturesDir, "golden-planning-idea-updated.v1.json"), "utf8")
+  );
+  const removed = JSON.parse(
+    fs.readFileSync(path.join(fixturesDir, "golden-planning-idea-removed.v1.json"), "utf8")
+  );
+  const afterUpdate = replayPlanningStateEvents([created, updated]);
+  assert.equal(afterUpdate.ok, true);
+  assert.equal(Object.keys(afterUpdate.projection.ideasById).length, 1);
+  assert.equal(afterUpdate.projection.ideasById["I001"].status, "planning");
+  assert.equal(afterUpdate.projection.ideasById["I001"].linkedPlanArtifact, "plan-artifact-fixture-001");
+
+  const afterRemove = replayPlanningStateEvents([created, updated, removed]);
+  assert.equal(afterRemove.ok, true);
+  assert.equal(Object.keys(afterRemove.projection.ideasById).length, 0);
+});
+
+test("idea create idempotency key skips duplicate rows on replay", () => {
+  const created = JSON.parse(
+    fs.readFileSync(path.join(fixturesDir, "golden-planning-idea-created.v1.json"), "utf8")
+  );
+  const replayed = replayPlanningStateEvents([created, created]);
+  assert.equal(replayed.ok, true);
+  assert.equal(Object.keys(replayed.projection.ideasById).length, 1);
+});
+
+test("persistPlanningProjectionToSqlite writes workflow_ideas rows", () => {
+  const created = JSON.parse(
+    fs.readFileSync(path.join(fixturesDir, "golden-planning-idea-created.v1.json"), "utf8")
+  );
+  const updated = JSON.parse(
+    fs.readFileSync(path.join(fixturesDir, "golden-planning-idea-updated.v1.json"), "utf8")
+  );
+  const replayed = replayPlanningStateEvents([created, updated]);
+  assert.equal(replayed.ok, true);
+
+  const db = new Database(":memory:");
+  db.exec(`
+CREATE TABLE workflow_ideas (
+  id TEXT PRIMARY KEY NOT NULL,
+  title TEXT NOT NULL,
+  note TEXT,
+  status TEXT NOT NULL DEFAULT 'open',
+  sort_order INTEGER NOT NULL,
+  linked_plan_artifact TEXT,
+  previous_plan_artifacts_json TEXT NOT NULL DEFAULT '[]',
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+`);
+  persistPlanningProjectionToSqlite(db, replayed.projection, { replaceCatalog: false });
+  const row = db.prepare("SELECT id, status, linked_plan_artifact FROM workflow_ideas WHERE id = ?").get("I001");
+  assert.equal(row.id, "I001");
+  assert.equal(row.status, "planning");
+  assert.equal(row.linked_plan_artifact, "plan-artifact-fixture-001");
   db.close();
 });

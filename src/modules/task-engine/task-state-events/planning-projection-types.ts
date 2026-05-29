@@ -13,11 +13,24 @@ export type PlanningWorkspaceStatusAuditV1 = {
   clientMutationId?: string;
 };
 
+export type WorkflowIdeaProjectionRow = {
+  id: string;
+  title: string;
+  note: string | null;
+  status: "open" | "planning" | "planned";
+  sortOrder: number;
+  linkedPlanArtifact: string | null;
+  previousPlanArtifacts: string[];
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type PlanningStateProjectionV1 = {
   schemaVersion: 1;
   phaseCatalogByKey: Record<string, PhaseCatalogRow>;
   phaseNotesById: Record<string, PhaseNoteRow>;
   phaseNoteSuggestionsById: Record<string, PhaseNoteTaskSuggestionRow>;
+  ideasById: Record<string, WorkflowIdeaProjectionRow>;
   workspaceStatus: KitWorkspaceStatusPublic | null;
   workspaceStatusAudits: PlanningWorkspaceStatusAuditV1[];
   /** clientMutationId keys applied in this replay (workspace status audit dedupe). */
@@ -26,6 +39,8 @@ export type PlanningStateProjectionV1 = {
   appliedNoteIdempotencyKeys: Set<string>;
   /** clientMutationId keys applied for suggestion mutations in this replay. */
   appliedSuggestionMutationIds: Set<string>;
+  /** clientMutationId keys applied for idea mutations in this replay. */
+  appliedIdeaMutationIds: Set<string>;
   lastEventSequence: number;
   lastUpdated: string;
 };

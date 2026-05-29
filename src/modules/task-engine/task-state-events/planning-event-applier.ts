@@ -11,12 +11,15 @@ import type {
   PlanningPhaseNoteSuggestionRemovedPayloadV1,
   PlanningPhaseNoteSuggestionUpdatedPayloadV1,
   PlanningPhaseNoteUpdatedPayloadV1,
+  PlanningIdeaCreatedPayloadV1,
+  PlanningIdeaUpdatedPayloadV1,
   PlanningWorkspaceStatusUpdatedPayloadV1
 } from "./planning-event-payloads.js";
 import {
   eventSnapshotToPhaseNoteRow,
   eventSnapshotToPhaseNoteSuggestionRow
 } from "./planning-phase-note-event-utils.js";
+import { eventSnapshotToWorkflowIdeaRow } from "./planning-idea-event-utils.js";
 import type {
   PlanningStateApplierError,
   PlanningStateProjectionV1
@@ -30,11 +33,13 @@ export function createEmptyPlanningStateProjection(
     phaseCatalogByKey: {},
     phaseNotesById: {},
     phaseNoteSuggestionsById: {},
+    ideasById: {},
     workspaceStatus: null,
     workspaceStatusAudits: [],
     appliedWorkspaceMutationIds: new Set<string>(),
     appliedNoteIdempotencyKeys: new Set<string>(),
     appliedSuggestionMutationIds: new Set<string>(),
+    appliedIdeaMutationIds: new Set<string>(),
     lastEventSequence: 0,
     lastUpdated
   };
@@ -220,6 +225,50 @@ function applySuggestionRemoved(
   return null;
 }
 
+function applyIdeaCreated(
+  projection: PlanningStateProjectionV1,
+  event: PlanningStateEventV1,
+  payload: PlanningIdeaCreatedPayloadV1
+): PlanningStateApplierError | null {
+  const mutationKey = event.clientMutationId?.trim();
+  if (mutationKey && projection.appliedIdeaMutationIds.has(mutationKey)) {
+    bumpSequence(projection, event);
+    return null;
+  }
+  if (projection.ideasById[payload.idea.id]) {
+    bumpSequence(projection, event);
+    return null;
+  }
+  projection.ideasById[payload.idea.id] = eventSnapshotToWorkflowIdeaRow(payload.idea);
+  if (mutationKey) {
+    projection.appliedIdeaMutationIds.add(mutationKey);
+  }
+  bumpSequence(projection, event);
+  return null;
+}
+
+function applyIdeaUpdated(
+  projection: PlanningStateProjectionV1,
+  event: PlanningStateEventV1,
+  payload: PlanningIdeaUpdatedPayloadV1
+): PlanningStateApplierError | null {
+  const mutationKey = event.clientMutationId?.trim();
+  if (mutationKey && projection.appliedIdeaMutationIds.has(`update:${mutationKey}`)) {
+    bumpSequence(projection, event);
+    return null;
+  }
+  if (payload.removed) {
+    delete projection.ideasById[payload.idea.id];
+  } else {
+    projection.ideasById[payload.idea.id] = eventSnapshotToWorkflowIdeaRow(payload.idea);
+  }
+  if (mutationKey) {
+    projection.appliedIdeaMutationIds.add(`update:${mutationKey}`);
+  }
+  bumpSequence(projection, event);
+  return null;
+}
+
 function applyWorkspaceStatusUpdated(
   projection: PlanningStateProjectionV1,
   event: PlanningStateEventV1,
@@ -299,11 +348,13 @@ export function applyPlanningStateEvent(
       Object.entries(projection.phaseNotesById).map(([id, note]) => [id, cloneNoteRow(note)])
     ),
     phaseNoteSuggestionsById: { ...projection.phaseNoteSuggestionsById },
+    ideasById: { ...projection.ideasById },
     workspaceStatus: projection.workspaceStatus ? { ...projection.workspaceStatus } : null,
     workspaceStatusAudits: [...projection.workspaceStatusAudits],
     appliedWorkspaceMutationIds: new Set(projection.appliedWorkspaceMutationIds),
     appliedNoteIdempotencyKeys: new Set(projection.appliedNoteIdempotencyKeys),
-    appliedSuggestionMutationIds: new Set(projection.appliedSuggestionMutationIds)
+    appliedSuggestionMutationIds: new Set(projection.appliedSuggestionMutationIds),
+    appliedIdeaMutationIds: new Set(projection.appliedIdeaMutationIds)
   };
 
   let err: PlanningStateApplierError | null = null;
@@ -334,6 +385,12 @@ export function applyPlanningStateEvent(
       break;
     case "planning.phase_note_suggestion.removed":
       err = applySuggestionRemoved(next, event, event.payload as PlanningPhaseNoteSuggestionRemovedPayloadV1);
+      break;
+    case "planning.idea.created":
+      err = applyIdeaCreated(next, event, event.payload as PlanningIdeaCreatedPayloadV1);
+      break;
+    case "planning.idea.updated":
+      err = applyIdeaUpdated(next, event, event.payload as PlanningIdeaUpdatedPayloadV1);
       break;
     default:
       err = {

@@ -23,7 +23,9 @@
                 "planning.phase_note.archived",
                 "planning.phase_note_suggestion.created",
                 "planning.phase_note_suggestion.updated",
-                "planning.phase_note_suggestion.removed"
+                "planning.phase_note_suggestion.removed",
+                "planning.idea.created",
+                "planning.idea.updated"
               ]
             },
             "expectedWorkspaceRevision": {
@@ -37,7 +39,8 @@
                 { "$ref": "#/$defs/workspaceStatusUpdatedPayload" },
                 { "$ref": "#/$defs/phaseNoteSnapshotPayload" },
                 { "$ref": "#/$defs/phaseNoteSuggestionSnapshotPayload" },
-                { "$ref": "#/$defs/phaseNoteSuggestionRemovedPayload" }
+                { "$ref": "#/$defs/phaseNoteSuggestionRemovedPayload" },
+                { "$ref": "#/$defs/ideaMutationPayload" }
               ]
             }
           }
@@ -188,6 +191,47 @@
       "properties": {
         "suggestionId": { "type": "string", "minLength": 1, "maxLength": 64 },
         "noteId": { "type": "string", "minLength": 1, "maxLength": 64 }
+      }
+    },
+    "ideaSnapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "title",
+        "note",
+        "status",
+        "sortOrder",
+        "linkedPlanArtifact",
+        "previousPlanArtifacts",
+        "createdAt",
+        "updatedAt"
+      ],
+      "properties": {
+        "id": { "type": "string", "pattern": "^I[0-9]+$", "maxLength": 16 },
+        "title": { "type": "string", "minLength": 1, "maxLength": 512 },
+        "note": { "type": ["string", "null"], "maxLength": 8192 },
+        "status": {
+          "type": "string",
+          "enum": ["open", "planning", "planned"]
+        },
+        "sortOrder": { "type": "integer", "minimum": 0 },
+        "linkedPlanArtifact": { "type": ["string", "null"], "maxLength": 512 },
+        "previousPlanArtifacts": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1, "maxLength": 512 }
+        },
+        "createdAt": { "type": "string", "minLength": 20, "maxLength": 64 },
+        "updatedAt": { "type": "string", "minLength": 20, "maxLength": 64 }
+      }
+    },
+    "ideaMutationPayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["idea"],
+      "properties": {
+        "idea": { "$ref": "#/$defs/ideaSnapshot" },
+        "removed": { "type": "boolean" }
       }
     },
     "phaseCatalogUpsertedPayload": {

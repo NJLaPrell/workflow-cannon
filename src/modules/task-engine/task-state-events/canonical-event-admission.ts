@@ -94,11 +94,13 @@ function clonePlanningProjection(projection: PlanningStateProjectionV1): Plannin
       Object.entries(projection.phaseNotesById).map(([id, note]) => [id, { ...note, refs: note.refs.map((r) => ({ ...r })) }])
     ),
     phaseNoteSuggestionsById: { ...projection.phaseNoteSuggestionsById },
+    ideasById: { ...projection.ideasById },
     workspaceStatus: projection.workspaceStatus ? { ...projection.workspaceStatus } : null,
     workspaceStatusAudits: [...projection.workspaceStatusAudits],
     appliedWorkspaceMutationIds: new Set(projection.appliedWorkspaceMutationIds),
     appliedNoteIdempotencyKeys: new Set(projection.appliedNoteIdempotencyKeys),
-    appliedSuggestionMutationIds: new Set(projection.appliedSuggestionMutationIds)
+    appliedSuggestionMutationIds: new Set(projection.appliedSuggestionMutationIds),
+    appliedIdeaMutationIds: new Set(projection.appliedIdeaMutationIds)
   };
 }
 
