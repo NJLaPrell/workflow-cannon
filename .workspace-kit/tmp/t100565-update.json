@@ -1,0 +1,39 @@
+{
+  "taskId": "T100565",
+  "expectedPlanningGeneration": 4068,
+  "clientMutationId": "t100565-ready-review-gates-b-v1",
+  "updates": {
+    "metadata": {
+      "blockers": [],
+      "wbsId": "CI-7",
+      "planRef": "planning:ci-optimization:2026-05-28",
+      "planningType": "change",
+      "architectureDecision": {
+        "id": "release-readiness-gates",
+        "chosen": "B",
+        "label": "Split maintainer-gates (requiresDist)",
+        "rationale": "When artifact exists, run metadata-only maintainer-gates; run requiresDist gates only when dist not already validated.",
+        "decidedAt": "2026-05-29",
+        "decidedBy": "user"
+      },
+      "readyReview": {
+        "reviewedAt": "2026-05-29",
+        "reviewedBy": "user",
+        "option": "B + minus pack/build",
+        "decision": "Release-readiness keeps current surface minus duplicate pack/build; maintainer-gates split by requiresDist."
+      },
+      "technicalBreakdown": [
+        "Classify maintainer-gates scripts into requiresDist vs metadata-only.",
+        "Release-readiness downloads artifact and skips rebuild/pack when present.",
+        "Run requiresDist gates only when not satisfied by prior CI code path.",
+        "Preserve release diff base SHA behavior on push/release refs."
+      ]
+    },
+    "acceptanceCriteria": [
+      "Release-readiness does not duplicate build or pack when a validated artifact exists.",
+      "Maintainer-gates split: metadata-only always runs; requiresDist runs when needed.",
+      "Release diff allowlist receives correct base SHA on push and release refs.",
+      "Release-readiness evidence identifies the artifact SHA validated."
+    ]
+  }
+}

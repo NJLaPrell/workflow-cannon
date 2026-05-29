@@ -1,0 +1,39 @@
+{
+  "taskId": "T100563",
+  "expectedPlanningGeneration": 4064,
+  "clientMutationId": "t100563-ready-review-artifact-a-v1",
+  "updates": {
+    "metadata": {
+      "blockers": [],
+      "wbsId": "CI-5",
+      "planRef": "planning:ci-optimization:2026-05-28",
+      "planningType": "change",
+      "architectureDecision": {
+        "id": "artifact-retention-naming",
+        "chosen": "A",
+        "label": "30-day retention; SHA+version naming",
+        "rationale": "GitHub Actions artifact retention 30 days; tarball name includes commit SHA and package version per ready review.",
+        "decidedAt": "2026-05-29",
+        "decidedBy": "user"
+      },
+      "readyReview": {
+        "reviewedAt": "2026-05-29",
+        "reviewedBy": "user",
+        "option": "A + SHA/version",
+        "decision": "30-day artifact retention; identity is commit SHA plus package version."
+      },
+      "technicalBreakdown": [
+        "Upload package tarball once per release-capable CI run with 30-day retention.",
+        "Name artifacts workspace-kit-<sha>-<version>.tgz (or documented equivalent).",
+        "Record artifact name in release evidence manifest for publish lookup.",
+        "Verify downstream jobs download without rebuild/repack."
+      ]
+    },
+    "acceptanceCriteria": [
+      "Package tarball created exactly once in the CI path that needs release/parity validation.",
+      "Downstream jobs download tarball without rebuilding or repacking.",
+      "Artifact names include commit SHA and package version; retention is 30 days.",
+      "Release evidence references artifact identity for publish consumption."
+    ]
+  }
+}

@@ -19,6 +19,7 @@ import {
 import { confirmAndRunTransition } from "./run-transition-with-approval.js";
 import { kitRunTraceHooks, logWc } from "./runtime/workflow-cannon-log.js";
 import { TaskStateSyncCoordinator } from "./runtime/task-state-sync-coordinator.js";
+import { registerGitTaskStateSyncListener } from "./runtime/git-task-state-sync-listener.js";
 import { buildLeaseUiState, leaseActionLabel, type LeaseActionKind } from "./lease-status-ui.js";
 
 function readWorkflowCannonNodeSetting(): string | undefined {
@@ -146,6 +147,7 @@ export function activate(context: vscode.ExtensionContext): void {
     if (taskStateSyncSettings.enabled) {
       taskStateSync.start();
       taskStateSync.requestSync("activate");
+      registerGitTaskStateSyncListener(folder, taskStateSync, context.subscriptions);
     }
     context.subscriptions.push({ dispose: () => taskStateSync?.stop() });
     guidancePanel = new GuidancePanel(context.extensionUri, client, onKitStateChanged, folder);

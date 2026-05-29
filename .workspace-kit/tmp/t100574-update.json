@@ -1,0 +1,39 @@
+{
+  "taskId": "T100574",
+  "expectedPlanningGeneration": 4039,
+  "clientMutationId": "t100574-ready-review-baseline-a-v1",
+  "updates": {
+    "metadata": {
+      "blockers": [],
+      "planRef": "planning:git-sync:2026-05-29",
+      "wbsId": "PSYNC-119-S5",
+      "planningType": "feature",
+      "architectureDecision": {
+        "id": "planning-baseline-existing-remote",
+        "chosen": "A",
+        "label": "Fail closed unless overwriteExisting:true",
+        "rationale": "Mirror task-state-migrate-baseline: refuse to seed when planning tail exists unless operator passes overwriteExisting; dry-run reports conflict.",
+        "decidedAt": "2026-05-29",
+        "decidedBy": "user"
+      },
+      "readyReview": {
+        "reviewedAt": "2026-05-29",
+        "reviewedBy": "user",
+        "option": "A",
+        "decision": "Baseline fails if remote has planning events unless overwriteExisting:true; seed from fullest laptop first."
+      },
+      "technicalBreakdown": [
+        "Implement runPlanningStateMigrateBaseline reading kit_phase_catalog + kit_workspace_status rows.",
+        "Detect existing planning tail on workflow-cannon/task-state; fail closed unless overwriteExisting:true.",
+        "Wire publish via existing task-state git layout (same stream as tasks).",
+        "Register command + instruction capsule; document seed ritual in .ai/runbooks/task-state-git-operator.md."
+      ]
+    },
+    "acceptanceCriteria": [
+      "Dry-run reports row counts, content digest, and conflict when remote planning tail exists.",
+      "Apply publishes genesis planning events only when branch lacks planning tail or overwriteExisting is true.",
+      "Operator runbook documents one-time seed ritual on the machine with the most complete catalog.",
+      "Command registered with --schema-only capsule and appears in run --list-commands."
+    ]
+  }
+}

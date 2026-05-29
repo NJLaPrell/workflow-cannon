@@ -68,6 +68,11 @@
           "default": 5,
           "minimum": 0,
           "description": "Minutes between background task-state sync cycles (0 disables the interval; explicit refresh still works when enabled)."
+        },
+        "workflowCannon.taskStateSync.onGitHeadChange": {
+          "type": "boolean",
+          "default": true,
+          "description": "When git HEAD changes (pull, merge, rebase, checkout), request background task-state sync immediately."
         }
       }
     },

@@ -1,0 +1,39 @@
+{
+  "taskId": "T100559",
+  "expectedPlanningGeneration": 4056,
+  "clientMutationId": "t100559-ready-review-inventory-c-v1",
+  "updates": {
+    "metadata": {
+      "blockers": [],
+      "wbsId": "CI-1",
+      "planRef": "planning:ci-optimization:2026-05-28",
+      "planningType": "change",
+      "architectureDecision": {
+        "id": "ci1-inventory-deliverable",
+        "chosen": "C",
+        "label": "Machine + maintainer docs",
+        "rationale": "Inventory in .ai/runbooks/ci-baseline-inventory.md with maintainer mirror; task metadata links both; branch protection via gh/API only.",
+        "decidedAt": "2026-05-29",
+        "decidedBy": "user"
+      },
+      "readyReview": {
+        "reviewedAt": "2026-05-29",
+        "reviewedBy": "user",
+        "option": "C + gh/API only",
+        "decision": "Inventory deliverable in .ai/ and docs/maintainers/; branch-protection evidence from gh/GitHub API only."
+      },
+      "technicalBreakdown": [
+        "Run gh api / gh rulesets to capture required checks for main and release/phase-* (no UI-only evidence).",
+        "Summarize recent Actions runs: job timings, duplicate build/test/pack/parity.",
+        "Document skip-safe path classes and migration note for branch protection.",
+        "Write .ai/runbooks/ci-baseline-inventory.md and docs/maintainers/runbooks/ci-baseline-inventory.md."
+      ]
+    },
+    "acceptanceCriteria": [
+      "Current required checks are identified via gh/API output, including aggregator vs leaf job requirements.",
+      "Recent CI and publish run timings are summarized with duplicated build/test/pack/parity work called out.",
+      "Skip-safe evidence/status paths are listed with rationale and excluded from code-affecting categories.",
+      "Migration note identifies branch protection changes; inventory exists in .ai/ and docs/maintainers/ runbooks."
+    ]
+  }
+}

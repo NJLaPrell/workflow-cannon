@@ -1,0 +1,39 @@
+{
+  "taskId": "T100577",
+  "expectedPlanningGeneration": 4045,
+  "clientMutationId": "t100577-ready-review-note-snapshot-a-v1",
+  "updates": {
+    "metadata": {
+      "blockers": [],
+      "planRef": "planning:git-sync:2026-05-29",
+      "wbsId": "PSYNC-120-S1",
+      "planningType": "feature",
+      "architectureDecision": {
+        "id": "phase-note-updated-payload",
+        "chosen": "A",
+        "label": "Full snapshot on updated",
+        "rationale": "planning.phase_note.updated carries complete note row plus refs array for simple deterministic replay.",
+        "decidedAt": "2026-05-29",
+        "decidedBy": "user"
+      },
+      "readyReview": {
+        "reviewedAt": "2026-05-29",
+        "reviewedBy": "user",
+        "option": "A",
+        "decision": "Phase note updated events use full snapshot payloads (not delta/changedFields)."
+      },
+      "technicalBreakdown": [
+        "Define planning.phase_note.created, updated, archived with full-row payloads and refs array.",
+        "Implement applier writing phase_notes and phase_note_refs; archived sets status without hard delete.",
+        "Wire publish hooks on phase journal mutation commands.",
+        "Add unit and hydrate tests for phase note event streams."
+      ]
+    },
+    "acceptanceCriteria": [
+      "Phase note create/update/archive mutations publish planning events under git-event-log authority.",
+      "planning.phase_note.updated payloads include full note snapshot and refs (not delta-only).",
+      "Hydrate replays phase notes and refs identically on a fresh projection.",
+      "Idempotency keys on phase note commands prevent duplicate rows on replay."
+    ]
+  }
+}

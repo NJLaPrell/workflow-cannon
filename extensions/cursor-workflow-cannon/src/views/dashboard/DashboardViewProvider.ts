@@ -54,7 +54,11 @@ import {
   renderQueueBucketRowsHtml,
   type DashboardQueueBucketCategory
 } from "./dashboard-queue-bucket-lazy.js";
-import { computeQueueContentFingerprint } from "./dashboard-queue-fingerprint.js";
+import {
+  computeQueueContentFingerprint,
+  dashboardSummaryNeedsQueueRollupHydration,
+  dashboardSummaryProjectionForSectionPatch
+} from "./dashboard-queue-fingerprint.js";
 import {
   escapeHtml,
   lazyTerminalBucketListLimit,
@@ -1232,6 +1236,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       this.dashboardRootHydrated = true;
       webview.html = this.buildHtml(webview, rootInner);
       logWc("dashboard", "startup diagnostic direct render applied");
+      void this.ensureQueueRollupsHydrated();
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       logWc("dashboard", `startup diagnostic direct render failed: ${message}`);
@@ -1264,12 +1269,25 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     for (const sectionId of this.sectionsForTabActivation(tabId)) {
       await this.hydrateDashboardSection(sectionId);
     }
+    if (tabId === "task-engine") {
+      await this.ensureQueueRollupsHydrated(this.refreshController.currentGeneration());
+    }
     const staleOnTab = DASHBOARD_SECTION_REGISTRY.filter(
       (section) => section.tabId === tabId && this.staleDashboardSections.has(section.id)
     ).map((section) => section.id);
     if (staleOnTab.length > 0) {
       await this.patchDashboardSectionsFromSummary(staleOnTab);
     }
+  }
+
+  /** Upgrade queue section from overview stub to queue rollups (phase filter + buckets). */
+  private async ensureQueueRollupsHydrated(updateSequence?: number): Promise<void> {
+    if (!this.view || !dashboardSummaryNeedsQueueRollupHydration(this.lastDashboardSummaryData)) {
+      return;
+    }
+    await this.patchDashboardSectionsFromSummary(["queue"], updateSequence, {
+      projection: "queue"
+    });
   }
 
   private async hydrateDashboardSection(sectionId: DashboardSectionId): Promise<void> {
@@ -1461,7 +1479,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   private async patchDashboardSectionsFromSummary(
     sectionIds: readonly DashboardSectionId[],
     updateSequence?: number,
-    options?: { light?: boolean }
+    options?: { light?: boolean; projection?: "full" | "queue" | "overview" | "status" }
   ): Promise<void> {
     const activeView = this.view;
     if (!activeView || sectionIds.length === 0) {
@@ -1470,12 +1488,14 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     let sectionsToPatch: DashboardSectionId[] = [...sectionIds];
     const needsPhaseJournal = sectionsToPatch.includes("phase-journal");
     const needsCae = sectionsToPatch.includes("cae");
+    const summaryProjection =
+      options?.projection ?? dashboardSummaryProjectionForSectionPatch(sectionsToPatch);
     let raw: DashboardSummaryCommandSuccess | Record<string, unknown>;
     try {
       raw = (await this.client.run("dashboard-summary", {
         wishlistPage: this.wishlistPage,
         wishlistPageSize: 5,
-        projection: "full"
+        projection: summaryProjection
       })) as DashboardSummaryCommandSuccess | Record<string, unknown>;
       if (isKitRefreshRunAborted(raw as Record<string, unknown>)) {
         return;
@@ -4141,10 +4161,16 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         this.dashboardRootHydrated = true;
         webview.html = this.buildHtml(webview, rootInner);
         logWc("dashboard", "pushUpdate applied first full document render");
+        if (useDeferredSecondary) {
+          void this.ensureQueueRollupsHydrated(updateSequence);
+        }
         return;
       }
       // Full-root refresh stays the compatibility path while section slices land (T100396+).
       await webview.postMessage({ type: "wcReplaceRoot", html: rootInner });
+      if (useDeferredSecondary) {
+        void this.ensureQueueRollupsHydrated(updateSequence);
+      }
     } catch (e) {
       logWc("dashboard", `pushUpdate render failed: ${e instanceof Error ? e.message : String(e)}`);
     }

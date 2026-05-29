@@ -1,0 +1,39 @@
+{
+  "taskId": "T100580",
+  "expectedPlanningGeneration": 4052,
+  "clientMutationId": "t100580-ready-review-domains-a-v1",
+  "updates": {
+    "metadata": {
+      "blockers": [],
+      "planRef": "planning:git-sync:2026-05-29",
+      "wbsId": "PSYNC-120-S4",
+      "planningType": "feature",
+      "architectureDecision": {
+        "id": "canonical-sync-domains-default",
+        "chosen": "A",
+        "label": "All domains enabled when omitted",
+        "rationale": "When planning.canonicalSync.domains is omitted and git-event-log is active, default enables tasks, phaseCatalog, workspaceStatus, phaseNotes, phaseNoteSuggestions, ideas, moduleState.",
+        "decidedAt": "2026-05-29",
+        "decidedBy": "user"
+      },
+      "readyReview": {
+        "reviewedAt": "2026-05-29",
+        "reviewedBy": "user",
+        "option": "A",
+        "decision": "Default domain list is full Phase 119+120 set; operators opt out by editing config."
+      },
+      "technicalBreakdown": [
+        "Add planning.canonicalSync.domains to config registry with default array of all domain ids.",
+        "Implement readPlanningSyncDomains helper; default to full list when key omitted.",
+        "Gate each domain publish hook and hydrate applier by domain membership.",
+        "Document in .ai/CONFIG.md; add config validation test and explain-config surfacing."
+      ]
+    },
+    "acceptanceCriteria": [
+      "Config key planning.canonicalSync.domains accepts array of domain ids.",
+      "When omitted under git-event-log, all Phase 119 and 120 domains are enabled by default.",
+      "Disabling a domain skips publish and hydrate apply for that domain only.",
+      "doctor or explain-config surfaces effective domain list."
+    ]
+  }
+}
