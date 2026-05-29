@@ -8,6 +8,19 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [0.99.18] - 2026-05-29
+
+Patch — **Phase 118 closeout** (dashboard phase-roster sync; CI optimization scope cancelled).
+
+### Added
+
+- Dashboard phase roster honors canonical SQLite workspace phase when `currentKitPhase` is unset (cross-workstation sync).
+
+### Changed
+
+- Phase 118 CI optimization tasks (T100559–T100569) cancelled: skip-aware CI stack deferred; delivery focus was planning-sync closeout on main at 0.99.17.
+
+
 ## [0.99.17] - 2026-05-29
 
 Patch — **Phase 120 planning domain git sync** (extends Phase 119 stream with phase journal, ideas, module state, and domain toggles).

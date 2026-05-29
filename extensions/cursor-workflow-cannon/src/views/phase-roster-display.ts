@@ -37,11 +37,20 @@ export function parseLeadingDigitsOrdinal(raw: unknown): number | null {
 }
 
 export function resolveWorkspacePhaseOrdinal(phaseSlice: Record<string, unknown>): number | null {
-  return (
-    parseLeadingDigitsOrdinal(phaseSlice.currentKitPhase) ??
-    parseLeadingDigitsOrdinal(phaseSlice.canonicalPhaseKey) ??
-    parseLeadingDigitsOrdinal(phaseSlice.workspaceStatusPhaseKey)
-  );
+  const fromCurrent = parseLeadingDigitsOrdinal(phaseSlice.currentKitPhase);
+  if (fromCurrent !== null) {
+    return fromCurrent;
+  }
+  const fromWorkspaceStatus = parseLeadingDigitsOrdinal(phaseSlice.workspaceStatusPhaseKey);
+  if (fromWorkspaceStatus !== null) {
+    return fromWorkspaceStatus;
+  }
+  // Config hints are UX/bootstrap only — when SQLite workspace phase is unset, do not
+  // anchor the narrow roster on stale kit.currentPhaseNumber.
+  if (phaseSlice.currentKitPhase === null && phaseSlice.workspaceStatusPhaseKey === null) {
+    return null;
+  }
+  return parseLeadingDigitsOrdinal(phaseSlice.canonicalPhaseKey);
 }
 
 function phaseHasActiveQueueWork(

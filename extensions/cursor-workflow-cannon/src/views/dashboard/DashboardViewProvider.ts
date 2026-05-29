@@ -64,6 +64,7 @@ import {
   lazyTerminalBucketListLimit,
   lookupDashboardTaskPhaseKey,
   lookupProposedTaskPhaseKey,
+  mergeReadyQueueRollupSummaries,
   renderDashboardCaeSectionInnerHtml,
   renderDashboardPhaseJournalSectionInnerHtml,
   renderDashboardRootInnerHtml,
@@ -607,7 +608,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       }
       if (msg?.type === "dashboardWebviewBoot") {
         logWc("dashboard", "webview boot");
-        if (!this.dashboardRootHydrated) {
+        if (!this.dashboardRootHydrated && !this.refreshController.hasInFlightRefresh()) {
           await this.pushUpdate({ projection: "overview", skipHeavyFetches: true });
         }
         return;
@@ -615,7 +616,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       if (msg?.type === "dashboardStartupTimeout") {
         const rootClass = typeof msg.rootClass === "string" ? msg.rootClass : "";
         logWc("dashboard", `startup timeout rootClass=${rootClass}`);
-        if (!this.dashboardRootHydrated) {
+        if (!this.dashboardRootHydrated && !this.refreshController.hasInFlightRefresh()) {
           await this.pushUpdate({ projection: "overview", skipHeavyFetches: true });
         }
         return;
@@ -629,8 +630,10 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       }
       if (msg?.type === "dashboardWebviewReady") {
         logWc("dashboard", "webview ready");
-        if (!this.dashboardRootHydrated) {
+        if (!this.dashboardRootHydrated && !this.refreshController.hasInFlightRefresh()) {
           await this.pushUpdate({ projection: "overview", skipHeavyFetches: true });
+        } else if (dashboardSummaryNeedsQueueRollupHydration(this.lastDashboardSummaryData)) {
+          await this.ensureQueueRollupsHydrated(this.refreshController.currentGeneration());
         }
         return;
       }
@@ -1578,10 +1581,28 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       }
     }
     if (raw.ok === true && raw.data && typeof raw.data === "object" && sectionsToPatch.includes("queue")) {
-      this.lastQueueContentFingerprint = computeQueueContentFingerprint(
-        raw.data as Record<string, unknown>
-      );
+      const summaryData = raw.data as Record<string, unknown>;
+      this.lastQueueContentFingerprint = computeQueueContentFingerprint(summaryData);
+      await this.postTaskEngineTabBadgesFromSummary(summaryData);
     }
+  }
+
+  private async postTaskEngineTabBadgesFromSummary(summaryData: Record<string, unknown>): Promise<void> {
+    const webview = this.view?.webview;
+    if (!webview) {
+      return;
+    }
+    const ris = (summaryData.readyImprovementsSummary as Record<string, unknown> | undefined) ?? {};
+    const res = (summaryData.readyExecutionSummary as Record<string, unknown> | undefined) ?? {};
+    const readyMerged = mergeReadyQueueRollupSummaries(ris, res);
+    const blockedSummary = summaryData.blockedSummary as Record<string, unknown> | undefined;
+    const blockedCount =
+      typeof blockedSummary?.count === "number" ? (blockedSummary.count as number) : 0;
+    await webview.postMessage({
+      type: "wcUpdateTabBadges",
+      readyCount: readyMerged.count,
+      blockedCount
+    });
   }
 
   private async executeLightSectionRefresh(updateSequence: number): Promise<void> {
@@ -4139,7 +4160,6 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       if (useDeferredSecondary) {
         this.hydratedDashboardSections.clear();
         this.hydratedDashboardSections.add("overview");
-        this.hydratedDashboardSections.add("queue");
       } else {
         this.hydratedDashboardSections = new Set(
           DASHBOARD_SECTION_REGISTRY.map((section) => section.id)
@@ -4162,14 +4182,14 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         webview.html = this.buildHtml(webview, rootInner);
         logWc("dashboard", "pushUpdate applied first full document render");
         if (useDeferredSecondary) {
-          void this.ensureQueueRollupsHydrated(updateSequence);
+          await this.ensureQueueRollupsHydrated(updateSequence);
         }
         return;
       }
       // Full-root refresh stays the compatibility path while section slices land (T100396+).
       await webview.postMessage({ type: "wcReplaceRoot", html: rootInner });
       if (useDeferredSecondary) {
-        void this.ensureQueueRollupsHydrated(updateSequence);
+        await this.ensureQueueRollupsHydrated(updateSequence);
       }
     } catch (e) {
       logWc("dashboard", `pushUpdate render failed: ${e instanceof Error ? e.message : String(e)}`);
