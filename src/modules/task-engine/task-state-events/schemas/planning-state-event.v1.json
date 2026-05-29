@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://workflow-cannon.dev/schemas/planning-state-event.v1.json",
   "title": "Planning state event (envelope + payload v1)",
-  "description": "Canonical git-backed planning events sharing the task-state envelope (Phase 119).",
+  "description": "Canonical git-backed planning events sharing the task-state envelope (Phase 119 + Phase 120 S1 phase journal).",
   "$ref": "#/$defs/fullEvent",
   "$defs": {
     "fullEvent": {
@@ -17,7 +17,13 @@
               "enum": [
                 "planning.phase_catalog.upserted",
                 "planning.phase_catalog.removed",
-                "planning.workspace_status.updated"
+                "planning.workspace_status.updated",
+                "planning.phase_note.created",
+                "planning.phase_note.updated",
+                "planning.phase_note.archived",
+                "planning.phase_note_suggestion.created",
+                "planning.phase_note_suggestion.updated",
+                "planning.phase_note_suggestion.removed"
               ]
             },
             "expectedWorkspaceRevision": {
@@ -28,7 +34,10 @@
               "oneOf": [
                 { "$ref": "#/$defs/phaseCatalogUpsertedPayload" },
                 { "$ref": "#/$defs/phaseCatalogRemovedPayload" },
-                { "$ref": "#/$defs/workspaceStatusUpdatedPayload" }
+                { "$ref": "#/$defs/workspaceStatusUpdatedPayload" },
+                { "$ref": "#/$defs/phaseNoteSnapshotPayload" },
+                { "$ref": "#/$defs/phaseNoteSuggestionSnapshotPayload" },
+                { "$ref": "#/$defs/phaseNoteSuggestionRemovedPayload" }
               ]
             }
           }
@@ -53,6 +62,133 @@
           }
         }
       ]
+    },
+    "phaseNoteEventRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["refType", "refValue"],
+      "properties": {
+        "refType": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "refValue": { "type": "string", "minLength": 1, "maxLength": 512 }
+      }
+    },
+    "phaseNoteSnapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "phaseKey",
+        "phaseLabel",
+        "taskId",
+        "author",
+        "authorKind",
+        "sessionId",
+        "sourceCommand",
+        "planningGeneration",
+        "policyTraceId",
+        "noteType",
+        "summary",
+        "details",
+        "status",
+        "priority",
+        "createdAt",
+        "updatedAt",
+        "expiresAt",
+        "supersededBy",
+        "convertedTaskId",
+        "idempotencyKey",
+        "refs"
+      ],
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "phaseKey": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "phaseLabel": { "type": ["string", "null"], "maxLength": 120 },
+        "taskId": { "type": ["string", "null"], "maxLength": 32 },
+        "author": { "type": ["string", "null"], "maxLength": 120 },
+        "authorKind": { "type": ["string", "null"], "maxLength": 64 },
+        "sessionId": { "type": ["string", "null"], "maxLength": 120 },
+        "sourceCommand": { "type": ["string", "null"], "maxLength": 64 },
+        "planningGeneration": { "type": ["integer", "null"] },
+        "policyTraceId": { "type": ["string", "null"], "maxLength": 120 },
+        "noteType": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "summary": { "type": "string", "minLength": 1, "maxLength": 512 },
+        "details": { "type": ["string", "null"], "maxLength": 8192 },
+        "status": {
+          "type": "string",
+          "enum": ["active", "converted", "superseded", "dismissed", "expired"]
+        },
+        "priority": {
+          "type": "string",
+          "enum": ["low", "normal", "high", "critical"]
+        },
+        "createdAt": { "type": "string", "minLength": 20, "maxLength": 64 },
+        "updatedAt": { "type": "string", "minLength": 20, "maxLength": 64 },
+        "expiresAt": { "type": ["string", "null"], "maxLength": 64 },
+        "supersededBy": { "type": ["string", "null"], "maxLength": 64 },
+        "convertedTaskId": { "type": ["string", "null"], "maxLength": 32 },
+        "idempotencyKey": { "type": ["string", "null"], "maxLength": 120 },
+        "refs": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/phaseNoteEventRef" }
+        }
+      }
+    },
+    "phaseNoteSuggestionSnapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "noteId",
+        "title",
+        "description",
+        "suggestedStatus",
+        "suggestedPhaseKey",
+        "suggestedPhaseLabel",
+        "suggestedTaskType",
+        "acceptanceCriteriaJson",
+        "convertedTaskId",
+        "createdAt",
+        "updatedAt"
+      ],
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "noteId": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "title": { "type": "string", "minLength": 1, "maxLength": 512 },
+        "description": { "type": "string", "minLength": 1, "maxLength": 8192 },
+        "suggestedStatus": { "type": "string", "minLength": 1, "maxLength": 32 },
+        "suggestedPhaseKey": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "suggestedPhaseLabel": { "type": ["string", "null"], "maxLength": 120 },
+        "suggestedTaskType": { "type": ["string", "null"], "maxLength": 64 },
+        "acceptanceCriteriaJson": { "type": ["string", "null"], "maxLength": 8192 },
+        "convertedTaskId": { "type": ["string", "null"], "maxLength": 32 },
+        "createdAt": { "type": "string", "minLength": 20, "maxLength": 64 },
+        "updatedAt": { "type": "string", "minLength": 20, "maxLength": 64 }
+      }
+    },
+    "phaseNoteSnapshotPayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["note"],
+      "properties": {
+        "note": { "$ref": "#/$defs/phaseNoteSnapshot" }
+      }
+    },
+    "phaseNoteSuggestionSnapshotPayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["suggestion"],
+      "properties": {
+        "suggestion": { "$ref": "#/$defs/phaseNoteSuggestionSnapshot" }
+      }
+    },
+    "phaseNoteSuggestionRemovedPayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["suggestionId", "noteId"],
+      "properties": {
+        "suggestionId": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "noteId": { "type": "string", "minLength": 1, "maxLength": 64 }
+      }
     },
     "phaseCatalogUpsertedPayload": {
       "type": "object",

@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "eventId": "tse.20260529T120011Z.phase-note-suggestion-created-fixture",
+  "sequence": 11,
+  "parentEventId": null,
+  "recordedAt": "2026-05-29T12:00:11.000Z",
+  "actor": { "id": "system", "source": "system" },
+  "command": { "name": "propose-tasks-from-phase-notes", "moduleId": "task-engine" },
+  "clientMutationId": "fixture-suggestion-create-1",
+  "kind": "planning.phase_note_suggestion.created",
+  "payload": {
+    "suggestion": {
+      "id": "suggestion-fixture-001",
+      "noteId": "note-fixture-001",
+      "title": "Phase journal git sync note",
+      "description": "Phase journal git sync note",
+      "suggestedStatus": "proposed",
+      "suggestedPhaseKey": "120",
+      "suggestedPhaseLabel": "Phase 120",
+      "suggestedTaskType": "workspace-kit",
+      "acceptanceCriteriaJson": null,
+      "convertedTaskId": null,
+      "createdAt": "2026-05-29T12:00:11.000Z",
+      "updatedAt": "2026-05-29T12:00:11.000Z"
+    }
+  }
+}

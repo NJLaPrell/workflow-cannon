@@ -73,7 +73,7 @@ export async function dispatchTaskEnginePlanningCommands(
     return taskIntakePolicy;
   }
 
-  const phaseJournal = await resolvePhaseJournalCommands(command, ctx, planning);
+  const phaseJournal = await resolvePhaseJournalCommands(command, ctx, planning, store);
   if (phaseJournal !== null) {
     return phaseJournal;
   }

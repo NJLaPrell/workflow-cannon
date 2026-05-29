@@ -4,8 +4,19 @@ import type { PlanningStateEventV1 } from "./planning-event-payloads.js";
 import type {
   PlanningPhaseCatalogRemovedPayloadV1,
   PlanningPhaseCatalogUpsertedPayloadV1,
+  PlanningPhaseNoteArchivedPayloadV1,
+  PlanningPhaseNoteCreatedPayloadV1,
+  PlanningPhaseNoteSnapshotV1,
+  PlanningPhaseNoteSuggestionCreatedPayloadV1,
+  PlanningPhaseNoteSuggestionRemovedPayloadV1,
+  PlanningPhaseNoteSuggestionUpdatedPayloadV1,
+  PlanningPhaseNoteUpdatedPayloadV1,
   PlanningWorkspaceStatusUpdatedPayloadV1
 } from "./planning-event-payloads.js";
+import {
+  eventSnapshotToPhaseNoteRow,
+  eventSnapshotToPhaseNoteSuggestionRow
+} from "./planning-phase-note-event-utils.js";
 import type {
   PlanningStateApplierError,
   PlanningStateProjectionV1
@@ -17,9 +28,13 @@ export function createEmptyPlanningStateProjection(
   return {
     schemaVersion: 1,
     phaseCatalogByKey: {},
+    phaseNotesById: {},
+    phaseNoteSuggestionsById: {},
     workspaceStatus: null,
     workspaceStatusAudits: [],
     appliedWorkspaceMutationIds: new Set<string>(),
+    appliedNoteIdempotencyKeys: new Set<string>(),
+    appliedSuggestionMutationIds: new Set<string>(),
     lastEventSequence: 0,
     lastUpdated
   };
@@ -28,6 +43,22 @@ export function createEmptyPlanningStateProjection(
 function bumpSequence(projection: PlanningStateProjectionV1, event: PlanningStateEventV1): void {
   projection.lastEventSequence = Math.max(projection.lastEventSequence, event.sequence);
   projection.lastUpdated = event.recordedAt;
+}
+
+function noteIdempotencyKey(
+  event: PlanningStateEventV1,
+  note: PlanningPhaseNoteSnapshotV1
+): string | null {
+  const fromNote = note.idempotencyKey?.trim();
+  if (fromNote) {
+    return fromNote;
+  }
+  const fromEvent = event.clientMutationId?.trim();
+  return fromEvent && fromEvent.length > 0 ? fromEvent : null;
+}
+
+function cloneNoteRow(note: PlanningStateProjectionV1["phaseNotesById"][string]) {
+  return { ...note, refs: note.refs.map((r) => ({ ...r })) };
 }
 
 function applyCatalogUpsert(
@@ -66,6 +97,125 @@ function applyCatalogRemoved(
     };
   }
   delete projection.phaseCatalogByKey[key];
+  bumpSequence(projection, event);
+  return null;
+}
+
+function applyPhaseNoteCreated(
+  projection: PlanningStateProjectionV1,
+  event: PlanningStateEventV1,
+  payload: PlanningPhaseNoteCreatedPayloadV1
+): PlanningStateApplierError | null {
+  const idemKey = noteIdempotencyKey(event, payload.note);
+  if (idemKey && projection.appliedNoteIdempotencyKeys.has(idemKey)) {
+    bumpSequence(projection, event);
+    return null;
+  }
+  if (projection.phaseNotesById[payload.note.id]) {
+    bumpSequence(projection, event);
+    return null;
+  }
+  projection.phaseNotesById[payload.note.id] = eventSnapshotToPhaseNoteRow(payload.note);
+  if (idemKey) {
+    projection.appliedNoteIdempotencyKeys.add(idemKey);
+  }
+  bumpSequence(projection, event);
+  return null;
+}
+
+function applyPhaseNoteUpdated(
+  projection: PlanningStateProjectionV1,
+  event: PlanningStateEventV1,
+  payload: PlanningPhaseNoteUpdatedPayloadV1
+): PlanningStateApplierError | null {
+  const mutationKey = event.clientMutationId?.trim();
+  if (mutationKey && projection.appliedNoteIdempotencyKeys.has(`update:${mutationKey}`)) {
+    bumpSequence(projection, event);
+    return null;
+  }
+  projection.phaseNotesById[payload.note.id] = eventSnapshotToPhaseNoteRow(payload.note);
+  if (mutationKey) {
+    projection.appliedNoteIdempotencyKeys.add(`update:${mutationKey}`);
+  }
+  bumpSequence(projection, event);
+  return null;
+}
+
+function applyPhaseNoteArchived(
+  projection: PlanningStateProjectionV1,
+  event: PlanningStateEventV1,
+  payload: PlanningPhaseNoteArchivedPayloadV1
+): PlanningStateApplierError | null {
+  const mutationKey = event.clientMutationId?.trim();
+  if (mutationKey && projection.appliedNoteIdempotencyKeys.has(`archive:${mutationKey}`)) {
+    bumpSequence(projection, event);
+    return null;
+  }
+  projection.phaseNotesById[payload.note.id] = eventSnapshotToPhaseNoteRow(payload.note);
+  if (mutationKey) {
+    projection.appliedNoteIdempotencyKeys.add(`archive:${mutationKey}`);
+  }
+  bumpSequence(projection, event);
+  return null;
+}
+
+function applySuggestionCreated(
+  projection: PlanningStateProjectionV1,
+  event: PlanningStateEventV1,
+  payload: PlanningPhaseNoteSuggestionCreatedPayloadV1
+): PlanningStateApplierError | null {
+  const mutationKey = event.clientMutationId?.trim();
+  if (mutationKey && projection.appliedSuggestionMutationIds.has(mutationKey)) {
+    bumpSequence(projection, event);
+    return null;
+  }
+  const row = eventSnapshotToPhaseNoteSuggestionRow(payload.suggestion);
+  projection.phaseNoteSuggestionsById[row.id] = row;
+  if (mutationKey) {
+    projection.appliedSuggestionMutationIds.add(mutationKey);
+  }
+  bumpSequence(projection, event);
+  return null;
+}
+
+function applySuggestionUpdated(
+  projection: PlanningStateProjectionV1,
+  event: PlanningStateEventV1,
+  payload: PlanningPhaseNoteSuggestionUpdatedPayloadV1
+): PlanningStateApplierError | null {
+  const mutationKey = event.clientMutationId?.trim();
+  if (mutationKey && projection.appliedSuggestionMutationIds.has(mutationKey)) {
+    bumpSequence(projection, event);
+    return null;
+  }
+  const row = eventSnapshotToPhaseNoteSuggestionRow(payload.suggestion);
+  projection.phaseNoteSuggestionsById[row.id] = row;
+  if (mutationKey) {
+    projection.appliedSuggestionMutationIds.add(mutationKey);
+  }
+  bumpSequence(projection, event);
+  return null;
+}
+
+function applySuggestionRemoved(
+  projection: PlanningStateProjectionV1,
+  event: PlanningStateEventV1,
+  payload: PlanningPhaseNoteSuggestionRemovedPayloadV1
+): PlanningStateApplierError | null {
+  const mutationKey = event.clientMutationId?.trim();
+  if (mutationKey && projection.appliedSuggestionMutationIds.has(mutationKey)) {
+    bumpSequence(projection, event);
+    return null;
+  }
+  delete projection.phaseNoteSuggestionsById[payload.suggestionId];
+  for (const [id, row] of Object.entries(projection.phaseNoteSuggestionsById)) {
+    if (row.noteId === payload.noteId && id !== payload.suggestionId) {
+      delete projection.phaseNoteSuggestionsById[id];
+    }
+  }
+  if (mutationKey) {
+    projection.appliedSuggestionMutationIds.add(mutationKey);
+  }
   bumpSequence(projection, event);
   return null;
 }
@@ -145,9 +295,15 @@ export function applyPlanningStateEvent(
   const next = {
     ...projection,
     phaseCatalogByKey: { ...projection.phaseCatalogByKey },
+    phaseNotesById: Object.fromEntries(
+      Object.entries(projection.phaseNotesById).map(([id, note]) => [id, cloneNoteRow(note)])
+    ),
+    phaseNoteSuggestionsById: { ...projection.phaseNoteSuggestionsById },
     workspaceStatus: projection.workspaceStatus ? { ...projection.workspaceStatus } : null,
     workspaceStatusAudits: [...projection.workspaceStatusAudits],
-    appliedWorkspaceMutationIds: new Set(projection.appliedWorkspaceMutationIds)
+    appliedWorkspaceMutationIds: new Set(projection.appliedWorkspaceMutationIds),
+    appliedNoteIdempotencyKeys: new Set(projection.appliedNoteIdempotencyKeys),
+    appliedSuggestionMutationIds: new Set(projection.appliedSuggestionMutationIds)
   };
 
   let err: PlanningStateApplierError | null = null;
@@ -160,6 +316,24 @@ export function applyPlanningStateEvent(
       break;
     case "planning.workspace_status.updated":
       err = applyWorkspaceStatusUpdated(next, event, event.payload as PlanningWorkspaceStatusUpdatedPayloadV1);
+      break;
+    case "planning.phase_note.created":
+      err = applyPhaseNoteCreated(next, event, event.payload as PlanningPhaseNoteCreatedPayloadV1);
+      break;
+    case "planning.phase_note.updated":
+      err = applyPhaseNoteUpdated(next, event, event.payload as PlanningPhaseNoteUpdatedPayloadV1);
+      break;
+    case "planning.phase_note.archived":
+      err = applyPhaseNoteArchived(next, event, event.payload as PlanningPhaseNoteArchivedPayloadV1);
+      break;
+    case "planning.phase_note_suggestion.created":
+      err = applySuggestionCreated(next, event, event.payload as PlanningPhaseNoteSuggestionCreatedPayloadV1);
+      break;
+    case "planning.phase_note_suggestion.updated":
+      err = applySuggestionUpdated(next, event, event.payload as PlanningPhaseNoteSuggestionUpdatedPayloadV1);
+      break;
+    case "planning.phase_note_suggestion.removed":
+      err = applySuggestionRemoved(next, event, event.payload as PlanningPhaseNoteSuggestionRemovedPayloadV1);
       break;
     default:
       err = {
