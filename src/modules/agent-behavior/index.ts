@@ -32,13 +32,19 @@ import { mergeDimensions, validateBehaviorProfile } from "./validate.js";
 
 async function withStore(
   ctx: Parameters<NonNullable<WorkflowModule["onCommand"]>>[1],
+  commandName: string,
   fn: (store: BehaviorProfileStore) => Promise<{ ok: boolean; code: string; message?: string; data?: Record<string, unknown> }>
 ): Promise<{ ok: boolean; code: string; message?: string; data?: Record<string, unknown> }> {
   const raw = await loadBehaviorWorkspaceState(ctx);
   const store = new BehaviorProfileStore(raw);
   const result = await fn(store);
   if (result.ok) {
-    await saveBehaviorWorkspaceState(ctx, store.getState());
+    const saveErr = await saveBehaviorWorkspaceState(ctx, store.getState(), {
+      commandName
+    });
+    if (saveErr) {
+      return saveErr;
+    }
     scheduleAutoSyncEffectiveBehaviorCursorRule(ctx);
   }
   return result;
@@ -150,7 +156,7 @@ export const agentBehaviorModule: WorkflowModule = {
     }
 
     if (name === "set-active-behavior-profile") {
-      return withStore(ctx, async (store) => {
+      return withStore(ctx, name, async (store) => {
         const clear = args.clear === true;
         const profileId = typeof args.profileId === "string" ? args.profileId.trim() : "";
         if (!clear && !profileId) {
@@ -188,7 +194,7 @@ export const agentBehaviorModule: WorkflowModule = {
     }
 
     if (name === "create-behavior-profile") {
-      return withStore(ctx, async (store) => {
+      return withStore(ctx, name, async (store) => {
         const newId = typeof args.id === "string" ? args.id.trim() : "";
         if (!newId.startsWith("custom:") || newId.length < 9) {
           return {
@@ -237,7 +243,7 @@ export const agentBehaviorModule: WorkflowModule = {
     }
 
     if (name === "update-behavior-profile") {
-      return withStore(ctx, async (store) => {
+      return withStore(ctx, name, async (store) => {
         const profileId = typeof args.profileId === "string" ? args.profileId.trim() : "";
         if (!profileId.startsWith("custom:")) {
           return { ok: false, code: "invalid-args", message: "update-behavior-profile requires custom profileId" };
@@ -274,7 +280,7 @@ export const agentBehaviorModule: WorkflowModule = {
     }
 
     if (name === "delete-behavior-profile") {
-      return withStore(ctx, async (store) => {
+      return withStore(ctx, name, async (store) => {
         const profileId = typeof args.profileId === "string" ? args.profileId.trim() : "";
         if (!profileId.startsWith("custom:")) {
           return { ok: false, code: "invalid-args", message: "delete-behavior-profile requires custom profileId" };
@@ -510,7 +516,7 @@ export const agentBehaviorModule: WorkflowModule = {
         }
         const apply = args.apply === true;
         const labelFromArgs = typeof args.label === "string" ? args.label.trim() : "";
-        const persist = await withStore(ctx, async (store) => {
+        const persist = await withStore(ctx, name, async (store) => {
           let customId = explicitId;
           if (!customId) {
             const next = allocateSequentialInterviewCustomId((id) => !!store.getRawProfile(id));

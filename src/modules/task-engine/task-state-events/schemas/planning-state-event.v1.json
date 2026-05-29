@@ -25,7 +25,8 @@
                 "planning.phase_note_suggestion.updated",
                 "planning.phase_note_suggestion.removed",
                 "planning.idea.created",
-                "planning.idea.updated"
+                "planning.idea.updated",
+                "planning.module_state.updated"
               ]
             },
             "expectedWorkspaceRevision": {
@@ -40,7 +41,8 @@
                 { "$ref": "#/$defs/phaseNoteSnapshotPayload" },
                 { "$ref": "#/$defs/phaseNoteSuggestionSnapshotPayload" },
                 { "$ref": "#/$defs/phaseNoteSuggestionRemovedPayload" },
-                { "$ref": "#/$defs/ideaMutationPayload" }
+                { "$ref": "#/$defs/ideaMutationPayload" },
+                { "$ref": "#/$defs/moduleStateUpdatedPayload" }
               ]
             }
           }
@@ -231,6 +233,19 @@
       "required": ["idea"],
       "properties": {
         "idea": { "$ref": "#/$defs/ideaSnapshot" },
+        "removed": { "type": "boolean" }
+      }
+    },
+    "moduleStateUpdatedPayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["moduleId", "stateSchemaVersion", "state", "updatedAt"],
+      "properties": {
+        "moduleId": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "stateSchemaVersion": { "type": "integer", "minimum": 0 },
+        "state": { "type": "object", "additionalProperties": true },
+        "updatedAt": { "type": "string", "minLength": 20, "maxLength": 64 },
+        "expectedStateSchemaVersion": { "type": "integer", "minimum": 0 },
         "removed": { "type": "boolean" }
       }
     },
