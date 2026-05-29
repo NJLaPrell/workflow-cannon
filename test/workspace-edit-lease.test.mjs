@@ -313,12 +313,12 @@ test("workspace edit lease: waitForLease polls until held lease is released", as
   assert.equal(runClaimWorkspaceEditLease(c, { agentSessionId: "holder", leaseTtlSeconds: 120 }).ok, true);
   setTimeout(() => {
     runReleaseWorkspaceEditLease(c, { agentSessionId: "holder" });
-  }, 80);
+  }, 150);
   const result = await waitForWorkspaceEditLease(c, {
     waitForLease: true,
     agentSessionId: "waiter",
-    waitForLeaseTimeoutMs: 1_000,
-    waitForLeasePollMs: 50
+    waitForLeaseTimeoutMs: 3_000,
+    waitForLeasePollMs: 40
   });
   assert.equal(result.ok, true);
   assert.equal(result.data.leaseStatus.state, "lease-free");

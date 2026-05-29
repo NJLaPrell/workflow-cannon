@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "eventId": "tse.20260529T120031Z.module-state-removed-fixture",
+  "sequence": 31,
+  "parentEventId": null,
+  "recordedAt": "2026-05-29T12:00:31.000Z",
+  "actor": { "id": "system", "source": "system" },
+  "command": { "name": "clear-build-plan-session", "moduleId": "planning-build-session" },
+  "clientMutationId": "fixture-module-state-remove-1",
+  "kind": "planning.module_state.updated",
+  "payload": {
+    "moduleId": "planning-build-session",
+    "stateSchemaVersion": 1,
+    "expectedStateSchemaVersion": 1,
+    "state": {
+      "schemaVersion": 1,
+      "planningType": "feature",
+      "outputMode": "tasks",
+      "status": "in_progress",
+      "completionPct": 50,
+      "answeredCritical": 1,
+      "totalCritical": 2,
+      "answers": {},
+      "resumeCli": "pnpm run wk run build-plan '{}'"
+    },
+    "updatedAt": "2026-05-29T12:00:31.000Z",
+    "removed": true
+  }
+}

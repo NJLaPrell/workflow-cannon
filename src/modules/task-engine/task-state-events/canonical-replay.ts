@@ -5,6 +5,7 @@ import type { TaskStateEventV1 } from "./event-payloads.js";
 import {
   applyPlanningStateEvent,
   createEmptyPlanningStateProjection,
+  type PlanningSyncApplyOptions,
   replayPlanningStateEvents
 } from "./planning-event-applier.js";
 import type { PlanningStateEventV1 } from "./planning-event-payloads.js";
@@ -26,7 +27,10 @@ function sortBySequence(events: CanonicalStateEventV1[]): CanonicalStateEventV1[
   });
 }
 
-export function replayCanonicalStateEvents(events: CanonicalStateEventV1[]): {
+export function replayCanonicalStateEvents(
+  events: CanonicalStateEventV1[],
+  options?: PlanningSyncApplyOptions
+): {
   ok: true;
   result: CanonicalReplayResultV1;
 } | {
@@ -54,7 +58,7 @@ export function replayCanonicalStateEvents(events: CanonicalStateEventV1[]): {
       }
       taskProjection = applied.projection;
     } else if (isPlanningStateEvent(event)) {
-      const applied = applyPlanningStateEvent(planningProjection, event as PlanningStateEventV1);
+      const applied = applyPlanningStateEvent(planningProjection, event as PlanningStateEventV1, options);
       if (!applied.ok) {
         return {
           ok: false,
@@ -84,7 +88,10 @@ export function replayTaskEventsFromCanonical(events: CanonicalStateEventV1[]) {
 }
 
 /** Convenience: replay planning-only subset. */
-export function replayPlanningEventsFromCanonical(events: CanonicalStateEventV1[]) {
+export function replayPlanningEventsFromCanonical(
+  events: CanonicalStateEventV1[],
+  options?: PlanningSyncApplyOptions
+) {
   const planningEvents = events.filter(isPlanningStateEvent) as PlanningStateEventV1[];
-  return replayPlanningStateEvents(planningEvents);
+  return replayPlanningStateEvents(planningEvents, options);
 }

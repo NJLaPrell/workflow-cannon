@@ -8,6 +8,23 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [0.99.17] - 2026-05-29
+
+Patch — **Phase 120 planning domain git sync** (extends Phase 119 stream with phase journal, ideas, module state, and domain toggles).
+
+### Added
+
+- `planning.phase_note.*` and `planning.phase_note_suggestion.*` events with publish hooks on phase journal mutators.
+- `planning.idea.created` and `planning.idea.updated` (with `removed: true` for deletes) on idea commands.
+- `planning.module_state.updated` for allowlisted modules (`improvement`, `agent-behavior`, `planning-build-session`) with schema-version OCC.
+- `planning.canonicalSync.domains` config to gate publish/hydrate per domain (defaults to all Phase 119+120 domains under git-event-log).
+- Integration tests: dual-worktree convergence for phase notes, ideas, and module state (`test/planning-git-sync-phase120-integration.test.mjs`).
+
+### Changed
+
+- Hydrate/rebuild respects enabled planning sync domains; disabled domains skip publish and SQLite overwrite.
+
+
 ## [0.99.16] - 2026-05-29
 
 Patch — **Phase 119 planning git sync** (`planning.*` events on `workflow-cannon/task-state`).

@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "eventId": "tse.20260529T120030Z.module-state-updated-fixture",
+  "sequence": 30,
+  "parentEventId": null,
+  "recordedAt": "2026-05-29T12:00:30.000Z",
+  "actor": { "id": "system", "source": "system" },
+  "command": { "name": "save-improvement-state", "moduleId": "improvement" },
+  "clientMutationId": "fixture-module-state-update-1",
+  "kind": "planning.module_state.updated",
+  "payload": {
+    "moduleId": "improvement",
+    "stateSchemaVersion": 1,
+    "expectedStateSchemaVersion": 0,
+    "state": {
+      "schemaVersion": 1,
+      "lastIngestedPolicyTraceId": 42,
+      "lastSyncRunAt": "2026-05-29T12:00:30.000Z"
+    },
+    "updatedAt": "2026-05-29T12:00:30.000Z"
+  }
+}

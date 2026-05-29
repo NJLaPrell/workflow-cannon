@@ -73,7 +73,7 @@ export function toIdeaRecord(row: IdeaRow): IdeaRecord {
   };
 }
 
-function allocateNextIdeaId(db: Sqlite.Database): string {
+export function allocateNextIdeaId(db: Sqlite.Database): string {
   const rows = db.prepare("SELECT id FROM workflow_ideas WHERE id GLOB 'I[0-9]*'").all() as Array<{ id: string }>;
   const max = rows.reduce((acc, row) => {
     const n = Number(row.id.slice(1));
@@ -82,7 +82,7 @@ function allocateNextIdeaId(db: Sqlite.Database): string {
   return `I${String(max + 1).padStart(3, "0")}`;
 }
 
-function nextSortOrder(db: Sqlite.Database): number {
+export function nextIdeaSortOrder(db: Sqlite.Database): number {
   const row = db.prepare("SELECT COALESCE(MAX(sort_order), -1) + 1 AS next_order FROM workflow_ideas").get() as
     | { next_order: number }
     | undefined;
@@ -107,7 +107,7 @@ export type UpdateIdeaInput = {
 
 export function createIdea(db: Sqlite.Database, input: CreateIdeaInput, nowIso: string): IdeaRecord {
   const id = allocateNextIdeaId(db);
-  const sortOrder = nextSortOrder(db);
+  const sortOrder = nextIdeaSortOrder(db);
   const status = input.status ?? "open";
   const previousPlanArtifacts = input.previousPlanArtifacts ?? [];
   db.prepare(

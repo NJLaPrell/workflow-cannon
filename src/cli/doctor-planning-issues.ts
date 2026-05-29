@@ -25,6 +25,8 @@ import { formatNodeRuntimeIdentity } from "../core/native-sqlite-diagnostics.js"
 import { readRuntimeStamp } from "../core/runtime-contract.js";
 import { defaultRegistryModules } from "../modules/index.js";
 import { discoverPluginPackages } from "../modules/plugins/discovery.js";
+import { readTasksCanonicalAuthority } from "../modules/task-engine/persistence/task-state-canonical-authority.js";
+import { resolveEnabledPlanningSyncDomains } from "../modules/task-engine/persistence/planning-canonical-sync-domains.js";
 
 export type DoctorPlanningIssue = { path: string; reason: string };
 
@@ -197,6 +199,12 @@ export async function collectTaskPersistenceDoctorSummaryLines(cwd: string): Pro
   lines.push(
     `Planning generation policy: ${pol} (tasks.planningGenerationPolicy — require/warn: pass expectedPlanningGeneration from prior reads; see ADR-planning-generation-optimistic-concurrency.md)`
   );
+  if (readTasksCanonicalAuthority(effective) === "git-event-log") {
+    const domains = resolveEnabledPlanningSyncDomains({ effectiveConfig: effective });
+    lines.push(
+      `Planning canonical sync domains (git-event-log): ${domains.join(", ")} — configure planning.canonicalSync.domains or explain-config path planning.canonicalSync.domains`
+    );
+  }
   return lines;
 }
 

@@ -14,6 +14,17 @@ import {
   readIdempotencyValue
 } from "../mutation-utils.js";
 import { planningGenPolicyGate } from "../planning-generation-gate.js";
+import {
+  draftPlanningPhaseNoteArchivedEvent,
+  draftPlanningPhaseNoteSuggestionUpdatedEvent
+} from "../persistence/planning-event-draft.js";
+import { isGitTaskStateCanonicalAuthority } from "../persistence/task-state-canonical-authority.js";
+import { commitCanonicalTaskStateEvents } from "../persistence/task-state-canonical-commit.js";
+import { draftCreatedTaskEvents } from "../persistence/task-state-event-draft.js";
+import {
+  phaseNoteRowToEventSnapshot,
+  phaseNoteSuggestionRowToEventSnapshot
+} from "../task-state-events/planning-phase-note-event-utils.js";
 import { resolveKnownFeatureSlugSet } from "../persistence/feature-registry-queries.js";
 import type { OpenedPlanningStores } from "../persistence/planning-open.js";
 import type { TaskStore } from "../persistence/store.js";
@@ -332,6 +343,97 @@ export async function runConvertPhaseNoteToTaskCommand(
       code: "task-create-dry-run",
       message: `Dry run: validated convert-phase-note-to-task for '${resolvedId}' (no persistence)`,
       data: dryData
+    };
+  }
+
+  const gitCanonical = isGitTaskStateCanonicalAuthority(ctx);
+  if (gitCanonical) {
+    const updatedAt = nowIso();
+    const archivedNote = phaseNoteRowToEventSnapshot({
+      ...note,
+      status: "converted",
+      convertedTaskId: resolvedId,
+      updatedAt
+    });
+    const planningEvents = [
+      draftPlanningPhaseNoteArchivedEvent({
+        note: archivedNote,
+        ctx: {
+          commandName: "convert-phase-note-to-task",
+          moduleId: "task-engine",
+          actorId: actor,
+          clientMutationId: clientMutationId ? `${clientMutationId}::note` : undefined,
+          phaseKey: note.phaseKey
+        }
+      })
+    ];
+    const suggestionQuery = suggestionIdOpt
+      ? db.prepare(`SELECT * FROM phase_note_task_suggestions WHERE id = ? AND note_id = ?`).get(suggestionIdOpt, noteId)
+      : phaseNoteTaskSuggestionsTableExists(db)
+        ? db.prepare(`SELECT * FROM phase_note_task_suggestions WHERE note_id = ?`).get(noteId)
+        : undefined;
+    if (suggestionQuery) {
+      const row = suggestionQuery as Record<string, unknown>;
+      const suggestionUpdated = phaseNoteSuggestionRowToEventSnapshot({
+        id: String(row.id),
+        noteId: String(row.note_id),
+        title: String(row.title),
+        description: String(row.description),
+        suggestedStatus: String(row.suggested_status),
+        suggestedPhaseKey: String(row.suggested_phase_key),
+        suggestedPhaseLabel: row.suggested_phase_label == null ? null : String(row.suggested_phase_label),
+        suggestedTaskType: row.suggested_task_type == null ? null : String(row.suggested_task_type),
+        acceptanceCriteriaJson:
+          row.acceptance_criteria_json == null ? null : String(row.acceptance_criteria_json),
+        convertedTaskId: resolvedId,
+        createdAt: String(row.created_at),
+        updatedAt
+      });
+      planningEvents.push(
+        draftPlanningPhaseNoteSuggestionUpdatedEvent({
+          suggestion: suggestionUpdated,
+          ctx: {
+            commandName: "convert-phase-note-to-task",
+            moduleId: "task-engine",
+            actorId: actor,
+            clientMutationId: clientMutationId ? `${clientMutationId}::suggestion` : undefined,
+            phaseKey: note.phaseKey
+          }
+        })
+      );
+    }
+    const taskEvents = draftCreatedTaskEvents(task, {
+      commandName: "convert-phase-note-to-task",
+      moduleId: "task-engine",
+      actorId: actor,
+      clientMutationId,
+      phaseKey: task.phaseKey
+    });
+    const canonical = await commitCanonicalTaskStateEvents({
+      ctx,
+      store,
+      planning,
+      events: taskEvents,
+      planningEvents,
+      policyApproval: args.policyApproval as { confirmed: boolean; rationale: string } | undefined
+    });
+    if (canonical && !canonical.ok) {
+      return canonical;
+    }
+    await store.load();
+    const createdData: Record<string, unknown> = {
+      task: store.getTask(resolvedId) ?? task,
+      sourcePhaseNoteId: note.id
+    };
+    attachPolicyMeta(createdData, ctx, planning.sqliteDual.getPlanningGeneration(), [
+      ...(pgCreate.warnings ?? []),
+      ...featureSlugWarnings
+    ]);
+    return {
+      ok: true,
+      code: "phase-note-converted-to-task",
+      message: `Created task '${resolvedId}' from phase note '${noteId}'`,
+      data: createdData
     };
   }
 

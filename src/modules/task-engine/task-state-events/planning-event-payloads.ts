@@ -1,11 +1,58 @@
 import type { TaskStateEventEnvelopeV1 } from "./types.js";
 import type { WorkspaceStatusUpdatePatch } from "../persistence/workspace-status-store.js";
+import type { PhaseNotePriority, PhaseNoteStatus } from "../phase-journal/phase-journal-types.js";
 
-/** Discriminated planning event kinds (Phase 119 — shared git stream with task.*). */
+/** Discriminated planning event kinds (Phase 119 + Phase 120 S1 phase journal). */
 export type PlanningStateEventKindV1 =
   | "planning.phase_catalog.upserted"
   | "planning.phase_catalog.removed"
-  | "planning.workspace_status.updated";
+  | "planning.workspace_status.updated"
+  | "planning.phase_note.created"
+  | "planning.phase_note.updated"
+  | "planning.phase_note.archived"
+  | "planning.phase_note_suggestion.created"
+  | "planning.phase_note_suggestion.updated"
+  | "planning.phase_note_suggestion.removed"
+  | "planning.idea.created"
+  | "planning.idea.updated"
+  | "planning.module_state.updated";
+
+export type PlanningIdeaStatusV1 = "open" | "planning" | "planned";
+
+/** Full workflow_ideas row snapshot (Phase 120 S2). */
+export type PlanningIdeaSnapshotV1 = {
+  id: string;
+  title: string;
+  note: string | null;
+  status: PlanningIdeaStatusV1;
+  sortOrder: number;
+  linkedPlanArtifact: string | null;
+  previousPlanArtifacts: string[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type PlanningIdeaCreatedPayloadV1 = {
+  idea: PlanningIdeaSnapshotV1;
+};
+
+export type PlanningIdeaUpdatedPayloadV1 = {
+  idea: PlanningIdeaSnapshotV1;
+  /** When true, applier removes the row (delete/archive tombstone via updated kind). */
+  removed?: boolean;
+};
+
+/** workspace_module_state row snapshot for git-sync allowlisted module IDs (Phase 120 S3). */
+export type PlanningModuleStateUpdatedPayloadV1 = {
+  moduleId: string;
+  stateSchemaVersion: number;
+  state: Record<string, unknown>;
+  updatedAt: string;
+  /** Optimistic concurrency: replayed row version must match before apply. */
+  expectedStateSchemaVersion?: number;
+  /** When true, applier deletes the module state row. */
+  removed?: boolean;
+};
 
 export type PlanningPhaseCatalogUpsertedPayloadV1 = {
   phaseKey: string;
@@ -34,10 +81,90 @@ export type PlanningWorkspaceStatusUpdatedPayloadV1 = {
   payloadDigest?: string;
 };
 
+export type PlanningPhaseNoteEventRefV1 = {
+  refType: string;
+  refValue: string;
+};
+
+/** Full note row + refs (no delta-only updates — Phase 120 S1 decision). */
+export type PlanningPhaseNoteSnapshotV1 = {
+  id: string;
+  phaseKey: string;
+  phaseLabel: string | null;
+  taskId: string | null;
+  author: string | null;
+  authorKind: string | null;
+  sessionId: string | null;
+  sourceCommand: string | null;
+  planningGeneration: number | null;
+  policyTraceId: string | null;
+  noteType: string;
+  summary: string;
+  details: string | null;
+  status: PhaseNoteStatus;
+  priority: PhaseNotePriority;
+  createdAt: string;
+  updatedAt: string;
+  expiresAt: string | null;
+  supersededBy: string | null;
+  convertedTaskId: string | null;
+  idempotencyKey: string | null;
+  refs: PlanningPhaseNoteEventRefV1[];
+};
+
+export type PlanningPhaseNoteCreatedPayloadV1 = {
+  note: PlanningPhaseNoteSnapshotV1;
+};
+
+export type PlanningPhaseNoteUpdatedPayloadV1 = {
+  note: PlanningPhaseNoteSnapshotV1;
+};
+
+export type PlanningPhaseNoteArchivedPayloadV1 = {
+  note: PlanningPhaseNoteSnapshotV1;
+};
+
+export type PlanningPhaseNoteSuggestionSnapshotV1 = {
+  id: string;
+  noteId: string;
+  title: string;
+  description: string;
+  suggestedStatus: string;
+  suggestedPhaseKey: string;
+  suggestedPhaseLabel: string | null;
+  suggestedTaskType: string | null;
+  acceptanceCriteriaJson: string | null;
+  convertedTaskId: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type PlanningPhaseNoteSuggestionCreatedPayloadV1 = {
+  suggestion: PlanningPhaseNoteSuggestionSnapshotV1;
+};
+
+export type PlanningPhaseNoteSuggestionUpdatedPayloadV1 = {
+  suggestion: PlanningPhaseNoteSuggestionSnapshotV1;
+};
+
+export type PlanningPhaseNoteSuggestionRemovedPayloadV1 = {
+  suggestionId: string;
+  noteId: string;
+};
+
 export type PlanningStateEventPayloadV1 =
   | PlanningPhaseCatalogUpsertedPayloadV1
   | PlanningPhaseCatalogRemovedPayloadV1
-  | PlanningWorkspaceStatusUpdatedPayloadV1;
+  | PlanningWorkspaceStatusUpdatedPayloadV1
+  | PlanningPhaseNoteCreatedPayloadV1
+  | PlanningPhaseNoteUpdatedPayloadV1
+  | PlanningPhaseNoteArchivedPayloadV1
+  | PlanningPhaseNoteSuggestionCreatedPayloadV1
+  | PlanningPhaseNoteSuggestionUpdatedPayloadV1
+  | PlanningPhaseNoteSuggestionRemovedPayloadV1
+  | PlanningIdeaCreatedPayloadV1
+  | PlanningIdeaUpdatedPayloadV1
+  | PlanningModuleStateUpdatedPayloadV1;
 
 export type PlanningStateEventV1 = TaskStateEventEnvelopeV1 & {
   kind: PlanningStateEventKindV1;
@@ -48,7 +175,16 @@ export type PlanningStateEventV1 = TaskStateEventEnvelopeV1 & {
 export const PLANNING_STATE_EVENT_KINDS: readonly PlanningStateEventKindV1[] = [
   "planning.phase_catalog.upserted",
   "planning.phase_catalog.removed",
-  "planning.workspace_status.updated"
+  "planning.workspace_status.updated",
+  "planning.phase_note.created",
+  "planning.phase_note.updated",
+  "planning.phase_note.archived",
+  "planning.phase_note_suggestion.created",
+  "planning.phase_note_suggestion.updated",
+  "planning.phase_note_suggestion.removed",
+  "planning.idea.created",
+  "planning.idea.updated",
+  "planning.module_state.updated"
 ] as const;
 
 export function isPlanningStateEventKind(kind: string): kind is PlanningStateEventKindV1 {

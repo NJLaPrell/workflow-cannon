@@ -2,8 +2,24 @@ import type { ModuleCommandResult, ModuleLifecycleContext } from "../../../contr
 import { CLI_REMEDIATION_DOCS } from "../../../core/cli-remediation.js";
 import { parsePolicyApproval } from "../../../core/policy.js";
 import { attachPolicyMeta } from "../attach-planning-response-meta.js";
+import { readIdempotencyValue } from "../mutation-utils.js";
+import {
+  draftPlanningPhaseNoteArchivedEvent,
+  draftPlanningPhaseNoteCreatedEvent,
+  draftPlanningPhaseNoteSuggestionCreatedEvent,
+  draftPlanningPhaseNoteSuggestionRemovedEvent,
+  draftPlanningPhaseNoteSuggestionUpdatedEvent,
+  draftPlanningPhaseNoteUpdatedEvent
+} from "../persistence/planning-event-draft.js";
+import {
+  isPlanningGitSyncPublishActive
+} from "../persistence/planning-canonical-sync-domains.js";
 import type { OpenedPlanningStores } from "../persistence/planning-open.js";
-import { readWorkspaceStatusSnapshotFromDual } from "../persistence/workspace-status-store.js";
+import type { TaskStore } from "../persistence/store.js";
+import type { PlanningStateEventV1 } from "../task-state-events/planning-event-payloads.js";
+import {
+  phaseNoteRowToEventSnapshot
+} from "../task-state-events/planning-phase-note-event-utils.js";
 import {
   PHASE_JOURNAL_MIN_KIT_USER_VERSION,
   PHASE_NOTE_TASK_SUGGESTIONS_MIN_KIT_USER_VERSION,
@@ -33,7 +49,12 @@ import { sortPhaseNotesForContext } from "../phase-journal/phase-journal-scoring
 import { inferPhaseKeyFromTask, resolvePhaseKeyForPhaseJournalRead, type PhaseJournalPhaseKeySource } from "../phase-journal/phase-journal-phase-key.js";
 import { rejectIfPhaseNoteTextContainsSecret } from "../phase-journal/phase-journal-secret-guard.js";
 import { readPhaseJournalKitPolicy } from "../phase-journal/phase-journal-kit-config.js";
+import {
+  newPhaseNoteId,
+  publishPhaseJournalPlanningEvents
+} from "../phase-journal/phase-journal-planning-events-runtime.js";
 import { runConvertPhaseNoteToTaskCommand } from "./phase-journal-convert-command.js";
+import { readWorkspaceStatusSnapshotFromDual } from "../persistence/workspace-status-store.js";
 
 function readKitUserVersion(db: { pragma: (name: string, options?: { simple: boolean }) => unknown }): number {
   const raw = db.pragma("user_version", { simple: true });
@@ -113,7 +134,8 @@ function parseRefInput(raw: unknown): { type: string; value: string } | null {
 export async function resolvePhaseJournalCommands(
   command: { name: string; args?: Record<string, unknown> },
   ctx: ModuleLifecycleContext,
-  planning: OpenedPlanningStores
+  planning: OpenedPlanningStores,
+  store: TaskStore
 ): Promise<ModuleCommandResult | null> {
   const names = new Set([
     "add-phase-note",
@@ -135,9 +157,24 @@ export async function resolvePhaseJournalCommands(
     return phaseJournalVersionError(uv);
   }
 
-  const store = createPhaseJournalStore(db);
+  const journalStore = createPhaseJournalStore(db);
   const args = (command.args ?? {}) as Record<string, unknown>;
   const gen = planning.sqliteDual.getPlanningGeneration();
+
+  const draftCtxBase = (commandName: string, phaseKey?: string) => ({
+    commandName,
+    moduleId: "task-engine",
+    phaseKey
+  });
+
+  const suggestionRowsForNote = (noteId: string): Array<{ id: string; note_id: string }> => {
+    if (!phaseNoteTaskSuggestionsTableExists(db)) {
+      return [];
+    }
+    return db
+      .prepare(`SELECT id, note_id FROM phase_note_task_suggestions WHERE note_id = ?`)
+      .all(noteId) as Array<{ id: string; note_id: string }>;
+  };
 
   const okData = (data: Record<string, unknown>, code: string, message: string): ModuleCommandResult => {
     attachPolicyMeta(data, ctx, gen);
@@ -277,7 +314,77 @@ export async function resolvePhaseJournalCommands(
     };
 
     try {
-      const result = store.createNoteIdempotent(input);
+      if (isPlanningGitSyncPublishActive(ctx, "phase_notes")) {
+        if (idempotencyKey) {
+          const hit = db
+            .prepare(`SELECT id FROM phase_notes WHERE idempotency_key = ?`)
+            .get(idempotencyKey) as { id: string } | undefined;
+          if (hit) {
+            const existing = journalStore.getById(hit.id);
+            if (existing) {
+              return okData(
+                { created: false, note: projectPhaseNote(existing) },
+                "phase-note-created",
+                "Phase note returned (idempotent)"
+              );
+            }
+          }
+        }
+        const noteId = newPhaseNoteId();
+        const now = new Date().toISOString();
+        const noteSnapshot = phaseNoteRowToEventSnapshot({
+          id: noteId,
+          phaseKey: input.phaseKey,
+          phaseLabel: input.phaseLabel ?? null,
+          taskId: input.taskId ?? null,
+          author: input.author ?? null,
+          authorKind: input.authorKind ?? null,
+          sessionId: input.sessionId ?? null,
+          sourceCommand: input.sourceCommand ?? null,
+          planningGeneration: input.planningGeneration ?? null,
+          policyTraceId: input.policyTraceId ?? null,
+          noteType: input.noteType,
+          summary: input.summary,
+          details: input.details ?? null,
+          status: input.status ?? "active",
+          priority: input.priority ?? "normal",
+          createdAt: now,
+          updatedAt: now,
+          expiresAt: input.expiresAt ?? null,
+          supersededBy: null,
+          convertedTaskId: null,
+          idempotencyKey: input.idempotencyKey ?? null,
+          refs: (input.refs ?? []).map((r, idx) => ({
+            id: `${noteId}-ref-${idx}`,
+            noteId,
+            refType: r.refType,
+            refValue: r.refValue
+          }))
+        });
+        const clientMutationId = idempotencyKey ?? readIdempotencyValue(args);
+        const publishErr = await publishPhaseJournalPlanningEvents({
+          ctx,
+          store,
+          planning,
+          events: [
+            draftPlanningPhaseNoteCreatedEvent({
+              note: noteSnapshot,
+              ctx: { ...draftCtxBase("add-phase-note", phaseKey), clientMutationId }
+            })
+          ],
+          policyApproval: args.policyApproval as { confirmed: boolean; rationale: string } | undefined
+        });
+        if (publishErr) {
+          return publishErr;
+        }
+        const created = journalStore.getById(noteId);
+        if (!created) {
+          return { ok: false, code: "storage-read-error", message: "Phase note missing after canonical publish." };
+        }
+        return okData({ created: true, note: projectPhaseNote(created) }, "phase-note-created", "Phase note created");
+      }
+
+      const result = journalStore.createNoteIdempotent(input);
       const data: Record<string, unknown> = {
         created: result.created,
         note: projectPhaseNote(result.note)
@@ -332,7 +439,7 @@ export async function resolvePhaseJournalCommands(
       limit = Math.min(Math.max(limitRaw, 1), PHASE_NOTE_LIST_MAX_LIMIT);
     }
 
-    let rows = store.listNotes({ phaseKey, status: statusFilter, limit: PHASE_NOTE_LIST_MAX_LIMIT });
+    let rows = journalStore.listNotes({ phaseKey, status: statusFilter, limit: PHASE_NOTE_LIST_MAX_LIMIT });
     const includeExpired = args.includeExpired === true;
     rows = filterOutPassiveExpiredActiveNotes(rows, includeExpired, Date.now());
     const noteTypeFilter = readStringField(args, "noteType")?.trim();
@@ -382,7 +489,7 @@ export async function resolvePhaseJournalCommands(
 
     const includeExpired = args.includeExpired === true;
     const pool = filterOutPassiveExpiredActiveNotes(
-      store.listNotes({ phaseKey, status: "active", limit: 200 }),
+      journalStore.listNotes({ phaseKey, status: "active", limit: 200 }),
       includeExpired,
       Date.now()
     );
@@ -411,7 +518,7 @@ export async function resolvePhaseJournalCommands(
     }
 
     const pool = filterOutPassiveExpiredActiveNotes(
-      store.listNotes({ phaseKey, status: "active", limit: PHASE_NOTE_LIST_MAX_LIMIT }),
+      journalStore.listNotes({ phaseKey, status: "active", limit: PHASE_NOTE_LIST_MAX_LIMIT }),
       false,
       Date.now()
     );
@@ -454,6 +561,90 @@ export async function resolvePhaseJournalCommands(
       };
     }
 
+    if (isPlanningGitSyncPublishActive(ctx, "phase_note_suggestions")) {
+      const baseClientMutationId = readIdempotencyValue(args);
+      const events: PlanningStateEventV1[] = [];
+      for (const n of convertible) {
+        const existingRow = db
+          .prepare(`SELECT * FROM phase_note_task_suggestions WHERE note_id = ?`)
+          .get(n.id) as Record<string, unknown> | undefined;
+        const now = new Date().toISOString();
+        const title = n.summary.trim();
+        const description = (n.details?.trim() ? n.details.trim() : n.summary.trim()) || title;
+        const suggestionSnapshot = {
+          id: existingRow ? String(existingRow.id) : newPhaseNoteId(),
+          noteId: n.id,
+          title,
+          description,
+          suggestedStatus: "proposed",
+          suggestedPhaseKey: n.phaseKey,
+          suggestedPhaseLabel: n.phaseLabel ?? null,
+          suggestedTaskType: "workspace-kit",
+          acceptanceCriteriaJson: null,
+          convertedTaskId: null,
+          createdAt: existingRow ? String(existingRow.created_at) : now,
+          updatedAt: now
+        };
+        const noteMutationId = baseClientMutationId ? `${baseClientMutationId}::${n.id}` : undefined;
+        const ctxDraft = { ...draftCtxBase("propose-tasks-from-phase-notes", phaseKey), clientMutationId: noteMutationId };
+        if (existingRow) {
+          events.push(
+            draftPlanningPhaseNoteSuggestionUpdatedEvent({ suggestion: suggestionSnapshot, ctx: ctxDraft })
+          );
+        } else {
+          events.push(
+            draftPlanningPhaseNoteSuggestionCreatedEvent({ suggestion: suggestionSnapshot, ctx: ctxDraft })
+          );
+        }
+      }
+      const publishErr = await publishPhaseJournalPlanningEvents({
+        ctx,
+        store,
+        planning,
+        events,
+        policyApproval: args.policyApproval as { confirmed: boolean; rationale: string } | undefined
+      });
+      if (publishErr) {
+        return publishErr;
+      }
+      const persistedSuggestions = convertible.map((n) => {
+        const row = db
+          .prepare(`SELECT * FROM phase_note_task_suggestions WHERE note_id = ?`)
+          .get(n.id) as Record<string, unknown> | undefined;
+        if (!row) {
+          throw new Error(`phase journal: suggestion missing after canonical persist for ${n.id}`);
+        }
+        return projectPhaseNoteTaskSuggestion({
+          id: String(row.id),
+          noteId: String(row.note_id),
+          title: String(row.title),
+          description: String(row.description),
+          suggestedStatus: String(row.suggested_status),
+          suggestedPhaseKey: String(row.suggested_phase_key),
+          suggestedPhaseLabel: row.suggested_phase_label == null ? null : String(row.suggested_phase_label),
+          suggestedTaskType: row.suggested_task_type == null ? null : String(row.suggested_task_type),
+          acceptanceCriteriaJson:
+            row.acceptance_criteria_json == null ? null : String(row.acceptance_criteria_json),
+          convertedTaskId: row.converted_task_id == null ? null : String(row.converted_task_id),
+          createdAt: String(row.created_at),
+          updatedAt: String(row.updated_at)
+        });
+      });
+      return okData(
+        {
+          phaseKey,
+          phaseKeySource,
+          taskId: taskId ?? null,
+          proposals,
+          persistedSuggestions,
+          persisted: true,
+          count: proposals.length
+        },
+        "phase-note-proposals-persisted",
+        "Upserted phase_note_task_suggestions rows for convertible notes"
+      );
+    }
+
     const persistedSuggestions = convertible.map((n) =>
       projectPhaseNoteTaskSuggestion(upsertPhaseNoteTaskSuggestionFromNote(db, n))
     );
@@ -473,7 +664,7 @@ export async function resolvePhaseJournalCommands(
   }
 
   if (command.name === "convert-phase-note-to-task") {
-    return await runConvertPhaseNoteToTaskCommand(ctx, planning, planning.taskStore, args);
+    return await runConvertPhaseNoteToTaskCommand(ctx, planning, store, args);
   }
 
   if (command.name === "update-phase-note") {
@@ -544,16 +735,54 @@ export async function resolvePhaseJournalCommands(
         return { ok: false, code: gd.code, message: gd.message };
       }
     }
-    const existing = store.getById(noteId);
+    const existing = journalStore.getById(noteId);
     if (!existing) {
       return { ok: false, code: "phase-note-not-found", message: `Unknown noteId '${noteId}'.` };
     }
     if (existing.status !== "active") {
       return { ok: false, code: "phase-note-not-updatable", message: "Only active phase notes can be updated." };
     }
-    const updated = store.updateActivePhaseNote(noteId, patch, {
+    const updatedAt = new Date().toISOString();
+    if (isPlanningGitSyncPublishActive(ctx, "phase_notes")) {
+      const nextNote = {
+        ...existing,
+        summary: patch.summary !== undefined ? patch.summary : existing.summary,
+        details: patch.details !== undefined ? patch.details : existing.details,
+        expiresAt: patch.expiresAt !== undefined ? patch.expiresAt : existing.expiresAt,
+        planningGeneration: gen,
+        updatedAt
+      };
+      const publishErr = await publishPhaseJournalPlanningEvents({
+        ctx,
+        store,
+        planning,
+        events: [
+          draftPlanningPhaseNoteUpdatedEvent({
+            note: phaseNoteRowToEventSnapshot(nextNote),
+            ctx: {
+              ...draftCtxBase("update-phase-note", existing.phaseKey),
+              clientMutationId: readIdempotencyValue(args)
+            }
+          })
+        ],
+        policyApproval: args.policyApproval as { confirmed: boolean; rationale: string } | undefined
+      });
+      if (publishErr) {
+        return publishErr;
+      }
+      const updated = journalStore.getById(noteId);
+      if (!updated) {
+        return {
+          ok: false,
+          code: "phase-note-not-found",
+          message: `Unknown noteId '${noteId}' or note not active.`
+        };
+      }
+      return okData({ note: projectPhaseNote(updated) }, "phase-note-updated", "Updated phase note");
+    }
+    const updated = journalStore.updateActivePhaseNote(noteId, patch, {
       planningGeneration: gen,
-      updatedAt: new Date().toISOString()
+      updatedAt
     });
     if (!updated) {
       return {
@@ -581,7 +810,7 @@ export async function resolvePhaseJournalCommands(
     if (!secretReason.ok) {
       return { ok: false, code: secretReason.code, message: secretReason.message };
     }
-    const existing = store.getById(noteId);
+    const existing = journalStore.getById(noteId);
     if (!existing) {
       return { ok: false, code: "phase-note-not-found", message: `Unknown noteId '${noteId}'.` };
     }
@@ -594,8 +823,48 @@ export async function resolvePhaseJournalCommands(
     ) {
       return denyCriticalPhaseNoteWithoutPolicy("dismiss-phase-note");
     }
-    store.dismissNote(noteId);
-    const updated = store.getById(noteId);
+    if (
+      isPlanningGitSyncPublishActive(ctx, "phase_notes") ||
+      isPlanningGitSyncPublishActive(ctx, "phase_note_suggestions")
+    ) {
+      const updatedAt = new Date().toISOString();
+      const archived = phaseNoteRowToEventSnapshot({ ...existing, status: "dismissed", updatedAt });
+      const baseMutationId = readIdempotencyValue(args);
+      const events: PlanningStateEventV1[] = [
+        draftPlanningPhaseNoteArchivedEvent({
+          note: archived,
+          ctx: {
+            ...draftCtxBase("dismiss-phase-note", existing.phaseKey),
+            clientMutationId: baseMutationId
+          }
+        })
+      ];
+      for (const s of suggestionRowsForNote(noteId)) {
+        events.push(
+          draftPlanningPhaseNoteSuggestionRemovedEvent({
+            suggestionId: s.id,
+            noteId,
+            ctx: {
+              ...draftCtxBase("dismiss-phase-note", existing.phaseKey),
+              clientMutationId: baseMutationId ? `${baseMutationId}::suggestion::${s.id}` : undefined
+            }
+          })
+        );
+      }
+      const publishErr = await publishPhaseJournalPlanningEvents({
+        ctx,
+        store,
+        planning,
+        events,
+        policyApproval: args.policyApproval as { confirmed: boolean; rationale: string } | undefined
+      });
+      if (publishErr) {
+        return publishErr;
+      }
+    } else {
+      journalStore.dismissNote(noteId);
+    }
+    const updated = journalStore.getById(noteId);
     if (!updated) {
       return { ok: false, code: "phase-note-not-found", message: `Note '${noteId}' missing after dismiss.` };
     }
@@ -611,8 +880,8 @@ export async function resolvePhaseJournalCommands(
     if (noteId === supersededBy) {
       return { ok: false, code: "invalid-phase-note-args", message: "noteId and supersededBy must differ." };
     }
-    const from = store.getById(noteId);
-    const to = store.getById(supersededBy);
+    const from = journalStore.getById(noteId);
+    const to = journalStore.getById(supersededBy);
     if (!from || !to) {
       return { ok: false, code: "phase-note-not-found", message: "noteId and supersededBy must both exist." };
     }
@@ -643,8 +912,53 @@ export async function resolvePhaseJournalCommands(
     ) {
       return denyCriticalPhaseNoteWithoutPolicy("supersede-phase-note");
     }
-    store.supersedeNote(noteId, supersededBy);
-    const updated = store.getById(noteId);
+    if (
+      isPlanningGitSyncPublishActive(ctx, "phase_notes") ||
+      isPlanningGitSyncPublishActive(ctx, "phase_note_suggestions")
+    ) {
+      const updatedAt = new Date().toISOString();
+      const archived = phaseNoteRowToEventSnapshot({
+        ...from,
+        status: "superseded",
+        supersededBy,
+        updatedAt
+      });
+      const baseMutationId = readIdempotencyValue(args);
+      const events: PlanningStateEventV1[] = [
+        draftPlanningPhaseNoteArchivedEvent({
+          note: archived,
+          ctx: {
+            ...draftCtxBase("supersede-phase-note", from.phaseKey),
+            clientMutationId: baseMutationId
+          }
+        })
+      ];
+      for (const s of suggestionRowsForNote(noteId)) {
+        events.push(
+          draftPlanningPhaseNoteSuggestionRemovedEvent({
+            suggestionId: s.id,
+            noteId,
+            ctx: {
+              ...draftCtxBase("supersede-phase-note", from.phaseKey),
+              clientMutationId: baseMutationId ? `${baseMutationId}::suggestion::${s.id}` : undefined
+            }
+          })
+        );
+      }
+      const publishErr = await publishPhaseJournalPlanningEvents({
+        ctx,
+        store,
+        planning,
+        events,
+        policyApproval: args.policyApproval as { confirmed: boolean; rationale: string } | undefined
+      });
+      if (publishErr) {
+        return publishErr;
+      }
+    } else {
+      journalStore.supersedeNote(noteId, supersededBy);
+    }
+    const updated = journalStore.getById(noteId);
     if (!updated) {
       return { ok: false, code: "phase-note-not-found", message: `Note '${noteId}' missing after supersede.` };
     }

@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type DatabaseCtor from "better-sqlite3";
 import {
   deletePhaseCatalogRow,
@@ -9,33 +10,205 @@ import {
   readKitWorkspaceStatusRow,
   workspaceStatusTableAvailable
 } from "../persistence/workspace-status-store.js";
+import { phaseNoteTaskSuggestionsTableExists } from "../phase-journal/phase-journal-store.js";
 import type { PlanningStateProjectionV1 } from "./planning-projection-types.js";
+import { MODULE_STATE_PLANNING_SYNC_ALLOWLIST } from "./module-state-planning-sync-allowlist.js";
+import type { PlanningSyncDomainId } from "../persistence/planning-canonical-sync-domains.js";
 
 type SqliteDb = InstanceType<typeof DatabaseCtor>;
+
+function phaseNotesTableAvailable(db: SqliteDb): boolean {
+  const row = db
+    .prepare(`SELECT 1 AS ok FROM sqlite_master WHERE type = 'table' AND name = 'phase_notes'`)
+    .get() as { ok: number } | undefined;
+  return row !== undefined;
+}
+
+function workflowIdeasTableAvailable(db: SqliteDb): boolean {
+  const row = db
+    .prepare(`SELECT 1 AS ok FROM sqlite_master WHERE type = 'table' AND name = 'workflow_ideas'`)
+    .get() as { ok: number } | undefined;
+  return row !== undefined;
+}
+
+function workspaceModuleStateTableAvailable(db: SqliteDb): boolean {
+  const row = db
+    .prepare(`SELECT 1 AS ok FROM sqlite_master WHERE type = 'table' AND name = 'workspace_module_state'`)
+    .get() as { ok: number } | undefined;
+  return row !== undefined;
+}
+
+const insertModuleStateSql = `
+INSERT INTO workspace_module_state (module_id, state_schema_version, state_json, updated_at)
+VALUES (@module_id, @state_schema_version, @state_json, @updated_at)
+ON CONFLICT(module_id) DO UPDATE SET
+  state_schema_version=excluded.state_schema_version,
+  state_json=excluded.state_json,
+  updated_at=excluded.updated_at
+`;
+
+const insertWorkflowIdeaSql = `
+INSERT INTO workflow_ideas (
+  id, title, note, status, sort_order, linked_plan_artifact,
+  previous_plan_artifacts_json, created_at, updated_at
+) VALUES (
+  @id, @title, @note, @status, @sort_order, @linked_plan_artifact,
+  @previous_plan_artifacts_json, @created_at, @updated_at
+)`;
+
+const insertPhaseNoteSql = `
+INSERT INTO phase_notes (
+  id, phase_key, phase_label, task_id, author, author_kind, session_id, source_command,
+  planning_generation, policy_trace_id, note_type, summary, details, status, priority,
+  created_at, updated_at, expires_at, superseded_by, converted_task_id, idempotency_key
+) VALUES (
+  @id, @phase_key, @phase_label, @task_id, @author, @author_kind, @session_id, @source_command,
+  @planning_generation, @policy_trace_id, @note_type, @summary, @details, @status, @priority,
+  @created_at, @updated_at, @expires_at, @superseded_by, @converted_task_id, @idempotency_key
+)`;
+
+const insertPhaseNoteRefSql = `
+INSERT INTO phase_note_refs (id, note_id, ref_type, ref_value)
+VALUES (@id, @note_id, @ref_type, @ref_value)
+`;
+
+const insertPhaseNoteSuggestionSql = `
+INSERT INTO phase_note_task_suggestions (
+  id, note_id, title, description, suggested_status, suggested_phase_key, suggested_phase_label,
+  suggested_task_type, acceptance_criteria_json, converted_task_id, created_at, updated_at
+) VALUES (
+  @id, @note_id, @title, @description, @suggested_status, @suggested_phase_key, @suggested_phase_label,
+  @suggested_task_type, @acceptance_criteria_json, @converted_task_id, @created_at, @updated_at
+)`;
 
 /** Persist in-memory planning projection into kit SQLite (full rebuild path). */
 export function persistPlanningProjectionToSqlite(
   db: SqliteDb,
   projection: PlanningStateProjectionV1,
-  options?: { replaceCatalog?: boolean }
+  options?: { replaceCatalog?: boolean; enabledDomains?: ReadonlySet<PlanningSyncDomainId> }
 ): void {
   const replaceCatalog = options?.replaceCatalog !== false;
-  if (replaceCatalog && phaseCatalogTableAvailable(db)) {
+  const domainEnabled = (domain: PlanningSyncDomainId): boolean =>
+    !options?.enabledDomains || options.enabledDomains.has(domain);
+
+  if (replaceCatalog && domainEnabled("phase_catalog") && phaseCatalogTableAvailable(db)) {
     db.prepare(`DELETE FROM ${KIT_PHASE_CATALOG_TABLE}`).run();
     for (const row of Object.values(projection.phaseCatalogByKey)) {
       upsertPhaseCatalogRow(db, row.phaseKey, row.shortDescription, row.updatedAt);
     }
   }
 
-  if (!workspaceStatusTableAvailable(db) || !projection.workspaceStatus) {
-    return;
+  if (domainEnabled("phase_notes") && phaseNotesTableAvailable(db)) {
+    db.transaction(() => {
+      db.prepare(`DELETE FROM phase_note_refs`).run();
+      db.prepare(`DELETE FROM phase_notes`).run();
+
+      const insertNote = db.prepare(insertPhaseNoteSql);
+      const insertRef = db.prepare(insertPhaseNoteRefSql);
+      for (const note of Object.values(projection.phaseNotesById)) {
+        insertNote.run({
+          id: note.id,
+          phase_key: note.phaseKey,
+          phase_label: note.phaseLabel,
+          task_id: note.taskId,
+          author: note.author,
+          author_kind: note.authorKind,
+          session_id: note.sessionId,
+          source_command: note.sourceCommand,
+          planning_generation: note.planningGeneration,
+          policy_trace_id: note.policyTraceId,
+          note_type: note.noteType,
+          summary: note.summary,
+          details: note.details,
+          status: note.status,
+          priority: note.priority,
+          created_at: note.createdAt,
+          updated_at: note.updatedAt,
+          expires_at: note.expiresAt,
+          superseded_by: note.supersededBy,
+          converted_task_id: note.convertedTaskId,
+          idempotency_key: note.idempotencyKey
+        });
+        for (const ref of note.refs) {
+          insertRef.run({
+            id: ref.id || randomUUID(),
+            note_id: note.id,
+            ref_type: ref.refType,
+            ref_value: ref.refValue
+          });
+        }
+      }
+    })();
   }
 
-  const ws = projection.workspaceStatus;
-  const now = ws.updatedAt;
-  db.transaction(() => {
-    db.prepare(
-      `UPDATE kit_workspace_status SET
+  if (domainEnabled("phase_note_suggestions") && phaseNotesTableAvailable(db) && phaseNoteTaskSuggestionsTableExists(db)) {
+    db.transaction(() => {
+      db.prepare(`DELETE FROM phase_note_task_suggestions`).run();
+      const insertSuggestion = db.prepare(insertPhaseNoteSuggestionSql);
+      for (const suggestion of Object.values(projection.phaseNoteSuggestionsById)) {
+        insertSuggestion.run({
+          id: suggestion.id,
+          note_id: suggestion.noteId,
+          title: suggestion.title,
+          description: suggestion.description,
+          suggested_status: suggestion.suggestedStatus,
+          suggested_phase_key: suggestion.suggestedPhaseKey,
+          suggested_phase_label: suggestion.suggestedPhaseLabel,
+          suggested_task_type: suggestion.suggestedTaskType,
+          acceptance_criteria_json: suggestion.acceptanceCriteriaJson,
+          converted_task_id: suggestion.convertedTaskId,
+          created_at: suggestion.createdAt,
+          updated_at: suggestion.updatedAt
+        });
+      }
+    })();
+  }
+
+  if (domainEnabled("ideas") && workflowIdeasTableAvailable(db)) {
+    db.transaction(() => {
+      db.prepare(`DELETE FROM workflow_ideas`).run();
+      const insertIdea = db.prepare(insertWorkflowIdeaSql);
+      for (const idea of Object.values(projection.ideasById)) {
+        insertIdea.run({
+          id: idea.id,
+          title: idea.title,
+          note: idea.note,
+          status: idea.status,
+          sort_order: idea.sortOrder,
+          linked_plan_artifact: idea.linkedPlanArtifact,
+          previous_plan_artifacts_json: JSON.stringify(idea.previousPlanArtifacts),
+          created_at: idea.createdAt,
+          updated_at: idea.updatedAt
+        });
+      }
+    })();
+  }
+
+  if (domainEnabled("module_state") && workspaceModuleStateTableAvailable(db)) {
+    db.transaction(() => {
+      for (const moduleId of MODULE_STATE_PLANNING_SYNC_ALLOWLIST) {
+        if (!projection.moduleStateById[moduleId]) {
+          db.prepare(`DELETE FROM workspace_module_state WHERE module_id = ?`).run(moduleId);
+        }
+      }
+      const insertModuleState = db.prepare(insertModuleStateSql);
+      for (const row of Object.values(projection.moduleStateById)) {
+        insertModuleState.run({
+          module_id: row.moduleId,
+          state_schema_version: row.stateSchemaVersion,
+          state_json: JSON.stringify(row.state),
+          updated_at: row.updatedAt
+        });
+      }
+    })();
+  }
+
+  if (domainEnabled("workspace_status") && workspaceStatusTableAvailable(db) && projection.workspaceStatus) {
+    const ws = projection.workspaceStatus;
+    const now = ws.updatedAt;
+    db.transaction(() => {
+      db.prepare(
+        `UPDATE kit_workspace_status SET
         workspace_revision = ?,
         current_kit_phase = ?,
         next_kit_phase = ?,
@@ -46,34 +219,50 @@ export function persistPlanningProjectionToSqlite(
         next_agent_actions_json = ?,
         updated_at = ?
       WHERE id = 1`
-    ).run(
-      ws.workspaceRevision,
-      ws.currentKitPhase,
-      ws.nextKitPhase,
-      ws.activeFocus,
-      ws.lastUpdated,
-      JSON.stringify(ws.blockers),
-      JSON.stringify(ws.pendingDecisions),
-      JSON.stringify(ws.nextAgentActions),
-      now
-    );
-    db.prepare(`DELETE FROM kit_workspace_status_events`).run();
-    for (const audit of projection.workspaceStatusAudits) {
-      db.prepare(
-        `INSERT INTO kit_workspace_status_events (
+      ).run(
+        ws.workspaceRevision,
+        ws.currentKitPhase,
+        ws.nextKitPhase,
+        ws.activeFocus,
+        ws.lastUpdated,
+        JSON.stringify(ws.blockers),
+        JSON.stringify(ws.pendingDecisions),
+        JSON.stringify(ws.nextAgentActions),
+        now
+      );
+      db.prepare(`DELETE FROM kit_workspace_status_events`).run();
+      for (const audit of projection.workspaceStatusAudits) {
+        db.prepare(
+          `INSERT INTO kit_workspace_status_events (
           created_at, event_kind, actor, command, revision_before, revision_after, details_json
         ) VALUES (?, ?, ?, ?, ?, ?, ?)`
-      ).run(
-        audit.createdAt,
-        audit.eventKind,
-        audit.actor,
-        audit.command,
-        audit.revisionBefore,
-        audit.revisionAfter,
-        audit.detailsJson
-      );
-    }
-  })();
+        ).run(
+          audit.createdAt,
+          audit.eventKind,
+          audit.actor,
+          audit.command,
+          audit.revisionBefore,
+          audit.revisionAfter,
+          audit.detailsJson
+        );
+      }
+    })();
+  }
+}
+
+function loadPhaseNoteRefs(
+  db: SqliteDb,
+  noteId: string
+): Array<{ id: string; noteId: string; refType: string; refValue: string }> {
+  const rows = db
+    .prepare(`SELECT id, note_id, ref_type, ref_value FROM phase_note_refs WHERE note_id = ? ORDER BY id`)
+    .all(noteId) as Array<{ id: string; note_id: string; ref_type: string; ref_value: string }>;
+  return rows.map((r) => ({
+    id: r.id,
+    noteId: r.note_id,
+    refType: r.ref_type,
+    refValue: r.ref_value
+  }));
 }
 
 /** Seed planning projection from current SQLite rows (baseline / snapshot paths). */
@@ -81,9 +270,17 @@ export function planningProjectionFromSqlite(db: SqliteDb): PlanningStateProject
   const projection: PlanningStateProjectionV1 = {
     schemaVersion: 1,
     phaseCatalogByKey: {},
+    phaseNotesById: {},
+    phaseNoteSuggestionsById: {},
+    ideasById: {},
+    moduleStateById: {},
     workspaceStatus: readKitWorkspaceStatusRow(db),
     workspaceStatusAudits: [],
     appliedWorkspaceMutationIds: new Set<string>(),
+    appliedNoteIdempotencyKeys: new Set<string>(),
+    appliedSuggestionMutationIds: new Set<string>(),
+    appliedIdeaMutationIds: new Set<string>(),
+    appliedModuleStateMutationIds: new Set<string>(),
     lastEventSequence: 0,
     lastUpdated: new Date().toISOString()
   };
@@ -95,6 +292,129 @@ export function planningProjectionFromSqlite(db: SqliteDb): PlanningStateProject
       projection.phaseCatalogByKey[row.phase_key] = {
         phaseKey: row.phase_key,
         shortDescription: row.short_description,
+        updatedAt: row.updated_at
+      };
+    }
+  }
+  if (phaseNotesTableAvailable(db)) {
+    const noteRows = db.prepare(`SELECT * FROM phase_notes`).all() as Record<string, unknown>[];
+    for (const row of noteRows) {
+      const id = String(row.id);
+      projection.phaseNotesById[id] = {
+        id,
+        phaseKey: String(row.phase_key),
+        phaseLabel: row.phase_label == null ? null : String(row.phase_label),
+        taskId: row.task_id == null ? null : String(row.task_id),
+        author: row.author == null ? null : String(row.author),
+        authorKind: row.author_kind == null ? null : String(row.author_kind),
+        sessionId: row.session_id == null ? null : String(row.session_id),
+        sourceCommand: row.source_command == null ? null : String(row.source_command),
+        planningGeneration:
+          row.planning_generation == null || row.planning_generation === ""
+            ? null
+            : Number(row.planning_generation),
+        policyTraceId: row.policy_trace_id == null ? null : String(row.policy_trace_id),
+        noteType: String(row.note_type),
+        summary: String(row.summary),
+        details: row.details == null ? null : String(row.details),
+        status: String(row.status) as PlanningStateProjectionV1["phaseNotesById"][string]["status"],
+        priority: String(row.priority) as PlanningStateProjectionV1["phaseNotesById"][string]["priority"],
+        createdAt: String(row.created_at),
+        updatedAt: String(row.updated_at),
+        expiresAt: row.expires_at == null ? null : String(row.expires_at),
+        supersededBy: row.superseded_by == null ? null : String(row.superseded_by),
+        convertedTaskId: row.converted_task_id == null ? null : String(row.converted_task_id),
+        idempotencyKey: row.idempotency_key == null ? null : String(row.idempotency_key),
+        refs: loadPhaseNoteRefs(db, id)
+      };
+    }
+  }
+  if (phaseNoteTaskSuggestionsTableExists(db)) {
+    const suggestionRows = db.prepare(`SELECT * FROM phase_note_task_suggestions`).all() as Record<
+      string,
+      unknown
+    >[];
+    for (const row of suggestionRows) {
+      const id = String(row.id);
+      projection.phaseNoteSuggestionsById[id] = {
+        id,
+        noteId: String(row.note_id),
+        title: String(row.title),
+        description: String(row.description),
+        suggestedStatus: String(row.suggested_status),
+        suggestedPhaseKey: String(row.suggested_phase_key),
+        suggestedPhaseLabel: row.suggested_phase_label == null ? null : String(row.suggested_phase_label),
+        suggestedTaskType: row.suggested_task_type == null ? null : String(row.suggested_task_type),
+        acceptanceCriteriaJson:
+          row.acceptance_criteria_json == null ? null : String(row.acceptance_criteria_json),
+        convertedTaskId: row.converted_task_id == null ? null : String(row.converted_task_id),
+        createdAt: String(row.created_at),
+        updatedAt: String(row.updated_at)
+      };
+    }
+  }
+  if (workflowIdeasTableAvailable(db)) {
+    const ideaRows = db
+      .prepare(`SELECT * FROM workflow_ideas ORDER BY sort_order ASC, id ASC`)
+      .all() as Array<{
+      id: string;
+      title: string;
+      note: string | null;
+      status: "open" | "planning" | "planned";
+      sort_order: number;
+      linked_plan_artifact: string | null;
+      previous_plan_artifacts_json: string;
+      created_at: string;
+      updated_at: string;
+    }>;
+    for (const row of ideaRows) {
+      let previousPlanArtifacts: string[] = [];
+      try {
+        const parsed = JSON.parse(row.previous_plan_artifacts_json) as unknown;
+        previousPlanArtifacts = Array.isArray(parsed)
+          ? parsed.filter((value): value is string => typeof value === "string")
+          : [];
+      } catch {
+        previousPlanArtifacts = [];
+      }
+      projection.ideasById[row.id] = {
+        id: row.id,
+        title: row.title,
+        note: row.note,
+        status: row.status,
+        sortOrder: row.sort_order,
+        linkedPlanArtifact: row.linked_plan_artifact,
+        previousPlanArtifacts,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at
+      };
+    }
+  }
+  if (workspaceModuleStateTableAvailable(db)) {
+    const moduleRows = db
+      .prepare(
+        `SELECT module_id, state_schema_version, state_json, updated_at FROM workspace_module_state ORDER BY module_id ASC`
+      )
+      .all() as Array<{
+      module_id: string;
+      state_schema_version: number;
+      state_json: string;
+      updated_at: string;
+    }>;
+    for (const row of moduleRows) {
+      let state: Record<string, unknown> = {};
+      try {
+        const parsed = JSON.parse(row.state_json) as unknown;
+        if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+          state = parsed as Record<string, unknown>;
+        }
+      } catch {
+        state = {};
+      }
+      projection.moduleStateById[row.module_id] = {
+        moduleId: row.module_id,
+        stateSchemaVersion: row.state_schema_version,
+        state,
         updatedAt: row.updated_at
       };
     }

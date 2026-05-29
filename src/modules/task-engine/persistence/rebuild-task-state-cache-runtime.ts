@@ -10,6 +10,7 @@ import {
   resolveGitHeadSha,
   upsertProjectionMetaAfterApply
 } from "./task-state-cache-runtime-shared.js";
+import { enabledPlanningSyncDomainSet } from "./planning-canonical-sync-domains.js";
 
 export async function runRebuildTaskStateCache(
   ctx: ModuleLifecycleContext,
@@ -38,7 +39,8 @@ export async function runRebuildTaskStateCache(
     };
   }
 
-  const replayed = replayCanonicalStateEvents(admitted.events);
+  const enabledDomains = enabledPlanningSyncDomainSet(ctx);
+  const replayed = replayCanonicalStateEvents(admitted.events, { enabledDomains });
   if (!replayed.ok) {
     return {
       ok: false,
@@ -82,7 +84,8 @@ export async function runRebuildTaskStateCache(
     (e) => typeof e === "object" && e !== null && "kind" in e && String((e as { kind: string }).kind).startsWith("planning.")
   ).length;
   persistPlanningProjectionToSqlite(planning.sqliteDual.getDatabase(), replayed.result.planningProjection, {
-    replaceCatalog: planningEventCount > 0
+    replaceCatalog: planningEventCount > 0,
+    enabledDomains
   });
   const projectionMeta = upsertProjectionMetaAfterApply(planning, {
     appliedSequence: lastSequence,

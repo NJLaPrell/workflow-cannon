@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "eventId": "tse.20260529T120020Z.idea-created-fixture",
+  "sequence": 20,
+  "parentEventId": null,
+  "recordedAt": "2026-05-29T12:00:20.000Z",
+  "actor": { "id": "system", "source": "system" },
+  "command": { "name": "create-idea", "moduleId": "ideas" },
+  "clientMutationId": "fixture-idea-create-1",
+  "kind": "planning.idea.created",
+  "payload": {
+    "idea": {
+      "id": "I001",
+      "title": "Git-synced workflow idea",
+      "note": "Capture planner intent for phase 120",
+      "status": "open",
+      "sortOrder": 0,
+      "linkedPlanArtifact": null,
+      "previousPlanArtifacts": [],
+      "createdAt": "2026-05-29T12:00:20.000Z",
+      "updatedAt": "2026-05-29T12:00:20.000Z"
+    }
+  }
+}
