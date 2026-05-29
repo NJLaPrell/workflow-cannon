@@ -1,0 +1,39 @@
+{
+  "taskId": "T100575",
+  "expectedPlanningGeneration": 4041,
+  "clientMutationId": "t100575-ready-review-doctor-a-v1",
+  "updates": {
+    "metadata": {
+      "blockers": [],
+      "planRef": "planning:git-sync:2026-05-29",
+      "wbsId": "PSYNC-119-S6",
+      "planningType": "feature",
+      "architectureDecision": {
+        "id": "doctor-planning-drift-severity",
+        "chosen": "A",
+        "label": "Advisory warning (doctor exit 0)",
+        "rationale": "Planning behind canonical git prints doctor issue + hydrate hint; does not fail doctor unless other checks fail.",
+        "decidedAt": "2026-05-29",
+        "decidedBy": "user"
+      },
+      "readyReview": {
+        "reviewedAt": "2026-05-29",
+        "reviewedBy": "user",
+        "option": "A",
+        "decision": "Planning projection drift is advisory in doctor for Phase 119."
+      },
+      "technicalBreakdown": [
+        "Add doctor issue codes/messages for planning projection drift (advisory).",
+        "Extend task-state-sync-status helpers with optional planning summary on unified sequence.",
+        "Update .ai/runbooks/task-state-git-operator.md and install-git-hooks.md.",
+        "Add planning sync note to get-kit-persistence-map response."
+      ]
+    },
+    "acceptanceCriteria": [
+      "doctor surfaces planning behind/conflict as advisory warnings with hydrate remediation hint; doctor exit 0 when no other failures.",
+      "task-state-git-operator runbook lists Phase 119 synced domains (catalog + workspace status).",
+      "get-kit-persistence-map data notes planning canonical sync when git-event-log is enabled.",
+      "install-git-hooks instruction mentions planning hydrate scope (inherits task-state-hydrate)."
+    ]
+  }
+}

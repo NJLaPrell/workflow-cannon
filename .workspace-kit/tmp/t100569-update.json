@@ -1,0 +1,40 @@
+{
+  "taskId": "T100569",
+  "expectedPlanningGeneration": 4076,
+  "clientMutationId": "t100569-ready-review-validate-b-v1",
+  "updates": {
+    "metadata": {
+      "blockers": [],
+      "wbsId": "CI-11",
+      "planRef": "planning:ci-optimization:2026-05-28",
+      "planningType": "change",
+      "architectureDecision": {
+        "id": "ci11-validation-execution",
+        "chosen": "B",
+        "label": "Minimal PR set",
+        "rationale": "Combine compatible scenarios in one PR where paths do not mix; separate PRs only when required; each scenario still gets run URL plus job summary.",
+        "decidedAt": "2026-05-29",
+        "decidedBy": "user"
+      },
+      "readyReview": {
+        "reviewedAt": "2026-05-29",
+        "reviewedBy": "user",
+        "option": "B + run URL summary",
+        "decision": "Minimal PR set for six scenarios; evidence is Actions run URL plus selected/skipped job summary per scenario."
+      },
+      "technicalBreakdown": [
+        "Plan PRs: evidence/status-only, docs/governance-only, extension-only, code, release-branch, publish dispatch.",
+        "Combine scenarios only when changed paths stay in one classifier bucket.",
+        "Record run URL and workflow job summary (selected vs skipped) in task completion notes.",
+        "Confirm no regression in task publish/hydrate paths unrelated to CI."
+      ]
+    },
+    "acceptanceCriteria": [
+      "Evidence/status-only scenario: run URL + job summary showing classifier + aggregator only.",
+      "Docs-only and extension-only scenarios: focused groups run; run URL + summary attached.",
+      "Code scenario: build/check/test/smoke as expected; run URL + summary attached.",
+      "Release and publish scenarios: full parity/artifact path; run URL + summary attached.",
+      "Scenarios executed via minimal PR set (combined where compatible); local-only validation insufficient."
+    ]
+  }
+}

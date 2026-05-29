@@ -1,0 +1,39 @@
+{
+  "taskId": "T100578",
+  "expectedPlanningGeneration": 4048,
+  "clientMutationId": "t100578-ready-review-idea-a-v1",
+  "updates": {
+    "metadata": {
+      "blockers": [],
+      "planRef": "planning:git-sync:2026-05-29",
+      "wbsId": "PSYNC-120-S2",
+      "planningType": "feature",
+      "architectureDecision": {
+        "id": "idea-lifecycle-events",
+        "chosen": "A",
+        "label": "Updated snapshot for archive/delete",
+        "rationale": "Archive and delete are field changes in planning.idea.updated full-row snapshots; no separate archived/deleted kinds in Phase 120.",
+        "decidedAt": "2026-05-29",
+        "decidedBy": "user"
+      },
+      "readyReview": {
+        "reviewedAt": "2026-05-29",
+        "reviewedBy": "user",
+        "option": "A",
+        "decision": "Idea removals/archive via planning.idea.updated full snapshot only."
+      },
+      "technicalBreakdown": [
+        "Add planning.idea.created and planning.idea.updated with full workflow_ideas row snapshots.",
+        "Implement applier for workflow_ideas insert/update including archived/inactive fields.",
+        "Hook ideas module mutators to canonical publish path.",
+        "Add ideas + hydrate integration tests including archive via updated event."
+      ]
+    },
+    "acceptanceCriteria": [
+      "Idea create and update commands publish planning.idea.* events under git-event-log.",
+      "Archive/delete/inactive transitions publish planning.idea.updated with full snapshot (no separate deleted kind).",
+      "Hydrate restores workflow_ideas rows on a second machine.",
+      "No duplicate ideas on idempotent command replay."
+    ]
+  }
+}

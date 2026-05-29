@@ -1,0 +1,39 @@
+{
+  "taskId": "T100562",
+  "expectedPlanningGeneration": 4062,
+  "clientMutationId": "t100562-ready-review-union-a-v1",
+  "updates": {
+    "metadata": {
+      "blockers": [],
+      "wbsId": "CI-4",
+      "planRef": "planning:ci-optimization:2026-05-28",
+      "planningType": "change",
+      "architectureDecision": {
+        "id": "union-group-execution",
+        "chosen": "A",
+        "label": "Parallel conditional jobs",
+        "rationale": "Each matched check group runs as its own job with classifier if:; ci-result aggregates pass/fail/skipped.",
+        "decidedAt": "2026-05-29",
+        "decidedBy": "user"
+      },
+      "readyReview": {
+        "reviewedAt": "2026-05-29",
+        "reviewedBy": "user",
+        "option": "A + union of groups",
+        "decision": "Mixed paths run union of matching groups as parallel conditional jobs; ci-result aggregates."
+      },
+      "technicalBreakdown": [
+        "Wire classifier outputs to per-group job if: conditions in ci.yml.",
+        "Add check-code, check-docs, check-governance, check-extension jobs as needed per path class.",
+        "Ensure ci-result treats intentional skips as success after phase-1 proof.",
+        "Validate evidence/status-only runs only changes + ci-result."
+      ]
+    },
+    "acceptanceCriteria": [
+      "Code changes run build, code checks, tests, smoke, and extension when shared surfaces require it.",
+      "Docs/governance and extension-only paths run only relevant groups (union when multiple classes match).",
+      "Each matched group runs as a separate conditional job; ci-result reports aggregate outcome.",
+      "Evidence/status-only changes produce only classifier and ci-result."
+    ]
+  }
+}

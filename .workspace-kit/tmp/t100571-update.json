@@ -1,0 +1,39 @@
+{
+  "taskId": "T100571",
+  "expectedPlanningGeneration": 4033,
+  "clientMutationId": "t100571-ready-review-ws-audit-a-v1",
+  "updates": {
+    "metadata": {
+      "blockers": [],
+      "planRef": "planning:git-sync:2026-05-29",
+      "wbsId": "PSYNC-119-S2",
+      "planningType": "feature",
+      "architectureDecision": {
+        "id": "workspace-status-hydrate-audit",
+        "chosen": "A",
+        "label": "Singleton + audit trail on replay",
+        "rationale": "Hydrate and event replay update kit_workspace_status and append kit_workspace_status_events rows to match direct update-workspace-status behavior.",
+        "decidedAt": "2026-05-29",
+        "decidedBy": "user"
+      },
+      "readyReview": {
+        "reviewedAt": "2026-05-29",
+        "reviewedBy": "user",
+        "option": "A",
+        "decision": "Planning workspace-status replay writes singleton row and audit trail events."
+      },
+      "technicalBreakdown": [
+        "Extend admitTaskStateEventStream to validate planning.* kinds and revision fields.",
+        "Implement applyPlanningPhaseCatalogUpsert and applyPlanningPhaseCatalogRemoved.",
+        "Implement applyPlanningWorkspaceStatusUpdated with revision bump, singleton update, and kit_workspace_status_events append.",
+        "Add unit tests for happy-path replay, revision conflict, idempotent replay, and audit row count."
+      ]
+    },
+    "acceptanceCriteria": [
+      "Replay of a fixture stream produces expected kit_phase_catalog rows and kit_workspace_status singleton state.",
+      "Workspace revision mismatch rejects admission with a stable error code.",
+      "Idempotent replay of the same clientMutationId is a no-op without duplicate audit rows.",
+      "kit_workspace_status_events audit trail is populated on workspace status replay (same as live mutation path)."
+    ]
+  }
+}

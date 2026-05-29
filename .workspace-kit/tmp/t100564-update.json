@@ -1,0 +1,39 @@
+{
+  "taskId": "T100564",
+  "expectedPlanningGeneration": 4066,
+  "clientMutationId": "t100564-ready-review-parity-c-v1",
+  "updates": {
+    "metadata": {
+      "blockers": [],
+      "wbsId": "CI-6",
+      "planRef": "planning:ci-optimization:2026-05-28",
+      "planningType": "change",
+      "architectureDecision": {
+        "id": "parity-artifact-mode",
+        "chosen": "C",
+        "label": "Flag + env; validationMode evidence",
+        "rationale": "PARITY_TARBALL_PATH env and --from-tarball flag (flag wins); parity evidence adds optional validationMode full|from-tarball.",
+        "decidedAt": "2026-05-29",
+        "decidedBy": "user"
+      },
+      "readyReview": {
+        "reviewedAt": "2026-05-29",
+        "reviewedBy": "user",
+        "option": "C + full chain default",
+        "decision": "Local parity full chain by default; CI artifact mode via flag/env; evidence validationMode field."
+      },
+      "technicalBreakdown": [
+        "Add --from-tarball and PARITY_TARBALL_PATH to run-parity.mjs (flag overrides env).",
+        "Extend parity-evidence.schema.json with optional validationMode.",
+        "CI parity job downloads tarball and runs from-tarball mode only.",
+        "Keep local pnpm run parity as full chain when no tarball input."
+      ]
+    },
+    "acceptanceCriteria": [
+      "Local pnpm run parity runs full validation unless tarball path provided.",
+      "CI parity runs against downloaded tarball without rebuild/check/test/pack.",
+      "Parity evidence records validationMode full or from-tarball (backward compatible).",
+      "Failure output identifies the failing parity step in both modes."
+    ]
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "taskId": "T100560",
+  "expectedPlanningGeneration": 4058,
+  "clientMutationId": "t100560-ready-review-protection-b-v1",
+  "updates": {
+    "metadata": {
+      "blockers": [],
+      "wbsId": "CI-2",
+      "planRef": "planning:ci-optimization:2026-05-28",
+      "planningType": "change",
+      "architectureDecision": {
+        "id": "branch-protection-cutover",
+        "chosen": "B",
+        "label": "Two-phase protection cutover",
+        "rationale": "PR1 adds ci-result as reporting; PR2 flips required checks after aggregator proven on real PRs.",
+        "decidedAt": "2026-05-29",
+        "decidedBy": "user"
+      },
+      "readyReview": {
+        "reviewedAt": "2026-05-29",
+        "reviewedBy": "user",
+        "option": "B + test/release leafs",
+        "decision": "Two-phase branch protection; required checks ci-result plus test and release leafs on shipping contexts."
+      },
+      "technicalBreakdown": [
+        "Add changes classifier job and ci-result aggregator to ci.yml.",
+        "Phase 1: ci-result visible but not sole required check; document skip behavior.",
+        "Phase 2 follow-up: update branch protection to require ci-result per CI-1 inventory.",
+        "Prove evidence/status-only paths skip expensive jobs without false failures."
+      ]
+    },
+    "acceptanceCriteria": [
+      "Evidence/status-only changes do not start expensive validation jobs.",
+      "ci-result succeeds when selected jobs pass or no validation required; fails on unexpected cancel/failure.",
+      "Skip decisions visible in workflow summary; two-phase protection cutover documented.",
+      "Final state: branch protection requires ci-result plus agreed test/release leaf checks."
+    ]
+  }
+}

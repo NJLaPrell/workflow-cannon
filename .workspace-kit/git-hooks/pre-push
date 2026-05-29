@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+# Installed by workspace-kit (install-git-hooks). Blocks destructive git on protected branches
+# unless WORKSPACE_KIT_POLICY_APPROVAL or .workspace-kit/policy/git-destructive-approval.json grants approval.
+set -euo pipefail
+ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+APPROVAL_FILE="$ROOT/.workspace-kit/policy/git-destructive-approval.json"
+has_approval() {
+  if [[ -n "${WORKSPACE_KIT_POLICY_APPROVAL:-}" ]]; then
+    node -e "const j=JSON.parse(process.env.WORKSPACE_KIT_POLICY_APPROVAL||'{}'); process.exit(j.confirmed===true?0:1)" 2>/dev/null && return 0
+  fi
+  if [[ -f "$APPROVAL_FILE" ]]; then
+    node -e "const fs=require('fs'); const j=JSON.parse(fs.readFileSync(process.argv[1],'utf8')); const ok=j.confirmed===true&&(!j.expiresAt||Date.parse(j.expiresAt)>Date.now()); process.exit(ok?0:1)" "$APPROVAL_FILE" 2>/dev/null && return 0
+  fi
+  return 1
+}
+protected_ref() {
+  case "$1" in
+    refs/heads/main|refs/heads/master|refs/heads/release/phase-*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+while read -r local_ref local_sha remote_ref remote_sha; do
+  [[ -z "$remote_ref" ]] && continue
+  protected_ref "$remote_ref" || continue
+  # force push: local_sha is all-zero (delete) or not ancestor
+  zero="0000000000000000000000000000000000000000"
+  if [[ "$local_sha" == "$zero" ]] || ! git merge-base --is-ancestor "$remote_sha" "$local_sha" 2>/dev/null; then
+    if has_approval; then
+      exit 0
+    fi
+    echo "workspace-kit git-policy: blocked force/rewritten push to protected branch $remote_ref" >&2
+    echo "Set WORKSPACE_KIT_POLICY_APPROVAL='{"confirmed":true,"rationale":"…"}' or write $APPROVAL_FILE" >&2
+    exit 1
+  fi
+done
+exit 0

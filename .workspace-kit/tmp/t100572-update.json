@@ -1,0 +1,39 @@
+{
+  "taskId": "T100572",
+  "expectedPlanningGeneration": 4035,
+  "clientMutationId": "t100572-ready-review-publish-a-v1",
+  "updates": {
+    "metadata": {
+      "blockers": [],
+      "planRef": "planning:git-sync:2026-05-29",
+      "wbsId": "PSYNC-119-S3",
+      "planningType": "feature",
+      "architectureDecision": {
+        "id": "planning-publish-failure-semantics",
+        "chosen": "A",
+        "label": "Mirror task.* canonical commit",
+        "rationale": "Planning publish uses commitCanonicalTaskStateEvents semantics: mutation does not durably succeed unless publish/push succeeds; repair via existing task-state tools.",
+        "decidedAt": "2026-05-29",
+        "decidedBy": "user"
+      },
+      "readyReview": {
+        "reviewedAt": "2026-05-29",
+        "reviewedBy": "user",
+        "option": "A",
+        "decision": "On publish failure, mirror task canonical commit — no local-first pending planning queue in Phase 119."
+      },
+      "technicalBreakdown": [
+        "Add draftPlanningPhaseCatalogEvent and draftPlanningWorkspaceStatusEvent helpers.",
+        "Hook upsert-phase-catalog-entry post-save to commitCanonicalPlanningEvents (same failure semantics as tasks).",
+        "Hook update-workspace-status and set-current-phase to publish workspace status events.",
+        "Add integration test: publish failure leaves store unchanged / returns stable error codes matching task path."
+      ]
+    },
+    "acceptanceCriteria": [
+      "Mutations under git-event-log authority append planning events and push to workflow-cannon/task-state.",
+      "Publish failure mirrors task.* canonical commit: command fails with stable codes; no durable local-only planning drift.",
+      "Workspaces with sqlite-only canonical authority behave unchanged (no publish attempted).",
+      "Publish conflicts surface task-state-stale-version or planning-equivalent stable codes."
+    ]
+  }
+}

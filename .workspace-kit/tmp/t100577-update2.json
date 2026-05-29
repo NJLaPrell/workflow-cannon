@@ -1,0 +1,50 @@
+{
+  "taskId": "T100577",
+  "expectedPlanningGeneration": 4046,
+  "clientMutationId": "t100577-ready-review-suggestion-a-v1",
+  "updates": {
+    "metadata": {
+      "blockers": [],
+      "planRef": "planning:git-sync:2026-05-29",
+      "wbsId": "PSYNC-120-S1",
+      "planningType": "feature",
+      "architectureDecisions": [
+        {
+          "id": "phase-note-updated-payload",
+          "chosen": "A",
+          "label": "Full snapshot on updated",
+          "rationale": "planning.phase_note.updated carries complete note row plus refs array for simple deterministic replay.",
+          "decidedAt": "2026-05-29",
+          "decidedBy": "user"
+        },
+        {
+          "id": "phase-note-suggestion-sync",
+          "chosen": "A",
+          "label": "Separate suggestion events",
+          "rationale": "phase_note_task_suggestions sync via planning.phase_note_suggestion.created/updated/removed; note events carry refs only.",
+          "decidedAt": "2026-05-29",
+          "decidedBy": "user"
+        }
+      ],
+      "readyReview": {
+        "reviewedAt": "2026-05-29",
+        "reviewedBy": "user",
+        "option": "A+A",
+        "decision": "Full snapshot note updates; suggestions via separate planning.phase_note_suggestion.* events."
+      },
+      "technicalBreakdown": [
+        "Define planning.phase_note.created, updated, archived with full-row payloads and refs array.",
+        "Define planning.phase_note_suggestion.created, updated, removed for harvest rows.",
+        "Implement applier for phase_notes, phase_note_refs, phase_note_task_suggestions.",
+        "Wire publish hooks on phase journal and suggestion mutation commands.",
+        "Add unit and hydrate tests for note + suggestion event streams."
+      ]
+    },
+    "acceptanceCriteria": [
+      "Phase note create/update/archive mutations publish planning.phase_note.* events under git-event-log authority.",
+      "Suggestion row mutations publish planning.phase_note_suggestion.* events (separate from note payloads).",
+      "Hydrate replays phase notes, refs, and suggestions identically on a fresh projection.",
+      "Idempotency keys prevent duplicate rows on replay for both note and suggestion commands."
+    ]
+  }
+}

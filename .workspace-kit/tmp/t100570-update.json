@@ -1,0 +1,34 @@
+{
+  "taskId": "T100570",
+  "expectedPlanningGeneration": 4031,
+  "clientMutationId": "t100570-ready-review-arch-a-v1",
+  "updates": {
+    "metadata": {
+      "blockers": [],
+      "planRef": "planning:git-sync:2026-05-29",
+      "wbsId": "PSYNC-119-S1",
+      "planningType": "feature",
+      "architectureDecision": {
+        "id": "planning-canonical-stream",
+        "chosen": "A",
+        "label": "Same branch and stream (workflow-cannon/task-state)",
+        "rationale": "Append planning.* events alongside task.* in the existing git-event-log; single hydrate pass and manifest.",
+        "decidedAt": "2026-05-29",
+        "decidedBy": "user"
+      },
+      "readyReview": {
+        "reviewedAt": "2026-05-29",
+        "reviewedBy": "user",
+        "option": "A",
+        "decision": "Planning events share workflow-cannon/task-state branch and unified event stream with task.* kinds."
+      },
+      "technicalBreakdown": [
+        "Add PlanningStateEventKindV1 union with phase_catalog and workspace_status variants.",
+        "Define payload types for catalog upsert/remove and workspace status patch (revision, fields).",
+        "Add JSON schema files and golden fixtures under task-state-events/fixtures/.",
+        "Export planning types from task-state-events index; document shared-stream invariant in instruction capsule."
+      ]
+    },
+    "approach": "Extend the Phase 114 canonical event envelope with planning-domain kinds on workflow-cannon/task-state (same branch/stream as task.* events); add golden fixtures and schema validation without breaking existing task.* admission."
+  }
+}

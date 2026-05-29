@@ -1,0 +1,39 @@
+{
+  "taskId": "T100576",
+  "expectedPlanningGeneration": 4043,
+  "clientMutationId": "t100576-ready-review-e2e-b-v1",
+  "updates": {
+    "metadata": {
+      "blockers": [],
+      "planRef": "planning:git-sync:2026-05-29",
+      "wbsId": "PSYNC-119-S7",
+      "planningType": "feature",
+      "architectureDecision": {
+        "id": "phase119-e2e-evidence",
+        "chosen": "B",
+        "label": "Dual-worktree automated test",
+        "rationale": "Integration test with two git worktrees (publish on A, fetch/hydrate on B) satisfies two-machine convergence AC; physical laptops optional spot-check.",
+        "decidedAt": "2026-05-29",
+        "decidedBy": "user"
+      },
+      "readyReview": {
+        "reviewedAt": "2026-05-29",
+        "reviewedBy": "user",
+        "option": "B",
+        "decision": "Dual-worktree automated test is required evidence; manual two-laptop checklist is optional."
+      },
+      "technicalBreakdown": [
+        "Add integration tests for planning publisher + applier round-trip.",
+        "Add dual-worktree hydrate test: worktree A publishes catalog edit; worktree B fetch + hydrate matches.",
+        "Add hydrate golden test with mixed task and planning stream.",
+        "Run pnpm test and extension test suite; attach CI/local test output to task notes."
+      ]
+    },
+    "acceptanceCriteria": [
+      "Root unit tests and extension tests pass.",
+      "Automated dual-worktree test proves catalog and workspace status converge after fetch + hydrate (physical laptops not required).",
+      "No regression in existing task publish/hydrate/conflict scenarios.",
+      "Test output summary or CI run reference recorded in task completion notes."
+    ]
+  }
+}

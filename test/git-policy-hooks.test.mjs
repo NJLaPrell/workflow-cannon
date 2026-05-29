@@ -18,21 +18,30 @@ test("isProtectedRef matches main, master, and release phase branches", () => {
   assert.equal(isProtectedRef("refs/heads/feature/T1-slug"), false);
 });
 
-test("installGitPolicyHooks writes executable pre-push and pre-commit hooks", () => {
+test("installGitPolicyHooks writes executable pre-push, pre-commit, post-merge, and post-rewrite hooks", () => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "wk-git-hooks-"));
   try {
     const result = installGitPolicyHooks(tmp);
-    assert.equal(result.installed.length, 2);
+    assert.equal(result.installed.length, 4);
     for (const rel of result.installed) {
       const hookPath = path.join(tmp, rel);
       assert.ok(fs.existsSync(hookPath));
       const mode = fs.statSync(hookPath).mode & 0o111;
       assert.ok(mode > 0, `hook ${rel} should be executable`);
       const body = fs.readFileSync(hookPath, "utf8");
-      assert.match(body, /workspace-kit git-policy/);
+      assert.match(body, /workspace-kit/);
+      if (rel.endsWith("pre-push") || rel.endsWith("pre-commit")) {
+        assert.match(body, /git-policy/);
+      }
       if (rel.endsWith("pre-commit")) {
         assert.match(body, /block_staged_task_store_without_approval/);
         assert.match(body, /task-store-sqlite-commit-approval/);
+      }
+      if (rel.endsWith("post-merge") || rel.endsWith("post-rewrite")) {
+        assert.match(body, /task_state_git_event_log_enabled/);
+        assert.match(body, /run_task_state_hydrate_after_git_sync/);
+        assert.match(body, /task-state-hydrate/);
+        assert.match(body, /git-event-log/);
       }
     }
   } finally {

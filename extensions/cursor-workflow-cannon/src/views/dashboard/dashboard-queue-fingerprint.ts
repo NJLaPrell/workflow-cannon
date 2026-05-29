@@ -3,6 +3,7 @@
  * Used to skip redundant queue section patches on kit-state light refresh.
  */
 
+import type { DashboardSectionId } from "./dashboard-section-registry.js";
 import type { DashboardQueueBucketCategory } from "./dashboard-queue-bucket-lazy.js";
 
 type SummarySlice = {
@@ -128,4 +129,21 @@ export function queueBucketMetaKey(
   taskIds: string
 ): string {
   return `${category}|${phaseKey}|${count}|${taskIds}`;
+}
+
+/** True when queue rollups (phase buckets, filter dropdown) still need a queue/full summary read. */
+export function dashboardSummaryNeedsQueueRollupHydration(
+  data: Record<string, unknown> | null | undefined
+): boolean {
+  if (!data) {
+    return true;
+  }
+  return data.dashboardProjection === "overview";
+}
+
+/** Prefer the lighter queue slice when patching only the queue section. */
+export function dashboardSummaryProjectionForSectionPatch(
+  sectionIds: readonly DashboardSectionId[]
+): "full" | "queue" {
+  return sectionIds.length === 1 && sectionIds[0] === "queue" ? "queue" : "full";
 }

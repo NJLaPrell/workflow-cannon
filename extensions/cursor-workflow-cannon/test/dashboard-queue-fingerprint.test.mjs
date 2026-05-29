@@ -66,3 +66,17 @@ test("computeQueueSummaryFingerprint includes store timestamp", () => {
   const b = computeQueueSummaryFingerprint({ taskStoreLastUpdated: "2026-05-26T12:00:01.000Z" });
   assert.notEqual(a, b);
 });
+
+test("dashboardSummaryNeedsQueueRollupHydration detects overview stub", async () => {
+  const mod = await import("../dist/views/dashboard/dashboard-queue-fingerprint.js");
+  assert.equal(mod.dashboardSummaryNeedsQueueRollupHydration(null), true);
+  assert.equal(mod.dashboardSummaryNeedsQueueRollupHydration({ dashboardProjection: "overview" }), true);
+  assert.equal(mod.dashboardSummaryNeedsQueueRollupHydration({ dashboardProjection: "full" }), false);
+  assert.equal(mod.dashboardSummaryNeedsQueueRollupHydration({ dashboardProjection: "queue" }), false);
+});
+
+test("dashboardSummaryProjectionForSectionPatch prefers queue slice for queue-only patches", async () => {
+  const mod = await import("../dist/views/dashboard/dashboard-queue-fingerprint.js");
+  assert.equal(mod.dashboardSummaryProjectionForSectionPatch(["queue"]), "queue");
+  assert.equal(mod.dashboardSummaryProjectionForSectionPatch(["overview", "queue"]), "full");
+});

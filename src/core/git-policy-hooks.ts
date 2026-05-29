@@ -156,6 +156,49 @@ exit 0
 `;
 }
 
+function postMergeHookBody(): string {
+  return `#!/usr/bin/env bash
+# workspace-kit post-merge: reconcile task-state after git pull/merge (git-event-log authority).
+set -euo pipefail
+${taskStateGitSyncHookHelpers()}
+run_task_state_hydrate_after_git_sync
+exit 0
+`;
+}
+
+function postRewriteHookBody(): string {
+  return `#!/usr/bin/env bash
+# workspace-kit post-rewrite: reconcile task-state after pull --rebase, amend, etc.
+set -euo pipefail
+${taskStateGitSyncHookHelpers()}
+run_task_state_hydrate_after_git_sync
+exit 0
+`;
+}
+
+/** Shared shell helpers for post-merge / post-rewrite task-state hydrate (exported for tests). */
+export function taskStateGitSyncHookHelpers(): string {
+  return `
+ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+task_state_git_event_log_enabled() {
+  [[ -f "$ROOT/.workspace-kit/config.json" ]] || return 1
+  node -e "const fs=require('fs');const p=require('path').join(process.argv[1],'.workspace-kit/config.json');try{const j=JSON.parse(fs.readFileSync(p,'utf8'));const t=j.tasks||{};const a=t.canonicalAuthority||t.taskStateCanonicalAuthority;process.exit(a==='git-event-log'?0:1)}catch{process.exit(1)}" "$ROOT" 2>/dev/null
+}
+run_task_state_hydrate_after_git_sync() {
+  task_state_git_event_log_enabled || return 0
+  git -C "$ROOT" checkout -- .workspace-kit/tasks/workspace-kit.db .workspace-kit/tasks/task-state-events.jsonl 2>/dev/null || true
+  local hydrate_args='{"fetch":true,"policyApproval":{"confirmed":true,"rationale":"git hook post-sync task-state reconcile"}}'
+  if command -v pnpm >/dev/null 2>&1; then
+    (cd "$ROOT" && pnpm exec wk run task-state-hydrate "$hydrate_args") || echo "workspace-kit: task-state-hydrate failed after git sync (non-fatal)" >&2
+  elif [[ -x "$ROOT/.workspace-kit/bin/wk" ]]; then
+    (cd "$ROOT" && "$ROOT/.workspace-kit/bin/wk" run task-state-hydrate "$hydrate_args") || echo "workspace-kit: task-state-hydrate failed after git sync (non-fatal)" >&2
+  else
+    echo "workspace-kit: skipped post-sync task-state hydrate (pnpm or .workspace-kit/bin/wk not found)" >&2
+  fi
+}
+`;
+}
+
 export type GitHooksInstallResult = {
   hooksDir: string;
   hooksPathConfig: string;
@@ -167,7 +210,9 @@ export function installGitPolicyHooks(workspacePath: string): GitHooksInstallRes
   fs.mkdirSync(hooksDir, { recursive: true });
   const hooks: Record<string, string> = {
     "pre-push": prePushHookBody(),
-    "pre-commit": preCommitHookBody()
+    "pre-commit": preCommitHookBody(),
+    "post-merge": postMergeHookBody(),
+    "post-rewrite": postRewriteHookBody()
   };
   const installed: string[] = [];
   for (const [name, body] of Object.entries(hooks)) {

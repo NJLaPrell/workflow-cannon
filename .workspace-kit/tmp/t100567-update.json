@@ -1,0 +1,45 @@
+{
+  "taskId": "T100567",
+  "expectedPlanningGeneration": 4072,
+  "clientMutationId": "t100567-ready-review-parity-b-v1",
+  "updates": {
+    "metadata": {
+      "blockers": [],
+      "wbsId": "CI-9",
+      "planRef": "planning:ci-optimization:2026-05-28",
+      "planningType": "change",
+      "architectureDecision": {
+        "id": "full-parity-contexts",
+        "chosen": "B",
+        "label": "Shipping + release PRs",
+        "rationale": "Full parity on release/**, tags, release-readiness dispatch, publish, and pull_request targeting release/**; not on ordinary main pushes.",
+        "decidedAt": "2026-05-29",
+        "decidedBy": "user"
+      },
+      "readyReview": {
+        "reviewedAt": "2026-05-29",
+        "reviewedBy": "user",
+        "option": "B + maintainer approval on task",
+        "decision": "Full parity on shipping contexts plus PRs to release/**; maintainer policy approval recorded on this task note."
+      },
+      "policyApprovalRecord": {
+        "required": true,
+        "approverRole": "maintainer",
+        "surface": "task-note",
+        "topic": "move full parity off ordinary main pushes"
+      },
+      "technicalBreakdown": [
+        "Update ci.yml triggers/if so full parity runs only on shipping contexts and PRs to release/**.",
+        "Record maintainer approval (approver, date, rationale) on T100567 before merging policy change.",
+        "Update branch protection docs in lockstep with two-phase ci-result cutover.",
+        "Verify ordinary main evidence/status pushes skip full parity."
+      ]
+    },
+    "acceptanceCriteria": [
+      "Ordinary main pushes skip full parity unless code/release context requires it.",
+      "release/**, tags, release-readiness dispatch, publish, and PRs targeting release/** run full parity.",
+      "Maintainer approval for parity policy change is recorded on task T100567 notes/metadata.",
+      "Branch protection documentation matches final required checks."
+    ]
+  }
+}

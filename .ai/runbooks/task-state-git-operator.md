@@ -35,6 +35,8 @@ Routine **`git pull`** on **`main`** must **not** require merging a teammate’s
    pnpm exec wk run task-state-hydrate '{"fetch":true,"policyApproval":{"confirmed":true,"rationale":"reconcile task store after pull"}}'
    ```
 
+   **Automatic:** with **`install-git-hooks`**, **post-merge** and **post-rewrite** run the same hydrate path after **`git pull`** / rebase (when **`tasks.canonicalAuthority`** is **`git-event-log`**). With the Workflow Cannon extension, **Sync on git HEAD change** (default on) and the background interval also reconcile without manual steps.
+
 3. Confirm:
 
    ```bash

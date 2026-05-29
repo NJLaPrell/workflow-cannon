@@ -1,0 +1,39 @@
+{
+  "taskId": "T100579",
+  "expectedPlanningGeneration": 4050,
+  "clientMutationId": "t100579-ready-review-module-occ-a-v1",
+  "updates": {
+    "metadata": {
+      "blockers": [],
+      "planRef": "planning:git-sync:2026-05-29",
+      "wbsId": "PSYNC-120-S3",
+      "planningType": "feature",
+      "architectureDecision": {
+        "id": "module-state-concurrency",
+        "chosen": "A",
+        "label": "Optimistic concurrency on schema version",
+        "rationale": "planning.module_state.updated events carry expectedStateSchemaVersion; admission rejects stale publishes with stable conflict codes.",
+        "decidedAt": "2026-05-29",
+        "decidedBy": "user"
+      },
+      "readyReview": {
+        "reviewedAt": "2026-05-29",
+        "reviewedBy": "user",
+        "option": "A",
+        "decision": "Module state publish uses optimistic concurrency on state_schema_version (not last-writer-wins)."
+      },
+      "technicalBreakdown": [
+        "Define planning.module_state.updated payload (moduleId, state_schema_version, state_json, expectedStateSchemaVersion).",
+        "Implement applier upserting workspace_module_state with version conflict detection.",
+        "Add publish hooks on allowlisted module persistence saves (improvement, agent-behavior, planning-build-session).",
+        "Add tests per module id for publish, stale conflict, and replay round-trip."
+      ]
+    },
+    "acceptanceCriteria": [
+      "Only allowlisted module IDs publish planning.module_state.updated events.",
+      "Stale expectedStateSchemaVersion rejects admission/publish with a stable conflict code.",
+      "Hydrate restores module state JSON on a second machine for allowlisted modules.",
+      "Non-allowlisted module saves do not publish planning events."
+    ]
+  }
+}

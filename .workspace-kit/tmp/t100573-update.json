@@ -1,0 +1,39 @@
+{
+  "taskId": "T100573",
+  "expectedPlanningGeneration": 4037,
+  "clientMutationId": "t100573-ready-review-meta-a-v1",
+  "updates": {
+    "metadata": {
+      "blockers": [],
+      "planRef": "planning:git-sync:2026-05-29",
+      "wbsId": "PSYNC-119-S4",
+      "planningType": "feature",
+      "architectureDecision": {
+        "id": "planning-projection-meta",
+        "chosen": "A",
+        "label": "Unified applied_sequence (shared stream)",
+        "rationale": "Planning and task events share workflow-cannon/task-state sequence; kit_task_state_projection_meta applied_sequence covers full replay without new DDL.",
+        "decidedAt": "2026-05-29",
+        "decidedBy": "user"
+      },
+      "readyReview": {
+        "reviewedAt": "2026-05-29",
+        "reviewedBy": "user",
+        "option": "A",
+        "decision": "No separate planning sequence column; hydrate replays planning.* in the same loop as task.*."
+      },
+      "technicalBreakdown": [
+        "Extend replayTailFromSnapshot / event apply loop for planning kinds in unified sequence order.",
+        "Keep kit_task_state_projection_meta applied_sequence as single cursor (no KIT_SQLITE_USER_VERSION bump for planning-only meta).",
+        "Extend task-state-status-runtime with optional planning summary fields (catalog/workspace status freshness).",
+        "Add hydrate golden test with catalog + workspace status events interleaved with task events."
+      ]
+    },
+    "acceptanceCriteria": [
+      "task-state-hydrate with fetch:true applies planning events to kit_phase_catalog and kit_workspace_status in stream sequence order.",
+      "task-state-status JSON reports sync state using unified applied_sequence (current, behind, conflict) with optional planning summary.",
+      "Post-merge/post-rewrite hooks and extension git HEAD listener converge planning state without manual steps.",
+      "Mixed task+planning fixture hydrate test passes; no separate planning_sequence column required."
+    ]
+  }
+}
