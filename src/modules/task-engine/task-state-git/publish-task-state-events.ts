@@ -1,7 +1,10 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { admitCanonicalStateEventStream } from "../task-state-events/canonical-event-admission.js";
 import { admitTaskStateEventStream } from "../task-state-events/event-admission.js";
+import type { CanonicalStateEventV1 } from "../task-state-events/canonical-state-events.js";
+import { isTaskStateEvent } from "../task-state-events/canonical-state-events.js";
 import type { TaskStateEventV1 } from "../task-state-events/event-payloads.js";
 import type { TaskStateProjectionV1 } from "../task-state-events/projection-types.js";
 import { TASK_STATE_GIT_BRANCH, TASK_STATE_MANIFEST_RELATIVE } from "./constants.js";
@@ -31,7 +34,7 @@ import { resolveEventSegmentRelativePath } from "./layout.js";
 export type PublishTaskStateEventsInput = {
   workspacePath: string;
   branch?: string;
-  events: TaskStateEventV1[];
+  events: CanonicalStateEventV1[];
   /** Tip SHA the writer observed before building events (after fetch). */
   expectedHeadSha: string;
   /** Per-task version the writer observed for every task touched by `events`. */
@@ -43,7 +46,7 @@ export type PublishTaskStateEventsInput = {
 export type PublishTaskStateEventsSuccess = {
   ok: true;
   headSha: string;
-  publishedEvents: TaskStateEventV1[];
+  publishedEvents: CanonicalStateEventV1[];
   attempts: number;
   branch: string;
 };
@@ -57,7 +60,10 @@ export type PublishTaskStateEventsFailure = {
 
 export type PublishTaskStateEventsResult = PublishTaskStateEventsSuccess | PublishTaskStateEventsFailure;
 
-export function taskIdsTouchedByEvent(event: TaskStateEventV1): string[] {
+export function taskIdsTouchedByEvent(event: CanonicalStateEventV1): string[] {
+  if (!isTaskStateEvent(event)) {
+    return [];
+  }
   const payload = event.payload;
   if (event.kind === "task.batch_applied" && payload && typeof payload === "object") {
     const ids = (payload as { taskIds?: unknown }).taskIds;
@@ -81,7 +87,7 @@ export function taskVersionMapFromProjection(projection: TaskStateProjectionV1):
 export function detectTaskVersionConflict(input: {
   expectedTaskVersions: Record<string, number>;
   remoteVersions: Map<string, number>;
-  events: TaskStateEventV1[];
+  events: CanonicalStateEventV1[];
 }): { taskId: string; expected: number; actual: number } | null {
   const touched = new Set<string>();
   for (const event of input.events) {
@@ -103,15 +109,15 @@ export function detectTaskVersionConflict(input: {
 }
 
 export function assignEventSequences(
-  drafts: TaskStateEventV1[],
+  drafts: CanonicalStateEventV1[],
   head: { latestSequence: number; latestEventId: string | null }
-): TaskStateEventV1[] {
+): CanonicalStateEventV1[] {
   let sequence = head.latestSequence;
   let parentEventId = head.latestEventId;
-  const published: TaskStateEventV1[] = [];
+  const published: CanonicalStateEventV1[] = [];
   for (const draft of drafts) {
     sequence += 1;
-    const next: TaskStateEventV1 = {
+    const next: CanonicalStateEventV1 = {
       ...draft,
       sequence,
       parentEventId
@@ -127,7 +133,7 @@ function loadRemoteEvents(
   ref: string,
   manifest: TaskStateGitManifestV1,
   eventSegmentPaths: string[]
-): { ok: true; events: TaskStateEventV1[] } | PublishTaskStateEventsFailure {
+): { ok: true; events: CanonicalStateEventV1[] } | PublishTaskStateEventsFailure {
   const paths =
     eventSegmentPaths.length > 0 ? eventSegmentPaths : segmentPathsThroughHead(manifest);
   const read = readEventSegmentsJsonl(workspacePath, ref, paths);
@@ -151,7 +157,7 @@ const DEFAULT_EVENTS_PER_SEGMENT = 10_000;
 
 function appendEventsToManifest(
   manifest: TaskStateGitManifestV1,
-  published: TaskStateEventV1[]
+  published: CanonicalStateEventV1[]
 ): TaskStateGitManifestV1 {
   const last = published.at(-1);
   if (!last) {
@@ -175,7 +181,7 @@ function appendEventsToManifest(
 function writeSegmentAppend(
   worktreeRoot: string,
   manifest: TaskStateGitManifestV1,
-  published: TaskStateEventV1[]
+  published: CanonicalStateEventV1[]
 ): void {
   const rel =
     manifest.head.latestSegmentPath?.startsWith("task-state/")
@@ -284,9 +290,9 @@ export async function publishTaskStateEvents(
     );
     // `readRemoteSnapshotProjection` already replays the remote tail on the bootstrap snapshot.
     // Seeding admission with both that head projection and `remoteLoaded.events` would replay tail twice.
-    const admitted = admitTaskStateEventStream(publishedEvents, {
+    const admitted = admitCanonicalStateEventStream(publishedEvents, {
       priorEvents: headProjection ? [] : remoteLoaded.events,
-      initialProjection: headProjection ?? undefined
+      initialTaskProjection: headProjection ?? undefined
     });
     if (!admitted.ok) {
       return {

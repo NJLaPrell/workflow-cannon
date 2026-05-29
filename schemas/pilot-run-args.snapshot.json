@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "sourceSchemaPackageVersion": "0.99.15",
+  "sourceSchemaPackageVersion": "0.99.16",
   "pilotCommands": [
     "accept-improvement",
     "add-dependency",
@@ -98,6 +98,7 @@
     "task-state-compact",
     "task-state-hydrate",
     "task-state-init",
+    "planning-state-migrate-baseline",
     "task-state-migrate-baseline",
     "task-state-publish",
     "task-state-snapshot",
@@ -1815,6 +1816,9 @@
         }
       },
       "additionalProperties": true
+    },
+    "planning-state-migrate-baseline": {
+      "type": "object"
     },
     "task-state-migrate-baseline": {
       "type": "object"

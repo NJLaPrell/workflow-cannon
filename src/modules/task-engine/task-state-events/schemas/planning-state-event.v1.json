@@ -1,0 +1,114 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workflow-cannon.dev/schemas/planning-state-event.v1.json",
+  "title": "Planning state event (envelope + payload v1)",
+  "description": "Canonical git-backed planning events sharing the task-state envelope (Phase 119).",
+  "$ref": "#/$defs/fullEvent",
+  "$defs": {
+    "fullEvent": {
+      "allOf": [
+        { "$ref": "task-state-event-envelope.v1.json" },
+        {
+          "type": "object",
+          "required": ["kind", "payload"],
+          "properties": {
+            "kind": {
+              "type": "string",
+              "enum": [
+                "planning.phase_catalog.upserted",
+                "planning.phase_catalog.removed",
+                "planning.workspace_status.updated"
+              ]
+            },
+            "expectedWorkspaceRevision": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "payload": {
+              "oneOf": [
+                { "$ref": "#/$defs/phaseCatalogUpsertedPayload" },
+                { "$ref": "#/$defs/phaseCatalogRemovedPayload" },
+                { "$ref": "#/$defs/workspaceStatusUpdatedPayload" }
+              ]
+            }
+          }
+        },
+        {
+          "propertyNames": {
+            "enum": [
+              "schemaVersion",
+              "eventId",
+              "sequence",
+              "parentEventId",
+              "recordedAt",
+              "actor",
+              "clientMutationId",
+              "expectedTaskVersion",
+              "expectedWorkspaceRevision",
+              "command",
+              "workspace",
+              "kind",
+              "payload"
+            ]
+          }
+        }
+      ]
+    },
+    "phaseCatalogUpsertedPayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["phaseKey", "shortDescription", "updatedAt"],
+      "properties": {
+        "phaseKey": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "shortDescription": { "type": ["string", "null"], "maxLength": 240 },
+        "updatedAt": { "type": "string", "minLength": 20, "maxLength": 64 }
+      }
+    },
+    "phaseCatalogRemovedPayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["phaseKey"],
+      "properties": {
+        "phaseKey": { "type": "string", "minLength": 1, "maxLength": 64 }
+      }
+    },
+    "workspaceStatusUpdatedPayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["patch", "after"],
+      "properties": {
+        "patch": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "after": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "workspaceRevision",
+            "currentKitPhase",
+            "nextKitPhase",
+            "activeFocus",
+            "lastUpdated",
+            "blockers",
+            "pendingDecisions",
+            "nextAgentActions",
+            "updatedAt"
+          ],
+          "properties": {
+            "workspaceRevision": { "type": "integer", "minimum": 0 },
+            "currentKitPhase": { "type": ["string", "null"], "maxLength": 64 },
+            "nextKitPhase": { "type": ["string", "null"], "maxLength": 64 },
+            "activeFocus": { "type": ["string", "null"], "maxLength": 512 },
+            "lastUpdated": { "type": ["string", "null"], "maxLength": 64 },
+            "blockers": { "type": "array", "items": { "type": "string" } },
+            "pendingDecisions": { "type": "array", "items": { "type": "string" } },
+            "nextAgentActions": { "type": "array", "items": { "type": "string" } },
+            "updatedAt": { "type": "string", "minLength": 20, "maxLength": 64 }
+          }
+        },
+        "payloadDigest": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+      }
+    }
+  }
+}

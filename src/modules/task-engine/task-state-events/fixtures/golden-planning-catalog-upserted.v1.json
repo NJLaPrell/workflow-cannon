@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "eventId": "tse.20260529T120001Z.catalog-upsert-fixture",
+  "sequence": 1,
+  "parentEventId": null,
+  "recordedAt": "2026-05-29T12:00:01.000Z",
+  "actor": { "id": "system", "source": "system" },
+  "command": { "name": "upsert-phase-catalog-entry", "moduleId": "task-engine" },
+  "kind": "planning.phase_catalog.upserted",
+  "payload": {
+    "phaseKey": "119",
+    "shortDescription": "Planning git sync phase",
+    "updatedAt": "2026-05-29T12:00:01.000Z"
+  }
+}

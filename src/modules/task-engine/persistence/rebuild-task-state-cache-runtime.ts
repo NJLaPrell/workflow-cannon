@@ -1,6 +1,8 @@
 import type { ModuleCommandResult, ModuleLifecycleContext } from "../../../contracts/module-contract.js";
-import { admitTaskStateEventStream } from "../task-state-events/event-admission.js";
-import { replayTaskStateEvents } from "../task-state-events/event-applier.js";
+import { admitCanonicalStateEventStream } from "../task-state-events/canonical-event-admission.js";
+import { replayCanonicalStateEvents } from "../task-state-events/canonical-replay.js";
+import { materializeTaskStoreDocument } from "../task-state-events/event-applier.js";
+import { persistPlanningProjectionToSqlite } from "../task-state-events/planning-sqlite-persist.js";
 import { readTaskStateEventLogJsonl, resolveTaskStateEventLogPath } from "../task-state-events/task-state-event-log-io.js";
 import {
   openPlanningStoresForTaskStateCache,
@@ -21,7 +23,7 @@ export async function runRebuildTaskStateCache(
   const logPath = resolveTaskStateEventLogPath(ctx.workspacePath, eventLogRelativePath);
   const rawEvents = readTaskStateEventLogJsonl(ctx.workspacePath, eventLogRelativePath);
 
-  const admitted = admitTaskStateEventStream(rawEvents);
+  const admitted = admitCanonicalStateEventStream(rawEvents);
   if (!admitted.ok) {
     return {
       ok: false,
@@ -36,22 +38,22 @@ export async function runRebuildTaskStateCache(
     };
   }
 
-  const replayed = replayTaskStateEvents(admitted.events);
+  const replayed = replayCanonicalStateEvents(admitted.events);
   if (!replayed.ok) {
     return {
       ok: false,
       code: "task-state-event-replay-failed",
-      message: replayed.error.message,
+      message: replayed.message,
       data: {
         schemaVersion: 1,
         eventLogPath: logPath,
-        replayCode: replayed.error.code
+        replayCode: replayed.code
       }
     };
   }
 
-  const document = replayed.result.document;
-  const lastSequence = replayed.result.projection.lastEventSequence;
+  const document = materializeTaskStoreDocument(replayed.result.taskProjection);
+  const lastSequence = replayed.result.lastEventSequence;
   const sourceCommit = resolveGitHeadSha(ctx.workspacePath);
   const preview = {
     schemaVersion: 1,
@@ -76,6 +78,12 @@ export async function runRebuildTaskStateCache(
 
   const planning = await openPlanningStoresForTaskStateCache(ctx);
   persistTaskStateProjectionDocument(planning, document);
+  const planningEventCount = admitted.events.filter(
+    (e) => typeof e === "object" && e !== null && "kind" in e && String((e as { kind: string }).kind).startsWith("planning.")
+  ).length;
+  persistPlanningProjectionToSqlite(planning.sqliteDual.getDatabase(), replayed.result.planningProjection, {
+    replaceCatalog: planningEventCount > 0
+  });
   const projectionMeta = upsertProjectionMetaAfterApply(planning, {
     appliedSequence: lastSequence,
     sourceCommit,

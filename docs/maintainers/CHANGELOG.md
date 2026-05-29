@@ -8,6 +8,21 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [0.99.16] - 2026-05-29
+
+Patch — **Phase 119 planning git sync** (`planning.*` events on `workflow-cannon/task-state`).
+
+### Added
+
+- `planning.phase_catalog.upserted`, `planning.phase_catalog.removed`, and `planning.workspace_status.updated` event kinds sharing the canonical git stream with `task.*` lifecycle events.
+- Unified hydrate/rebuild applies planning projections into `kit_phase_catalog` and `kit_workspace_status` in stream sequence order.
+- Canonical publish hooks for `upsert-phase-catalog-entry` and `update-workspace-status` under `git-event-log` authority.
+- `planning-state-migrate-baseline` command to seed genesis planning events from local SQLite.
+
+### Changed
+
+- `task-state-hydrate` and `rebuild-task-state-cache` replay planning and task events in a single admission/replay pass.
+
 ## [0.99.15] - 2026-05-28
 
 Patch - **Phase 116 Planner-chat provenance closeout** (idea provenance, planner-chat playbook/prompt seed, and CAE registry coverage).

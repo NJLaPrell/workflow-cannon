@@ -55,6 +55,11 @@
       "minimum": 0,
       "description": "Writer-observed per-task version for optimistic concurrency on mutating events."
     },
+    "expectedWorkspaceRevision": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Writer-observed workspace revision for planning.workspace_status.updated events."
+    },
     "command": {
       "$ref": "#/$defs/commandMetadata"
     },
