@@ -8,6 +8,8 @@ import { validatePlanningStateEvent } from "../dist/modules/task-engine/task-sta
 import { replayPlanningStateEvents, applyPlanningStateEvent } from "../dist/modules/task-engine/task-state-events/planning-event-applier.js";
 import { admitCanonicalStateEventStream } from "../dist/modules/task-engine/task-state-events/canonical-event-admission.js";
 import { replayCanonicalStateEvents } from "../dist/modules/task-engine/task-state-events/canonical-replay.js";
+import { persistPlanningProjectionToSqlite } from "../dist/modules/task-engine/task-state-events/planning-sqlite-persist.js";
+import Database from "better-sqlite3";
 
 const fixturesDir = path.join(
   path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."),
@@ -17,7 +19,10 @@ const fixturesDir = path.join(
 const PLANNING_GOLDEN = [
   "golden-planning-catalog-upserted.v1.json",
   "golden-planning-catalog-removed.v1.json",
-  "golden-planning-workspace-status-updated.v1.json"
+  "golden-planning-workspace-status-updated.v1.json",
+  "golden-planning-phase-note-created.v1.json",
+  "golden-planning-phase-note-archived.v1.json",
+  "golden-planning-phase-note-suggestion-created.v1.json"
 ];
 
 test("planning golden fixtures validate", () => {
@@ -49,6 +54,8 @@ test("workspace status replay requires matching expectedWorkspaceRevision", () =
   const seed = {
     schemaVersion: 1,
     phaseCatalogByKey: {},
+    phaseNotesById: {},
+    phaseNoteSuggestionsById: {},
     workspaceStatus: {
       workspaceRevision: 69,
       currentKitPhase: "119",
@@ -62,6 +69,8 @@ test("workspace status replay requires matching expectedWorkspaceRevision", () =
     },
     workspaceStatusAudits: [],
     appliedWorkspaceMutationIds: new Set(),
+    appliedNoteIdempotencyKeys: new Set(),
+    appliedSuggestionMutationIds: new Set(),
     lastEventSequence: 0,
     lastUpdated: "1970-01-01T00:00:00.000Z"
   };
@@ -82,4 +91,101 @@ test("workspace revision mismatch rejects admission", () => {
   const admitted = admitCanonicalStateEventStream([wsEvent]);
   assert.equal(admitted.ok, false);
   assert.equal(admitted.error.code, "workspace-revision-mismatch");
+});
+
+test("phase note + suggestion replay produces expected projection", () => {
+  const created = JSON.parse(
+    fs.readFileSync(path.join(fixturesDir, "golden-planning-phase-note-created.v1.json"), "utf8")
+  );
+  const suggestion = JSON.parse(
+    fs.readFileSync(path.join(fixturesDir, "golden-planning-phase-note-suggestion-created.v1.json"), "utf8")
+  );
+  const archived = JSON.parse(
+    fs.readFileSync(path.join(fixturesDir, "golden-planning-phase-note-archived.v1.json"), "utf8")
+  );
+  const replayed = replayPlanningStateEvents([created, suggestion, archived]);
+  assert.equal(replayed.ok, true);
+  assert.equal(Object.keys(replayed.projection.phaseNotesById).length, 1);
+  assert.equal(replayed.projection.phaseNotesById["note-fixture-001"].status, "dismissed");
+  assert.equal(replayed.projection.phaseNotesById["note-fixture-001"].refs.length, 1);
+  assert.equal(Object.keys(replayed.projection.phaseNoteSuggestionsById).length, 1);
+  assert.equal(
+    replayed.projection.phaseNoteSuggestionsById["suggestion-fixture-001"].noteId,
+    "note-fixture-001"
+  );
+});
+
+test("phase note create idempotency key skips duplicate rows on replay", () => {
+  const created = JSON.parse(
+    fs.readFileSync(path.join(fixturesDir, "golden-planning-phase-note-created.v1.json"), "utf8")
+  );
+  const replayed = replayPlanningStateEvents([created, created]);
+  assert.equal(replayed.ok, true);
+  assert.equal(Object.keys(replayed.projection.phaseNotesById).length, 1);
+});
+
+test("persistPlanningProjectionToSqlite writes phase notes refs and suggestions", () => {
+  const created = JSON.parse(
+    fs.readFileSync(path.join(fixturesDir, "golden-planning-phase-note-created.v1.json"), "utf8")
+  );
+  const suggestion = JSON.parse(
+    fs.readFileSync(path.join(fixturesDir, "golden-planning-phase-note-suggestion-created.v1.json"), "utf8")
+  );
+  const replayed = replayPlanningStateEvents([created, suggestion]);
+  assert.equal(replayed.ok, true);
+
+  const db = new Database(":memory:");
+  db.exec(`
+CREATE TABLE phase_notes (
+  id TEXT PRIMARY KEY,
+  phase_key TEXT NOT NULL,
+  phase_label TEXT,
+  task_id TEXT,
+  author TEXT,
+  author_kind TEXT,
+  session_id TEXT,
+  source_command TEXT,
+  planning_generation INTEGER,
+  policy_trace_id TEXT,
+  note_type TEXT NOT NULL,
+  summary TEXT NOT NULL,
+  details TEXT,
+  status TEXT NOT NULL DEFAULT 'active',
+  priority TEXT NOT NULL DEFAULT 'normal',
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  expires_at TEXT,
+  superseded_by TEXT,
+  converted_task_id TEXT,
+  idempotency_key TEXT
+);
+CREATE TABLE phase_note_refs (
+  id TEXT PRIMARY KEY,
+  note_id TEXT NOT NULL,
+  ref_type TEXT NOT NULL,
+  ref_value TEXT NOT NULL
+);
+CREATE TABLE phase_note_task_suggestions (
+  id TEXT PRIMARY KEY,
+  note_id TEXT NOT NULL,
+  title TEXT NOT NULL,
+  description TEXT NOT NULL,
+  suggested_status TEXT NOT NULL DEFAULT 'proposed',
+  suggested_phase_key TEXT NOT NULL,
+  suggested_phase_label TEXT,
+  suggested_task_type TEXT,
+  acceptance_criteria_json TEXT,
+  converted_task_id TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+`);
+  persistPlanningProjectionToSqlite(db, replayed.projection, { replaceCatalog: false });
+  const noteCount = db.prepare("SELECT COUNT(*) AS c FROM phase_notes").get().c;
+  const refCount = db.prepare("SELECT COUNT(*) AS c FROM phase_note_refs").get().c;
+  const suggestionCount = db.prepare("SELECT COUNT(*) AS c FROM phase_note_task_suggestions").get().c;
+  assert.equal(noteCount, 1);
+  assert.equal(refCount, 1);
+  assert.equal(suggestionCount, 1);
+  db.close();
 });

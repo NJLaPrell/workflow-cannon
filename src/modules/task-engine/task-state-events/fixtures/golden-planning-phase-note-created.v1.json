@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "eventId": "tse.20260529T120010Z.phase-note-created-fixture",
+  "sequence": 10,
+  "parentEventId": null,
+  "recordedAt": "2026-05-29T12:00:10.000Z",
+  "actor": { "id": "system", "source": "system" },
+  "command": { "name": "add-phase-note", "moduleId": "task-engine" },
+  "clientMutationId": "fixture-note-create-1",
+  "kind": "planning.phase_note.created",
+  "payload": {
+    "note": {
+      "id": "note-fixture-001",
+      "phaseKey": "120",
+      "phaseLabel": "Phase 120",
+      "taskId": null,
+      "author": null,
+      "authorKind": null,
+      "sessionId": null,
+      "sourceCommand": "add-phase-note",
+      "planningGeneration": 4046,
+      "policyTraceId": null,
+      "noteType": "finding",
+      "summary": "Phase journal git sync note",
+      "details": null,
+      "status": "active",
+      "priority": "normal",
+      "createdAt": "2026-05-29T12:00:10.000Z",
+      "updatedAt": "2026-05-29T12:00:10.000Z",
+      "expiresAt": null,
+      "supersededBy": null,
+      "convertedTaskId": null,
+      "idempotencyKey": "fixture-note-create-1",
+      "refs": [{ "refType": "task", "refValue": "T100577" }]
+    }
+  }
+}

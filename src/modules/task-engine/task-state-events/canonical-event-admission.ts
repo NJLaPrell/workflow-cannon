@@ -90,9 +90,15 @@ function clonePlanningProjection(projection: PlanningStateProjectionV1): Plannin
   return {
     ...projection,
     phaseCatalogByKey: { ...projection.phaseCatalogByKey },
+    phaseNotesById: Object.fromEntries(
+      Object.entries(projection.phaseNotesById).map(([id, note]) => [id, { ...note, refs: note.refs.map((r) => ({ ...r })) }])
+    ),
+    phaseNoteSuggestionsById: { ...projection.phaseNoteSuggestionsById },
     workspaceStatus: projection.workspaceStatus ? { ...projection.workspaceStatus } : null,
     workspaceStatusAudits: [...projection.workspaceStatusAudits],
-    appliedWorkspaceMutationIds: new Set(projection.appliedWorkspaceMutationIds)
+    appliedWorkspaceMutationIds: new Set(projection.appliedWorkspaceMutationIds),
+    appliedNoteIdempotencyKeys: new Set(projection.appliedNoteIdempotencyKeys),
+    appliedSuggestionMutationIds: new Set(projection.appliedSuggestionMutationIds)
   };
 }
 

@@ -1,6 +1,11 @@
 import crypto from "node:crypto";
 import type { KitWorkspaceStatusPublic, WorkspaceStatusUpdatePatch } from "../persistence/workspace-status-store.js";
-import type { PlanningStateEventKindV1, PlanningStateEventV1 } from "../task-state-events/planning-event-payloads.js";
+import type {
+  PlanningPhaseNoteSnapshotV1,
+  PlanningPhaseNoteSuggestionSnapshotV1,
+  PlanningStateEventKindV1,
+  PlanningStateEventV1
+} from "../task-state-events/planning-event-payloads.js";
 import { TASK_STATE_EVENT_ENVELOPE_SCHEMA_VERSION } from "../task-state-events/types.js";
 import type { DraftEventContext } from "./task-state-event-draft.js";
 
@@ -98,5 +103,60 @@ export function draftPlanningWorkspaceStatusUpdatedEvent(args: {
     },
     args.ctx,
     { expectedWorkspaceRevision: args.before.workspaceRevision }
+  );
+}
+
+export function draftPlanningPhaseNoteCreatedEvent(args: {
+  note: PlanningPhaseNoteSnapshotV1;
+  ctx: DraftEventContext;
+}): PlanningStateEventV1 {
+  return draftPlanningEnvelope("planning.phase_note.created", { note: args.note }, args.ctx);
+}
+
+export function draftPlanningPhaseNoteUpdatedEvent(args: {
+  note: PlanningPhaseNoteSnapshotV1;
+  ctx: DraftEventContext;
+}): PlanningStateEventV1 {
+  return draftPlanningEnvelope("planning.phase_note.updated", { note: args.note }, args.ctx);
+}
+
+export function draftPlanningPhaseNoteArchivedEvent(args: {
+  note: PlanningPhaseNoteSnapshotV1;
+  ctx: DraftEventContext;
+}): PlanningStateEventV1 {
+  return draftPlanningEnvelope("planning.phase_note.archived", { note: args.note }, args.ctx);
+}
+
+export function draftPlanningPhaseNoteSuggestionCreatedEvent(args: {
+  suggestion: PlanningPhaseNoteSuggestionSnapshotV1;
+  ctx: DraftEventContext;
+}): PlanningStateEventV1 {
+  return draftPlanningEnvelope(
+    "planning.phase_note_suggestion.created",
+    { suggestion: args.suggestion },
+    args.ctx
+  );
+}
+
+export function draftPlanningPhaseNoteSuggestionUpdatedEvent(args: {
+  suggestion: PlanningPhaseNoteSuggestionSnapshotV1;
+  ctx: DraftEventContext;
+}): PlanningStateEventV1 {
+  return draftPlanningEnvelope(
+    "planning.phase_note_suggestion.updated",
+    { suggestion: args.suggestion },
+    args.ctx
+  );
+}
+
+export function draftPlanningPhaseNoteSuggestionRemovedEvent(args: {
+  suggestionId: string;
+  noteId: string;
+  ctx: DraftEventContext;
+}): PlanningStateEventV1 {
+  return draftPlanningEnvelope(
+    "planning.phase_note_suggestion.removed",
+    { suggestionId: args.suggestionId, noteId: args.noteId },
+    args.ctx
   );
 }
