@@ -302,7 +302,8 @@
             "updatedAt": { "type": "string", "minLength": 20, "maxLength": 64 }
           }
         },
-        "payloadDigest": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+        "payloadDigest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "previousCurrentKitPhase": { "type": ["string", "null"], "maxLength": 64 }
       }
     }
   }
