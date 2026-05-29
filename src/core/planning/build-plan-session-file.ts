@@ -1,6 +1,5 @@
 import path from "node:path";
-import type { ModuleCommandResult, ModuleLifecycleContext } from "../../contracts/module-contract.js";
-import { persistAllowlistedModuleStateWithPlanningSync } from "../../modules/task-engine/persistence/module-state-planning-events-runtime.js";
+import type { ModuleLifecycleContext } from "../../contracts/module-contract.js";
 import {
   archiveSidecarFile,
   persistModuleStateRow,
@@ -72,46 +71,32 @@ function parseSession(raw: unknown): BuildPlanSessionSnapshotV1 | null {
 export async function persistBuildPlanSession(
   workspacePath: string,
   snapshot: Omit<BuildPlanSessionSnapshotV1, "schemaVersion" | "updatedAt">,
-  effectiveConfig?: Record<string, unknown>,
-  options?: { commandName?: string; clientMutationId?: string; policyApproval?: { confirmed: boolean; rationale: string } }
-): Promise<ModuleCommandResult | null> {
+  effectiveConfig?: Record<string, unknown>
+): Promise<void> {
   const full: BuildPlanSessionSnapshotV1 = {
     schemaVersion: 1,
     updatedAt: new Date().toISOString(),
     ...snapshot
   };
-  const result = await persistAllowlistedModuleStateWithPlanningSync({
+  const rel = dbRelativePath(workspacePath, effectiveConfig);
+  persistModuleStateRow({
     workspacePath,
-    effectiveConfig,
+    databaseRelativePath: rel,
     moduleId: MODULE_ID,
-    state: full as unknown as Record<string, unknown>,
-    updatedAt: full.updatedAt,
-    documentSchemaVersion: STATE_SCHEMA,
-    commandName: options?.commandName ?? "persist-build-plan-session",
-    clientMutationId: options?.clientMutationId,
-    policyApproval: options?.policyApproval
+    stateSchemaVersion: STATE_SCHEMA,
+    state: full as unknown as Record<string, unknown>
   });
   await archiveSidecarFile(workspacePath, BUILD_PLAN_SESSION_SIDECAR_REL);
-  return result;
 }
 
 export async function clearBuildPlanSession(
   workspacePath: string,
-  effectiveConfig?: Record<string, unknown>,
-  options?: { commandName?: string; clientMutationId?: string; policyApproval?: { confirmed: boolean; rationale: string } }
-): Promise<ModuleCommandResult | null> {
-  const result = await persistAllowlistedModuleStateWithPlanningSync({
-    workspacePath,
-    effectiveConfig,
-    moduleId: MODULE_ID,
-    state: {},
-    removed: true,
-    commandName: options?.commandName ?? "clear-build-plan-session",
-    clientMutationId: options?.clientMutationId,
-    policyApproval: options?.policyApproval
-  });
+  effectiveConfig?: Record<string, unknown>
+): Promise<void> {
+  const rel = dbRelativePath(workspacePath, effectiveConfig);
+  const db = new UnifiedStateDb(workspacePath, rel);
+  db.deleteModuleState(MODULE_ID);
   await archiveSidecarFile(workspacePath, BUILD_PLAN_SESSION_SIDECAR_REL);
-  return result;
 }
 
 export async function readBuildPlanSession(

@@ -16,8 +16,6 @@ import {
   validateWishlistContentFields,
   allocateNextTaskNumericId,
   taskEntityFromNewIntake,
-  clearBuildPlanSession,
-  persistBuildPlanSession,
   type TaskEntity,
   type TaskPriority
 } from "../../core/planning/index.js";
@@ -42,6 +40,7 @@ import {
   toCliGuidance,
   type PlanningOutputMode
 } from "./build-plan-output-helpers.js";
+import { clearBuildPlanSessionWithPlanningSync } from "./build-plan-session-persist.js";
 import { buildTasksFromExecutionDrafts, nextTaskId } from "./build-plan-execution-drafts.js";
 import { validatePlanArtifactDraftInput } from "../../core/planning/validate-plan-artifact.js";
 import {
@@ -271,10 +270,7 @@ export const planningModule: WorkflowModule = {
     if (command.name === "build-plan") {
       const args = command.args ?? {};
       if (args.action === "discard") {
-        await clearBuildPlanSession(
-          ctx.workspacePath,
-          ctx.effectiveConfig as Record<string, unknown> | undefined
-        );
+        await clearBuildPlanSessionWithPlanningSync(ctx, { commandName: "build-plan" });
         await clearBuildPlanActivity(ctx);
         return {
           ok: true,
@@ -336,10 +332,7 @@ export const planningModule: WorkflowModule = {
             totalCriticalCount,
             outputMode
           });
-          await persistInterviewSnapshot(
-            ctx.workspacePath,
-            ctx.effectiveConfig as Record<string, unknown> | undefined,
-            {
+          await persistInterviewSnapshot(ctx, {
             planningType,
             outputMode,
             status: "ready-with-warnings",
@@ -375,10 +368,7 @@ export const planningModule: WorkflowModule = {
           finalize: true,
           outputMode
         });
-        await persistInterviewSnapshot(
-            ctx.workspacePath,
-            ctx.effectiveConfig as Record<string, unknown> | undefined,
-            {
+        await persistInterviewSnapshot(ctx, {
           planningType,
           outputMode,
           status: "blocked-critical-unknowns",
@@ -409,10 +399,7 @@ export const planningModule: WorkflowModule = {
           finalize: true,
           outputMode
         });
-        await persistInterviewSnapshot(
-            ctx.workspacePath,
-            ctx.effectiveConfig as Record<string, unknown> | undefined,
-            {
+        await persistInterviewSnapshot(ctx, {
           planningType,
           outputMode,
           status: "blocked-adaptive-unknowns",
@@ -449,10 +436,7 @@ export const planningModule: WorkflowModule = {
           totalCriticalCount,
           outputMode
         });
-        await persistInterviewSnapshot(
-            ctx.workspacePath,
-            ctx.effectiveConfig as Record<string, unknown> | undefined,
-            {
+        await persistInterviewSnapshot(ctx, {
           planningType,
           outputMode,
           status: "needs-input",
@@ -482,10 +466,7 @@ export const planningModule: WorkflowModule = {
         unresolvedCriticalQuestionIds: unresolvedIds
       });
       if (outputMode === "response") {
-        await clearBuildPlanSession(
-          ctx.workspacePath,
-          ctx.effectiveConfig as Record<string, unknown> | undefined
-        );
+        await clearBuildPlanSessionWithPlanningSync(ctx, { commandName: "build-plan" });
         await clearBuildPlanActivity(ctx);
         return {
           ok: true,
@@ -571,10 +552,7 @@ export const planningModule: WorkflowModule = {
                 "When executionTaskDrafts is set, build-plan does not persist tasks (persistTasks must be false); materialize drafts with workspace-kit run persist-planning-execution-drafts (include expectedPlanningGeneration when policy requires it)."
             };
           }
-          await clearBuildPlanSession(
-          ctx.workspacePath,
-          ctx.effectiveConfig as Record<string, unknown> | undefined
-        );
+          await clearBuildPlanSessionWithPlanningSync(ctx, { commandName: "build-plan" });
           await clearBuildPlanActivity(ctx);
           return {
             ok: true,
@@ -701,10 +679,7 @@ export const planningModule: WorkflowModule = {
             planningConcurrencySaveOpts(args as Record<string, unknown>)
           );
         }
-        await clearBuildPlanSession(
-          ctx.workspacePath,
-          ctx.effectiveConfig as Record<string, unknown> | undefined
-        );
+        await clearBuildPlanSessionWithPlanningSync(ctx, { commandName: "build-plan" });
         await clearBuildPlanActivity(ctx);
         return {
           ok: true,
@@ -747,10 +722,7 @@ export const planningModule: WorkflowModule = {
       }
 
       if (!finalize || !createWishlist) {
-        await clearBuildPlanSession(
-          ctx.workspacePath,
-          ctx.effectiveConfig as Record<string, unknown> | undefined
-        );
+        await clearBuildPlanSessionWithPlanningSync(ctx, { commandName: "build-plan" });
         await clearBuildPlanActivity(ctx);
         return {
           ok: true,
@@ -862,10 +834,7 @@ export const planningModule: WorkflowModule = {
         const msg = e instanceof Error ? e.message : String(e);
         return { ok: false, code: "invalid-planning-artifact", message: msg };
       }
-      await clearBuildPlanSession(
-          ctx.workspacePath,
-          ctx.effectiveConfig as Record<string, unknown> | undefined
-        );
+      await clearBuildPlanSessionWithPlanningSync(ctx, { commandName: "build-plan" });
       await clearBuildPlanActivity(ctx);
       return {
         ok: true,
