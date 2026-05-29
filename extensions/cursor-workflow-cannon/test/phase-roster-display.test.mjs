@@ -146,3 +146,23 @@ test("buildNarrowPhaseRosterRows returns no-workspace-ordinal when phase not par
   );
   assert.equal(r.ok, false);
 });
+
+test("resolveWorkspacePhaseOrdinal ignores config hint when SQLite workspace phase is unset", async () => {
+  const { resolveWorkspacePhaseOrdinal } = await import("../dist/views/phase-roster-display.js");
+  assert.equal(
+    resolveWorkspacePhaseOrdinal({
+      currentKitPhase: null,
+      workspaceStatusPhaseKey: null,
+      canonicalPhaseKey: "119"
+    }),
+    null
+  );
+  assert.equal(
+    resolveWorkspacePhaseOrdinal({
+      currentKitPhase: "119",
+      workspaceStatusPhaseKey: "119",
+      canonicalPhaseKey: "119"
+    }),
+    119
+  );
+});

@@ -832,6 +832,28 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
     setUiInteraction('phase-deliverables', false);
   }
 
+  function updateTaskEngineTabBadges(readyCount, blockedCount) {
+    var btn = document.querySelector('.wc-tab-btn[data-wc-tab="task-engine"]');
+    if (!btn) return;
+    var existing = btn.querySelector('.wc-tab-badge');
+    if (existing) existing.remove();
+    var ready = typeof readyCount === 'number' && readyCount > 0 ? readyCount : 0;
+    var blocked = typeof blockedCount === 'number' && blockedCount > 0 ? blockedCount : 0;
+    if (ready > 0) {
+      var readyBadge = document.createElement('span');
+      readyBadge.className = 'wc-tab-badge wc-tab-badge-ready';
+      readyBadge.textContent = String(ready);
+      btn.appendChild(readyBadge);
+      return;
+    }
+    if (blocked > 0) {
+      var blockedBadge = document.createElement('span');
+      blockedBadge.className = 'wc-tab-badge wc-tab-badge-blocked';
+      blockedBadge.textContent = String(blocked);
+      btn.appendChild(blockedBadge);
+    }
+  }
+
   function applyTab(tab) {
     if (!tab) return;
     var prevTab = activeTab;
@@ -1039,6 +1061,10 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
         return;
       }
       applySectionPatch(sectionId, m.html, m.state);
+      return;
+    }
+    if (m && m.type === 'wcUpdateTabBadges') {
+      updateTaskEngineTabBadges(m.readyCount, m.blockedCount);
       return;
     }
     if (!m || m.type !== 'wcReplaceRoot' || typeof m.html !== 'string') return;

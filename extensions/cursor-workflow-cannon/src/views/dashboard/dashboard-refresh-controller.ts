@@ -141,6 +141,11 @@ export class DashboardRefreshController {
     return this.refreshAfterDeferred;
   }
 
+  /** True while a refresh loop is awaiting `executeRefresh`. */
+  hasInFlightRefresh(): boolean {
+    return this.inFlight !== undefined;
+  }
+
   private async runLoop(): Promise<void> {
     do {
       this.queued = false;
