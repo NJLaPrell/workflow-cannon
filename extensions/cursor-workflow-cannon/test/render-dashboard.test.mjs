@@ -2405,10 +2405,22 @@ test("buildPhaseCompleteReleaseChatPrompt is compact agent-oriented closeout see
   assert.match(p, /improvement-triage-top-three/);
   assert.match(p, /wishlist-intake-to-execution/);
   assert.match(p, /phase-closeout-readiness/);
+  assert.match(p, /phase-closeout-ordering-recovery/);
   assert.match(p, /wishlist_intake/);
   assert.match(p, /task-engine-run-contracts\.schema\.json/);
   assert.match(p, /publish:npm/);
   assert.match(p, /Handoff if blocked/);
+});
+
+test("buildPhaseCompleteReleaseChatPrompt includes ordering risk when later phases delivered", () => {
+  const p = buildPhaseCompleteReleaseChatPrompt("Phase 118", {
+    phaseKey: "118",
+    workspaceCurrentPhase: "118",
+    laterDeliveredPhases: "119,120"
+  });
+  assert.match(p, /ordering risk/);
+  assert.match(p, /119,120/);
+  assert.match(p, /phase-closeout-ordering-recovery/);
 });
 
 test("buildPhaseCompleteReleaseChatPrompt warns when target differs from workspace current", () => {
@@ -2874,9 +2886,55 @@ test("Phase Progress badge reflects closeout checklist not delivery bar alone", 
   );
   const progressSection =
     overview.match(/<section class="dash-card wc-phase-progress[\s\S]*?<\/section>/)?.[0] ?? "";
-  assert.match(progressSection, /wc-cae-score-badge[\s\S]*>67<span>%<\/span>/);
+  assert.match(progressSection, /wc-cae-score-badge[\s\S]*>71<span>%<\/span>/);
   assert.match(progressSection, /aria-valuenow="80"/);
   assert.doesNotMatch(progressSection, /wc-phase-card-hint/);
+});
+
+test("Phase Progress blocks closeout when later phases are delivered on roster", () => {
+  const overview = overviewPanelHtml(
+    renderDashboardRootInnerHtml(
+      readinessDashboardPayload({
+        legacyDeliveredMaxOrdinal: 120,
+        workspaceStatus: {
+          currentKitPhase: "118",
+          nextKitPhase: "119",
+          blockers: [],
+          pendingDecisions: []
+        },
+        systemStatus: {
+          phase: {
+            currentKitPhase: "118",
+            nextKitPhase: "119",
+            canonicalPhaseKey: "118",
+            phaseCatalog: {
+              supported: true,
+              phases: [
+                { phaseKey: "118", shortDescription: "CI", inCatalog: true },
+                { phaseKey: "119", shortDescription: "Sync", inCatalog: true },
+                { phaseKey: "120", shortDescription: "Expand", inCatalog: true }
+              ]
+            }
+          }
+        },
+        currentPhaseDelivery: {
+          ...phaseSnapshotDrained,
+          phaseKey: "118",
+          closeoutPassed: true,
+          releaseReadyPercent: 100,
+          released: false
+        }
+      })
+    )
+  );
+  const progressSection =
+    overview.match(/<section class="dash-card wc-phase-progress[\s\S]*?<\/section>/)?.[0] ?? "";
+  assert.match(progressSection, /Phase ordering vs roster/);
+  assert.match(progressSection, /wc-phase-ordering-risk/);
+  const readinessSection =
+    overview.match(/<section class="dash-card wc-cae-readiness[\s\S]*?<\/section>/)?.[0] ?? "";
+  assert.match(readinessSection, /wc-phase-ordering-risk/);
+  assert.match(readinessSection, /dash-phase-release-btn[\s\S]*disabled/);
 });
 
 test("Phase Progress badge stays below 100% until phase is released", () => {
@@ -2889,7 +2947,7 @@ test("Phase Progress badge stays below 100% until phase is released", () => {
   );
   const progressSection =
     overview.match(/<section class="dash-card wc-phase-progress[\s\S]*?<\/section>/)?.[0] ?? "";
-  assert.match(progressSection, /wc-cae-score-badge[\s\S]*>83<span>%<\/span>/);
+  assert.match(progressSection, /wc-cae-score-badge[\s\S]*>86<span>%<\/span>/);
   assert.match(progressSection, /aria-valuenow="100"/);
 });
 

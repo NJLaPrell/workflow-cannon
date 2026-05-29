@@ -815,6 +815,9 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         const scopeRaw = msg?.scope;
         const scope =
           scopeRaw === "current" || scopeRaw === "bucket" ? scopeRaw : undefined;
+        const laterRaw = msg?.laterDeliveredPhases;
+        const laterDeliveredPhases =
+          typeof laterRaw === "string" && laterRaw.trim().length > 0 ? laterRaw.trim() : undefined;
         await this.client.recordActivity({
           kind: "releasing",
           command: "phase-complete-release",
@@ -832,7 +835,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
             workspaceCurrentPhase: wsCur || undefined,
             workspaceNextPhase: wsNext || undefined,
             seededTaskIds,
-            scope
+            scope,
+            laterDeliveredPhases
           })
         );
       }

@@ -13,6 +13,8 @@ export type PhaseCompleteReleasePromptOptions = {
   /** Ready-task ids from the dashboard bucket (preview; refresh via list-tasks). */
   seededTaskIds?: string[];
   scope?: PhaseCompleteReleaseScope;
+  /** Comma-separated phase keys already marked delivered ahead of the target (dashboard ordering guard). */
+  laterDeliveredPhases?: string;
 };
 
 function branchRef(phaseKey: string | undefined): string {
@@ -63,9 +65,15 @@ export function buildPhaseCompleteReleaseChatPrompt(
   if (mismatch) {
     lines.push(`- **mismatch:** ${mismatch}`);
   }
+  const later = options?.laterDeliveredPhases?.trim();
+  if (later && later.length > 0) {
+    lines.push(
+      `- **ordering risk:** later delivered phase keys on roster: ${later} — read .ai/runbooks/phase-closeout-ordering-recovery.md before Stage 2`
+    );
+  }
   lines.push(
     "",
-    "**Attach:** `@.ai/playbooks/phase-closeout-and-release.md` `@.ai/playbooks/task-to-phase-branch.md` `@.ai/MACHINE-PLAYBOOKS.md` `@.ai/AGENT-CLI-MAP.md`",
+    "**Attach:** `@.ai/playbooks/phase-closeout-and-release.md` `@.ai/playbooks/task-to-phase-branch.md` `@.ai/runbooks/phase-closeout-ordering-recovery.md` `@.ai/MACHINE-PLAYBOOKS.md` `@.ai/AGENT-CLI-MAP.md`",
     "**Rules:** `@.cursor/rules/maintainer-delivery-loop.mdc` `@.cursor/rules/playbook-task-to-phase-branch.mdc` `@.cursor/rules/playbook-phase-closeout.mdc`",
     "**If needed:** `@.ai/playbooks/improvement-triage-top-three.md` `@.ai/playbooks/wishlist-intake-to-execution.md`",
     "",
@@ -94,7 +102,7 @@ export function buildPhaseCompleteReleaseChatPrompt(
     "4. `release-evidence-manifest` with validation records",
     "5. `" + branch + "` → `main` PR merge",
     "6. Chat confirm → `pnpm run publish:npm` → `gh run watch`",
-    "7. `set-current-phase` rollover · `phase-status` verify",
+    "7. Unset workspace phase via `update-workspace-status` (`currentKitPhase`/`nextKitPhase` null) or `set-current-phase` when advancing · `phase-status` verify",
     "8. Playbook §7 summary — expand all tokens from CLI evidence (no placeholders)",
     "",
     "**Handoff if blocked:** remaining `T###` ids · branch names · last CLI JSON · next step (0, 1, or 2)."

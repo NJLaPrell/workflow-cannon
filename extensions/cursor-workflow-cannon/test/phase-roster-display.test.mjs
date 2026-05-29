@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   buildNarrowPhaseRosterRows,
   buildPhaseRosterRowsWhenNoCurrent,
+  detectPhaseCloseoutOrderingRisk,
   parseLeadingDigitsOrdinal,
   parseLeadingPhaseOrdinalFromKey,
   phaseRosterStatusLabel
@@ -164,5 +165,39 @@ test("resolveWorkspacePhaseOrdinal ignores config hint when SQLite workspace pha
       canonicalPhaseKey: "119"
     }),
     119
+  );
+});
+
+test("detectPhaseCloseoutOrderingRisk when later phases are delivered", () => {
+  const phases = [
+    { phaseKey: "118", shortDescription: "CI", inCatalog: true },
+    { phaseKey: "119", shortDescription: "Sync", inCatalog: true },
+    { phaseKey: "120", shortDescription: "Expand", inCatalog: true }
+  ];
+  const risk = detectPhaseCloseoutOrderingRisk({
+    currentKitPhase: "118",
+    phases,
+    deliveredPhaseKeys: [],
+    legacyDeliveredMaxOrdinal: 120
+  });
+  assert.ok(risk);
+  assert.equal(risk.currentOrdinal, 118);
+  assert.deepEqual(risk.laterDeliveredPhaseKeys, ["119", "120"]);
+  assert.match(risk.message, /phase-closeout-ordering-recovery/);
+});
+
+test("detectPhaseCloseoutOrderingRisk returns null when aligned", () => {
+  const phases = [
+    { phaseKey: "118", shortDescription: "CI", inCatalog: true },
+    { phaseKey: "119", shortDescription: "Sync", inCatalog: true }
+  ];
+  assert.equal(
+    detectPhaseCloseoutOrderingRisk({
+      currentKitPhase: "119",
+      phases,
+      deliveredPhaseKeys: ["118"],
+      legacyDeliveredMaxOrdinal: 118
+    }),
+    null
   );
 });
