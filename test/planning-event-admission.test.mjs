@@ -8,7 +8,9 @@ import { validatePlanningStateEvent } from "../dist/modules/task-engine/task-sta
 import { replayPlanningStateEvents, applyPlanningStateEvent } from "../dist/modules/task-engine/task-state-events/planning-event-applier.js";
 import { admitCanonicalStateEventStream } from "../dist/modules/task-engine/task-state-events/canonical-event-admission.js";
 import { replayCanonicalStateEvents } from "../dist/modules/task-engine/task-state-events/canonical-replay.js";
-import { persistPlanningProjectionToSqlite } from "../dist/modules/task-engine/task-state-events/planning-sqlite-persist.js";
+import { persistPlanningProjectionToSqlite, rewriteWorkspaceStatusFromProjection } from "../dist/modules/task-engine/task-state-events/planning-sqlite-persist.js";
+import { createEmptyPlanningStateProjection } from "../dist/modules/task-engine/task-state-events/planning-event-applier.js";
+import { assessSnapshotTail, TASK_STATE_SNAPSHOT_TAIL_WARN_THRESHOLD } from "../dist/modules/task-engine/task-state-git/task-state-snapshot-tail-health.js";
 import Database from "better-sqlite3";
 
 const fixturesDir = path.join(
@@ -401,4 +403,165 @@ test("filterPlanningEventsByEnabledDomains drops disabled domain events before p
   const filtered = filterPlanningEventsByEnabledDomains(ctx, [upsert, idea]);
   assert.equal(filtered.length, 1);
   assert.equal(filtered[0].kind, "planning.idea.created");
+});
+
+test("persistPlanningProjectionToSqlite preserves local rollover audits missing from git replay", () => {
+  const db = new Database(":memory:");
+  db.exec(`
+    CREATE TABLE kit_workspace_status (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      workspace_revision INTEGER NOT NULL,
+      current_kit_phase TEXT,
+      next_kit_phase TEXT,
+      active_focus TEXT,
+      last_updated TEXT,
+      blockers_json TEXT NOT NULL DEFAULT '[]',
+      pending_decisions_json TEXT NOT NULL DEFAULT '[]',
+      next_agent_actions_json TEXT NOT NULL DEFAULT '[]',
+      updated_at TEXT NOT NULL
+    );
+    INSERT INTO kit_workspace_status (
+      id, workspace_revision, current_kit_phase, next_kit_phase,
+      active_focus, last_updated, updated_at
+    ) VALUES (1, 2, '120', '118', '', '', '2026-05-29T00:00:00.000Z');
+    CREATE TABLE kit_workspace_status_events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      created_at TEXT NOT NULL,
+      event_kind TEXT NOT NULL,
+      actor TEXT,
+      command TEXT,
+      revision_before INTEGER,
+      revision_after INTEGER,
+      details_json TEXT NOT NULL
+    );
+    INSERT INTO kit_workspace_status_events (
+      created_at, event_kind, actor, command, revision_before, revision_after, details_json
+    ) VALUES (
+      '2026-05-29T00:00:00.000Z', 'set_current_phase', 'agent', 'set-current-phase', 1, 2,
+      '{"previousCurrentKitPhase":"119"}'
+    );
+  `);
+
+  const projection = createEmptyPlanningStateProjection();
+  projection.workspaceStatus = {
+    workspaceRevision: 2,
+    currentKitPhase: "120",
+    nextKitPhase: "118",
+    activeFocus: "",
+    lastUpdated: "",
+    blockers: [],
+    pendingDecisions: [],
+    nextAgentActions: [],
+    updatedAt: "2026-05-29T00:00:00.000Z"
+  };
+  projection.workspaceStatusAudits = [
+    {
+      eventKind: "update-workspace-status",
+      actor: "agent",
+      command: "update-workspace-status",
+      revisionBefore: 1,
+      revisionAfter: 2,
+      detailsJson: '{"patchKeys":["activeFocus"]}',
+      createdAt: "2026-05-29T00:00:00.000Z",
+      clientMutationId: null
+    }
+  ];
+
+  persistPlanningProjectionToSqlite(db, projection, { replaceCatalog: false });
+  const preserved = db
+    .prepare(
+      `SELECT details_json FROM kit_workspace_status_events WHERE event_kind = 'set_current_phase'`
+    )
+    .all();
+  assert.equal(preserved.length, 1);
+  assert.match(preserved[0].details_json, /"previousCurrentKitPhase":"119"/);
+  db.close();
+});
+
+test("rewriteWorkspaceStatusFromProjection dedupes git replay against preserved rollovers", () => {
+  const db = new Database(":memory:");
+  db.exec(`
+    CREATE TABLE kit_workspace_status (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      workspace_revision INTEGER NOT NULL,
+      current_kit_phase TEXT,
+      next_kit_phase TEXT,
+      active_focus TEXT,
+      last_updated TEXT,
+      blockers_json TEXT NOT NULL DEFAULT '[]',
+      pending_decisions_json TEXT NOT NULL DEFAULT '[]',
+      next_agent_actions_json TEXT NOT NULL DEFAULT '[]',
+      updated_at TEXT NOT NULL
+    );
+    INSERT INTO kit_workspace_status (
+      id, workspace_revision, current_kit_phase, updated_at
+    ) VALUES (1, 0, '118', '2026-05-29T00:00:00.000Z');
+    CREATE TABLE kit_workspace_status_events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      created_at TEXT NOT NULL,
+      event_kind TEXT NOT NULL,
+      actor TEXT,
+      command TEXT,
+      revision_before INTEGER,
+      revision_after INTEGER,
+      details_json TEXT NOT NULL
+    );
+  `);
+
+  const projection = createEmptyPlanningStateProjection();
+  projection.workspaceStatus = {
+    workspaceRevision: 1,
+    currentKitPhase: "120",
+    nextKitPhase: null,
+    activeFocus: null,
+    lastUpdated: null,
+    blockers: [],
+    pendingDecisions: [],
+    nextAgentActions: [],
+    updatedAt: "2026-05-29T00:00:00.000Z"
+  };
+  projection.workspaceStatusAudits = [
+    {
+      eventKind: "set_current_phase",
+      actor: "agent",
+      command: "set-current-phase",
+      revisionBefore: 0,
+      revisionAfter: 1,
+      detailsJson: '{"previousCurrentKitPhase":"119"}',
+      createdAt: "2026-05-29T00:00:00.000Z",
+      clientMutationId: null
+    }
+  ];
+  const preserved = [
+    {
+      created_at: "2026-05-28T00:00:00.000Z",
+      event_kind: "set_current_phase",
+      actor: "agent",
+      command: "set-current-phase",
+      revision_before: 0,
+      revision_after: 1,
+      details_json: '{"previousCurrentKitPhase":"118"}'
+    }
+  ];
+
+  rewriteWorkspaceStatusFromProjection(db, projection, preserved);
+  const rows = db
+    .prepare(`SELECT details_json FROM kit_workspace_status_events ORDER BY revision_after DESC`)
+    .all();
+  assert.equal(rows.length, 2);
+  const bodies = rows.map((row) => row.details_json).join("\n");
+  assert.match(bodies, /"previousCurrentKitPhase":"119"/);
+  assert.match(bodies, /"previousCurrentKitPhase":"118"/);
+  db.close();
+});
+
+test("assessSnapshotTail recommends snapshot when tail exceeds threshold", () => {
+  const tail = assessSnapshotTail({
+    latestSequence: 584,
+    throughSequence: 0,
+    threshold: TASK_STATE_SNAPSHOT_TAIL_WARN_THRESHOLD
+  });
+  assert.equal(tail.recommendSnapshot, true);
+  assert.equal(tail.tailEventCount, 584);
+  assert.ok(tail.recommendedCommand?.includes("task-state-snapshot"));
 });

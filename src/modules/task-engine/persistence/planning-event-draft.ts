@@ -83,6 +83,7 @@ export function draftPlanningWorkspaceStatusUpdatedEvent(args: {
   before: KitWorkspaceStatusPublic;
   after: KitWorkspaceStatusPublic;
   payloadDigest?: string;
+  previousCurrentKitPhase?: string | null;
   ctx: DraftEventContext;
 }): PlanningStateEventV1 {
   return draftPlanningEnvelope(
@@ -100,7 +101,10 @@ export function draftPlanningWorkspaceStatusUpdatedEvent(args: {
         nextAgentActions: [...args.after.nextAgentActions],
         updatedAt: args.after.updatedAt
       },
-      payloadDigest: args.payloadDigest
+      payloadDigest: args.payloadDigest,
+      ...(Object.hasOwn(args, "previousCurrentKitPhase")
+        ? { previousCurrentKitPhase: args.previousCurrentKitPhase ?? null }
+        : {})
     },
     args.ctx,
     { expectedWorkspaceRevision: args.before.workspaceRevision }

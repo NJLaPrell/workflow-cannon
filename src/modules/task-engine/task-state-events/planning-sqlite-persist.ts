@@ -81,6 +81,122 @@ INSERT INTO phase_note_task_suggestions (
   @suggested_task_type, @acceptance_criteria_json, @converted_task_id, @created_at, @updated_at
 )`;
 
+type StoredWorkspaceStatusEventRow = {
+  created_at: string;
+  event_kind: string;
+  actor: string | null;
+  command: string | null;
+  revision_before: number;
+  revision_after: number;
+  details_json: string;
+};
+
+/** Normalize audit event_kind for kit_workspace_status_events (roster reads set_current_phase). */
+export function normalizeWorkspaceStatusEventKind(eventKind: string): string {
+  return eventKind === "set-current-phase" ? "set_current_phase" : eventKind;
+}
+
+export function previousCurrentKitPhaseFromDetailsJson(detailsJson: string): string | null {
+  try {
+    const parsed = JSON.parse(detailsJson) as { previousCurrentKitPhase?: unknown };
+    if (typeof parsed.previousCurrentKitPhase === "string" && parsed.previousCurrentKitPhase.trim().length > 0) {
+      return parsed.previousCurrentKitPhase.trim();
+    }
+  } catch {
+    /* ignore malformed historical rows */
+  }
+  return null;
+}
+
+function readStoredRolloverWorkspaceStatusEvents(db: SqliteDb): StoredWorkspaceStatusEventRow[] {
+  if (!workspaceStatusTableAvailable(db)) {
+    return [];
+  }
+  return db
+    .prepare(
+      `SELECT created_at, event_kind, actor, command, revision_before, revision_after, details_json
+       FROM kit_workspace_status_events
+       WHERE event_kind = 'set_current_phase'`
+    )
+    .all() as StoredWorkspaceStatusEventRow[];
+}
+
+/** Merge git-replayed audits without dropping local rollover history missing from the canonical stream. */
+export function rewriteWorkspaceStatusFromProjection(
+  db: SqliteDb,
+  projection: PlanningStateProjectionV1,
+  preservedRollovers: StoredWorkspaceStatusEventRow[]
+): void {
+  const ws = projection.workspaceStatus;
+  if (!ws) {
+    return;
+  }
+  const now = ws.updatedAt;
+  const insertAudit = db.prepare(
+    `INSERT INTO kit_workspace_status_events (
+      created_at, event_kind, actor, command, revision_before, revision_after, details_json
+    ) VALUES (?, ?, ?, ?, ?, ?, ?)`
+  );
+  db.transaction(() => {
+    db.prepare(
+      `UPDATE kit_workspace_status SET
+        workspace_revision = ?,
+        current_kit_phase = ?,
+        next_kit_phase = ?,
+        active_focus = ?,
+        last_updated = ?,
+        blockers_json = ?,
+        pending_decisions_json = ?,
+        next_agent_actions_json = ?,
+        updated_at = ?
+      WHERE id = 1`
+    ).run(
+      ws.workspaceRevision,
+      ws.currentKitPhase,
+      ws.nextKitPhase,
+      ws.activeFocus,
+      ws.lastUpdated,
+      JSON.stringify(ws.blockers),
+      JSON.stringify(ws.pendingDecisions),
+      JSON.stringify(ws.nextAgentActions),
+      now
+    );
+    db.prepare(`DELETE FROM kit_workspace_status_events`).run();
+    const insertedRolloverPhases = new Set<string>();
+    for (const audit of projection.workspaceStatusAudits) {
+      const eventKind = normalizeWorkspaceStatusEventKind(audit.eventKind);
+      insertAudit.run(
+        audit.createdAt,
+        eventKind,
+        audit.actor,
+        audit.command,
+        audit.revisionBefore,
+        audit.revisionAfter,
+        audit.detailsJson
+      );
+      const prior = previousCurrentKitPhaseFromDetailsJson(audit.detailsJson);
+      if (prior && eventKind === "set_current_phase") {
+        insertedRolloverPhases.add(prior);
+      }
+    }
+    for (const row of preservedRollovers) {
+      const prior = previousCurrentKitPhaseFromDetailsJson(row.details_json);
+      if (prior && insertedRolloverPhases.has(prior)) {
+        continue;
+      }
+      insertAudit.run(
+        row.created_at,
+        row.event_kind,
+        row.actor,
+        row.command,
+        row.revision_before,
+        row.revision_after,
+        row.details_json
+      );
+    }
+  })();
+}
+
 /** Persist in-memory planning projection into kit SQLite (full rebuild path). */
 export function persistPlanningProjectionToSqlite(
   db: SqliteDb,
@@ -204,49 +320,8 @@ export function persistPlanningProjectionToSqlite(
   }
 
   if (domainEnabled("workspace_status") && workspaceStatusTableAvailable(db) && projection.workspaceStatus) {
-    const ws = projection.workspaceStatus;
-    const now = ws.updatedAt;
-    db.transaction(() => {
-      db.prepare(
-        `UPDATE kit_workspace_status SET
-        workspace_revision = ?,
-        current_kit_phase = ?,
-        next_kit_phase = ?,
-        active_focus = ?,
-        last_updated = ?,
-        blockers_json = ?,
-        pending_decisions_json = ?,
-        next_agent_actions_json = ?,
-        updated_at = ?
-      WHERE id = 1`
-      ).run(
-        ws.workspaceRevision,
-        ws.currentKitPhase,
-        ws.nextKitPhase,
-        ws.activeFocus,
-        ws.lastUpdated,
-        JSON.stringify(ws.blockers),
-        JSON.stringify(ws.pendingDecisions),
-        JSON.stringify(ws.nextAgentActions),
-        now
-      );
-      db.prepare(`DELETE FROM kit_workspace_status_events`).run();
-      for (const audit of projection.workspaceStatusAudits) {
-        db.prepare(
-          `INSERT INTO kit_workspace_status_events (
-          created_at, event_kind, actor, command, revision_before, revision_after, details_json
-        ) VALUES (?, ?, ?, ?, ?, ?, ?)`
-        ).run(
-          audit.createdAt,
-          audit.eventKind,
-          audit.actor,
-          audit.command,
-          audit.revisionBefore,
-          audit.revisionAfter,
-          audit.detailsJson
-        );
-      }
-    })();
+    const preservedRollovers = readStoredRolloverWorkspaceStatusEvents(db);
+    rewriteWorkspaceStatusFromProjection(db, projection, preservedRollovers);
   }
 }
 

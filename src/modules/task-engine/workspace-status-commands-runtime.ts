@@ -515,6 +515,9 @@ export async function runUpdateWorkspaceStatus(
         before,
         after: plannedAfter,
         payloadDigest,
+        ...(clearedCurrent && before.currentKitPhase
+          ? { previousCurrentKitPhase: before.currentKitPhase }
+          : {}),
         ctx: {
           commandName: command,
           moduleId: "task-engine",
@@ -782,20 +785,53 @@ export async function runSetCurrentPhase(
           message: "set-current-phase requires expectedWorkspaceRevision (non-negative integer) for live writes"
         };
       }
-      const patched = patchWorkspaceStatus(db, {
-        expectedWorkspaceRevision,
-        patch,
-        actor,
-        command: "set-current-phase",
-        eventKind: "set_current_phase",
-        details: {
-          clientMutationId,
+      const gitCanonical = isPlanningGitSyncPublishActive(ctx, "workspace_status");
+      if (gitCanonical) {
+        const planning = await openPlanningStores(ctx);
+        const store = planning.taskStore;
+        const plannedAfter = plannedWorkspaceStatusAfter(before, patch);
+        const event = draftPlanningWorkspaceStatusUpdatedEvent({
+          patch,
+          before,
+          after: plannedAfter,
           payloadDigest,
-          previousCurrentKitPhase: before.currentKitPhase
+          previousCurrentKitPhase: before.currentKitPhase,
+          ctx: {
+            commandName: "set-current-phase",
+            moduleId: "task-engine",
+            actorId: actor ?? undefined,
+            clientMutationId
+          }
+        });
+        const canonical = await commitCanonicalPlanningEvents({
+          ctx,
+          store,
+          planning,
+          events: [event],
+          policyApproval: args.policyApproval as { confirmed: boolean; rationale: string } | undefined
+        });
+        if (canonical && !canonical.ok) {
+          return canonical;
         }
-      });
-      beforeRevision = patched.beforeRevision;
-      afterRevision = patched.afterRevision;
+        beforeRevision = before.workspaceRevision;
+        const reread = readKitWorkspaceStatusRow(db);
+        afterRevision = reread?.workspaceRevision ?? before.workspaceRevision + 1;
+      } else {
+        const patched = patchWorkspaceStatus(db, {
+          expectedWorkspaceRevision,
+          patch,
+          actor,
+          command: "set-current-phase",
+          eventKind: "set_current_phase",
+          details: {
+            clientMutationId,
+            payloadDigest,
+            previousCurrentKitPhase: before.currentKitPhase
+          }
+        });
+        beforeRevision = patched.beforeRevision;
+        afterRevision = patched.afterRevision;
+      }
     }
 
     await writeProjectConfigDocument(ctx.workspacePath, configAfter);

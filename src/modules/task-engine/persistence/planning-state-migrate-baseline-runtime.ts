@@ -123,7 +123,10 @@ export async function runPlanningStateMigrateBaseline(
         nextAgentActions: ws.nextAgentActions
       },
       before: genesisBefore,
-      after: ws,
+      after: {
+        ...ws,
+        workspaceRevision: genesisBefore.workspaceRevision + 1
+      },
       ctx: { ...ctxDraft, clientMutationId: "planning-baseline-workspace-status-v1" }
     })
   ];

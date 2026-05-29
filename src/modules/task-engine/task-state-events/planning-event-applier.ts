@@ -369,13 +369,22 @@ function applyWorkspaceStatusUpdated(
   };
   projection.workspaceStatus = next;
 
+  const rolloverPhase =
+    payload.previousCurrentKitPhase !== undefined && payload.previousCurrentKitPhase !== null
+      ? String(payload.previousCurrentKitPhase).trim()
+      : "";
+  const eventKind =
+    rolloverPhase.length > 0 || event.command.name === "set-current-phase"
+      ? "set_current_phase"
+      : event.command.name;
   const details = JSON.stringify({
     patchKeys: Object.keys(payload.patch),
     clientMutationId: mutationKey ?? undefined,
-    payloadDigest: payload.payloadDigest
+    payloadDigest: payload.payloadDigest,
+    ...(rolloverPhase.length > 0 ? { previousCurrentKitPhase: rolloverPhase } : {})
   });
   projection.workspaceStatusAudits.push({
-    eventKind: event.command.name,
+    eventKind,
     actor: event.actor?.id ?? null,
     command: event.command.name,
     revisionBefore: beforeRevision,

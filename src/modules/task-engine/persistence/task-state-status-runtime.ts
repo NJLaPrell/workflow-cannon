@@ -12,6 +12,7 @@ import {
 } from "./task-state-sync-status.js";
 import { openPlanningStoresForTaskStateCache } from "./task-state-cache-runtime-shared.js";
 import { readTaskStateProjectionMeta, taskStateProjectionMetaTableAvailable } from "./task-state-projection-meta-store.js";
+import { assessSnapshotTailFromManifest } from "../task-state-git/task-state-snapshot-tail-health.js";
 
 export async function runTaskStateStatus(
   ctx: ModuleLifecycleContext,
@@ -64,6 +65,18 @@ export async function runTaskStateStatus(
     localSourceCommit: projectionMeta?.sourceCommit ?? null
   });
 
+  let snapshotTail = null;
+  if (!("missing" in resolved) && manifestHead && typeof remoteLatestSequence === "number") {
+    const layoutRead = readTaskStateBranchLayout(ctx.workspacePath, resolved.ref, resolved.tipSha);
+    if (layoutRead.ok) {
+      snapshotTail = assessSnapshotTailFromManifest(
+        ctx.workspacePath,
+        resolved.ref,
+        layoutRead.layout.manifest
+      );
+    }
+  }
+
   return {
     ok: true,
     code: "task-state-status-read",
@@ -81,6 +94,8 @@ export async function runTaskStateStatus(
       localAppliedSequence,
       projectionMeta,
       manifestHead,
+      snapshotTail,
+      snapshotRecommendation: snapshotTail?.recommendedCommand ?? null,
       triedRefs: "missing" in resolved ? resolved.tried : undefined
     }
   };

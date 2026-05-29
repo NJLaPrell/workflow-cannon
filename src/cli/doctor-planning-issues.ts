@@ -11,6 +11,7 @@ import {
 import { validatePlanningPersistenceForDoctor } from "../modules/task-engine/doctor-planning-persistence.js";
 import { collectDoctorTaskStateProjectionIssues } from "../modules/task-engine/doctor-task-state-projection.js";
 import { collectDoctorTaskStateShadowIssues } from "../modules/task-engine/doctor-task-state-shadow.js";
+import { collectDoctorTaskStateGitHealthIssues } from "../modules/task-engine/doctor-task-state-git-health.js";
 import {
   getPlanningGenerationPolicy,
   planningSqliteDatabaseRelativePath
@@ -88,7 +89,8 @@ export async function collectDoctorPlanningPersistenceIssues(
     const phaseIssues = await collectDoctorKitPhaseIssues(cwd, effective);
     const projectionIssues = await collectDoctorTaskStateProjectionIssues(cwd, effective);
     const shadowIssues = await collectDoctorTaskStateShadowIssues(cwd, effective);
-    return [...persistence, ...phaseIssues, ...projectionIssues, ...shadowIssues];
+    const gitHealthIssues = await collectDoctorTaskStateGitHealthIssues(cwd, effective);
+    return [...persistence, ...phaseIssues, ...projectionIssues, ...shadowIssues, ...gitHealthIssues];
   } catch (err) {
     return [
       {
