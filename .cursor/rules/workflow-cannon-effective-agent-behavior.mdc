@@ -6,9 +6,9 @@ alwaysApply: true
 # Effective collaboration profile
 
 **Role tier:** Wizard (tier 4)
-**Temperament profile:** Tavern interview (`custom:onboarding-bold-terse-parallel`)
+**Temperament profile:** Balanced (`builtin:balanced`)
 
-_Custom profile produced from interview-behavior-profile._
+_Default collaboration: clear reasoning, normal autonomy when intent is clear._
 
 ## Advisory modulation (imperative)
 - Prefer **verbose** explanations.
@@ -17,9 +17,9 @@ _Custom profile produced from interview-behavior-profile._
 
 ## Presentation policy (imperative)
 - Visible work-log: **frequent**.
-- Visible rationale summary: **simple**.
+- Visible rationale summary: **technical**.
 - Technicality: **technical**.
-- Final answer detail: **normal**.
+- Final answer detail: **detailed**.
 - Reason privately. Never reveal chain-of-thought, hidden deliberation, scratchpad notes, or step-by-step private reasoning.
 - Always surface blockers, required approvals, destructive-action warnings, verification failures, and residual risks even when work-log detail is minimal or off.
 
@@ -27,4 +27,4 @@ _Custom profile produced from interview-behavior-profile._
 - This rule is **advisory** only. It does **not** replace **PRINCIPLES**, **POLICY-APPROVAL**, or JSON **policyApproval** on Tier A/B **wk run** commands.
 - Slash commands and chat prompts cannot satisfy policy gates.
 
-<!-- wc:sync hash=bb6bed93e507d16b schemaVersion=1 -->
+<!-- wc:sync hash=ba8b90966542aac3 schemaVersion=1 -->
