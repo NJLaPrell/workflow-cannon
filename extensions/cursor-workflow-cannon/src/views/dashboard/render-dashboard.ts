@@ -10,7 +10,9 @@
 import {
   buildNarrowPhaseRosterRows,
   buildPhaseRosterRowsWhenNoCurrent,
-  type PhaseCatalogListRow
+  detectPhaseCloseoutOrderingRisk,
+  type PhaseCatalogListRow,
+  type PhaseCloseoutOrderingRisk
 } from "../phase-roster-display.js";
 import {
   renderPhaseBucketSummaryLabelHtml,
@@ -29,6 +31,40 @@ export type RenderDashboardRootOptions = {
   /** Sections that stay as loading placeholders until tab activation (T100398). */
   deferredSections?: ReadonlySet<DashboardSectionId>;
 };
+
+/** Inputs for {@link detectPhaseCloseoutOrderingRisk} on dashboard phase cards. */
+export type PhaseOrderingInputs = {
+  phases: ReadonlyArray<PhaseCatalogListRow>;
+  deliveredPhaseKeys: ReadonlySet<string> | readonly string[];
+  legacyDeliveredMaxOrdinal?: number | null;
+  activeQueuePhaseKeys?: ReadonlySet<string> | readonly string[];
+};
+
+function resolvePhaseCloseoutOrderingRisk(
+  ws: Record<string, unknown> | null | undefined,
+  orderingInputs: PhaseOrderingInputs | undefined
+): PhaseCloseoutOrderingRisk | null {
+  if (!ws || !orderingInputs) {
+    return null;
+  }
+  return detectPhaseCloseoutOrderingRisk({
+    currentKitPhase:
+      ws.currentKitPhase != null ? String(ws.currentKitPhase) : null,
+    phases: orderingInputs.phases,
+    deliveredPhaseKeys: orderingInputs.deliveredPhaseKeys,
+    legacyDeliveredMaxOrdinal: orderingInputs.legacyDeliveredMaxOrdinal,
+    activeQueuePhaseKeys: orderingInputs.activeQueuePhaseKeys
+  });
+}
+
+function renderPhaseOrderingRiskHtml(risk: PhaseCloseoutOrderingRisk | null): string {
+  if (!risk) {
+    return "";
+  }
+  return (
+    '<p class="wc-phase-ordering-risk" role="alert">' + escapeHtml(risk.message) + "</p>"
+  );
+}
 
 function wrapDashboardSection(
   id: DashboardSectionId,
@@ -1233,6 +1269,7 @@ function renderPhaseReleaseAction(args: {
   snapshot: PhaseSnapshot;
   /** Badge % on Phase Readiness (work-readiness score). */
   readinessScore: number;
+  orderingRisk?: PhaseCloseoutOrderingRisk | null;
 }): string {
   const delivered = args.snapshot.closeoutPassed && args.snapshot.released;
   if (delivered) {
@@ -1244,18 +1281,24 @@ function renderPhaseReleaseAction(args: {
   }
   const releaseReadyPercent = args.snapshot.releaseReadyPercent;
   const readinessScore = Math.min(100, Math.max(0, Math.round(args.readinessScore)));
+  const orderingBlocked = args.orderingRisk != null;
   const closeoutReady =
-    args.snapshot.closeoutPassed && releaseReadyPercent >= 100;
-  return renderPhaseCompleteReleaseButton({
-    phaseKey: args.phaseKey,
-    phasePhrase: args.phasePhrase,
-    taskIds: [],
-    workspaceCurrent: args.workspaceCurrent,
-    workspaceNext: args.workspaceNext,
-    scope: "current",
-    closeoutReady,
-    disabled: readinessScore < 100
-  });
+    !orderingBlocked && args.snapshot.closeoutPassed && releaseReadyPercent >= 100;
+  return (
+    renderPhaseOrderingRiskHtml(args.orderingRisk ?? null) +
+    renderPhaseCompleteReleaseButton({
+      phaseKey: args.phaseKey,
+      phasePhrase: args.phasePhrase,
+      taskIds: [],
+      workspaceCurrent: args.workspaceCurrent,
+      workspaceNext: args.workspaceNext,
+      scope: "current",
+      closeoutReady,
+      disabled: readinessScore < 100 || orderingBlocked,
+      laterDeliveredPhases: args.orderingRisk?.laterDeliveredPhaseKeys,
+      orderingBlocked
+    })
+  );
 }
 
 function phaseDeliveryBarPercent(segments: PhaseSnapshotSegments): number {
@@ -1268,8 +1311,12 @@ function phaseDeliveryBarPercent(segments: PhaseSnapshotSegments): number {
 }
 
 /** Badge % on Phase Progress — all checklist gates including release (not delivery bar alone). */
-function phaseProgressOverallPercent(snapshot: PhaseSnapshot, humanGateCount: number): number {
-  const checks = buildPhaseProgressChecks({ snapshot, humanGateCount });
+function phaseProgressOverallPercent(
+  snapshot: PhaseSnapshot,
+  humanGateCount: number,
+  orderingRisk?: PhaseCloseoutOrderingRisk | null
+): number {
+  const checks = buildPhaseProgressChecks({ snapshot, humanGateCount, orderingRisk });
   if (checks.length === 0) {
     return 0;
   }
@@ -1394,15 +1441,28 @@ function renderPhaseMarkCompleteButton(phaseKey: string, ready: boolean): string
 function buildPhaseProgressChecks(args: {
   snapshot: PhaseSnapshot;
   humanGateCount: number;
+  orderingRisk?: PhaseCloseoutOrderingRisk | null;
 }): PhaseProgressCheck[] {
-  const { snapshot, humanGateCount } = args;
+  const { snapshot, humanGateCount, orderingRisk } = args;
   const segments = snapshot.segments;
   const started = phaseWorkHasBegun(snapshot);
   const checked = snapshot.checkedTaskCount;
   const evidenceOk = snapshot.deliveryEvidenceViolationCount === 0;
   const releaseReady = snapshot.releaseReadyPercent >= 100;
+  const orderingOk = orderingRisk == null;
 
   return [
+    {
+      label: "Phase ordering vs roster",
+      ok: orderingOk,
+      statusMeta: orderingOk
+        ? "aligned"
+        : orderingRisk!.laterDeliveredPhaseKeys.length > 0
+          ? orderingRisk!.laterDeliveredPhaseKeys.map((k) => "P" + k).join(", ")
+          : "legacy ahead",
+      failHelp:
+        "Later phases are already marked delivered while this phase is still current. Follow .ai/runbooks/phase-closeout-ordering-recovery.md before Complete & Release."
+    },
     {
       label: "Delivery work started",
       ok: started,
@@ -1522,11 +1582,16 @@ const PHASE_ROSTER_TABLE_HEAD =
   "</tr>";
 
 /** Phase readiness — can we work this phase now? (scoped to current phase). */
-function renderPhaseReadinessCard(ws: Record<string, unknown> | null, snapshot: PhaseSnapshot | null): string {
+function renderPhaseReadinessCard(
+  ws: Record<string, unknown> | null,
+  snapshot: PhaseSnapshot | null,
+  orderingInputs?: PhaseOrderingInputs
+): string {
   const curPhase = workspaceCurrentPhaseKey(ws);
   if (curPhase.length === 0) {
     return "";
   }
+  const orderingRisk = resolvePhaseCloseoutOrderingRisk(ws, orderingInputs);
   const nextPhase =
     ws?.nextKitPhase != null ? String(ws.nextKitPhase).trim() : "";
   const blockers: string[] = Array.isArray(ws?.blockers)
@@ -1602,7 +1667,8 @@ function renderPhaseReadinessCard(ws: Record<string, unknown> | null, snapshot: 
           workspaceCurrent: curPhase,
           workspaceNext: nextPhase,
           snapshot,
-          readinessScore: score
+          readinessScore: score,
+          orderingRisk
         })
       : "";
 
@@ -1638,17 +1704,19 @@ function renderPhaseReadinessCard(ws: Record<string, unknown> | null, snapshot: 
 function renderPhaseProgressCard(
   ws: Record<string, unknown> | null,
   snapshot: PhaseSnapshot | null,
-  humanGateCount: number
+  humanGateCount: number,
+  orderingInputs?: PhaseOrderingInputs
 ): string {
   const curPhase = workspaceCurrentPhaseKey(ws);
   if (curPhase.length === 0 || !snapshot) {
     return "";
   }
+  const orderingRisk = resolvePhaseCloseoutOrderingRisk(ws, orderingInputs);
   const nextPhase =
     ws?.nextKitPhase != null ? String(ws.nextKitPhase).trim() : "";
   const segments = snapshot?.segments ?? EMPTY_PHASE_SEGMENTS;
   const barPct = phaseDeliveryBarPercent(segments);
-  const overallPct = phaseProgressOverallPercent(snapshot, humanGateCount);
+  const overallPct = phaseProgressOverallPercent(snapshot, humanGateCount, orderingRisk);
   const terminal = snapshot?.terminalCount ?? 0;
   const checked = snapshot?.checkedTaskCount ?? 0;
   const remaining = snapshot?.remainingCount ?? 0;
@@ -1674,7 +1742,7 @@ function renderPhaseProgressCard(
       ? '<p class="muted">Finish remaining delivery tasks in this phase before you release it.</p>'
       : "";
 
-  const progressChecks = buildPhaseProgressChecks({ snapshot, humanGateCount });
+  const progressChecks = buildPhaseProgressChecks({ snapshot, humanGateCount, orderingRisk });
   const progressChecksSection =
     '<div class="wc-cae-checks wc-phase-progress-checks">' +
     progressChecks.map((c) => renderPhaseCheckRow(c)).join("") +
@@ -1703,6 +1771,7 @@ function renderPhaseProgressCard(
     "</p>" +
     renderPhaseProgressBar(segments) +
     renderPhaseProgressLegend(segments) +
+    renderPhaseOrderingRiskHtml(orderingRisk) +
     progressChecksSection +
     closeoutLine +
     renderPhaseMarkCompleteButton(curPhase, markCompleteReady) +
@@ -2465,6 +2534,8 @@ function renderPhaseCompleteReleaseButton(args: {
   closeoutReady?: boolean;
   /** Overview Phase Readiness — disabled until phase readiness reaches 100%. */
   disabled?: boolean;
+  laterDeliveredPhases?: string[];
+  orderingBlocked?: boolean;
 }): string {
   const pk = escapeHtmlAttr(args.phaseKey.trim());
   const phrase = escapeHtmlAttr(args.phasePhrase.trim());
@@ -2474,14 +2545,17 @@ function renderPhaseCompleteReleaseButton(args: {
   const scope = args.scope === "current" ? "current" : "bucket";
   const closeoutReady = args.closeoutReady !== false;
   const disabled = args.disabled === true;
+  const laterCsv = escapeHtmlAttr((args.laterDeliveredPhases ?? []).join(","));
   const title =
-    scope === "current"
-      ? disabled
-        ? "Complete & Release unlocks when phase readiness reaches 100%."
-        : closeoutReady
-          ? "Release this phase when you are ready."
-          : "Finish the progress checks, then release this phase."
-      : "Release every task in this phase bucket when ready.";
+    args.orderingBlocked === true
+      ? "Complete & Release blocked: later phases are already marked delivered on the roster. See phase-closeout-ordering-recovery runbook."
+      : scope === "current"
+        ? disabled
+          ? "Complete & Release unlocks when phase readiness reaches 100%."
+          : closeoutReady
+            ? "Release this phase when you are ready."
+            : "Finish the progress checks, then release this phase."
+        : "Release every task in this phase bucket when ready.";
   const disabledAttr = disabled ? ' disabled aria-disabled="true"' : "";
   return (
     '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary dash-phase-release-btn' +
@@ -2498,6 +2572,8 @@ function renderPhaseCompleteReleaseButton(args: {
     cur +
     '" data-wc-workspace-next-phase="' +
     nxt +
+    '" data-wc-later-delivered-phases="' +
+    laterCsv +
     '" data-wc-release-scope="' +
     scope +
     '" title="' +
@@ -4826,6 +4902,15 @@ export function renderDashboardRootInnerHtml(
       ? ((d.systemStatus as Record<string, unknown>).phase as Record<string, unknown> | undefined)
       : undefined;
   const phaseCatalogLookup = buildPhaseCatalogLookup(phaseSystemSlice);
+  const phaseOrderingInputs: PhaseOrderingInputs | undefined =
+    phaseCatalogLookup.size > 0
+      ? {
+          phases: [...phaseCatalogLookup.values()],
+          deliveredPhaseKeys: rosterDeliveredPhaseKeys,
+          legacyDeliveredMaxOrdinal,
+          activeQueuePhaseKeys
+        }
+      : undefined;
   const wishlist = (d.wishlist as Record<string, unknown>) || {};
   const wishlistOpenTop = Array.isArray(wishlist.openTop) ? wishlist.openTop : [];
   const wishOpen = Number(wishlist.openCount ?? 0);
@@ -5086,8 +5171,17 @@ export function renderDashboardRootInnerHtml(
     ) +
     renderAgentStatusBanner(d) +
     recNextCard +
-    renderPhaseReadinessCard(ws as Record<string, unknown> | null, phaseSnapshot) +
-    renderPhaseProgressCard(ws as Record<string, unknown> | null, phaseSnapshot, humanGatesCount) +
+    renderPhaseReadinessCard(
+      ws as Record<string, unknown> | null,
+      phaseSnapshot,
+      phaseOrderingInputs
+    ) +
+    renderPhaseProgressCard(
+      ws as Record<string, unknown> | null,
+      phaseSnapshot,
+      humanGatesCount,
+      phaseOrderingInputs
+    ) +
     renderPhaseCatalogOverviewSection(
       phaseSystemSlice,
       ws as Record<string, unknown> | null,

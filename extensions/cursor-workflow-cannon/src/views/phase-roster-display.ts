@@ -284,6 +284,67 @@ export function buildPhaseRosterRowsWhenNoCurrent(
   return rows;
 }
 
+export type PhaseCloseoutOrderingRisk = {
+  currentOrdinal: number;
+  laterDeliveredPhaseKeys: string[];
+  message: string;
+};
+
+const PHASE_CLOSEOUT_ORDERING_RUNBOOK = ".ai/runbooks/phase-closeout-ordering-recovery.md";
+
+/**
+ * True when the workspace current phase is behind phases already marked delivered on the roster
+ * (common when git shipped later `release/phase-<N>` branches before the workspace pointer caught up).
+ */
+export function detectPhaseCloseoutOrderingRisk(args: {
+  currentKitPhase: string | null | undefined;
+  phases: ReadonlyArray<PhaseCatalogListRow>;
+  deliveredPhaseKeys?: ReadonlySet<string> | readonly string[];
+  legacyDeliveredMaxOrdinal?: number | null;
+  activeQueuePhaseKeys?: ReadonlySet<string> | readonly string[];
+}): PhaseCloseoutOrderingRisk | null {
+  const currentOrd = parseLeadingDigitsOrdinal(args.currentKitPhase);
+  if (currentOrd === null) {
+    return null;
+  }
+  const deliveredSet = deliveredPhaseKeySet(args.deliveredPhaseKeys);
+  const activeSet = activeQueuePhaseKeySet(args.activeQueuePhaseKeys);
+  const later: string[] = [];
+  for (const row of args.phases) {
+    const pk = row.phaseKey.trim();
+    const ord = parseLeadingPhaseOrdinalFromKey(pk);
+    if (
+      ord !== null &&
+      ord > currentOrd &&
+      phaseIsDelivered(pk, deliveredSet, args.legacyDeliveredMaxOrdinal, activeSet)
+    ) {
+      later.push(pk);
+    }
+  }
+  later.sort(
+    (a, b) =>
+      (parseLeadingPhaseOrdinalFromKey(a) ?? 0) - (parseLeadingPhaseOrdinalFromKey(b) ?? 0)
+  );
+  const legacy = args.legacyDeliveredMaxOrdinal;
+  const legacyAhead =
+    typeof legacy === "number" && Number.isFinite(legacy) && legacy > currentOrd;
+  if (later.length === 0 && !legacyAhead) {
+    return null;
+  }
+  const laterLabel =
+    later.length > 0 ? later.map((k) => "Phase " + k).join(", ") : "later catalog phases";
+  const message =
+    "Workspace is on Phase " +
+    String(currentOrd) +
+    " but the roster already marks " +
+    laterLabel +
+    " as delivered. Confirm `origin/release/phase-" +
+    String(currentOrd) +
+    "` exists and matches git before Complete & Release. Recovery: " +
+    PHASE_CLOSEOUT_ORDERING_RUNBOOK;
+  return { currentOrdinal: currentOrd, laterDeliveredPhaseKeys: later, message };
+}
+
 /** @deprecated Prefer {@link phaseScheduleTagLabel} from `phase-schedule-tag.ts`. */
 export function phaseRosterStatusLabel(status: PhaseRosterDisplayRow["status"]): string {
   switch (status) {
