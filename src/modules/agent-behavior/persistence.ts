@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
-import type { ModuleLifecycleContext } from "../../contracts/module-contract.js";
+import type { ModuleCommandResult, ModuleLifecycleContext } from "../../contracts/module-contract.js";
+import { persistAllowlistedModuleStateWithPlanningSync } from "../task-engine/persistence/module-state-planning-events-runtime.js";
 import { validateModuleScopedConfigDocument } from "../../core/config-metadata.js";
 import { readModuleScopedConfigDocument } from "../../core/module-scoped-config.js";
 import {
@@ -110,17 +111,28 @@ export async function loadBehaviorWorkspaceState(
 
 export async function saveBehaviorWorkspaceState(
   ctx: ModuleLifecycleContext,
-  state: BehaviorWorkspaceStateV1
-): Promise<void> {
+  state: BehaviorWorkspaceStateV1,
+  options?: { commandName?: string; clientMutationId?: string; policyApproval?: { confirmed: boolean; rationale: string } }
+): Promise<ModuleCommandResult | null> {
   const cfg = ctx.effectiveConfig as Record<string, unknown> | undefined;
   const body: BehaviorWorkspaceStateV1 = {
     schemaVersion: 1,
     activeProfileId: state.activeProfileId,
     customProfiles: { ...state.customProfiles }
   };
-  const rel = behaviorSqliteRelativePath(cfg);
-  const db = new UnifiedStateDb(ctx.workspacePath, rel);
-  db.setModuleState(MODULE_ID, STATE_SCHEMA, body as unknown as Record<string, unknown>);
+  const publishErr = await persistAllowlistedModuleStateWithPlanningSync({
+    workspacePath: ctx.workspacePath,
+    effectiveConfig: cfg,
+    moduleId: MODULE_ID,
+    state: body as unknown as Record<string, unknown>,
+    documentSchemaVersion: STATE_SCHEMA,
+    commandName: options?.commandName ?? "save-behavior-workspace-state",
+    clientMutationId: options?.clientMutationId,
+    policyApproval: options?.policyApproval
+  });
+  if (publishErr) {
+    return publishErr;
+  }
 
   const disk = await readModuleScopedConfigDocument(ctx.workspacePath, MODULE_ID);
   const next: Record<string, unknown> = { ...disk };
@@ -133,4 +145,5 @@ export async function saveBehaviorWorkspaceState(
   };
   validateModuleScopedConfigDocument(MODULE_ID, next, "agent-behavior config.json");
   await writeModuleScopedConfigDocument(ctx.workspacePath, MODULE_ID, next);
+  return null;
 }

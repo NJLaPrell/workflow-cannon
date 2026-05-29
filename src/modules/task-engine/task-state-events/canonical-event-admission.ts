@@ -23,6 +23,7 @@ export type CanonicalEventAdmissionErrorCode =
   | "duplicate-task-id"
   | "task-not-found"
   | "workspace-revision-mismatch"
+  | "module-state-schema-version-mismatch"
   | "replay-conflict";
 
 export type CanonicalEventAdmissionError = {
@@ -95,12 +96,16 @@ function clonePlanningProjection(projection: PlanningStateProjectionV1): Plannin
     ),
     phaseNoteSuggestionsById: { ...projection.phaseNoteSuggestionsById },
     ideasById: { ...projection.ideasById },
+    moduleStateById: Object.fromEntries(
+      Object.entries(projection.moduleStateById).map(([id, row]) => [id, { ...row, state: { ...row.state } }])
+    ),
     workspaceStatus: projection.workspaceStatus ? { ...projection.workspaceStatus } : null,
     workspaceStatusAudits: [...projection.workspaceStatusAudits],
     appliedWorkspaceMutationIds: new Set(projection.appliedWorkspaceMutationIds),
     appliedNoteIdempotencyKeys: new Set(projection.appliedNoteIdempotencyKeys),
     appliedSuggestionMutationIds: new Set(projection.appliedSuggestionMutationIds),
-    appliedIdeaMutationIds: new Set(projection.appliedIdeaMutationIds)
+    appliedIdeaMutationIds: new Set(projection.appliedIdeaMutationIds),
+    appliedModuleStateMutationIds: new Set(projection.appliedModuleStateMutationIds)
   };
 }
 
@@ -152,7 +157,9 @@ function buildProjections(
             code:
               applied.error.code === "workspace-revision-mismatch"
                 ? "workspace-revision-mismatch"
-                : "replay-conflict",
+                : applied.error.code === "module-state-schema-version-mismatch"
+                  ? "module-state-schema-version-mismatch"
+                  : "replay-conflict",
             message: applied.error.message,
             details: [applied.error.code]
           }
@@ -210,6 +217,28 @@ function checkExpectedWorkspaceRevision(
       code: "workspace-revision-mismatch",
       message: `expectedWorkspaceRevision ${expected} does not match replayed workspace revision ${actual}`,
       details: ["stale-workspace-revision"]
+    };
+  }
+  return null;
+}
+
+function checkExpectedModuleStateSchemaVersion(
+  event: PlanningStateEventV1,
+  projection: PlanningStateProjectionV1
+): CanonicalEventAdmissionError | null {
+  if (event.kind !== "planning.module_state.updated") {
+    return null;
+  }
+  const payload = event.payload as { moduleId?: string; expectedStateSchemaVersion?: number };
+  if (payload.expectedStateSchemaVersion === undefined || typeof payload.moduleId !== "string") {
+    return null;
+  }
+  const actual = projection.moduleStateById[payload.moduleId]?.stateSchemaVersion ?? 0;
+  if (actual !== payload.expectedStateSchemaVersion) {
+    return {
+      code: "module-state-schema-version-mismatch",
+      message: `expectedStateSchemaVersion ${payload.expectedStateSchemaVersion} does not match replayed module state version ${actual} for ${payload.moduleId}`,
+      details: ["stale-module-state-schema-version"]
     };
   }
   return null;
@@ -376,6 +405,13 @@ export function admitCanonicalStateEvent(
     if (revisionErr) {
       return { ok: false, error: revisionErr };
     }
+    const moduleStateErr = checkExpectedModuleStateSchemaVersion(
+      planningEvent,
+      projectionResult.planningProjection
+    );
+    if (moduleStateErr) {
+      return { ok: false, error: moduleStateErr };
+    }
     const applied = applyPlanningStateEvent(projectionResult.planningProjection, planningEvent);
     if (!applied.ok) {
       return {
@@ -384,7 +420,9 @@ export function admitCanonicalStateEvent(
           code:
             applied.error.code === "workspace-revision-mismatch"
               ? "workspace-revision-mismatch"
-              : "replay-conflict",
+              : applied.error.code === "module-state-schema-version-mismatch"
+                ? "module-state-schema-version-mismatch"
+                : "replay-conflict",
           message: applied.error.message,
           details: [applied.error.code]
         }

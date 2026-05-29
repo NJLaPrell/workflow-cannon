@@ -13,6 +13,13 @@ export type PlanningWorkspaceStatusAuditV1 = {
   clientMutationId?: string;
 };
 
+export type ModuleStateProjectionRow = {
+  moduleId: string;
+  stateSchemaVersion: number;
+  state: Record<string, unknown>;
+  updatedAt: string;
+};
+
 export type WorkflowIdeaProjectionRow = {
   id: string;
   title: string;
@@ -31,6 +38,7 @@ export type PlanningStateProjectionV1 = {
   phaseNotesById: Record<string, PhaseNoteRow>;
   phaseNoteSuggestionsById: Record<string, PhaseNoteTaskSuggestionRow>;
   ideasById: Record<string, WorkflowIdeaProjectionRow>;
+  moduleStateById: Record<string, ModuleStateProjectionRow>;
   workspaceStatus: KitWorkspaceStatusPublic | null;
   workspaceStatusAudits: PlanningWorkspaceStatusAuditV1[];
   /** clientMutationId keys applied in this replay (workspace status audit dedupe). */
@@ -41,12 +49,15 @@ export type PlanningStateProjectionV1 = {
   appliedSuggestionMutationIds: Set<string>;
   /** clientMutationId keys applied for idea mutations in this replay. */
   appliedIdeaMutationIds: Set<string>;
+  /** clientMutationId keys applied for module state mutations in this replay. */
+  appliedModuleStateMutationIds: Set<string>;
   lastEventSequence: number;
   lastUpdated: string;
 };
 
 export type PlanningStateApplierErrorCode =
   | "workspace-revision-mismatch"
+  | "module-state-schema-version-mismatch"
   | "workspace-status-missing"
   | "phase-catalog-key-invalid"
   | "replay-conflict";

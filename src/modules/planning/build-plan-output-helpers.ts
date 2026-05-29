@@ -1,4 +1,5 @@
-import { persistBuildPlanSession } from "../../core/planning/index.js";
+import type { ModuleLifecycleContext } from "../../contracts/module-contract.js";
+import { persistBuildPlanSessionWithPlanningSync } from "./build-plan-session-persist.js";
 
 export type PlanningOutputMode = "wishlist" | "tasks" | "response";
 
@@ -134,8 +135,7 @@ export function buildPlanArtifactRecommendedNextCommands(args: {
 }
 
 export async function persistInterviewSnapshot(
-  workspacePath: string,
-  effectiveConfig: Record<string, unknown> | undefined,
+  ctx: ModuleLifecycleContext,
   args: {
     planningType: string;
     outputMode: PlanningOutputMode;
@@ -149,18 +149,14 @@ export async function persistInterviewSnapshot(
   const answeredCritical = typeof cg.answeredCritical === "number" ? cg.answeredCritical : 0;
   const totalCritical = typeof cg.totalCritical === "number" ? cg.totalCritical : 0;
   const resumeCli = typeof cg.suggestedNextCommand === "string" ? cg.suggestedNextCommand : "";
-  await persistBuildPlanSession(
-    workspacePath,
-    {
-      planningType: args.planningType,
-      outputMode: args.outputMode,
-      status: args.status,
-      completionPct,
-      answeredCritical,
-      totalCritical,
-      answers: args.answers,
-      resumeCli
-    },
-    effectiveConfig
-  );
+  await persistBuildPlanSessionWithPlanningSync(ctx, {
+    planningType: args.planningType,
+    outputMode: args.outputMode,
+    status: args.status,
+    completionPct,
+    answeredCritical,
+    totalCritical,
+    answers: args.answers,
+    resumeCli
+  }, { commandName: "build-plan" });
 }

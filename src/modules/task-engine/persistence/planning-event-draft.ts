@@ -180,3 +180,24 @@ export function draftPlanningIdeaUpdatedEvent(args: {
     args.ctx
   );
 }
+
+export function draftPlanningModuleStateUpdatedEvent(args: {
+  moduleId: string;
+  stateSchemaVersion: number;
+  state: Record<string, unknown>;
+  updatedAt: string;
+  expectedStateSchemaVersion?: number;
+  removed?: boolean;
+  ctx: DraftEventContext;
+}): PlanningStateEventV1 {
+  return draftPlanningEnvelope("planning.module_state.updated", {
+    moduleId: args.moduleId,
+    stateSchemaVersion: args.stateSchemaVersion,
+    state: args.state,
+    updatedAt: args.updatedAt,
+    ...(args.expectedStateSchemaVersion !== undefined
+      ? { expectedStateSchemaVersion: args.expectedStateSchemaVersion }
+      : {}),
+    ...(args.removed ? { removed: true } : {})
+  }, args.ctx);
+}

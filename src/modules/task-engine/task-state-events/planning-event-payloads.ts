@@ -14,7 +14,8 @@ export type PlanningStateEventKindV1 =
   | "planning.phase_note_suggestion.updated"
   | "planning.phase_note_suggestion.removed"
   | "planning.idea.created"
-  | "planning.idea.updated";
+  | "planning.idea.updated"
+  | "planning.module_state.updated";
 
 export type PlanningIdeaStatusV1 = "open" | "planning" | "planned";
 
@@ -38,6 +39,18 @@ export type PlanningIdeaCreatedPayloadV1 = {
 export type PlanningIdeaUpdatedPayloadV1 = {
   idea: PlanningIdeaSnapshotV1;
   /** When true, applier removes the row (delete/archive tombstone via updated kind). */
+  removed?: boolean;
+};
+
+/** workspace_module_state row snapshot for git-sync allowlisted module IDs (Phase 120 S3). */
+export type PlanningModuleStateUpdatedPayloadV1 = {
+  moduleId: string;
+  stateSchemaVersion: number;
+  state: Record<string, unknown>;
+  updatedAt: string;
+  /** Optimistic concurrency: replayed row version must match before apply. */
+  expectedStateSchemaVersion?: number;
+  /** When true, applier deletes the module state row. */
   removed?: boolean;
 };
 
@@ -150,7 +163,8 @@ export type PlanningStateEventPayloadV1 =
   | PlanningPhaseNoteSuggestionUpdatedPayloadV1
   | PlanningPhaseNoteSuggestionRemovedPayloadV1
   | PlanningIdeaCreatedPayloadV1
-  | PlanningIdeaUpdatedPayloadV1;
+  | PlanningIdeaUpdatedPayloadV1
+  | PlanningModuleStateUpdatedPayloadV1;
 
 export type PlanningStateEventV1 = TaskStateEventEnvelopeV1 & {
   kind: PlanningStateEventKindV1;
@@ -169,7 +183,8 @@ export const PLANNING_STATE_EVENT_KINDS: readonly PlanningStateEventKindV1[] = [
   "planning.phase_note_suggestion.updated",
   "planning.phase_note_suggestion.removed",
   "planning.idea.created",
-  "planning.idea.updated"
+  "planning.idea.updated",
+  "planning.module_state.updated"
 ] as const;
 
 export function isPlanningStateEventKind(kind: string): kind is PlanningStateEventKindV1 {

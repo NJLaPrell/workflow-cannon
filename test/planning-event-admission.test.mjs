@@ -25,7 +25,9 @@ const PLANNING_GOLDEN = [
   "golden-planning-phase-note-suggestion-created.v1.json",
   "golden-planning-idea-created.v1.json",
   "golden-planning-idea-updated.v1.json",
-  "golden-planning-idea-removed.v1.json"
+  "golden-planning-idea-removed.v1.json",
+  "golden-planning-module-state-updated.v1.json",
+  "golden-planning-module-state-removed.v1.json"
 ];
 
 test("planning golden fixtures validate", () => {
@@ -60,6 +62,7 @@ test("workspace status replay requires matching expectedWorkspaceRevision", () =
     phaseNotesById: {},
     phaseNoteSuggestionsById: {},
     ideasById: {},
+    moduleStateById: {},
     workspaceStatus: {
       workspaceRevision: 69,
       currentKitPhase: "119",
@@ -76,6 +79,7 @@ test("workspace status replay requires matching expectedWorkspaceRevision", () =
     appliedNoteIdempotencyKeys: new Set(),
     appliedSuggestionMutationIds: new Set(),
     appliedIdeaMutationIds: new Set(),
+    appliedModuleStateMutationIds: new Set(),
     lastEventSequence: 0,
     lastUpdated: "1970-01-01T00:00:00.000Z"
   };
@@ -254,5 +258,72 @@ CREATE TABLE workflow_ideas (
   assert.equal(row.id, "I001");
   assert.equal(row.status, "planning");
   assert.equal(row.linked_plan_artifact, "plan-artifact-fixture-001");
+  db.close();
+});
+
+test("module state replay upsert/remove produces expected projection", () => {
+  const updated = JSON.parse(
+    fs.readFileSync(path.join(fixturesDir, "golden-planning-module-state-updated.v1.json"), "utf8")
+  );
+  const sessionCreated = JSON.parse(
+    fs.readFileSync(path.join(fixturesDir, "golden-planning-module-state-session-created.v1.json"), "utf8")
+  );
+  const removed = JSON.parse(
+    fs.readFileSync(path.join(fixturesDir, "golden-planning-module-state-removed.v1.json"), "utf8")
+  );
+  const afterUpdate = replayPlanningStateEvents([updated]);
+  assert.equal(afterUpdate.ok, true);
+  assert.equal(Object.keys(afterUpdate.projection.moduleStateById).length, 1);
+  assert.equal(afterUpdate.projection.moduleStateById["improvement"].stateSchemaVersion, 1);
+  assert.equal(afterUpdate.projection.moduleStateById["improvement"].state.lastIngestedPolicyTraceId, 42);
+
+  const afterRemove = replayPlanningStateEvents([sessionCreated, removed]);
+  assert.equal(afterRemove.ok, true);
+  assert.equal(Object.keys(afterRemove.projection.moduleStateById).length, 0);
+});
+
+test("module state schema version mismatch rejects admission", () => {
+  const updated = JSON.parse(
+    fs.readFileSync(path.join(fixturesDir, "golden-planning-module-state-updated.v1.json"), "utf8")
+  );
+  updated.payload.expectedStateSchemaVersion = 99;
+  const admitted = admitCanonicalStateEventStream([updated]);
+  assert.equal(admitted.ok, false);
+  assert.equal(admitted.error.code, "module-state-schema-version-mismatch");
+});
+
+test("module state create idempotency key skips duplicate rows on replay", () => {
+  const updated = JSON.parse(
+    fs.readFileSync(path.join(fixturesDir, "golden-planning-module-state-updated.v1.json"), "utf8")
+  );
+  const replayed = replayPlanningStateEvents([updated, updated]);
+  assert.equal(replayed.ok, true);
+  assert.equal(Object.keys(replayed.projection.moduleStateById).length, 1);
+});
+
+test("persistPlanningProjectionToSqlite writes workspace_module_state rows", () => {
+  const updated = JSON.parse(
+    fs.readFileSync(path.join(fixturesDir, "golden-planning-module-state-updated.v1.json"), "utf8")
+  );
+  const replayed = replayPlanningStateEvents([updated]);
+  assert.equal(replayed.ok, true);
+
+  const db = new Database(":memory:");
+  db.exec(`
+CREATE TABLE workspace_module_state (
+  module_id TEXT PRIMARY KEY,
+  state_schema_version INTEGER NOT NULL,
+  state_json TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+`);
+  persistPlanningProjectionToSqlite(db, replayed.projection, { replaceCatalog: false });
+  const row = db
+    .prepare("SELECT module_id, state_schema_version, state_json FROM workspace_module_state WHERE module_id = ?")
+    .get("improvement");
+  assert.equal(row.module_id, "improvement");
+  assert.equal(row.state_schema_version, 1);
+  const state = JSON.parse(row.state_json);
+  assert.equal(state.lastIngestedPolicyTraceId, 42);
   db.close();
 });

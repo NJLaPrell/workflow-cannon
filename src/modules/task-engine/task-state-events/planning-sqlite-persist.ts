@@ -12,6 +12,7 @@ import {
 } from "../persistence/workspace-status-store.js";
 import { phaseNoteTaskSuggestionsTableExists } from "../phase-journal/phase-journal-store.js";
 import type { PlanningStateProjectionV1 } from "./planning-projection-types.js";
+import { MODULE_STATE_PLANNING_SYNC_ALLOWLIST } from "./module-state-planning-sync-allowlist.js";
 
 type SqliteDb = InstanceType<typeof DatabaseCtor>;
 
@@ -28,6 +29,22 @@ function workflowIdeasTableAvailable(db: SqliteDb): boolean {
     .get() as { ok: number } | undefined;
   return row !== undefined;
 }
+
+function workspaceModuleStateTableAvailable(db: SqliteDb): boolean {
+  const row = db
+    .prepare(`SELECT 1 AS ok FROM sqlite_master WHERE type = 'table' AND name = 'workspace_module_state'`)
+    .get() as { ok: number } | undefined;
+  return row !== undefined;
+}
+
+const insertModuleStateSql = `
+INSERT INTO workspace_module_state (module_id, state_schema_version, state_json, updated_at)
+VALUES (@module_id, @state_schema_version, @state_json, @updated_at)
+ON CONFLICT(module_id) DO UPDATE SET
+  state_schema_version=excluded.state_schema_version,
+  state_json=excluded.state_json,
+  updated_at=excluded.updated_at
+`;
 
 const insertWorkflowIdeaSql = `
 INSERT INTO workflow_ideas (
@@ -163,6 +180,25 @@ export function persistPlanningProjectionToSqlite(
     })();
   }
 
+  if (workspaceModuleStateTableAvailable(db)) {
+    db.transaction(() => {
+      for (const moduleId of MODULE_STATE_PLANNING_SYNC_ALLOWLIST) {
+        if (!projection.moduleStateById[moduleId]) {
+          db.prepare(`DELETE FROM workspace_module_state WHERE module_id = ?`).run(moduleId);
+        }
+      }
+      const insertModuleState = db.prepare(insertModuleStateSql);
+      for (const row of Object.values(projection.moduleStateById)) {
+        insertModuleState.run({
+          module_id: row.moduleId,
+          state_schema_version: row.stateSchemaVersion,
+          state_json: JSON.stringify(row.state),
+          updated_at: row.updatedAt
+        });
+      }
+    })();
+  }
+
   if (!workspaceStatusTableAvailable(db) || !projection.workspaceStatus) {
     return;
   }
@@ -235,12 +271,14 @@ export function planningProjectionFromSqlite(db: SqliteDb): PlanningStateProject
     phaseNotesById: {},
     phaseNoteSuggestionsById: {},
     ideasById: {},
+    moduleStateById: {},
     workspaceStatus: readKitWorkspaceStatusRow(db),
     workspaceStatusAudits: [],
     appliedWorkspaceMutationIds: new Set<string>(),
     appliedNoteIdempotencyKeys: new Set<string>(),
     appliedSuggestionMutationIds: new Set<string>(),
     appliedIdeaMutationIds: new Set<string>(),
+    appliedModuleStateMutationIds: new Set<string>(),
     lastEventSequence: 0,
     lastUpdated: new Date().toISOString()
   };
@@ -346,6 +384,35 @@ export function planningProjectionFromSqlite(db: SqliteDb): PlanningStateProject
         linkedPlanArtifact: row.linked_plan_artifact,
         previousPlanArtifacts,
         createdAt: row.created_at,
+        updatedAt: row.updated_at
+      };
+    }
+  }
+  if (workspaceModuleStateTableAvailable(db)) {
+    const moduleRows = db
+      .prepare(
+        `SELECT module_id, state_schema_version, state_json, updated_at FROM workspace_module_state ORDER BY module_id ASC`
+      )
+      .all() as Array<{
+      module_id: string;
+      state_schema_version: number;
+      state_json: string;
+      updated_at: string;
+    }>;
+    for (const row of moduleRows) {
+      let state: Record<string, unknown> = {};
+      try {
+        const parsed = JSON.parse(row.state_json) as unknown;
+        if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+          state = parsed as Record<string, unknown>;
+        }
+      } catch {
+        state = {};
+      }
+      projection.moduleStateById[row.module_id] = {
+        moduleId: row.module_id,
+        stateSchemaVersion: row.state_schema_version,
+        state,
         updatedAt: row.updated_at
       };
     }

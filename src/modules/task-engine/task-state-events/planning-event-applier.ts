@@ -13,8 +13,10 @@ import type {
   PlanningPhaseNoteUpdatedPayloadV1,
   PlanningIdeaCreatedPayloadV1,
   PlanningIdeaUpdatedPayloadV1,
+  PlanningModuleStateUpdatedPayloadV1,
   PlanningWorkspaceStatusUpdatedPayloadV1
 } from "./planning-event-payloads.js";
+import { isModuleStatePlanningSyncAllowed } from "./module-state-planning-sync-allowlist.js";
 import {
   eventSnapshotToPhaseNoteRow,
   eventSnapshotToPhaseNoteSuggestionRow
@@ -34,12 +36,14 @@ export function createEmptyPlanningStateProjection(
     phaseNotesById: {},
     phaseNoteSuggestionsById: {},
     ideasById: {},
+    moduleStateById: {},
     workspaceStatus: null,
     workspaceStatusAudits: [],
     appliedWorkspaceMutationIds: new Set<string>(),
     appliedNoteIdempotencyKeys: new Set<string>(),
     appliedSuggestionMutationIds: new Set<string>(),
     appliedIdeaMutationIds: new Set<string>(),
+    appliedModuleStateMutationIds: new Set<string>(),
     lastEventSequence: 0,
     lastUpdated
   };
@@ -269,6 +273,52 @@ function applyIdeaUpdated(
   return null;
 }
 
+function applyModuleStateUpdated(
+  projection: PlanningStateProjectionV1,
+  event: PlanningStateEventV1,
+  payload: PlanningModuleStateUpdatedPayloadV1
+): PlanningStateApplierError | null {
+  if (!isModuleStatePlanningSyncAllowed(payload.moduleId)) {
+    return {
+      code: "replay-conflict",
+      message: `moduleId '${payload.moduleId}' is not allowlisted for planning.module_state.updated`,
+      eventId: event.eventId
+    };
+  }
+
+  const mutationKey = event.clientMutationId?.trim();
+  if (mutationKey && projection.appliedModuleStateMutationIds.has(mutationKey)) {
+    bumpSequence(projection, event);
+    return null;
+  }
+
+  const currentVersion = projection.moduleStateById[payload.moduleId]?.stateSchemaVersion ?? 0;
+  const expected = payload.expectedStateSchemaVersion ?? currentVersion;
+  if (currentVersion !== expected) {
+    return {
+      code: "module-state-schema-version-mismatch",
+      message: `expectedStateSchemaVersion ${expected} does not match replayed version ${currentVersion} for ${payload.moduleId}`,
+      eventId: event.eventId
+    };
+  }
+
+  if (payload.removed) {
+    delete projection.moduleStateById[payload.moduleId];
+  } else {
+    projection.moduleStateById[payload.moduleId] = {
+      moduleId: payload.moduleId,
+      stateSchemaVersion: payload.stateSchemaVersion,
+      state: { ...payload.state },
+      updatedAt: payload.updatedAt
+    };
+  }
+  if (mutationKey) {
+    projection.appliedModuleStateMutationIds.add(mutationKey);
+  }
+  bumpSequence(projection, event);
+  return null;
+}
+
 function applyWorkspaceStatusUpdated(
   projection: PlanningStateProjectionV1,
   event: PlanningStateEventV1,
@@ -349,12 +399,16 @@ export function applyPlanningStateEvent(
     ),
     phaseNoteSuggestionsById: { ...projection.phaseNoteSuggestionsById },
     ideasById: { ...projection.ideasById },
+    moduleStateById: Object.fromEntries(
+      Object.entries(projection.moduleStateById).map(([id, row]) => [id, { ...row, state: { ...row.state } }])
+    ),
     workspaceStatus: projection.workspaceStatus ? { ...projection.workspaceStatus } : null,
     workspaceStatusAudits: [...projection.workspaceStatusAudits],
     appliedWorkspaceMutationIds: new Set(projection.appliedWorkspaceMutationIds),
     appliedNoteIdempotencyKeys: new Set(projection.appliedNoteIdempotencyKeys),
     appliedSuggestionMutationIds: new Set(projection.appliedSuggestionMutationIds),
-    appliedIdeaMutationIds: new Set(projection.appliedIdeaMutationIds)
+    appliedIdeaMutationIds: new Set(projection.appliedIdeaMutationIds),
+    appliedModuleStateMutationIds: new Set(projection.appliedModuleStateMutationIds)
   };
 
   let err: PlanningStateApplierError | null = null;
@@ -391,6 +445,9 @@ export function applyPlanningStateEvent(
       break;
     case "planning.idea.updated":
       err = applyIdeaUpdated(next, event, event.payload as PlanningIdeaUpdatedPayloadV1);
+      break;
+    case "planning.module_state.updated":
+      err = applyModuleStateUpdated(next, event, event.payload as PlanningModuleStateUpdatedPayloadV1);
       break;
     default:
       err = {

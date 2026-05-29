@@ -1,4 +1,5 @@
-import type { ModuleLifecycleContext } from "../../contracts/module-contract.js";
+import type { ModuleCommandResult, ModuleLifecycleContext } from "../../contracts/module-contract.js";
+import { persistAllowlistedModuleStateWithPlanningSync } from "../task-engine/persistence/module-state-planning-events-runtime.js";
 import {
   archiveSidecarFile,
   persistModuleStateRow,
@@ -226,17 +227,21 @@ async function finalizeImprovementStateLoad(
 export async function saveImprovementState(
   workspacePath: string,
   doc: ImprovementStateDocument,
-  effectiveConfig?: Record<string, unknown>
-): Promise<void> {
+  effectiveConfig?: Record<string, unknown>,
+  options?: { commandName?: string; clientMutationId?: string; policyApproval?: { confirmed: boolean; rationale: string } }
+): Promise<ModuleCommandResult | null> {
   const out: ImprovementStateDocument = {
     ...doc,
     schemaVersion: IMPROVEMENT_STATE_SCHEMA_VERSION
   };
-  const ctx = { workspacePath, effectiveConfig } as ModuleLifecycleContext;
-  const unified = new UnifiedStateDb(workspacePath, planningSqliteDatabaseRelativePath(ctx));
-  unified.setModuleState(
-    IMPROVEMENT_MODULE_STATE_ID,
-    out.schemaVersion,
-    out as unknown as Record<string, unknown>
-  );
+  return persistAllowlistedModuleStateWithPlanningSync({
+    workspacePath,
+    effectiveConfig,
+    moduleId: IMPROVEMENT_MODULE_STATE_ID,
+    state: out as unknown as Record<string, unknown>,
+    documentSchemaVersion: out.schemaVersion,
+    commandName: options?.commandName ?? "save-improvement-state",
+    clientMutationId: options?.clientMutationId,
+    policyApproval: options?.policyApproval
+  });
 }
