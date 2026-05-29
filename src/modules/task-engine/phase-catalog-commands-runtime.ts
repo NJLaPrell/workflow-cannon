@@ -17,7 +17,7 @@ import {
   draftPlanningPhaseCatalogRemovedEvent,
   draftPlanningPhaseCatalogUpsertedEvent
 } from "./persistence/planning-event-draft.js";
-import { isGitTaskStateCanonicalAuthority } from "./persistence/task-state-canonical-authority.js";
+import { isPlanningGitSyncPublishActive } from "./persistence/planning-canonical-sync-domains.js";
 import type { OpenedPlanningStores } from "./persistence/planning-open.js";
 import type { TaskStore } from "./persistence/store.js";
 import {
@@ -258,7 +258,7 @@ export async function runUpsertPhaseCatalogEntry(
   }
 
   try {
-    const gitCanonical = isGitTaskStateCanonicalAuthority(ctx);
+    const gitCanonical = isPlanningGitSyncPublishActive(ctx, "phase_catalog");
     const draftCtx = {
       commandName: "upsert-phase-catalog-entry",
       moduleId: "task-engine",

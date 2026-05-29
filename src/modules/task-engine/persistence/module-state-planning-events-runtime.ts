@@ -7,7 +7,7 @@ import { draftPlanningModuleStateUpdatedEvent } from "./planning-event-draft.js"
 import { commitCanonicalPlanningEvents } from "./planning-canonical-mutation-hook.js";
 import type { OpenedPlanningStores } from "./planning-open.js";
 import type { TaskStore } from "./store.js";
-import { isGitTaskStateCanonicalAuthority } from "./task-state-canonical-authority.js";
+import { isPlanningGitSyncPublishActive } from "./planning-canonical-sync-domains.js";
 import { isModuleStatePlanningSyncAllowed } from "../task-state-events/module-state-planning-sync-allowlist.js";
 
 export { MODULE_STATE_PLANNING_SYNC_ALLOWLIST } from "../task-state-events/module-state-planning-sync-allowlist.js";
@@ -40,7 +40,7 @@ export async function publishModuleStatePlanningEventIfAllowed(input: {
   if (!isModuleStatePlanningSyncAllowed(input.moduleId)) {
     return null;
   }
-  if (!isGitTaskStateCanonicalAuthority(input.ctx)) {
+  if (!isPlanningGitSyncPublishActive(input.ctx, "module_state")) {
     return null;
   }
 
@@ -98,7 +98,7 @@ export async function persistAllowlistedModuleStateWithPlanningSync(args: {
   const db = new UnifiedStateDb(args.workspacePath, rel);
   const current = db.getModuleState(args.moduleId);
   const updatedAt = args.updatedAt ?? new Date().toISOString();
-  const gitSync = isModuleStatePlanningSyncAllowed(args.moduleId) && isGitTaskStateCanonicalAuthority(ctx);
+  const gitSync = isModuleStatePlanningSyncAllowed(args.moduleId) && isPlanningGitSyncPublishActive(ctx, "module_state");
 
   if (args.removed) {
     if (!current) {

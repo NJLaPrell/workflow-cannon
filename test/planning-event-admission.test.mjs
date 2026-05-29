@@ -327,3 +327,78 @@ CREATE TABLE workspace_module_state (
   assert.equal(state.lastIngestedPolicyTraceId, 42);
   db.close();
 });
+
+test("resolveEnabledPlanningSyncDomains defaults to all Phase 119+120 domains when omitted", async () => {
+  const { resolveEnabledPlanningSyncDomains, ALL_PLANNING_SYNC_DOMAINS } = await import(
+    "../dist/modules/task-engine/persistence/planning-canonical-sync-domains.js"
+  );
+  const enabled = resolveEnabledPlanningSyncDomains({ effectiveConfig: {} });
+  assert.deepEqual(enabled, [...ALL_PLANNING_SYNC_DOMAINS]);
+});
+
+test("disabled planning sync domain skips replay apply and sqlite persist", async () => {
+  const { enabledPlanningSyncDomainSet } = await import(
+    "../dist/modules/task-engine/persistence/planning-canonical-sync-domains.js"
+  );
+  const created = JSON.parse(
+    fs.readFileSync(path.join(fixturesDir, "golden-planning-idea-created.v1.json"), "utf8")
+  );
+  const ctx = {
+    effectiveConfig: {
+      tasks: { canonicalAuthority: "git-event-log" },
+      planning: { canonicalSync: { domains: ["phase_catalog"] } }
+    }
+  };
+  const enabledDomains = enabledPlanningSyncDomainSet(ctx);
+  assert.equal(enabledDomains.has("ideas"), false);
+
+  const replayed = replayPlanningStateEvents([created], { enabledDomains });
+  assert.equal(replayed.ok, true);
+  assert.equal(Object.keys(replayed.projection.ideasById).length, 0);
+
+  const db = new Database(":memory:");
+  db.exec(`
+CREATE TABLE workflow_ideas (
+  id TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  note TEXT,
+  status TEXT NOT NULL,
+  sort_order INTEGER NOT NULL,
+  linked_plan_artifact TEXT,
+  previous_plan_artifacts_json TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+)`);
+  db.prepare(
+    `INSERT INTO workflow_ideas (id, title, note, status, sort_order, linked_plan_artifact, previous_plan_artifacts_json, created_at, updated_at)
+     VALUES ('I999', 'seed', NULL, 'open', 0, NULL, '[]', '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z')`
+  ).run();
+
+  const fullReplay = replayPlanningStateEvents([created]);
+  assert.equal(Object.keys(fullReplay.projection.ideasById).length, 1);
+  persistPlanningProjectionToSqlite(db, fullReplay.projection, { enabledDomains, replaceCatalog: false });
+  const row = db.prepare(`SELECT id FROM workflow_ideas WHERE id = 'I999'`).get();
+  assert.ok(row, "ideas domain disabled should not replace existing workflow_ideas rows");
+  db.close();
+});
+
+test("filterPlanningEventsByEnabledDomains drops disabled domain events before publish", async () => {
+  const { filterPlanningEventsByEnabledDomains } = await import(
+    "../dist/modules/task-engine/persistence/planning-canonical-sync-domains.js"
+  );
+  const upsert = JSON.parse(
+    fs.readFileSync(path.join(fixturesDir, "golden-planning-catalog-upserted.v1.json"), "utf8")
+  );
+  const idea = JSON.parse(
+    fs.readFileSync(path.join(fixturesDir, "golden-planning-idea-created.v1.json"), "utf8")
+  );
+  const ctx = {
+    effectiveConfig: {
+      tasks: { canonicalAuthority: "git-event-log" },
+      planning: { canonicalSync: { domains: ["ideas"] } }
+    }
+  };
+  const filtered = filterPlanningEventsByEnabledDomains(ctx, [upsert, idea]);
+  assert.equal(filtered.length, 1);
+  assert.equal(filtered[0].kind, "planning.idea.created");
+});

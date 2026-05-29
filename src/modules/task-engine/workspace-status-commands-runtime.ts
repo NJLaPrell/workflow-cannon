@@ -12,7 +12,7 @@ import { digestPayload, readIdempotencyValue } from "./mutation-utils.js";
 import { commitCanonicalPlanningEvents } from "./persistence/planning-canonical-mutation-hook.js";
 import { draftPlanningWorkspaceStatusUpdatedEvent } from "./persistence/planning-event-draft.js";
 import { openPlanningStores } from "./persistence/planning-open.js";
-import { isGitTaskStateCanonicalAuthority } from "./persistence/task-state-canonical-authority.js";
+import { isPlanningGitSyncPublishActive } from "./persistence/planning-canonical-sync-domains.js";
 import type { TaskEntity, TaskStatus } from "./types.js";
 import {
   applyWorkspaceStatusPatchInMemory,
@@ -499,7 +499,7 @@ export async function runUpdateWorkspaceStatus(
     }
     const clearedCurrent =
       Object.hasOwn(patch, "currentKitPhase") && patch.currentKitPhase === null;
-    const gitCanonical = isGitTaskStateCanonicalAuthority(ctx);
+    const gitCanonical = isPlanningGitSyncPublishActive(ctx, "workspace_status");
     let beforeRevision: number;
     let afterRevision: number;
     let after: KitWorkspaceStatusPublic;

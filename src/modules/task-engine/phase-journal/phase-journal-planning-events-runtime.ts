@@ -26,7 +26,9 @@ export async function publishPhaseJournalPlanningEvents(input: {
   if (canonical && !canonical.ok) {
     return canonical;
   }
-  await input.store.load();
+  if (canonical !== null) {
+    await input.store.load();
+  }
   return null;
 }
 

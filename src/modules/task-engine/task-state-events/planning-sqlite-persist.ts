@@ -13,6 +13,7 @@ import {
 import { phaseNoteTaskSuggestionsTableExists } from "../phase-journal/phase-journal-store.js";
 import type { PlanningStateProjectionV1 } from "./planning-projection-types.js";
 import { MODULE_STATE_PLANNING_SYNC_ALLOWLIST } from "./module-state-planning-sync-allowlist.js";
+import type { PlanningSyncDomainId } from "../persistence/planning-canonical-sync-domains.js";
 
 type SqliteDb = InstanceType<typeof DatabaseCtor>;
 
@@ -84,22 +85,22 @@ INSERT INTO phase_note_task_suggestions (
 export function persistPlanningProjectionToSqlite(
   db: SqliteDb,
   projection: PlanningStateProjectionV1,
-  options?: { replaceCatalog?: boolean }
+  options?: { replaceCatalog?: boolean; enabledDomains?: ReadonlySet<PlanningSyncDomainId> }
 ): void {
   const replaceCatalog = options?.replaceCatalog !== false;
-  if (replaceCatalog && phaseCatalogTableAvailable(db)) {
+  const domainEnabled = (domain: PlanningSyncDomainId): boolean =>
+    !options?.enabledDomains || options.enabledDomains.has(domain);
+
+  if (replaceCatalog && domainEnabled("phase_catalog") && phaseCatalogTableAvailable(db)) {
     db.prepare(`DELETE FROM ${KIT_PHASE_CATALOG_TABLE}`).run();
     for (const row of Object.values(projection.phaseCatalogByKey)) {
       upsertPhaseCatalogRow(db, row.phaseKey, row.shortDescription, row.updatedAt);
     }
   }
 
-  if (phaseNotesTableAvailable(db)) {
+  if (domainEnabled("phase_notes") && phaseNotesTableAvailable(db)) {
     db.transaction(() => {
       db.prepare(`DELETE FROM phase_note_refs`).run();
-      if (phaseNoteTaskSuggestionsTableExists(db)) {
-        db.prepare(`DELETE FROM phase_note_task_suggestions`).run();
-      }
       db.prepare(`DELETE FROM phase_notes`).run();
 
       const insertNote = db.prepare(insertPhaseNoteSql);
@@ -137,30 +138,33 @@ export function persistPlanningProjectionToSqlite(
           });
         }
       }
+    })();
+  }
 
-      if (phaseNoteTaskSuggestionsTableExists(db)) {
-        const insertSuggestion = db.prepare(insertPhaseNoteSuggestionSql);
-        for (const suggestion of Object.values(projection.phaseNoteSuggestionsById)) {
-          insertSuggestion.run({
-            id: suggestion.id,
-            note_id: suggestion.noteId,
-            title: suggestion.title,
-            description: suggestion.description,
-            suggested_status: suggestion.suggestedStatus,
-            suggested_phase_key: suggestion.suggestedPhaseKey,
-            suggested_phase_label: suggestion.suggestedPhaseLabel,
-            suggested_task_type: suggestion.suggestedTaskType,
-            acceptance_criteria_json: suggestion.acceptanceCriteriaJson,
-            converted_task_id: suggestion.convertedTaskId,
-            created_at: suggestion.createdAt,
-            updated_at: suggestion.updatedAt
-          });
-        }
+  if (domainEnabled("phase_note_suggestions") && phaseNotesTableAvailable(db) && phaseNoteTaskSuggestionsTableExists(db)) {
+    db.transaction(() => {
+      db.prepare(`DELETE FROM phase_note_task_suggestions`).run();
+      const insertSuggestion = db.prepare(insertPhaseNoteSuggestionSql);
+      for (const suggestion of Object.values(projection.phaseNoteSuggestionsById)) {
+        insertSuggestion.run({
+          id: suggestion.id,
+          note_id: suggestion.noteId,
+          title: suggestion.title,
+          description: suggestion.description,
+          suggested_status: suggestion.suggestedStatus,
+          suggested_phase_key: suggestion.suggestedPhaseKey,
+          suggested_phase_label: suggestion.suggestedPhaseLabel,
+          suggested_task_type: suggestion.suggestedTaskType,
+          acceptance_criteria_json: suggestion.acceptanceCriteriaJson,
+          converted_task_id: suggestion.convertedTaskId,
+          created_at: suggestion.createdAt,
+          updated_at: suggestion.updatedAt
+        });
       }
     })();
   }
 
-  if (workflowIdeasTableAvailable(db)) {
+  if (domainEnabled("ideas") && workflowIdeasTableAvailable(db)) {
     db.transaction(() => {
       db.prepare(`DELETE FROM workflow_ideas`).run();
       const insertIdea = db.prepare(insertWorkflowIdeaSql);
@@ -180,7 +184,7 @@ export function persistPlanningProjectionToSqlite(
     })();
   }
 
-  if (workspaceModuleStateTableAvailable(db)) {
+  if (domainEnabled("module_state") && workspaceModuleStateTableAvailable(db)) {
     db.transaction(() => {
       for (const moduleId of MODULE_STATE_PLANNING_SYNC_ALLOWLIST) {
         if (!projection.moduleStateById[moduleId]) {
@@ -199,15 +203,12 @@ export function persistPlanningProjectionToSqlite(
     })();
   }
 
-  if (!workspaceStatusTableAvailable(db) || !projection.workspaceStatus) {
-    return;
-  }
-
-  const ws = projection.workspaceStatus;
-  const now = ws.updatedAt;
-  db.transaction(() => {
-    db.prepare(
-      `UPDATE kit_workspace_status SET
+  if (domainEnabled("workspace_status") && workspaceStatusTableAvailable(db) && projection.workspaceStatus) {
+    const ws = projection.workspaceStatus;
+    const now = ws.updatedAt;
+    db.transaction(() => {
+      db.prepare(
+        `UPDATE kit_workspace_status SET
         workspace_revision = ?,
         current_kit_phase = ?,
         next_kit_phase = ?,
@@ -218,34 +219,35 @@ export function persistPlanningProjectionToSqlite(
         next_agent_actions_json = ?,
         updated_at = ?
       WHERE id = 1`
-    ).run(
-      ws.workspaceRevision,
-      ws.currentKitPhase,
-      ws.nextKitPhase,
-      ws.activeFocus,
-      ws.lastUpdated,
-      JSON.stringify(ws.blockers),
-      JSON.stringify(ws.pendingDecisions),
-      JSON.stringify(ws.nextAgentActions),
-      now
-    );
-    db.prepare(`DELETE FROM kit_workspace_status_events`).run();
-    for (const audit of projection.workspaceStatusAudits) {
-      db.prepare(
-        `INSERT INTO kit_workspace_status_events (
+      ).run(
+        ws.workspaceRevision,
+        ws.currentKitPhase,
+        ws.nextKitPhase,
+        ws.activeFocus,
+        ws.lastUpdated,
+        JSON.stringify(ws.blockers),
+        JSON.stringify(ws.pendingDecisions),
+        JSON.stringify(ws.nextAgentActions),
+        now
+      );
+      db.prepare(`DELETE FROM kit_workspace_status_events`).run();
+      for (const audit of projection.workspaceStatusAudits) {
+        db.prepare(
+          `INSERT INTO kit_workspace_status_events (
           created_at, event_kind, actor, command, revision_before, revision_after, details_json
         ) VALUES (?, ?, ?, ?, ?, ?, ?)`
-      ).run(
-        audit.createdAt,
-        audit.eventKind,
-        audit.actor,
-        audit.command,
-        audit.revisionBefore,
-        audit.revisionAfter,
-        audit.detailsJson
-      );
-    }
-  })();
+        ).run(
+          audit.createdAt,
+          audit.eventKind,
+          audit.actor,
+          audit.command,
+          audit.revisionBefore,
+          audit.revisionAfter,
+          audit.detailsJson
+        );
+      }
+    })();
+  }
 }
 
 function loadPhaseNoteRefs(
