@@ -18,6 +18,10 @@ import type {
 } from "./planning-event-payloads.js";
 import { isModuleStatePlanningSyncAllowed } from "./module-state-planning-sync-allowlist.js";
 import {
+  planningEventKindToSyncDomain,
+  type PlanningSyncDomainId
+} from "../persistence/planning-canonical-sync-domains.js";
+import {
   eventSnapshotToPhaseNoteRow,
   eventSnapshotToPhaseNoteSuggestionRow
 } from "./planning-phase-note-event-utils.js";
@@ -387,10 +391,21 @@ function applyWorkspaceStatusUpdated(
   return null;
 }
 
+export type PlanningSyncApplyOptions = {
+  enabledDomains?: ReadonlySet<PlanningSyncDomainId>;
+};
+
 export function applyPlanningStateEvent(
   projection: PlanningStateProjectionV1,
-  event: PlanningStateEventV1
+  event: PlanningStateEventV1,
+  options?: PlanningSyncApplyOptions
 ): { ok: true; projection: PlanningStateProjectionV1 } | { ok: false; error: PlanningStateApplierError } {
+  if (options?.enabledDomains) {
+    const domain = planningEventKindToSyncDomain(event.kind);
+    if (!options.enabledDomains.has(domain)) {
+      return { ok: true, projection };
+    }
+  }
   const next = {
     ...projection,
     phaseCatalogByKey: { ...projection.phaseCatalogByKey },
@@ -463,7 +478,10 @@ export function applyPlanningStateEvent(
   return { ok: true, projection: next };
 }
 
-export function replayPlanningStateEvents(events: PlanningStateEventV1[]): {
+export function replayPlanningStateEvents(
+  events: PlanningStateEventV1[],
+  options?: PlanningSyncApplyOptions
+): {
   ok: true;
   projection: PlanningStateProjectionV1;
 } | {
@@ -472,7 +490,7 @@ export function replayPlanningStateEvents(events: PlanningStateEventV1[]): {
 } {
   let projection = createEmptyPlanningStateProjection();
   for (const event of events) {
-    const applied = applyPlanningStateEvent(projection, event);
+    const applied = applyPlanningStateEvent(projection, event, options);
     if (!applied.ok) {
       return applied;
     }

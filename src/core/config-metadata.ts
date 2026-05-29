@@ -45,6 +45,30 @@ export function validateValueForMetadata(meta: ConfigKeyMetadata, value: unknown
         }
       }
     }
+    if (meta.key === "planning.canonicalSync.domains") {
+      for (const item of value) {
+        if (typeof item !== "string" || !item.trim()) {
+          throw new Error(`config-type-error(${meta.key}): array entries must be non-empty strings`);
+        }
+        const trimmed = item.trim();
+        const allowed = new Set([
+          "phase_catalog",
+          "workspace_status",
+          "phase_notes",
+          "phase_note_suggestions",
+          "phase_journal",
+          "phaseJournal",
+          "ideas",
+          "module_state"
+        ]);
+        if (!allowed.has(trimmed)) {
+          throw new Error(
+            `config-type-error(${meta.key}): unknown domain id '${trimmed}' (allowed: phase_catalog, workspace_status, phase_notes, phase_note_suggestions, phase_journal, ideas, module_state)`
+          );
+        }
+      }
+      return;
+    }
     if (meta.key === "kit.githubInvocation.allowedRepositories") {
       for (const item of value) {
         if (typeof item !== "string" || !item.trim()) {
@@ -1116,7 +1140,8 @@ export function validatePersistedConfigDocument(
         k !== "defaultQuestionDepth" &&
         k !== "hardBlockCriticalUnknowns" &&
         k !== "adaptiveFinalizePolicy" &&
-        k !== "rulePacks"
+        k !== "rulePacks" &&
+        k !== "canonicalSync"
       ) {
         throw new Error(`config-invalid(${label}): unknown planning.${k}`);
       }
@@ -1132,6 +1157,20 @@ export function validatePersistedConfigDocument(
     }
     if (pl.rulePacks !== undefined) {
       validateValueForMetadata(REGISTRY["planning.rulePacks"]!, pl.rulePacks);
+    }
+    if (pl.canonicalSync !== undefined) {
+      if (typeof pl.canonicalSync !== "object" || pl.canonicalSync === null || Array.isArray(pl.canonicalSync)) {
+        throw new Error(`config-invalid(${label}): planning.canonicalSync must be an object`);
+      }
+      const cs = pl.canonicalSync as Record<string, unknown>;
+      for (const ck of Object.keys(cs)) {
+        if (ck !== "domains") {
+          throw new Error(`config-invalid(${label}): unknown planning.canonicalSync.${ck}`);
+        }
+      }
+      if (cs.domains !== undefined) {
+        validateValueForMetadata(REGISTRY["planning.canonicalSync.domains"]!, cs.domains);
+      }
     }
   }
   const agentBehavior = data.agentBehavior;

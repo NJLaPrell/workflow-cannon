@@ -33,6 +33,7 @@ import {
 } from "./task-state-cache-runtime-shared.js";
 import { replayCanonicalStateEvents } from "../task-state-events/canonical-replay.js";
 import { persistPlanningProjectionToSqlite } from "../task-state-events/planning-sqlite-persist.js";
+import { enabledPlanningSyncDomainSet } from "./planning-canonical-sync-domains.js";
 
 export async function runTaskStateHydrate(
   ctx: ModuleLifecycleContext,
@@ -204,11 +205,13 @@ export async function runTaskStateHydrate(
 
   const planning = await openPlanningStoresForTaskStateCache(ctx);
   persistTaskStateProjectionDocument(planning, document!);
-  const planningReplay = replayCanonicalStateEvents(admitted.events);
+  const enabledDomains = enabledPlanningSyncDomainSet(ctx);
+  const planningReplay = replayCanonicalStateEvents(admitted.events, { enabledDomains });
   if (planningReplay.ok) {
     persistPlanningProjectionToSqlite(
       planning.sqliteDual.getDatabase(),
-      planningReplay.result.planningProjection
+      planningReplay.result.planningProjection,
+      { enabledDomains }
     );
   }
   upsertProjectionMetaAfterApply(planning, {

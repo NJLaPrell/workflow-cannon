@@ -7,7 +7,7 @@ import {
   draftPlanningIdeaCreatedEvent,
   draftPlanningIdeaUpdatedEvent
 } from "../task-engine/persistence/planning-event-draft.js";
-import { isGitTaskStateCanonicalAuthority } from "../task-engine/persistence/task-state-canonical-authority.js";
+import { isPlanningGitSyncPublishActive } from "../task-engine/persistence/planning-canonical-sync-domains.js";
 import { ideaRecordToEventSnapshot } from "../task-engine/task-state-events/planning-idea-event-utils.js";
 import { TaskEngineError } from "../task-engine/transitions.js";
 import {
@@ -165,7 +165,7 @@ export const ideasModule: WorkflowModule = {
 
     const db = planning.sqliteDual.getDatabase();
     const store = planning.taskStore;
-    const gitCanonical = isGitTaskStateCanonicalAuthority(ctx);
+    const gitCanonical = isPlanningGitSyncPublishActive(ctx, "ideas");
     const schemaOk = assertIdeasKitSchema(planning.sqliteDual.dbPath);
     if (!schemaOk.ok) {
       return { ok: false, code: "invalid-task-schema", message: schemaOk.message };

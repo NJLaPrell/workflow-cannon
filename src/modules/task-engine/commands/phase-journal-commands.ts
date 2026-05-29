@@ -11,7 +11,9 @@ import {
   draftPlanningPhaseNoteSuggestionUpdatedEvent,
   draftPlanningPhaseNoteUpdatedEvent
 } from "../persistence/planning-event-draft.js";
-import { isGitTaskStateCanonicalAuthority } from "../persistence/task-state-canonical-authority.js";
+import {
+  isPlanningGitSyncPublishActive
+} from "../persistence/planning-canonical-sync-domains.js";
 import type { OpenedPlanningStores } from "../persistence/planning-open.js";
 import type { TaskStore } from "../persistence/store.js";
 import type { PlanningStateEventV1 } from "../task-state-events/planning-event-payloads.js";
@@ -158,7 +160,6 @@ export async function resolvePhaseJournalCommands(
   const journalStore = createPhaseJournalStore(db);
   const args = (command.args ?? {}) as Record<string, unknown>;
   const gen = planning.sqliteDual.getPlanningGeneration();
-  const gitCanonical = isGitTaskStateCanonicalAuthority(ctx);
 
   const draftCtxBase = (commandName: string, phaseKey?: string) => ({
     commandName,
@@ -313,7 +314,7 @@ export async function resolvePhaseJournalCommands(
     };
 
     try {
-      if (gitCanonical) {
+      if (isPlanningGitSyncPublishActive(ctx, "phase_notes")) {
         if (idempotencyKey) {
           const hit = db
             .prepare(`SELECT id FROM phase_notes WHERE idempotency_key = ?`)
@@ -560,7 +561,7 @@ export async function resolvePhaseJournalCommands(
       };
     }
 
-    if (gitCanonical) {
+    if (isPlanningGitSyncPublishActive(ctx, "phase_note_suggestions")) {
       const baseClientMutationId = readIdempotencyValue(args);
       const events: PlanningStateEventV1[] = [];
       for (const n of convertible) {
@@ -742,7 +743,7 @@ export async function resolvePhaseJournalCommands(
       return { ok: false, code: "phase-note-not-updatable", message: "Only active phase notes can be updated." };
     }
     const updatedAt = new Date().toISOString();
-    if (gitCanonical) {
+    if (isPlanningGitSyncPublishActive(ctx, "phase_notes")) {
       const nextNote = {
         ...existing,
         summary: patch.summary !== undefined ? patch.summary : existing.summary,
@@ -822,7 +823,10 @@ export async function resolvePhaseJournalCommands(
     ) {
       return denyCriticalPhaseNoteWithoutPolicy("dismiss-phase-note");
     }
-    if (gitCanonical) {
+    if (
+      isPlanningGitSyncPublishActive(ctx, "phase_notes") ||
+      isPlanningGitSyncPublishActive(ctx, "phase_note_suggestions")
+    ) {
       const updatedAt = new Date().toISOString();
       const archived = phaseNoteRowToEventSnapshot({ ...existing, status: "dismissed", updatedAt });
       const baseMutationId = readIdempotencyValue(args);
@@ -908,7 +912,10 @@ export async function resolvePhaseJournalCommands(
     ) {
       return denyCriticalPhaseNoteWithoutPolicy("supersede-phase-note");
     }
-    if (gitCanonical) {
+    if (
+      isPlanningGitSyncPublishActive(ctx, "phase_notes") ||
+      isPlanningGitSyncPublishActive(ctx, "phase_note_suggestions")
+    ) {
       const updatedAt = new Date().toISOString();
       const archived = phaseNoteRowToEventSnapshot({
         ...from,
