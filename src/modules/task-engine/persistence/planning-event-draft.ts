@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import type { KitWorkspaceStatusPublic, WorkspaceStatusUpdatePatch } from "../persistence/workspace-status-store.js";
 import type {
+  PlanningIdeaSnapshotV1,
   PlanningPhaseNoteSnapshotV1,
   PlanningPhaseNoteSuggestionSnapshotV1,
   PlanningStateEventKindV1,
@@ -157,6 +158,25 @@ export function draftPlanningPhaseNoteSuggestionRemovedEvent(args: {
   return draftPlanningEnvelope(
     "planning.phase_note_suggestion.removed",
     { suggestionId: args.suggestionId, noteId: args.noteId },
+    args.ctx
+  );
+}
+
+export function draftPlanningIdeaCreatedEvent(args: {
+  idea: PlanningIdeaSnapshotV1;
+  ctx: DraftEventContext;
+}): PlanningStateEventV1 {
+  return draftPlanningEnvelope("planning.idea.created", { idea: args.idea }, args.ctx);
+}
+
+export function draftPlanningIdeaUpdatedEvent(args: {
+  idea: PlanningIdeaSnapshotV1;
+  removed?: boolean;
+  ctx: DraftEventContext;
+}): PlanningStateEventV1 {
+  return draftPlanningEnvelope(
+    "planning.idea.updated",
+    { idea: args.idea, ...(args.removed ? { removed: true } : {}) },
     args.ctx
   );
 }

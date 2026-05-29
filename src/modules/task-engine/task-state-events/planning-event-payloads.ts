@@ -12,7 +12,34 @@ export type PlanningStateEventKindV1 =
   | "planning.phase_note.archived"
   | "planning.phase_note_suggestion.created"
   | "planning.phase_note_suggestion.updated"
-  | "planning.phase_note_suggestion.removed";
+  | "planning.phase_note_suggestion.removed"
+  | "planning.idea.created"
+  | "planning.idea.updated";
+
+export type PlanningIdeaStatusV1 = "open" | "planning" | "planned";
+
+/** Full workflow_ideas row snapshot (Phase 120 S2). */
+export type PlanningIdeaSnapshotV1 = {
+  id: string;
+  title: string;
+  note: string | null;
+  status: PlanningIdeaStatusV1;
+  sortOrder: number;
+  linkedPlanArtifact: string | null;
+  previousPlanArtifacts: string[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type PlanningIdeaCreatedPayloadV1 = {
+  idea: PlanningIdeaSnapshotV1;
+};
+
+export type PlanningIdeaUpdatedPayloadV1 = {
+  idea: PlanningIdeaSnapshotV1;
+  /** When true, applier removes the row (delete/archive tombstone via updated kind). */
+  removed?: boolean;
+};
 
 export type PlanningPhaseCatalogUpsertedPayloadV1 = {
   phaseKey: string;
@@ -121,7 +148,9 @@ export type PlanningStateEventPayloadV1 =
   | PlanningPhaseNoteArchivedPayloadV1
   | PlanningPhaseNoteSuggestionCreatedPayloadV1
   | PlanningPhaseNoteSuggestionUpdatedPayloadV1
-  | PlanningPhaseNoteSuggestionRemovedPayloadV1;
+  | PlanningPhaseNoteSuggestionRemovedPayloadV1
+  | PlanningIdeaCreatedPayloadV1
+  | PlanningIdeaUpdatedPayloadV1;
 
 export type PlanningStateEventV1 = TaskStateEventEnvelopeV1 & {
   kind: PlanningStateEventKindV1;
@@ -138,7 +167,9 @@ export const PLANNING_STATE_EVENT_KINDS: readonly PlanningStateEventKindV1[] = [
   "planning.phase_note.archived",
   "planning.phase_note_suggestion.created",
   "planning.phase_note_suggestion.updated",
-  "planning.phase_note_suggestion.removed"
+  "planning.phase_note_suggestion.removed",
+  "planning.idea.created",
+  "planning.idea.updated"
 ] as const;
 
 export function isPlanningStateEventKind(kind: string): kind is PlanningStateEventKindV1 {

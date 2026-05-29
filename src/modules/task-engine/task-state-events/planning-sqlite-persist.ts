@@ -22,6 +22,22 @@ function phaseNotesTableAvailable(db: SqliteDb): boolean {
   return row !== undefined;
 }
 
+function workflowIdeasTableAvailable(db: SqliteDb): boolean {
+  const row = db
+    .prepare(`SELECT 1 AS ok FROM sqlite_master WHERE type = 'table' AND name = 'workflow_ideas'`)
+    .get() as { ok: number } | undefined;
+  return row !== undefined;
+}
+
+const insertWorkflowIdeaSql = `
+INSERT INTO workflow_ideas (
+  id, title, note, status, sort_order, linked_plan_artifact,
+  previous_plan_artifacts_json, created_at, updated_at
+) VALUES (
+  @id, @title, @note, @status, @sort_order, @linked_plan_artifact,
+  @previous_plan_artifacts_json, @created_at, @updated_at
+)`;
+
 const insertPhaseNoteSql = `
 INSERT INTO phase_notes (
   id, phase_key, phase_label, task_id, author, author_kind, session_id, source_command,
@@ -127,6 +143,26 @@ export function persistPlanningProjectionToSqlite(
     })();
   }
 
+  if (workflowIdeasTableAvailable(db)) {
+    db.transaction(() => {
+      db.prepare(`DELETE FROM workflow_ideas`).run();
+      const insertIdea = db.prepare(insertWorkflowIdeaSql);
+      for (const idea of Object.values(projection.ideasById)) {
+        insertIdea.run({
+          id: idea.id,
+          title: idea.title,
+          note: idea.note,
+          status: idea.status,
+          sort_order: idea.sortOrder,
+          linked_plan_artifact: idea.linkedPlanArtifact,
+          previous_plan_artifacts_json: JSON.stringify(idea.previousPlanArtifacts),
+          created_at: idea.createdAt,
+          updated_at: idea.updatedAt
+        });
+      }
+    })();
+  }
+
   if (!workspaceStatusTableAvailable(db) || !projection.workspaceStatus) {
     return;
   }
@@ -198,11 +234,13 @@ export function planningProjectionFromSqlite(db: SqliteDb): PlanningStateProject
     phaseCatalogByKey: {},
     phaseNotesById: {},
     phaseNoteSuggestionsById: {},
+    ideasById: {},
     workspaceStatus: readKitWorkspaceStatusRow(db),
     workspaceStatusAudits: [],
     appliedWorkspaceMutationIds: new Set<string>(),
     appliedNoteIdempotencyKeys: new Set<string>(),
     appliedSuggestionMutationIds: new Set<string>(),
+    appliedIdeaMutationIds: new Set<string>(),
     lastEventSequence: 0,
     lastUpdated: new Date().toISOString()
   };
@@ -272,6 +310,43 @@ export function planningProjectionFromSqlite(db: SqliteDb): PlanningStateProject
         convertedTaskId: row.converted_task_id == null ? null : String(row.converted_task_id),
         createdAt: String(row.created_at),
         updatedAt: String(row.updated_at)
+      };
+    }
+  }
+  if (workflowIdeasTableAvailable(db)) {
+    const ideaRows = db
+      .prepare(`SELECT * FROM workflow_ideas ORDER BY sort_order ASC, id ASC`)
+      .all() as Array<{
+      id: string;
+      title: string;
+      note: string | null;
+      status: "open" | "planning" | "planned";
+      sort_order: number;
+      linked_plan_artifact: string | null;
+      previous_plan_artifacts_json: string;
+      created_at: string;
+      updated_at: string;
+    }>;
+    for (const row of ideaRows) {
+      let previousPlanArtifacts: string[] = [];
+      try {
+        const parsed = JSON.parse(row.previous_plan_artifacts_json) as unknown;
+        previousPlanArtifacts = Array.isArray(parsed)
+          ? parsed.filter((value): value is string => typeof value === "string")
+          : [];
+      } catch {
+        previousPlanArtifacts = [];
+      }
+      projection.ideasById[row.id] = {
+        id: row.id,
+        title: row.title,
+        note: row.note,
+        status: row.status,
+        sortOrder: row.sort_order,
+        linkedPlanArtifact: row.linked_plan_artifact,
+        previousPlanArtifacts,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at
       };
     }
   }

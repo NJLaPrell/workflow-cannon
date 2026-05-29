@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "eventId": "tse.20260529T120022Z.idea-removed-fixture",
+  "sequence": 22,
+  "parentEventId": "tse.20260529T120021Z.idea-updated-fixture",
+  "recordedAt": "2026-05-29T12:00:22.000Z",
+  "actor": { "id": "system", "source": "system" },
+  "command": { "name": "delete-idea", "moduleId": "ideas" },
+  "clientMutationId": "fixture-idea-delete-1",
+  "kind": "planning.idea.updated",
+  "payload": {
+    "idea": {
+      "id": "I001",
+      "title": "Git-synced workflow idea",
+      "note": "Capture planner intent for phase 120",
+      "status": "planning",
+      "sortOrder": 0,
+      "linkedPlanArtifact": "plan-artifact-fixture-001",
+      "previousPlanArtifacts": [],
+      "createdAt": "2026-05-29T12:00:20.000Z",
+      "updatedAt": "2026-05-29T12:00:21.000Z"
+    },
+    "removed": true
+  }
+}
