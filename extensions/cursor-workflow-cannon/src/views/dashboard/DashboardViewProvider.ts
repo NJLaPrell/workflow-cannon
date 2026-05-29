@@ -372,6 +372,9 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   /** After first full HTML load, refresh only swaps `#root` via postMessage so `<details open>` state survives. */
   private dashboardRootShellReady = false;
 
+  /** First successful data render replaces the full document once; later refreshes patch `#root`. */
+  private dashboardRootHydrated = false;
+
   /** Sections hydrated via tab activation or eager first paint (T100398). */
   private hydratedDashboardSections = new Set<DashboardSectionId>();
 
@@ -598,8 +601,33 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         await webview.postMessage({ type: "wcReleaseRefreshBlock" });
         await this.pushUpdate({ projection: "full", skipHeavyFetches: false });
       }
+      if (msg?.type === "dashboardWebviewBoot") {
+        logWc("dashboard", "webview boot");
+        if (!this.dashboardRootHydrated) {
+          await this.pushUpdate({ projection: "overview", skipHeavyFetches: true });
+        }
+        return;
+      }
+      if (msg?.type === "dashboardStartupTimeout") {
+        const rootClass = typeof msg.rootClass === "string" ? msg.rootClass : "";
+        logWc("dashboard", `startup timeout rootClass=${rootClass}`);
+        if (!this.dashboardRootHydrated) {
+          await this.pushUpdate({ projection: "overview", skipHeavyFetches: true });
+        }
+        return;
+      }
+      if (msg?.type === "dashboardStartupRefresh") {
+        logWc("dashboard", "startup diagnostic refresh");
+        this.dashboardInteractionLocks.clear();
+        this.dashboardRefreshAfterInteraction = false;
+        await this.renderDashboardStartupDirect(webview);
+        return;
+      }
       if (msg?.type === "dashboardWebviewReady") {
-        await this.pushUpdate({ projection: "overview", skipHeavyFetches: true });
+        logWc("dashboard", "webview ready");
+        if (!this.dashboardRootHydrated) {
+          await this.pushUpdate({ projection: "overview", skipHeavyFetches: true });
+        }
         return;
       }
       if (msg?.type === "dashboardTabActivated") {
@@ -1138,6 +1166,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }, 45_000);
     webviewView.onDidDispose(() => {
       this.dashboardRootShellReady = false;
+      this.dashboardRootHydrated = false;
       this.hydratedDashboardSections.clear();
       this.staleDashboardSections.clear();
       this.webviewMessageDisposable?.dispose();
@@ -1154,6 +1183,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       this.dashboardGuidanceAuthoring = undefined;
     });
     // Shell-first paint (T100395): document before any dashboard-summary await.
+    this.dashboardRootHydrated = false;
     webview.html = this.buildHtml(webview, renderDashboardShellInnerHtml());
     this.dashboardRootShellReady = true;
     logWc("dashboard", "resolveWebviewView: shell painted synchronously");
@@ -1161,6 +1191,54 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   }
 
   /** Section-level DOM patch (T100395); full wcReplaceRoot remains the compatibility fallback. */
+  private async renderDashboardStartupDirect(webview: vscode.Webview): Promise<void> {
+    try {
+      const raw = (await this.client.run("dashboard-summary", {
+        wishlistPage: this.wishlistPage,
+        wishlistPageSize: 5,
+        projection: "overview"
+      })) as DashboardSummaryCommandSuccess | Record<string, unknown>;
+      if (isKitRefreshRunAborted(raw as Record<string, unknown>)) {
+        await webview.postMessage({
+          type: "dashboardStartupError",
+          message: "Dashboard refresh was paused by another Workflow Cannon operation. Try again in a moment."
+        });
+        return;
+      }
+      if (raw.ok === true && raw.data && typeof raw.data === "object") {
+        this.lastDashboardSummaryData = raw.data as Record<string, unknown>;
+        this.lastQueueContentFingerprint = computeQueueContentFingerprint(this.lastDashboardSummaryData);
+        ingestPlanningMetaFromData(raw.data as Record<string, unknown>);
+      }
+      const editorIntegration = await resolveEditorIntegrationState();
+      const rootInner = renderDashboardRootInnerHtml(
+        this.wrapDashboardPayloadForRender(raw as Record<string, unknown>),
+        raw.ok === true ? this.planningWizardPanel() : null,
+        editorIntegration,
+        undefined,
+        null,
+        {
+          deferredSections: new Set<DashboardSectionId>([
+            "status",
+            "config",
+            "cae",
+            "phase-journal"
+          ])
+        }
+      );
+      this.hydratedDashboardSections.clear();
+      this.hydratedDashboardSections.add("overview");
+      this.hydratedDashboardSections.add("queue");
+      this.dashboardRootHydrated = true;
+      webview.html = this.buildHtml(webview, rootInner);
+      logWc("dashboard", "startup diagnostic direct render applied");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      logWc("dashboard", `startup diagnostic direct render failed: ${message}`);
+      await webview.postMessage({ type: "dashboardStartupError", message });
+    }
+  }
+
   private async postSectionPatch(
     sectionId: DashboardSectionId,
     html: string,
@@ -4059,6 +4137,12 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       return;
     }
     try {
+      if (!this.dashboardRootHydrated) {
+        this.dashboardRootHydrated = true;
+        webview.html = this.buildHtml(webview, rootInner);
+        logWc("dashboard", "pushUpdate applied first full document render");
+        return;
+      }
       // Full-root refresh stays the compatibility path while section slices land (T100396+).
       await webview.postMessage({ type: "wcReplaceRoot", html: rootInner });
     } catch (e) {
@@ -4169,6 +4253,46 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     );
 
     const bootstrap = buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource);
+    const startupProbe = `(function(){
+  var vscode = window.__wfcVscode || (window.__wfcVscode = acquireVsCodeApi());
+  window.addEventListener('message', function(ev){
+    var msg = ev.data || {};
+    if (msg.type !== 'dashboardStartupError') return;
+    var status = document.querySelector('[data-wc-startup-status]');
+    if (status) {
+      status.textContent = msg.message || 'Dashboard refresh failed.';
+      status.removeAttribute('hidden');
+    }
+    var btn = document.querySelector('[data-wc-startup-refresh]');
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = 'Refresh';
+    }
+  });
+  try { vscode.postMessage({ type: 'dashboardWebviewBoot' }); } catch (e) {}
+  setTimeout(function(){
+    var root = document.getElementById('root');
+    if (!root) return;
+    var first = root.firstElementChild;
+    var shell = !!(first && first.classList && first.classList.contains('wc-dashboard-shell-initial'));
+    if (!shell) return;
+    root.innerHTML = '<section class="wc-card wc-dashboard-startup-timeout" role="status">' +
+      '<h3>Dashboard is still loading</h3>' +
+      '<p class="muted">Workflow Cannon started the webview, but the first data render did not replace the loading shell.</p>' +
+      '<p class="muted" data-wc-startup-status hidden></p>' +
+      '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-startup-refresh>Refresh</button>' +
+      '</section>';
+    var btn = root.querySelector('[data-wc-startup-refresh]');
+    if (btn) {
+      btn.addEventListener('click', function(){
+        btn.disabled = true;
+        btn.textContent = 'Refreshing...';
+        try { vscode.postMessage({ type: 'dashboardStartupRefresh' }); } catch (e) {}
+      });
+    }
+    try { vscode.postMessage({ type: 'dashboardStartupTimeout', rootClass: first.className || '' }); } catch (e) {}
+  }, 8000);
+})();`;
 
     return `<!DOCTYPE html>
 <html lang="en">
@@ -5661,6 +5785,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   <footer class="dash-footer">
     <button type="button" id="btn" class="wc-btn wc-btn-lg wc-btn-primary dash-refresh-btn" title="Refresh the dashboard now. The panel also updates when you return to it or when planning data changes.">Refresh</button>
   </footer>
+  <script>${startupProbe}</script>
   <script>${bootstrap}</script>
   <script>${buildConfigWebviewBootstrapScript({ autoLoad: false })}</script>
 </body>

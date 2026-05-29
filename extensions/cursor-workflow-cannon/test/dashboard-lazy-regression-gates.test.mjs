@@ -37,8 +37,23 @@ test("dashboard webview ready handshake retries initial hydration", () => {
   const providerSrc = fs.readFileSync(providerPath, "utf8");
   const webviewSrc = readSrc("dashboard-webview-client.ts");
   assert.match(webviewSrc, /dashboardWebviewReady/);
+  assert.match(providerSrc, /dashboardWebviewBoot/);
+  assert.match(providerSrc, /dashboardStartupTimeout/);
+  assert.match(providerSrc, /dashboardStartupRefresh/);
+  assert.match(providerSrc, /renderDashboardStartupDirect/);
+  assert.match(providerSrc, /dashboardStartupError/);
+  assert.match(providerSrc, /data-wc-startup-refresh/);
+  assert.match(providerSrc, /data-wc-startup-status/);
   assert.match(providerSrc, /msg\?\.type === "dashboardWebviewReady"/);
   assert.match(providerSrc, /pushUpdate\(\{ projection: "overview", skipHeavyFetches: true \}\)/);
+});
+
+test("first dashboard data render replaces full document before root patches", () => {
+  const providerSrc = fs.readFileSync(providerPath, "utf8");
+  assert.match(providerSrc, /dashboardRootHydrated = false/);
+  assert.match(providerSrc, /if \(!this\.dashboardRootHydrated\)/);
+  assert.match(providerSrc, /webview\.html = this\.buildHtml\(webview, rootInner\)/);
+  assert.match(providerSrc, /wcReplaceRoot/);
 });
 
 function taskEnginePanelHtml(html) {
