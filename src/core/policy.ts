@@ -1,5 +1,6 @@
 import { execFile } from "node:child_process";
 import { BUILTIN_RUN_COMMAND_MANIFEST } from "../contracts/builtin-run-command-manifest.js";
+import { resolveTaskSyncCommandAlias } from "./task-sync-command-aliases.js";
 
 export const POLICY_TRACE_SCHEMA_VERSION = 1 as const;
 
@@ -85,11 +86,11 @@ const COMMAND_POLICY_SENSITIVITY = new Map(
 export function getPolicySensitivityForBuiltinCommand(
   commandName: string
 ): "non-sensitive" | "sensitive" | "sensitive-with-dryrun" | undefined {
-  return COMMAND_POLICY_SENSITIVITY.get(commandName);
+  return COMMAND_POLICY_SENSITIVITY.get(resolveTaskSyncCommandAlias(commandName));
 }
 
 export function getOperationIdForCommand(commandName: string): PolicyOperationId | undefined {
-  return COMMAND_TO_OPERATION[commandName];
+  return COMMAND_TO_OPERATION[resolveTaskSyncCommandAlias(commandName)];
 }
 
 export function getExtraSensitiveModuleCommandsFromEffective(
@@ -131,18 +132,19 @@ export function isSensitiveModuleCommand(
   commandName: string,
   args: Record<string, unknown>
 ): boolean {
-  const sens = COMMAND_POLICY_SENSITIVITY.get(commandName);
+  const canonical = resolveTaskSyncCommandAlias(commandName);
+  const sens = COMMAND_POLICY_SENSITIVITY.get(canonical);
   if (!sens || sens === "non-sensitive") {
     return false;
   }
   if (sens === "sensitive-with-dryrun") {
-    if (commandName === "draft-plan-artifact" && args.persist === false) {
+    if (canonical === "draft-plan-artifact" && args.persist === false) {
       return false;
     }
-    if (commandName === "review-plan-artifact" && args.recordReview !== true) {
+    if (canonical === "review-plan-artifact" && args.recordReview !== true) {
       return false;
     }
-    if (commandName === "finalize-plan-to-phase" && args.dryRun !== false) {
+    if (canonical === "finalize-plan-to-phase" && args.dryRun !== false) {
       return false;
     }
     const options =

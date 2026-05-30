@@ -1,14 +1,9 @@
 <!--
-agentCapsule|v=1|command=task-state-snapshot|module=task-engine|schema_only=pnpm exec wk run task-state-snapshot --schema-only '{}'
+agentCapsule|v=1|command=task-state-snapshot|module=task-engine|alias_of=task-sync-snapshot|schema_only=pnpm exec wk run task-sync-snapshot --schema-only '{}'
 -->
 
-# task-state-snapshot
+# task-state-snapshot (recovery alias)
 
-Create a point-in-time snapshot of the SQLite task projection on the canonical `workflow-cannon/task-state` branch.
+**Preferred command:** [`task-sync-snapshot`](./task-sync-snapshot.md) — same argv and policy surfaces.
 
-## Usage
-
-```
-pnpm exec wk run task-state-snapshot '{"dryRun":true}'
-pnpm exec wk run task-state-snapshot '{"policyApproval":{"confirmed":true,"rationale":"create snapshot"}}'
-```
+Legacy git-oriented name retained for recovery scripts and older playbooks.

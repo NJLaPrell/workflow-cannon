@@ -61,10 +61,10 @@ workspace-kit run convert-phase-note-to-task '{"noteId":"<uuid>","expectedPlanni
 
    - **`service` mode:** dashboard service must be running and healthy (`dashboard-service-status`).
    - **Outbox drained:** no pending/publishing rows in the canonical event outbox (`service-sync-outbox-not-drained`).
-   - **Fresh projection:** `task-state-status` local projection is `fresh` (`service-sync-projection-not-fresh`).
+   - **Fresh projection:** `task-sync-status` local projection is `fresh` (`service-sync-projection-not-fresh`).
    - **No conflicts:** zero failed/conflict outbox rows and no conflict sync posture (`service-sync-conflict-rows`).
 
-   When `dashboard.dataSource` is **`auto`** and the service is not running, preflight may warn and continue on CLI **`task-state-*`** fallback; operators should still clear outbox/projection findings before closeout. Stranded-work findings mean completed task implementation files differ from the selected integration/base ref; merge/rebase that work, or move the task out of `completed` before release prep continues. This check is distinct from task-store branch synchronization.
+   When `dashboard.dataSource` is **`auto`** and the service is not running, preflight may warn and continue on CLI **`task-sync-*`** fallback; operators should still clear outbox/projection findings before closeout. Stranded-work findings mean completed task implementation files differ from the selected integration/base ref; merge/rebase that work, or move the task out of `completed` before release prep continues. This check is distinct from task-store branch synchronization.
 4. Run `workspace-kit run release-evidence-manifest '<json>'` with human approval, release-note evidence, validation records, known risks, publish artifact placeholders/proof, and follow-up scan data. Resolve structured failures before tag/npm/GitHub release actions.
 5. Run full validation on that tip (`pnpm run build`, `pnpm run check`, `pnpm run test`, `pnpm run parity`, and **`pre-merge-gates`** / maintainer gates as in [`RELEASING.md`](../RELEASING.md)).
 6. Run **`workspace-kit run propose-release-version '{"phaseKey":"<N>"}'`** and align `package.json` / changelog version with the recommended bump before tagging (see **`.ai/RELEASING.md`** rule **R200-semver**).
@@ -84,15 +84,15 @@ When **`tasks.canonicalAuthority`** is **`git-event-log`** (Workflow Cannon main
 2. Publish outstanding task-engine mutations to canonical git (normal `wk run` paths with **`git-event-log`** publish events on success, or explicit publish when repairing):
 
    ```bash
-   pnpm exec wk run task-state-status '{"fetch":true}'
+   pnpm exec wk run task-sync-status '{"fetch":true}'
    ```
 
-   Resolve **`behind`** / **`conflict`** with **`task-state-hydrate`** and/or **`task-state-publish`** per [`.ai/runbooks/task-state-git-operator.md`](../runbooks/task-state-git-operator.md).
+   Resolve **`behind`** / **`conflict`** with **`task-sync-hydrate`** and/or **`task-sync-publish`** per [`.ai/runbooks/task-state-git-operator.md`](../runbooks/task-state-git-operator.md).
 
 3. Verify remote layout:
 
    ```bash
-   pnpm exec wk run task-state-verify '{"source":"git","branch":"workflow-cannon/task-state"}'
+   pnpm exec wk run task-sync-verify '{"source":"git","branch":"workflow-cannon/task-state"}'
    ```
 
 4. Push **`workflow-cannon/task-state`** so **`origin/workflow-cannon/task-state`** matches what operators will hydrate.
@@ -107,7 +107,7 @@ When **`tasks.canonicalAuthority`** is **`git-event-log`** (Workflow Cannon main
 ```bash
 git pull origin main
 git checkout -- .workspace-kit/tasks/workspace-kit.db .workspace-kit/tasks/task-state-events.jsonl 2>/dev/null || true
-pnpm exec wk run task-state-hydrate '{"fetch":true,"policyApproval":{"confirmed":true,"rationale":"reconcile after phase merge to main"}}'
+pnpm exec wk run task-sync-hydrate '{"fetch":true,"policyApproval":{"confirmed":true,"rationale":"reconcile after phase merge to main"}}'
 ```
 
 **Recovery-only exception:** committing a SQLite blob requires **`.workspace-kit/policy/task-store-sqlite-commit-approval.json`** and **`check-task-store-commit`** — see [`.ai/runbooks/task-state-git-operator.md`](../runbooks/task-state-git-operator.md) § Recovery-only.

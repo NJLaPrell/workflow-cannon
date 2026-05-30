@@ -76,25 +76,25 @@ export async function routeTaskEngineBeforeOpenPlanningStores(
   if (command.name === "repair-task-state-cache") {
     return runRepairTaskStateCache(ctx, args as Record<string, unknown>);
   }
-  if (command.name === "task-state-status") {
+  if (command.name === "task-sync-status") {
     return runTaskStateStatus(ctx, args as Record<string, unknown>);
   }
-  if (command.name === "task-state-hydrate") {
+  if (command.name === "task-sync-hydrate") {
     return runTaskStateHydrate(ctx, args as Record<string, unknown>);
   }
-  if (command.name === "task-state-init") {
+  if (command.name === "task-sync-init") {
     return runTaskStateInit(ctx, args as Record<string, unknown>);
   }
-  if (command.name === "task-state-verify") {
+  if (command.name === "task-sync-verify") {
     return runTaskStateVerify(ctx, args as Record<string, unknown>);
   }
-  if (command.name === "task-state-publish") {
+  if (command.name === "task-sync-publish") {
     return runTaskStatePublish(ctx, args as Record<string, unknown>);
   }
-  if (command.name === "task-state-snapshot") {
+  if (command.name === "task-sync-snapshot") {
     return runTaskStateSnapshot(ctx, args as Record<string, unknown>);
   }
-  if (command.name === "task-state-compact") {
+  if (command.name === "task-sync-compact") {
     return runTaskStateCompact(ctx, args as Record<string, unknown>);
   }
   if (command.name === "task-state-migrate-baseline") {

@@ -20,9 +20,9 @@ export type GitBackendMethodMap = {
 
 /** CLI/runtime flows that compose backend methods but are not on the interface. */
 export type GitDerivedCommandMap = {
-  "task-state-status": "readHead + local projection meta + outbox → TaskSyncStatusV1";
-  "task-state-hydrate": "fetchEvents (+ snapshot tail) then apply to SQLite/JSONL cache";
-  "task-state-publish": "outbox drain → publishEvents";
+  "task-sync-status": "readHead + local projection meta + outbox → TaskSyncStatusV1";
+  "task-sync-hydrate": "fetchEvents (+ snapshot tail) then apply to SQLite/JSONL cache";
+  "task-sync-publish": "outbox drain → publishEvents";
 };
 
 export const GIT_EVENT_LOG_BACKEND_COMPAT: readonly GitMethodCompatEntry[] = [
@@ -71,15 +71,15 @@ export const GIT_EVENT_LOG_BACKEND_COMPAT: readonly GitMethodCompatEntry[] = [
 export const GIT_DERIVED_COMMAND_COMPAT: Readonly<
   Record<keyof GitDerivedCommandMap, { sources: readonly string[]; notes: string }>
 > = {
-  "task-state-status": {
+  "task-sync-status": {
     sources: ["src/modules/task-engine/persistence/task-state-status-runtime.ts"],
     notes: "Maps remoteLatestSequence/localAppliedSequence to TaskSyncStatusV1.syncState."
   },
-  "task-state-hydrate": {
+  "task-sync-hydrate": {
     sources: ["src/modules/task-engine/persistence/task-state-hydrate-runtime.ts"],
     notes: "Uses fetchEvents semantics; local apply is outside the backend interface."
   },
-  "task-state-publish": {
+  "task-sync-publish": {
     sources: ["src/modules/task-engine/persistence/task-state-publish-runtime.ts"],
     notes: "Drains canonical event outbox then calls publishEvents."
   }
