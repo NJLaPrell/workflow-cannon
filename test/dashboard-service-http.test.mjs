@@ -60,6 +60,7 @@ describe("dashboard service HTTP", () => {
       const flush = await flushRes.json();
       assert.equal(flush.schemaVersion, 1);
       assert.equal(typeof flush.code, "string");
+      assert.equal(typeof health.taskSyncWorker, "object");
 
       const refreshRes = await fetch(`${base}/dashboard/refresh`, {
         method: "POST",
@@ -127,6 +128,15 @@ describe("dashboard service HTTP", () => {
       assert.ok(
         first.type === "dashboard.slice.updated" || first.type === "dashboard.snapshot.updated"
       );
+
+      const pauseRes = await fetch(`${base}/task-sync/pause`, { method: "POST" });
+      assert.equal(pauseRes.status, 200);
+      const pause = await pauseRes.json();
+      assert.equal(pause.ok, true);
+      const resumeRes = await fetch(`${base}/task-sync/resume`, { method: "POST" });
+      assert.equal(resumeRes.status, 200);
+      const resume = await resumeRes.json();
+      assert.equal(resume.ok, true);
     } finally {
       await svc.stop();
     }
