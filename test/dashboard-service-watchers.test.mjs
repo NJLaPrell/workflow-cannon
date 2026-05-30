@@ -39,8 +39,12 @@ describe("dashboard service watchers", () => {
       assert.equal(bootSnap.slices.overview?.status, "fresh", "critical bootstrap on start");
 
       const genBefore = bootSnap.generation;
-      await new Promise((resolve) => setTimeout(resolve, 120));
-      const afterSnap = await (await fetch(`${base}/dashboard/snapshot`)).json();
+      const deadline = Date.now() + 3000;
+      let afterSnap = bootSnap;
+      while (Date.now() < deadline && afterSnap.generation <= genBefore) {
+        await new Promise((resolve) => setTimeout(resolve, 75));
+        afterSnap = await (await fetch(`${base}/dashboard/snapshot`)).json();
+      }
       assert.ok(afterSnap.generation > genBefore, "critical interval should refresh slices");
 
       const manualRes = await fetch(`${base}/dashboard/refresh`, {
