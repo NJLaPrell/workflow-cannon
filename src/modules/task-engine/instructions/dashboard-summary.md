@@ -24,9 +24,13 @@ Optional JSON object:
 | `wishlistPageSize` | integer (1–100) | `10` | Rows per wishlist page (`openTop` length). |
 | `includePhaseFocus` | boolean | `false` | When `true`, adds **`phaseFocus`** (`AgentPhaseFocusDashboard` v1) — same bounded slice as **`phase-focus-dashboard`**. |
 | `phaseKey` | string | workspace current | Phase scope for **`phaseFocus`** when `includePhaseFocus` is set. |
-| `projection` | string (`full`, `overview`, `queue`, `status`) | `full` | Section slice for lazy dashboard hydration. **`overview`** omits queue rollups and phase-journal SQLite reads; extension uses it for first paint after the shell (T100396). CLI default **`full`** preserves aggregate compatibility. |
+| `projection` | string (`full`, `overview`, `queue`, `status`) | `full` | Section slice for lazy dashboard hydration. **`overview`** omits queue rollups and phase-journal SQLite reads; skips `build-plan` session read and wishlist paging work at build time (T100590). Extension uses **`overview`** for first paint after the shell (T100396). CLI default **`full`** preserves aggregate compatibility. |
 
 Also accepts standard invocation `config` / `actor` overlays where applicable.
+
+## Build pipeline
+
+`buildDashboardBase` assembles shared dashboard state with projection guards (`dashboardSummaryNeedsQueueRollups`, `dashboardSummaryNeedsStatusRollups`, etc.) so expensive queue rollups and overview-only skips (e.g. planning session file read) happen **before** projection assembly. Section builders (`buildDashboardOverviewProjection`, `buildDashboardQueueProjection`, `buildDashboardStatusProjection`, `buildDashboardFullProjection`) map the base object; `finalizeDashboardSummaryProjection` stamps `dashboardProjection` and applies field omissions for each slice.
 
 ## Returns
 

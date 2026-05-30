@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "description": "Source (.ai) → human render (docs/maintainers). Regenerate list when adding paths; drift + orphan checks consume this file.",
+  "description": "Source (.ai) \u2192 human render (docs/maintainers). Regenerate list when adding paths; drift + orphan checks consume this file.",
   "mappings": [
     {
       "source": ".ai/playbooks/improvement-scout.md",
@@ -97,6 +97,10 @@
     {
       "source": ".ai/runbooks/cursor-transcript-automation.md",
       "output": "docs/maintainers/runbooks/cursor-transcript-automation.md"
+    },
+    {
+      "source": ".ai/runbooks/dashboard-data-map.md",
+      "output": "docs/maintainers/runbooks/dashboard-data-map.md"
     },
     {
       "source": ".ai/runbooks/documentation-governance-checks.md",
