@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workflow-cannon.dev/schemas/dashboard-service-event.v1.json",
+  "title": "Dashboard service SSE event v1",
+  "description": "Events emitted on GET /dashboard/events for Option 2 live refresh.",
+  "oneOf": [
+    { "$ref": "#/$defs/dashboardSnapshotUpdated" },
+    { "$ref": "#/$defs/dashboardSliceUpdated" },
+    { "$ref": "#/$defs/dashboardServiceError" }
+  ],
+  "$defs": {
+    "dashboardSnapshotUpdated": {
+      "type": "object",
+      "required": ["type", "generation", "changedSlices", "updatedAt"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "dashboard.snapshot.updated" },
+        "generation": { "type": "integer", "minimum": 0 },
+        "changedSlices": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "updatedAt": { "type": "string", "minLength": 1 }
+      }
+    },
+    "dashboardSliceUpdated": {
+      "type": "object",
+      "required": ["type", "generation", "slice", "updatedAt"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "dashboard.slice.updated" },
+        "generation": { "type": "integer", "minimum": 0 },
+        "slice": { "type": "string", "minLength": 1 },
+        "updatedAt": { "type": "string", "minLength": 1 }
+      }
+    },
+    "dashboardServiceError": {
+      "type": "object",
+      "required": ["type", "message"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "dashboard.service.error" },
+        "message": { "type": "string", "minLength": 1 },
+        "code": { "type": "string" }
+      }
+    }
+  }
+}

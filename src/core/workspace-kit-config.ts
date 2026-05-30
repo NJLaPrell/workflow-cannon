@@ -117,6 +117,10 @@ export const KIT_CONFIG_DEFAULTS: Record<string, unknown> = {
       enforcementMode: "enforce"
     }
   },
+  /** Dashboard extension read path (Option 2); see `dashboard.dataSource` registry key. */
+  dashboard: {
+    dataSource: "auto"
+  },
   maintainerDelivery: {
     defaultProfile: "github-pr",
     enforcementMode: "advisory",

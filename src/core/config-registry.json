@@ -1282,5 +1282,26 @@
       "project",
       "user"
     ]
+  },
+  "dashboard.dataSource": {
+    "key": "dashboard.dataSource",
+    "type": "string",
+    "description": "Dashboard read path for the Cursor extension: cli-polling (Option 1 pollers), service (warm kit HTTP/SSE daemon), or auto (probe service then fall back). Invalid values fail fast when the dashboard service starts.",
+    "default": "auto",
+    "allowedValues": [
+      "cli-polling",
+      "service",
+      "auto"
+    ],
+    "domainScope": "project",
+    "owningModule": "task-engine",
+    "sensitive": false,
+    "requiresRestart": true,
+    "requiresApproval": false,
+    "exposure": "public",
+    "writableLayers": [
+      "project",
+      "user"
+    ]
   }
 }
