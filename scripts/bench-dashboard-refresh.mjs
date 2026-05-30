@@ -63,3 +63,8 @@ console.log(`  queue dashboardProjection: ${queueProj ?? "n/a"}`);
 console.log(
   `  initial-open target: overview only (~${padMs(overview.ms)} ms); defer secondary (~${padMs(secondaryMs)} ms) until tab activation`
 );
+console.log("");
+console.log("  Option 1 SLA gates (extension pollers — not measured here):");
+console.log("    critical slices target ≤5000 ms freshness");
+console.log("    visible non-heavy slices target ≤10000 ms freshness");
+console.log("  Enable slice trace: WORKSPACE_KIT_DEBUG_DASHBOARD=1");

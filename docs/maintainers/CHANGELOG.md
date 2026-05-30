@@ -8,6 +8,23 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [0.99.19] - 2026-05-30
+
+Patch — **Phase 121 Dashboard Option 1** (state store + targeted pollers; replaces monolithic 45s refresh).
+
+### Added
+
+- `.ai/runbooks/dashboard-data-map.md` — machine dashboard slice → source → UI map.
+- Extension `DashboardDataStore`, slice registry, `DashboardPollerCoordinator`, load trace, and freshness labels per section.
+- Kit `build-dashboard-base` projection builders so `dashboard-summary` overview skips queue rollup work at build time.
+- Acceptance tests: `dashboard-data-store`, `dashboard-pollers`, `dashboard-option1-acceptance`.
+
+### Changed
+
+- `DashboardViewProvider` renders from store snapshots; critical/queue/ops/status poll groups replace the global 45s `pushNow` interval.
+- Mutations pause pollers, mark affected slices stale, and `refreshSlicesNow` on success.
+
+
 ## [0.99.18] - 2026-05-29
 
 Patch — **Phase 118 closeout** (dashboard phase-roster sync; CI optimization scope cancelled).

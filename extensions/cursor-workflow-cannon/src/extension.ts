@@ -114,6 +114,7 @@ export function activate(context: vscode.ExtensionContext): void {
   let guidancePanel: GuidancePanel | undefined;
   let statusDashboard: StatusDashboardPanel | undefined;
   let taskStateSync: TaskStateSyncCoordinator | undefined;
+  let taskStateActivateSyncScheduled = false;
 
   if (client && folder) {
     dashboard = new DashboardViewProvider(
@@ -121,7 +122,14 @@ export function activate(context: vscode.ExtensionContext): void {
       client,
       onKitStateChanged,
       () => kitStateEmitter.fire(),
-      () => taskStateSync?.isSyncing() ?? false
+      () => taskStateSync?.isSyncing() ?? false,
+      () => {
+        if (taskStateActivateSyncScheduled || !taskStateSync) {
+          return;
+        }
+        taskStateActivateSyncScheduled = true;
+        taskStateSync.requestSync("activate");
+      }
     );
     const watcher = new StateWatcher(
       folder,
@@ -146,8 +154,15 @@ export function activate(context: vscode.ExtensionContext): void {
     });
     if (taskStateSyncSettings.enabled) {
       taskStateSync.start();
-      taskStateSync.requestSync("activate");
+      // Defer activate sync until first dashboard paint (see CommandClient.runForDashboardPaint).
       registerGitTaskStateSyncListener(folder, taskStateSync, context.subscriptions);
+      setTimeout(() => {
+        if (taskStateActivateSyncScheduled || !taskStateSync) {
+          return;
+        }
+        taskStateActivateSyncScheduled = true;
+        taskStateSync.requestSync("activate-fallback");
+      }, 30_000);
     }
     context.subscriptions.push({ dispose: () => taskStateSync?.stop() });
     guidancePanel = new GuidancePanel(context.extensionUri, client, onKitStateChanged, folder);

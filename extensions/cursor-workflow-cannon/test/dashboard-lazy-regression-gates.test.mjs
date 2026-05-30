@@ -26,11 +26,12 @@ test("initial overview hydration skips secondary kit commands (T100400 regressio
   assert.doesNotMatch(skipBlock, /cae-authoring-summary/);
 });
 
-test("initial pushUpdate uses overview projection with skipHeavyFetches", () => {
+test("initial webview resolve paints via startup direct render (overview)", () => {
   const resolveBlock = fs.readFileSync(providerPath, "utf8").slice(
     fs.readFileSync(providerPath, "utf8").indexOf("resolveWebviewView(")
   );
-  assert.match(resolveBlock, /pushUpdate\(\{ projection: "overview", skipHeavyFetches: true \}\)/);
+  assert.match(resolveBlock, /renderDashboardStartupDirect\(webview\)/);
+  assert.match(resolveBlock, /runDashboardSummary/);
 });
 
 test("dashboard webview ready handshake retries initial hydration", () => {
@@ -45,7 +46,7 @@ test("dashboard webview ready handshake retries initial hydration", () => {
   assert.match(providerSrc, /data-wc-startup-refresh/);
   assert.match(providerSrc, /data-wc-startup-status/);
   assert.match(providerSrc, /msg\?\.type === "dashboardWebviewReady"/);
-  assert.match(providerSrc, /pushUpdate\(\{ projection: "overview", skipHeavyFetches: true \}\)/);
+  assert.match(providerSrc, /renderDashboardStartupDirect/);
 });
 
 test("first dashboard data render replaces full document before root patches", () => {

@@ -812,6 +812,20 @@ export class CommandClient {
     });
   }
 
+  /**
+   * First dashboard paint only — bypasses refresh/mutation lane backlog and refresh pause
+   * so task-state sync on activate cannot block the webview past the startup timeout.
+   */
+  async runForDashboardPaint(
+    commandName: string,
+    args: Record<string, unknown>
+  ): Promise<KitRunResult> {
+    if (!isKitRefreshRunCommand(commandName)) {
+      return this.run(commandName, args);
+    }
+    return this.runOnce(commandName, args);
+  }
+
   /** Single serialized `workspace-kit run` invocation (do not call directly). */
   private async runOnce(commandName: string, args: Record<string, unknown>): Promise<KitRunResult> {
     this.activeRunCommand = commandName;
