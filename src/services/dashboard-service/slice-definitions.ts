@@ -2,9 +2,11 @@
  * Kit-side dashboard slice refresh definitions (mirrors extension `dashboard-slice-registry.ts`).
  */
 import type { DashboardServiceSliceName } from "../../contracts/dashboard-snapshot.js";
+import type { DashboardServicePollGroup } from "./poll-groups.js";
 
 export type DashboardServiceSliceDefinition = {
   readonly name: DashboardServiceSliceName;
+  readonly pollGroup: DashboardServicePollGroup;
   readonly command: string;
   readonly args: Readonly<Record<string, unknown>>;
   readonly source: string;
@@ -32,6 +34,7 @@ const SHARED_META_KEYS = [
 export const DASHBOARD_SERVICE_SLICE_DEFINITIONS: readonly DashboardServiceSliceDefinition[] = [
   {
     name: "overview",
+    pollGroup: "critical",
     command: "dashboard-summary",
     args: { projection: "overview" },
     source: "dashboard-summary:overview",
@@ -61,6 +64,7 @@ export const DASHBOARD_SERVICE_SLICE_DEFINITIONS: readonly DashboardServiceSlice
   },
   {
     name: "phase",
+    pollGroup: "critical",
     command: "dashboard-summary",
     args: { projection: "overview" },
     source: "dashboard-summary:overview",
@@ -79,6 +83,7 @@ export const DASHBOARD_SERVICE_SLICE_DEFINITIONS: readonly DashboardServiceSlice
   },
   {
     name: "agent",
+    pollGroup: "critical",
     command: "dashboard-summary",
     args: { projection: "overview" },
     source: "dashboard-summary:overview",
@@ -87,6 +92,7 @@ export const DASHBOARD_SERVICE_SLICE_DEFINITIONS: readonly DashboardServiceSlice
   },
   {
     name: "queue",
+    pollGroup: "queue",
     command: "dashboard-summary",
     args: { projection: "queue" },
     source: "dashboard-summary:queue",
@@ -112,6 +118,7 @@ export const DASHBOARD_SERVICE_SLICE_DEFINITIONS: readonly DashboardServiceSlice
   },
   {
     name: "ideas",
+    pollGroup: "queue",
     command: "dashboard-summary",
     args: { projection: "queue" },
     source: "dashboard-summary:queue",
@@ -119,6 +126,7 @@ export const DASHBOARD_SERVICE_SLICE_DEFINITIONS: readonly DashboardServiceSlice
   },
   {
     name: "team",
+    pollGroup: "ops",
     command: "dashboard-summary",
     args: { projection: "overview" },
     source: "dashboard-summary:overview",
@@ -126,6 +134,7 @@ export const DASHBOARD_SERVICE_SLICE_DEFINITIONS: readonly DashboardServiceSlice
   },
   {
     name: "subagents",
+    pollGroup: "ops",
     command: "dashboard-summary",
     args: { projection: "overview" },
     source: "dashboard-summary:overview",
@@ -133,6 +142,7 @@ export const DASHBOARD_SERVICE_SLICE_DEFINITIONS: readonly DashboardServiceSlice
   },
   {
     name: "checkpoints",
+    pollGroup: "ops",
     command: "dashboard-summary",
     args: { projection: "overview" },
     source: "dashboard-summary:overview",
@@ -140,6 +150,7 @@ export const DASHBOARD_SERVICE_SLICE_DEFINITIONS: readonly DashboardServiceSlice
   },
   {
     name: "status",
+    pollGroup: "status",
     command: "dashboard-summary",
     args: { projection: "status" },
     source: "dashboard-summary:status",
@@ -155,6 +166,7 @@ export const DASHBOARD_SERVICE_SLICE_DEFINITIONS: readonly DashboardServiceSlice
   },
   {
     name: "phaseJournal",
+    pollGroup: "manual",
     command: "dashboard-summary",
     args: { projection: "queue" },
     source: "dashboard-summary:queue",
@@ -163,6 +175,7 @@ export const DASHBOARD_SERVICE_SLICE_DEFINITIONS: readonly DashboardServiceSlice
   },
   {
     name: "cae",
+    pollGroup: "manual",
     command: "cae-authoring-summary",
     args: { schemaVersion: 1 },
     source: "cae-authoring-summary",
@@ -170,6 +183,7 @@ export const DASHBOARD_SERVICE_SLICE_DEFINITIONS: readonly DashboardServiceSlice
   },
   {
     name: "config",
+    pollGroup: "manual",
     command: "dashboard-summary",
     args: { projection: "overview" },
     source: "dashboard-summary:overview",

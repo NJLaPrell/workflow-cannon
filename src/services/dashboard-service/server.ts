@@ -6,6 +6,12 @@ import { DashboardSnapshotStore } from "./snapshot-store.js";
 import { DashboardSliceRefresher } from "./slice-refreshers.js";
 import { DashboardSseHub } from "./events.js";
 import { handleDashboardServiceRequest, wireDashboardServiceEvents } from "./routes.js";
+import { DashboardServiceWatchers } from "./watchers.js";
+import { resolveRegistryAndConfig } from "../../core/module-registry-resolve.js";
+import { defaultRegistryModules } from "../../modules/index.js";
+import {
+  type DashboardServicePollGroup
+} from "./poll-groups.js";
 
 export type DashboardServiceHandle = {
   server: Server;
@@ -13,6 +19,7 @@ export type DashboardServiceHandle = {
   port: number;
   snapshotStore: DashboardSnapshotStore;
   refresher: DashboardSliceRefresher;
+  watchers: DashboardServiceWatchers;
   stop: () => Promise<void>;
 };
 
@@ -21,6 +28,8 @@ export type CreateDashboardServiceOptions = {
   host?: string;
   port?: number;
   serviceVersion?: string;
+  /** Test hook: override tiered poll intervals. */
+  pollIntervalMs?: Partial<Record<Exclude<DashboardServicePollGroup, "manual">, number>>;
 };
 
 function readKitPackageVersion(): string {
@@ -41,6 +50,19 @@ export async function createDashboardService(
   const unwire = wireDashboardServiceEvents(snapshotStore, sseHub);
 
   await refresher.start();
+
+  const { effective } = await resolveRegistryAndConfig(
+    options.workspacePath,
+    defaultRegistryModules,
+    {}
+  );
+  const watchers = new DashboardServiceWatchers({
+    workspacePath: options.workspacePath,
+    ctx: { runtimeVersion: "0.1", workspacePath: options.workspacePath, effectiveConfig: effective },
+    refresher,
+    pollIntervalMs: options.pollIntervalMs
+  });
+  await watchers.start();
 
   const server = createServer((req, res) => {
     void handleDashboardServiceRequest(req, res, { snapshotStore, refresher, sseHub }).catch((error) => {
@@ -63,6 +85,7 @@ export async function createDashboardService(
   const stop = async (): Promise<void> => {
     unwire();
     sseHub.closeAll();
+    await watchers.stop();
     await refresher.stop();
     await new Promise<void>((resolve, reject) => {
       server.close((err) => (err ? reject(err) : resolve()));
@@ -75,6 +98,7 @@ export async function createDashboardService(
     port: address.port,
     snapshotStore,
     refresher,
+    watchers,
     stop
   };
 }
