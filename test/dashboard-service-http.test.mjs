@@ -12,6 +12,20 @@ async function tmpWorkspace() {
   return fs.mkdtemp(path.join(os.tmpdir(), "wk-dash-svc-"));
 }
 
+async function waitForSliceFresh(base, sliceName, timeoutMs = 15_000) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const health = await (await fetch(`${base}/health`)).json();
+    if (health.slices?.[sliceName]?.status === "fresh") {
+      return health;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  const health = await (await fetch(`${base}/health`)).json();
+  assert.equal(health.slices?.[sliceName]?.status, "fresh");
+  return health;
+}
+
 async function seedEmptySqlite(workspace) {
   const { mkdir } = await import("node:fs/promises");
   const { SqliteDualPlanningStore } = await import("../dist/modules/task-engine/persistence/sqlite-dual-planning.js");
@@ -72,7 +86,7 @@ describe("dashboard service HTTP", () => {
       assert.equal(refresh.ok, true);
       assert.ok(refresh.changedSlices.includes("overview"));
 
-      const healthAfter = await (await fetch(`${base}/health`)).json();
+      const healthAfter = await waitForSliceFresh(base, "overview");
       assert.equal(healthAfter.slices.overview?.status, "fresh");
       assert.equal(typeof healthAfter.slices.overview?.lastDurationMs, "number");
       assert.equal(healthAfter.summary.totalRefreshes >= 1, true);
