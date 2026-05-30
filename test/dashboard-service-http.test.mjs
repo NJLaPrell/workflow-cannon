@@ -40,6 +40,27 @@ describe("dashboard service HTTP", () => {
       assert.equal(typeof health.slices, "object");
       assert.equal(typeof health.summary, "object");
 
+      const statusRes = await fetch(`${base}/status`);
+      assert.equal(statusRes.status, 200);
+      const status = await statusRes.json();
+      assert.equal(status.schemaVersion, 1);
+      assert.equal(status.health, "ok");
+      assert.equal(typeof status.dashboard.generation, "number");
+      assert.ok(Array.isArray(status.dashboard.staleSlices));
+
+      const syncRes = await fetch(`${base}/task-sync/status`);
+      assert.equal(syncRes.status, 200);
+      const sync = await syncRes.json();
+      assert.equal(sync.schemaVersion, 1);
+      assert.equal(typeof sync.syncState, "string");
+      assert.equal(typeof sync.outbox, "object");
+
+      const flushRes = await fetch(`${base}/task-sync/flush`, { method: "POST" });
+      assert.ok(flushRes.status === 200 || flushRes.status === 503);
+      const flush = await flushRes.json();
+      assert.equal(flush.schemaVersion, 1);
+      assert.equal(typeof flush.code, "string");
+
       const refreshRes = await fetch(`${base}/dashboard/refresh`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
