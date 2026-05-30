@@ -8,6 +8,20 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [0.99.21] - 2026-05-30
+
+Patch — **Phase 123 Local-first outbox sync** (canonical event outbox, background publisher, sync posture).
+
+### Added
+
+- SQLite v30 `kit_canonical_event_outbox` schema and repository API for idempotent canonical event enqueue.
+- `tasks.canonicalPublishQueue` mode: mutations enqueue locally when Git is unavailable; background batch publisher to `workflow-cannon/task-state`.
+- Sync posture on `task-state-status` / dashboard (outbox pending/failed/conflict counts).
+
+### Changed
+
+- Agent runbooks: `task-state-hydrate` / `task-state-publish` documented as recovery/admin paths only; closeout requires outbox drained or explicit waiver.
+
 ## [0.99.20] - 2026-05-30
 
 Patch — **Phase 122 Dashboard Option 2** (warm read service + extension auto mode).
