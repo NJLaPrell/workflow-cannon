@@ -1058,6 +1058,38 @@
   },
   {
     "moduleId": "task-engine",
+    "name": "dashboard-service-start",
+    "file": "dashboard-service-start.md",
+    "description": "Start the warm dashboard read service (localhost HTTP/SSE); writes runtime.json.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "dashboard-service-stop",
+    "file": "dashboard-service-stop.md",
+    "description": "Stop the dashboard read service (SIGTERM + runtime cleanup).",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "dashboard-service-status",
+    "file": "dashboard-service-status.md",
+    "description": "Read-only dashboard service health, pid, port, uptime, generation.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "dashboard-service-snapshot",
+    "file": "dashboard-service-snapshot.md",
+    "description": "Fetch warm DashboardServiceSnapshot from the running read service.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
     "name": "explain-task-engine-model",
     "file": "explain-task-engine-model.md",
     "description": "Explain model variants, planning boundaries, lifecycle transitions, and required fields.",

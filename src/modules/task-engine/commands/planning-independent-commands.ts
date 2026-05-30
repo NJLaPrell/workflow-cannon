@@ -45,6 +45,12 @@ import {
 } from "./git-policy-hooks-commands.js";
 import { runCheckTaskStoreCommit } from "../persistence/check-task-store-commit-runtime.js";
 import { runGetLastOutput } from "./get-last-output-command.js";
+import {
+  runDashboardServiceSnapshot,
+  runDashboardServiceStart,
+  runDashboardServiceStatus,
+  runDashboardServiceStop
+} from "../../../services/dashboard-service/lifecycle-runtime.js";
 
 /** If non-null, dispatch should return immediately (command fully handled without planning stores). */
 export async function routeTaskEngineBeforeOpenPlanningStores(
@@ -188,6 +194,18 @@ export async function routeTaskEngineBeforeOpenPlanningStores(
           code: "task-not-found",
           message: `No module state found for '${moduleId}'`
         };
+  }
+  if (command.name === "dashboard-service-start") {
+    return runDashboardServiceStart(ctx);
+  }
+  if (command.name === "dashboard-service-stop") {
+    return runDashboardServiceStop(ctx);
+  }
+  if (command.name === "dashboard-service-status") {
+    return runDashboardServiceStatus(ctx);
+  }
+  if (command.name === "dashboard-service-snapshot") {
+    return runDashboardServiceSnapshot(ctx);
   }
 
   return null;

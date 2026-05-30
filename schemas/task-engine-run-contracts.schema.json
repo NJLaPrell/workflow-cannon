@@ -125,6 +125,10 @@
         "set-agent-activity",
         "start-task",
         "dashboard-summary",
+        "dashboard-service-snapshot",
+        "dashboard-service-start",
+        "dashboard-service-status",
+        "dashboard-service-stop",
         "derive-publish-artifacts",
         "derive-validations",
         "demote-task",
@@ -450,6 +454,18 @@
         },
         "dashboard-summary": {
           "$ref": "#/$defs/contractDashboardSummary"
+        },
+        "dashboard-service-start": {
+          "$ref": "#/$defs/contractBase"
+        },
+        "dashboard-service-stop": {
+          "$ref": "#/$defs/contractBase"
+        },
+        "dashboard-service-status": {
+          "$ref": "#/$defs/contractBase"
+        },
+        "dashboard-service-snapshot": {
+          "$ref": "#/$defs/contractBase"
         },
         "demote-task": {
           "$ref": "#/$defs/contractTaskIntentWithTaskId"

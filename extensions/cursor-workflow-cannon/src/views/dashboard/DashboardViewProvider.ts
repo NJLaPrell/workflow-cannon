@@ -62,6 +62,11 @@ import {
 import { DashboardDataStore } from "./dashboard-data-store.js";
 import { DashboardLoadTrace, isDashboardLoadTraceEnabled } from "./dashboard-load-trace.js";
 import { DashboardPollerCoordinator } from "./dashboard-pollers.js";
+import { DashboardReadPathCoordinator } from "./dashboard-read-path-coordinator.js";
+import {
+  formatDashboardReadModeBadgeDetail,
+  formatDashboardReadModeBadgeLabel
+} from "./dashboard-read-mode-badge.js";
 import {
   dashboardSectionIdForSlice,
   mergeSlicePayloadIntoSummary,
@@ -83,6 +88,7 @@ import {
   renderDashboardPhaseJournalSectionInnerHtml,
   renderDashboardRootInnerHtml,
   renderDashboardStatusSectionInnerHtml,
+  type RenderDashboardRootOptions,
   type DashboardPhaseJournalBundle,
   type PhaseJournalKitPayload,
   type PlanningInterviewWizardPanel
@@ -390,6 +396,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   private readonly dashboardStore = new DashboardDataStore();
   private readonly dashboardLoadTrace = new DashboardLoadTrace();
   private readonly dashboardPollers: DashboardPollerCoordinator;
+  private readonly readPath: DashboardReadPathCoordinator;
   private storeUnsubscribe?: () => void;
   /** After first full HTML load, refresh only swaps `#root` via postMessage so `<details open>` state survives. */
   private dashboardRootShellReady = false;
@@ -475,7 +482,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       isDeferred: () => this.isDashboardRefreshDeferred(),
       onMutationStart: () => {
         this.client.setRefreshPaused(true);
-        this.dashboardPollers?.pause();
+        this.readPath?.pause();
       },
       log: (message) => {
         if (isWcTraceVerbose()) {
@@ -497,12 +504,73 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       },
       trace: isDashboardLoadTraceEnabled() ? this.dashboardLoadTrace : undefined
     });
+    this.readPath = new DashboardReadPathCoordinator({
+      workspacePath: this.client.getWorkspaceRoot(),
+      client: this.client,
+      store: this.dashboardStore,
+      pollers: this.dashboardPollers,
+      log: (message) => {
+        if (isWcTraceVerbose()) {
+          logWc("dashboard", message);
+        }
+      },
+      onModeChanged: () => {
+        this.postDashboardReadModeBadge();
+      }
+    });
     this.storeUnsubscribe = this.dashboardStore.subscribe((update) => {
       void this.onDashboardSliceUpdate(update.name);
     });
     onKitStateChanged(() => {
       void this.onKitStateChangedRefresh();
     });
+  }
+
+  private dashboardRenderRootOptions(extra?: RenderDashboardRootOptions): RenderDashboardRootOptions {
+    return {
+      ...extra,
+      readModeBadge: this.readPath.getModeBadge()
+    };
+  }
+
+  private postDashboardReadModeBadge(): void {
+    const webview = this.view?.webview;
+    if (!webview) {
+      return;
+    }
+    const badge = this.readPath.getModeBadge();
+    void webview.postMessage({
+      type: "wcDashboardReadMode",
+      badge: {
+        label: formatDashboardReadModeBadgeLabel(badge),
+        detail: formatDashboardReadModeBadgeDetail(badge)
+      }
+    });
+  }
+
+  /** Re-resolve `dashboard.dataSource` after config file changes (T100599). */
+  reloadReadPathFromConfig(): void {
+    void this.readPath.reloadFromConfig();
+  }
+
+  async restartDashboardService(): Promise<void> {
+    const result = await this.readPath.restartDashboardService();
+    if (!result.ok) {
+      await vscode.window.showErrorMessage(
+        result.message ?? "Failed to start dashboard service"
+      );
+      return;
+    }
+    await vscode.window.showInformationMessage(
+      result.message ?? "Dashboard service restarted"
+    );
+  }
+
+  async forceCliDashboardRefreshMode(): Promise<void> {
+    await this.readPath.forceCliPollingMode();
+    await vscode.window.showInformationMessage(
+      "Dashboard is using CLI refresh mode for this session."
+    );
   }
 
   private markDashboardRootHydrated(): void {
@@ -579,7 +647,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       }
       return section.tabId === this.activeDashboardTab;
     }).map((section) => section.id);
-    this.dashboardPollers.setVisibleSections(visible);
+    this.readPath.setVisibleSections(visible);
   }
 
   private ingestDashboardSummaryIntoStore(
@@ -644,7 +712,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         this.planningWizardPanel(),
         editorIntegration,
         undefined,
-        this.lastEmbeddedCaePanelHtml
+        this.lastEmbeddedCaePanelHtml,
+        this.dashboardRenderRootOptions()
       );
     } catch (e) {
       logWc(
@@ -1357,10 +1426,12 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         return;
       }
       this.syncVisibleSectionsToPollers();
-      void this.dashboardPollers.refreshCriticalNow();
+      void this.readPath.refreshCriticalNow();
     });
     this.dashboardStore.start();
-    this.dashboardPollers.start();
+    void this.readPath.start().then(() => {
+      this.postDashboardReadModeBadge();
+    });
     webviewView.onDidDispose(() => {
       this.dashboardRootShellReady = false;
       this.dashboardRootHydrated = false;
@@ -1371,7 +1442,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       this.webviewMessageDisposable = undefined;
       this.refreshController.notifyMutationEnd();
       this.client.setRefreshPaused(false);
-      this.dashboardPollers.stop();
+      void this.readPath.stop();
       this.storeUnsubscribe?.();
       this.storeUnsubscribe = undefined;
       this.dashboardStore.dispose();
@@ -1388,7 +1459,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     void this.renderDashboardStartupDirect(webview).then(() => {
       if (this.dashboardRootHydrated) {
         this.syncVisibleSectionsToPollers();
-        void this.dashboardPollers.refreshCriticalNow();
+        void this.readPath.refreshCriticalNow();
       }
     });
   }
@@ -1438,7 +1509,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
             "config",
             "cae",
             "phase-journal"
-          ])
+          ]),
+          readModeBadge: this.readPath.getModeBadge()
         }
       );
       this.hydratedDashboardSections.clear();
@@ -1619,7 +1691,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         this.dashboardStore.markStale(sliceName, `mutation:${kind}`);
       }
     }
-    this.dashboardPollers.pause();
+    this.readPath.pause();
     const toStale: DashboardSectionId[] = [];
     const toRefresh: DashboardSectionId[] = [];
     for (const sectionId of sectionIds) {
@@ -1641,10 +1713,10 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         await this.patchDashboardSectionsFromSummary(toRefresh);
       }
       if (typeof kind === "string") {
-        await this.dashboardPollers.refreshSlicesNow(dashboardSliceNamesForMutation(kind));
+        await this.readPath.refreshSlicesNow(dashboardSliceNamesForMutation(kind));
       }
     } finally {
-      this.dashboardPollers.resume();
+      this.readPath.resume();
     }
   }
 
@@ -1798,7 +1870,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         wizardPanel,
         editorIntegration,
         phaseJournal,
-        embeddedCaePanelHtml
+        embeddedCaePanelHtml,
+        this.dashboardRenderRootOptions()
       );
     } catch (e) {
       logWc(
@@ -2938,13 +3011,13 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   private beginDashboardMutationRefreshHold(): void {
     this.refreshController.notifyMutationStart();
     this.client.setRefreshPaused(true);
-    this.dashboardPollers.pause();
+    this.readPath.pause();
   }
 
   private endDashboardMutationRefreshHold(): void {
     this.refreshController.notifyMutationEnd();
     this.client.setRefreshPaused(false);
-    this.dashboardPollers.resume();
+    this.readPath.resume();
   }
 
   /** Hold dashboard refresh while a drawer mutating batch runs (accept-all, etc.). */
@@ -4400,16 +4473,18 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         editorIntegration,
         phaseJournal,
         embeddedCaePanelHtml,
-        useDeferredSecondary
-          ? {
-              deferredSections: new Set<DashboardSectionId>([
-                "status",
-                "config",
-                "cae",
-                "phase-journal"
-              ])
-            }
-          : undefined
+        this.dashboardRenderRootOptions(
+          useDeferredSecondary
+            ? {
+                deferredSections: new Set<DashboardSectionId>([
+                  "status",
+                  "config",
+                  "cae",
+                  "phase-journal"
+                ])
+              }
+            : undefined
+        )
       );
       if (useDeferredSecondary) {
         this.hydratedDashboardSections.clear();
