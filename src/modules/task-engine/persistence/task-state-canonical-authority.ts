@@ -24,10 +24,10 @@ export {
   resolveCanonicalBackend,
   readCanonicalBackendTypeFromConfig,
   formatResolvedCanonicalBackendLine,
-  createCanonicalSyncBackendFromContext,
   type CanonicalBackendType,
   type ResolvedCanonicalBackend
 } from "./canonical-backend-config.js";
+export { createCanonicalSyncBackendFromContext } from "./canonical-sync-backend-factory.js";
 
 /** Monotonic per-task version used for optimistic concurrency (matches event applier bumps). */
 export function taskVersionFromStore(store: TaskStore, taskId: string): number {

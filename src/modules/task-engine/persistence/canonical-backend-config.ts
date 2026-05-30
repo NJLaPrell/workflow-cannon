@@ -1,15 +1,11 @@
 import type { ModuleLifecycleContext } from "../../../contracts/module-contract.js";
-import {
-  createGitEventLogBackendFromContext,
-  GIT_EVENT_LOG_BACKEND_ID
-} from "../sync-backends/git-event-log-backend.js";
-import {
-  createLocalOnlyBackend,
-  LOCAL_ONLY_BACKEND_ID,
-  type CreateLocalOnlyBackendOptions
-} from "../sync-backends/local-only-backend.js";
-import type { CanonicalStateSyncBackend } from "../sync-backends/canonical-state-sync-backend.js";
 import type { TasksCanonicalAuthority } from "./task-state-canonical-authority.js";
+
+/** Keep in sync with `GIT_EVENT_LOG_BACKEND_ID` in git-event-log-backend.ts (no import — avoids ESM cycle). */
+const GIT_EVENT_LOG_BACKEND_ID = "git-event-log" as const;
+/** Keep in sync with `LOCAL_ONLY_BACKEND_ID` in local-only-backend.ts. */
+const LOCAL_ONLY_BACKEND_ID = "local-only" as const;
+const HOSTED_API_BACKEND_ID = "hosted-api" as const;
 
 /** Config `tasks.canonicalBackend.type` — maps to sync backend implementations. */
 export type CanonicalBackendType = "git" | "local-only" | "hosted";
@@ -46,7 +42,7 @@ const TYPE_FOR_AUTHORITY: Record<TasksCanonicalAuthority, CanonicalBackendType> 
 const BACKEND_ID_FOR_TYPE: Record<CanonicalBackendType, string> = {
   git: GIT_EVENT_LOG_BACKEND_ID,
   "local-only": LOCAL_ONLY_BACKEND_ID,
-  hosted: "hosted-api"
+  hosted: HOSTED_API_BACKEND_ID
 };
 
 export function readCanonicalBackendTypeFromConfig(
@@ -168,26 +164,3 @@ export function formatResolvedCanonicalBackendLine(resolved: ResolvedCanonicalBa
   return parts.join(", ");
 }
 
-export function createCanonicalSyncBackendFromContext(
-  ctx: ModuleLifecycleContext,
-  options: {
-    git?: Partial<Parameters<typeof createGitEventLogBackendFromContext>[1]>;
-    localOnly?: CreateLocalOnlyBackendOptions;
-  } = {}
-): CanonicalStateSyncBackend {
-  const resolved = resolveCanonicalBackend(ctx.effectiveConfig as Record<string, unknown> | undefined);
-  switch (resolved.type) {
-    case "git":
-      return createGitEventLogBackendFromContext(ctx, options.git ?? {});
-    case "local-only":
-      return createLocalOnlyBackend(options.localOnly ?? {});
-    case "hosted":
-      throw new Error(
-        "tasks.canonicalBackend.type hosted is not implemented yet (see .ai/adrs/ADR-hosted-api-backend-contract-v1.md)"
-      );
-    default: {
-      const _exhaustive: never = resolved.type;
-      throw new Error(`unsupported canonical backend type: ${String(_exhaustive)}`);
-    }
-  }
-}

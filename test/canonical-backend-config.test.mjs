@@ -55,7 +55,7 @@ describe("canonical-backend-config", () => {
 
   it("createCanonicalSyncBackendFromContext returns git backend", async () => {
     const { createCanonicalSyncBackendFromContext } = await import(
-      "../dist/modules/task-engine/persistence/canonical-backend-config.js"
+      "../dist/modules/task-engine/persistence/canonical-sync-backend-factory.js"
     );
     const { GIT_EVENT_LOG_BACKEND_ID } = await import(
       "../dist/modules/task-engine/sync-backends/git-event-log-backend.js"
