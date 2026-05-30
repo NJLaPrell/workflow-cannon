@@ -52,6 +52,11 @@ export class DashboardSliceRefresher {
     this.router = null;
   }
 
+  async readPlanningGeneration(): Promise<number> {
+    const opened = await this.openStores();
+    return opened.sqliteDual.getPlanningGeneration();
+  }
+
   async refreshSlices(sliceNames: string[]): Promise<string[]> {
     const changed: string[] = [];
     for (const name of sliceNames) {

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-05-29T13:48:04.871Z",
+  "generatedAt": "2026-05-30T03:06:55.096Z",
   "commands": [
     {
       "name": "accept-improvement",
@@ -445,6 +445,26 @@
     {
       "name": "create-wishlist",
       "path": ".ai/agent-cli-snippets/by-command/create-wishlist.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "dashboard-service-snapshot",
+      "path": ".ai/agent-cli-snippets/by-command/dashboard-service-snapshot.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "dashboard-service-start",
+      "path": ".ai/agent-cli-snippets/by-command/dashboard-service-start.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "dashboard-service-status",
+      "path": ".ai/agent-cli-snippets/by-command/dashboard-service-status.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "dashboard-service-stop",
+      "path": ".ai/agent-cli-snippets/by-command/dashboard-service-stop.json",
       "moduleId": "task-engine"
     },
     {
