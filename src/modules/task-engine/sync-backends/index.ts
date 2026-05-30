@@ -62,3 +62,15 @@ export {
   LOCAL_ONLY_CLOSEOUT_WARNING_CODE,
   assessLocalOnlyCloseoutWarning
 } from "./local-only-closeout.js";
+export type {
+  BackendConformanceHarnessOptions,
+  BackendConformanceReport,
+  BackendConformanceScenario,
+  BackendConformanceScenarioResult
+} from "./backend-conformance-harness.js";
+export {
+  BackendConformanceError,
+  draftTaskCreatedEvent,
+  draftTaskUpdatedEvent,
+  runBackendConformanceHarness
+} from "./backend-conformance-harness.js";
