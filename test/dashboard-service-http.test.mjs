@@ -37,6 +37,8 @@ describe("dashboard service HTTP", () => {
       const health = await healthRes.json();
       assert.equal(health.ok, true);
       assert.equal(typeof health.generation, "number");
+      assert.equal(typeof health.slices, "object");
+      assert.equal(typeof health.summary, "object");
 
       const refreshRes = await fetch(`${base}/dashboard/refresh`, {
         method: "POST",
@@ -47,6 +49,11 @@ describe("dashboard service HTTP", () => {
       const refresh = await refreshRes.json();
       assert.equal(refresh.ok, true);
       assert.ok(refresh.changedSlices.includes("overview"));
+
+      const healthAfter = await (await fetch(`${base}/health`)).json();
+      assert.equal(healthAfter.slices.overview?.status, "fresh");
+      assert.equal(typeof healthAfter.slices.overview?.lastDurationMs, "number");
+      assert.equal(healthAfter.summary.totalRefreshes >= 1, true);
 
       const snapshotRes = await fetch(`${base}/dashboard/snapshot`);
       assert.equal(snapshotRes.status, 200);

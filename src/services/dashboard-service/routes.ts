@@ -3,6 +3,7 @@ import type { DashboardSnapshotStore } from "./snapshot-store.js";
 import type { DashboardSliceRefresher } from "./slice-refreshers.js";
 import { DashboardSseHub, toSseEvent } from "./events.js";
 import { listDashboardServiceSliceNames } from "./slice-definitions.js";
+import { buildDashboardServiceHealthPayload } from "./slice-observability.js";
 
 function readJsonBody(req: IncomingMessage): Promise<Record<string, unknown>> {
   return new Promise((resolve, reject) => {
@@ -52,14 +53,19 @@ export async function handleDashboardServiceRequest(
   const url = new URL(req.url ?? "/", "http://127.0.0.1");
 
   if (method === "GET" && url.pathname === "/health") {
-    sendJson(res, 200, {
-      ok: true,
-      uptimeMs: deps.snapshotStore.getUptimeMs(),
-      generation: deps.snapshotStore.getGeneration(),
-      planningGeneration: deps.snapshotStore.getPlanningGeneration(),
-      sseClients: deps.sseHub.clientCount(),
-      sliceCount: listDashboardServiceSliceNames().length
-    });
+    sendJson(
+      res,
+      200,
+      buildDashboardServiceHealthPayload({
+        uptimeMs: deps.snapshotStore.getUptimeMs(),
+        generation: deps.snapshotStore.getGeneration(),
+        planningGeneration: deps.snapshotStore.getPlanningGeneration(),
+        sseClients: deps.sseHub.clientCount(),
+        sliceCount: listDashboardServiceSliceNames().length,
+        sliceObservability: deps.refresher.getSliceObservability(),
+        summary: deps.refresher.getObservabilitySummary()
+      })
+    );
     return;
   }
 
