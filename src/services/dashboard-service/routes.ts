@@ -6,7 +6,8 @@ import { buildRuntimeServiceStatus } from "./build-runtime-service-status.js";
 import { DashboardSseHub, toSseEvent } from "./events.js";
 import { listDashboardServiceSliceNames } from "./slice-definitions.js";
 import { buildDashboardServiceHealthPayload } from "./slice-observability.js";
-import { flushTaskSyncOutbox, readTaskSyncStatus } from "./task-sync-handlers.js";
+import { readTaskSyncStatus } from "./task-sync-handlers.js";
+import type { DashboardTaskSyncWorker } from "./task-sync-worker.js";
 
 function readJsonBody(req: IncomingMessage): Promise<Record<string, unknown>> {
   return new Promise((resolve, reject) => {
@@ -46,6 +47,7 @@ export type DashboardServiceRoutesDeps = {
   refresher: DashboardSliceRefresher;
   sseHub: DashboardSseHub;
   ctx: ModuleLifecycleContext;
+  taskSyncWorker: DashboardTaskSyncWorker;
 };
 
 export async function handleDashboardServiceRequest(
@@ -67,7 +69,8 @@ export async function handleDashboardServiceRequest(
         sseClients: deps.sseHub.clientCount(),
         sliceCount: listDashboardServiceSliceNames().length,
         sliceObservability: deps.refresher.getSliceObservability(),
-        summary: deps.refresher.getObservabilitySummary()
+        summary: deps.refresher.getObservabilitySummary(),
+        taskSyncWorker: deps.taskSyncWorker.getStatus()
       })
     );
     return;
@@ -102,7 +105,7 @@ export async function handleDashboardServiceRequest(
 
   if (method === "POST" && url.pathname === "/task-sync/flush") {
     try {
-      const result = await flushTaskSyncOutbox(deps.ctx);
+      const result = await deps.taskSyncWorker.flush();
       sendJson(res, result.ok ? 200 : 503, result);
     } catch (error) {
       sendJson(res, 500, {
@@ -111,6 +114,26 @@ export async function handleDashboardServiceRequest(
         message: error instanceof Error ? error.message : String(error)
       });
     }
+    return;
+  }
+
+  if (method === "POST" && url.pathname === "/task-sync/pause") {
+    const paused = deps.taskSyncWorker.pause();
+    sendJson(res, 200, {
+      ok: true,
+      code: paused ? "task-sync-worker-paused" : "task-sync-worker-pause-noop",
+      worker: deps.taskSyncWorker.getStatus()
+    });
+    return;
+  }
+
+  if (method === "POST" && url.pathname === "/task-sync/resume") {
+    const resumed = deps.taskSyncWorker.resume();
+    sendJson(res, 200, {
+      ok: true,
+      code: resumed ? "task-sync-worker-resumed" : "task-sync-worker-resume-noop",
+      worker: deps.taskSyncWorker.getStatus()
+    });
     return;
   }
 

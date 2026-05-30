@@ -126,6 +126,7 @@ export function buildDashboardServiceHealthPayload(args: {
   sliceCount: number;
   sliceObservability: Record<string, DashboardSliceObservabilityRecord>;
   summary: DashboardSliceObservabilitySummary;
+  taskSyncWorker?: Record<string, unknown>;
 }): Record<string, unknown> {
   return {
     ok: true,
@@ -135,6 +136,7 @@ export function buildDashboardServiceHealthPayload(args: {
     sseClients: args.sseClients,
     sliceCount: args.sliceCount,
     slices: args.sliceObservability,
-    summary: args.summary
+    summary: args.summary,
+    ...(args.taskSyncWorker ? { taskSyncWorker: args.taskSyncWorker } : {})
   };
 }
