@@ -56,8 +56,17 @@ workspace-kit run convert-phase-note-to-task '{"noteId":"<uuid>","expectedPlanni
 (Skip conversion when the note is informational only.)
 
 1. `git fetch origin` and `git checkout release/phase-<N>`, then `git pull origin release/phase-<N>`.
-2. Run `workspace-kit run phase-closeout-readiness '{"phaseKey":"<N>"}'` and stop unless it reports `passed: true` with `remainingCount: 0` (including outbox drained), or there is an explicit maintainer waiver covering the remaining closeout finding(s).
-3. Run `workspace-kit run phase-delivery-preflight '{"phaseKey":"<N>","includeInProgress":false,"baseRef":"origin/release/phase-<N>"}'` and resolve every evidence, readiness, or stranded-work finding with evidence matching each task’s **resolved** delivery profile (from **`resolve-maintainer-delivery-policy`** / preflight policy context) or an explicit maintainer waiver before closeout. Stranded-work findings mean completed task implementation files differ from the selected integration/base ref; merge/rebase that work, or move the task out of `completed` before release prep continues. This check is distinct from task-store branch synchronization.
+2. Run `workspace-kit run phase-closeout-readiness '{"phaseKey":"<N>"}'` and stop unless it reports `passed: true` with `remainingCount: 0`, or there is an explicit maintainer waiver covering the remaining closeout finding(s).
+3. Run `workspace-kit run phase-delivery-preflight '{"phaseKey":"<N>","includeInProgress":false,"baseRef":"origin/release/phase-<N>"}'` and resolve every evidence, readiness, stranded-work, and **service sync** finding with evidence matching each task’s **resolved** delivery profile (from **`resolve-maintainer-delivery-policy`** / preflight policy context) or an explicit maintainer waiver before closeout.
+
+   **Service sync gate** (embedded in preflight as `data.serviceSync` when **`tasks.canonicalAuthority`** is **`git-event-log`** and **`dashboard.dataSource`** is **`service`** or **`auto`**):
+
+   - **`service` mode:** dashboard service must be running and healthy (`dashboard-service-status`).
+   - **Outbox drained:** no pending/publishing rows in the canonical event outbox (`service-sync-outbox-not-drained`).
+   - **Fresh projection:** `task-state-status` local projection is `fresh` (`service-sync-projection-not-fresh`).
+   - **No conflicts:** zero failed/conflict outbox rows and no conflict sync posture (`service-sync-conflict-rows`).
+
+   When `dashboard.dataSource` is **`auto`** and the service is not running, preflight may warn and continue on CLI **`task-state-*`** fallback; operators should still clear outbox/projection findings before closeout. Stranded-work findings mean completed task implementation files differ from the selected integration/base ref; merge/rebase that work, or move the task out of `completed` before release prep continues. This check is distinct from task-store branch synchronization.
 4. Run `workspace-kit run release-evidence-manifest '<json>'` with human approval, release-note evidence, validation records, known risks, publish artifact placeholders/proof, and follow-up scan data. Resolve structured failures before tag/npm/GitHub release actions.
 5. Run full validation on that tip (`pnpm run build`, `pnpm run check`, `pnpm run test`, `pnpm run parity`, and **`pre-merge-gates`** / maintainer gates as in [`RELEASING.md`](../RELEASING.md)).
 6. Run **`workspace-kit run propose-release-version '{"phaseKey":"<N>"}'`** and align `package.json` / changelog version with the recommended bump before tagging (see **`.ai/RELEASING.md`** rule **R200-semver**).
