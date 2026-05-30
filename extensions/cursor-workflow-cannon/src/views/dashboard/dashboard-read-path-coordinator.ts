@@ -1,4 +1,6 @@
 import type { CommandClient } from "../../runtime/command-client.js";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 import type { DashboardDataSourceMode } from "./dashboard-data-source.js";
 import type { DashboardDataStore } from "./dashboard-data-store.js";
 import type { DashboardPollerCoordinator } from "./dashboard-pollers.js";
@@ -9,6 +11,10 @@ import {
   type DashboardReadModeBadge
 } from "./dashboard-read-mode-badge.js";
 import { DashboardServiceStoreSync } from "./dashboard-service-store-sync.js";
+import {
+  DASHBOARD_SERVICE_RUNTIME_REL,
+  parseDashboardServiceRuntime
+} from "./dashboard-service-mapper.js";
 import { readConfiguredDashboardDataSourceMode } from "./resolve-dashboard-read-config.js";
 import {
   probeDashboardServiceHealth,
@@ -199,6 +205,32 @@ export class DashboardReadPathCoordinator {
     this.emitModeChanged();
   }
 
+  private async emitServiceHealthDiagnostics(): Promise<void> {
+    try {
+      const abs = path.join(this.deps.workspacePath, DASHBOARD_SERVICE_RUNTIME_REL);
+      const raw = JSON.parse(await readFile(abs, "utf8")) as unknown;
+      const runtime = parseDashboardServiceRuntime(raw);
+      if (!runtime) {
+        return;
+      }
+      const res = await fetch(`http://${runtime.host}:${runtime.port}/health`);
+      if (!res.ok) {
+        return;
+      }
+      const health = (await res.json()) as {
+        generation?: number;
+        summary?: { failingSlices?: string[]; slowestSlice?: string | null; totalErrors?: number };
+      };
+      const failing = health.summary?.failingSlices ?? [];
+      const slowest = health.summary?.slowestSlice ?? "none";
+      this.deps.log?.(
+        `dashboard service health gen=${health.generation ?? "?"} slowest=${slowest} failing=${failing.length > 0 ? failing.join(",") : "none"} errors=${health.summary?.totalErrors ?? 0}`
+      );
+    } catch {
+      // diagnostics are best-effort
+    }
+  }
+
   private async startServicePath(): Promise<void> {
     const dataSource = new ServiceDashboardDataSource({
       workspacePath: this.deps.workspacePath
@@ -207,6 +239,7 @@ export class DashboardReadPathCoordinator {
     await this.serviceSync.start();
     this.activePath = "service";
     this.deps.log?.("dashboard read path: warm service");
+    await this.emitServiceHealthDiagnostics();
   }
 
   private async startCliPollingPath(): Promise<void> {
