@@ -585,6 +585,32 @@ test("isKitRefreshRunAborted treats empty stdout json-parse as refresh abort", a
   );
 });
 
+test("CommandClient.runForDashboardPaint bypasses lane queue and refresh pause", async () => {
+  const calls = [];
+  let releaseMutation;
+  const mutationGate = new Promise((resolve) => {
+    releaseMutation = resolve;
+  });
+  const client = new CommandClient("/tmp/noop", {
+    execFn: async (_root, args) => {
+      calls.push(args[1]);
+      if (args[1] === "task-state-hydrate") {
+        await mutationGate;
+      }
+      return { exitCode: 0, stdout: JSON.stringify({ ok: true, code: args[1] }), stderr: "" };
+    }
+  });
+  client.setRefreshPaused(true);
+  const mutation = client.run("task-state-hydrate", { policyApproval: { confirmed: true, rationale: "t" } });
+  await new Promise((r) => setTimeout(r, 0));
+  const paint = await client.runForDashboardPaint("dashboard-summary", { projection: "overview" });
+  assert.equal(paint.ok, true);
+  assert.equal(paint.code, "dashboard-summary");
+  assert.ok(calls.includes("dashboard-summary"));
+  releaseMutation();
+  await mutation;
+});
+
 test("CommandClient mutation lane runs before queued refresh", async () => {
   const order = [];
   const client = new CommandClient("/tmp/noop", {

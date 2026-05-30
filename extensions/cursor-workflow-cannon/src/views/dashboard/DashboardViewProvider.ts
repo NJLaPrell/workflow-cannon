@@ -397,6 +397,9 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   /** First successful data render replaces the full document once; later refreshes patch `#root`. */
   private dashboardRootHydrated = false;
 
+  /** Coalesces parallel boot/ready/timeout startup renders. */
+  private dashboardStartupInFlight: Promise<void> | undefined;
+
   /** Sections hydrated via tab activation or eager first paint (T100398). */
   private hydratedDashboardSections = new Set<DashboardSectionId>();
 
@@ -464,7 +467,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     private readonly client: CommandClient,
     private readonly onKitStateChanged: vscode.Event<void>,
     private readonly notifyKitStateChanged: () => void,
-    private readonly isTaskStateSyncInFlight?: () => boolean
+    private readonly isTaskStateSyncInFlight?: () => boolean,
+    private readonly onFirstDashboardPaint?: () => void
   ) {
     this.refreshController = new DashboardRefreshController({
       executeRefresh: (mode, generation) => this.executeDashboardRefresh(mode, generation),
@@ -499,6 +503,36 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     onKitStateChanged(() => {
       void this.onKitStateChangedRefresh();
     });
+  }
+
+  private markDashboardRootHydrated(): void {
+    if (this.dashboardRootHydrated) {
+      return;
+    }
+    this.dashboardRootHydrated = true;
+    this.onFirstDashboardPaint?.();
+  }
+
+  /**
+   * Bootstrap / queue-upgrade reads use {@link CommandClient.runForDashboardPaint} so
+   * task-state sync on the mutation lane cannot leave overview stubs at zero counts.
+   */
+  private shouldUseDashboardPaintLane(): boolean {
+    return (
+      !this.dashboardRootHydrated ||
+      dashboardSummaryNeedsQueueRollupHydration(this.lastDashboardSummaryData)
+    );
+  }
+
+  private runDashboardSummary(
+    args: Record<string, unknown>
+  ): Promise<DashboardSummaryCommandSuccess | Record<string, unknown>> {
+    const runner = this.shouldUseDashboardPaintLane()
+      ? (name: string, a: Record<string, unknown>) => this.client.runForDashboardPaint(name, a)
+      : (name: string, a: Record<string, unknown>) => this.client.run(name, a);
+    return runner("dashboard-summary", args) as Promise<
+      DashboardSummaryCommandSuccess | Record<string, unknown>
+    >;
   }
 
   private overlayTaskStateSyncForRender(data: Record<string, unknown>): Record<string, unknown> {
@@ -759,16 +793,16 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       }
       if (msg?.type === "dashboardWebviewBoot") {
         logWc("dashboard", "webview boot");
-        if (!this.dashboardRootHydrated && !this.refreshController.hasInFlightRefresh()) {
-          await this.pushUpdate({ projection: "overview", skipHeavyFetches: true });
+        if (!this.dashboardRootHydrated) {
+          await this.renderDashboardStartupDirect(webview);
         }
         return;
       }
       if (msg?.type === "dashboardStartupTimeout") {
         const rootClass = typeof msg.rootClass === "string" ? msg.rootClass : "";
         logWc("dashboard", `startup timeout rootClass=${rootClass}`);
-        if (!this.dashboardRootHydrated && !this.refreshController.hasInFlightRefresh()) {
-          await this.pushUpdate({ projection: "overview", skipHeavyFetches: true });
+        if (!this.dashboardRootHydrated) {
+          await this.renderDashboardStartupDirect(webview);
         }
         return;
       }
@@ -781,8 +815,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       }
       if (msg?.type === "dashboardWebviewReady") {
         logWc("dashboard", "webview ready");
-        if (!this.dashboardRootHydrated && !this.refreshController.hasInFlightRefresh()) {
-          await this.pushUpdate({ projection: "overview", skipHeavyFetches: true });
+        if (!this.dashboardRootHydrated) {
+          await this.renderDashboardStartupDirect(webview);
         } else if (dashboardSummaryNeedsQueueRollupHydration(this.lastDashboardSummaryData)) {
           await this.ensureQueueRollupsHydrated(this.refreshController.currentGeneration());
         }
@@ -1314,16 +1348,23 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       }
     });
     webviewView.onDidChangeVisibility(() => {
-      if (webviewView.visible && !this.refreshController.isSuppressed()) {
-        this.syncVisibleSectionsToPollers();
-        void this.dashboardPollers.refreshCriticalNow();
+      if (
+        !webviewView.visible ||
+        this.refreshController.isSuppressed() ||
+        !this.dashboardRootHydrated ||
+        this.dashboardStartupInFlight
+      ) {
+        return;
       }
+      this.syncVisibleSectionsToPollers();
+      void this.dashboardPollers.refreshCriticalNow();
     });
     this.dashboardStore.start();
     this.dashboardPollers.start();
     webviewView.onDidDispose(() => {
       this.dashboardRootShellReady = false;
       this.dashboardRootHydrated = false;
+      this.dashboardStartupInFlight = undefined;
       this.hydratedDashboardSections.clear();
       this.staleDashboardSections.clear();
       this.webviewMessageDisposable?.dispose();
@@ -1344,15 +1385,29 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     webview.html = this.buildHtml(webview, renderDashboardShellInnerHtml());
     this.dashboardRootShellReady = true;
     logWc("dashboard", "resolveWebviewView: shell painted synchronously");
-    void this.pushUpdate({ projection: "overview", skipHeavyFetches: true });
-    void this.dashboardPollers.refreshCriticalNow();
-    this.syncVisibleSectionsToPollers();
+    void this.renderDashboardStartupDirect(webview).then(() => {
+      if (this.dashboardRootHydrated) {
+        this.syncVisibleSectionsToPollers();
+        void this.dashboardPollers.refreshCriticalNow();
+      }
+    });
   }
 
   /** Section-level DOM patch (T100395); full wcReplaceRoot remains the compatibility fallback. */
   private async renderDashboardStartupDirect(webview: vscode.Webview): Promise<void> {
+    if (this.dashboardStartupInFlight) {
+      return this.dashboardStartupInFlight;
+    }
+    const run = this.renderDashboardStartupDirectOnce(webview).finally(() => {
+      this.dashboardStartupInFlight = undefined;
+    });
+    this.dashboardStartupInFlight = run;
+    return run;
+  }
+
+  private async renderDashboardStartupDirectOnce(webview: vscode.Webview): Promise<void> {
     try {
-      const raw = (await this.client.run("dashboard-summary", {
+      const raw = (await this.runDashboardSummary({
         wishlistPage: this.wishlistPage,
         wishlistPageSize: 5,
         projection: "overview"
@@ -1368,6 +1423,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         this.lastDashboardSummaryData = raw.data as Record<string, unknown>;
         this.lastQueueContentFingerprint = computeQueueContentFingerprint(this.lastDashboardSummaryData);
         ingestPlanningMetaFromData(raw.data as Record<string, unknown>);
+        this.ingestDashboardSummaryIntoStore(raw.data as Record<string, unknown>, "overview");
       }
       const editorIntegration = await resolveEditorIntegrationState();
       const rootInner = renderDashboardRootInnerHtml(
@@ -1388,10 +1444,10 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       this.hydratedDashboardSections.clear();
       this.hydratedDashboardSections.add("overview");
       this.hydratedDashboardSections.add("queue");
-      this.dashboardRootHydrated = true;
       webview.html = this.buildHtml(webview, rootInner);
       logWc("dashboard", "startup diagnostic direct render applied");
-      void this.ensureQueueRollupsHydrated();
+      await this.ensureQueueRollupsHydrated();
+      this.markDashboardRootHydrated();
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       logWc("dashboard", `startup diagnostic direct render failed: ${message}`);
@@ -1436,13 +1492,15 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     this.syncVisibleSectionsToPollers();
   }
 
-  /** Upgrade queue section from overview stub to queue rollups (phase filter + buckets). */
+  /** Upgrade queue (+ overview stat pills) from overview stub to queue rollups. */
   private async ensureQueueRollupsHydrated(updateSequence?: number): Promise<void> {
     if (!this.view || !dashboardSummaryNeedsQueueRollupHydration(this.lastDashboardSummaryData)) {
       return;
     }
-    await this.patchDashboardSectionsFromSummary(["queue"], updateSequence, {
-      projection: "queue"
+    logWc("dashboard", "ensureQueueRollupsHydrated: upgrading overview stub to queue projection");
+    await this.patchDashboardSectionsFromSummary(["queue", "overview"], updateSequence, {
+      projection: "queue",
+      forcePaintLane: true
     });
   }
 
@@ -1648,7 +1706,12 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   private async patchDashboardSectionsFromSummary(
     sectionIds: readonly DashboardSectionId[],
     updateSequence?: number,
-    options?: { light?: boolean; projection?: "full" | "queue" | "overview" | "status" }
+    options?: {
+      light?: boolean;
+      projection?: "full" | "queue" | "overview" | "status";
+      /** Queue upgrade during startup — bypass refresh lane even after root hydrated. */
+      forcePaintLane?: boolean;
+    }
   ): Promise<void> {
     const activeView = this.view;
     if (!activeView || sectionIds.length === 0) {
@@ -1661,12 +1724,21 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       options?.projection ?? dashboardSummaryProjectionForSectionPatch(sectionsToPatch);
     let raw: DashboardSummaryCommandSuccess | Record<string, unknown>;
     try {
-      raw = (await this.client.run("dashboard-summary", {
+      const summaryArgs = {
         wishlistPage: this.wishlistPage,
         wishlistPageSize: 5,
         projection: summaryProjection
-      })) as DashboardSummaryCommandSuccess | Record<string, unknown>;
+      };
+      raw = (options?.forcePaintLane === true
+        ? ((await this.client.runForDashboardPaint(
+            "dashboard-summary",
+            summaryArgs
+          )) as DashboardSummaryCommandSuccess | Record<string, unknown>)
+        : ((await this.runDashboardSummary(summaryArgs)) as
+            | DashboardSummaryCommandSuccess
+            | Record<string, unknown>));
       if (isKitRefreshRunAborted(raw as Record<string, unknown>)) {
+        logWc("dashboard", "patchDashboardSectionsFromSummary aborted (refresh paused or preempted)");
         return;
       }
     } catch (e) {
@@ -4114,6 +4186,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     if (!activeView) {
       return;
     }
+    const { webview } = activeView;
     const lightRefresh = mode === "light";
     const refreshOptions = this.pendingPushUpdateOptions;
     this.pendingPushUpdateOptions = undefined;
@@ -4123,6 +4196,9 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       this.refreshController.markDeferredRefreshNeeded();
       this.dashboardCoordinator?.emitSnapshot();
       logWc("dashboard", "pushUpdate deferred (UI interaction lock active)");
+      if (!this.dashboardRootHydrated) {
+        await this.renderDashboardStartupDirect(webview);
+      }
       return;
     }
     if (lightRefresh) {
@@ -4131,7 +4207,6 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     this.setDashboardRefreshBusy(true);
     try {
-    const { webview } = activeView;
     const requestedWishlistPage = this.wishlistPage;
     const startedAt = Date.now();
     logWc(
@@ -4140,21 +4215,27 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     );
     let raw: DashboardSummaryCommandSuccess | Record<string, unknown>;
     try {
-      raw = (await this.client.run("dashboard-summary", {
+      raw = (await this.runDashboardSummary({
         wishlistPage: requestedWishlistPage,
         wishlistPageSize: 5,
         projection: summaryProjection
       })) as DashboardSummaryCommandSuccess | Record<string, unknown>;
       if (isKitRefreshRunAborted(raw as Record<string, unknown>)) {
         logWc("dashboard", "pushUpdate aborted (refresh paused or preempted)");
+        if (!this.dashboardRootHydrated) {
+          await this.renderDashboardStartupDirect(webview);
+        }
         return;
       }
       if (isWishlistPagingArgRejection(raw as Record<string, unknown>)) {
         logWc("dashboard", "pushUpdate: dashboard-summary rejected wishlist paging; retrying without paging");
         this.wishlistPage = 0;
-        raw = (await this.client.run("dashboard-summary", { projection: summaryProjection })) as DashboardSummaryCommandSuccess | Record<string, unknown>;
+        raw = (await this.runDashboardSummary({ projection: summaryProjection })) as DashboardSummaryCommandSuccess | Record<string, unknown>;
         if (isKitRefreshRunAborted(raw as Record<string, unknown>)) {
           logWc("dashboard", "pushUpdate aborted (refresh paused or preempted)");
+          if (!this.dashboardRootHydrated) {
+            await this.renderDashboardStartupDirect(webview);
+          }
           return;
         }
       }
@@ -4351,12 +4432,12 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     try {
       if (!this.dashboardRootHydrated) {
-        this.dashboardRootHydrated = true;
         webview.html = this.buildHtml(webview, rootInner);
         logWc("dashboard", "pushUpdate applied first full document render");
         if (useDeferredSecondary) {
           await this.ensureQueueRollupsHydrated(updateSequence);
         }
+        this.markDashboardRootHydrated();
         return;
       }
       // Full-root refresh stays the compatibility path while section slices land (T100396+).

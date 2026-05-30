@@ -3,7 +3,7 @@
 /**
  * Section model (Phase 108):
  * - `eager` sections (overview, queue) hydrate on first `dashboard-summary` read with `skipHeavyFetches`.
- * - Queue rollups upgrade from overview stub via `ensureQueueRollupsHydrated` on tab open or post-overview paint.
+ * - Queue rollups upgrade from overview stub via `ensureQueueRollupsHydrated` (queue + overview stat pills) on tab open or post-overview paint.
  * - `on-tab-activate` sections (status, config, cae, phase-journal) stay placeholders until tab open.
  * - Targeted invalidation after mutations: see `dashboard-section-invalidation.ts` (T100399).
  * - Manual Refresh runs full reconciliation via `wcReplaceRoot`; light watcher refresh patches visible sections only.

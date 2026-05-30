@@ -56,10 +56,8 @@ test("DashboardViewProvider paints shell before pushUpdate (T100395)", () => {
   assert.match(src, /shell painted synchronously/);
   const resolveBlock = src.slice(src.indexOf("resolveWebviewView("));
   const shellIdx = resolveBlock.indexOf("renderDashboardShellInnerHtml()");
-  const pushIdx = resolveBlock.indexOf(
-    'void this.pushUpdate({ projection: "overview", skipHeavyFetches: true })'
-  );
-  assert.ok(shellIdx >= 0 && pushIdx >= 0 && shellIdx < pushIdx, "shell must render before pushUpdate");
+  const paintIdx = resolveBlock.indexOf("void this.renderDashboardStartupDirect(webview)");
+  assert.ok(shellIdx >= 0 && paintIdx >= 0 && shellIdx < paintIdx, "shell must render before startup direct paint");
 });
 
 test("dashboard webview bootstrap handles wcSectionPatch with interaction-lock queue", () => {

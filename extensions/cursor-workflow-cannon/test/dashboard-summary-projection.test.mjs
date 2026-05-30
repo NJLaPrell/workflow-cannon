@@ -12,5 +12,6 @@ test("DashboardViewProvider overview hydration skips heavy kit fetches (T100396)
   assert.match(src, /skipHeavyFetches/);
   assert.match(src, /projection:\s*"overview"/);
   assert.match(src, /projection:\s*"full"/);
-  assert.match(src, /skipHeavyFetches:\s*true/);
+  assert.match(src, /renderDashboardStartupDirect/);
+  assert.match(src, /runDashboardSummary/);
 });
