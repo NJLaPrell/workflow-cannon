@@ -8,7 +8,9 @@ export {
   TASK_ENGINE_DEPENDENCIES_TABLE,
   TASK_ENGINE_TRANSITION_LOG_TABLE,
   TASK_ENGINE_MUTATION_LOG_TABLE,
+  KIT_CANONICAL_EVENT_OUTBOX_TABLE,
   prepareKitSqliteDatabase,
   kitSqliteHasRelationalTaskDdl,
+  kitSqliteHasCanonicalEventOutbox,
   readKitSqliteUserVersion
 } from "./kit-sqlite/planning-sqlite-kernel.js";
