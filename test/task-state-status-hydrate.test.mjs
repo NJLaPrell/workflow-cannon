@@ -90,6 +90,8 @@ test("task-state-status reports missing without branch", async () => {
   const result = await runTaskStateStatus({ workspacePath: tmp, config: {} }, {});
   assert.equal(result.ok, true);
   assert.equal(result.data.syncState, "missing");
+  assert.equal(result.data.localProjection, "offline");
+  assert.equal(result.data.recommendedAction, "none");
 });
 
 test("task-state-hydrate dry-run reads branch layout", async () => {
@@ -118,4 +120,7 @@ test("task-state-status current after hydrate on fixture repo", async () => {
   const status = await runTaskStateStatus({ workspacePath: tmp, config: {} }, { fetch: false });
   assert.equal(status.ok, true);
   assert.equal(status.data.syncState, "current");
+  assert.equal(status.data.localProjection, "fresh");
+  assert.equal(typeof status.data.outbox.pending, "number");
+  assert.equal(typeof status.data.remote.behind, "boolean");
 });
