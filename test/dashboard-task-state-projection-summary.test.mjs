@@ -49,6 +49,10 @@ test("dashboard-summary exposes taskStateProjection metadata from SQLite", async
   assert.equal(typeof proj.displayState, "string");
   assert.ok("remediation" in proj);
   assert.ok("gitSyncState" in proj);
+  assert.equal(typeof proj.localProjection, "string");
+  assert.equal(typeof proj.outbox.pending, "number");
+  assert.equal(typeof proj.remote.behind, "boolean");
+  assert.equal(typeof proj.recommendedAction, "string");
 });
 
 test("dashboard-summary status projection retains taskStateProjection", async () => {
@@ -66,4 +70,5 @@ test("dashboard-summary status projection retains taskStateProjection", async ()
   assert.equal(result.data.dashboardProjection, "status");
   assert.equal(result.data.taskStateProjection?.available, true);
   assert.equal(result.data.taskStateProjection?.appliedSequence, 0);
+  assert.equal(typeof result.data.taskStateProjection?.outbox.pending, "number");
 });

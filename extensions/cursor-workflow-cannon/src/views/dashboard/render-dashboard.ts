@@ -4407,6 +4407,25 @@ export function renderTaskStateSyncStatusHtml(taskStateProjection: unknown): str
   if (!taskStateProjection || typeof taskStateProjection !== "object") {
     return "";
   }
+  function formatAge(ms: number): string {
+    if (!Number.isFinite(ms) || ms <= 0) {
+      return "0s";
+    }
+    const sec = Math.floor(ms / 1000);
+    if (sec < 60) {
+      return `${sec}s`;
+    }
+    const min = Math.floor(sec / 60);
+    if (min < 60) {
+      return `${min}m`;
+    }
+    const hrs = Math.floor(min / 60);
+    if (hrs < 24) {
+      return `${hrs}h`;
+    }
+    const days = Math.floor(hrs / 24);
+    return `${days}d`;
+  }
   const proj = taskStateProjection as Record<string, unknown>;
   const raw =
     typeof proj.displayState === "string" && proj.displayState.trim()
@@ -4437,6 +4456,38 @@ export function renderTaskStateSyncStatusHtml(taskStateProjection: unknown): str
     typeof proj.sourceCommit === "string" && proj.sourceCommit.trim()
       ? proj.sourceCommit.trim().slice(0, 12)
       : "—";
+  const localProjection =
+    typeof proj.localProjection === "string" && proj.localProjection.trim()
+      ? proj.localProjection.trim()
+      : "fresh";
+  const outboxRaw =
+    proj.outbox && typeof proj.outbox === "object" ? (proj.outbox as Record<string, unknown>) : {};
+  const pending =
+    typeof outboxRaw.pending === "number" && Number.isFinite(outboxRaw.pending) ? outboxRaw.pending : 0;
+  const publishing =
+    typeof outboxRaw.publishing === "number" && Number.isFinite(outboxRaw.publishing)
+      ? outboxRaw.publishing
+      : 0;
+  const failed =
+    typeof outboxRaw.failed === "number" && Number.isFinite(outboxRaw.failed) ? outboxRaw.failed : 0;
+  const conflict =
+    typeof outboxRaw.conflict === "number" && Number.isFinite(outboxRaw.conflict) ? outboxRaw.conflict : 0;
+  const oldestPendingAgeMs =
+    typeof outboxRaw.oldestPendingAgeMs === "number" && Number.isFinite(outboxRaw.oldestPendingAgeMs)
+      ? outboxRaw.oldestPendingAgeMs
+      : 0;
+  const queueStatus =
+    failed > 0
+      ? "Failed"
+      : conflict > 0
+        ? "Conflict"
+        : pending > 0 || publishing > 0
+          ? "Pending"
+          : "Drained";
+  const recommendedAction =
+    typeof proj.recommendedAction === "string" && proj.recommendedAction.trim()
+      ? proj.recommendedAction.trim()
+      : "none";
   const pillClass = "wc-task-state-pill wc-task-state-" + state;
   return (
     '<section class="dash-card" aria-label="Task-state sync">' +
@@ -4453,6 +4504,27 @@ export function renderTaskStateSyncStatusHtml(taskStateProjection: unknown): str
     '<div class="wc-status-kv"><span class="wc-status-kv-label">Source commit</span><span class="wc-status-kv-val"><code>' +
     escapeHtml(commit) +
     "</code></span></div>" +
+    '<div class="wc-status-kv"><span class="wc-status-kv-label">Projection</span><span class="wc-status-kv-val">' +
+    escapeHtml(localProjection) +
+    "</span></div>" +
+    '<div class="wc-status-kv"><span class="wc-status-kv-label">Queue status</span><span class="wc-status-kv-val">' +
+    escapeHtml(queueStatus) +
+    "</span></div>" +
+    '<div class="wc-status-kv"><span class="wc-status-kv-label">Outbox pending</span><span class="wc-status-kv-val">' +
+    escapeHtml(String(pending)) +
+    "</span></div>" +
+    '<div class="wc-status-kv"><span class="wc-status-kv-label">Outbox publishing</span><span class="wc-status-kv-val">' +
+    escapeHtml(String(publishing)) +
+    "</span></div>" +
+    '<div class="wc-status-kv"><span class="wc-status-kv-label">Outbox failed/conflict</span><span class="wc-status-kv-val">' +
+    escapeHtml(`${failed}/${conflict}`) +
+    "</span></div>" +
+    '<div class="wc-status-kv"><span class="wc-status-kv-label">Oldest pending age</span><span class="wc-status-kv-val">' +
+    escapeHtml(formatAge(oldestPendingAgeMs)) +
+    "</span></div>" +
+    '<div class="wc-status-kv"><span class="wc-status-kv-label">Recommended action</span><span class="wc-status-kv-val">' +
+    escapeHtml(recommendedAction) +
+    "</span></div>" +
     "</div>" +
     (remediation
       ? '<p class="muted wc-task-state-remediation">' + escapeHtml(remediation) + "</p>"
