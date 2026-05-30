@@ -1,4 +1,4 @@
-# AGENT_CARD_PLAN.md — Dashboard Agent Activity Board Plan
+# AGENT_CARD_PLAN.md — Dashboard Agent Activity Projection Plan
 
 ## Purpose
 
@@ -12,7 +12,35 @@ The purpose of the card is to help a human user immediately understand:
 4. **Is anything blocked, stale, or waiting on the human?**
 5. **Can the user trust that the panel is near-real-time?**
 
-The target is not merely a prettier single status card. The target is an **Agent Activity Board** powered by all active agent activity leases, with derived status as fallback.
+The target is not merely a prettier single status card. The target is an **Agent Activity Board** powered by a stable dashboard projection that can absorb current and future task-engine, agent-session, assignment, subagent, and runtime-service changes.
+
+---
+
+## Core Architecture Decision
+
+The Agent Activity Board must **not** render directly from current task-engine implementation details.
+
+It must consume a stable projected dashboard view model:
+
+```text
+Current and future sources
+  - live activity leases
+  - derived agent status
+  - task rows
+  - team execution assignments
+  - subagent registry sessions
+  - task checkpoints
+  - future AgentAssignment / AgentSession / AgentHandoff / ResourceLock data
+  - future runtime service snapshots/events
+        ↓
+Agent Activity Projection Builder
+        ↓
+DashboardAgentActivitySummary
+        ↓
+Dashboard overview renderer
+```
+
+This projection boundary is mandatory because the task engine is actively evolving. The dashboard UI should not be rewritten every time task-engine phase, assignment, or agent-session state changes.
 
 ---
 
@@ -44,13 +72,19 @@ Do **not** materialize execution tasks from this plan until the Phase 0 decision
 
 The dashboard overview currently exposes a high-level `agentStatus` field and already has supporting data for team assignments, subagent sessions, checkpoints, task state, phase, and live agent activity leases.
 
-The highest-value change is:
+The highest-value immediate change remains:
 
 ```text
-Expose and render all active agent activity leases in the dashboard overview.
+Expose and render current agent activity in the dashboard overview.
 ```
 
-Today, the dashboard reads the first current activity lease and converts it into a single `agentStatus`. The underlying store already supports multiple active leases. That means Workflow Cannon can support a near-real-time multi-agent panel with modest schema expansion.
+But the correct implementation is now:
+
+```text
+Build a stable Agent Activity Projection from current sources, then render the board from that projection only.
+```
+
+Today, the dashboard reads the first current activity lease and converts it into a single `agentStatus`. The underlying activity store already supports multiple active leases. That gives us a good v1 data source, but it should be treated as **one source feeding the projection**, not as the dashboard contract itself.
 
 Target state:
 
@@ -158,7 +192,7 @@ version
 details
 ```
 
-The activity store already supports listing current active leases ordered by freshness. The current dashboard build path only picks the first lease for `agentStatus`. That is the core limitation.
+The activity store already supports listing current active leases ordered by freshness. The current dashboard build path only picks the first lease for `agentStatus`. That is the immediate limitation.
 
 ## 2.4 Current supporting dashboard data
 
@@ -213,6 +247,23 @@ agentPresentation
 
 Agent guidance describes configured main-agent style/profile, not necessarily active work. Use it as secondary context only.
 
+## 2.5 Expected future task-engine data
+
+Future phased task-engine work is expected to add or change concepts such as:
+
+```text
+AgentAssignment
+AgentSession
+AgentHandoff
+AgentResourceLock
+PhaseDelivery
+TaskStateProjection
+RuntimeServiceSnapshot
+Backend sync state
+```
+
+The Agent Activity Board should survive those changes by depending on a projection layer, not raw current tables.
+
 ---
 
 # 3. Product Goals
@@ -221,30 +272,35 @@ Agent guidance describes configured main-agent style/profile, not necessarily ac
 
 A user should be able to glance at the top of the dashboard and understand what agents are currently doing without opening logs, task details, or CLI commands.
 
-## Goal 2 — Individual agent identity
+## Goal 2 — Stable UI despite task-engine evolution
+
+The dashboard UI should consume `DashboardAgentActivitySummary`, not raw task-engine tables, so future backend changes only require updating the projection builder.
+
+## Goal 3 — Individual agent identity
 
 The panel should identify each active agent or subagent using the best available data:
 
 - custom display name
 - agent id
 - session id
+- agent definition id
 - subagent definition id
 - role
 - supervisor/worker relationship
 
-## Goal 3 — Custom agent visibility
+## Goal 4 — Custom agent visibility
 
-If a particular custom agent is run, the user should know which one. The panel should surface `agentDefinitionId`, `definitionId`, `customAgentName`, or `agentDisplayName` when available.
+If a particular custom agent is run, the user should know which one. The projection should surface `agentDefinitionId`, `definitionId`, `customAgentName`, or `agentDisplayName` when available.
 
-## Goal 4 — Near-real-time freshness
+## Goal 5 — Near-real-time freshness
 
-The panel should update near real time. For the first implementation, polling every 2–5 seconds is acceptable if it uses a lightweight slice. Once the dashboard service/event stream exists, the panel should become event-driven.
+The panel should update near real time. For the first implementation, polling every 2–5 seconds is acceptable if it uses a lightweight projection/slice. Once the dashboard service/event stream exists, the panel should become event-driven.
 
-## Goal 5 — Attention-first design
+## Goal 6 — Attention-first design
 
 Blocked work, policy approvals, human gates, expired/stale leases, and validation failures should be visually prioritized above routine working states.
 
-## Goal 6 — Derived fallback without deception
+## Goal 7 — Derived fallback without deception
 
 When no live activity exists, the card should still show useful inferred status, but it must be visibly labeled as inferred.
 
@@ -262,6 +318,7 @@ When no live activity exists, the card should still show useful inferred status,
 - Do not make the card dependent on Git sync freshness.
 - Do not add a full-dashboard polling loop just to update agent activity.
 - Do not implement actions like log viewing or handoff copying in v1 unless the data source already exists.
+- Do not bind the UI directly to current activity-lease, team-execution, or subagent-registry table shapes.
 
 ---
 
@@ -280,6 +337,7 @@ When no live activity exists, the card should still show useful inferred status,
 - Strengthens Workflow Cannon’s multi-agent story.
 - Makes live activity leases more valuable.
 - Creates a foundation for future agent assignments, handoffs, and resource locks.
+- Creates a durable dashboard projection pattern for volatile backend state.
 
 ## Agent value
 
@@ -292,7 +350,17 @@ When no live activity exists, the card should still show useful inferred status,
 
 # 6. Risk Assessment
 
-## Risk 1 — Activity data may be incomplete
+## Risk 1 — Backend churn breaks the UI
+
+Future task-engine work may change assignments, sessions, phases, or subagent state.
+
+Mitigation:
+
+- Add an Agent Activity Projection Builder.
+- Keep the renderer dependent only on `DashboardAgentActivitySummary`.
+- Treat current leases/team/subagent rows as projection inputs.
+
+## Risk 2 — Activity data may be incomplete
 
 Agents may not call `set-agent-activity`, or may omit useful details.
 
@@ -303,18 +371,18 @@ Mitigation:
 - Add automatic activity hooks at known command boundaries where possible.
 - Make minimal activity useful: `agentId`, `kind`, `label`, `taskId`.
 
-## Risk 2 — Panel could become noisy
+## Risk 3 — Panel could become noisy
 
 If many short-lived activities appear, the card could overwhelm the user.
 
 Mitigation:
 
-- Show active leases only by default.
+- Show active projection rows only by default.
 - Limit compact rows.
 - Sort attention states first.
 - Defer recently-active display unless a cheap query exists.
 
-## Risk 3 — Live vs inferred could be confused
+## Risk 4 — Live vs inferred could be confused
 
 A derived guess may look like real activity.
 
@@ -323,18 +391,18 @@ Mitigation:
 - Always show `Live`, `Inferred`, or `Mixed`.
 - Use confidence text or subtle styling.
 
-## Risk 4 — Polling could slow dashboard refresh
+## Risk 5 — Polling could slow dashboard refresh
 
 Frequent full dashboard refreshes would be expensive.
 
 Mitigation:
 
-- Add a dedicated lightweight agent-activity slice or projection.
-- Poll only the activity slice every 2–5 seconds.
+- Add a dedicated lightweight agent-activity projection or command.
+- Poll only the activity projection every 2–5 seconds.
 - Patch only the agent activity section.
 - Do not call full `dashboard-summary` for heartbeat updates.
 
-## Risk 5 — Privacy / oversharing command details
+## Risk 6 — Privacy / oversharing command details
 
 Command, branch, path, and model details may be sensitive or too verbose.
 
@@ -345,7 +413,7 @@ Mitigation:
 - Display only basename or repo-relative values for worktrees/paths.
 - Do not display raw details JSON unless explicitly expanded/debug mode.
 
-## Risk 6 — Stale leases may mislead users
+## Risk 7 — Stale leases may mislead users
 
 Expired activities should not look active.
 
@@ -356,62 +424,120 @@ Mitigation:
 - Hide expired activities from active rows.
 - Use a short TTL for dashboard-facing activity.
 
-## Risk 7 — Duplicate rows from multiple sources
+## Risk 8 — Duplicate rows from multiple sources
 
 The same work may appear in live activity leases, team execution, and subagent registry rows.
 
 Mitigation:
 
-- Define identity and merge rules before implementation.
+- Define projection merge rules before implementation.
 - Treat live leases as primary.
 - Use team/subagent rows as enrichment or fallback, not duplicate active rows.
 
 ---
 
-# 7. Technical Impact
+# 7. Technical Direction
 
-## 7.1 Backend / contract changes
+## 7.1 Add an Agent Activity Projection Builder
 
-Add a dashboard field for all active agent activities. Preserve the existing `agentStatus` field for backward compatibility.
+Add a builder such as:
 
-Recommended contract placement:
-
-```ts
-dashboardSummary.agentStatus;          // existing single-status compatibility field
-dashboardSummary.agentActivitySummary; // new multi-agent board payload
+```text
+src/modules/task-engine/dashboard/build-dashboard-agent-activity-summary.ts
 ```
 
-## 7.2 Minimum v1 contract
+The builder should accept current data sources and return a stable dashboard view model.
+
+Inputs may include:
+
+```text
+live activity leases
+derived agent status
+tasks
+team execution summary
+subagent registry summary
+task checkpoints
+system status / current phase
+future agent assignments
+future agent sessions
+future runtime service snapshots
+```
+
+Output:
+
+```text
+DashboardAgentActivitySummary
+```
+
+## 7.2 Preserve current compatibility
+
+Keep:
+
+```ts
+dashboardSummary.agentStatus;
+```
+
+Add:
+
+```ts
+dashboardSummary.agentActivitySummary;
+```
+
+The existing `agentStatus` remains a single-status compatibility and fallback field. The new `agentActivitySummary` becomes the stable projected view model for the Agent Activity Board.
+
+## 7.3 Minimum v1 projection contract
 
 Keep v1 lean. Do not block the first usable board on every future enrichment field.
 
 ```ts
 export type DashboardAgentActivityRow = {
   schemaVersion: 1;
-  activityId: string;
-  agentId: string;
-  sessionId: string;
+  rowId: string;
   displayName: string;
-  kind: DashboardAgentStatusKind;
-  label: string;
-  source: "live_activity" | "subagent_registry" | "team_execution" | "derived";
-  startedAt: string | null;
-  updatedAt: string;
-  expiresAt: string | null;
-  taskId: string | null;
-  taskTitle: string | null;
-  phaseKey: string | null;
-  command: string | null;
-  detail: string | null;
-  freshnessState: "fresh" | "aging" | "stale" | "expired" | "unknown";
-  attentionState: "none" | "blocked" | "needs_human" | "needs_policy" | "stale" | "unavailable";
   role: "main" | "supervisor" | "worker" | "reviewer" | "validator" | "researcher" | "unknown";
+  status: DashboardAgentStatusKind;
+  statusLabel: string;
+  source: "live_activity" | "subagent_registry" | "team_execution" | "derived" | "future_runtime";
+  sourceConfidence: "high" | "medium" | "low";
+
+  work: {
+    kind: "task" | "phase" | "planning" | "review" | "validation" | "release" | "idle" | "unknown";
+    title: string | null;
+    taskId: string | null;
+    taskTitle: string | null;
+    phaseKey: string | null;
+    command: string | null;
+    detail: string | null;
+  };
+
+  refs: {
+    activityId?: string | null;
+    agentId?: string | null;
+    sessionId?: string | null;
+    assignmentId?: string | null;
+    agentDefinitionId?: string | null;
+    subagentDefinitionId?: string | null;
+    taskId?: string | null;
+    prNumber?: number | null;
+  };
+
+  freshness: {
+    updatedAt: string | null;
+    startedAt: string | null;
+    expiresAt: string | null;
+    state: "fresh" | "aging" | "stale" | "expired" | "unknown";
+  };
+
+  attention: {
+    state: "none" | "blocked" | "needs_human" | "needs_policy" | "stale" | "failed" | "unavailable";
+    message: string | null;
+  };
 };
 
 export type DashboardAgentActivitySummary = {
   schemaVersion: 1;
+  generatedAt: string;
   source: "live_activity" | "derived_only" | "mixed";
-  updatedAt: string;
   activeCount: number;
   staleCount: number;
   needsAttentionCount: number;
@@ -419,15 +545,20 @@ export type DashboardAgentActivitySummary = {
   active: DashboardAgentActivityRow[];
   needsAttention: DashboardAgentActivityRow[];
   inferredFallback: DashboardAgentStatusSummary | null;
+  sourceMap: {
+    liveActivityCount: number;
+    teamExecutionCount: number;
+    subagentSessionCount: number;
+    derivedFallbackUsed: boolean;
+  };
 };
 ```
 
-## 7.3 Deferred v1.1 fields
+## 7.4 Deferred v1.1 fields
 
 These are useful but should not block v1:
 
 ```text
-agentDefinitionId
 customAgentName
 branch
 baseBranch
@@ -446,27 +577,25 @@ recentlyActive[]
 
 They can be parsed best-effort from `details` and shown in expanded rows later.
 
-## 7.4 Dashboard rendering changes
+## 7.5 Projection source precedence
 
-Replace or enhance the current top overview agent card with an Agent Activity Board.
-
-## 7.5 Polling / refresh changes
-
-Add a dedicated agent activity slice to the dashboard refresh model.
-
-Suggested interval:
+Default precedence, pending A-PROJECTION approval:
 
 ```text
-agentActivity: every 2–5 seconds while overview/dashboard is visible
+1. live activity lease
+2. future AgentSession / AgentAssignment runtime state
+3. team execution assignment
+4. subagent registry session
+5. derived agent status
 ```
 
-Do not use a full dashboard refresh for this cadence.
+Live activity should usually win because it has the freshest heartbeat.
 
-## 7.6 Agent command guidance changes
+Team execution and subagent registry should enrich or backfill rows rather than creating duplicates when they refer to the same work.
 
-Update docs/snippets so agents call `set-agent-activity` when starting, changing step, blocking, validating, reviewing, releasing, waiting, or completing activity.
+## 7.6 Renderer rule
 
-Also add automatic command-boundary hooks where practical.
+The dashboard renderer must consume only `DashboardAgentActivitySummary` and must not query task-engine internals.
 
 ---
 
@@ -476,8 +605,9 @@ These artifacts must be completed before implementation tasks begin. They are de
 
 | ID | Artifact | Required decision | Blocks |
 | --- | --- | --- | --- |
-| **A-ID** | Agent identity + row merge model | Define `agentId`, `sessionId`, `activityId`, `agentDefinitionId`, subagent `definitionId`, display-name precedence, main-agent selection, and duplicate-merge rules. | T-AC-101, T-AC-201 |
-| **A-CONTRACT** | Agent activity dashboard contract | Decide where `agentActivitySummary` lives, required v1 fields, compatibility with `agentStatus`, versioning, and fixture examples. | T-AC-101, T-AC-502 |
+| **A-PROJECTION** | Agent activity projection source map | Define current/future inputs, output contract, source precedence, row merge rules, freshness calculation, and attention calculation. | T-AC-050, T-AC-101, T-AC-201 |
+| **A-ID** | Agent identity + row merge model | Define `agentId`, `sessionId`, `activityId`, `agentDefinitionId`, subagent `definitionId`, display-name precedence, main-agent selection, and duplicate-merge rules. | T-AC-050, T-AC-101, T-AC-201 |
+| **A-CONTRACT** | Agent activity dashboard contract | Decide where `agentActivitySummary` lives, required v1 fields, compatibility with `agentStatus`, versioning, and fixture examples. | T-AC-050, T-AC-101, T-AC-502 |
 | **A-REFRESH** | Agent activity slice/refresh plan | Decide projection vs command vs service slice, polling interval, mutation-lock behavior, section patch id, and fallback behavior. | T-AC-301, T-AC-302 |
 | **A-UX** | Narrow dashboard UX spec | Finalize compact layout, row limits, status chips, accessibility labels, line wrapping, action buttons, and expansion rules. | T-AC-201, T-AC-202, T-AC-203 |
 | **A-INSTRUMENTATION** | Agent activity reporting convention | Decide TTL/heartbeat policy, required/minimum payload, docs, and automatic command hooks. | T-AC-401, command-hook work |
@@ -485,7 +615,7 @@ These artifacts must be completed before implementation tasks begin. They are de
 
 ---
 
-# 9. Available Data To Display
+# 9. Available Data To Feed The Projection
 
 ## From `agentStatus`
 
@@ -597,6 +727,15 @@ These artifacts must be completed before implementation tasks begin. They are de
 - queue counts
 - task sync current/behind/conflict
 
+## Future source candidates
+
+- AgentAssignment
+- AgentSession
+- AgentHandoff
+- AgentResourceLock
+- RuntimeServiceSnapshot
+- service event stream
+
 ---
 
 # 10. Information We Should Display By Default
@@ -613,7 +752,7 @@ Display:
 - phase key
 - current step or command
 - updated relative time
-- Live/Inferred badge
+- Live/Inferred/Mixed badge
 
 Example:
 
@@ -626,7 +765,7 @@ Main Agent
 
 ## Active agents list
 
-Display each active row:
+Display each active projected row:
 
 - display name / agent id
 - status chip
@@ -661,7 +800,10 @@ Expanded row details may show:
 
 - session id
 - activity id
-- raw kind
+- assignment id
+- agent definition id
+- subagent definition id
+- raw kind/status
 - exact startedAt / updatedAt / expiresAt
 - branch
 - worktree basename or repo-relative path
@@ -671,7 +813,6 @@ Expanded row details may show:
 - model/provider
 - checkpoint references
 - handoff references
-- assignment id
 - supervisor id
 - worker id
 - raw details JSON only in debug/explicit expansion mode
@@ -777,7 +918,7 @@ Inferred
 Mixed
 ```
 
-Live means at least one current activity lease is present. Inferred means the system is guessing from tasks/sessions. Mixed means live leases exist, but fallback derived status is also contributing.
+Live means at least one current activity lease is present. Inferred means the system is guessing from tasks/sessions. Mixed means live rows exist but fallback/enrichment also contributes.
 
 ## 12.7 V1 actions
 
@@ -858,15 +999,37 @@ requestedDecision
 
 Do not remove or break the existing `agentStatus` field. Add `agentActivitySummary` or equivalent alongside it.
 
-## 14.2 Use all active leases
+## 14.2 Build the projection first
 
-The store already supports listing active leases. The dashboard build path should use that list, not only the first lease.
+Do not have the renderer assemble rows from leases/team/subagent data directly.
 
-## 14.3 Enrich activity rows with task titles
+Add a projection builder such as:
+
+```text
+buildDashboardAgentActivitySummary(input): DashboardAgentActivitySummary
+```
+
+The builder owns:
+
+- source normalization
+- row id generation
+- display-name resolution
+- source precedence
+- duplicate merge rules
+- main-agent selection
+- freshness calculation
+- attention-state calculation
+- derived fallback incorporation
+
+## 14.3 Use all active leases as the first current input
+
+The store already supports listing active leases. The projection build path should use that list, not only the first lease.
+
+## 14.4 Enrich projection rows with task titles
 
 Use task store data to join `taskId` to task title. If a task id no longer exists or is external, keep the raw task id and avoid failing.
 
-## 14.4 Derive display name safely
+## 14.5 Derive display name safely
 
 Suggested display name order, pending A-ID decision:
 
@@ -879,7 +1042,7 @@ agentId
 sessionId
 ```
 
-## 14.5 Add a lightweight projection/slice
+## 14.6 Add a lightweight projection/slice
 
 Do not require full dashboard summary refresh just to update agent activity.
 
@@ -901,11 +1064,11 @@ or future:
 /dashboard/slices/agentActivity
 ```
 
-## 14.6 Keep rendering pure and testable
+## 14.7 Keep rendering pure and testable
 
-The dashboard renderer should receive structured data and render HTML without fetching anything.
+The dashboard renderer should receive `DashboardAgentActivitySummary` and render HTML without fetching anything.
 
-## 14.7 Update tests before or alongside renderer work
+## 14.8 Update tests before or alongside renderer work
 
 Add rendering tests for:
 
@@ -914,6 +1077,7 @@ Add rendering tests for:
 - multiple live activities
 - custom agent display name
 - subagent definition id fallback/enrichment
+- team execution fallback/enrichment
 - awaiting approval sorted first
 - stale/expired handling
 - old payload compatibility
@@ -933,6 +1097,7 @@ Add rendering tests for:
 - Do not bury human-gate or policy-approval states below routine working rows.
 - Do not make the visual design color-only; use labels/icons/text for accessibility.
 - Do not treat subagent registry rows and live activity rows as separate duplicate active rows when they represent the same work.
+- Do not bind the UI directly to current backend source shapes.
 
 ---
 
@@ -945,6 +1110,7 @@ Add rendering tests for:
 - Task titles can be joined from active task store rows where available.
 - Subagent registry definition ids are sufficient initial identifiers for custom subagents when no live lease exists.
 - Recently active rows may require a new query and should be deferred unless cheap.
+- Future task-engine assignment/session/lock models will be integrated by updating the projection builder, not the renderer.
 
 ---
 
@@ -952,16 +1118,18 @@ Add rendering tests for:
 
 These decisions should be made one at a time before execution tasks are generated.
 
-1. Where should the new data live: top-level `agentActivitySummary`, nested under `agentStatus`, or separate command only?
-2. What is the canonical agent identity and row merge model?
-3. How should the main agent be selected?
-4. What is the minimum v1 activity row contract?
-5. What TTL/heartbeat/freshness policy should dashboard activity use?
-6. Should activity `details` be schema-validated or best-effort parsed?
-7. How should subagent registry and team execution rows be merged with live activity leases?
-8. What refresh mechanism should v1 use: projection, separate command, or service slice?
-9. How much UI belongs in v1: compact board only, or expansion/actions too?
-10. Which activity states should be set automatically by Workflow Cannon command boundaries?
+1. Should the dashboard expose raw current-source data, or a stable projected `DashboardAgentActivitySummary` view model?
+2. Where should the projected summary live: top-level `agentActivitySummary`, nested under `agentStatus`, or separate command only?
+3. What current and future sources feed the projection, and what is their precedence?
+4. What is the canonical agent identity and row merge model?
+5. How should the main agent be selected?
+6. What is the minimum v1 projection row contract?
+7. What TTL/heartbeat/freshness policy should dashboard activity use?
+8. Should activity `details` be schema-validated or best-effort parsed?
+9. How should subagent registry and team execution rows be merged with live activity leases?
+10. What refresh mechanism should v1 use: projection, separate command, or service slice?
+11. How much UI belongs in v1: compact board only, or expansion/actions too?
+12. Which activity states should be set automatically by Workflow Cannon command boundaries?
 
 ---
 
@@ -969,23 +1137,25 @@ These decisions should be made one at a time before execution tasks are generate
 
 ## Phase 0 — Decision artifacts
 
-Complete A-ID, A-CONTRACT, A-REFRESH, A-UX, A-INSTRUMENTATION, and A-TEST before implementation.
+Complete A-PROJECTION, A-ID, A-CONTRACT, A-REFRESH, A-UX, A-INSTRUMENTATION, and A-TEST before implementation.
 
 Exit criteria:
 
 - Major decisions are recorded.
+- Projection model is approved.
 - Contract and identity model are approved.
 - Implementation tasks have clear constraints.
 
-## Phase A — Contract and data surfacing
+## Phase A — Projection and contract foundations
 
-Expose all active agent activity leases in dashboard summary, enriched with task titles and safe display metadata.
+Implement the projection builder and expose `agentActivitySummary` from current sources.
 
 Exit criteria:
 
-- `agentActivitySummary` or equivalent exists.
+- `DashboardAgentActivitySummary` exists.
 - Existing `agentStatus` remains compatible.
-- Tests prove multiple active leases are returned.
+- Tests prove multiple active leases are projected.
+- Team/subagent rows can enrich or backfill without duplicate active rows.
 
 ## Phase B — Overview card UX
 
@@ -996,7 +1166,7 @@ Exit criteria:
 - Main agent row renders.
 - Active agents render.
 - Needs attention rows sort first.
-- Live/Inferred badge displays.
+- Live/Inferred/Mixed badge displays.
 - Freshness labels display.
 
 ## Phase C — Near-real-time refresh
@@ -1021,11 +1191,11 @@ Exit criteria:
 
 ## Phase E — Service/event-stream readiness
 
-Prepare the slice to be swapped to the future dashboard service/event stream.
+Prepare the projection to be fed by the future dashboard service/event stream.
 
 Exit criteria:
 
-- Slice boundary is clear.
+- Projection boundary is clear.
 - Renderer is data-source agnostic.
 - Future service can feed the same contract.
 
@@ -1041,12 +1211,13 @@ Exit criteria:
 **Priority:** P0  
 **Severity:** Critical  
 **Suggested phase:** Phase 0  
-**Value:** Prevents parallel agents from implementing identity, contract, and refresh behavior inconsistently.
+**Value:** Prevents parallel agents from implementing identity, contract, projection, and refresh behavior inconsistently.
 
 **Scope**
 
 Produce and approve:
 
+- A-PROJECTION — Agent activity projection source map
 - A-ID — Agent identity + row merge model
 - A-CONTRACT — Agent activity dashboard contract
 - A-REFRESH — Agent activity slice/refresh plan
@@ -1062,21 +1233,22 @@ Produce and approve:
 
 ---
 
-## WP-1 — Inventory and contract decision
+## WP-1 — Inventory and projection decision
 
-### T-AC-001 — Inventory current agent card rendering and data flow
+### T-AC-001 — Inventory current and expected future agent activity data flow
 
 **Type:** research  
 **Priority:** P0  
 **Severity:** High  
 **Suggested phase:** Phase 0  
-**Value:** Prevents building a duplicate or incompatible status model.
+**Value:** Prevents building a projection that only fits today’s backend.
 
 **Scope**
 
 - Locate current overview agent card renderer.
 - Trace dashboard data from `dashboard-summary` to render HTML.
 - Confirm how `agentStatus`, `teamExecution`, `subagentRegistry`, `taskCheckpoints`, and live leases are currently included.
+- Identify expected future task-engine sources likely to feed activity.
 - Identify tests that cover current rendering.
 
 **Acceptance criteria**
@@ -1084,10 +1256,11 @@ Produce and approve:
 - Notes list current renderer functions and data fields.
 - Notes list what the current card displays.
 - Notes list missing fields for multi-agent display.
+- Notes list future backend concepts the projection should anticipate.
 
 ---
 
-### T-AC-002 — Decide `agentActivitySummary` contract shape
+### T-AC-002 — Decide `DashboardAgentActivitySummary` projection contract
 
 **Type:** design / contract  
 **Priority:** P0  
@@ -1100,6 +1273,7 @@ Produce and approve:
 - Decide where the new payload lives.
 - Define `DashboardAgentActivityRow` and `DashboardAgentActivitySummary`.
 - Include compatibility policy for existing `agentStatus`.
+- Include source-map fields.
 - Include display-name derivation rules.
 - Include fixture examples.
 
@@ -1108,52 +1282,90 @@ Produce and approve:
 - Contract shape is documented.
 - Existing `agentStatus` remains unchanged or backward compatible.
 - The contract supports multiple active agents.
+- The contract is source-agnostic enough for future task-engine changes.
 
 ---
 
-## WP-2 — Backend data surfacing
+## WP-2 — Projection builder and backend data surfacing
 
-### T-AC-101 — Expose all active live activity leases in dashboard summary
+### T-AC-050 — Implement Agent Activity Projection Builder
 
 **Type:** implementation  
 **Priority:** P0  
 **Severity:** Critical  
 **Suggested phase:** Phase A  
-**Requires:** A-ID, A-CONTRACT  
-**Value:** Unlocks multi-agent visibility.
+**Requires:** A-PROJECTION, A-ID, A-CONTRACT  
+**Value:** Creates the stability boundary between volatile backend state and dashboard UI.
 
 **Likely files**
 
 ```text
+src/modules/task-engine/dashboard/build-dashboard-agent-activity-summary.ts
 src/contracts/dashboard-summary-run.ts
+test/dashboard-agent-activity-summary.test.mjs
+```
+
+**Scope**
+
+- Normalize current sources into `DashboardAgentActivitySummary`.
+- Implement row id generation.
+- Implement display-name resolution.
+- Implement main-agent selection.
+- Implement source precedence.
+- Implement duplicate merge rules.
+- Implement freshness and attention calculation.
+- Preserve derived fallback.
+
+**Acceptance criteria**
+
+- Projection can be built from current live activity leases.
+- Projection can include/enrich from task/team/subagent data.
+- Duplicate sources do not create duplicate rows for the same work.
+- Renderer does not need to know source-specific shapes.
+
+---
+
+### T-AC-101 — Feed all active live activity leases into the projection
+
+**Type:** implementation  
+**Priority:** P0  
+**Severity:** Critical  
+**Suggested phase:** Phase A  
+**Requires:** T-AC-050  
+**Value:** Unlocks multi-agent visibility from current data.
+
+**Likely files**
+
+```text
 src/modules/task-engine/dashboard/build-dashboard-base.ts
 src/modules/task-engine/agent-activity-store.ts
+src/modules/task-engine/dashboard/build-dashboard-agent-activity-summary.ts
 test/dashboard-*.mjs
 ```
 
 **Scope**
 
 - Use `listCurrentAgentActivityLeases` rather than only `readCurrentAgentActivityLease`.
-- Convert leases into dashboard rows.
+- Pass leases into the projection builder.
 - Preserve existing single `agentStatus` behavior.
-- Include active count and updatedAt.
+- Include active count and generatedAt.
 
 **Acceptance criteria**
 
-- Multiple active leases appear in dashboard summary.
-- Expired leases are excluded.
+- Multiple active leases appear in projected summary.
+- Expired leases are excluded from active rows.
 - Existing `agentStatus` still works.
 - When no live leases exist, derived status remains available.
 
 ---
 
-### T-AC-102 — Enrich activity rows with task title and phase context
+### T-AC-102 — Enrich projection rows with task title and phase context
 
 **Type:** implementation  
 **Priority:** P0  
 **Severity:** High  
 **Suggested phase:** Phase A  
-**Requires:** A-CONTRACT  
+**Requires:** T-AC-050  
 **Value:** Makes rows human-readable.
 
 **Scope**
@@ -1177,7 +1389,7 @@ test/dashboard-*.mjs
 **Priority:** P1  
 **Severity:** Medium  
 **Suggested phase:** Phase A  
-**Requires:** A-ID, A-CONTRACT  
+**Requires:** T-AC-050  
 **Value:** Allows custom agents to identify themselves without a new table.
 
 **Scope**
@@ -1186,7 +1398,7 @@ Parse approved known keys from `details` defensively.
 
 **Acceptance criteria**
 
-- Known detail keys appear in structured row fields.
+- Known detail keys appear in structured row fields or expanded metadata.
 - Unknown detail keys are not rendered in compact card.
 - Malformed details do not break dashboard summary.
 
@@ -1194,13 +1406,13 @@ Parse approved known keys from `details` defensively.
 
 ## WP-3 — Agent Activity Board UX
 
-### T-AC-201 — Render compact Agent Activity Board
+### T-AC-201 — Render compact Agent Activity Board from projection only
 
 **Type:** implementation / UI  
 **Priority:** P0  
 **Severity:** High  
 **Suggested phase:** Phase B  
-**Requires:** A-ID, A-CONTRACT, A-UX  
+**Requires:** T-AC-050, A-UX  
 **Value:** Converts data into immediate human understanding.
 
 **Likely files**
@@ -1212,7 +1424,7 @@ extensions/cursor-workflow-cannon/test/render-dashboard.test.mjs
 
 **Scope**
 
-Render:
+Render from `DashboardAgentActivitySummary` only:
 
 - header with freshness/source
 - Main Agent
@@ -1226,6 +1438,7 @@ Render:
 - Multiple live activities render in active list.
 - No live activity renders derived fallback.
 - Empty state is clear and not alarming.
+- Renderer does not depend on raw lease/team/subagent shapes.
 
 ---
 
@@ -1287,7 +1500,7 @@ Render:
 
 **Scope**
 
-Expanded details may show session, activity id, branch/worktree, PR, command, model, role, and debug details.
+Expanded details may show session, activity id, assignment id, branch/worktree, PR, command, model, role, and debug details.
 
 **Acceptance criteria**
 
@@ -1299,13 +1512,13 @@ Expanded details may show session, activity id, branch/worktree, PR, command, mo
 
 ## WP-4 — Near-real-time updates
 
-### T-AC-301 — Add agent activity dashboard projection/slice
+### T-AC-301 — Add agent activity projection/slice
 
 **Type:** implementation  
 **Priority:** P0  
 **Severity:** High  
 **Suggested phase:** Phase C  
-**Requires:** A-REFRESH, A-CONTRACT  
+**Requires:** A-REFRESH, T-AC-050  
 **Value:** Enables frequent updates without full dashboard refresh.
 
 **Scope**
@@ -1453,6 +1666,7 @@ Fixtures for:
 - multiple live activities
 - custom agent metadata
 - subagent definition id fallback/enrichment
+- team execution fallback/enrichment
 - waiting on human gate
 - policy approval
 - blocked
@@ -1469,26 +1683,28 @@ Fixtures for:
 
 ---
 
-### T-AC-502 — Add dashboard data contract tests
+### T-AC-502 — Add dashboard data contract/projection tests
 
 **Type:** testing  
 **Priority:** P0  
 **Severity:** High  
 **Suggested phase:** Phase A  
-**Requires:** A-CONTRACT, A-TEST  
-**Value:** Protects backend summary shape.
+**Requires:** A-CONTRACT, A-PROJECTION, A-TEST  
+**Value:** Protects backend summary shape and projection behavior.
 
 **Scope**
 
 - Contract test for multiple current activity leases.
 - Contract test for enriched task title.
 - Contract test for unknown/missing fields.
-- Contract test for live + derived fallback coexistence.
+- Projection test for duplicate source merge.
+- Projection test for live + derived fallback coexistence.
 
 **Acceptance criteria**
 
 - Dashboard summary payload remains versioned and stable.
 - Tests fail if multiple activities regress to single activity.
+- Tests fail if duplicate sources produce duplicate active rows.
 
 ---
 
@@ -1496,14 +1712,18 @@ Fixtures for:
 
 ```text
 T-AC-000 → all implementation work
-T-AC-001 → A-ID, A-CONTRACT, A-REFRESH
-A-ID + A-CONTRACT → T-AC-101
-T-AC-101 → T-AC-102
-T-AC-101 → T-AC-201
-T-AC-102 → T-AC-201
-T-AC-103 → T-AC-201
-A-UX → T-AC-201, T-AC-202, T-AC-203, T-AC-204
-A-REFRESH → T-AC-301, T-AC-302, T-AC-303
+T-AC-001 → A-PROJECTION, A-ID, A-CONTRACT, A-REFRESH
+A-PROJECTION + A-ID + A-CONTRACT → T-AC-050
+T-AC-050 → T-AC-101
+T-AC-050 → T-AC-102
+T-AC-050 → T-AC-103
+T-AC-050 + A-UX → T-AC-201
+T-AC-201 → T-AC-202
+T-AC-201 → T-AC-203
+T-AC-201 → T-AC-204
+A-REFRESH + T-AC-050 → T-AC-301
+T-AC-301 → T-AC-302
+T-AC-301 → T-AC-303
 A-INSTRUMENTATION → T-AC-401, T-AC-402
 A-TEST → T-AC-501, T-AC-502
 ```
@@ -1512,22 +1732,23 @@ A-TEST → T-AC-501, T-AC-502
 
 # 21. Recommended Work Order
 
-1. T-AC-001 — Inventory current rendering/data flow.
+1. T-AC-001 — Inventory current and future activity data flow.
 2. T-AC-000 — Produce required decision artifacts.
-3. T-AC-002 — Finalize `agentActivitySummary` contract shape.
-4. T-AC-101 — Expose all active leases.
-5. T-AC-102 — Enrich with task titles/phase context.
-6. T-AC-502 — Add contract tests.
-7. T-AC-201 — Render compact Agent Activity Board.
-8. T-AC-202 — Add status chips and attention sorting.
-9. T-AC-203 — Add freshness/stale handling.
-10. T-AC-501 — Add render fixtures.
-11. T-AC-301 — Add lightweight activity projection/slice.
-12. T-AC-302 — Poll/patch near-real-time.
-13. T-AC-401 — Add agent-facing docs and examples.
-14. T-AC-402 — Add automatic activity hooks.
-15. T-AC-204 — Add expandable details.
-16. T-AC-303 — Prepare service/event-stream compatibility.
+3. T-AC-002 — Finalize projection contract shape.
+4. T-AC-050 — Implement Agent Activity Projection Builder.
+5. T-AC-101 — Feed all active live leases into projection.
+6. T-AC-102 — Enrich with task titles/phase context.
+7. T-AC-502 — Add contract/projection tests.
+8. T-AC-201 — Render compact Agent Activity Board from projection only.
+9. T-AC-202 — Add status chips and attention sorting.
+10. T-AC-203 — Add freshness/stale handling.
+11. T-AC-501 — Add render fixtures.
+12. T-AC-301 — Add lightweight projection/slice.
+13. T-AC-302 — Poll/patch near-real-time.
+14. T-AC-401 — Add agent-facing docs and examples.
+15. T-AC-402 — Add automatic activity hooks.
+16. T-AC-204 — Add expandable details.
+17. T-AC-303 — Prepare service/event-stream compatibility.
 
 ---
 
@@ -1536,15 +1757,17 @@ A-TEST → T-AC-501, T-AC-502
 This plan is complete when:
 
 - The dashboard overview has an Agent Activity panel/card.
+- The panel renders only from `DashboardAgentActivitySummary` or equivalent stable projection.
 - The panel shows multiple active agents, not only one inferred status.
 - Custom agents can be identified when they provide metadata.
 - Subagent sessions can be identified by definition/session/task without duplicating live rows.
-- Main agent selection follows the approved identity model.
+- Main agent selection follows the approved projection/identity model.
 - Human intervention states are visually prioritized.
 - Live vs inferred status is clearly labeled.
 - Freshness is shown and stale activity is not misleading.
 - Agent activity updates within 5 seconds while the dashboard is visible.
 - The renderer is tested with representative multi-agent states.
+- Projection tests cover current and anticipated source combinations.
 - Agent docs show how to provide richer activity data.
 - Known command boundaries report activity where practical.
 
@@ -1557,8 +1780,8 @@ When converting this plan into Workflow Cannon tasks, use task metadata like:
 ```json
 {
   "planRef": "AGENT_CARD_PLAN.md",
-  "planArea": "dashboard-agent-activity",
-  "wbsId": "T-AC-101",
+  "planArea": "dashboard-agent-activity-projection",
+  "wbsId": "T-AC-050",
   "requiresPhaseBranch": true,
   "maintainerDeliveryProfile": "github-pr"
 }
@@ -1575,6 +1798,7 @@ Recommended tags:
 ```text
 dashboard
 agent-activity
+activity-projection
 multi-agent
 extension-ui
 task-engine
@@ -1585,17 +1809,21 @@ near-real-time
 
 # 24. Final Recommendation
 
-Do this, but do not start with UI. Start with the decision artifacts.
+Do this, but do not start with UI and do not start by dumping raw activity leases into the renderer.
+
+Start with the projection boundary.
 
 The winning product pattern is:
 
 ```text
 Agent Activity Board
-  = live leases first
+  = stable projection view model
+  + live leases as first current input
+  + future task-engine/session/assignment sources as future inputs
   + derived fallback
   + attention-first sorting
   + custom agent identity
   + near-real-time slice refresh
 ```
 
-The biggest implementation risk is ambiguity. Solve identity, contract, refresh, UX, instrumentation, and testing decisions first; then the implementation should be straightforward and high-value.
+The biggest implementation risk is coupling the UI to backend churn. Solve that with `DashboardAgentActivitySummary` and `buildDashboardAgentActivitySummary(...)`; then the implementation should stay useful even as task-engine phased work changes the underlying data model.
