@@ -128,24 +128,27 @@ task-worker
 
 ## 5. Recommended delivery phases
 
+Use exactly three planner-facing phases.
+
 | Phase | Theme | Exit criteria |
 | --- | --- | --- |
-| **P0** | Decision artifacts | Human-approved contracts, schemas, access/context/model profiles, command impacts, test strategy |
-| **P1** | Contract bridge | Validators and data-shape helpers exist for AgentDefinition, AgentSession, Assignment metadata, Activity, Handoff |
-| **P2** | Registry/session foundations | Agent definitions and sessions can be registered/read in a host-agnostic way or safely bridged through existing subagent registry |
-| **P3** | Assignment orchestration | TeamAssignment can carry structured AgentAssignment metadata; orchestrator/worker flows are supported |
-| **P4** | Activity + handoff | Activity v1 lifecycle and Handoff v2 are usable from CLI/agent workflows |
-| **P5** | Profile + prompt docs | Agents have concrete prompts, context/access/model guidance, and examples |
-| **P6** | Projection bridge | Dashboard projection can consume orchestration state without owning it |
-| **P7** | Hardening | Tests, fixtures, compatibility docs, E2E operator checklist, release readiness |
+| **Phase 1 — Contracts & Design Gates** | Inventory, architecture, schemas, command contracts, policy, profiles, handoff/activity/projection/test/compatibility artifacts | All A-* artifacts exist and have explicit human approval. No implementation task starts until relevant artifacts are approved. |
+| **Phase 2 — Core Orchestration Implementation** | Shared types, validators, fixtures, AgentDefinition/AgentSession bridges, assignment metadata, blocker/bug flow, lifecycle authority, Handoff v2, Activity v1 | Agent definitions/sessions can be represented; assignments carry structured orchestration metadata; workers can report blockers and submit Handoff v2; Activity v1 links agent/session/task/assignment; mutation boundaries are enforced. |
+| **Phase 3 — Projection, Docs & Hardening** | Agent docs/prompts, profile catalog docs, dashboard projection bridge, projection tests, compatibility tests, E2E fixtures, release checklist | Agents have usable prompts/docs; dashboard projection can consume orchestration state; existing flows remain compatible; happy-path and blocked-worker E2E fixtures pass; release checklist is complete. |
 
-Phases are recommended sequencing, not necessarily repo `phaseKey` values.
+Phase mapping summary:
+
+```text
+Phase 1 = decide exactly what to build
+Phase 2 = build the orchestration engine pieces
+Phase 3 = make it visible, documented, tested, and safe
+```
 
 ---
 
 ## 6. Required human-reviewed artifacts
 
-These artifacts must be produced and approved before dependent coding starts.
+These artifacts must be produced and approved before dependent coding starts. They all belong to **Phase 1 — Contracts & Design Gates**.
 
 | ID | Artifact | What it must contain | Produced by | Human approves | Blocks |
 | --- | --- | --- | --- | --- | --- |
@@ -174,14 +177,14 @@ These artifacts must be produced and approved before dependent coding starts.
 
 ## 7. Work Breakdown Structure
 
-## WP-A — Prerequisite decision artifacts
+## WP-A — Phase 1: Contracts & Design Gates
 
 ### T-AO-000 — Inventory current orchestration surfaces
 
 **Type:** research / inventory  
 **Priority:** P0  
 **Severity:** Critical  
-**Recommended phase:** P0  
+**Recommended phase:** Phase 1 — Contracts & Design Gates  
 **Requires:** —  
 **Produces:** A-INV  
 **Value:** Prevents building duplicate or incompatible orchestration primitives.
@@ -219,7 +222,7 @@ Inventory:
   "type": "research",
   "planRef": "AGENT_ORCHESTRATION_TASKS.md",
   "wbsId": "T-AO-000",
-  "recommendedPhase": "P0",
+  "recommendedPhase": "Phase 1 — Contracts & Design Gates",
   "tags": ["agent-orchestration", "inventory", "subagents", "team-execution"]
 }
 ```
@@ -231,7 +234,7 @@ Inventory:
 **Type:** architecture  
 **Priority:** P0  
 **Severity:** Critical  
-**Recommended phase:** P0  
+**Recommended phase:** Phase 1 — Contracts & Design Gates  
 **Requires:** A-INV  
 **Produces:** A-ARCH  
 **Value:** Locks source-of-truth boundaries before schema or code work.
@@ -256,20 +259,6 @@ Create `AGENT_ORCHESTRATION_ARCHITECTURE.md` or equivalent sectioned artifact co
 - Existing subagent/team execution compatibility is preserved.
 - Human approval recorded before dependent implementation.
 
-**Generated task payload hint**
-
-```json
-{
-  "title": "Draft orchestration architecture decision document",
-  "type": "architecture",
-  "planRef": "AGENT_ORCHESTRATION_TASKS.md",
-  "wbsId": "T-AO-010",
-  "requiresArtifacts": ["A-INV"],
-  "producesArtifacts": ["A-ARCH"],
-  "recommendedPhase": "P0"
-}
-```
-
 ---
 
 ### T-AO-020 — Draft orchestration schema and contract pack
@@ -277,7 +266,7 @@ Create `AGENT_ORCHESTRATION_ARCHITECTURE.md` or equivalent sectioned artifact co
 **Type:** schema / contract  
 **Priority:** P0  
 **Severity:** Critical  
-**Recommended phase:** P0  
+**Recommended phase:** Phase 1 — Contracts & Design Gates  
 **Requires:** A-ARCH  
 **Produces:** A-SCHEMA  
 **Value:** Gives agents and implementation code stable payloads.
@@ -310,7 +299,7 @@ Create `AGENT_ORCHESTRATION_CONTRACTS.md` or equivalent containing:
 **Type:** command contract  
 **Priority:** P0  
 **Severity:** High  
-**Recommended phase:** P0  
+**Recommended phase:** Phase 1 — Contracts & Design Gates  
 **Requires:** A-ARCH, A-SCHEMA  
 **Produces:** A-COMMANDS  
 **Value:** Prevents command/API drift across agents.
@@ -327,15 +316,7 @@ Define command changes and any new commands needed for:
 - setting/updating/clearing Activity v1
 - reading orchestration status for agents
 
-For each command, define:
-
-- request shape
-- response shape
-- dry-run behavior if applicable
-- policyApproval requirement
-- idempotency key behavior if applicable
-- error cases
-- examples
+For each command, define request shape, response shape, dry-run behavior if applicable, policyApproval requirement, idempotency key behavior if applicable, error cases, and examples.
 
 **Acceptance criteria**
 
@@ -351,24 +332,14 @@ For each command, define:
 **Type:** policy / safety  
 **Priority:** P0  
 **Severity:** Critical  
-**Recommended phase:** P0  
+**Recommended phase:** Phase 1 — Contracts & Design Gates  
 **Requires:** A-COMMANDS, A-SCHEMA  
 **Produces:** A-POLICY  
 **Value:** Protects task DB integrity and prevents worker overreach.
 
 **Scope**
 
-Document:
-
-- Orchestration Agent allowed mutations
-- Task Work Agent allowed mutations
-- worker-created blocker/bug rules
-- who can transition tasks
-- who can reconcile assignments
-- who can unblock assignments
-- required policyApproval surfaces
-- forbidden DB/manual mutation paths
-- alignment with current Workflow Cannon policy docs
+Document Orchestration Agent allowed mutations, Task Work Agent allowed mutations, worker-created blocker/bug rules, who can transition tasks, who can reconcile assignments, who can unblock assignments, required policyApproval surfaces, forbidden DB/manual mutation paths, and alignment with current Workflow Cannon policy docs.
 
 **Acceptance criteria**
 
@@ -384,23 +355,14 @@ Document:
 **Type:** profile design  
 **Priority:** P0  
 **Severity:** High  
-**Recommended phase:** P0  
+**Recommended phase:** Phase 1 — Contracts & Design Gates  
 **Requires:** A-SCHEMA, A-POLICY  
 **Produces:** A-PROFILES  
 **Value:** Makes agent behavior reusable, cost-aware, and host-agnostic.
 
 **Scope**
 
-Define:
-
-- `orchestrator_access_v1`
-- `task_worker_strict_v1`
-- `orchestrator_context_v1`
-- `task_worker_context_v1`
-- model/cost tiers and routing rubric
-- host compatibility labels
-- required/optional capability vocabulary
-- resource ownership metadata rules
+Define `orchestrator_access_v1`, `task_worker_strict_v1`, `orchestrator_context_v1`, `task_worker_context_v1`, model/cost tiers and routing rubric, host compatibility labels, required/optional capability vocabulary, and resource ownership metadata rules.
 
 **Acceptance criteria**
 
@@ -416,30 +378,14 @@ Define:
 **Type:** contract / rubric  
 **Priority:** P0  
 **Severity:** High  
-**Recommended phase:** P0  
+**Recommended phase:** Phase 1 — Contracts & Design Gates  
 **Requires:** A-SCHEMA  
 **Produces:** A-HANDOFF  
 **Value:** Ensures handoffs are compact but sufficient for reconciliation.
 
 **Scope**
 
-Create examples and validation rules for:
-
-- completed handoff
-- blocked handoff
-- partial handoff
-- failed handoff
-- needs_review handoff
-
-Define:
-
-- required fields
-- evidence requirements
-- maximum verbosity guidance
-- acceptance criteria reporting
-- commands/tests reporting
-- risk/blocker reporting
-- next action requirements
+Create examples and validation rules for completed, blocked, partial, failed, and needs_review handoffs. Define required fields, evidence requirements, maximum verbosity guidance, acceptance criteria reporting, commands/tests reporting, risk/blocker reporting, and next action requirements.
 
 **Acceptance criteria**
 
@@ -454,24 +400,14 @@ Define:
 **Type:** contract / lifecycle  
 **Priority:** P0  
 **Severity:** High  
-**Recommended phase:** P0  
+**Recommended phase:** Phase 1 — Contracts & Design Gates  
 **Requires:** A-SCHEMA, A-POLICY  
 **Produces:** A-ACTIVITY  
 **Value:** Makes live agent visibility reliable.
 
 **Scope**
 
-Document:
-
-- Activity v1 required/optional fields
-- lifecycle events
-- heartbeat interval
-- default TTL
-- fresh/aging/stale/expired thresholds
-- block/validation/review activity kinds
-- clear vs expire behavior
-- agent compliance expectations
-- future command-boundary hook candidates
+Document Activity v1 required/optional fields, lifecycle events, heartbeat interval, default TTL, fresh/aging/stale/expired thresholds, block/validation/review activity kinds, clear vs expire behavior, agent compliance expectations, and future command-boundary hook candidates.
 
 **Acceptance criteria**
 
@@ -486,33 +422,16 @@ Document:
 **Type:** projection contract  
 **Priority:** P0  
 **Severity:** High  
-**Recommended phase:** P0  
+**Recommended phase:** Phase 1 — Contracts & Design Gates  
 **Requires:** A-SCHEMA, A-ACTIVITY  
 **Produces:** A-PROJECTION  
 **Value:** Keeps dashboard UX separate from orchestration internals.
 
 **Scope**
 
-Define how the dashboard activity projection consumes:
+Define how the dashboard activity projection consumes AgentDefinition, AgentSession, TeamAssignment / AgentAssignment metadata, AgentActivity, SubagentSession, Handoff summaries, Resource ownership metadata, Model tier metadata, and Host hints/capabilities.
 
-- AgentDefinition
-- AgentSession
-- TeamAssignment / AgentAssignment metadata
-- AgentActivity
-- SubagentSession
-- Handoff summaries
-- Resource ownership metadata
-- Model tier metadata
-- Host hints/capabilities
-
-Define:
-
-- merge keys
-- source precedence
-- source confidence
-- stale/blocked/needs-attention derivation
-- no dashboard mutation rule
-- compatibility with `AGENT_CARD_PLAN.md`
+Define merge keys, source precedence, source confidence, stale/blocked/needs-attention derivation, no dashboard mutation rule, and compatibility with `AGENT_CARD_PLAN.md`.
 
 **Acceptance criteria**
 
@@ -527,24 +446,14 @@ Define:
 **Type:** test strategy  
 **Priority:** P0  
 **Severity:** High  
-**Recommended phase:** P0  
+**Recommended phase:** Phase 1 — Contracts & Design Gates  
 **Requires:** A-SCHEMA, A-COMMANDS  
 **Produces:** A-TEST  
 **Value:** Prevents contract and lifecycle regressions.
 
 **Scope**
 
-Define tests for:
-
-- schema validation
-- command contracts
-- policy/mutation authority
-- worker blocker flow
-- handoff v2 validation
-- activity lifecycle and stale/expired behavior
-- assignment metadata validation
-- dashboard projection source merge
-- compatibility with existing subagent/team execution flows
+Define tests for schema validation, command contracts, policy/mutation authority, worker blocker flow, handoff v2 validation, activity lifecycle and stale/expired behavior, assignment metadata validation, dashboard projection source merge, and compatibility with existing subagent/team execution flows.
 
 **Acceptance criteria**
 
@@ -559,21 +468,14 @@ Define tests for:
 **Type:** compatibility  
 **Priority:** P1  
 **Severity:** Medium  
-**Recommended phase:** P0  
+**Recommended phase:** Phase 1 — Contracts & Design Gates  
 **Requires:** A-INV, A-ARCH  
 **Produces:** A-COMPAT  
 **Value:** Avoids breaking current subagent/team execution users.
 
 **Scope**
 
-Document:
-
-- current subagent registry behavior that stays supported
-- current Team Execution behavior that stays supported
-- compatibility bridge for structured metadata
-- whether any commands gain optional new fields
-- deprecation wording if any
-- safe fallback behavior when new metadata is absent
+Document current subagent registry behavior that stays supported, current Team Execution behavior that stays supported, compatibility bridge for structured metadata, whether any commands gain optional new fields, deprecation wording if any, and safe fallback behavior when new metadata is absent.
 
 **Acceptance criteria**
 
@@ -583,14 +485,14 @@ Document:
 
 ---
 
-## WP-1 — Contract validators and shared types
+## WP-1 — Phase 2: Contract validators and shared types
 
 ### T-AO-110 — Add shared orchestration contract types
 
 **Type:** implementation / types  
 **Priority:** P0  
 **Severity:** Critical  
-**Recommended phase:** P1  
+**Recommended phase:** Phase 2 — Core Orchestration Implementation  
 **Requires:** A-SCHEMA, A-ARCH  
 **Value:** Establishes compile-time contract foundation.
 
@@ -605,15 +507,7 @@ src/contracts/team-execution*.ts
 
 **Scope**
 
-Add or extend shared TypeScript types for:
-
-- AgentDefinition v1
-- AgentSession v1
-- AgentAssignmentMetadata v1
-- AgentActivity v1
-- Handoff v2
-- context/access/model/resource profile references
-- common enums
+Add or extend shared TypeScript types for AgentDefinition v1, AgentSession v1, AgentAssignmentMetadata v1, AgentActivity v1, Handoff v2, context/access/model/resource profile references, and common enums.
 
 **Acceptance criteria**
 
@@ -633,19 +527,13 @@ Add or extend shared TypeScript types for:
 **Type:** implementation / validation  
 **Priority:** P0  
 **Severity:** Critical  
-**Recommended phase:** P1  
+**Recommended phase:** Phase 2 — Core Orchestration Implementation  
 **Requires:** T-AO-110, A-TEST  
 **Value:** Prevents malformed agent payloads from corrupting state.
 
 **Scope**
 
-Add runtime validation for:
-
-- AgentDefinition v1
-- AgentSession v1
-- AgentAssignmentMetadata v1
-- AgentActivity v1
-- Handoff v2
+Add runtime validation for AgentDefinition v1, AgentSession v1, AgentAssignmentMetadata v1, AgentActivity v1, and Handoff v2.
 
 **Acceptance criteria**
 
@@ -666,21 +554,13 @@ Add runtime validation for:
 **Type:** test fixtures / docs  
 **Priority:** P1  
 **Severity:** Medium  
-**Recommended phase:** P1  
+**Recommended phase:** Phase 2 — Core Orchestration Implementation  
 **Requires:** T-AO-120  
 **Value:** Gives future agents examples to follow.
 
 **Scope**
 
-Add fixture JSON for:
-
-- Orchestration Agent definition
-- Task Work Agent definition
-- AgentSession examples
-- assignment metadata examples
-- Activity examples
-- Handoff v2 examples
-- blocked-worker examples
+Add fixture JSON for Orchestration Agent definition, Task Work Agent definition, AgentSession examples, assignment metadata examples, Activity examples, Handoff v2 examples, and blocked-worker examples.
 
 **Acceptance criteria**
 
@@ -689,31 +569,22 @@ Add fixture JSON for:
 
 ---
 
-## WP-2 — Agent registry/session foundations
+## WP-2 — Phase 2: Agent registry/session foundations
 
 ### T-AO-210 — Implement AgentDefinition v1 storage bridge
 
 **Type:** implementation  
 **Priority:** P0  
 **Severity:** High  
-**Recommended phase:** P2  
+**Recommended phase:** Phase 2 — Core Orchestration Implementation  
 **Requires:** A-ARCH, A-COMPAT, T-AO-120  
 **Value:** Provides host-agnostic agent identity definitions.
 
 **Scope**
 
-Implement the approved A-ARCH approach:
+Implement the approved A-ARCH approach: extend subagent definitions, add an agent registry module/table, or bridge through metadata if selected.
 
-- extend subagent definitions, or
-- add an agent registry module/table, or
-- bridge through metadata if selected
-
-Support:
-
-- register/update/list/get AgentDefinition
-- retired flag/version handling
-- profile references
-- host/capability fields
+Support register/update/list/get AgentDefinition, retired flag/version handling, profile references, and host/capability fields.
 
 **Acceptance criteria**
 
@@ -728,19 +599,13 @@ Support:
 **Type:** implementation  
 **Priority:** P0  
 **Severity:** High  
-**Recommended phase:** P2  
+**Recommended phase:** Phase 2 — Core Orchestration Implementation  
 **Requires:** A-ARCH, A-COMPAT, T-AO-120  
 **Value:** Links running/participating agents to host/model/current pointers.
 
 **Scope**
 
-Implement the approved session storage/bridge:
-
-- open/update/list/get/close session path
-- status enum support
-- hostHint / hostSessionRef
-- modelTier / modelHint
-- currentAssignmentId / currentTaskId / currentActivityId pointers
+Implement the approved session storage/bridge: open/update/list/get/close session path, status enum support, hostHint / hostSessionRef, modelTier / modelHint, currentAssignmentId / currentTaskId / currentActivityId pointers.
 
 **Acceptance criteria**
 
@@ -755,18 +620,13 @@ Implement the approved session storage/bridge:
 **Type:** implementation / read model  
 **Priority:** P1  
 **Severity:** Medium  
-**Recommended phase:** P2  
+**Recommended phase:** Phase 2 — Core Orchestration Implementation  
 **Requires:** T-AO-210, T-AO-220  
 **Value:** Gives orchestrator and dashboard projection read access.
 
 **Scope**
 
-Add read summaries for:
-
-- registered agent definitions
-- active/open agent sessions
-- host/capability availability
-- current assignment/activity pointers
+Add read summaries for registered agent definitions, active/open agent sessions, host/capability availability, and current assignment/activity pointers.
 
 **Acceptance criteria**
 
@@ -776,31 +636,20 @@ Add read summaries for:
 
 ---
 
-## WP-3 — Assignment orchestration bridge
+## WP-3 — Phase 2: Assignment orchestration bridge
 
 ### T-AO-310 — Add structured assignment metadata validation to Team Execution
 
 **Type:** implementation  
 **Priority:** P0  
 **Severity:** Critical  
-**Recommended phase:** P3  
+**Recommended phase:** Phase 2 — Core Orchestration Implementation  
 **Requires:** A-SCHEMA, A-POLICY, T-AO-120  
 **Value:** Turns TeamAssignment into the AgentAssignment bridge.
 
 **Scope**
 
-Update assignment registration/update paths to validate optional structured metadata:
-
-- schemaVersion
-- agentDefinitionId
-- agentSessionId
-- modelTier
-- contextProfileId
-- accessProfileId
-- handoffContractId
-- resource ownership metadata
-- assignmentPromptSummary
-- blockingPolicy
+Update assignment registration/update paths to validate optional structured metadata: schemaVersion, agentDefinitionId, agentSessionId, modelTier, contextProfileId, accessProfileId, handoffContractId, resource ownership metadata, assignmentPromptSummary, and blockingPolicy.
 
 **Acceptance criteria**
 
@@ -816,7 +665,7 @@ Update assignment registration/update paths to validate optional structured meta
 **Type:** implementation / command  
 **Priority:** P0  
 **Severity:** High  
-**Recommended phase:** P3  
+**Recommended phase:** Phase 2 — Core Orchestration Implementation  
 **Requires:** T-AO-310, A-COMMANDS  
 **Value:** Allows Orchestration Agent to create bounded worker assignments.
 
@@ -838,18 +687,13 @@ Extend or wrap `register-assignment` to accept structured metadata and agent/ses
 **Type:** implementation / command  
 **Priority:** P0  
 **Severity:** High  
-**Recommended phase:** P3  
+**Recommended phase:** Phase 2 — Core Orchestration Implementation  
 **Requires:** A-COMMANDS, A-POLICY  
 **Value:** Lets bounded workers report blockers without taking over planning.
 
 **Scope**
 
-Implement or adapt a command path that lets a Task Work Agent create:
-
-- ready blocking task tied to assignment/task
-- bug report tied to assignment/task
-
-Then require worker to report/block its assignment.
+Implement or adapt a command path that lets a Task Work Agent create a ready blocking task tied to assignment/task or bug report tied to assignment/task. Then require worker to report/block its assignment.
 
 **Acceptance criteria**
 
@@ -865,20 +709,13 @@ Then require worker to report/block its assignment.
 **Type:** implementation / policy  
 **Priority:** P0  
 **Severity:** Critical  
-**Recommended phase:** P3  
+**Recommended phase:** Phase 2 — Core Orchestration Implementation  
 **Requires:** A-POLICY, T-AO-310  
 **Value:** Enforces the orchestrator/worker boundary.
 
 **Scope**
 
-Update command validation/policy checks so:
-
-- worker may submit own handoff
-- worker may mark/report own assignment blocked
-- worker may not reconcile assignment
-- worker may not cancel assignment
-- worker may not unblock itself
-- orchestrator may reconcile/block/cancel according to policy
+Update command validation/policy checks so worker may submit own handoff, worker may mark/report own assignment blocked, worker may not reconcile assignment, worker may not cancel assignment, worker may not unblock itself, and orchestrator may reconcile/block/cancel according to policy.
 
 **Acceptance criteria**
 
@@ -888,14 +725,14 @@ Update command validation/policy checks so:
 
 ---
 
-## WP-4 — Handoff v2 and activity v1
+## WP-4 — Phase 2: Handoff v2 and activity v1
 
 ### T-AO-410 — Implement Handoff v2 submission support
 
 **Type:** implementation / command  
 **Priority:** P0  
 **Severity:** Critical  
-**Recommended phase:** P4  
+**Recommended phase:** Phase 2 — Core Orchestration Implementation  
 **Requires:** A-HANDOFF, T-AO-120, T-AO-340  
 **Value:** Makes worker output useful for orchestration.
 
@@ -917,19 +754,13 @@ Extend `submit-assignment-handoff` or provide compatible wrapper to accept Hando
 **Type:** implementation / command  
 **Priority:** P1  
 **Severity:** High  
-**Recommended phase:** P4  
+**Recommended phase:** Phase 2 — Core Orchestration Implementation  
 **Requires:** T-AO-410, A-POLICY  
 **Value:** Lets the Orchestrator reconcile without rereading chat.
 
 **Scope**
 
-Update reconcile/summary paths to surface Handoff v2 fields and support decisions:
-
-- reconcile
-- request rework
-- assign blocker
-- assign review
-- cancel/supersede
+Update reconcile/summary paths to surface Handoff v2 fields and support decisions: reconcile, request rework, assign blocker, assign review, cancel/supersede.
 
 **Acceptance criteria**
 
@@ -944,24 +775,13 @@ Update reconcile/summary paths to surface Handoff v2 fields and support decision
 **Type:** implementation / command  
 **Priority:** P0  
 **Severity:** High  
-**Recommended phase:** P4  
+**Recommended phase:** Phase 2 — Core Orchestration Implementation  
 **Requires:** A-ACTIVITY, T-AO-120  
 **Value:** Provides live visibility into active agents.
 
 **Scope**
 
-Extend `set-agent-activity`/activity store or bridge fields for Activity v1:
-
-- agentDefinitionId
-- assignmentId
-- taskId
-- phaseKey
-- hostHint
-- modelTier
-- modelHint
-- currentStep
-- command
-- TTL
+Extend `set-agent-activity`/activity store or bridge fields for Activity v1: agentDefinitionId, assignmentId, taskId, phaseKey, hostHint, modelTier, modelHint, currentStep, command, and TTL.
 
 **Acceptance criteria**
 
@@ -972,25 +792,20 @@ Extend `set-agent-activity`/activity store or bridge fields for Activity v1:
 
 ---
 
+## WP-5 — Phase 3: Profiles, prompts, and agent-facing docs
+
 ### T-AO-440 — Add activity lifecycle docs/snippets for agents
 
 **Type:** docs / agent guidance  
 **Priority:** P1  
 **Severity:** Medium  
-**Recommended phase:** P4  
+**Recommended phase:** Phase 3 — Projection, Docs & Hardening  
 **Requires:** A-ACTIVITY, T-AO-430  
 **Value:** Improves compliance before command-boundary automation exists.
 
 **Scope**
 
-Document agent lifecycle requirements:
-
-- assignment accepted → set activity
-- step changes → update activity
-- long work → heartbeat every 30s
-- blocked → set blocked activity + block/report assignment
-- handoff submitted → short terminal activity + handoff
-- reconciled/cancelled/closed → clear or allow short expiry
+Document agent lifecycle requirements: assignment accepted, step changes, long-work heartbeat, blocked, handoff submitted, reconciled/cancelled/closed.
 
 **Acceptance criteria**
 
@@ -999,30 +814,18 @@ Document agent lifecycle requirements:
 
 ---
 
-## WP-5 — Profiles, prompts, and agent-facing docs
-
 ### T-AO-510 — Add Orchestration Agent prompt/contract
 
 **Type:** docs / prompt contract  
 **Priority:** P0  
 **Severity:** High  
-**Recommended phase:** P5  
+**Recommended phase:** Phase 3 — Projection, Docs & Hardening  
 **Requires:** A-PROFILES, A-COMMANDS, A-POLICY  
 **Value:** Makes orchestrator behavior repeatable.
 
 **Scope**
 
-Create an agent-facing prompt/contract describing:
-
-- role and authority
-- context profile
-- access profile
-- model tier rubric
-- assignment creation rules
-- blocker handling
-- reconciliation behavior
-- forbidden implementation behavior
-- output format for orchestration plans/assignments
+Create an agent-facing prompt/contract describing role and authority, context profile, access profile, model tier rubric, assignment creation rules, blocker handling, reconciliation behavior, forbidden implementation behavior, and output format for orchestration plans/assignments.
 
 **Acceptance criteria**
 
@@ -1038,22 +841,13 @@ Create an agent-facing prompt/contract describing:
 **Type:** docs / prompt contract  
 **Priority:** P0  
 **Severity:** High  
-**Recommended phase:** P5  
+**Recommended phase:** Phase 3 — Projection, Docs & Hardening  
 **Requires:** A-PROFILES, A-HANDOFF, A-ACTIVITY, A-POLICY  
 **Value:** Makes bounded worker behavior repeatable.
 
 **Scope**
 
-Create an agent-facing prompt/contract describing:
-
-- strict bounded worker role
-- assignment scope rules
-- owned/shared/forbidden path rules
-- activity lifecycle
-- allowed blocker/bug creation
-- handoff v2 requirements
-- escalation rules
-- forbidden self-reconcile/self-unblock behavior
+Create an agent-facing prompt/contract describing strict bounded worker role, assignment scope rules, owned/shared/forbidden path rules, activity lifecycle, allowed blocker/bug creation, handoff v2 requirements, escalation rules, and forbidden self-reconcile/self-unblock behavior.
 
 **Acceptance criteria**
 
@@ -1069,20 +863,13 @@ Create an agent-facing prompt/contract describing:
 **Type:** docs  
 **Priority:** P1  
 **Severity:** Medium  
-**Recommended phase:** P5  
+**Recommended phase:** Phase 3 — Projection, Docs & Hardening  
 **Requires:** A-PROFILES  
 **Value:** Makes profiles inspectable and reusable.
 
 **Scope**
 
-Document:
-
-- access profiles
-- context profiles
-- model/cost tiers
-- host capability vocabulary
-- resource ownership metadata
-- examples of assigning profiles to AgentDefinitions
+Document access profiles, context profiles, model/cost tiers, host capability vocabulary, resource ownership metadata, and examples of assigning profiles to AgentDefinitions.
 
 **Acceptance criteria**
 
@@ -1091,30 +878,20 @@ Document:
 
 ---
 
-## WP-6 — Dashboard projection bridge
+## WP-6 — Phase 3: Dashboard projection bridge
 
 ### T-AO-610 — Add orchestration projection source builder
 
 **Type:** implementation / projection  
 **Priority:** P1  
 **Severity:** High  
-**Recommended phase:** P6  
+**Recommended phase:** Phase 3 — Projection, Docs & Hardening  
 **Requires:** A-PROJECTION, T-AO-210, T-AO-220, T-AO-310, T-AO-430  
 **Value:** Provides normalized orchestration state to the dashboard UX plan.
 
 **Scope**
 
-Build or extend a projection builder that consumes:
-
-- agent definitions
-- agent sessions
-- team assignments / assignment metadata
-- activities
-- subagent sessions
-- handoff summaries
-- resource/model/host metadata
-
-and produces a normalized source package for `DashboardAgentActivitySummary`.
+Build or extend a projection builder that consumes agent definitions, agent sessions, team assignments / assignment metadata, activities, subagent sessions, handoff summaries, and resource/model/host metadata; then produces a normalized source package for `DashboardAgentActivitySummary`.
 
 **Acceptance criteria**
 
@@ -1130,22 +907,13 @@ and produces a normalized source package for `DashboardAgentActivitySummary`.
 **Type:** testing  
 **Priority:** P1  
 **Severity:** High  
-**Recommended phase:** P6  
+**Recommended phase:** Phase 3 — Projection, Docs & Hardening  
 **Requires:** T-AO-610, A-TEST  
 **Value:** Prevents dashboard/source drift.
 
 **Scope**
 
-Test projection cases:
-
-- live activity + assignment + session merge
-- subagent session fallback
-- missing activity but active assignment
-- stale activity
-- blocked assignment
-- completed handoff
-- malformed metadata
-- old assignments without new metadata
+Test projection cases: live activity + assignment + session merge, subagent session fallback, missing activity but active assignment, stale activity, blocked assignment, completed handoff, malformed metadata, old assignments without new metadata.
 
 **Acceptance criteria**
 
@@ -1154,27 +922,20 @@ Test projection cases:
 
 ---
 
-## WP-7 — Hardening, compatibility, and E2E
+## WP-7 — Phase 3: Hardening, compatibility, and E2E
 
 ### T-AO-710 — Add compatibility tests for existing subagent and team execution flows
 
 **Type:** testing  
 **Priority:** P0  
 **Severity:** High  
-**Recommended phase:** P7  
+**Recommended phase:** Phase 3 — Projection, Docs & Hardening  
 **Requires:** A-COMPAT, A-TEST, WP-2, WP-3  
 **Value:** Prevents new orchestration layer from breaking existing users.
 
 **Scope**
 
-Test that existing flows still work:
-
-- register/list/get subagent definitions
-- spawn/list/close subagent sessions
-- message subagent sessions
-- register assignment without new metadata
-- submit old handoff shape or compatibility path
-- reconcile/cancel/block existing assignments
+Test that existing flows still work: register/list/get subagent definitions, spawn/list/close subagent sessions, message subagent sessions, register assignment without new metadata, submit old handoff shape or compatibility path, reconcile/cancel/block existing assignments.
 
 **Acceptance criteria**
 
@@ -1188,7 +949,7 @@ Test that existing flows still work:
 **Type:** e2e / fixture  
 **Priority:** P1  
 **Severity:** High  
-**Recommended phase:** P7  
+**Recommended phase:** Phase 3 — Projection, Docs & Hardening  
 **Requires:** A-TEST, WP-2, WP-3, WP-4  
 **Value:** Demonstrates the foundation works as a system.
 
@@ -1219,7 +980,7 @@ project dashboard source
 **Type:** e2e / fixture  
 **Priority:** P1  
 **Severity:** High  
-**Recommended phase:** P7  
+**Recommended phase:** Phase 3 — Projection, Docs & Hardening  
 **Requires:** A-TEST, T-AO-330, T-AO-430  
 **Value:** Proves the blocker flow is safe and visible.
 
@@ -1250,22 +1011,13 @@ original assignment remains blocked until orchestrator resumes/reassigns
 **Type:** docs / release  
 **Priority:** P2  
 **Severity:** Medium  
-**Recommended phase:** P7  
+**Recommended phase:** Phase 3 — Projection, Docs & Hardening  
 **Requires:** A-TEST, A-COMPAT  
 **Value:** Gives maintainers a final gate before relying on orchestration.
 
 **Scope**
 
-Create checklist covering:
-
-- schemas and validators
-- commands and policy
-- docs and prompts
-- compatibility tests
-- E2E happy path
-- blocked-worker path
-- dashboard projection bridge
-- known limitations and future-work buckets
+Create checklist covering schemas and validators, commands and policy, docs and prompts, compatibility tests, E2E happy path, blocked-worker path, dashboard projection bridge, and known limitations/future-work buckets.
 
 **Acceptance criteria**
 
@@ -1297,6 +1049,8 @@ WP-2 + WP-3 + WP-4 → T-AO-720, T-AO-730
 
 ## 9. Recommended work order
 
+### Phase 1 — Contracts & Design Gates
+
 1. T-AO-000 — Inventory current orchestration surfaces.
 2. T-AO-010 — Draft architecture decision document.
 3. T-AO-020 — Draft schema and contract pack.
@@ -1308,28 +1062,37 @@ WP-2 + WP-3 + WP-4 → T-AO-720, T-AO-730
 9. T-AO-080 — Draft dashboard projection source contract.
 10. T-AO-090 — Draft test strategy.
 11. T-AO-100 — Draft compatibility/migration note.
+
+### Phase 2 — Core Orchestration Implementation
+
 12. T-AO-110 — Add shared orchestration contract types.
 13. T-AO-120 — Add runtime validators.
 14. T-AO-130 — Add canonical fixtures.
 15. T-AO-210 — Implement AgentDefinition storage bridge.
 16. T-AO-220 — Implement AgentSession record path.
-17. T-AO-310 — Add structured assignment metadata validation.
-18. T-AO-320 — Extend assignment registration flow.
-19. T-AO-330 — Add worker blocker/bug creation path.
-20. T-AO-340 — Harden assignment lifecycle authority.
-21. T-AO-410 — Implement Handoff v2 submission support.
-22. T-AO-420 — Update reconcile flow for Handoff v2.
-23. T-AO-430 — Implement Activity v1 command compatibility.
-24. T-AO-440 — Add activity lifecycle docs/snippets.
-25. T-AO-510 — Add Orchestration Agent prompt/contract.
-26. T-AO-520 — Add Task Work Agent prompt/contract.
-27. T-AO-530 — Add profile catalog docs.
-28. T-AO-610 — Add orchestration projection source builder.
-29. T-AO-620 — Add projection tests.
-30. T-AO-710 — Add compatibility tests.
-31. T-AO-720 — Add happy-path E2E fixture.
-32. T-AO-730 — Add blocked-worker E2E fixture.
-33. T-AO-740 — Add release readiness checklist.
+17. T-AO-230 — Add agent registry/session read summaries.
+18. T-AO-310 — Add structured assignment metadata validation.
+19. T-AO-320 — Extend assignment registration flow.
+20. T-AO-330 — Add worker blocker/bug creation path.
+21. T-AO-340 — Harden assignment lifecycle authority.
+22. T-AO-410 — Implement Handoff v2 submission support.
+23. T-AO-420 — Update reconcile flow for Handoff v2.
+24. T-AO-430 — Implement Activity v1 command compatibility.
+
+### Phase 3 — Projection, Docs & Hardening
+
+25. T-AO-440 — Add activity lifecycle docs/snippets.
+26. T-AO-510 — Add Orchestration Agent prompt/contract.
+27. T-AO-520 — Add Task Work Agent prompt/contract.
+28. T-AO-530 — Add profile catalog docs.
+29. T-AO-610 — Add orchestration projection source builder.
+30. T-AO-620 — Add projection tests.
+31. T-AO-710 — Add compatibility tests.
+32. T-AO-720 — Add happy-path E2E fixture.
+33. T-AO-730 — Add blocked-worker E2E fixture.
+34. T-AO-740 — Add release readiness checklist.
+
+Note: the WBS now contains **34 task entries** because `T-AO-230` is retained as its own read-summary task. If a tighter 33-task plan is required, merge `T-AO-230` into `T-AO-220`.
 
 ---
 
