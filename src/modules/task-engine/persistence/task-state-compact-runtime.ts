@@ -1,7 +1,6 @@
 import type { ModuleCommandResult, ModuleLifecycleContext } from "../../../contracts/module-contract.js";
 import { TASK_STATE_GIT_BRANCH } from "../task-state-git/constants.js";
-import { isGitRepository, resolveTaskStateGitRef } from "../task-state-git/git-io.js";
-import { readTaskStateBranchLayout } from "../task-state-git/read-branch-layout.js";
+import { createGitEventLogBackendFromContext } from "../sync-backends/git-event-log-backend.js";
 
 export async function runTaskStateCompact(
   ctx: ModuleLifecycleContext,
@@ -11,57 +10,41 @@ export async function runTaskStateCompact(
   const branch =
     typeof args.branch === "string" && args.branch.trim() ? args.branch.trim() : TASK_STATE_GIT_BRANCH;
 
-  if (!isGitRepository(ctx.workspacePath)) {
-    return { ok: false, code: "not-a-git-repo", message: "task-state-compact requires a git workspace" };
-  }
+  const backend = createGitEventLogBackendFromContext(ctx, { branch });
+  const result = await backend.compact!({ dryRun });
 
-  const resolved = resolveTaskStateGitRef(ctx.workspacePath, branch);
-  if ("missing" in resolved) {
-    return {
-      ok: false,
-      code: "task-state-branch-missing",
-      message: `Branch ${branch} missing`
-    };
-  }
-
-  const layoutRead = readTaskStateBranchLayout(ctx.workspacePath, resolved.ref, resolved.tipSha);
-  if (!layoutRead.ok) {
-    return { ok: false, code: layoutRead.code, message: layoutRead.message };
-  }
-
-  const retention = layoutRead.layout.manifest.retention;
-  const segmentCount = layoutRead.layout.eventSegmentPaths.length;
-  const latestSnapshotId = layoutRead.layout.manifest.head.latestSnapshotId;
-
+  const gitDiag = result.diagnostics?.git as
+    | { branch?: string; retentionMaxEventSegments?: number | null; retentionMaxSnapshots?: number | null }
+    | undefined;
   const plan = {
     schemaVersion: 1,
-    dryRun,
-    branch,
-    latestSequence: layoutRead.layout.manifest.head.latestSequence,
-    latestSnapshotId,
-    segmentCount,
-    retentionMaxEventSegments: retention?.maxEventSegments ?? null,
-    retentionMaxSnapshots: retention?.maxSnapshots ?? null,
-    wouldRetainSegments: segmentCount,
+    dryRun: result.dryRun,
+    branch: gitDiag?.branch ?? branch,
+    latestSequence: result.latestSequence,
+    latestSnapshotId: result.latestSnapshotId,
+    segmentCount: result.retainedEventSegmentCount,
+    retentionMaxEventSegments: gitDiag?.retentionMaxEventSegments ?? null,
+    retentionMaxSnapshots: gitDiag?.retentionMaxSnapshots ?? null,
+    wouldRetainSegments: result.retainedEventSegmentCount,
     note:
       dryRun
         ? "Compaction dry-run only; pass dryRun:false with policyApproval to apply (not yet implemented)."
         : "Apply compaction is not implemented; use task-state-snapshot plus manual retention policy review."
   };
 
-  if (!dryRun) {
+  if (!result.ok) {
     return {
       ok: false,
-      code: "task-state-compact-apply-not-implemented",
-      message: "Compaction apply is not implemented; run with dryRun:true (default) to review retention plan",
+      code: result.code,
+      message: result.message,
       data: plan
     };
   }
 
   return {
     ok: true,
-    code: "task-state-compact-dry-run",
-    message: "Compaction dry-run: retention plan computed",
+    code: result.code,
+    message: result.message,
     data: plan
   };
 }

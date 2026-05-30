@@ -8,6 +8,7 @@ export type {
 } from "./canonical-state-sync-backend.js";
 export {
   assertCanonicalStateSyncBackend,
+  isCanonicalSyncHeadFailure,
   toCanonicalStateEventEnvelope
 } from "./canonical-state-sync-backend.js";
 export type {
@@ -19,6 +20,15 @@ export {
   GIT_DERIVED_COMMAND_COMPAT,
   GIT_EVENT_LOG_BACKEND_COMPAT
 } from "./git-method-compat.js";
+export type { GitEventLogBackendOptions } from "./git-event-log-backend.js";
+export {
+  createGitEventLogBackend,
+  createGitEventLogBackendFromContext,
+  envelopesToCanonicalEvents,
+  GIT_EVENT_LOG_BACKEND_ID,
+  GitEventLogBackend,
+  publishEventsViaGitBackend
+} from "./git-event-log-backend.js";
 export type { LocalOnlySnapshotRecord, LocalOnlyEventStore } from "./local-only-event-store.js";
 export {
   createEmptyLocalOnlyHead,

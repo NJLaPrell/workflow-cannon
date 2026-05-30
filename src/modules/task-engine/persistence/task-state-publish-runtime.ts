@@ -1,6 +1,9 @@
 import type { ModuleCommandResult, ModuleLifecycleContext } from "../../../contracts/module-contract.js";
 import type { TaskStateEventV1 } from "../task-state-events/event-payloads.js";
-import { publishTaskStateEvents } from "../task-state-git/publish-task-state-events.js";
+import {
+  createGitEventLogBackendFromContext,
+  publishEventsViaGitBackend
+} from "../sync-backends/git-event-log-backend.js";
 
 function parseEventsArg(raw: unknown): TaskStateEventV1[] | null {
   if (!Array.isArray(raw) || raw.length === 0) {
@@ -78,14 +81,15 @@ export async function runTaskStatePublish(
     };
   }
 
-  const result = await publishTaskStateEvents({
-    workspacePath: ctx.workspacePath,
-    branch,
+  const backend = createGitEventLogBackendFromContext(ctx, { branch });
+  const result = await publishEventsViaGitBackend(backend, {
     events,
-    expectedHeadSha,
+    expectedHead: {
+      backendRevision: expectedHeadSha,
+      latestSequence: 0
+    },
     expectedTaskVersions,
-    maxAttempts,
-    push: args.push !== false
+    maxAttempts
   });
 
   if (!result.ok) {
