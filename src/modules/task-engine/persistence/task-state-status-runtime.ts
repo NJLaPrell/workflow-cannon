@@ -1,11 +1,11 @@
 import type { ModuleCommandResult, ModuleLifecycleContext } from "../../../contracts/module-contract.js";
+import type { CanonicalStateHead } from "../../../contracts/canonical-state-sync-backend.js";
 import { TASK_STATE_GIT_BRANCH } from "../task-state-git/constants.js";
-import {
-  gitFetchTaskStateBranch,
-  isGitRepository,
-  resolveTaskStateGitRef
-} from "../task-state-git/git-io.js";
-import { readTaskStateBranchLayout } from "../task-state-git/read-branch-layout.js";
+import { isGitRepository } from "../task-state-git/git-io.js";
+import type { TaskStateGitManifestV1 } from "../task-state-git/types.js";
+import { assessSnapshotTailFromManifest } from "../task-state-git/task-state-snapshot-tail-health.js";
+import { isCanonicalSyncHeadFailure } from "../sync-backends/canonical-state-sync-backend.js";
+import { createGitEventLogBackendFromContext } from "../sync-backends/git-event-log-backend.js";
 import {
   deriveTaskStateSyncState,
   readLocalAppliedSequence
@@ -16,7 +16,6 @@ import {
   taskStateProjectionMetaTableAvailable,
   type TaskStateProjectionSyncStatus
 } from "./task-state-projection-meta-store.js";
-import { assessSnapshotTailFromManifest } from "../task-state-git/task-state-snapshot-tail-health.js";
 import {
   canonicalEventOutboxTableAvailable,
   getOutboxStatus
@@ -46,6 +45,11 @@ function parseIsoMs(value: string | null): number | null {
   }
   const ms = Date.parse(value);
   return Number.isFinite(ms) ? ms : null;
+}
+
+function gitRefFromDiagnostics(diagnostics: Record<string, unknown> | undefined): string | null {
+  const git = diagnostics?.git as { ref?: string } | undefined;
+  return typeof git?.ref === "string" && git.ref.trim() ? git.ref.trim() : null;
 }
 
 function deriveLocalProjection(args: {
@@ -147,24 +151,44 @@ export async function runTaskStateStatus(
     };
   }
 
+  const backend = createGitEventLogBackendFromContext(ctx, { branch });
   let fetchResult: { ok: boolean; stderr?: string } | undefined;
+  let head = await backend.readHead();
+  let gitRef: string | null = null;
+
   if (fetch) {
-    const fr = gitFetchTaskStateBranch(ctx.workspacePath, branch);
-    fetchResult = { ok: fr.ok, stderr: fr.stderr || undefined };
+    const fetched = await backend.fetchEvents({ refresh: true });
+    if (fetched.ok) {
+      head = fetched.head;
+      gitRef = gitRefFromDiagnostics(fetched.diagnostics as Record<string, unknown> | undefined);
+      fetchResult = { ok: true };
+    } else {
+      fetchResult = { ok: false, stderr: fetched.message };
+    }
+  } else if (!isCanonicalSyncHeadFailure(head)) {
+    const fetched = await backend.fetchEvents({ refresh: false });
+    if (fetched.ok) {
+      gitRef = gitRefFromDiagnostics(fetched.diagnostics as Record<string, unknown> | undefined);
+    }
   }
 
-  const resolved = resolveTaskStateGitRef(ctx.workspacePath, branch);
+  let resolvedHead: CanonicalStateHead | null = null;
+  if (!isCanonicalSyncHeadFailure(head)) {
+    resolvedHead = head;
+  }
+  const branchResolvable = resolvedHead !== null;
   let remoteLatestSequence: number | null = null;
   let remoteTipSha: string | null = null;
   let manifestHead: Record<string, unknown> | null = null;
 
-  if (!("missing" in resolved)) {
-    remoteTipSha = resolved.tipSha;
-    const layout = readTaskStateBranchLayout(ctx.workspacePath, resolved.ref, resolved.tipSha);
-    if (layout.ok) {
-      remoteLatestSequence = layout.layout.manifest.head.latestSequence;
-      manifestHead = layout.layout.manifest.head as unknown as Record<string, unknown>;
-    }
+  if (resolvedHead) {
+    remoteTipSha = resolvedHead.backendRevision;
+    remoteLatestSequence = resolvedHead.latestSequence;
+    manifestHead = {
+      latestSequence: resolvedHead.latestSequence,
+      latestEventId: resolvedHead.latestEventId,
+      latestSnapshotId: resolvedHead.latestSnapshotId
+    };
   }
 
   const planning = await openPlanningStoresForTaskStateCache(ctx);
@@ -185,7 +209,7 @@ export async function runTaskStateStatus(
   };
 
   const { syncState, reason } = deriveTaskStateSyncState({
-    branchResolvable: !("missing" in resolved),
+    branchResolvable,
     remoteLatestSequence,
     localAppliedSequence,
     remoteTipSha,
@@ -209,15 +233,15 @@ export async function runTaskStateStatus(
   });
 
   let snapshotTail = null;
-  if (!("missing" in resolved) && manifestHead && typeof remoteLatestSequence === "number") {
-    const layoutRead = readTaskStateBranchLayout(ctx.workspacePath, resolved.ref, resolved.tipSha);
-    if (layoutRead.ok) {
-      snapshotTail = assessSnapshotTailFromManifest(
-        ctx.workspacePath,
-        resolved.ref,
-        layoutRead.layout.manifest
-      );
-    }
+  if (resolvedHead && gitRef && manifestHead) {
+    const manifest = {
+      head: {
+        latestSequence: resolvedHead.latestSequence,
+        latestEventId: resolvedHead.latestEventId,
+        latestSnapshotId: resolvedHead.latestSnapshotId
+      }
+    } as TaskStateGitManifestV1;
+    snapshotTail = assessSnapshotTailFromManifest(ctx.workspacePath, gitRef, manifest);
   }
 
   return {
@@ -231,7 +255,7 @@ export async function runTaskStateStatus(
       branch,
       fetchRequested: fetch,
       fetchResult,
-      gitRef: "missing" in resolved ? null : resolved.ref,
+      gitRef: branchResolvable ? gitRef : null,
       remoteTipSha,
       remoteLatestSequence,
       localAppliedSequence,
@@ -248,8 +272,7 @@ export async function runTaskStateStatus(
       },
       recommendedAction,
       snapshotTail,
-      snapshotRecommendation: snapshotTail?.recommendedCommand ?? null,
-      triedRefs: "missing" in resolved ? resolved.tried : undefined
+      snapshotRecommendation: snapshotTail?.recommendedCommand ?? null
     }
   };
 }

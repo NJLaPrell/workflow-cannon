@@ -1,6 +1,6 @@
 /**
  * Compatibility map: current Git task-state commands → CanonicalStateSyncBackend methods.
- * T-BE-202 wraps these call sites behind GitEventLogBackend; this note is the T-BE-201 evidence.
+ * T100617 wraps these call sites behind GitEventLogBackend; this note is the T100616 evidence.
  */
 
 export type GitMethodCompatEntry = {

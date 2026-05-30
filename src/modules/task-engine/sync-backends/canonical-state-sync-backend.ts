@@ -67,6 +67,12 @@ export function assertCanonicalStateSyncBackend(value: unknown): asserts value i
   }
 }
 
+export function isCanonicalSyncHeadFailure(
+  value: CanonicalStateHead | CanonicalSyncHeadFailure
+): value is CanonicalSyncHeadFailure {
+  return "ok" in value && value.ok === false;
+}
+
 /** Maps typed events to contract envelopes for wire serialization. */
 export function toCanonicalStateEventEnvelope(event: CanonicalStateSyncEvent): CanonicalStateEventEnvelopeV1 {
   return {

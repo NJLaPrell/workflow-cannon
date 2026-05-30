@@ -1,15 +1,16 @@
 import type { ModuleCommandResult, ModuleLifecycleContext } from "../../../contracts/module-contract.js";
-import { remoteBranchHeadSha, resolveTaskStateGitRef } from "../task-state-git/git-io.js";
 import { TASK_STATE_GIT_BRANCH } from "../task-state-git/constants.js";
-import { publishTaskStateEvents, taskIdsTouchedByEvent } from "../task-state-git/publish-task-state-events.js";
-import {
-  expectedVersionsForPublish,
-  readRemoteTaskVersionMap
-} from "../task-state-git/remote-projection-versions.js";
+import { taskIdsTouchedByEvent } from "../task-state-git/publish-task-state-events.js";
+import { expectedVersionsForPublish } from "../task-state-git/remote-projection-versions.js";
 import type { CanonicalStateEventV1 } from "../task-state-events/canonical-state-events.js";
 import { isTaskStateEvent } from "../task-state-events/canonical-state-events.js";
 import type { TaskStateEventV1 } from "../task-state-events/event-payloads.js";
 import type { PlanningStateEventV1 } from "../task-state-events/planning-event-payloads.js";
+import { isCanonicalSyncHeadFailure } from "../sync-backends/canonical-state-sync-backend.js";
+import {
+  createGitEventLogBackendFromContext,
+  publishEventsViaGitBackend
+} from "../sync-backends/git-event-log-backend.js";
 import type { OpenedPlanningStores } from "./planning-open.js";
 import { openPlanningStores } from "./planning-open.js";
 import { createCanonicalEventOutboxRepository } from "./canonical-event-outbox-runtime.js";
@@ -118,35 +119,30 @@ export async function commitCanonicalTaskStateEvents(
   }
 
   const branch = TASK_STATE_GIT_BRANCH;
-  const workspacePath = input.ctx.workspacePath;
-  const resolved = resolveTaskStateGitRef(workspacePath, branch);
-  if ("missing" in resolved) {
-    const remoteSha = remoteBranchHeadSha(workspacePath, branch);
-    if (!remoteSha) {
-      return {
-        ok: false,
-        code: "task-state-branch-missing",
-        message: `Canonical branch ${branch} is missing; run task-state-init before mutating tasks`,
-        data: { schemaVersion: 1, pending: false }
-      };
-    }
+  const backend = createGitEventLogBackendFromContext(input.ctx, { branch });
+  const head = await backend.readHead();
+  if (isCanonicalSyncHeadFailure(head)) {
+    return {
+      ok: false,
+      code: "task-state-branch-missing",
+      message: `Canonical branch ${branch} is missing; run task-state-init before mutating tasks`,
+      data: { schemaVersion: 1, pending: false }
+    };
   }
 
-  const headSha =
-    "missing" in resolved ? remoteBranchHeadSha(workspacePath, branch)! : resolved.tipSha;
-  const remoteVersions =
-    "missing" in resolved
-      ? new Map<string, number>()
-      : readRemoteTaskVersionMap(workspacePath, resolved.ref, resolved.tipSha);
+  const fetched = await backend.fetchEvents({ refresh: false });
+  const remoteVersions: Map<string, number> = fetched.ok
+    ? new Map(fetched.taskVersions.map((row: { taskId: string; version: number }) => [row.taskId, row.version]))
+    : new Map();
   const expectedTaskVersions = expectedVersionsForPublish(storeVersions, remoteVersions, touched);
 
-  const publish = await publishTaskStateEvents({
-    workspacePath,
-    branch,
+  const publish = await publishEventsViaGitBackend(backend, {
     events: publishEvents,
-    expectedHeadSha: headSha,
-    expectedTaskVersions,
-    push: true
+    expectedHead: {
+      backendRevision: head.backendRevision,
+      latestSequence: head.latestSequence
+    },
+    expectedTaskVersions
   });
 
   if (!publish.ok) {
