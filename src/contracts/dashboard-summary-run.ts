@@ -350,9 +350,24 @@ export type DashboardCurrentPhaseSegments = {
 
 export type DashboardTaskStateDisplayState =
   | "current"
+  | "syncing"
   | "behind"
   | "offline"
   | "conflict";
+
+export type DashboardTaskStateLocalProjection =
+  | "fresh"
+  | "behind"
+  | "conflict"
+  | "rebuilding"
+  | "offline";
+
+export type DashboardTaskStateRecommendedAction =
+  | "none"
+  | "wait"
+  | "hydrate"
+  | "resolve-conflict"
+  | "run-publish";
 
 /** Canonical task-state projection cursor surfaced on dashboard-summary (read-only). */
 export type DashboardTaskStateProjectionSummary = {
@@ -370,6 +385,24 @@ export type DashboardTaskStateProjectionSummary = {
   remediation: string | null;
   /** Git alignment from read-only `task-state-status` (never fetched on this path). */
   gitSyncState: "current" | "behind" | "missing" | "conflict" | null;
+  /** Local projection posture from task-state-status (accounts for queue-mode outbox). */
+  localProjection: DashboardTaskStateLocalProjection;
+  outbox: {
+    pending: number;
+    publishing: number;
+    failed: number;
+    conflict: number;
+    oldestPendingAgeMs: number;
+    latestPublishedAt: string | null;
+  };
+  remote: {
+    branch: string;
+    behind: boolean;
+    remoteLatestSequence: number | null;
+    remoteTipSha: string | null;
+    lastPublishedAt: string | null;
+  };
+  recommendedAction: DashboardTaskStateRecommendedAction;
 };
 
 /** Current workspace phase queue, progress, and release markers for dashboard cards. */

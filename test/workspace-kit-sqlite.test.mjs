@@ -39,6 +39,7 @@ test("prepareKitSqliteDatabase applies user_version and baseline tables", async 
     assert.ok(names.includes("kit_agent_activity_leases"));
     assert.ok(names.includes("kit_task_state_projection_meta"));
     assert.ok(names.includes("workflow_ideas"));
+    assert.ok(names.includes("kit_canonical_event_outbox"));
     const ideaColumns = db
       .prepare("PRAGMA table_info(workflow_ideas)")
       .all()

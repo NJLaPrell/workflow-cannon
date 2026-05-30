@@ -10,12 +10,14 @@ type SqliteDatabase = InstanceType<typeof Database>;
  */
 
 /** Bump and add a migration step in `migrateKitSqliteSchema` when DDL changes. Exposed for doctor / list-module-states. */
-export const KIT_SQLITE_USER_VERSION = 29;
+export const KIT_SQLITE_USER_VERSION = 30;
 
 export const TASK_ENGINE_TASKS_TABLE = "task_engine_tasks";
 export const TASK_ENGINE_DEPENDENCIES_TABLE = "task_engine_dependencies";
 export const TASK_ENGINE_TRANSITION_LOG_TABLE = "task_engine_transition_log";
 export const TASK_ENGINE_MUTATION_LOG_TABLE = "task_engine_mutation_log";
+/** Local canonical event outbox (Phase 123 / T100603). */
+export const KIT_CANONICAL_EVENT_OUTBOX_TABLE = "kit_canonical_event_outbox";
 
 /**
  * Baseline DDL for the unified planning DB (task document row + module state). Idempotent via IF NOT EXISTS.
@@ -1139,6 +1141,34 @@ CREATE INDEX idx_workflow_ideas_linked_plan_artifact ON workflow_ideas(linked_pl
 `);
 }
 
+/** Canonical event outbox for local-first git-event-log sync (Phase 123 / T100603). */
+function migrateV29ToV30(db: SqliteDatabase): void {
+  if (tableExists(db, KIT_CANONICAL_EVENT_OUTBOX_TABLE)) {
+    return;
+  }
+  db.exec(`
+CREATE TABLE kit_canonical_event_outbox (
+  id TEXT PRIMARY KEY NOT NULL,
+  event_id TEXT NOT NULL UNIQUE,
+  event_kind TEXT NOT NULL,
+  event_json TEXT NOT NULL,
+  touched_task_ids_json TEXT NOT NULL DEFAULT '[]',
+  expected_task_versions_json TEXT NOT NULL DEFAULT '{}',
+  status TEXT NOT NULL CHECK (status IN ('pending','publishing','published','failed','conflict')),
+  attempts INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  last_attempt_at TEXT,
+  last_error TEXT,
+  published_head_sha TEXT,
+  published_sequence_start INTEGER,
+  published_sequence_end INTEGER
+);
+CREATE INDEX idx_kit_canonical_event_outbox_status_created
+  ON kit_canonical_event_outbox(status, created_at);
+`);
+}
+
 /**
  * Shared SQLite setup for workspace-kit.db: pragmas, centralized user_version migrations.
  * Call after `new Database(path)` for every open (read/write).
@@ -1301,6 +1331,16 @@ function migrateKitSqliteSchema(db: SqliteDatabase): void {
     db.pragma("user_version = 29");
     current = 29;
   }
+  if (current < 30) {
+    migrateV29ToV30(db);
+    db.pragma("user_version = 30");
+    current = 30;
+  }
+}
+
+/** True when canonical event outbox DDL is present (Phase 123+). Safe for pre-v30 workspaces until migrate runs. */
+export function kitSqliteHasCanonicalEventOutbox(db: SqliteDatabase): boolean {
+  return tableExists(db, KIT_CANONICAL_EVENT_OUTBOX_TABLE);
 }
 
 /** True when relational task rows + envelope columns are present (post v2 migration open). */

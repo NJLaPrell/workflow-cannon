@@ -19,41 +19,32 @@ Routine **`git pull`** on **`main`** must **not** require merging a teammate’s
 
 ---
 
-## After `git pull` / `git checkout` (every operator)
+## Routine workflow (local-first, no manual sync chores)
 
-1. If git reports local changes on tracked DB/JSONL files, **discard** them (they are stale projections):
+After `git pull` / `git checkout`, operators should continue normal work without running manual sync commands.
 
-   ```bash
-   git checkout -- .workspace-kit/tasks/workspace-kit.db .workspace-kit/tasks/task-state-events.jsonl
-   ```
+1. Use `workspace-kit run` mutation commands normally (`run-transition`, `create-task`, `update-task`, ...). Success means the local write landed and canonical sync is handled by the runtime publish path.
+2. Use dashboard/CLI sync posture (`task-state-status`, dashboard projection) as visibility, not as a required preflight for every branch switch.
+3. Do not run `task-state-hydrate` / `task-state-publish` on every pull. Those commands are recovery/admin paths only.
 
-   Or stash only those paths if you must keep a forensic copy elsewhere.
+**Automatic:** with **`install-git-hooks`**, **post-merge** and **post-rewrite** run hydrate when needed (when **`tasks.canonicalAuthority`** is **`git-event-log`**). The Workflow Cannon extension also reconciles in the background (**Sync on git HEAD change** + interval).
 
-2. **Reconcile** from canonical git:
+### Recovery/admin triggers
 
-   ```bash
-   pnpm exec wk run task-state-hydrate '{"fetch":true,"policyApproval":{"confirmed":true,"rationale":"reconcile task store after pull"}}'
-   ```
+Run manual sync only when there is a concrete issue:
 
-   **Automatic:** with **`install-git-hooks`**, **post-merge** and **post-rewrite** run the same hydrate path after **`git pull`** / rebase (when **`tasks.canonicalAuthority`** is **`git-event-log`**). With the Workflow Cannon extension, **Sync on git HEAD change** (default on) and the background interval also reconcile without manual steps.
-
-3. Confirm:
-
-   ```bash
-   pnpm exec wk run task-state-status '{}'
-   pnpm exec wk doctor
-   ```
-
-**Extension:** Workflow Cannon can background-sync via **Sync Task State (Git)**; CLI hydrate remains the recovery path when doctor reports divergence or pull left a dirty tracked blob.
+- `doctor` reports projection drift or stale tracked task-state blobs.
+- `task-state-status` reports `behind`, `conflict`, or unpublished outbox events that are not draining.
+- A maintainer is performing explicit closeout or repair operations.
 
 ---
 
 ## While working (agents / parallel branches)
 
-- Mutations go through **`workspace-kit run`** (`run-transition`, `create-task`, …). With **`git-event-log`**, the kit publishes events to **`workflow-cannon/task-state`** (see **`task-state-publish`**).
+- Mutations go through **`workspace-kit run`** (`run-transition`, `create-task`, …). Routine behavior is local-first commit with canonical sync draining in the background/outbox flow.
 - **Do not** commit **`.workspace-kit/tasks/workspace-kit.db`** or **`task-state-events.jsonl`** on feature branches or **`main`** except the **recovery** path below.
 - **`pnpm exec wk run check-task-store-commit '{}'`** — fails if live SQLite is **staged** without approval (also surfaced in **`doctor`**).
-- Legacy recovery on a feature branch only: **`sync-task-store-after-merge`** or **`task-state-hydrate`** — prefer hydrate when authority is **`git-event-log`**.
+- Legacy recovery/admin only: **`sync-task-store-after-merge`** or **`task-state-hydrate`** — prefer hydrate when authority is **`git-event-log`**.
 
 ### Phase 119 — planning canonical sync (catalog + workspace status)
 
@@ -74,8 +65,9 @@ See **`.ai/playbooks/phase-closeout-and-release.md`** § **3a**. Summary:
 
 1. On **`release/phase-<N>`** tip: publish outstanding task-state events and push **`workflow-cannon/task-state`**.
 2. **`task-state-verify`** against **`origin/workflow-cannon/task-state`**.
-3. Merge phase branch to **`main`** **without** committing **`workspace-kit.db`** / **`task-state-events.jsonl`** as closeout artifacts.
-4. After updating **`main`**: every clone runs **hydrate** (above).
+3. Require an outbox-drained closeout check (or explicit maintainer waiver) before phase → `main`.
+4. Merge phase branch to **`main`** **without** committing **`workspace-kit.db`** / **`task-state-events.jsonl`** as closeout artifacts.
+5. After updating **`main`**: every clone runs **hydrate** (above).
 
 ---
 

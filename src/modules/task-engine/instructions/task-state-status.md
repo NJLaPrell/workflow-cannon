@@ -24,6 +24,10 @@ pnpm exec wk run task-state-status '{"fetch":true}'
 
 - `data.syncState`: **`current`**, **`behind`**, **`missing`**, or **`conflict`**
 - `data.remoteLatestSequence`, `data.localAppliedSequence`, `data.gitRef`, `data.remoteTipSha`
+- `data.localProjection`: **`fresh`**, **`behind`**, **`conflict`**, **`rebuilding`**, or **`offline`**
+- `data.outbox`: queue counters (`pending`, `publishing`, `failed`, `conflict`) plus `oldestPendingAgeMs`
+- `data.remote`: branch posture (`branch`, `behind`, `remoteLatestSequence`, `remoteTipSha`, `lastPublishedAt`)
+- `data.recommendedAction`: **`none`**, **`wait`**, **`hydrate`**, **`resolve-conflict`**, or **`run-publish`**
 
 ## Notes
 

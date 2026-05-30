@@ -203,6 +203,10 @@
       "output": "docs/maintainers/runbooks/task-state-git-operator.md"
     },
     {
+      "source": ".ai/runbooks/task-state-sync-path-inventory.md",
+      "output": "docs/maintainers/runbooks/task-state-sync-path-inventory.md"
+    },
+    {
       "source": ".ai/runbooks/transcript-ingestion-operations.md",
       "output": "docs/maintainers/runbooks/transcript-ingestion-operations.md"
     },
