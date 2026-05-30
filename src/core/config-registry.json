@@ -35,6 +35,28 @@
       "user"
     ]
   },
+  "tasks.canonicalPublishQueue": {
+    "key": "tasks.canonicalPublishQueue",
+    "type": "object",
+    "description": "Background canonical publish queue settings: enabled, batchMaxEvents, batchMaxAgeMs, intervalMs, and maxAttempts.",
+    "default": {
+      "enabled": false,
+      "batchMaxEvents": 50,
+      "batchMaxAgeMs": 10000,
+      "intervalMs": 5000,
+      "maxAttempts": 5
+    },
+    "domainScope": "project",
+    "owningModule": "task-engine",
+    "sensitive": false,
+    "requiresRestart": false,
+    "requiresApproval": false,
+    "exposure": "public",
+    "writableLayers": [
+      "project",
+      "user"
+    ]
+  },
   "tasks.persistenceBackend": {
     "key": "tasks.persistenceBackend",
     "type": "string",

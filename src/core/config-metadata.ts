@@ -622,6 +622,30 @@ export function validatePersistedConfigDocument(
       if (queue.enabled !== undefined && typeof queue.enabled !== "boolean") {
         throw new Error(`config-invalid(${label}): tasks.canonicalPublishQueue.enabled must be boolean`);
       }
+      if (
+        queue.batchMaxEvents !== undefined &&
+        (typeof queue.batchMaxEvents !== "number" || !Number.isFinite(queue.batchMaxEvents) || Math.trunc(queue.batchMaxEvents) <= 0)
+      ) {
+        throw new Error(`config-invalid(${label}): tasks.canonicalPublishQueue.batchMaxEvents must be a positive number`);
+      }
+      if (
+        queue.batchMaxAgeMs !== undefined &&
+        (typeof queue.batchMaxAgeMs !== "number" || !Number.isFinite(queue.batchMaxAgeMs) || Math.trunc(queue.batchMaxAgeMs) <= 0)
+      ) {
+        throw new Error(`config-invalid(${label}): tasks.canonicalPublishQueue.batchMaxAgeMs must be a positive number`);
+      }
+      if (
+        queue.intervalMs !== undefined &&
+        (typeof queue.intervalMs !== "number" || !Number.isFinite(queue.intervalMs) || Math.trunc(queue.intervalMs) <= 0)
+      ) {
+        throw new Error(`config-invalid(${label}): tasks.canonicalPublishQueue.intervalMs must be a positive number`);
+      }
+      if (
+        queue.maxAttempts !== undefined &&
+        (typeof queue.maxAttempts !== "number" || !Number.isFinite(queue.maxAttempts) || Math.trunc(queue.maxAttempts) <= 0)
+      ) {
+        throw new Error(`config-invalid(${label}): tasks.canonicalPublishQueue.maxAttempts must be a positive number`);
+      }
     }
     if (t.deliveryEvidence !== undefined) {
       if (typeof t.deliveryEvidence !== "object" || t.deliveryEvidence === null || Array.isArray(t.deliveryEvidence)) {
