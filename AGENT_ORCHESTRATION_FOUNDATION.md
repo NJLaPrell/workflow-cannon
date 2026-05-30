@@ -12,6 +12,18 @@ For v1, Workflow Cannon does **not** directly launch or control agents. Instead,
 
 ---
 
+## User-Facing North Star
+
+Workflow Cannon should feel like a reliable command center where a human can delegate software work to multiple agents, see exactly what is happening, control cost and risk, and trust the handoffs.
+
+The strongest product goal is:
+
+```text
+Workflow Cannon should make multi-agent software work observable, bounded, cost-aware, and trustworthy.
+```
+
+---
+
 ## Goals
 
 As a Workflow Cannon user, I want:
@@ -23,6 +35,189 @@ As a Workflow Cannon user, I want:
 5. Agent handoffs to be compact, structured, and complete enough for continuation.
 6. The system to remain host-agnostic and future-compatible.
 7. The dashboard UX plan to consume this foundation without owning orchestration state.
+
+## User Outcome Goals
+
+### 1. I always know what is happening
+
+A user should be able to open Workflow Cannon and immediately see:
+
+```text
+Who is working
+What they are working on
+Which task/phase they are tied to
+Whether they are active, stale, blocked, validating, reviewing, or done
+What needs human attention
+```
+
+Outcome:
+
+```text
+No mystery work. No hidden agent state. No guessing whether an agent is stuck.
+```
+
+### 2. I can safely delegate work
+
+A user should be able to tell Workflow Cannon:
+
+```text
+Work this phase.
+Use agents where useful.
+Keep me informed.
+Do not break scope.
+```
+
+The system should split work safely, assign bounded tasks, prevent overlap where possible, record blockers, require handoffs, and route risky decisions back to the human.
+
+Outcome:
+
+```text
+The user delegates outcomes, not low-level babysitting.
+```
+
+### 3. Agents stay in their lanes
+
+Each agent should have a clearly defined job.
+
+```text
+The Orchestration Agent coordinates.
+The Task Work Agent implements bounded work.
+Future Reviewer/Validator agents review and verify.
+```
+
+Outcome:
+
+```text
+No agent casually edits everything, invents scope, or claims work is done without evidence.
+```
+
+### 4. The system uses the right agent and model for the work
+
+The user should not have to manually decide whether each task needs a cheap model, balanced model, high-reasoning model, specialist agent, or human review.
+
+The Orchestration Agent should classify work by:
+
+```text
+complexity
+risk
+cost
+ambiguity
+required context
+required capabilities
+```
+
+Outcome:
+
+```text
+Workflow Cannon conserves credits without becoming careless or underpowered.
+```
+
+### 5. Handoffs are useful, not bloated
+
+When an agent finishes, the user and orchestrator should receive a compact handoff that says:
+
+```text
+what changed
+what files changed
+what commands/tests ran
+what passed or failed
+what acceptance criteria were met
+what blockers or risks remain
+what should happen next
+```
+
+Outcome:
+
+```text
+Another agent or human can continue without rereading the whole conversation.
+```
+
+### 6. Blocked work becomes visible and actionable
+
+When a worker hits a blocker, it should not silently stall or improvise. It should create a linked blocker/bug report where appropriate, mark/report the assignment blocked, tell the Orchestrator, and stop until resumed.
+
+Outcome:
+
+```text
+Blockers become part of the work system instead of disappearing into chat.
+```
+
+### 7. Parallel work becomes safer
+
+When multiple agents work at once, Workflow Cannon should track assignment scope, owned paths, shared paths, forbidden paths, requires-approval paths, and resource conflicts.
+
+Outcome:
+
+```text
+Parallel agents stop feeling like chaos with extra steps.
+```
+
+### 8. The system stays host-agnostic
+
+The user should not be locked into one agent host. Workflow Cannon should be able to record and coordinate work from Cursor, VS Code, CLI, manual workflows, MCP tools, future services, and unknown compatible hosts.
+
+Outcome:
+
+```text
+Workflow Cannon owns the workflow, not the host.
+```
+
+### 9. I can intervene at the right moment
+
+The user should only be interrupted for meaningful decisions:
+
+```text
+approval needed
+architecture/risk decision
+blocked work
+scope conflict
+high-cost model recommendation
+dangerous change
+human review required
+```
+
+Outcome:
+
+```text
+The user is in control without becoming the scheduler.
+```
+
+### 10. Every phase can be executed like an operating system
+
+For a phase of work, the ideal experience is:
+
+```text
+Review phase
+Approve orchestration plan
+Agents execute bounded assignments
+Dashboard shows live activity
+Workers submit handoffs
+Orchestrator reconciles
+Validators verify
+User sees final readiness
+Phase closes cleanly
+```
+
+Outcome:
+
+```text
+Workflow Cannon becomes a disciplined multi-agent execution system.
+```
+
+## Measurable Success Criteria
+
+The foundation succeeds when:
+
+1. A user can see all active agents and subagents within 5 seconds of opening the dashboard.
+2. A user can tell which agent owns each active assignment.
+3. A user can tell whether each agent is active, stale, blocked, validating, reviewing, or done.
+4. A Task Work Agent cannot complete or reconcile its own assignment without Orchestrator review.
+5. A blocked worker can create a linked blocker/bug report and stop safely.
+6. The Orchestration Agent can choose a model tier for each assignment and record the reason.
+7. Every worker handoff includes summary, changed files, commands/tests, evidence, blockers, risks, and next action.
+8. Parallel assignments include owned/shared/forbidden path metadata.
+9. The model works conceptually across Cursor, VS Code, CLI, manual, and future service hosts.
+10. The dashboard consumes a projection of orchestration state and never becomes the source of truth.
 
 ---
 
