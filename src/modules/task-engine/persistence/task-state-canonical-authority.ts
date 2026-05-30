@@ -2,6 +2,21 @@ import type { ModuleLifecycleContext } from "../../../contracts/module-contract.
 import type { TaskStore } from "./store.js";
 
 export type TasksCanonicalAuthority = "sqlite" | "git-event-log";
+export type CanonicalPublishQueueConfig = {
+  enabled: boolean;
+  batchMaxEvents: number;
+  batchMaxAgeMs: number;
+  intervalMs: number;
+  maxAttempts: number;
+};
+
+export const DEFAULT_CANONICAL_PUBLISH_QUEUE_CONFIG: CanonicalPublishQueueConfig = {
+  enabled: false,
+  batchMaxEvents: 50,
+  batchMaxAgeMs: 10_000,
+  intervalMs: 5_000,
+  maxAttempts: 5
+};
 
 export function readTasksCanonicalAuthority(
   config?: Record<string, unknown> | null
@@ -49,7 +64,49 @@ export function expectedTaskVersionsForTaskIds(
 }
 
 export function readCanonicalPublishQueueMode(config?: Record<string, unknown> | null): boolean {
+  return readCanonicalPublishQueueConfig(config).enabled;
+}
+
+function readPositiveInt(raw: unknown, fallback: number): number {
+  if (typeof raw !== "number" || !Number.isFinite(raw)) {
+    return fallback;
+  }
+  const value = Math.trunc(raw);
+  return value > 0 ? value : fallback;
+}
+
+export function readCanonicalPublishQueueConfig(
+  config?: Record<string, unknown> | null
+): CanonicalPublishQueueConfig {
   const tasks = config?.tasks as Record<string, unknown> | undefined;
   const queue = tasks?.canonicalPublishQueue as Record<string, unknown> | undefined;
-  return queue?.enabled === true;
+  return {
+    enabled: queue?.enabled === true,
+    batchMaxEvents: readPositiveInt(
+      queue?.batchMaxEvents,
+      DEFAULT_CANONICAL_PUBLISH_QUEUE_CONFIG.batchMaxEvents
+    ),
+    batchMaxAgeMs: readPositiveInt(
+      queue?.batchMaxAgeMs,
+      DEFAULT_CANONICAL_PUBLISH_QUEUE_CONFIG.batchMaxAgeMs
+    ),
+    intervalMs: readPositiveInt(queue?.intervalMs, DEFAULT_CANONICAL_PUBLISH_QUEUE_CONFIG.intervalMs),
+    maxAttempts: readPositiveInt(queue?.maxAttempts, DEFAULT_CANONICAL_PUBLISH_QUEUE_CONFIG.maxAttempts)
+  };
+}
+
+export function readCanonicalPublishQueueBatchMaxEvents(config?: Record<string, unknown> | null): number {
+  return readCanonicalPublishQueueConfig(config).batchMaxEvents;
+}
+
+export function readCanonicalPublishQueueBatchMaxAgeMs(config?: Record<string, unknown> | null): number {
+  return readCanonicalPublishQueueConfig(config).batchMaxAgeMs;
+}
+
+export function readCanonicalPublishQueueIntervalMs(config?: Record<string, unknown> | null): number {
+  return readCanonicalPublishQueueConfig(config).intervalMs;
+}
+
+export function readCanonicalPublishQueueMaxAttempts(config?: Record<string, unknown> | null): number {
+  return readCanonicalPublishQueueConfig(config).maxAttempts;
 }
