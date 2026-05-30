@@ -13,7 +13,7 @@ const providerSrc = readFileSync(
 test("Option 1: DashboardViewProvider wires store + pollers (no legacy 45s timer)", () => {
   assert.match(providerSrc, /DashboardDataStore/);
   assert.match(providerSrc, /DashboardPollerCoordinator/);
-  assert.match(providerSrc, /dashboardPollers\.start\(\)/);
+  assert.match(providerSrc, /readPath\.start\(\)/);
   assert.match(providerSrc, /refreshCriticalNow/);
   assert.doesNotMatch(providerSrc, /dashboardPollTimer/);
 });
@@ -29,7 +29,7 @@ test("Option 1: slice freshness labels render in section patches", () => {
 
 test("Option 1: mutation path marks store slices stale and refreshes pollers", () => {
   assert.match(providerSrc, /dashboardSliceNamesForMutation/);
-  assert.match(providerSrc, /dashboardPollers\.pause\(\)/);
+  assert.match(providerSrc, /readPath\.pause\(\)/);
   assert.match(providerSrc, /refreshSlicesNow/);
 });
 

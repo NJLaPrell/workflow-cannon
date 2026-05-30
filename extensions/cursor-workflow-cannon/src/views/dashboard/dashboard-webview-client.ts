@@ -30,6 +30,18 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
   var localUiLocks = {};
   var pendingReplaceRootHtml = null;
   var hostSnapshot = null;
+
+  function applyDashboardReadModeBadge(badge) {
+    var el = document.querySelector('[data-wc-read-mode-badge]');
+    if (!el || !badge) return;
+    el.textContent = typeof badge.label === 'string' ? badge.label : '';
+    if (typeof badge.detail === 'string' && badge.detail.trim().length > 0) {
+      el.setAttribute('title', badge.detail.trim());
+    } else {
+      el.removeAttribute('title');
+    }
+  }
+
   var pendingSectionPatches = {};
   var draggedIdeaRow = null;
 
@@ -956,6 +968,10 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
     }
     if (m && m.type === 'wcHostSnapshot' && m.snapshot) {
       applyHostSnapshot(m.snapshot);
+      return;
+    }
+    if (m && m.type === 'wcDashboardReadMode' && m.badge) {
+      applyDashboardReadModeBadge(m.badge);
       return;
     }
     if (m && m.type === 'wcIdeaCreateResult') {

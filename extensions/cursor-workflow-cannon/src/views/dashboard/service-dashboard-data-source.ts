@@ -20,6 +20,37 @@ export type ServiceDashboardDataSourceOptions = {
 
 type FetchFn = typeof fetch;
 
+/** Lightweight health probe for auto mode (no SSE connection). */
+export async function probeDashboardServiceHealth(
+  workspacePath: string,
+  options?: Pick<ServiceDashboardDataSourceOptions, "fetchFn" | "readRuntimeFile">
+): Promise<boolean> {
+  const fetchFn = options?.fetchFn ?? fetch;
+  const readRuntimeFile = options?.readRuntimeFile ?? ((absPath) => readFile(absPath, "utf8"));
+  const abs = path.join(workspacePath, DASHBOARD_SERVICE_RUNTIME_REL);
+  let runtime: DashboardServiceRuntimeV1 | null;
+  try {
+    const raw = JSON.parse(await readRuntimeFile(abs)) as unknown;
+    runtime = parseDashboardServiceRuntime(raw);
+  } catch {
+    return false;
+  }
+  if (!runtime) {
+    return false;
+  }
+  const base = `http://${runtime.host}:${runtime.port}`;
+  try {
+    const res = await fetchFn(`${base}/health`);
+    if (!res.ok) {
+      return false;
+    }
+    const body = (await res.json()) as { ok?: boolean };
+    return body.ok === true;
+  } catch {
+    return false;
+  }
+}
+
 export class ServiceDashboardDataSource implements DashboardDataSource {
   private runtime: DashboardServiceRuntimeV1 | null = null;
   private sseAbort: AbortController | null = null;

@@ -1,0 +1,232 @@
+import type { CommandClient } from "../../runtime/command-client.js";
+import type { DashboardDataSourceMode } from "./dashboard-data-source.js";
+import type { DashboardDataStore } from "./dashboard-data-store.js";
+import type { DashboardPollerCoordinator } from "./dashboard-pollers.js";
+import {
+  formatDashboardReadModeBadgeDetail,
+  formatDashboardReadModeBadgeLabel,
+  type DashboardActiveReadPath,
+  type DashboardReadModeBadge
+} from "./dashboard-read-mode-badge.js";
+import { DashboardServiceStoreSync } from "./dashboard-service-store-sync.js";
+import { readConfiguredDashboardDataSourceMode } from "./resolve-dashboard-read-config.js";
+import {
+  probeDashboardServiceHealth,
+  ServiceDashboardDataSource
+} from "./service-dashboard-data-source.js";
+import type { DashboardSliceName } from "./dashboard-snapshot-types.js";
+import type { DashboardSectionId } from "./dashboard-section-registry.js";
+
+export type DashboardReadPathCoordinatorDeps = {
+  workspacePath: string;
+  client: Pick<CommandClient, "run">;
+  store: DashboardDataStore;
+  pollers: DashboardPollerCoordinator;
+  log?: (message: string) => void;
+  onModeChanged?: (badge: DashboardReadModeBadge) => void;
+};
+
+/**
+ * Selects Option 1 CLI pollers vs Option 2 warm service (T100599).
+ * Only one read path runs at a time — no duplicate CLI spawn during service mode.
+ */
+export class DashboardReadPathCoordinator {
+  private configuredMode: DashboardDataSourceMode = "auto";
+  private sessionOverride: "cli-polling" | null = null;
+  private activePath: DashboardActiveReadPath | null = null;
+  private serviceFailDetail: string | undefined;
+  private serviceSync: DashboardServiceStoreSync | undefined;
+  private pollersPaused = false;
+  private running = false;
+
+  constructor(private readonly deps: DashboardReadPathCoordinatorDeps) {}
+
+  getModeBadge(): DashboardReadModeBadge {
+    const configured = this.sessionOverride ?? this.configuredMode;
+    return {
+      configured,
+      active: this.activePath ?? "cli-polling",
+      detail: this.serviceFailDetail
+    };
+  }
+
+  getModeBadgeLabel(): string {
+    return formatDashboardReadModeBadgeLabel(this.getModeBadge());
+  }
+
+  getModeBadgeDetail(): string | undefined {
+    return formatDashboardReadModeBadgeDetail(this.getModeBadge());
+  }
+
+  isServicePathActive(): boolean {
+    return this.activePath === "service";
+  }
+
+  async start(): Promise<void> {
+    if (this.running) {
+      return;
+    }
+    this.running = true;
+    this.configuredMode = await readConfiguredDashboardDataSourceMode(this.deps.workspacePath);
+    await this.activateReadPath();
+  }
+
+  async stop(): Promise<void> {
+    await this.stopActivePath();
+    this.running = false;
+    this.activePath = null;
+  }
+
+  /** Re-read config and swap read paths when `dashboard.dataSource` changes. */
+  async reloadFromConfig(): Promise<void> {
+    const next = await readConfiguredDashboardDataSourceMode(this.deps.workspacePath);
+    if (next === this.configuredMode && !this.sessionOverride) {
+      return;
+    }
+    this.configuredMode = next;
+    if (this.running) {
+      await this.activateReadPath();
+    }
+  }
+
+  async forceCliPollingMode(): Promise<void> {
+    this.sessionOverride = "cli-polling";
+    this.serviceFailDetail = undefined;
+    if (this.running) {
+      await this.activateReadPath();
+    } else {
+      this.emitModeChanged();
+    }
+  }
+
+  async restartDashboardService(): Promise<{ ok: boolean; message?: string }> {
+    this.sessionOverride = null;
+    await this.stopActivePath();
+    const result = await this.deps.client.run("dashboard-service-start", {});
+    if (result.ok !== true) {
+      const message =
+        typeof result.message === "string"
+          ? result.message
+          : typeof result.code === "string"
+            ? result.code
+            : "dashboard-service-start failed";
+      this.serviceFailDetail = message;
+      if (this.running) {
+        await this.activateReadPath();
+      }
+      return { ok: false, message };
+    }
+    if (this.running) {
+      await this.activateReadPath();
+    }
+    return { ok: true, message: typeof result.message === "string" ? result.message : undefined };
+  }
+
+  pause(): void {
+    this.pollersPaused = true;
+    this.deps.pollers.pause();
+  }
+
+  resume(): void {
+    this.pollersPaused = false;
+    if (this.activePath === "cli-polling") {
+      this.deps.pollers.resume();
+    }
+  }
+
+  async refreshCriticalNow(): Promise<void> {
+    if (this.activePath === "service" && this.serviceSync) {
+      await this.serviceSync.refreshSlice("overview");
+      return;
+    }
+    await this.deps.pollers.refreshCriticalNow();
+  }
+
+  async refreshSlicesNow(names: readonly DashboardSliceName[]): Promise<void> {
+    if (this.activePath === "service" && this.serviceSync) {
+      for (const name of names) {
+        await this.serviceSync.refreshSlice(name);
+      }
+      return;
+    }
+    await this.deps.pollers.refreshSlicesNow(names);
+  }
+
+  setVisibleSections(sections: readonly DashboardSectionId[]): void {
+    if (this.activePath !== "service") {
+      this.deps.pollers.setVisibleSections(sections);
+    }
+  }
+
+  private async activateReadPath(): Promise<void> {
+    await this.stopActivePath();
+    const effectiveMode = this.sessionOverride ?? this.configuredMode;
+    this.serviceFailDetail = undefined;
+
+    if (effectiveMode === "cli-polling") {
+      await this.startCliPollingPath();
+      this.emitModeChanged();
+      return;
+    }
+
+    const serviceHealthy = await probeDashboardServiceHealth(this.deps.workspacePath);
+    if (serviceHealthy) {
+      try {
+        await this.startServicePath();
+        this.emitModeChanged();
+        return;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        this.deps.log?.(`dashboard service start failed: ${message}`);
+        if (effectiveMode === "service") {
+          this.serviceFailDetail = message;
+          this.activePath = null;
+          this.emitModeChanged();
+          return;
+        }
+        this.serviceFailDetail = "Dashboard service unavailable — using CLI polling";
+      }
+    } else if (effectiveMode === "service") {
+      this.serviceFailDetail = "Dashboard service is not running or failed health check";
+      this.activePath = null;
+      this.emitModeChanged();
+      return;
+    } else {
+      this.serviceFailDetail = "Dashboard service unavailable — using CLI polling";
+    }
+
+    await this.startCliPollingPath();
+    this.emitModeChanged();
+  }
+
+  private async startServicePath(): Promise<void> {
+    const dataSource = new ServiceDashboardDataSource({
+      workspacePath: this.deps.workspacePath
+    });
+    this.serviceSync = new DashboardServiceStoreSync(dataSource, this.deps.store);
+    await this.serviceSync.start();
+    this.activePath = "service";
+    this.deps.log?.("dashboard read path: warm service");
+  }
+
+  private async startCliPollingPath(): Promise<void> {
+    this.deps.pollers.start();
+    if (!this.pollersPaused) {
+      this.deps.pollers.resume();
+    }
+    this.activePath = "cli-polling";
+    this.deps.log?.("dashboard read path: CLI pollers");
+  }
+
+  private async stopActivePath(): Promise<void> {
+    if (this.serviceSync) {
+      await this.serviceSync.stop();
+      this.serviceSync = undefined;
+    }
+    this.deps.pollers.stop();
+  }
+
+  private emitModeChanged(): void {
+    this.deps.onModeChanged?.(this.getModeBadge());
+  }
+}

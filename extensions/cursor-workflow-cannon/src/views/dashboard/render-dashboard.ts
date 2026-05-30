@@ -25,11 +25,14 @@ import { renderConfigPanelShellHtml } from "../config/config-panel-shell.js";
 import { compareQueuePhaseFilterValues } from "../phase-select-options.js";
 import type { DashboardSectionId } from "./dashboard-section-registry.js";
 import { lookupDashboardSection } from "./dashboard-section-registry.js";
-import { renderDashboardSectionPlaceholder } from "./render-dashboard-shell.js";
+import { renderDashboardReadModeBadgeHtml, renderDashboardSectionPlaceholder } from "./render-dashboard-shell.js";
+import type { DashboardReadModeBadge } from "./dashboard-read-mode-badge.js";
 
 export type RenderDashboardRootOptions = {
   /** Sections that stay as loading placeholders until tab activation (T100398). */
   deferredSections?: ReadonlySet<DashboardSectionId>;
+  /** Active dashboard read path badge (T100599). */
+  readModeBadge?: DashboardReadModeBadge | null;
 };
 
 /** Inputs for {@link detectPhaseCloseoutOrderingRisk} on dashboard phase cards. */
@@ -5255,6 +5258,7 @@ export function renderDashboardRootInnerHtml(
     '<button type="button" class="wc-tab-btn" role="tab" data-wc-tab="status">Status</button>' +
     '<button type="button" class="wc-tab-btn" role="tab" data-wc-tab="config">Config</button>' +
     '<button type="button" class="wc-tab-btn" role="tab" data-wc-tab="cae">CAE</button>' +
+    renderDashboardReadModeBadgeHtml(options?.readModeBadge) +
     "</div>" +
     '<div class="wc-tab-panel" data-wc-tab="overview" role="tabpanel">' + overviewWrapped + ideasWrapped + "</div>" +
     '<div class="wc-tab-panel" data-wc-tab="task-engine" role="tabpanel" style="display:none">' +
