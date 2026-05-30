@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workflow-cannon.dev/schemas/task-sync-status.v1.json",
+  "title": "Task sync status v1",
+  "description": "Canonical task-state Git alignment and outbox posture from GET /task-sync/status.",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "generatedAt",
+    "syncState",
+    "reason",
+    "localProjection",
+    "recommendedAction",
+    "branch",
+    "remoteLatestSequence",
+    "localAppliedSequence",
+    "outbox"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "generatedAt": { "type": "string", "minLength": 1 },
+    "syncState": {
+      "type": "string",
+      "enum": ["missing", "current", "behind", "conflict"]
+    },
+    "reason": { "type": "string" },
+    "localProjection": {
+      "type": "string",
+      "enum": ["fresh", "behind", "conflict", "rebuilding", "offline"]
+    },
+    "recommendedAction": {
+      "type": "string",
+      "enum": ["none", "wait", "hydrate", "resolve-conflict", "run-publish"]
+    },
+    "branch": { "type": "string", "minLength": 1 },
+    "remoteLatestSequence": { "type": ["integer", "null"], "minimum": 0 },
+    "localAppliedSequence": { "type": ["integer", "null"], "minimum": 0 },
+    "outbox": { "$ref": "#/$defs/taskSyncOutboxCounts" }
+  },
+  "$defs": {
+    "taskSyncOutboxCounts": {
+      "type": "object",
+      "required": [
+        "pending",
+        "publishing",
+        "failed",
+        "conflict",
+        "oldestPendingAgeMs",
+        "latestPublishedAt"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "pending": { "type": "integer", "minimum": 0 },
+        "publishing": { "type": "integer", "minimum": 0 },
+        "failed": { "type": "integer", "minimum": 0 },
+        "conflict": { "type": "integer", "minimum": 0 },
+        "oldestPendingAgeMs": { "type": "integer", "minimum": 0 },
+        "latestPublishedAt": { "type": ["string", "null"] }
+      }
+    }
+  }
+}

@@ -24,6 +24,24 @@ export type {
   DashboardServiceSnapshot
 } from "./dashboard-snapshot.js";
 export type {
+  RuntimeServiceDashboardFreshness,
+  RuntimeServiceHealth,
+  RuntimeServiceStatusV1
+} from "./runtime-service.js";
+export { RUNTIME_SERVICE_STATUS_SCHEMA_VERSION } from "./runtime-service.js";
+export type {
+  TaskSyncFlushResultV1,
+  TaskSyncLocalProjection,
+  TaskSyncOutboxCounts,
+  TaskSyncRecommendedAction,
+  TaskSyncState,
+  TaskSyncStatusV1
+} from "./task-sync-status.js";
+export {
+  TASK_SYNC_FLUSH_RESULT_SCHEMA_VERSION,
+  TASK_SYNC_STATUS_SCHEMA_VERSION
+} from "./task-sync-status.js";
+export type {
   DashboardAgentGuidanceSummary,
   DashboardSummaryCommandSuccess,
   DashboardCurrentPhaseDelivery,

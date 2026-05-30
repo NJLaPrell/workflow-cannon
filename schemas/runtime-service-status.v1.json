@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workflow-cannon.dev/schemas/runtime-service-status.v1.json",
+  "title": "Runtime service status v1",
+  "description": "Versioned runtime posture from GET /status — process health and dashboard freshness, not task sync.",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "generatedAt",
+    "serviceVersion",
+    "health",
+    "uptimeMs",
+    "sseClients",
+    "dashboard"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "generatedAt": { "type": "string", "minLength": 1 },
+    "serviceVersion": { "type": "string", "minLength": 1 },
+    "health": { "type": "string", "enum": ["ok", "degraded", "starting"] },
+    "uptimeMs": { "type": "integer", "minimum": 0 },
+    "sseClients": { "type": "integer", "minimum": 0 },
+    "dashboard": { "$ref": "#/$defs/runtimeServiceDashboardFreshness" }
+  },
+  "$defs": {
+    "runtimeServiceDashboardFreshness": {
+      "type": "object",
+      "required": [
+        "generation",
+        "planningGeneration",
+        "staleSlices",
+        "failingSlices",
+        "lastSnapshotAt"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "generation": { "type": "integer", "minimum": 0 },
+        "planningGeneration": { "type": ["integer", "null"], "minimum": 0 },
+        "staleSlices": { "type": "array", "items": { "type": "string" } },
+        "failingSlices": { "type": "array", "items": { "type": "string" } },
+        "lastSnapshotAt": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

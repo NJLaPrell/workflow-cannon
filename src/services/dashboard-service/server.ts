@@ -56,16 +56,21 @@ export async function createDashboardService(
     defaultRegistryModules,
     {}
   );
+  const ctx = {
+    runtimeVersion: "0.1",
+    workspacePath: options.workspacePath,
+    effectiveConfig: effective
+  };
   const watchers = new DashboardServiceWatchers({
     workspacePath: options.workspacePath,
-    ctx: { runtimeVersion: "0.1", workspacePath: options.workspacePath, effectiveConfig: effective },
+    ctx,
     refresher,
     pollIntervalMs: options.pollIntervalMs
   });
   await watchers.start();
 
   const server = createServer((req, res) => {
-    void handleDashboardServiceRequest(req, res, { snapshotStore, refresher, sseHub }).catch((error) => {
+    void handleDashboardServiceRequest(req, res, { snapshotStore, refresher, sseHub, ctx }).catch((error) => {
       const message = error instanceof Error ? error.message : String(error);
       res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
       res.end(JSON.stringify({ ok: false, code: "internal-error", message }));
