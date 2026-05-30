@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import { DashboardSnapshotStore } from "./snapshot-store.js";
 import { DashboardSliceRefresher } from "./slice-refreshers.js";
 import { DashboardSseHub } from "./events.js";
-import { handleDashboardServiceRequest, wireDashboardServiceEvents } from "./routes.js";
+import { handleDashboardServiceRequest, wireDashboardServiceEvents, wireTaskSyncSseEvents } from "./routes.js";
 import { DashboardServiceWatchers } from "./watchers.js";
 import { resolveRegistryAndConfig } from "../../core/module-registry-resolve.js";
 import { defaultRegistryModules } from "../../modules/index.js";
@@ -76,6 +76,7 @@ export async function createDashboardService(
 
   const taskSyncWorker = await createDashboardTaskSyncWorker(ctx);
   await taskSyncWorker.start();
+  const unwireTaskSync = wireTaskSyncSseEvents(ctx, taskSyncWorker, sseHub);
 
   const server = createServer((req, res) => {
     void handleDashboardServiceRequest(req, res, {
@@ -103,6 +104,7 @@ export async function createDashboardService(
 
   const stop = async (): Promise<void> => {
     unwire();
+    unwireTaskSync();
     sseHub.closeAll();
     await taskSyncWorker.stop();
     await watchers.stop();

@@ -3,7 +3,7 @@ import type { ModuleLifecycleContext } from "../../contracts/module-contract.js"
 import type { DashboardSnapshotStore } from "./snapshot-store.js";
 import type { DashboardSliceRefresher } from "./slice-refreshers.js";
 import { buildRuntimeServiceStatus } from "./build-runtime-service-status.js";
-import { DashboardSseHub, toSseEvent } from "./events.js";
+import { DashboardSseHub, toSseEvent, toTaskSyncStatusChangedEvent } from "./events.js";
 import { listDashboardServiceSliceNames } from "./slice-definitions.js";
 import { buildDashboardServiceHealthPayload } from "./slice-observability.js";
 import { readTaskSyncStatus } from "./task-sync-handlers.js";
@@ -208,4 +208,32 @@ export function wireDashboardServiceEvents(
       sseHub.broadcast(toSseEvent(event));
     }
   });
+}
+
+export function wireTaskSyncSseEvents(
+  ctx: ModuleLifecycleContext,
+  taskSyncWorker: DashboardTaskSyncWorker,
+  sseHub: DashboardSseHub
+): () => void {
+  let lastFingerprint: string | null = null;
+
+  const emitIfChanged = async (): Promise<void> => {
+    try {
+      const status = await readTaskSyncStatus(ctx);
+      const fingerprint = JSON.stringify(status);
+      if (fingerprint === lastFingerprint) {
+        return;
+      }
+      lastFingerprint = fingerprint;
+      sseHub.broadcast(toTaskSyncStatusChangedEvent(status));
+    } catch {
+      // status read failures are surfaced via HTTP; SSE stays best-effort
+    }
+  };
+
+  const unsubscribe = taskSyncWorker.onStatusChanged(() => {
+    void emitIfChanged();
+  });
+  void emitIfChanged();
+  return unsubscribe;
 }
