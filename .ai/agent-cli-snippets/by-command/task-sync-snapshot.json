@@ -1,39 +1,18 @@
 {
   "ok": true,
   "code": "run-args-schema",
-  "command": "task-state-publish",
+  "command": "task-sync-snapshot",
   "schema": {
     "type": "object",
-    "required": [
-      "events",
-      "expectedHeadSha",
-      "expectedTaskVersions"
-    ],
     "properties": {
       "dryRun": {
         "type": "boolean"
       },
-      "events": {
-        "type": "array",
-        "minItems": 1
-      },
-      "expectedHeadSha": {
-        "type": "string"
-      },
-      "expectedTaskVersions": {
-        "type": "object",
-        "additionalProperties": {
-          "type": "integer"
-        }
-      },
       "branch": {
         "type": "string"
       },
-      "maxAttempts": {
-        "type": "integer"
-      },
-      "push": {
-        "type": "boolean"
+      "snapshotId": {
+        "type": "string"
       },
       "policyApproval": {
         "type": "object",
@@ -43,23 +22,19 @@
     "additionalProperties": true
   },
   "schemaSource": "pilot-run-args-snapshot",
-  "sampleArgs": {
-    "events": [],
-    "expectedHeadSha": "",
-    "expectedTaskVersions": {}
-  },
+  "sampleArgs": {},
   "examples": [
     {
       "description": "Minimal argv example",
-      "argv": "workspace-kit run task-state-publish '{\"events\":[],\"expectedHeadSha\":\"\",\"expectedTaskVersions\":{}}'"
+      "argv": "workspace-kit run task-sync-snapshot '{}'"
     }
   ],
-  "instructionPath": "src/modules/task-engine/instructions/task-state-publish.md",
+  "instructionPath": "src/modules/task-engine/instructions/task-sync-snapshot.md",
   "moduleId": "task-engine",
-  "description": "Publish canonical task-state events to the git branch with optimistic push and conflict detection.",
+  "description": "Create a snapshot of the SQLite task projection on the canonical task-state git branch.",
   "policy": {
     "sensitivity": "sensitive",
-    "operationId": "tasks.task-state-publish",
+    "operationId": "tasks.task-state-snapshot",
     "jsonApprovalRequired": true
   },
   "planningGeneration": {
@@ -77,5 +52,5 @@
     "listCommands": "pnpm exec wk run --list-commands",
     "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
   },
-  "invocationId": "6c04f482-1541-4a28-ab45-2dc9256e5a84"
+  "invocationId": "2eb25556-7062-4da1-9a32-7ad57ff2234a"
 }

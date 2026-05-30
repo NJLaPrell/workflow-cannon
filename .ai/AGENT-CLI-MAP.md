@@ -113,6 +113,28 @@ Distinct from `.ai/` canon and `document-project` outputs — see `CANNON.md` an
 - `pnpm exec wk run prune-memory '{"id":"mem_…","auditNote":"…","policyApproval":{"confirmed":true,"rationale":"…"}}'`
 - `pnpm exec wk run explain-memory-precedence '{}'`
 
+
+## Task sync (canonical backend)
+
+Preferred **`task-sync-*`** commands (backend-neutral). Legacy **`task-state-*`** names remain as recovery aliases — same argv and policy surfaces.
+
+| Canonical | Recovery alias |
+| --- | --- |
+| `task-sync-status` | `task-state-status` |
+| `task-sync-hydrate` | `task-state-hydrate` |
+| `task-sync-init` | `task-state-init` |
+| `task-sync-verify` | `task-state-verify` |
+| `task-sync-publish` | `task-state-publish` |
+| `task-sync-snapshot` | `task-state-snapshot` |
+| `task-sync-compact` | `task-state-compact` |
+
+- `pnpm exec wk run task-sync-status '{}'`
+- `pnpm exec wk run task-sync-hydrate '{"fetch":true,"policyApproval":{"confirmed":true,"rationale":"…"}}'`
+- `pnpm exec wk run task-sync-publish '{"policyApproval":{"confirmed":true,"rationale":"…"}}'` (see `--schema-only` for full argv)
+- `pnpm exec wk run task-sync-verify '{"source":"git","branch":"workflow-cannon/task-state"}'`
+
+Operator runbook: [`.ai/runbooks/task-state-git-operator.md`](./runbooks/task-state-git-operator.md). Per-command schemas: [`.ai/agent-cli-snippets/`](./agent-cli-snippets/INDEX.json).
+
 ## Where did the big tables go?
 
 - **Tier A/B/C examples, CAE block, queue-health copy-paste, wishlist ladder:** **`.ai/AGENT-CLI-MAP.extended.md`**

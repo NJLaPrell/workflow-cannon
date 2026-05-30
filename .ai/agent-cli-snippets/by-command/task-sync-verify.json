@@ -1,28 +1,15 @@
 {
   "ok": true,
   "code": "run-args-schema",
-  "command": "task-state-init",
+  "command": "task-sync-verify",
   "schema": {
     "type": "object",
     "properties": {
-      "dryRun": {
-        "type": "boolean"
-      },
-      "overwriteExisting": {
-        "type": "boolean"
-      },
-      "push": {
+      "fetch": {
         "type": "boolean"
       },
       "branch": {
         "type": "string"
-      },
-      "snapshotId": {
-        "type": "string"
-      },
-      "policyApproval": {
-        "type": "object",
-        "additionalProperties": true
       }
     },
     "additionalProperties": true
@@ -32,16 +19,16 @@
   "examples": [
     {
       "description": "Minimal argv example",
-      "argv": "workspace-kit run task-state-init '{}'"
+      "argv": "workspace-kit run task-sync-verify '{}'"
     }
   ],
-  "instructionPath": "src/modules/task-engine/instructions/task-state-init.md",
+  "instructionPath": "src/modules/task-engine/instructions/task-sync-verify.md",
   "moduleId": "task-engine",
-  "description": "Bootstrap workflow-cannon/task-state from SQLite: manifest, snapshot, event segment; refuses overwrite unless approved.",
+  "description": "Verify task-state manifest, snapshot hashes, and event log sequence/parent/schema integrity.",
   "policy": {
-    "sensitivity": "sensitive",
-    "operationId": "tasks.task-state-init",
-    "jsonApprovalRequired": true
+    "sensitivity": "non-sensitive",
+    "operationId": null,
+    "jsonApprovalRequired": false
   },
   "planningGeneration": {
     "cliPrelude": false,
@@ -58,5 +45,5 @@
     "listCommands": "pnpm exec wk run --list-commands",
     "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
   },
-  "invocationId": "62b79e64-0dde-4232-b908-ee5b81c80b8a"
+  "invocationId": "c03c7663-6e44-4655-a654-2e5044e55afe"
 }

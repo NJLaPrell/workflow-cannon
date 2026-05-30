@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-05-30T03:06:55.096Z",
+  "generatedAt": "2026-05-30T22:35:27.963Z",
   "commands": [
     {
       "name": "accept-improvement",
@@ -1088,43 +1088,43 @@
       "moduleId": "task-engine"
     },
     {
-      "name": "task-state-compact",
-      "path": ".ai/agent-cli-snippets/by-command/task-state-compact.json",
-      "moduleId": "task-engine"
-    },
-    {
-      "name": "task-state-hydrate",
-      "path": ".ai/agent-cli-snippets/by-command/task-state-hydrate.json",
-      "moduleId": "task-engine"
-    },
-    {
-      "name": "task-state-init",
-      "path": ".ai/agent-cli-snippets/by-command/task-state-init.json",
-      "moduleId": "task-engine"
-    },
-    {
       "name": "task-state-migrate-baseline",
       "path": ".ai/agent-cli-snippets/by-command/task-state-migrate-baseline.json",
       "moduleId": "task-engine"
     },
     {
-      "name": "task-state-publish",
-      "path": ".ai/agent-cli-snippets/by-command/task-state-publish.json",
+      "name": "task-sync-compact",
+      "path": ".ai/agent-cli-snippets/by-command/task-sync-compact.json",
       "moduleId": "task-engine"
     },
     {
-      "name": "task-state-snapshot",
-      "path": ".ai/agent-cli-snippets/by-command/task-state-snapshot.json",
+      "name": "task-sync-hydrate",
+      "path": ".ai/agent-cli-snippets/by-command/task-sync-hydrate.json",
       "moduleId": "task-engine"
     },
     {
-      "name": "task-state-status",
-      "path": ".ai/agent-cli-snippets/by-command/task-state-status.json",
+      "name": "task-sync-init",
+      "path": ".ai/agent-cli-snippets/by-command/task-sync-init.json",
       "moduleId": "task-engine"
     },
     {
-      "name": "task-state-verify",
-      "path": ".ai/agent-cli-snippets/by-command/task-state-verify.json",
+      "name": "task-sync-publish",
+      "path": ".ai/agent-cli-snippets/by-command/task-sync-publish.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "task-sync-snapshot",
+      "path": ".ai/agent-cli-snippets/by-command/task-sync-snapshot.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "task-sync-status",
+      "path": ".ai/agent-cli-snippets/by-command/task-sync-status.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "task-sync-verify",
+      "path": ".ai/agent-cli-snippets/by-command/task-sync-verify.json",
       "moduleId": "task-engine"
     },
     {

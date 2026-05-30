@@ -4,6 +4,8 @@
 
 **Authority:** When `tasks.canonicalAuthority` is `git-event-log`, canonical history lives on branch `workflow-cannon/task-state`. Local `.workspace-kit/tasks/workspace-kit.db` is a projection; `.workspace-kit/tasks/task-state-events.jsonl` is a materialization target.
 
+**CLI names:** Prefer **`task-sync-*`** for operator sync commands; **`task-state-*`** names for the same seven commands remain recovery aliases (see **`.ai/AGENT-CLI-MAP.md`** § Task sync).
+
 ## Central publish pipeline
 
 All mutation-time publication flows through **`commitCanonicalTaskStateEvents`** (`src/modules/task-engine/persistence/task-state-canonical-commit.ts`):
@@ -55,13 +57,13 @@ Domain filtering: `filterPlanningEventsByEnabledDomains` (`planning-canonical-sy
 
 | Command | Runtime | Blocks on Git? | Role |
 | --- | --- | --- | --- |
-| `task-state-publish` | `task-state-publish-runtime.ts` | Yes (`push` default) | Manual/explicit publish of pending local events |
-| `task-state-hydrate` | `task-state-hydrate-runtime.ts` | Fetch optional | Pull remote events → local projection |
-| `task-state-status` | `task-state-status-runtime.ts` | No (read-only unless `fetch:true`) | Alignment cursor for CLI/dashboard |
-| `task-state-verify` | `task-state-verify-runtime.ts` | No | Integrity check against git source |
-| `task-state-snapshot` | `task-state-snapshot-runtime.ts` | No | Snapshot export |
-| `task-state-init` | `task-state-init-runtime.ts` | Yes (bootstrap branch) | First-time branch setup |
-| `task-state-compact` | `task-state-compact-runtime.ts` | Yes | Segment compaction |
+| `task-sync-publish` | `task-state-publish-runtime.ts` | Yes (`push` default) | Manual/explicit publish of pending local events |
+| `task-sync-hydrate` | `task-state-hydrate-runtime.ts` | Fetch optional | Pull remote events → local projection |
+| `task-sync-status` | `task-state-status-runtime.ts` | No (read-only unless `fetch:true`) | Alignment cursor for CLI/dashboard |
+| `task-sync-verify` | `task-state-verify-runtime.ts` | No | Integrity check against git source |
+| `task-sync-snapshot` | `task-state-snapshot-runtime.ts` | No | Snapshot export |
+| `task-sync-init` | `task-state-init-runtime.ts` | Yes (bootstrap branch) | First-time branch setup |
+| `task-sync-compact` | `task-state-compact-runtime.ts` | Yes | Segment compaction |
 | `task-state-migrate-baseline` | `task-state-migrate-baseline-runtime.ts` | Yes | Baseline migration |
 | `apply-task-state-events` | `apply-task-state-events-runtime.ts` | No | Local projection apply |
 | `rebuild-task-state-cache` | `rebuild-task-state-cache-runtime.ts` | No | Local rebuild |
@@ -72,15 +74,15 @@ Domain filtering: `filterPlanningEventsByEnabledDomains` (`planning-canonical-sy
 | Path | Behavior today |
 | --- | --- |
 | Mutation commands (table above) | **Synchronous** publish + hydrate on success path |
-| `task-state-publish` | **Explicit** synchronous publish (operator/recovery) |
+| `task-sync-publish` | **Explicit** synchronous publish (operator/recovery) |
 | `tasks.canonicalPublishQueue.enabled` | **Stub** — returns `task-state-canonical-queue-not-implemented` (Phase 123 outbox replaces this) |
-| Dashboard background sync | Extension `task-state-sync-coordinator` may call `task-state-hydrate` after mutations — does not replace canonical publish on mutation path |
+| Dashboard background sync | Extension `task-state-sync-coordinator` may call `task-sync-hydrate` after mutations — does not replace canonical publish on mutation path |
 
 ## `expectedHeadSha` / `expectedTaskVersions` usage
 
 - Set in **`commitCanonicalTaskStateEvents`** immediately before each mutation publish.
 - **`publishTaskStateEvents`** validates head SHA matches branch tip and task versions match remote projection for touched task IDs.
-- **`task-state-publish`** (operator command) builds expected versions from local store + remote read (`task-state-publish-runtime.ts`).
+- **`task-sync-publish`** (operator command) builds expected versions from local store + remote read (`task-state-publish-runtime.ts`). Recovery alias: **`task-state-publish`**.
 - Conflict surface: `task-state-publish-task-conflict`, `task-state-stale-version`.
 
 ## Test files protecting existing behavior
@@ -104,6 +106,6 @@ Replace step 5–6 in **`commitCanonicalTaskStateEvents`** with:
 1. Local SQLite transaction (immediate).
 2. **`enqueueCanonicalEvent`** to `kit_canonical_event_outbox`.
 3. Background publisher calls **`publishTaskStateEvents`** in batches.
-4. `task-state-status` / dashboard expose outbox + sync posture.
+4. `task-sync-status` / dashboard expose outbox + sync posture.
 
 See `BACKEND.md` Phase 1 WBS and plan artifact `de3064a4-9995-4b27-94a9-1512523c1757`.

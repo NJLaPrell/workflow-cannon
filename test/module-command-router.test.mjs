@@ -6,6 +6,7 @@ import {
   ModuleCommandRouterError,
   ModuleRegistry,
   UNKNOWN_COMMAND_SAMPLE_LIMIT,
+  TASK_SYNC_RECOVERY_ALIASES,
   agentBehaviorModule,
   documentationModule,
   formatUnknownCommandMessage,
@@ -160,14 +161,14 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
     "sync-task-store-after-merge",
     "synthesize-transcript-churn",
     "task-persistence-readiness",
-    "task-state-compact",
-    "task-state-hydrate",
-    "task-state-init",
     "task-state-migrate-baseline",
-    "task-state-publish",
-    "task-state-snapshot",
-    "task-state-status",
-    "task-state-verify",
+    "task-sync-compact",
+    "task-sync-hydrate",
+    "task-sync-init",
+    "task-sync-publish",
+    "task-sync-snapshot",
+    "task-sync-status",
+    "task-sync-verify",
     "unblock-task",
     "uninstall-git-hooks",
     "update-behavior-profile",
@@ -183,6 +184,23 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
     "workspace-edit-status",
     "workspace-status-history"
   ]);
+});
+
+test("ModuleCommandRouter resolves task-state-* recovery aliases to task-sync-*", async () => {
+  const registry = new ModuleRegistry([workspaceConfigModule, taskEngineModule]);
+  const router = new ModuleCommandRouter(registry, { aliases: TASK_SYNC_RECOVERY_ALIASES });
+
+  const canonical = router.describeCommand("task-sync-status");
+  const alias = router.describeCommand("task-state-status");
+  assert.ok(canonical);
+  assert.deepEqual(alias, canonical);
+
+  const result = await router.execute(
+    "task-state-status",
+    {},
+    { ...lifecycleContext, moduleRegistry: registry }
+  );
+  assert.equal(typeof result.ok, "boolean");
 });
 
 test("ModuleCommandRouter executes explain-config", async () => {

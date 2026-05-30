@@ -95,15 +95,15 @@
     "sync-task-store-after-merge",
     "synthesize-transcript-churn",
     "task-persistence-readiness",
-    "task-state-compact",
-    "task-state-hydrate",
-    "task-state-init",
+    "task-sync-compact",
+    "task-sync-hydrate",
+    "task-sync-init",
     "planning-state-migrate-baseline",
     "task-state-migrate-baseline",
-    "task-state-publish",
-    "task-state-snapshot",
-    "task-state-status",
-    "task-state-verify",
+    "task-sync-publish",
+    "task-sync-snapshot",
+    "task-sync-status",
+    "task-sync-verify",
     "unblock-task",
     "uninstall-git-hooks",
     "update-phase-note",
@@ -1758,7 +1758,7 @@
       "type": "object",
       "additionalProperties": true
     },
-    "task-state-compact": {
+    "task-sync-compact": {
       "type": "object",
       "properties": {
         "dryRun": {
@@ -1770,7 +1770,7 @@
       },
       "additionalProperties": true
     },
-    "task-state-hydrate": {
+    "task-sync-hydrate": {
       "type": "object",
       "properties": {
         "dryRun": {
@@ -1792,7 +1792,7 @@
       },
       "additionalProperties": true
     },
-    "task-state-init": {
+    "task-sync-init": {
       "type": "object",
       "properties": {
         "dryRun": {
@@ -1823,7 +1823,7 @@
     "task-state-migrate-baseline": {
       "type": "object"
     },
-    "task-state-publish": {
+    "task-sync-publish": {
       "type": "object",
       "required": [
         "events",
@@ -1863,7 +1863,7 @@
       },
       "additionalProperties": true
     },
-    "task-state-snapshot": {
+    "task-sync-snapshot": {
       "type": "object",
       "properties": {
         "dryRun": {
@@ -1882,7 +1882,7 @@
       },
       "additionalProperties": true
     },
-    "task-state-status": {
+    "task-sync-status": {
       "type": "object",
       "properties": {
         "fetch": {
@@ -1894,7 +1894,7 @@
       },
       "additionalProperties": true
     },
-    "task-state-verify": {
+    "task-sync-verify": {
       "type": "object",
       "properties": {
         "fetch": {
