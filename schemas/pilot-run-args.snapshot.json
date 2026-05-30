@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "sourceSchemaPackageVersion": "0.99.19",
+  "sourceSchemaPackageVersion": "0.99.20",
   "pilotCommands": [
     "accept-improvement",
     "add-dependency",

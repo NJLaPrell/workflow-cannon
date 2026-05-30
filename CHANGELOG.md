@@ -37,4 +37,4 @@ This root file is intentionally pointer-only to avoid split release history.
 - Patch release for task-store recovery and phase snapshot alignment after the phase 108/113 dashboard closeout sequence.
 - Captures phase 114/115 task-state event-log planning tasks in the task engine so maintainers can pick up the migration work from a fresh dashboard.
 
-Latest release: **v0.99.19** (Phase 121 Dashboard Option 1; see canonical changelog). (Phase 116 Planner-chat provenance closeout; see canonical changelog).
+Latest release: **v0.99.20** (Phase 122 Dashboard Option 2 read service; see canonical changelog). (Phase 121 Dashboard Option 1; see canonical changelog).

@@ -8,6 +8,22 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [0.99.20] - 2026-05-30
+
+Patch — **Phase 122 Dashboard Option 2** (warm read service + extension auto mode).
+
+### Added
+
+- Kit dashboard read service (`src/services/dashboard-service/`) — HTTP/SSE, SQLite snapshot store, tiered watchers, lifecycle commands.
+- `dashboard.dataSource` config: `cli-polling` | `service` | `auto` (default `auto`).
+- Extension `DashboardReadPathCoordinator`, mode badge, restart service / CLI override commands.
+- `/health` per-slice observability; `scripts/bench-dashboard-service.mjs`; Option 2 acceptance tests.
+
+### Changed
+
+- Dashboard extension prefers warm service when healthy; falls back to Option 1 CLI pollers without clearing last-good slice data.
+
+
 ## [0.99.19] - 2026-05-30
 
 Patch — **Phase 121 Dashboard Option 1** (state store + targeted pollers; replaces monolithic 45s refresh).
