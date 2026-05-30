@@ -56,6 +56,10 @@ export class DashboardServiceStoreSync {
     if (event.type === "dashboard.service.error") {
       return;
     }
+    if (event.type === "task-sync.status.changed") {
+      await this.applyTaskSyncStatus(event.status);
+      return;
+    }
     if (event.type === "dashboard.slice.updated") {
       const name = event.slice as DashboardSliceName;
       await this.ingestSlice(name);
@@ -64,6 +68,13 @@ export class DashboardServiceStoreSync {
     if (event.type === "dashboard.snapshot.updated") {
       await this.ingestFullSnapshot();
     }
+  }
+
+  private async applyTaskSyncStatus(status: Record<string, unknown>): Promise<void> {
+    const previous = this.store.getSlice("status");
+    const current = (previous.value ?? {}) as Record<string, unknown>;
+    const merged = { ...current, taskSyncStatus: status };
+    this.store.updateSlice("status", merged, { source: "task-sync:status" });
   }
 
   private async ingestFullSnapshot(): Promise<void> {

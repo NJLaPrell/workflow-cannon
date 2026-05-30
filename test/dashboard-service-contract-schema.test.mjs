@@ -68,6 +68,29 @@ describe("dashboard service contract schemas", () => {
         type: "dashboard.service.error",
         message: "slice refresh failed",
         code: "slice-refresh-failed"
+      },
+      {
+        type: "task-sync.status.changed",
+        updatedAt: "2026-05-30T02:00:03.000Z",
+        status: {
+          schemaVersion: 1,
+          generatedAt: "2026-05-30T02:00:03.000Z",
+          syncState: "current",
+          reason: "ok",
+          localProjection: "fresh",
+          recommendedAction: "none",
+          branch: "workflow-cannon/task-state",
+          remoteLatestSequence: 1,
+          localAppliedSequence: 1,
+          outbox: {
+            pending: 0,
+            publishing: 0,
+            failed: 0,
+            conflict: 0,
+            oldestPendingAgeMs: 0,
+            latestPublishedAt: null
+          }
+        }
       }
     ];
     for (const event of events) {

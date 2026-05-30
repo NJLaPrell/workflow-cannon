@@ -108,6 +108,7 @@ export class DashboardTaskSyncWorker {
   private lastHydrateCycleAt: string | null = null;
   private lastHydrateAction: DashboardTaskSyncWorkerStatus["lastHydrateAction"] = "none";
   private lastHydrateCode: string | null = null;
+  private readonly statusChangeListeners = new Set<() => void>();
 
   constructor(
     private readonly ctx: ModuleLifecycleContext,
@@ -132,6 +133,19 @@ export class DashboardTaskSyncWorker {
       lastHydrateAction: this.lastHydrateAction,
       lastHydrateCode: this.lastHydrateCode
     };
+  }
+
+  onStatusChanged(listener: () => void): () => void {
+    this.statusChangeListeners.add(listener);
+    return () => {
+      this.statusChangeListeners.delete(listener);
+    };
+  }
+
+  private notifyStatusChanged(): void {
+    for (const listener of this.statusChangeListeners) {
+      listener();
+    }
   }
 
   isActive(): boolean {
@@ -180,6 +194,7 @@ export class DashboardTaskSyncWorker {
     this.publisher?.stop();
     this.clearHydrateTimers();
     this.posture = "paused";
+    this.notifyStatusChanged();
     return true;
   }
 
@@ -191,6 +206,7 @@ export class DashboardTaskSyncWorker {
     this.posture = "running";
     this.scheduleHydrateInterval();
     void this.runHydrateCycle("resume");
+    this.notifyStatusChanged();
     return true;
   }
 
@@ -202,14 +218,18 @@ export class DashboardTaskSyncWorker {
   }
 
   async flush(): Promise<TaskSyncFlushResultV1> {
+    let result: TaskSyncFlushResultV1;
     if (this.publisher) {
       try {
-        return cycleResultToFlush(await this.publisher.runCycle());
+        result = cycleResultToFlush(await this.publisher.runCycle());
       } catch {
-        // fall through to one-shot flush
+        result = await flushTaskSyncOutbox(this.ctx);
       }
+    } else {
+      result = await flushTaskSyncOutbox(this.ctx);
     }
-    return flushTaskSyncOutbox(this.ctx);
+    this.notifyStatusChanged();
+    return result;
   }
 
   requestHydrate(reason: string): void {
@@ -273,52 +293,56 @@ export class DashboardTaskSyncWorker {
   }
 
   private async executeHydrateCycle(reason: string): Promise<void> {
-    this.lastHydrateCycleAt = new Date().toISOString();
-    const status = await runTaskStateStatus(this.ctx, { fetch: true });
-    if (!status.ok) {
-      this.lastHydrateAction = "error";
-      this.lastHydrateCode = status.code;
-      return;
-    }
-    const data = status.data && typeof status.data === "object" ? (status.data as Record<string, unknown>) : {};
-    const syncState = typeof data.syncState === "string" ? data.syncState : "unknown";
+    try {
+      this.lastHydrateCycleAt = new Date().toISOString();
+      const status = await runTaskStateStatus(this.ctx, { fetch: true });
+      if (!status.ok) {
+        this.lastHydrateAction = "error";
+        this.lastHydrateCode = status.code;
+        return;
+      }
+      const data = status.data && typeof status.data === "object" ? (status.data as Record<string, unknown>) : {};
+      const syncState = typeof data.syncState === "string" ? data.syncState : "unknown";
 
-    if (syncState === "conflict") {
-      this.lastHydrateAction = "skipped";
-      this.lastHydrateCode = "task-state-sync-conflict";
-      return;
-    }
+      if (syncState === "conflict") {
+        this.lastHydrateAction = "skipped";
+        this.lastHydrateCode = "task-state-sync-conflict";
+        return;
+      }
 
-    const queueEnabled = readCanonicalPublishQueueConfig(
-      this.ctx.effectiveConfig as Record<string, unknown> | undefined
-    ).enabled;
+      const queueEnabled = readCanonicalPublishQueueConfig(
+        this.ctx.effectiveConfig as Record<string, unknown> | undefined
+      ).enabled;
 
-    if (syncState === "behind" || syncState === "missing") {
-      const hydrate = await runTaskStateHydrate(this.ctx, {
-        fetch: true,
+      if (syncState === "behind" || syncState === "missing") {
+        const hydrate = await runTaskStateHydrate(this.ctx, {
+          fetch: true,
+          policyApproval: SERVICE_SYNC_POLICY_APPROVAL
+        });
+        this.lastHydrateCode = hydrate.code;
+        this.lastHydrateAction = hydrate.ok ? "hydrated" : "error";
+        return;
+      }
+
+      const apply = await runApplyTaskStateEvents(this.ctx, {
         policyApproval: SERVICE_SYNC_POLICY_APPROVAL
       });
-      this.lastHydrateCode = hydrate.code;
-      this.lastHydrateAction = hydrate.ok ? "hydrated" : "error";
-      return;
-    }
-
-    const apply = await runApplyTaskStateEvents(this.ctx, {
-      policyApproval: SERVICE_SYNC_POLICY_APPROVAL
-    });
-    this.lastHydrateCode = apply.code;
-    if (!apply.ok) {
-      this.lastHydrateAction = "error";
-      return;
-    }
-    this.lastHydrateAction = apply.code === "task-state-events-applied" ? "applied" : "none";
-
-    if (queueEnabled && this.publisher) {
-      const flush = await this.publisher.runCycle();
-      if (flush.conflictCount > 0) {
-        this.lastHydrateAction = "skipped";
-        this.lastHydrateCode = "task-state-publish-task-conflict";
+      this.lastHydrateCode = apply.code;
+      if (!apply.ok) {
+        this.lastHydrateAction = "error";
+        return;
       }
+      this.lastHydrateAction = apply.code === "task-state-events-applied" ? "applied" : "none";
+
+      if (queueEnabled && this.publisher) {
+        const flush = await this.publisher.runCycle();
+        if (flush.conflictCount > 0) {
+          this.lastHydrateAction = "skipped";
+          this.lastHydrateCode = "task-state-publish-task-conflict";
+        }
+      }
+    } finally {
+      this.notifyStatusChanged();
     }
   }
 }

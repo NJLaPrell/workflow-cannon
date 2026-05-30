@@ -16,6 +16,8 @@ export type ServiceDashboardDataSourceOptions = {
   workspacePath: string;
   fetchFn?: typeof fetch;
   readRuntimeFile?: (absPath: string) => Promise<string>;
+  /** Test hook: SSE reconnect backoff (default 1000ms). */
+  sseReconnectDelayMs?: number;
 };
 
 type FetchFn = typeof fetch;
@@ -58,10 +60,12 @@ export class ServiceDashboardDataSource implements DashboardDataSource {
   private readonly listeners = new Set<(event: DashboardServiceEvent) => void>();
   private readonly fetchFn: FetchFn;
   private readonly readRuntimeFile: (absPath: string) => Promise<string>;
+  private readonly sseReconnectDelayMs: number;
 
   constructor(private readonly options: ServiceDashboardDataSourceOptions) {
     this.fetchFn = options.fetchFn ?? fetch;
     this.readRuntimeFile = options.readRuntimeFile ?? ((absPath) => readFile(absPath, "utf8"));
+    this.sseReconnectDelayMs = options.sseReconnectDelayMs ?? 1000;
   }
 
   getRuntime(): DashboardServiceRuntimeV1 | null {
@@ -164,45 +168,74 @@ export class ServiceDashboardDataSource implements DashboardDataSource {
   }
 
   private connectSse(): void {
-    const base = this.baseUrl();
-    if (!base) {
-      return;
-    }
     this.sseAbort = new AbortController();
     const signal = this.sseAbort.signal;
-    this.sseTask = (async () => {
-      const res = await this.fetchFn(`${base}/dashboard/events`, { signal });
-      if (!res.ok || !res.body) {
-        return;
+    this.sseTask = this.runSseLoop(signal);
+  }
+
+  private async runSseLoop(signal: AbortSignal): Promise<void> {
+    while (!signal.aborted) {
+      const runtime = await this.loadRuntime();
+      if (!runtime) {
+        await this.delayReconnect(signal);
+        continue;
       }
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-      while (!signal.aborted) {
-        const { done, value } = await reader.read();
-        if (done) {
-          break;
+      this.runtime = runtime;
+      const base = `http://${runtime.host}:${runtime.port}`;
+
+      try {
+        const res = await this.fetchFn(`${base}/dashboard/events`, { signal });
+        if (!res.ok || !res.body) {
+          await this.delayReconnect(signal);
+          continue;
         }
-        buffer += decoder.decode(value, { stream: true });
-        const chunks = buffer.split("\n\n");
-        buffer = chunks.pop() ?? "";
-        for (const chunk of chunks) {
-          const line = chunk.split("\n").find((l) => l.startsWith("data: "));
-          if (!line) {
-            continue;
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+        while (!signal.aborted) {
+          const { done, value } = await reader.read();
+          if (done) {
+            break;
           }
-          try {
-            const event = JSON.parse(line.slice(6)) as DashboardServiceEvent;
-            for (const listener of this.listeners) {
-              listener(event);
+          buffer += decoder.decode(value, { stream: true });
+          const chunks = buffer.split("\n\n");
+          buffer = chunks.pop() ?? "";
+          for (const chunk of chunks) {
+            const line = chunk.split("\n").find((l) => l.startsWith("data: "));
+            if (!line) {
+              continue;
             }
-          } catch {
-            // ignore malformed SSE payloads
+            try {
+              const event = JSON.parse(line.slice(6)) as DashboardServiceEvent;
+              for (const listener of this.listeners) {
+                listener(event);
+              }
+            } catch {
+              // ignore malformed SSE payloads
+            }
           }
         }
+      } catch {
+        // SSE disconnect is normal on stop() or transient network errors
       }
-    })().catch(() => {
-      // SSE disconnect is normal on stop()
+
+      if (!signal.aborted) {
+        await this.delayReconnect(signal);
+      }
+    }
+  }
+
+  private delayReconnect(signal: AbortSignal): Promise<void> {
+    return new Promise((resolve) => {
+      const timer = setTimeout(resolve, this.sseReconnectDelayMs);
+      signal.addEventListener(
+        "abort",
+        () => {
+          clearTimeout(timer);
+          resolve();
+        },
+        { once: true }
+      );
     });
   }
 }

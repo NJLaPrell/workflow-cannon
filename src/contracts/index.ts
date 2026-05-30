@@ -15,7 +15,8 @@ export type {
   DashboardServiceEvent,
   DashboardServiceErrorEvent,
   DashboardServiceSliceUpdatedEvent,
-  DashboardServiceSnapshotUpdatedEvent
+  DashboardServiceSnapshotUpdatedEvent,
+  TaskSyncStatusChangedEvent
 } from "./dashboard-events.js";
 export type {
   DashboardServiceSliceName,
