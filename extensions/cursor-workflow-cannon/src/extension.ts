@@ -134,7 +134,10 @@ export function activate(context: vscode.ExtensionContext): void {
     const watcher = new StateWatcher(
       folder,
       () => kitStateEmitter.fire(),
-      () => dashboard?.scheduleConfigTabRefresh()
+      () => {
+        dashboard?.scheduleConfigTabRefresh();
+        dashboard?.reloadReadPathFromConfig();
+      }
     );
     watcher.start();
     context.subscriptions.push(watcher);
@@ -322,6 +325,20 @@ export function activate(context: vscode.ExtensionContext): void {
         return;
       }
       dashboard.refresh();
+    }),
+    vscode.commands.registerCommand("workflowCannon.dashboard.restartService", async () => {
+      if (!dashboard) {
+        void requireClient();
+        return;
+      }
+      await dashboard.restartDashboardService();
+    }),
+    vscode.commands.registerCommand("workflowCannon.dashboard.useCliRefreshMode", async () => {
+      if (!dashboard) {
+        void requireClient();
+        return;
+      }
+      await dashboard.forceCliDashboardRefreshMode();
     }),
     vscode.commands.registerCommand("workflowCannon.refreshTasks", () => {
       if (!dashboard) {

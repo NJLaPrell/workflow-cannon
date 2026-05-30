@@ -3,6 +3,11 @@ import {
   type DashboardSectionId,
   type DashboardSectionLoadState
 } from "./dashboard-section-registry.js";
+import {
+  formatDashboardReadModeBadgeDetail,
+  formatDashboardReadModeBadgeLabel,
+  type DashboardReadModeBadge
+} from "./dashboard-read-mode-badge.js";
 import { escapeHtml } from "./render-dashboard.js";
 
 function sectionStatusCopy(state: DashboardSectionLoadState): string {
@@ -55,8 +60,18 @@ function renderSectionPlaceholder(
   );
 }
 
+export function renderDashboardReadModeBadgeHtml(badge?: DashboardReadModeBadge | null): string {
+  const label = badge ? formatDashboardReadModeBadgeLabel(badge) : "Resolving read path…";
+  const detail = badge ? formatDashboardReadModeBadgeDetail(badge) : undefined;
+  const titleAttr = detail ? ` title="${escapeHtml(detail)}"` : "";
+  return (
+    `<span class="wc-dash-read-mode-badge muted" data-wc-read-mode-badge role="status"${titleAttr}>` +
+    `${escapeHtml(label)}</span>`
+  );
+}
+
 /** Inner HTML for `#root` before any kit read completes — tab chrome + section placeholders only. */
-export function renderDashboardShellInnerHtml(): string {
+export function renderDashboardShellInnerHtml(readModeBadge?: DashboardReadModeBadge | null): string {
   const overview = renderDashboardSectionPlaceholder("overview");
   const ideas = renderDashboardSectionPlaceholder("ideas");
   const queue = renderDashboardSectionPlaceholder("queue");
@@ -73,6 +88,7 @@ export function renderDashboardShellInnerHtml(): string {
     '<button type="button" class="wc-tab-btn" role="tab" data-wc-tab="status">Status</button>' +
     '<button type="button" class="wc-tab-btn" role="tab" data-wc-tab="config">Config</button>' +
     '<button type="button" class="wc-tab-btn" role="tab" data-wc-tab="cae">CAE</button>' +
+    renderDashboardReadModeBadgeHtml(readModeBadge) +
     "</div>" +
     '<div class="wc-tab-panel" data-wc-tab="overview" role="tabpanel">' +
     overview +

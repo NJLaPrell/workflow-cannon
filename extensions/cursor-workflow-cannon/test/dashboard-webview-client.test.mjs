@@ -15,6 +15,7 @@ test("buildDashboardWebviewBootstrapScript returns drawer + refresh client", () 
   assert.match(script, /applyWcDrawerState/);
   assert.match(script, /applyHostSnapshot/);
   assert.match(script, /wcHostSnapshot/);
+  assert.match(script, /wcDashboardReadMode/);
   assert.match(script, /wcReinitEmbeddedCae/);
   assert.match(script, /type: 'createIdea'/);
   assert.match(script, /type: 'updateIdea'/);
