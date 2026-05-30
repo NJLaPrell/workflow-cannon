@@ -8,6 +8,10 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+### Added
+
+- **Phase 124 (T100610):** Dashboard service process lifecycle — `dashboard-service-start`/`stop`/`status` with `.workspace-kit/dashboard-service/` runtime artifacts, stale pid recovery, and CLI status reporting `workspaceRoot`, port, pid, and uptime.
+
 ## [0.99.21] - 2026-05-30
 
 Patch — **Phase 123 Local-first outbox sync** (canonical event outbox, background publisher, sync posture).
