@@ -12,6 +12,18 @@ export type {
   WorkflowModule
 } from "./module-contract.js";
 export type {
+  DashboardServiceEvent,
+  DashboardServiceErrorEvent,
+  DashboardServiceSliceUpdatedEvent,
+  DashboardServiceSnapshotUpdatedEvent
+} from "./dashboard-events.js";
+export type {
+  DashboardServiceSliceName,
+  DashboardServiceSlicePayload,
+  DashboardServiceSliceStatus,
+  DashboardServiceSnapshot
+} from "./dashboard-snapshot.js";
+export type {
   DashboardAgentGuidanceSummary,
   DashboardSummaryCommandSuccess,
   DashboardCurrentPhaseDelivery,

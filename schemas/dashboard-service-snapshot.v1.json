@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workflow-cannon.dev/schemas/dashboard-service-snapshot.v1.json",
+  "title": "Dashboard service snapshot v1",
+  "description": "Warm read-model snapshot served by workspace-kit dashboard service GET /dashboard/snapshot and slice routes.",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "serviceVersion",
+    "generatedAt",
+    "generation",
+    "planningGeneration",
+    "slices"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "serviceVersion": { "type": "string", "minLength": 1 },
+    "generatedAt": { "type": "string", "minLength": 1 },
+    "generation": { "type": "integer", "minimum": 0 },
+    "planningGeneration": { "type": ["integer", "null"], "minimum": 0 },
+    "slices": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/dashboardServiceSlicePayload" }
+    }
+  },
+  "$defs": {
+    "dashboardServiceSliceStatus": {
+      "type": "string",
+      "enum": ["empty", "loading", "fresh", "stale", "error"]
+    },
+    "dashboardServiceSlicePayload": {
+      "type": "object",
+      "required": ["status", "updatedAt", "source", "value"],
+      "additionalProperties": false,
+      "properties": {
+        "status": { "$ref": "#/$defs/dashboardServiceSliceStatus" },
+        "updatedAt": { "type": ["string", "null"] },
+        "source": { "type": "string", "minLength": 1 },
+        "value": {},
+        "error": { "type": "string" },
+        "planningGeneration": { "type": ["integer", "null"], "minimum": 0 }
+      }
+    }
+  }
+}

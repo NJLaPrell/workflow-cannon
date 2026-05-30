@@ -25,6 +25,10 @@
     "./contracts/agent-phase-journal-read-contract": "./dist/contracts/agent-phase-journal-read-contract.js",
     "./contracts/agent-phase-focus-dashboard-contract": "./dist/contracts/agent-phase-focus-dashboard-contract.js",
     "./contracts/dashboard-summary-run": "./dist/contracts/dashboard-summary-run.js",
+    "./contracts/dashboard-snapshot": "./dist/contracts/dashboard-snapshot.js",
+    "./contracts/dashboard-events": "./dist/contracts/dashboard-events.js",
+    "./services/dashboard-service/resolve-data-source-config": "./dist/services/dashboard-service/resolve-data-source-config.js",
+    "./services/dashboard-service/server": "./dist/services/dashboard-service/server.js",
     "./contracts/agent-session-snapshot-run": "./dist/contracts/agent-session-snapshot-run.js",
     "./contracts/next-actions-run": "./dist/contracts/next-actions-run.js",
     "./package.json": "./package.json"
