@@ -1,3 +1,8 @@
+/**
+ * In-memory warm snapshot for the dashboard read service (Option 2).
+ * Wire shape: `DashboardServiceSnapshot` in `src/contracts/dashboard-snapshot.ts`.
+ * Failed refreshes keep the last-good slice value (mirrors extension `DashboardDataStore`).
+ */
 import type {
   DashboardServiceSlicePayload,
   DashboardServiceSnapshot
@@ -85,13 +90,18 @@ export class DashboardSnapshotStore {
   }
 
   applySliceError(name: string, source: string, message: string): string[] {
+    const prev = this.slices.get(name);
+    if (!prev) {
+      return [];
+    }
     const now = new Date().toISOString();
     this.generation += 1;
     this.slices.set(name, {
+      ...prev,
       status: "error",
       updatedAt: now,
       source,
-      value: null,
+      value: prev.value,
       error: message
     });
     this.emit("slice.updated", [name], now);
