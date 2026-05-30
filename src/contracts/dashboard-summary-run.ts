@@ -262,6 +262,17 @@ export type DashboardPlanningStoreSummary = {
   databaseRelativePath: string;
 };
 
+/** Effective canonical sync backend (`tasks.canonicalBackend` + legacy `tasks.canonicalAuthority`). */
+export type DashboardCanonicalBackendSummary = {
+  schemaVersion: 1;
+  type: "git" | "local-only" | "hosted";
+  backendId: string;
+  canonicalAuthority: "sqlite" | "git-event-log";
+  configSource: "canonicalBackend" | "canonicalAuthority" | "default";
+  configConflict: boolean;
+  hostedImplemented: boolean;
+};
+
 /** Bounded PlanArtifact lifecycle pointer for dashboard Plan panels; full WBS stays in artifact storage. */
 export type DashboardPlanArtifactSummary = {
   schemaVersion: 1;
@@ -292,6 +303,7 @@ export type DashboardSystemStatus = {
   generatedAt: string;
   identity?: DashboardWorkspaceIdentity;
   planningStore?: DashboardPlanningStoreSummary;
+  canonicalBackend?: DashboardCanonicalBackendSummary;
   phase: DashboardPhaseSystemSlice;
   doctor: DashboardDoctorSummary;
   modules: DashboardModuleActivationSlice;

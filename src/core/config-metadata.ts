@@ -586,6 +586,7 @@ export function validatePersistedConfigDocument(
         k !== "intakePolicy" &&
         k !== "planningGenerationPolicy" &&
         k !== "canonicalAuthority" &&
+        k !== "canonicalBackend" &&
         k !== "canonicalPublishQueue"
       ) {
         throw new Error(`config-invalid(${label}): unknown tasks.${k}`);
@@ -613,6 +614,29 @@ export function validatePersistedConfigDocument(
     }
     if (t.canonicalAuthority !== undefined) {
       validateValueForMetadata(REGISTRY["tasks.canonicalAuthority"]!, t.canonicalAuthority);
+    }
+    if (t.canonicalBackend !== undefined) {
+      if (typeof t.canonicalBackend !== "object" || t.canonicalBackend === null || Array.isArray(t.canonicalBackend)) {
+        throw new Error(`config-invalid(${label}): tasks.canonicalBackend must be an object`);
+      }
+      const cb = t.canonicalBackend as Record<string, unknown>;
+      for (const k of Object.keys(cb)) {
+        if (k !== "type" && k !== "baseUrl") {
+          throw new Error(`config-invalid(${label}): unknown tasks.canonicalBackend.${k}`);
+        }
+      }
+      if (cb.type === undefined) {
+        throw new Error(`config-invalid(${label}): tasks.canonicalBackend.type is required when canonicalBackend is set`);
+      }
+      validateValueForMetadata(REGISTRY["tasks.canonicalBackend.type"]!, cb.type);
+      if (cb.baseUrl !== undefined && typeof cb.baseUrl !== "string") {
+        throw new Error(`config-invalid(${label}): tasks.canonicalBackend.baseUrl must be a string`);
+      }
+      if (cb.type !== "hosted" && cb.baseUrl !== undefined) {
+        throw new Error(
+          `config-invalid(${label}): tasks.canonicalBackend.baseUrl is only valid when type is hosted`
+        );
+      }
     }
     if (t.canonicalPublishQueue !== undefined) {
       if (typeof t.canonicalPublishQueue !== "object" || t.canonicalPublishQueue === null || Array.isArray(t.canonicalPublishQueue)) {
