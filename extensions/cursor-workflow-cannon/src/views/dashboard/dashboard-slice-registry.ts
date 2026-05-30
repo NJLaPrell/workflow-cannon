@@ -61,7 +61,6 @@ export const DASHBOARD_SLICE_REGISTRY: readonly DashboardSliceDescriptor[] = [
         "stateSummary",
         "suggestedNext",
         "workspaceStatus",
-        "planArtifact",
         "humanGatesSummary",
         "approvalQueue",
         "taskStateProjection",
@@ -81,7 +80,7 @@ export const DASHBOARD_SLICE_REGISTRY: readonly DashboardSliceDescriptor[] = [
   },
   {
     name: "phase",
-    sectionId: "overview",
+    sectionId: "phase-roster",
     command: "dashboard-summary",
     args: { projection: "overview" },
     pollGroup: "critical",
@@ -101,6 +100,18 @@ export const DASHBOARD_SLICE_REGISTRY: readonly DashboardSliceDescriptor[] = [
         "legacyDeliveredMaxOrdinal",
         "phaseKeysWithActiveQueueWork"
       ])
+  },
+  {
+    name: "planArtifact",
+    sectionId: "plan-artifact",
+    command: "dashboard-summary",
+    args: { projection: "overview" },
+    pollGroup: "critical",
+    visibleOnly: false,
+    freshnessTtlMs: 10_000,
+    freshnessSlaMs: 10_000,
+    staleOnMutationKinds: ["overview", "task-queue", "workspace-wide"],
+    extractPayload: (data) => pick(data, [...SHARED_META_KEYS, "planArtifact", "workspaceStatus"])
   },
   {
     name: "agent",
@@ -141,9 +152,20 @@ export const DASHBOARD_SLICE_REGISTRY: readonly DashboardSliceDescriptor[] = [
         "wishlist",
         "blockingAnalysis",
         "dependencyOverview",
-        "planningSession",
         "transcriptChurnResearchSummary"
       ])
+  },
+  {
+    name: "planningSession",
+    sectionId: "planning-interview",
+    command: "dashboard-summary",
+    args: { projection: "queue" },
+    pollGroup: "queue",
+    visibleOnly: false,
+    freshnessTtlMs: 10_000,
+    freshnessSlaMs: 10_000,
+    staleOnMutationKinds: ["task-queue", "workspace-wide"],
+    extractPayload: (data) => pick(data, [...SHARED_META_KEYS, "planningSession"])
   },
   {
     name: "ideas",

@@ -7,7 +7,8 @@ import {
   isKitRefreshRunCommand,
   kitRefreshCoalesceKey,
   kitRefreshPausedResult,
-  kitRunLaneForCommand
+  kitRunLaneForCommand,
+  kitRunTimeoutMsForCommand
 } from "./kit-refresh-run-commands.js";
 
 export type KitRunResult = {
@@ -24,6 +25,8 @@ export type CommandClientExecResult = {
   stderr: string;
   /** Set when execKitCancellable.kill() preempted the child (refresh lane). */
   preempted?: boolean;
+  /** Set when Node execFile timeout SIGTERM'd the child before JSON landed on stdout. */
+  timedOut?: boolean;
 };
 export type CommandClientExecFn = (workspaceRoot: string, cliArgs: string[]) => Promise<CommandClientExecResult>;
 
@@ -474,8 +477,12 @@ function execKitCancellable(
               reject(err);
               return;
             }
+            const execErr = err as NodeJS.ErrnoException & { killed?: boolean; signal?: NodeJS.Signals | null };
+            const killed = execErr.killed === true;
+            const signal = execErr.signal;
+            const timedOut = killed && !preempted && signal === "SIGTERM";
             const code = typeof err.code === "number" ? err.code : 1;
-            resolve({ exitCode: code, stdout: out, stderr: errOut, preempted });
+            resolve({ exitCode: code, stdout: out, stderr: errOut, preempted, timedOut });
             return;
           }
           resolve({ exitCode: 0, stdout: out, stderr: errOut, preempted });
@@ -577,9 +584,33 @@ function execKit(
   });
 }
 
-export function parseRunCommandOutput(stdout: string, exitCode: number, stderr = ""): KitRunResult {
+export function parseRunCommandOutput(
+  stdout: string,
+  exitCode: number,
+  stderr = "",
+  options?: { timedOut?: boolean }
+): KitRunResult {
   const text = stdout.trim();
   const stderrText = stderr.trim();
+  if (options?.timedOut) {
+    return {
+      ok: false,
+      code: "extension-cli-timeout",
+      message:
+        "workspace-kit run was killed by the extension timeout before JSON was returned (git canonical publish and hydrate can be slow). Retry Add idea, or run create-idea from a terminal to see full progress.",
+      remediation: {
+        cleanInvocations: [
+          "pnpm exec wk run create-idea '{\"title\":\"…\",\"policyApproval\":{\"confirmed\":true,\"rationale\":\"…\"}}'",
+          "node dist/cli.js run create-idea '{\"title\":\"…\",\"policyApproval\":{\"confirmed\":true,\"rationale\":\"…\"}}'"
+        ]
+      },
+      details: {
+        timedOut: true,
+        exitCode,
+        stderr: stderrText.slice(0, 2000)
+      }
+    };
+  }
   try {
     return JSON.parse(text) as KitRunResult;
   } catch {
@@ -679,11 +710,12 @@ export class CommandClient {
 
   private execTracked(workspaceRoot: string, cliArgs: string[]): Promise<CommandClientExecResult> {
     const commandName = this.activeRunCommand ?? cliArgs[1] ?? "";
+    const timeoutMs = kitRunTimeoutMsForCommand(commandName);
     const tracked = execKitCancellable(
       workspaceRoot,
       cliArgs,
       20 * 1024 * 1024,
-      this.timeoutMs,
+      timeoutMs,
       this.cliPathOverride,
       this.resolveNodeExecutable,
       this.extensionRoot
@@ -832,7 +864,7 @@ export class CommandClient {
     const startedAt = this.onKitRunStart?.(commandName, args) ?? Date.now();
     const jsonArg = JSON.stringify(args);
     try {
-      const { stdout, stderr, exitCode, preempted } = await this.execFn(this.workspaceRoot, [
+      const { stdout, stderr, exitCode, preempted, timedOut } = await this.execFn(this.workspaceRoot, [
         "run",
         commandName,
         jsonArg
@@ -845,7 +877,7 @@ export class CommandClient {
       if (stderr.trim()) {
         this.onKitRunNotice?.(`stderr ${commandName}: ${stderr.trim().slice(0, 400)}`);
       }
-      const parsed = parseRunCommandOutput(stdout, exitCode, stderr);
+      const parsed = parseRunCommandOutput(stdout, exitCode, stderr, { timedOut });
       if (!parsed.ok && exitCode !== 0 && looksLikeNativeSqliteError(`${stderr}\n${stdout}`)) {
         let nativeProbeRoots: string[] | undefined;
         let runtimeRoots: string[] | undefined;

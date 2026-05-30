@@ -3,7 +3,7 @@ import path from "node:path";
 import {
   resolveDashboardDataSource,
   type DashboardDataSourceMode
-} from "@workflow-cannon/workspace-kit/services/dashboard-service/resolve-data-source-config";
+} from "./resolve-dashboard-data-source-mode.js";
 
 const CONFIG_REL = ".workspace-kit/config.json";
 

@@ -362,6 +362,27 @@ test("parseRunCommandOutput includes stderr when stdout is empty", () => {
   assert.match(out.details.stderr, /Unexpected token/);
 });
 
+test("parseRunCommandOutput returns timeout error when child was SIGTERM'd by exec timeout", () => {
+  const out = parseRunCommandOutput(
+    "",
+    1,
+    'unknown format "date-time" ignored in schema at path "#/properties/recordedAt"',
+    { timedOut: true }
+  );
+  assert.equal(out.ok, false);
+  assert.equal(out.code, "extension-cli-timeout");
+  assert.match(out.message, /timeout/i);
+  assert.match(out.message, /create-idea/i);
+});
+
+test("kitRunTimeoutMsForCommand gives mutations more time than refresh reads", async () => {
+  const { kitRunTimeoutMsForCommand, KIT_MUTATION_RUN_TIMEOUT_MS, KIT_REFRESH_RUN_TIMEOUT_MS } =
+    await import("../dist/runtime/kit-refresh-run-commands.js");
+  assert.equal(kitRunTimeoutMsForCommand("create-idea"), KIT_MUTATION_RUN_TIMEOUT_MS);
+  assert.equal(kitRunTimeoutMsForCommand("dashboard-summary"), KIT_REFRESH_RUN_TIMEOUT_MS);
+  assert.ok(KIT_MUTATION_RUN_TIMEOUT_MS > KIT_REFRESH_RUN_TIMEOUT_MS);
+});
+
 test("parseRunCommandOutput remediates pnpm banner contamination", () => {
   const out = parseRunCommandOutput(
     `> @workflow-cannon/workspace-kit@0.73.0 wk /repo

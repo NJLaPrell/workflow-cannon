@@ -36,7 +36,7 @@ import { SideEffectBus } from "./dashboard-side-effects.js";
 import { DrawerSessionController } from "./drawer-session.js";
 import { buildDashboardWebviewBootstrapScript } from "./dashboard-webview-client.js";
 import type { DashboardSectionId, DashboardSectionLoadState } from "./dashboard-section-registry.js";
-import { DASHBOARD_SECTION_REGISTRY } from "./dashboard-section-registry.js";
+import { DASHBOARD_SECTION_REGISTRY, isEagerDashboardSection } from "./dashboard-section-registry.js";
 import {
   dashboardSectionsForMutation,
   extractDashboardSectionInnerHtml,
@@ -637,7 +637,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       return false;
     }
     const tabId = DASHBOARD_SECTION_REGISTRY.find((s) => s.id === sectionId)?.tabId ?? "";
-    return tabId === this.activeDashboardTab || sectionId === "overview" || sectionId === "ideas";
+    return tabId === this.activeDashboardTab || isEagerDashboardSection(sectionId);
   }
 
   private syncVisibleSectionsToPollers(): void {
@@ -682,7 +682,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       return;
     }
     const tabId = DASHBOARD_SECTION_REGISTRY.find((s) => s.id === sectionId)?.tabId ?? "";
-    if (tabId !== this.activeDashboardTab && sectionId !== "overview" && sectionId !== "ideas") {
+    if (tabId !== this.activeDashboardTab && !isEagerDashboardSection(sectionId)) {
       return;
     }
     const prior = this.lastDashboardSummaryData ?? {};
@@ -775,6 +775,15 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     if (this.activeDashboardTab === "overview" && this.hydratedDashboardSections.has("overview")) {
       await this.patchDashboardSectionsFromSummary(["overview"], updateSequence, { light: true });
+      return;
+    }
+    if (this.activeDashboardTab === "planning") {
+      const planningSections = DASHBOARD_SECTION_REGISTRY.filter(
+        (section) => section.tabId === "planning" && this.hydratedDashboardSections.has(section.id)
+      ).map((section) => section.id);
+      if (planningSections.length > 0) {
+        await this.patchDashboardSectionsFromSummary(planningSections, updateSequence, { light: true });
+      }
       return;
     }
     if (this.hydratedDashboardSections.has("queue")) {
@@ -1516,6 +1525,11 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       this.hydratedDashboardSections.clear();
       this.hydratedDashboardSections.add("overview");
       this.hydratedDashboardSections.add("queue");
+      for (const section of DASHBOARD_SECTION_REGISTRY) {
+        if (section.tabId === "planning" && section.refreshPolicy === "eager") {
+          this.hydratedDashboardSections.add(section.id);
+        }
+      }
       webview.html = this.buildHtml(webview, rootInner);
       logWc("dashboard", "startup diagnostic direct render applied");
       await this.ensureQueueRollupsHydrated();
@@ -1570,7 +1584,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       return;
     }
     logWc("dashboard", "ensureQueueRollupsHydrated: upgrading overview stub to queue projection");
-    await this.patchDashboardSectionsFromSummary(["queue", "overview"], updateSequence, {
+    await this.patchDashboardSectionsFromSummary(["queue", "overview", "planning-interview"], updateSequence, {
       projection: "queue",
       forcePaintLane: true
     });
@@ -4489,6 +4503,11 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       if (useDeferredSecondary) {
         this.hydratedDashboardSections.clear();
         this.hydratedDashboardSections.add("overview");
+        for (const section of DASHBOARD_SECTION_REGISTRY) {
+          if (section.tabId === "planning" && section.refreshPolicy === "eager") {
+            this.hydratedDashboardSections.add(section.id);
+          }
+        }
       } else {
         this.hydratedDashboardSections = new Set(
           DASHBOARD_SECTION_REGISTRY.map((section) => section.id)

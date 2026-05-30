@@ -6,9 +6,10 @@ import {
   extractDashboardSectionInnerHtml
 } from "../dist/views/dashboard/dashboard-section-invalidation.js";
 
-test("dashboardSectionsForMutation maps task-queue to queue and overview", () => {
-  assert.deepEqual(dashboardSectionsForMutation("task-queue"), ["queue", "overview"]);
-  assert.deepEqual(dashboardSectionsForMutation("ideas"), ["ideas", "overview"]);
+test("dashboardSectionsForMutation maps task-queue to queue, overview, and planning interview", () => {
+  assert.deepEqual(dashboardSectionsForMutation("task-queue"), ["queue", "overview", "planning-interview"]);
+  assert.deepEqual(dashboardSectionsForMutation("ideas"), ["ideas"]);
+  assert.deepEqual(dashboardSectionsForMutation("overview"), ["overview", "phase-roster", "plan-artifact"]);
   assert.deepEqual(dashboardSectionsForMutation("phase-journal"), ["phase-journal", "queue"]);
 });
 

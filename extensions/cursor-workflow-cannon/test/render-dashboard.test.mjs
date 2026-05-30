@@ -137,7 +137,7 @@ test("renderDashboardRootInnerHtml shows error JSON when ok is false", () => {
   assert.match(html, /bad/);
 });
 
-test("renderDashboardRootInnerHtml places ideas second in the overview stack", () => {
+test("renderDashboardRootInnerHtml places planning cards on the Planning tab", () => {
   const html = renderDashboardRootInnerHtml({
     ok: true,
     data: {
@@ -154,29 +154,34 @@ test("renderDashboardRootInnerHtml places ideas second in the overview stack", (
       }
     }
   });
-  const overviewIdx = html.indexOf('data-wc-section="overview"');
-  const ideasIdx = html.indexOf('data-wc-section="ideas"');
-  const queueIdx = html.indexOf('data-wc-section="queue"');
-  assert.ok(overviewIdx >= 0, "overview section expected");
-  assert.ok(ideasIdx > overviewIdx, "ideas section should follow overview");
-  assert.ok(queueIdx > ideasIdx, "queue section should remain after overview tab stack");
-  assert.match(html, /Draft a better dashboard/);
-  assert.match(html, /Open 1 · Planning 0 · Planned 0 · Total 1/);
-  assert.match(html, /data-wc-ideas-create-form="1"/);
-  assert.match(html, /data-wc-action="idea-create"/);
-  assert.match(html, /data-wc-idea-title="1"/);
-  assert.match(html, /data-wc-idea-note="1"/);
-  assert.match(html, /wc-ideas-drag-handle/);
-  assert.match(html, /data-wc-action="idea-edit"/);
-  assert.match(html, /data-wc-action="idea-delete"/);
-  assert.match(html, /data-wc-action="idea-update"/);
-  assert.match(html, /data-wc-action="idea-plan"/);
-  assert.match(html, /Plan this/);
-  assert.match(html, /data-wc-ideas-toast="1"/);
-  assert.match(html, /data-wc-ideas-edit-form="1"/);
-  assert.match(html, /data-wc-ideas-list="1"/);
-  assert.match(html, /draggable="true"/);
-  assert.match(html, /Drag to reorder/);
+  const overviewPanelIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="overview"');
+  const planningPanelIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="planning"');
+  const taskEnginePanelIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="task-engine"');
+  const overviewPanel = html.slice(overviewPanelIdx, planningPanelIdx);
+  const planningPanel = html.slice(planningPanelIdx, taskEnginePanelIdx);
+  assert.ok(overviewPanelIdx >= 0, "overview panel expected");
+  assert.ok(planningPanelIdx > overviewPanelIdx, "planning panel should follow overview");
+  assert.ok(taskEnginePanelIdx > planningPanelIdx, "queue panel should follow planning");
+  assert.doesNotMatch(overviewPanel, /data-wc-section="ideas"/);
+  assert.match(planningPanel, /data-wc-section="ideas"/);
+  assert.match(planningPanel, /data-wc-section="phase-roster"/);
+  assert.match(planningPanel, /Draft a better dashboard/);
+  assert.match(planningPanel, /Open 1 · Planning 0 · Planned 0 · Total 1/);
+  assert.match(planningPanel, /data-wc-ideas-create-form="1"/);
+  assert.match(planningPanel, /data-wc-action="idea-create"/);
+  assert.match(planningPanel, /data-wc-idea-title="1"/);
+  assert.match(planningPanel, /data-wc-idea-note="1"/);
+  assert.match(planningPanel, /wc-ideas-drag-handle/);
+  assert.match(planningPanel, /data-wc-action="idea-edit"/);
+  assert.match(planningPanel, /data-wc-action="idea-delete"/);
+  assert.match(planningPanel, /data-wc-action="idea-update"/);
+  assert.match(planningPanel, /data-wc-action="idea-plan"/);
+  assert.match(planningPanel, /Plan this/);
+  assert.match(planningPanel, /data-wc-ideas-toast="1"/);
+  assert.match(planningPanel, /data-wc-ideas-edit-form="1"/);
+  assert.match(planningPanel, /data-wc-ideas-list="1"/);
+  assert.match(planningPanel, /draggable="true"/);
+  assert.match(planningPanel, /Drag to reorder/);
 });
 
 test("renderDashboardRootInnerHtml truncates long idea notes", () => {
@@ -214,21 +219,30 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.match(html, /dash-agent-row-list/);
   assert.match(html, /aria-label="Awaiting Instruction, Current agent"/);
   const overviewPanelIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="overview"');
+  const planningPanelIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="planning"');
   const taskEnginePanelIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="task-engine"');
   const statusPanelIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="status"');
   const configPanelIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="config"');
   const caePanelIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="cae"');
-  assert.ok(overviewPanelIdx >= 0 && taskEnginePanelIdx > overviewPanelIdx && statusPanelIdx > taskEnginePanelIdx);
+  assert.ok(
+    overviewPanelIdx >= 0 &&
+      planningPanelIdx > overviewPanelIdx &&
+      taskEnginePanelIdx > planningPanelIdx &&
+      statusPanelIdx > taskEnginePanelIdx
+  );
   assert.ok(configPanelIdx > statusPanelIdx, "config tab panel follows status");
   const configPanel = html.slice(configPanelIdx, caePanelIdx > configPanelIdx ? caePanelIdx : undefined);
   assert.match(configPanel, /id="config-list-root"/);
   assert.match(configPanel, /id="cfg-refresh"/);
   assert.doesNotMatch(configPanel, /activity bar/i);
   const taskEnginePanel = html.slice(taskEnginePanelIdx, statusPanelIdx);
-  const overviewPanel = html.slice(overviewPanelIdx, taskEnginePanelIdx);
+  const overviewPanel = html.slice(overviewPanelIdx, planningPanelIdx);
+  const planningPanel = html.slice(planningPanelIdx, taskEnginePanelIdx);
   const statusPanel = html.slice(statusPanelIdx, configPanelIdx);
   const caePanel = html.slice(caePanelIdx);
   assert.doesNotMatch(overviewPanel, /Role|Temperament|Presentation/);
+  assert.doesNotMatch(overviewPanel, /Phase Roster/);
+  assert.match(planningPanel, /data-wc-section="phase-roster"/);
   assert.match(statusPanel, /Agent Profile/);
   assert.match(statusPanel, /<span class="wc-status-kv-label">Role<\/span><span class="wc-status-kv-val">Adventurer<\/span>/);
   assert.match(statusPanel, /<span class="wc-status-kv-label">Temperament<\/span><span class="wc-status-kv-val">The Steady Adventurer<\/span>/);
@@ -354,10 +368,12 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.doesNotMatch(html, /data-wc-queue-category="blocked"/);
   assert.match(html, /Not Phased/);
   assert.doesNotMatch(html, /Dependency Overview/);
-  assert.match(html, /Planning Interview/);
+  assert.match(planningPanel, /Planning Interview/);
+  assert.doesNotMatch(taskEnginePanel, /Planning Interview/);
   assert.doesNotMatch(html, /data-wc-action="planning-new-plan"/);
   assert.doesNotMatch(html, /data-wc-action="planning-resume-chat"/);
   assert.doesNotMatch(taskEnginePanel, /data-wc-action="planning-discard"/);
+  assert.doesNotMatch(taskEnginePanel, /wc-plan-artifact/);
   assert.match(html, /Store updated/);
   assert.doesNotMatch(html, /wc-status-counts-scope-note/);
   assert.doesNotMatch(html, /stateSummary/);
@@ -409,6 +425,12 @@ test("renderDashboardRootInnerHtml renders PlanArtifact draft panel", () => {
       dependencyOverview: { schemaVersion: 1, nodes: [], edges: [] }
     }
   });
+
+  const planningPanelIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="planning"');
+  const taskEnginePanelIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="task-engine"');
+  const planningPanel = html.slice(planningPanelIdx, taskEnginePanelIdx);
+  assert.match(planningPanel, /wc-plan-artifact/);
+  assert.match(planningPanel, /Plan Draft/);
 
   assert.match(html, /wc-plan-artifact/);
   assert.match(html, /Plan Draft/);
@@ -630,6 +652,12 @@ test("renderDashboardRootInnerHtml renders phase roster deliverables inline edit
   });
 
   assert.match(html, /Phase Roster/);
+  const planningPanelIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="planning"');
+  const overviewPanelIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="overview"');
+  const planningPanel = html.slice(planningPanelIdx, html.indexOf('<div class="wc-tab-panel" data-wc-tab="task-engine"'));
+  const overviewPanel = html.slice(overviewPanelIdx, planningPanelIdx);
+  assert.match(planningPanel, /Phase Roster/);
+  assert.doesNotMatch(overviewPanel, /Phase Roster/);
   assert.match(html, /dash-phase-roster-col-phase/);
   assert.match(html, /dash-phase-roster-phase-link/);
   assert.match(html, /data-wc-action="open-queue-for-phase"/);

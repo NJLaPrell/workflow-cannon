@@ -5,6 +5,8 @@ export type DashboardSliceName =
   | "queue"
   | "ideas"
   | "phase"
+  | "planArtifact"
+  | "planningSession"
   | "phaseJournal"
   | "status"
   | "agent"

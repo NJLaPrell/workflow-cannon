@@ -16,6 +16,7 @@ test("renderDashboardShellInnerHtml paints tab chrome without dashboard-summary 
   const html = renderDashboardShellInnerHtml();
   assert.match(html, /wc-dashboard-tab-shell/);
   assert.match(html, /data-wc-tab="overview"/);
+  assert.match(html, /data-wc-tab="planning"/);
   assert.match(html, /data-wc-tab="task-engine"/);
   assert.match(html, /data-wc-tab="status"/);
   assert.match(html, /data-wc-tab="config"/);
@@ -39,14 +40,27 @@ test("renderDashboardShellInnerHtml includes loading placeholders for every regi
   }
 });
 
-test("dashboard section registry lists overview, ideas, queue, phase journal, status, config, cae", () => {
-  assert.equal(DASHBOARD_SECTION_REGISTRY.length, 7);
+test("dashboard section registry lists overview, planning, queue, phase journal, status, config, cae sections", () => {
+  assert.equal(DASHBOARD_SECTION_REGISTRY.length, 10);
   const ids = DASHBOARD_SECTION_REGISTRY.map((s) => s.id).sort();
-  assert.deepEqual(ids, ["cae", "config", "ideas", "overview", "phase-journal", "queue", "status"]);
+  assert.deepEqual(ids, [
+    "cae",
+    "config",
+    "ideas",
+    "overview",
+    "phase-journal",
+    "phase-roster",
+    "plan-artifact",
+    "planning-interview",
+    "queue",
+    "status"
+  ]);
   const ideas = DASHBOARD_SECTION_REGISTRY.find((s) => s.id === "ideas");
-  assert.equal(ideas?.tabId, "overview");
+  assert.equal(ideas?.tabId, "planning");
   assert.equal(ideas?.refreshPolicy, "eager");
   assert.equal(ideas?.ttlMs, 45_000);
+  const phaseRoster = DASHBOARD_SECTION_REGISTRY.find((s) => s.id === "phase-roster");
+  assert.equal(phaseRoster?.tabId, "planning");
 });
 
 test("DashboardViewProvider paints shell before pushUpdate (T100395)", () => {

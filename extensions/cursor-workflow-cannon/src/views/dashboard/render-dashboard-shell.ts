@@ -25,7 +25,10 @@ function sectionStatusCopy(state: DashboardSectionLoadState): string {
 
 const SECTION_LABELS: Record<DashboardSectionId, string> = {
   overview: "Overview",
+  "phase-roster": "Phase roster",
   ideas: "Ideas",
+  "plan-artifact": "Plan artifact",
+  "planning-interview": "Planning interview",
   queue: "Task queue",
   "phase-journal": "Phase journal",
   status: "Workspace status",
@@ -73,7 +76,10 @@ export function renderDashboardReadModeBadgeHtml(badge?: DashboardReadModeBadge 
 /** Inner HTML for `#root` before any kit read completes — tab chrome + section placeholders only. */
 export function renderDashboardShellInnerHtml(readModeBadge?: DashboardReadModeBadge | null): string {
   const overview = renderDashboardSectionPlaceholder("overview");
+  const phaseRoster = renderDashboardSectionPlaceholder("phase-roster");
   const ideas = renderDashboardSectionPlaceholder("ideas");
+  const planArtifact = renderDashboardSectionPlaceholder("plan-artifact");
+  const planningInterview = renderDashboardSectionPlaceholder("planning-interview");
   const queue = renderDashboardSectionPlaceholder("queue");
   const phaseJournal = renderDashboardSectionPlaceholder("phase-journal");
   const status = renderDashboardSectionPlaceholder("status");
@@ -84,6 +90,7 @@ export function renderDashboardShellInnerHtml(readModeBadge?: DashboardReadModeB
     '<div class="wc-dashboard-tab-shell wc-dashboard-shell-initial">' +
     '<div class="wc-tab-bar" role="tablist">' +
     '<button type="button" class="wc-tab-btn wc-tab-active" role="tab" data-wc-tab="overview">Overview</button>' +
+    '<button type="button" class="wc-tab-btn" role="tab" data-wc-tab="planning">Planning</button>' +
     '<button type="button" class="wc-tab-btn" role="tab" data-wc-tab="task-engine">Queue</button>' +
     '<button type="button" class="wc-tab-btn" role="tab" data-wc-tab="status">Status</button>' +
     '<button type="button" class="wc-tab-btn" role="tab" data-wc-tab="config">Config</button>' +
@@ -92,7 +99,12 @@ export function renderDashboardShellInnerHtml(readModeBadge?: DashboardReadModeB
     "</div>" +
     '<div class="wc-tab-panel" data-wc-tab="overview" role="tabpanel">' +
     overview +
+    "</div>" +
+    '<div class="wc-tab-panel" data-wc-tab="planning" role="tabpanel" style="display:none">' +
+    phaseRoster +
     ideas +
+    planArtifact +
+    planningInterview +
     "</div>" +
     '<div class="wc-tab-panel" data-wc-tab="task-engine" role="tabpanel" style="display:none">' +
     queue +
