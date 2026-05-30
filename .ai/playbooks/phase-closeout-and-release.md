@@ -54,7 +54,7 @@ workspace-kit run convert-phase-note-to-task '{"noteId":"<uuid>","expectedPlanni
 (Skip conversion when the note is informational only.)
 
 1. `git fetch origin` and `git checkout release/phase-<N>`, then `git pull origin release/phase-<N>`.
-2. Run `workspace-kit run phase-closeout-readiness '{"phaseKey":"<N>"}'` and stop unless it reports `passed: true` or every remaining task has an explicit maintainer decision.
+2. Run `workspace-kit run phase-closeout-readiness '{"phaseKey":"<N>"}'` and stop unless it reports `passed: true` with `remainingCount: 0` (including outbox drained), or there is an explicit maintainer waiver covering the remaining closeout finding(s).
 3. Run `workspace-kit run phase-delivery-preflight '{"phaseKey":"<N>","includeInProgress":false,"baseRef":"origin/release/phase-<N>"}'` and resolve every evidence, readiness, or stranded-work finding with evidence matching each task’s **resolved** delivery profile (from **`resolve-maintainer-delivery-policy`** / preflight policy context) or an explicit maintainer waiver before closeout. Stranded-work findings mean completed task implementation files differ from the selected integration/base ref; merge/rebase that work, or move the task out of `completed` before release prep continues. This check is distinct from task-store branch synchronization.
 4. Run `workspace-kit run release-evidence-manifest '<json>'` with human approval, release-note evidence, validation records, known risks, publish artifact placeholders/proof, and follow-up scan data. Resolve structured failures before tag/npm/GitHub release actions.
 5. Run full validation on that tip (`pnpm run build`, `pnpm run check`, `pnpm run test`, `pnpm run parity`, and **`pre-merge-gates`** / maintainer gates as in [`RELEASING.md`](../RELEASING.md)).
@@ -71,7 +71,8 @@ When **`tasks.canonicalAuthority`** is **`git-event-log`** (Workflow Cannon main
 
 **Before** opening the phase→`main` PR (on **`release/phase-<N>`** tip):
 
-1. Publish outstanding task-engine mutations to canonical git (normal `wk run` paths with **`git-event-log`** publish events on success, or explicit publish when repairing):
+1. Confirm closeout outbox posture first: no pending canonical event outbox backlog, or an explicit maintainer waiver is recorded for release closeout.
+2. Publish outstanding task-engine mutations to canonical git (normal `wk run` paths with **`git-event-log`** publish events on success, or explicit publish when repairing):
 
    ```bash
    pnpm exec wk run task-state-status '{"fetch":true}'
@@ -79,13 +80,13 @@ When **`tasks.canonicalAuthority`** is **`git-event-log`** (Workflow Cannon main
 
    Resolve **`behind`** / **`conflict`** with **`task-state-hydrate`** and/or **`task-state-publish`** per [`.ai/runbooks/task-state-git-operator.md`](../runbooks/task-state-git-operator.md).
 
-2. Verify remote layout:
+3. Verify remote layout:
 
    ```bash
    pnpm exec wk run task-state-verify '{"source":"git","branch":"workflow-cannon/task-state"}'
    ```
 
-3. Push **`workflow-cannon/task-state`** so **`origin/workflow-cannon/task-state`** matches what operators will hydrate.
+4. Push **`workflow-cannon/task-state`** so **`origin/workflow-cannon/task-state`** matches what operators will hydrate.
 
 **On the phase→`main` PR:**
 

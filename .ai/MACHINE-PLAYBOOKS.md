@@ -26,7 +26,7 @@ Optional Cursor rule: `.cursor/rules/playbook-task-to-phase-branch.mdc`. Full ch
 
 ## Phase closeout → `main` + release
 
-When the phase is done: validate and fix on **`release/phase-<N>`**, obtain human approval, **merge phase branch to `main`**, then follow **`.ai/RELEASING.md`** on the **`main`** tip.
+When the phase is done: validate and fix on **`release/phase-<N>`**, require closeout preflight with outbox drained (or explicit waiver), obtain human approval, **merge phase branch to `main`**, then follow **`.ai/RELEASING.md`** on the **`main`** tip.
 
 After publish and evidence (**playbook §6**), end with **§7 Phase delivery summary**: compact copy-paste block, **`{placeholders}`** only — counts from **`list-tasks`** / task store + roadmap scope (see playbook **§7 evidence rules**), not chat memory.
 
