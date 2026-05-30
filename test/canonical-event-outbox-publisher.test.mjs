@@ -126,7 +126,7 @@ function makeRepository(rows) {
 
 function makeCtx(overrides = {}) {
   return {
-    workspacePath: "/Users/nicklaprell/Workspace/workflow-cannon",
+    workspacePath: "/tmp/wk",
     runtimeVersion: "test",
     effectiveConfig: {
       tasks: {
@@ -152,6 +152,7 @@ test("publisher batches pending rows and marks them published", async () => {
   const publisher = new CanonicalEventOutboxPublisher({
     ctx: makeCtx(),
     repository: repo,
+    resolveHeadSha: () => "abc123",
     publish: async (input) => {
       assert.equal(input.events.length, 2);
       return {
@@ -179,6 +180,7 @@ test("publisher marks conflicts and stops reprocessing conflicted rows", async (
   const publisher = new CanonicalEventOutboxPublisher({
     ctx: makeCtx(),
     repository: repo,
+    resolveHeadSha: () => "abc123",
     publish: async () => ({
       ok: false,
       code: "task-state-publish-task-conflict",
@@ -204,6 +206,7 @@ test("publisher marks exhausted failures and defers retryable ones", async () =>
   const publisher = new CanonicalEventOutboxPublisher({
     ctx: makeCtx(),
     repository: repo,
+    resolveHeadSha: () => "abc123",
     publish: async () => ({
       ok: false,
       code: "task-state-publish-push-failed",

@@ -32,6 +32,7 @@ export type CanonicalEventOutboxPublisherOptions = {
   repository: CanonicalEventOutboxRepository;
   branch?: string;
   publish?: typeof publishTaskStateEvents;
+  resolveHeadSha?: (workspacePath: string, branch: string) => string | null;
   setIntervalFn?: SetIntervalFn;
   clearIntervalFn?: ClearIntervalFn;
 };
@@ -78,6 +79,7 @@ function failedRowsForAttempts(
 export class CanonicalEventOutboxPublisher {
   private readonly branch: string;
   private readonly publishImpl: typeof publishTaskStateEvents;
+  private readonly resolveHeadShaImpl: (workspacePath: string, branch: string) => string | null;
   private readonly setIntervalImpl: SetIntervalFn;
   private readonly clearIntervalImpl: ClearIntervalFn;
   private readonly queueConfig: CanonicalPublishQueueConfig;
@@ -87,6 +89,7 @@ export class CanonicalEventOutboxPublisher {
   constructor(private readonly options: CanonicalEventOutboxPublisherOptions) {
     this.branch = options.branch?.trim() || TASK_STATE_GIT_BRANCH;
     this.publishImpl = options.publish ?? publishTaskStateEvents;
+    this.resolveHeadShaImpl = options.resolveHeadSha ?? resolveExpectedHeadSha;
     this.setIntervalImpl = options.setIntervalFn ?? setInterval;
     this.clearIntervalImpl = options.clearIntervalFn ?? clearInterval;
     this.queueConfig = readCanonicalPublishQueueConfig(
@@ -156,7 +159,7 @@ export class CanonicalEventOutboxPublisher {
     const markedRows = pending.slice(0, markedPublishingCount);
     const markedIds = markedRows.map((row) => row.id);
     const expectedTaskVersions = mergeExpectedTaskVersions(markedRows);
-    const expectedHeadSha = resolveExpectedHeadSha(this.options.ctx.workspacePath, this.branch);
+    const expectedHeadSha = this.resolveHeadShaImpl(this.options.ctx.workspacePath, this.branch);
     if (!expectedHeadSha) {
       const { failedIds, deferredIds } = failedRowsForAttempts(markedRows, this.queueConfig.maxAttempts);
       let failedCount = 0;
