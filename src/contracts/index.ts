@@ -67,6 +67,40 @@ export type {
 } from "./canonical-state-sync-backend.js";
 export { CANONICAL_STATE_SYNC_BACKEND_CONTRACT_VERSION } from "./canonical-state-sync-backend.js";
 export type {
+  HostedApiAuthContextV1,
+  HostedApiBackendMethodMap,
+  HostedApiCompactResponseV1,
+  HostedApiConflictResponseV1,
+  HostedApiErrorResponseV1,
+  HostedApiFetchEventsQueryV1,
+  HostedApiFetchEventsResponseV1,
+  HostedApiHeadResponseV1,
+  HostedApiLatestSnapshotResponseV1,
+  HostedApiPublishEventsRequestV1,
+  HostedApiPublishEventsResponseV1,
+  HostedApiRequestHeadersV1,
+  HostedApiRouteId,
+  HostedApiSnapshotRequestV1,
+  HostedApiSnapshotResponseV1,
+  HostedApiTokenKind,
+  HostedApiVerifyResponseV1,
+  HostedApiVersionsResponseV1,
+  HostedApiWorkspaceId
+} from "./hosted-api-backend.js";
+export {
+  HOSTED_API_BACKEND_CONTRACT_VERSION,
+  HOSTED_API_FETCH_DEFAULT_LIMIT,
+  HOSTED_API_FETCH_MAX_LIMIT,
+  HOSTED_API_IDEMPOTENCY_TTL_SEC,
+  HOSTED_API_METHOD_COMPAT,
+  HOSTED_API_PUBLISH_BATCH_MAX,
+  assertHostedApiIdempotencyKey,
+  assertHostedApiPublishBatch,
+  hostedFetchResponseToCanonical,
+  hostedPublishResponseToCanonical,
+  isHostedApiConflictResponse
+} from "./hosted-api-backend.js";
+export type {
   DashboardAgentGuidanceSummary,
   DashboardSummaryCommandSuccess,
   DashboardCurrentPhaseDelivery,
