@@ -6,7 +6,8 @@
   "oneOf": [
     { "$ref": "#/$defs/dashboardSnapshotUpdated" },
     { "$ref": "#/$defs/dashboardSliceUpdated" },
-    { "$ref": "#/$defs/dashboardServiceError" }
+    { "$ref": "#/$defs/dashboardServiceError" },
+    { "$ref": "#/$defs/taskSyncStatusChanged" }
   ],
   "$defs": {
     "dashboardSnapshotUpdated": {
@@ -42,6 +43,16 @@
         "type": { "const": "dashboard.service.error" },
         "message": { "type": "string", "minLength": 1 },
         "code": { "type": "string" }
+      }
+    },
+    "taskSyncStatusChanged": {
+      "type": "object",
+      "required": ["type", "status", "updatedAt"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "task-sync.status.changed" },
+        "status": { "$ref": "https://workflow-cannon.dev/schemas/task-sync-status.v1.json" },
+        "updatedAt": { "type": "string", "minLength": 1 }
       }
     }
   }

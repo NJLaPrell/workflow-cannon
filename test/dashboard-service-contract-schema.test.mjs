@@ -18,6 +18,9 @@ function makeAjv() {
   const ajv = new Ajv2020({ strict: true, allErrors: true });
   ajv.addSchema(loadSchema("dashboard-service-snapshot.v1.json"));
   ajv.addSchema(loadSchema("dashboard-service-event.v1.json"));
+  ajv.addSchema(loadSchema("runtime-service-status.v1.json"));
+  ajv.addSchema(loadSchema("task-sync-status.v1.json"));
+  ajv.addSchema(loadSchema("task-sync-flush-result.v1.json"));
   return ajv;
 }
 
@@ -65,10 +68,107 @@ describe("dashboard service contract schemas", () => {
         type: "dashboard.service.error",
         message: "slice refresh failed",
         code: "slice-refresh-failed"
+      },
+      {
+        type: "task-sync.status.changed",
+        updatedAt: "2026-05-30T02:00:03.000Z",
+        status: {
+          schemaVersion: 1,
+          generatedAt: "2026-05-30T02:00:03.000Z",
+          syncState: "current",
+          reason: "ok",
+          localProjection: "fresh",
+          recommendedAction: "none",
+          branch: "workflow-cannon/task-state",
+          remoteLatestSequence: 1,
+          localAppliedSequence: 1,
+          outbox: {
+            pending: 0,
+            publishing: 0,
+            failed: 0,
+            conflict: 0,
+            oldestPendingAgeMs: 0,
+            latestPublishedAt: null
+          }
+        }
       }
     ];
     for (const event of events) {
       assert.equal(validate(event), true, JSON.stringify(validate.errors));
     }
+  });
+
+  it("accepts runtime service status and task sync wire payloads", () => {
+    const ajv = makeAjv();
+    const statusValidate = ajv.getSchema(
+      "https://workflow-cannon.dev/schemas/runtime-service-status.v1.json"
+    );
+    const syncValidate = ajv.getSchema("https://workflow-cannon.dev/schemas/task-sync-status.v1.json");
+    const flushValidate = ajv.getSchema(
+      "https://workflow-cannon.dev/schemas/task-sync-flush-result.v1.json"
+    );
+    assert.ok(statusValidate);
+    assert.ok(syncValidate);
+    assert.ok(flushValidate);
+
+    assert.equal(
+      statusValidate({
+        schemaVersion: 1,
+        generatedAt: "2026-05-30T19:00:00.000Z",
+        serviceVersion: "0.99.21",
+        health: "ok",
+        uptimeMs: 42,
+        sseClients: 0,
+        dashboard: {
+          generation: 1,
+          planningGeneration: 4379,
+          staleSlices: [],
+          failingSlices: [],
+          lastSnapshotAt: "2026-05-30T19:00:00.000Z"
+        }
+      }),
+      true,
+      JSON.stringify(statusValidate.errors)
+    );
+
+    assert.equal(
+      syncValidate({
+        schemaVersion: 1,
+        generatedAt: "2026-05-30T19:00:00.000Z",
+        syncState: "current",
+        reason: "Local projection matches branch head sequence.",
+        localProjection: "fresh",
+        recommendedAction: "none",
+        branch: "workflow-cannon/task-state",
+        remoteLatestSequence: 600,
+        localAppliedSequence: 600,
+        outbox: {
+          pending: 0,
+          publishing: 0,
+          failed: 0,
+          conflict: 0,
+          oldestPendingAgeMs: 0,
+          latestPublishedAt: null
+        }
+      }),
+      true,
+      JSON.stringify(syncValidate.errors)
+    );
+
+    assert.equal(
+      flushValidate({
+        schemaVersion: 1,
+        generatedAt: "2026-05-30T19:00:00.000Z",
+        ok: true,
+        code: "task-sync-nothing-to-flush",
+        enabled: true,
+        publishedCount: 0,
+        conflictCount: 0,
+        failedCount: 0,
+        deferredCount: 0
+      }),
+      true,
+      JSON.stringify(flushValidate.errors)
+    );
   });
 });

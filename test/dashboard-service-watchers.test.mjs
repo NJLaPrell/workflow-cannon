@@ -12,6 +12,20 @@ async function tmpWorkspace() {
   return fs.mkdtemp(path.join(os.tmpdir(), "wk-dash-watch-"));
 }
 
+async function waitForSliceFresh(base, sliceName, timeoutMs = 10_000) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const snap = await (await fetch(`${base}/dashboard/snapshot`)).json();
+    if (snap.slices[sliceName]?.status === "fresh") {
+      return snap;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  const last = await (await fetch(`${base}/dashboard/snapshot`)).json();
+  assert.equal(last.slices[sliceName]?.status, "fresh", `slice ${sliceName} never reached fresh`);
+  return last;
+}
+
 async function seedEmptySqlite(workspace) {
   const { mkdir } = await import("node:fs/promises");
   const { SqliteDualPlanningStore } = await import("../dist/modules/task-engine/persistence/sqlite-dual-planning.js");
@@ -35,7 +49,7 @@ describe("dashboard service watchers", () => {
     const base = `http://${svc.host}:${svc.port}`;
 
     try {
-      const bootSnap = await (await fetch(`${base}/dashboard/snapshot`)).json();
+      const bootSnap = await waitForSliceFresh(base, "overview");
       assert.equal(bootSnap.slices.overview?.status, "fresh", "critical bootstrap on start");
 
       const genBefore = bootSnap.generation;

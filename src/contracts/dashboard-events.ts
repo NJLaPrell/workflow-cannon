@@ -2,6 +2,8 @@
  * SSE event contract for the workspace-kit dashboard read service (Option 2).
  */
 
+import type { TaskSyncStatusV1 } from "./task-sync-status.js";
+
 export type DashboardServiceSnapshotUpdatedEvent = {
   type: "dashboard.snapshot.updated";
   generation: number;
@@ -22,13 +24,21 @@ export type DashboardServiceErrorEvent = {
   code?: string;
 };
 
+export type TaskSyncStatusChangedEvent = {
+  type: "task-sync.status.changed";
+  status: TaskSyncStatusV1;
+  updatedAt: string;
+};
+
 export type DashboardServiceEvent =
   | DashboardServiceSnapshotUpdatedEvent
   | DashboardServiceSliceUpdatedEvent
-  | DashboardServiceErrorEvent;
+  | DashboardServiceErrorEvent
+  | TaskSyncStatusChangedEvent;
 
 export const DASHBOARD_SERVICE_EVENT_TYPES = [
   "dashboard.snapshot.updated",
   "dashboard.slice.updated",
-  "dashboard.service.error"
+  "dashboard.service.error",
+  "task-sync.status.changed"
 ] as const;

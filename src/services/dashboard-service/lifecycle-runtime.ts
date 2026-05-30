@@ -198,12 +198,13 @@ export async function runDashboardServiceStatus(
   ctx: ModuleLifecycleContext
 ): Promise<ModuleCommandResult> {
   const runtime = await readRuntime(ctx.workspacePath);
+  const workspaceRoot = ctx.workspacePath;
   if (!runtime || !isPidAlive(runtime.pid)) {
     return {
       ok: true,
       code: "dashboard-service-status",
       message: "Dashboard service is not running",
-      data: { running: false, runtime: runtime ?? null }
+      data: { running: false, workspaceRoot, runtime: runtime ?? null }
     };
   }
   const health = await probeHealth(runtime);
@@ -213,6 +214,7 @@ export async function runDashboardServiceStatus(
     message: health?.ok === true ? "Dashboard service is healthy" : "Dashboard service is unhealthy",
     data: {
       running: true,
+      workspaceRoot,
       runtime,
       health,
       uptimeMs: typeof health?.uptimeMs === "number" ? health.uptimeMs : null,

@@ -1,5 +1,6 @@
 import type { ServerResponse } from "node:http";
 import type { DashboardServiceEvent } from "../../contracts/dashboard-events.js";
+import type { TaskSyncStatusV1 } from "../../contracts/task-sync-status.js";
 
 export type SseClient = {
   id: string;
@@ -75,5 +76,13 @@ export function toSseEvent(input: {
     generation: input.generation,
     changedSlices: input.changedSlices,
     updatedAt: input.updatedAt
+  };
+}
+
+export function toTaskSyncStatusChangedEvent(status: TaskSyncStatusV1): DashboardServiceEvent {
+  return {
+    type: "task-sync.status.changed",
+    status,
+    updatedAt: status.generatedAt
   };
 }

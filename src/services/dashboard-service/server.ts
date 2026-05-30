@@ -5,13 +5,17 @@ import { fileURLToPath } from "node:url";
 import { DashboardSnapshotStore } from "./snapshot-store.js";
 import { DashboardSliceRefresher } from "./slice-refreshers.js";
 import { DashboardSseHub } from "./events.js";
-import { handleDashboardServiceRequest, wireDashboardServiceEvents } from "./routes.js";
+import { handleDashboardServiceRequest, wireDashboardServiceEvents, wireTaskSyncSseEvents } from "./routes.js";
 import { DashboardServiceWatchers } from "./watchers.js";
 import { resolveRegistryAndConfig } from "../../core/module-registry-resolve.js";
 import { defaultRegistryModules } from "../../modules/index.js";
 import {
   type DashboardServicePollGroup
 } from "./poll-groups.js";
+import {
+  createDashboardTaskSyncWorker,
+  type DashboardTaskSyncWorker
+} from "./task-sync-worker.js";
 
 export type DashboardServiceHandle = {
   server: Server;
@@ -20,6 +24,7 @@ export type DashboardServiceHandle = {
   snapshotStore: DashboardSnapshotStore;
   refresher: DashboardSliceRefresher;
   watchers: DashboardServiceWatchers;
+  taskSyncWorker: DashboardTaskSyncWorker;
   stop: () => Promise<void>;
 };
 
@@ -56,16 +61,31 @@ export async function createDashboardService(
     defaultRegistryModules,
     {}
   );
+  const ctx = {
+    runtimeVersion: "0.1",
+    workspacePath: options.workspacePath,
+    effectiveConfig: effective
+  };
   const watchers = new DashboardServiceWatchers({
     workspacePath: options.workspacePath,
-    ctx: { runtimeVersion: "0.1", workspacePath: options.workspacePath, effectiveConfig: effective },
+    ctx,
     refresher,
     pollIntervalMs: options.pollIntervalMs
   });
   await watchers.start();
 
+  const taskSyncWorker = await createDashboardTaskSyncWorker(ctx);
+  await taskSyncWorker.start();
+  const unwireTaskSync = wireTaskSyncSseEvents(ctx, taskSyncWorker, sseHub);
+
   const server = createServer((req, res) => {
-    void handleDashboardServiceRequest(req, res, { snapshotStore, refresher, sseHub }).catch((error) => {
+    void handleDashboardServiceRequest(req, res, {
+      snapshotStore,
+      refresher,
+      sseHub,
+      ctx,
+      taskSyncWorker
+    }).catch((error) => {
       const message = error instanceof Error ? error.message : String(error);
       res.writeHead(500, { "Content-Type": "application/json; charset=utf-8" });
       res.end(JSON.stringify({ ok: false, code: "internal-error", message }));
@@ -84,7 +104,9 @@ export async function createDashboardService(
 
   const stop = async (): Promise<void> => {
     unwire();
+    unwireTaskSync();
     sseHub.closeAll();
+    await taskSyncWorker.stop();
     await watchers.stop();
     await refresher.stop();
     await new Promise<void>((resolve, reject) => {
@@ -99,6 +121,7 @@ export async function createDashboardService(
     snapshotStore,
     refresher,
     watchers,
+    taskSyncWorker,
     stop
   };
 }

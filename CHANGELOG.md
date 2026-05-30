@@ -8,6 +8,10 @@ This root file is intentionally pointer-only to avoid split release history.
 
 - See `docs/maintainers/CHANGELOG.md` for all release notes, migration notes, and historical entries.
 
+## [0.99.22] - 2026-05-30
+
+- **Phase 124 — Local dashboard service mode:** Versioned runtime/task-sync contracts, service-backed dashboard reads, in-process sync worker, SSE event stream, and service-mode closeout preflight gates. See `docs/maintainers/CHANGELOG.md`.
+
 ## [0.99.15] - 2026-05-28
 
 - **Phase 116 - Planner-chat provenance closeout:** PlanArtifact idea provenance fields, planner-chat playbook/prompt seed, and CAE playbook registry coverage for Ideas-to-plan workflows.

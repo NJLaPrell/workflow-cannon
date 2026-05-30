@@ -1,9 +1,13 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
+import type { ModuleLifecycleContext } from "../../contracts/module-contract.js";
 import type { DashboardSnapshotStore } from "./snapshot-store.js";
 import type { DashboardSliceRefresher } from "./slice-refreshers.js";
-import { DashboardSseHub, toSseEvent } from "./events.js";
+import { buildRuntimeServiceStatus } from "./build-runtime-service-status.js";
+import { DashboardSseHub, toSseEvent, toTaskSyncStatusChangedEvent } from "./events.js";
 import { listDashboardServiceSliceNames } from "./slice-definitions.js";
 import { buildDashboardServiceHealthPayload } from "./slice-observability.js";
+import { readTaskSyncStatus } from "./task-sync-handlers.js";
+import type { DashboardTaskSyncWorker } from "./task-sync-worker.js";
 
 function readJsonBody(req: IncomingMessage): Promise<Record<string, unknown>> {
   return new Promise((resolve, reject) => {
@@ -42,6 +46,8 @@ export type DashboardServiceRoutesDeps = {
   snapshotStore: DashboardSnapshotStore;
   refresher: DashboardSliceRefresher;
   sseHub: DashboardSseHub;
+  ctx: ModuleLifecycleContext;
+  taskSyncWorker: DashboardTaskSyncWorker;
 };
 
 export async function handleDashboardServiceRequest(
@@ -63,9 +69,71 @@ export async function handleDashboardServiceRequest(
         sseClients: deps.sseHub.clientCount(),
         sliceCount: listDashboardServiceSliceNames().length,
         sliceObservability: deps.refresher.getSliceObservability(),
-        summary: deps.refresher.getObservabilitySummary()
+        summary: deps.refresher.getObservabilitySummary(),
+        taskSyncWorker: deps.taskSyncWorker.getStatus()
       })
     );
+    return;
+  }
+
+  if (method === "GET" && url.pathname === "/status") {
+    sendJson(
+      res,
+      200,
+      buildRuntimeServiceStatus({
+        snapshotStore: deps.snapshotStore,
+        refresher: deps.refresher,
+        sseHub: deps.sseHub
+      })
+    );
+    return;
+  }
+
+  if (method === "GET" && url.pathname === "/task-sync/status") {
+    try {
+      const status = await readTaskSyncStatus(deps.ctx);
+      sendJson(res, 200, status);
+    } catch (error) {
+      sendJson(res, 500, {
+        ok: false,
+        code: "task-sync-status-failed",
+        message: error instanceof Error ? error.message : String(error)
+      });
+    }
+    return;
+  }
+
+  if (method === "POST" && url.pathname === "/task-sync/flush") {
+    try {
+      const result = await deps.taskSyncWorker.flush();
+      sendJson(res, result.ok ? 200 : 503, result);
+    } catch (error) {
+      sendJson(res, 500, {
+        ok: false,
+        code: "task-sync-flush-failed",
+        message: error instanceof Error ? error.message : String(error)
+      });
+    }
+    return;
+  }
+
+  if (method === "POST" && url.pathname === "/task-sync/pause") {
+    const paused = deps.taskSyncWorker.pause();
+    sendJson(res, 200, {
+      ok: true,
+      code: paused ? "task-sync-worker-paused" : "task-sync-worker-pause-noop",
+      worker: deps.taskSyncWorker.getStatus()
+    });
+    return;
+  }
+
+  if (method === "POST" && url.pathname === "/task-sync/resume") {
+    const resumed = deps.taskSyncWorker.resume();
+    sendJson(res, 200, {
+      ok: true,
+      code: resumed ? "task-sync-worker-resumed" : "task-sync-worker-resume-noop",
+      worker: deps.taskSyncWorker.getStatus()
+    });
     return;
   }
 
@@ -140,4 +208,32 @@ export function wireDashboardServiceEvents(
       sseHub.broadcast(toSseEvent(event));
     }
   });
+}
+
+export function wireTaskSyncSseEvents(
+  ctx: ModuleLifecycleContext,
+  taskSyncWorker: DashboardTaskSyncWorker,
+  sseHub: DashboardSseHub
+): () => void {
+  let lastFingerprint: string | null = null;
+
+  const emitIfChanged = async (): Promise<void> => {
+    try {
+      const status = await readTaskSyncStatus(ctx);
+      const fingerprint = JSON.stringify(status);
+      if (fingerprint === lastFingerprint) {
+        return;
+      }
+      lastFingerprint = fingerprint;
+      sseHub.broadcast(toTaskSyncStatusChangedEvent(status));
+    } catch {
+      // status read failures are surfaced via HTTP; SSE stays best-effort
+    }
+  };
+
+  const unsubscribe = taskSyncWorker.onStatusChanged(() => {
+    void emitIfChanged();
+  });
+  void emitIfChanged();
+  return unsubscribe;
 }

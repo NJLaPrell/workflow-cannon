@@ -8,6 +8,24 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [0.99.22] - 2026-05-30
+
+Patch — **Phase 124 Local dashboard service mode** (service contracts, sync worker, SSE, closeout gates).
+
+### Added
+
+- Versioned `runtime-service` and `task-sync-status` wire contracts with `/status`, `/task-sync/status`, and `/task-sync/flush` service routes (T100609).
+- Dashboard service process lifecycle commands with stale pid recovery (T100610).
+- Dashboard snapshot store last-good fallback on slice refresh errors (T100611).
+- Cursor extension `ServiceDashboardDataSource` with auto/service/cli-polling modes and data-source indicator (T100612).
+- In-service background task-sync worker: outbox polling, hydrate schedule, pause/resume/flush (T100613).
+- SSE event stream for dashboard slice updates and task-sync status changes with extension reconnect (T100614).
+- `phase-delivery-preflight` service-mode gates for outbox drained, sync posture, and conflict rows (T100615).
+
+### Changed
+
+- Phase closeout playbook documents service sync gate alongside outbox drained check.
+
 ## [0.99.21] - 2026-05-30
 
 Patch — **Phase 123 Local-first outbox sync** (canonical event outbox, background publisher, sync posture).
