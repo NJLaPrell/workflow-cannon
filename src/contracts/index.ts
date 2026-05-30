@@ -43,6 +43,30 @@ export {
   TASK_SYNC_STATUS_SCHEMA_VERSION
 } from "./task-sync-status.js";
 export type {
+  CanonicalPlanningVersionRow,
+  CanonicalStateBackendRevision,
+  CanonicalStateCompactResult,
+  CanonicalStateEventEnvelopeV1,
+  CanonicalStateEventId,
+  CanonicalStateHead,
+  CanonicalStateSequence,
+  CanonicalStateSnapshotResult,
+  CanonicalStateSyncDiagnostics,
+  CanonicalStateVerifyFinding,
+  CanonicalStateVerifyResult,
+  CanonicalSyncAlignmentState,
+  CanonicalSyncConflictDetail,
+  CanonicalSyncFailure,
+  CanonicalTaskVersionRow,
+  FetchEventsInput,
+  FetchEventsResult,
+  FetchEventsSuccess,
+  PublishEventsInput,
+  PublishEventsResult,
+  PublishEventsSuccess
+} from "./canonical-state-sync-backend.js";
+export { CANONICAL_STATE_SYNC_BACKEND_CONTRACT_VERSION } from "./canonical-state-sync-backend.js";
+export type {
   DashboardAgentGuidanceSummary,
   DashboardSummaryCommandSuccess,
   DashboardCurrentPhaseDelivery,
