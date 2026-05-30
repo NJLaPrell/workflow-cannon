@@ -26,10 +26,37 @@ import { formatNodeRuntimeIdentity } from "../core/native-sqlite-diagnostics.js"
 import { readRuntimeStamp } from "../core/runtime-contract.js";
 import { defaultRegistryModules } from "../modules/index.js";
 import { discoverPluginPackages } from "../modules/plugins/discovery.js";
+import {
+  formatResolvedCanonicalBackendLine,
+  resolveCanonicalBackend
+} from "../modules/task-engine/persistence/canonical-backend-config.js";
 import { readTasksCanonicalAuthority } from "../modules/task-engine/persistence/task-state-canonical-authority.js";
 import { resolveEnabledPlanningSyncDomains } from "../modules/task-engine/persistence/planning-canonical-sync-domains.js";
 
 export type DoctorPlanningIssue = { path: string; reason: string };
+
+const DOCTOR_CANONICAL_BACKEND_CONFLICT = "canonical-backend-config-conflict";
+const DOCTOR_CANONICAL_BACKEND_HOSTED_NOT_IMPLEMENTED = "canonical-backend-hosted-not-implemented";
+
+export function collectDoctorCanonicalBackendConfigIssues(
+  effective: Record<string, unknown>
+): DoctorPlanningIssue[] {
+  const resolved = resolveCanonicalBackend(effective);
+  const issues: DoctorPlanningIssue[] = [];
+  if (resolved.configConflict) {
+    issues.push({
+      path: ".workspace-kit/config.json tasks.canonicalBackend / tasks.canonicalAuthority",
+      reason: DOCTOR_CANONICAL_BACKEND_CONFLICT
+    });
+  }
+  if (resolved.type === "hosted" && !resolved.hostedImplemented) {
+    issues.push({
+      path: ".workspace-kit/config.json tasks.canonicalBackend.type",
+      reason: DOCTOR_CANONICAL_BACKEND_HOSTED_NOT_IMPLEMENTED
+    });
+  }
+  return issues;
+}
 
 /** Config `kit.currentPhaseNumber` disagrees with `kit_workspace_status.current_kit_phase` (SQLite v10+). */
 export const DOCTOR_KIT_PHASE_WORKSPACE_STATUS_MISMATCH = "kit-phase-config-workspace-status-mismatch";
@@ -90,7 +117,8 @@ export async function collectDoctorPlanningPersistenceIssues(
     const projectionIssues = await collectDoctorTaskStateProjectionIssues(cwd, effective);
     const shadowIssues = await collectDoctorTaskStateShadowIssues(cwd, effective);
     const gitHealthIssues = await collectDoctorTaskStateGitHealthIssues(cwd, effective);
-    return [...persistence, ...phaseIssues, ...projectionIssues, ...shadowIssues, ...gitHealthIssues];
+    const backendIssues = collectDoctorCanonicalBackendConfigIssues(effective);
+    return [...persistence, ...phaseIssues, ...projectionIssues, ...shadowIssues, ...gitHealthIssues, ...backendIssues];
   } catch (err) {
     return [
       {
@@ -201,6 +229,7 @@ export async function collectTaskPersistenceDoctorSummaryLines(cwd: string): Pro
   lines.push(
     `Planning generation policy: ${pol} (tasks.planningGenerationPolicy — require/warn: pass expectedPlanningGeneration from prior reads; see ADR-planning-generation-optimistic-concurrency.md)`
   );
+  lines.push(formatResolvedCanonicalBackendLine(resolveCanonicalBackend(effective)));
   if (readTasksCanonicalAuthority(effective) === "git-event-log") {
     const domains = resolveEnabledPlanningSyncDomains({ effectiveConfig: effective });
     lines.push(

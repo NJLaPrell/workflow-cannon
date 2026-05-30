@@ -10,7 +10,9 @@ import type {
   DashboardPlanningStoreSummary,
   DashboardWorkspaceIdentity
 } from "../../../contracts/dashboard-summary-run.js";
+import type { DashboardCanonicalBackendSummary } from "../../../contracts/dashboard-summary-run.js";
 import { planningSqliteDatabaseRelativePath } from "../planning-config.js";
+import { resolveCanonicalBackend } from "../persistence/canonical-backend-config.js";
 
 export async function buildDashboardWorkspaceIdentity(workspacePath: string): Promise<DashboardWorkspaceIdentity> {
   const projectContextPath = path.join(workspacePath, ".workspace-kit", "generated", "project-context.json");
@@ -73,5 +75,20 @@ export function buildDashboardPlanningStoreSummary(ctx: ModuleLifecycleContext):
     schemaVersion: 1,
     backend: "sqlite",
     databaseRelativePath: planningSqliteDatabaseRelativePath(ctx)
+  };
+}
+
+export function buildDashboardCanonicalBackendSummary(
+  ctx: ModuleLifecycleContext
+): DashboardCanonicalBackendSummary {
+  const resolved = resolveCanonicalBackend(ctx.effectiveConfig as Record<string, unknown> | undefined);
+  return {
+    schemaVersion: 1,
+    type: resolved.type,
+    backendId: resolved.backendId,
+    canonicalAuthority: resolved.canonicalAuthority,
+    configSource: resolved.configSource,
+    configConflict: resolved.configConflict,
+    hostedImplemented: resolved.hostedImplemented
   };
 }

@@ -18,17 +18,16 @@ export const DEFAULT_CANONICAL_PUBLISH_QUEUE_CONFIG: CanonicalPublishQueueConfig
   maxAttempts: 5
 };
 
-export function readTasksCanonicalAuthority(
-  config?: Record<string, unknown> | null
-): TasksCanonicalAuthority {
-  const tasks = config?.tasks as Record<string, unknown> | undefined;
-  const raw = tasks?.canonicalAuthority ?? tasks?.taskStateCanonicalAuthority;
-  return raw === "git-event-log" ? "git-event-log" : "sqlite";
-}
-
-export function isGitTaskStateCanonicalAuthority(ctx: ModuleLifecycleContext): boolean {
-  return readTasksCanonicalAuthority(ctx.effectiveConfig as Record<string, unknown> | undefined) === "git-event-log";
-}
+export {
+  readTasksCanonicalAuthority,
+  isGitTaskStateCanonicalAuthority,
+  resolveCanonicalBackend,
+  readCanonicalBackendTypeFromConfig,
+  formatResolvedCanonicalBackendLine,
+  type CanonicalBackendType,
+  type ResolvedCanonicalBackend
+} from "./canonical-backend-config.js";
+export { createCanonicalSyncBackendFromContext } from "./canonical-sync-backend-factory.js";
 
 /** Monotonic per-task version used for optimistic concurrency (matches event applier bumps). */
 export function taskVersionFromStore(store: TaskStore, taskId: string): number {

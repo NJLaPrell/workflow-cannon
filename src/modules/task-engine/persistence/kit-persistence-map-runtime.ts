@@ -1,5 +1,6 @@
 import type { ModuleCommandResult, ModuleLifecycleContext } from "../../../contracts/module-contract.js";
 import { planningSqliteDatabaseRelativePath, planningTaskStoreRelativePath } from "../planning-config.js";
+import { resolveCanonicalBackend } from "./canonical-backend-config.js";
 import { DEFAULT_TASK_STORE_PATH } from "./store.js";
 
 const PERSISTENCE_MAP_SCHEMA_VERSION = 1 as const;
@@ -8,6 +9,7 @@ const PERSISTENCE_MAP_SCHEMA_VERSION = 1 as const;
 export function runGetKitPersistenceMap(ctx: ModuleLifecycleContext): ModuleCommandResult {
   const taskRel = planningTaskStoreRelativePath(ctx) ?? DEFAULT_TASK_STORE_PATH;
   const dbRel = planningSqliteDatabaseRelativePath(ctx);
+  const canonicalBackend = resolveCanonicalBackend(ctx.effectiveConfig as Record<string, unknown> | undefined);
   return {
     ok: true,
     code: "kit-persistence-map",
@@ -16,6 +18,13 @@ export function runGetKitPersistenceMap(ctx: ModuleLifecycleContext): ModuleComm
       schemaVersion: PERSISTENCE_MAP_SCHEMA_VERSION,
       runtime: "sqlite-only",
       unifiedSqliteRelativePath: dbRel,
+      canonicalBackend: {
+        type: canonicalBackend.type,
+        backendId: canonicalBackend.backendId,
+        canonicalAuthority: canonicalBackend.canonicalAuthority,
+        configSource: canonicalBackend.configSource,
+        configConflict: canonicalBackend.configConflict
+      },
       planning: {
         table: "workspace_planning_state",
         taskDocumentColumn: "task_store_json",
