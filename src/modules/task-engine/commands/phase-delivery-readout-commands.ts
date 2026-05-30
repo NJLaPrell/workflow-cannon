@@ -19,6 +19,7 @@ import { runPhaseStatus } from "../workspace-status-commands-runtime.js";
 import { buildStrandedWorkReport } from "../stranded-work.js";
 import { buildPhaseFocusDashboard } from "../dashboard/build-phase-focus-dashboard.js";
 import { proposeReleaseVersion } from "../propose-release-version-runtime.js";
+import { buildPhaseServiceSyncPreflight } from "../phase-service-sync-preflight.js";
 
 /**
  * Phase / release readout commands that need an open task store + SQLite dual reader.
@@ -154,14 +155,19 @@ export async function resolvePhaseDeliveryReadoutCommands(
       phaseKey,
       baseRef
     });
+    const serviceSync = await buildPhaseServiceSyncPreflight(ctx);
     const blockingFindingCount =
-      preflight.violationCount + readiness.remainingCount + strandedWork.findings.length;
+      preflight.violationCount +
+      readiness.remainingCount +
+      strandedWork.findings.length +
+      serviceSync.blockingFindingCount;
     const data: Record<string, unknown> = {
       ...preflight,
       canonicalPhase: phaseRes,
       includeInProgress,
       readiness,
       strandedWork,
+      serviceSync,
       blockingFindingCount
     };
     attachPolicyMeta(data, ctx, planning.sqliteDual.getPlanningGeneration());
