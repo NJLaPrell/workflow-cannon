@@ -606,7 +606,7 @@ test("isKitRefreshRunAborted treats empty stdout json-parse as refresh abort", a
   );
 });
 
-test("CommandClient.runForDashboardPaint bypasses lane queue and refresh pause", async () => {
+test("CommandClient.runForDashboardPaint honors refresh pause unless bootstrap", async () => {
   const calls = [];
   let releaseMutation;
   const mutationGate = new Promise((resolve) => {
@@ -624,10 +624,21 @@ test("CommandClient.runForDashboardPaint bypasses lane queue and refresh pause",
   client.setRefreshPaused(true);
   const mutation = client.run("task-state-hydrate", { policyApproval: { confirmed: true, rationale: "t" } });
   await new Promise((r) => setTimeout(r, 0));
-  const paint = await client.runForDashboardPaint("dashboard-summary", { projection: "overview" });
-  assert.equal(paint.ok, true);
-  assert.equal(paint.code, "dashboard-summary");
+
+  const deferred = await client.runForDashboardPaint("dashboard-summary", { projection: "overview" });
+  assert.equal(deferred.ok, false);
+  assert.equal(deferred.code, "extension-refresh-paused");
+  assert.ok(!calls.includes("dashboard-summary"), "paused paint lane must not spawn CLI");
+
+  const bootstrap = await client.runForDashboardPaint(
+    "dashboard-summary",
+    { projection: "overview" },
+    { bootstrap: true }
+  );
+  assert.equal(bootstrap.ok, true);
+  assert.equal(bootstrap.code, "dashboard-summary");
   assert.ok(calls.includes("dashboard-summary"));
+
   releaseMutation();
   await mutation;
 });

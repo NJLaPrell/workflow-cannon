@@ -58,6 +58,14 @@ test("light refresh skips unchanged queue section via content fingerprint", () =
   assert.match(src, /skipped queue \(content unchanged\)/);
 });
 
+test("mutation hold skips dashboard kit refresh after root is hydrated", () => {
+  const src = fs.readFileSync(path.join(srcDir, "DashboardViewProvider.ts"), "utf8");
+  assert.match(src, /shouldSkipDashboardKitRefresh/);
+  assert.match(src, /markDeferredRefreshNeeded/);
+  assert.match(src, /executeDashboardRefresh[\s\S]*shouldSkipDashboardKitRefresh/);
+  assert.match(src, /patchDashboardSectionsFromSummary[\s\S]*shouldSkipDashboardKitRefresh/);
+});
+
 test("queue section patch preserves lazy bucket bodies when meta matches", () => {
   const src = fs.readFileSync(path.join(srcDir, "dashboard-webview-client.ts"), "utf8");
   assert.match(src, /captureLazyQueueBucketBodies/);

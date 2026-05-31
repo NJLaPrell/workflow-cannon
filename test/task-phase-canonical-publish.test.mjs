@@ -241,3 +241,52 @@ test("apply-task-batch publishes rich task fields that survive hydrate", async (
   assert.equal(status.data.remoteLatestSequence, 3);
   assert.equal(status.data.localAppliedSequence, 3);
 });
+
+test("persist-planning-execution-drafts publishes task.created events that survive hydrate", async () => {
+  const { canonicalCtx } = await seedCanonicalWorkspace();
+  const lt = await taskEngineModule.onCommand({ name: "list-tasks", args: {} }, canonicalCtx);
+  assert.equal(lt.ok, true, lt.message);
+
+  const persisted = await taskEngineModule.onCommand(
+    {
+      name: "persist-planning-execution-drafts",
+      args: {
+        tasks: [
+          {
+            id: "T779",
+            title: "Persisted canonical batch row",
+            type: "workspace-kit",
+            status: "ready",
+            phaseKey: "119",
+            phase: "Phase 119",
+            approach: "Materialize via persist-planning-execution-drafts",
+            technicalScope: ["persist-planning-execution-drafts", "git canonical publish"],
+            acceptanceCriteria: ["task.created published", "hydrate preserves row"]
+          }
+        ],
+        expectedPlanningGeneration: lt.data.planningGeneration,
+        policyApproval: { confirmed: true, rationale: "persist canonical publish regression" }
+      }
+    },
+    canonicalCtx
+  );
+  assert.equal(persisted.ok, true, persisted.message);
+  assert.equal(persisted.code, "planning-execution-drafts-persisted");
+
+  const hydrate = await taskEngineModule.onCommand(
+    {
+      name: "task-state-hydrate",
+      args: {
+        fetch: false,
+        policyApproval: { confirmed: true, rationale: "verify persist rows survive hydrate" }
+      }
+    },
+    canonicalCtx
+  );
+  assert.equal(hydrate.ok, true, hydrate.message);
+
+  const got = await taskEngineModule.onCommand({ name: "get-task", args: { taskId: "T779" } }, canonicalCtx);
+  assert.equal(got.ok, true, got.message);
+  assert.equal(got.data.task.title, "Persisted canonical batch row");
+  assert.equal(got.data.task.phaseKey, "119");
+});

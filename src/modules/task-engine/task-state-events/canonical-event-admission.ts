@@ -36,6 +36,8 @@ export type CanonicalEventAdmissionContext = {
   priorEvents?: CanonicalStateEventV1[];
   initialTaskProjection?: TaskStateProjectionV1;
   initialPlanningProjection?: PlanningStateProjectionV1;
+  /** Authoritative task projection at the tail boundary; prior task events are not replayed. */
+  checkpointTaskProjection?: TaskStateProjectionV1;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -112,7 +114,8 @@ function clonePlanningProjection(projection: PlanningStateProjectionV1): Plannin
 function buildProjections(
   priorEvents: CanonicalStateEventV1[],
   initialTaskProjection?: TaskStateProjectionV1,
-  initialPlanningProjection?: PlanningStateProjectionV1
+  initialPlanningProjection?: PlanningStateProjectionV1,
+  checkpointTaskProjection?: TaskStateProjectionV1
 ):
   | {
       ok: true;
@@ -120,9 +123,11 @@ function buildProjections(
       planningProjection: PlanningStateProjectionV1;
     }
   | { ok: false; error: CanonicalEventAdmissionError } {
-  let taskProjection = initialTaskProjection
-    ? cloneTaskProjection(initialTaskProjection)
-    : createEmptyTaskStateProjection();
+  let taskProjection = checkpointTaskProjection
+    ? cloneTaskProjection(checkpointTaskProjection)
+    : initialTaskProjection
+      ? cloneTaskProjection(initialTaskProjection)
+      : createEmptyTaskStateProjection();
   let planningProjection = initialPlanningProjection
     ? clonePlanningProjection(initialPlanningProjection)
     : createEmptyPlanningStateProjection();
@@ -135,6 +140,9 @@ function buildProjections(
   });
 
   for (const event of ordered) {
+    if (checkpointTaskProjection && isTaskStateEvent(event)) {
+      continue;
+    }
     if (isTaskStateEvent(event)) {
       const applied = applyTaskStateEvent(taskProjection, event);
       if (!applied.ok) {
@@ -354,7 +362,8 @@ export function admitCanonicalStateEvent(
   const projectionResult = buildProjections(
     priorEvents,
     context.initialTaskProjection,
-    context.initialPlanningProjection
+    context.initialPlanningProjection,
+    context.checkpointTaskProjection
   );
   if (!projectionResult.ok) {
     return projectionResult;
@@ -451,7 +460,8 @@ export function admitCanonicalStateEventStream(
     const result = admitCanonicalStateEvent(input, {
       priorEvents: admitted,
       initialTaskProjection: options?.initialTaskProjection,
-      initialPlanningProjection: options?.initialPlanningProjection
+      initialPlanningProjection: options?.initialPlanningProjection,
+      checkpointTaskProjection: options?.checkpointTaskProjection
     });
     if (!result.ok) {
       return result;

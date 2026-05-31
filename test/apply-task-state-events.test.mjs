@@ -97,3 +97,22 @@ test("apply-task-state-events applies tail in order and bumps projection once", 
     db.close();
   }
 });
+
+test("apply-task-state-events no-ops for snapshot-seeded log that fails standalone replay", async () => {
+  const stream = JSON.parse(fs.readFileSync(path.join(fixturesDir, "replay-stream-lifecycle.v1.json"), "utf8"));
+  const { workspace, logAbs } = await setupWorkspaceWithLog(stream);
+  const ctx = { workspacePath: workspace, config: {} };
+
+  const rebuild = await runRebuildTaskStateCache(ctx, {});
+  assert.equal(rebuild.ok, true);
+  assert.equal(rebuild.data.appliedSequence, 4);
+
+  const snapshotSeededLog = stream.slice(1);
+  await writeFile(logAbs, `${snapshotSeededLog.map((e) => JSON.stringify(e)).join("\n")}\n`, "utf8");
+
+  const apply = await runApplyTaskStateEvents(ctx, {});
+  assert.equal(apply.ok, true);
+  assert.equal(apply.code, "task-state-events-already-current");
+  assert.equal(apply.data.appliedSequence, 4);
+  assert.equal(apply.data.logMaxSequence, 4);
+});

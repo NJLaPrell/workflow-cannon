@@ -6,6 +6,8 @@ import {
   finalizeCanonicalCreateTask,
   finalizeCanonicalUpdateTask
 } from "../persistence/task-state-canonical-mutation-hook.js";
+import { commitCanonicalTaskStateEvents } from "../persistence/task-state-canonical-commit.js";
+import { draftCreatedTaskEvents } from "../persistence/task-state-event-draft.js";
 import { attachPolicyMeta } from "../attach-planning-response-meta.js";
 import { collectUnknownFeatureSlugWarnings } from "../feature-slug-validation.js";
 import {
@@ -832,6 +834,34 @@ export async function runTaskRowMutationCommands(
     const strictAfter = strictValidationError(store, ctx.effectiveConfig as Record<string, unknown> | undefined);
     if (strictAfter) {
       return { ok: false, code: "strict-task-validation-failed", message: strictAfter };
+    }
+
+    // Git-canonical workspaces: publish task.created events (same as apply-task-batch).
+    // Without this, hydrate/git-pull rebuilds SQLite from the branch and drops sqlite-only rows.
+    if (isGitTaskStateCanonicalAuthority(ctx)) {
+      const draftCtx = {
+        commandName: "persist-planning-execution-drafts",
+        moduleId: "task-engine",
+        actorId: actor
+      };
+      const events = built.flatMap((t) =>
+        draftCreatedTaskEvents(t, {
+          ...draftCtx,
+          clientMutationId: bulkClientMutationId ? `${bulkClientMutationId}::${t.id}` : undefined,
+          phaseKey: t.phaseKey
+        })
+      );
+      const canonical = await commitCanonicalTaskStateEvents({
+        ctx,
+        store,
+        planning,
+        events,
+        policyApproval: args.policyApproval as { confirmed: boolean; rationale: string } | undefined
+      });
+      if (canonical && !canonical.ok) {
+        return canonical;
+      }
+      await store.load();
     }
 
     const outData: Record<string, unknown> = { createdTasks: built, count: built.length };

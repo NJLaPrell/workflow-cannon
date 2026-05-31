@@ -847,13 +847,18 @@ export class CommandClient {
   /**
    * First dashboard paint only — bypasses refresh/mutation lane backlog and refresh pause
    * so task-state sync on activate cannot block the webview past the startup timeout.
+   * When `bootstrap` is false, refresh pause is honored (queue rollup upgrades defer during mutations).
    */
   async runForDashboardPaint(
     commandName: string,
-    args: Record<string, unknown>
+    args: Record<string, unknown>,
+    options?: { bootstrap?: boolean }
   ): Promise<KitRunResult> {
     if (!isKitRefreshRunCommand(commandName)) {
       return this.run(commandName, args);
+    }
+    if (this.refreshPaused && options?.bootstrap !== true) {
+      return kitRefreshPausedResult();
     }
     return this.runOnce(commandName, args);
   }
