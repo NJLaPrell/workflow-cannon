@@ -10,7 +10,7 @@ type SqliteDatabase = InstanceType<typeof Database>;
  */
 
 /** Bump and add a migration step in `migrateKitSqliteSchema` when DDL changes. Exposed for doctor / list-module-states. */
-export const KIT_SQLITE_USER_VERSION = 30;
+export const KIT_SQLITE_USER_VERSION = 32;
 
 export const TASK_ENGINE_TASKS_TABLE = "task_engine_tasks";
 export const TASK_ENGINE_DEPENDENCIES_TABLE = "task_engine_dependencies";
@@ -1142,6 +1142,53 @@ CREATE INDEX idx_workflow_ideas_linked_plan_artifact ON workflow_ideas(linked_pl
 }
 
 /** Canonical event outbox for local-first git-event-log sync (Phase 123 / T100603). */
+
+/** AgentDefinition v1 bridge columns on kit_subagent_definitions (Phase 127 / T100640). */
+function migrateV30ToV31(db: SqliteDatabase): void {
+  if (!tableExists(db, "kit_subagent_definitions")) {
+    return;
+  }
+  const cols = columnNames(db, "kit_subagent_definitions");
+  const add = (name: string, ddl: string): void => {
+    if (!cols.has(name)) {
+      db.exec(`ALTER TABLE kit_subagent_definitions ADD COLUMN ${ddl}`);
+    }
+  };
+  add("role", "role TEXT");
+  add("host_compatibility_json", "host_compatibility_json TEXT");
+  add("required_capabilities_json", "required_capabilities_json TEXT");
+  add("optional_capabilities_json", "optional_capabilities_json TEXT");
+  add("access_profile_id", "access_profile_id TEXT");
+  add("context_profile_id", "context_profile_id TEXT");
+  add("model_profile_id", "model_profile_id TEXT");
+  add("handoff_contract_id", "handoff_contract_id TEXT");
+  add("activity_contract_id", "activity_contract_id TEXT");
+  add("definition_version", "definition_version INTEGER");
+}
+
+/** Activity v1 linkage columns on kit_agent_activity_leases (Phase 127 / T100649). */
+function migrateV31ToV32(db: SqliteDatabase): void {
+  if (!tableExists(db, "kit_agent_activity_leases")) {
+    return;
+  }
+  const cols = columnNames(db, "kit_agent_activity_leases");
+  const add = (name: string, ddl: string): void => {
+    if (!cols.has(name)) {
+      db.exec(`ALTER TABLE kit_agent_activity_leases ADD COLUMN ${ddl}`);
+    }
+  };
+  add("agent_definition_id", "agent_definition_id TEXT");
+  add("assignment_id", "assignment_id TEXT");
+  add("current_step", "current_step TEXT");
+  add("host_hint", "host_hint TEXT");
+  add("model_tier", "model_tier TEXT");
+  add("model_hint", "model_hint TEXT");
+  db.exec(`
+CREATE INDEX IF NOT EXISTS idx_kit_agent_activity_leases_assignment
+  ON kit_agent_activity_leases(assignment_id);
+`);
+}
+
 function migrateV29ToV30(db: SqliteDatabase): void {
   if (tableExists(db, KIT_CANONICAL_EVENT_OUTBOX_TABLE)) {
     return;
@@ -1335,6 +1382,16 @@ function migrateKitSqliteSchema(db: SqliteDatabase): void {
     migrateV29ToV30(db);
     db.pragma("user_version = 30");
     current = 30;
+  }
+  if (current < 31) {
+    migrateV30ToV31(db);
+    db.pragma("user_version = 31");
+    current = 31;
+  }
+  if (current < 32) {
+    migrateV31ToV32(db);
+    db.pragma("user_version = 32");
+    current = 32;
   }
 }
 

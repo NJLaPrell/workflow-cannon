@@ -11,7 +11,7 @@ import {
 
 const DEFAULT_AGENT_ID = "workflow-cannon";
 const DEFAULT_SESSION_ID = "default";
-const DEFAULT_TTL_SECONDS = 10 * 60;
+const DEFAULT_TTL_SECONDS = 90;
 
 export type AgentActivityIdentityInput = {
   activityId?: unknown;
@@ -22,6 +22,12 @@ export type AgentActivityIdentityInput = {
 export type RecordAgentActivityInput = AgentActivityIdentityInput & {
   kind: DashboardAgentStatusKind;
   label?: string | null;
+  agentDefinitionId?: string | null;
+  assignmentId?: string | null;
+  currentStep?: string | null;
+  hostHint?: string | null;
+  modelTier?: string | null;
+  modelHint?: string | null;
   taskId?: string | null;
   command?: string | null;
   phaseKey?: string | null;
@@ -184,6 +190,12 @@ export function recordAgentActivity(
     label,
     now,
     expiresAt,
+    agentDefinitionId: cleanText(input.agentDefinitionId) || null,
+    assignmentId: cleanText(input.assignmentId) || null,
+    currentStep: cleanText(input.currentStep) || null,
+    hostHint: cleanText(input.hostHint) || null,
+    modelTier: cleanText(input.modelTier) || null,
+    modelHint: cleanText(input.modelHint) || null,
     taskId: cleanText(input.taskId) || null,
     command: cleanText(input.command) || null,
     phaseKey: cleanText(input.phaseKey) || null,
