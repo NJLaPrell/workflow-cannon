@@ -1,7 +1,7 @@
 {
   "ok": true,
   "code": "run-args-schema",
-  "command": "task-sync-init",
+  "command": "task-state-init",
   "schema": {
     "type": "object",
     "properties": {
@@ -32,12 +32,12 @@
   "examples": [
     {
       "description": "Minimal argv example",
-      "argv": "workspace-kit run task-sync-init '{}'"
+      "argv": "workspace-kit run task-state-init '{}'"
     }
   ],
-  "instructionPath": "src/modules/task-engine/instructions/task-sync-init.md",
+  "instructionPath": "src/modules/task-engine/instructions/task-state-init.md",
   "moduleId": "task-engine",
-  "description": "Bootstrap workflow-cannon/task-state from SQLite: manifest, snapshot, event segment; refuses overwrite unless approved.",
+  "description": "Recovery alias for task-sync-init (legacy git-oriented CLI name).",
   "policy": {
     "sensitivity": "sensitive",
     "operationId": "tasks.task-state-init",
@@ -58,5 +58,5 @@
     "listCommands": "pnpm exec wk run --list-commands",
     "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
   },
-  "invocationId": "9bd7c78c-03dd-411d-ad94-aff8800e5d84"
+  "invocationId": "9356eeb0-e0a5-4fd9-92a6-4c581da8e1b1"
 }

@@ -3,11 +3,9 @@
   "code": "run-args-schema",
   "command": "dashboard-service-status",
   "schema": {
-    "type": "object",
-    "additionalProperties": true,
-    "description": "Permissive fallback args schema for 'dashboard-service-status'. Use instructionPath for command-specific field guidance until a stricter schema is added."
+    "type": "object"
   },
-  "schemaSource": "manifest-permissive-fallback",
+  "schemaSource": "pilot-run-args-snapshot",
   "sampleArgs": {},
   "examples": [
     {
@@ -38,5 +36,5 @@
     "listCommands": "pnpm exec wk run --list-commands",
     "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
   },
-  "invocationId": "da051f64-6ea9-42e3-a2ab-e12e6888708f"
+  "invocationId": "6805aeb7-2c65-48e8-9afe-e0ddd42134ad"
 }
