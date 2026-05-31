@@ -240,5 +240,22 @@ export {
   type RuntimeVerificationResult,
   type WorkspaceKitRuntimeStampV1
 } from "./runtime-contract.js";
+export {
+  ORCHESTRATION_VALIDATION_CODES,
+  validateAgentActivityV1,
+  validateAgentDefinitionV1,
+  validateAgentSessionV1,
+  validateAssignmentMetadataV1,
+  validateHandoffV2,
+  type AgentActivityValidationResult,
+  type AgentDefinitionValidationResult,
+  type AgentSessionValidationResult,
+  type AssignmentMetadataValidationResult,
+  type HandoffV2ValidationResult,
+  type OrchestrationValidationCode,
+  type OrchestrationValidationIssue,
+  type OrchestrationValidationOptions,
+  type OrchestrationValidationResult
+} from "./validation/agent-orchestration/index.js";
 
 export type CoreRuntimeVersion = "0.1";
