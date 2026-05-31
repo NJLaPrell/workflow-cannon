@@ -1,0 +1,23 @@
+{
+  "activityId": "current:phase-127-delivery-worker:default",
+  "agentId": "phase-127-delivery-worker",
+  "agentDefinitionId": "task-worker",
+  "sessionId": "session-wkr12701",
+  "assignmentId": "A-phase127-T100639",
+  "taskId": "T100639",
+  "phaseKey": "127",
+  "kind": "blocked",
+  "label": "Blocked on T100638 validators",
+  "currentStep": "Waiting for phase branch merge",
+  "command": "pnpm exec wk run get-task",
+  "hostHint": "cursor",
+  "modelTier": "balanced",
+  "modelHint": "gpt-5.5-high",
+  "startedAt": "2026-05-31T15:55:00.000Z",
+  "updatedAt": "2026-05-31T15:58:30.000Z",
+  "expiresAt": "2026-05-31T16:00:00.000Z",
+  "details": {
+    "blockerTaskId": "T100638",
+    "blockerSummary": "Runtime validators must land on release/phase-127 before fixture tests pass."
+  }
+}

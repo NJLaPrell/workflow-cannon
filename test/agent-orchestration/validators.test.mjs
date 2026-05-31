@@ -1,5 +1,6 @@
 /**
  * Runtime validators for agent orchestration contracts (T100638 / T-AO-120).
+ * Golden fixtures catalog (T100639 / T-AO-130).
  */
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -21,39 +22,63 @@ function loadFixture(relativePath) {
   return JSON.parse(fs.readFileSync(path.join(fixturesRoot, relativePath), "utf8"));
 }
 
+/** @returns {string[]} paths relative to fixturesRoot */
+function listGoldenFixtureJson() {
+  const out = [];
+  function walk(dir, prefix = "") {
+    for (const name of fs.readdirSync(dir).sort()) {
+      const full = path.join(dir, name);
+      const rel = prefix ? `${prefix}/${name}` : name;
+      if (fs.statSync(full).isDirectory()) {
+        walk(full, rel);
+        continue;
+      }
+      if (name.endsWith(".json")) {
+        out.push(rel);
+      }
+    }
+  }
+  walk(fixturesRoot);
+  return out;
+}
+
+function validateGoldenFixture(relativePath, payload) {
+  const base = path.basename(relativePath);
+  if (base.startsWith("agent-definition-")) {
+    return validateAgentDefinitionV1(payload);
+  }
+  if (base.startsWith("agent-session-")) {
+    return validateAgentSessionV1(payload);
+  }
+  if (base.startsWith("assignment-metadata-")) {
+    return validateAssignmentMetadataV1(payload);
+  }
+  if (base.startsWith("agent-activity-")) {
+    return validateAgentActivityV1(payload);
+  }
+  if (base.startsWith("handoff-") && base.endsWith(".v2.json")) {
+    return validateHandoffV2(payload);
+  }
+  return null;
+}
+
 describe("agent orchestration validators — golden fixtures", () => {
-  it("accepts AgentDefinition fixtures", () => {
-    for (const file of [
-      "agent-definition-task-worker.v1.json",
-      "agent-definition-orchestration-agent.v1.json"
-    ]) {
-      const payload = loadFixture(file);
-      const result = validateAgentDefinitionV1(payload);
-      assert.equal(result.ok, true, `${file}: ${JSON.stringify(result)}`);
+  it("accepts every committed golden JSON under fixtures/agent-orchestration", () => {
+    const files = listGoldenFixtureJson();
+    assert.ok(files.length >= 18, `expected canonical fixture set, got ${files.length}`);
+    for (const relativePath of files) {
+      const payload = loadFixture(relativePath);
+      const result = validateGoldenFixture(relativePath, payload);
+      assert.notEqual(result, null, `no validator mapping for ${relativePath}`);
+      assert.equal(result.ok, true, `${relativePath}: ${JSON.stringify(result)}`);
     }
   });
 
-  it("accepts AgentSession fixture", () => {
-    const result = validateAgentSessionV1(loadFixture("agent-session-task-worker.v1.json"));
-    assert.equal(result.ok, true);
-  });
-
-  it("accepts assignment metadata fixture", () => {
-    const result = validateAssignmentMetadataV1(loadFixture("assignment-metadata-task-worker.v1.json"));
-    assert.equal(result.ok, true);
-  });
-
-  it("accepts AgentActivity fixture", () => {
-    const result = validateAgentActivityV1(loadFixture("agent-activity-working-task.v1.json"));
-    assert.equal(result.ok, true);
-  });
-
-  it("accepts Handoff v2 fixtures", () => {
-    const dir = path.join(fixturesRoot, "handoff-v2");
-    for (const file of fs.readdirSync(dir).filter((f) => f.endsWith(".json"))) {
-      const result = validateHandoffV2(loadFixture(path.join("handoff-v2", file)));
-      assert.equal(result.ok, true, `${file}: ${JSON.stringify(result)}`);
-    }
+  it("documents fixture catalog in README", () => {
+    const readme = fs.readFileSync(path.join(fixturesRoot, "README.md"), "utf8");
+    assert.match(readme, /agent-definition-orchestration-agent/);
+    assert.match(readme, /handoff-v2/);
+    assert.match(readme, /validators\.test\.mjs/);
   });
 });
 

@@ -1,0 +1,16 @@
+{
+  "sessionId": "session-orc12701",
+  "agentDefinitionId": "orchestration-agent",
+  "agentId": "phase-127-orchestrator",
+  "hostHint": "cursor",
+  "hostSessionRef": "cursor-tab-orc127",
+  "status": "active",
+  "modelTier": "high_reasoning",
+  "modelHint": "gpt-5.5-high",
+  "currentAssignmentId": "A-phase127-T100639",
+  "currentTaskId": "T100639",
+  "currentActivityId": "current:phase-127-orchestrator:default",
+  "startedAt": "2026-05-31T15:58:00.000Z",
+  "updatedAt": "2026-05-31T15:59:00.000Z",
+  "metadata": {}
+}
