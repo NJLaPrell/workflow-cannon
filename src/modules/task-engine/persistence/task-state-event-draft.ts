@@ -197,7 +197,10 @@ export function draftCreatedTaskEvents(
     changedFields,
     values
   };
-  return [created, draftEnvelope("task.updated", payload, ctx, 1)];
+  // Rich-create follow-up is not independently idempotent; sharing clientMutationId
+  // with task.created trips duplicate-idempotency-key during canonical publish.
+  const { clientMutationId: _omitIdempotency, ...ctxWithoutIdempotency } = ctx;
+  return [created, draftEnvelope("task.updated", payload, ctxWithoutIdempotency, 1)];
 }
 
 export function draftUpdatedEvent(

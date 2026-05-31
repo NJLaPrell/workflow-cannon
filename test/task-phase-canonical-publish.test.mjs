@@ -290,3 +290,53 @@ test("persist-planning-execution-drafts publishes task.created events that survi
   assert.equal(got.data.task.title, "Persisted canonical batch row");
   assert.equal(got.data.task.phaseKey, "119");
 });
+
+test("persist-planning-execution-drafts with clientMutationId publishes rich creates", async () => {
+  const { canonicalCtx } = await seedCanonicalWorkspace();
+  const lt = await taskEngineModule.onCommand({ name: "list-tasks", args: {} }, canonicalCtx);
+  assert.equal(lt.ok, true, lt.message);
+
+  const clientMutationId = `persist-rich-${Date.now()}`;
+  const persisted = await taskEngineModule.onCommand(
+    {
+      name: "persist-planning-execution-drafts",
+      args: {
+        tasks: [
+          {
+            id: "T780",
+            title: "Rich persist with bulk idempotency",
+            type: "workspace-kit",
+            status: "ready",
+            phaseKey: "119",
+            phase: "Phase 119",
+            approach: "Bulk clientMutationId must not duplicate across created+updated events",
+            technicalScope: ["persist-planning-execution-drafts"],
+            acceptanceCriteria: ["canonical publish succeeds"]
+          }
+        ],
+        clientMutationId,
+        expectedPlanningGeneration: lt.data.planningGeneration,
+        policyApproval: { confirmed: true, rationale: "persist rich create idempotency regression" }
+      }
+    },
+    canonicalCtx
+  );
+  assert.equal(persisted.ok, true, persisted.message);
+  assert.equal(persisted.code, "planning-execution-drafts-persisted");
+
+  const hydrate = await taskEngineModule.onCommand(
+    {
+      name: "task-state-hydrate",
+      args: {
+        fetch: false,
+        policyApproval: { confirmed: true, rationale: "verify rich persist survives hydrate" }
+      }
+    },
+    canonicalCtx
+  );
+  assert.equal(hydrate.ok, true, hydrate.message);
+
+  const got = await taskEngineModule.onCommand({ name: "get-task", args: { taskId: "T780" } }, canonicalCtx);
+  assert.equal(got.ok, true, got.message);
+  assert.equal(got.data.task.approach, "Bulk clientMutationId must not duplicate across created+updated events");
+});
