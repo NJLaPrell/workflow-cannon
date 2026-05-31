@@ -64,12 +64,8 @@ export const DASHBOARD_SLICE_REGISTRY: readonly DashboardSliceDescriptor[] = [
         "humanGatesSummary",
         "approvalQueue",
         "taskStateProjection",
-        "readyQueueCount",
-        "readyQueueBreakdown",
-        "blockedSummary",
-        "completedSummary",
-        "cancelledSummary",
-        "dependencyOverview",
+        // Queue rollups are owned by the `queue` slice (`projection: "queue"`). Overview
+        // projection intentionally zeros these — merging them clobbers hydrated task data.
         "currentPhaseDelivery",
         "deliveredPhaseKeys",
         "rolledOutPhaseKeys",
