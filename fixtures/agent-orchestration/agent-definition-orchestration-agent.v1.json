@@ -1,0 +1,34 @@
+{
+  "agentDefinitionId": "orchestration-agent",
+  "displayName": "Orchestration Agent",
+  "description": "Plans, assigns, monitors, reconciles, and optimizes multi-agent work.",
+  "role": "orchestrator",
+  "hostCompatibility": ["cursor", "vscode", "cli", "manual"],
+  "requiredCapabilities": [
+    "read_context",
+    "receive_assignment",
+    "submit_handoff",
+    "report_activity",
+    "write_task_state"
+  ],
+  "optionalCapabilities": ["record_subagent_session", "spawn_subagents", "open_pr"],
+  "allowedCommands": [
+    "set-agent-activity",
+    "register-assignment",
+    "block-assignment",
+    "cancel-assignment",
+    "reconcile-assignment",
+    "list-assignments",
+    "list-subagents",
+    "spawn-subagent",
+    "message-subagent"
+  ],
+  "accessProfileId": "orchestrator_access_v1",
+  "contextProfileId": "orchestrator_context_v1",
+  "modelProfileId": "high_reasoning_or_balanced_v1",
+  "handoffContractId": "orchestration_handoff_v2",
+  "activityContractId": "agent_activity_v1",
+  "metadata": {},
+  "retired": false,
+  "version": 1
+}

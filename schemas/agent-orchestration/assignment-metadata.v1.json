@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workflow-cannon.dev/schemas/agent-orchestration/assignment-metadata.v1.json",
+  "title": "TeamAssignment structured metadata v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "agentDefinitionId", "contextProfileId", "accessProfileId", "handoffContractId"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "agentDefinitionId": { "type": "string", "minLength": 1 },
+    "agentSessionId": { "type": "string" },
+    "modelTier": {
+      "type": "string",
+      "enum": ["cheap_fast", "balanced", "high_reasoning", "specialist", "human_review"]
+    },
+    "contextProfileId": { "type": "string", "minLength": 1 },
+    "accessProfileId": { "type": "string", "minLength": 1 },
+    "handoffContractId": { "type": "string", "minLength": 1 },
+    "ownedPaths": { "type": "array", "items": { "type": "string" } },
+    "forbiddenPaths": { "type": "array", "items": { "type": "string" } },
+    "sharedPaths": { "type": "array", "items": { "type": "string" } },
+    "requiresApprovalPaths": { "type": "array", "items": { "type": "string" } },
+    "assignmentPromptSummary": { "type": "string" },
+    "blockingPolicy": { "type": "string" },
+    "resources": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "ownedPaths": { "type": "array", "items": { "type": "string" } },
+        "readOnlyPaths": { "type": "array", "items": { "type": "string" } },
+        "sharedPaths": { "type": "array", "items": { "type": "string" } },
+        "forbiddenPaths": { "type": "array", "items": { "type": "string" } },
+        "requiresApprovalPaths": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "lockScope": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "tasks": { "type": "array", "items": { "type": "string", "pattern": "^T[0-9]+$" } },
+        "modules": { "type": "array", "items": { "type": "string" } },
+        "commands": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  }
+}

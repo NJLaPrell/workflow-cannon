@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 2,
+  "assignmentId": "A123",
+  "agentId": "phase-126-delivery-worker",
+  "agentDefinitionId": "task-worker",
+  "status": "blocked",
+  "summary": "Cannot run-transition start: task missing from git-event-log canonical store.",
+  "filesChanged": [],
+  "commandsRun": [
+    {
+      "command": "pnpm exec wk run run-transition",
+      "status": "failed",
+      "summary": "task-state-canonical-publish-failed / task-not-found"
+    }
+  ],
+  "acceptanceCriteria": [],
+  "evidenceRefs": ["task-sync-publish:task.created-backfill"],
+  "blockers": [
+    { "summary": "T100625 sqlite-only after persist-planning-execution-drafts", "taskId": "T100625", "severity": "high" }
+  ],
+  "risks": [
+    {
+      "risk": "task-sync-hydrate may drop sqlite-only rows",
+      "severity": "high",
+      "recommendation": "Publish task.created before transitions; avoid hydrate during delivery."
+    }
+  ],
+  "nextRecommendedAction": "Orchestrator: backfill git-canonical task.created, then resume worker."
+}

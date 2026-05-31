@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "agentDefinitionId": "task-worker",
+  "agentSessionId": "session-abc123",
+  "modelTier": "balanced",
+  "contextProfileId": "task_worker_context_v1",
+  "accessProfileId": "task_worker_strict_v1",
+  "handoffContractId": "implementation_handoff_v2",
+  "ownedPaths": ["AGENT_ORCHESTRATION_CONTRACTS.md", "schemas/agent-orchestration/**", "fixtures/agent-orchestration/**"],
+  "forbiddenPaths": ["extensions/cursor-workflow-cannon/**"],
+  "sharedPaths": [],
+  "requiresApprovalPaths": ["src/contracts/**"],
+  "assignmentPromptSummary": "Draft AGENT_ORCHESTRATION_CONTRACTS.md (A-SCHEMA) with v1 schemas, enums, examples, and malformed-field rules.",
+  "blockingPolicy": "worker_may_open_blocking_task_and_report",
+  "resources": {
+    "ownedPaths": ["AGENT_ORCHESTRATION_CONTRACTS.md", "schemas/agent-orchestration/**", "fixtures/agent-orchestration/**"],
+    "readOnlyPaths": [".ai/**", "AGENT_ORCHESTRATION_FOUNDATION.md", "AGENT_ORCHESTRATION_ARCHITECTURE.md", "AGENT_ORCHESTRATION_INVENTORY.md"],
+    "sharedPaths": [],
+    "forbiddenPaths": ["extensions/cursor-workflow-cannon/**"],
+    "requiresApprovalPaths": ["src/contracts/**"]
+  },
+  "lockScope": {
+    "tasks": ["T100625"],
+    "modules": [],
+    "commands": []
+  }
+}

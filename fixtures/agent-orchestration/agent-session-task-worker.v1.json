@@ -1,0 +1,16 @@
+{
+  "sessionId": "session-abc123",
+  "agentDefinitionId": "task-worker",
+  "agentId": "phase-126-delivery-worker",
+  "hostHint": "cursor",
+  "hostSessionRef": "cursor-tab-abc123",
+  "status": "active",
+  "modelTier": "balanced",
+  "modelHint": "gpt-5.5-high",
+  "currentAssignmentId": "A-phase126-T100625",
+  "currentTaskId": "T100625",
+  "currentActivityId": "current:phase-126-delivery-worker:default",
+  "startedAt": "2026-05-31T08:26:44.738Z",
+  "updatedAt": "2026-05-31T08:28:55.229Z",
+  "metadata": {}
+}

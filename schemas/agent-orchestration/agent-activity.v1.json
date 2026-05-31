@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workflow-cannon.dev/schemas/agent-orchestration/agent-activity.v1.json",
+  "title": "AgentActivity v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["activityId", "agentId", "sessionId", "kind", "label", "updatedAt", "expiresAt"],
+  "properties": {
+    "activityId": { "type": "string", "minLength": 1 },
+    "agentId": { "type": "string", "minLength": 1 },
+    "agentDefinitionId": { "type": "string" },
+    "sessionId": { "type": "string", "minLength": 1 },
+    "assignmentId": { "type": "string" },
+    "taskId": { "type": "string", "pattern": "^T[0-9]+$" },
+    "phaseKey": { "type": "string" },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "unavailable",
+        "planning",
+        "blocked",
+        "working_task",
+        "delegating_task",
+        "ready_task",
+        "awaiting_instruction",
+        "reviewing_item",
+        "reviewing_pr",
+        "validating",
+        "releasing",
+        "awaiting_policy_approval",
+        "awaiting_human_gate"
+      ]
+    },
+    "label": { "type": "string", "minLength": 1 },
+    "currentStep": { "type": "string" },
+    "command": { "type": "string" },
+    "hostHint": { "type": "string" },
+    "modelTier": {
+      "type": "string",
+      "enum": ["cheap_fast", "balanced", "high_reasoning", "specialist", "human_review"]
+    },
+    "modelHint": { "type": "string" },
+    "startedAt": { "type": "string", "format": "date-time" },
+    "updatedAt": { "type": "string", "format": "date-time" },
+    "expiresAt": { "type": "string", "format": "date-time" },
+    "details": { "type": "object", "additionalProperties": true }
+  }
+}
