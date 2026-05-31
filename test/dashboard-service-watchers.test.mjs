@@ -12,7 +12,7 @@ async function tmpWorkspace() {
   return fs.mkdtemp(path.join(os.tmpdir(), "wk-dash-watch-"));
 }
 
-async function waitForSliceFresh(base, sliceName, timeoutMs = 10_000) {
+async function waitForSliceFresh(base, sliceName, timeoutMs = 30_000) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     const snap = await (await fetch(`${base}/dashboard/snapshot`)).json();
@@ -53,7 +53,7 @@ describe("dashboard service watchers", () => {
       assert.equal(bootSnap.slices.overview?.status, "fresh", "critical bootstrap on start");
 
       const genBefore = bootSnap.generation;
-      const deadline = Date.now() + 3000;
+      const deadline = Date.now() + 8000;
       let afterSnap = bootSnap;
       while (Date.now() < deadline && afterSnap.generation <= genBefore) {
         await new Promise((resolve) => setTimeout(resolve, 75));

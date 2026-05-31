@@ -18,8 +18,18 @@ export const KIT_MUTATION_RUN_COMMANDS = new Set([
   "update-workspace-phase-snapshot",
   "update-workspace-status",
   "set-agent-activity",
-  "clear-agent-activity"
+  "clear-agent-activity",
+  "create-idea",
+  "update-idea",
+  "delete-idea",
+  "reorder-ideas"
 ]);
+
+/** Default exec timeout for dashboard refresh reads (ms). */
+export const KIT_REFRESH_RUN_TIMEOUT_MS = 30_000;
+
+/** Default exec timeout for mutation lane commands (git canonical publish can exceed 30s). */
+export const KIT_MUTATION_RUN_TIMEOUT_MS = 90_000;
 
 export type KitRunLane = "mutation" | "refresh";
 
@@ -41,6 +51,13 @@ export function kitRunLaneForCommand(commandName: string): KitRunLane {
 /** Coalesce key for pending refresh jobs (same command → keep newest only). */
 export function kitRefreshCoalesceKey(commandName: string): string {
   return commandName;
+}
+
+/** Per-command child-process timeout for `workspace-kit run` invocations from the extension. */
+export function kitRunTimeoutMsForCommand(commandName: string): number {
+  return kitRunLaneForCommand(commandName) === "mutation"
+    ? KIT_MUTATION_RUN_TIMEOUT_MS
+    : KIT_REFRESH_RUN_TIMEOUT_MS;
 }
 
 export function kitRefreshPausedResult(): {

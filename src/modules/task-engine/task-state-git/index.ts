@@ -63,6 +63,7 @@ export {
   taskIdsTouchedByEvent,
   taskVersionMapFromProjection
 } from "./publish-task-state-events.js";
+export { GIT_EVENT_LOG_BACKEND_ID, GitEventLogBackend, createGitEventLogBackend } from "../sync-backends/git-event-log-backend.js";
 export type {
   PublishTaskStateEventsFailure,
   PublishTaskStateEventsInput,

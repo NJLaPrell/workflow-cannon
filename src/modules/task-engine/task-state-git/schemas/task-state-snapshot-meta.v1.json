@@ -19,7 +19,7 @@
     "snapshotId": { "type": "string", "minLength": 1, "pattern": "^[a-zA-Z0-9._-]+$" },
     "throughSequence": { "type": "integer", "minimum": 0 },
     "throughEventId": { "type": "string", "minLength": 1 },
-    "recordedAt": { "type": "string", "format": "date-time" },
+    "recordedAt": { "type": "string", "minLength": 20, "maxLength": 64 },
     "contentPath": { "type": "string", "minLength": 1 },
     "contentDigest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
     "taskCount": { "type": "integer", "minimum": 0 }

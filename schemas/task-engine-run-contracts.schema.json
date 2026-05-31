@@ -16,7 +16,7 @@
       "const": 1
     },
     "packageVersion": {
-      "const": "0.99.22",
+      "const": "0.99.23",
       "description": "Must match package.json version."
     },
     "moduleId": {
@@ -46,15 +46,22 @@
         "backup-planning-sqlite",
         "rebuild-task-state-cache",
         "repair-task-state-cache",
+        "task-sync-status",
+        "task-sync-hydrate",
+        "task-sync-init",
+        "task-sync-publish",
+        "task-sync-snapshot",
+        "task-sync-compact",
+        "planning-state-migrate-baseline",
+        "task-state-migrate-baseline",
+        "task-sync-verify",
         "task-state-status",
         "task-state-hydrate",
         "task-state-init",
+        "task-state-verify",
         "task-state-publish",
         "task-state-snapshot",
         "task-state-compact",
-        "planning-state-migrate-baseline",
-        "task-state-migrate-baseline",
-        "task-state-verify",
         "batch-transition",
         "block-task",
         "check-task-store-commit",
@@ -209,6 +216,33 @@
         "repair-task-state-cache": {
           "$ref": "#/$defs/contractRepairTaskStateCache"
         },
+        "task-sync-status": {
+          "$ref": "#/$defs/contractTaskStateStatus"
+        },
+        "task-sync-hydrate": {
+          "$ref": "#/$defs/contractTaskStateHydrate"
+        },
+        "task-sync-init": {
+          "$ref": "#/$defs/contractTaskStateInit"
+        },
+        "task-sync-publish": {
+          "$ref": "#/$defs/contractTaskStatePublish"
+        },
+        "task-sync-snapshot": {
+          "$ref": "#/$defs/contractTaskStateSnapshot"
+        },
+        "task-sync-compact": {
+          "$ref": "#/$defs/contractTaskStateCompact"
+        },
+        "planning-state-migrate-baseline": {
+          "$ref": "#/$defs/contractTaskStateMigrateBaseline"
+        },
+        "task-state-migrate-baseline": {
+          "$ref": "#/$defs/contractTaskStateMigrateBaseline"
+        },
+        "task-sync-verify": {
+          "$ref": "#/$defs/contractTaskStateStatus"
+        },
         "task-state-status": {
           "$ref": "#/$defs/contractTaskStateStatus"
         },
@@ -218,6 +252,9 @@
         "task-state-init": {
           "$ref": "#/$defs/contractTaskStateInit"
         },
+        "task-state-verify": {
+          "$ref": "#/$defs/contractTaskStateStatus"
+        },
         "task-state-publish": {
           "$ref": "#/$defs/contractTaskStatePublish"
         },
@@ -226,15 +263,6 @@
         },
         "task-state-compact": {
           "$ref": "#/$defs/contractTaskStateCompact"
-        },
-        "planning-state-migrate-baseline": {
-          "$ref": "#/$defs/contractTaskStateMigrateBaseline"
-        },
-        "task-state-migrate-baseline": {
-          "$ref": "#/$defs/contractTaskStateMigrateBaseline"
-        },
-        "task-state-verify": {
-          "$ref": "#/$defs/contractTaskStateStatus"
         },
         "batch-transition": {
           "$ref": "#/$defs/contractBatchTransition"
@@ -535,15 +563,41 @@
       ],
       "additionalProperties": false,
       "properties": {
-        "planId": { "type": "string", "minLength": 1 },
-        "planRef": { "type": "string", "minLength": 1 },
-        "version": { "type": "integer", "minimum": 1 },
-        "status": { "type": "string", "minLength": 1 },
-        "title": { "type": "string", "minLength": 1 },
-        "planningType": { "type": "string", "minLength": 1 },
-        "updatedAt": { "type": "string" },
-        "wbsRowCount": { "type": "integer", "minimum": 0 },
-        "openQuestionCount": { "type": "integer", "minimum": 0 }
+        "planId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "planRef": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "status": {
+          "type": "string",
+          "minLength": 1
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "planningType": {
+          "type": "string",
+          "minLength": 1
+        },
+        "updatedAt": {
+          "type": "string"
+        },
+        "wbsRowCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "openQuestionCount": {
+          "type": "integer",
+          "minimum": 0
+        }
       }
     },
     "contractAgentMutationPlan": {
@@ -3248,20 +3302,34 @@
     },
     "contractRepairTaskStateCache": {
       "allOf": [
-        { "$ref": "#/$defs/contractBase" },
+        {
+          "$ref": "#/$defs/contractBase"
+        },
         {
           "properties": {
             "args": {
               "type": "object",
               "additionalProperties": true,
               "properties": {
-                "dryRun": { "type": "boolean" },
-                "autoRebuild": { "type": "boolean" },
-                "eventLogRelativePath": { "type": "string" },
-                "policyApproval": { "type": "object", "additionalProperties": true }
+                "dryRun": {
+                  "type": "boolean"
+                },
+                "autoRebuild": {
+                  "type": "boolean"
+                },
+                "eventLogRelativePath": {
+                  "type": "string"
+                },
+                "policyApproval": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
               }
             },
-            "responseData": { "type": "object", "additionalProperties": true }
+            "responseData": {
+              "type": "object",
+              "additionalProperties": true
+            }
           }
         }
       ]
@@ -3277,9 +3345,16 @@
               "type": "object",
               "additionalProperties": true,
               "properties": {
-                "dryRun": { "type": "boolean" },
-                "eventLogRelativePath": { "type": "string" },
-                "policyApproval": { "type": "object", "additionalProperties": true }
+                "dryRun": {
+                  "type": "boolean"
+                },
+                "eventLogRelativePath": {
+                  "type": "string"
+                },
+                "policyApproval": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
               }
             },
             "responseData": {
@@ -3344,25 +3419,38 @@
     },
     "contractTaskStateStatus": {
       "allOf": [
-        { "$ref": "#/$defs/contractBase" },
+        {
+          "$ref": "#/$defs/contractBase"
+        },
         {
           "properties": {
             "args": {
               "type": "object",
               "additionalProperties": true,
               "properties": {
-                "fetch": { "type": "boolean" },
-                "branch": { "type": "string" }
+                "fetch": {
+                  "type": "boolean"
+                },
+                "branch": {
+                  "type": "string"
+                }
               }
             },
             "responseData": {
               "type": "object",
               "additionalProperties": true,
               "properties": {
-                "schemaVersion": { "const": 1 },
+                "schemaVersion": {
+                  "const": 1
+                },
                 "syncState": {
                   "type": "string",
-                  "enum": ["current", "behind", "missing", "conflict"]
+                  "enum": [
+                    "current",
+                    "behind",
+                    "missing",
+                    "conflict"
+                  ]
                 }
               }
             }
@@ -3372,18 +3460,31 @@
     },
     "contractTaskStateHydrate": {
       "allOf": [
-        { "$ref": "#/$defs/contractBase" },
+        {
+          "$ref": "#/$defs/contractBase"
+        },
         {
           "properties": {
             "args": {
               "type": "object",
               "additionalProperties": true,
               "properties": {
-                "dryRun": { "type": "boolean" },
-                "fetch": { "type": "boolean" },
-                "branch": { "type": "string" },
-                "eventLogRelativePath": { "type": "string" },
-                "policyApproval": { "type": "object", "additionalProperties": true }
+                "dryRun": {
+                  "type": "boolean"
+                },
+                "fetch": {
+                  "type": "boolean"
+                },
+                "branch": {
+                  "type": "string"
+                },
+                "eventLogRelativePath": {
+                  "type": "string"
+                },
+                "policyApproval": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
               }
             },
             "responseData": {
@@ -3396,19 +3497,34 @@
     },
     "contractTaskStateInit": {
       "allOf": [
-        { "$ref": "#/$defs/contractBase" },
+        {
+          "$ref": "#/$defs/contractBase"
+        },
         {
           "properties": {
             "args": {
               "type": "object",
               "additionalProperties": true,
               "properties": {
-                "dryRun": { "type": "boolean" },
-                "overwriteExisting": { "type": "boolean" },
-                "push": { "type": "boolean" },
-                "branch": { "type": "string" },
-                "snapshotId": { "type": "string" },
-                "policyApproval": { "type": "object", "additionalProperties": true }
+                "dryRun": {
+                  "type": "boolean"
+                },
+                "overwriteExisting": {
+                  "type": "boolean"
+                },
+                "push": {
+                  "type": "boolean"
+                },
+                "branch": {
+                  "type": "string"
+                },
+                "snapshotId": {
+                  "type": "string"
+                },
+                "policyApproval": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
               }
             },
             "responseData": {
@@ -3421,68 +3537,117 @@
     },
     "contractTaskStateSnapshot": {
       "allOf": [
-        { "$ref": "#/$defs/contractBase" },
+        {
+          "$ref": "#/$defs/contractBase"
+        },
         {
           "properties": {
             "args": {
               "type": "object",
               "additionalProperties": true,
               "properties": {
-                "dryRun": { "type": "boolean" },
-                "branch": { "type": "string" },
-                "snapshotId": { "type": "string" },
-                "policyApproval": { "type": "object", "additionalProperties": true }
+                "dryRun": {
+                  "type": "boolean"
+                },
+                "branch": {
+                  "type": "string"
+                },
+                "snapshotId": {
+                  "type": "string"
+                },
+                "policyApproval": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
               }
             },
-            "responseData": { "type": "object", "additionalProperties": true }
+            "responseData": {
+              "type": "object",
+              "additionalProperties": true
+            }
           }
         }
       ]
     },
     "contractTaskStateCompact": {
       "allOf": [
-        { "$ref": "#/$defs/contractBase" },
+        {
+          "$ref": "#/$defs/contractBase"
+        },
         {
           "properties": {
             "args": {
               "type": "object",
               "additionalProperties": true,
               "properties": {
-                "dryRun": { "type": "boolean" },
-                "branch": { "type": "string" }
+                "dryRun": {
+                  "type": "boolean"
+                },
+                "branch": {
+                  "type": "string"
+                }
               }
             },
-            "responseData": { "type": "object", "additionalProperties": true }
+            "responseData": {
+              "type": "object",
+              "additionalProperties": true
+            }
           }
         }
       ]
     },
     "contractTaskStateMigrateBaseline": {
       "allOf": [
-        { "$ref": "#/$defs/contractTaskStateInit" }
+        {
+          "$ref": "#/$defs/contractTaskStateInit"
+        }
       ]
     },
     "contractTaskStatePublish": {
       "allOf": [
-        { "$ref": "#/$defs/contractBase" },
+        {
+          "$ref": "#/$defs/contractBase"
+        },
         {
           "properties": {
             "args": {
               "type": "object",
               "additionalProperties": true,
-              "required": ["events", "expectedHeadSha", "expectedTaskVersions"],
+              "required": [
+                "events",
+                "expectedHeadSha",
+                "expectedTaskVersions"
+              ],
               "properties": {
-                "dryRun": { "type": "boolean" },
-                "events": { "type": "array", "minItems": 1 },
-                "expectedHeadSha": { "type": "string" },
+                "dryRun": {
+                  "type": "boolean"
+                },
+                "events": {
+                  "type": "array",
+                  "minItems": 1
+                },
+                "expectedHeadSha": {
+                  "type": "string"
+                },
                 "expectedTaskVersions": {
                   "type": "object",
-                  "additionalProperties": { "type": "integer" }
+                  "additionalProperties": {
+                    "type": "integer"
+                  }
                 },
-                "branch": { "type": "string" },
-                "maxAttempts": { "type": "integer" },
-                "push": { "type": "boolean" },
-                "policyApproval": { "type": "object", "additionalProperties": true }
+                "branch": {
+                  "type": "string"
+                },
+                "maxAttempts": {
+                  "type": "integer"
+                },
+                "push": {
+                  "type": "boolean"
+                },
+                "policyApproval": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
               }
             },
             "responseData": {

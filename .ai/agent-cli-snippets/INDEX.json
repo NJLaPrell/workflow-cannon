@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-05-30T03:06:55.096Z",
+  "generatedAt": "2026-05-31T00:00:14.319Z",
   "commands": [
     {
       "name": "accept-improvement",
@@ -1125,6 +1125,41 @@
     {
       "name": "task-state-verify",
       "path": ".ai/agent-cli-snippets/by-command/task-state-verify.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "task-sync-compact",
+      "path": ".ai/agent-cli-snippets/by-command/task-sync-compact.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "task-sync-hydrate",
+      "path": ".ai/agent-cli-snippets/by-command/task-sync-hydrate.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "task-sync-init",
+      "path": ".ai/agent-cli-snippets/by-command/task-sync-init.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "task-sync-publish",
+      "path": ".ai/agent-cli-snippets/by-command/task-sync-publish.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "task-sync-snapshot",
+      "path": ".ai/agent-cli-snippets/by-command/task-sync-snapshot.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "task-sync-status",
+      "path": ".ai/agent-cli-snippets/by-command/task-sync-status.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "task-sync-verify",
+      "path": ".ai/agent-cli-snippets/by-command/task-sync-verify.json",
       "moduleId": "task-engine"
     },
     {

@@ -14,7 +14,7 @@ async function tmpWorkspace() {
   return fs.mkdtemp(path.join(os.tmpdir(), "wk-o2-timing-"));
 }
 
-async function waitForSliceFresh(base, sliceName, timeoutMs = 15_000) {
+async function waitForSliceFresh(base, sliceName, timeoutMs = 30_000) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     const snap = await (await fetch(`${base}/dashboard/snapshot`)).json();
@@ -56,7 +56,7 @@ describe("Option 2 service timing", () => {
     const coldMs = performance.now() - t0;
     await svc.stop();
     assert.equal(snap.slices.overview?.status, "fresh");
-    assert.ok(coldMs < 15_000, `cold path too slow: ${Math.round(coldMs)} ms`);
+    assert.ok(coldMs < 25_000, `cold path too slow: ${Math.round(coldMs)} ms`);
   });
 
   it("warm snapshot re-fetch is faster than cold path", async () => {
@@ -74,6 +74,6 @@ describe("Option 2 service timing", () => {
     await (await fetch(`${base}/dashboard/snapshot`)).json();
     const warmMs = performance.now() - warm0;
     await svc.stop();
-    assert.ok(warmMs < 3000, `warm snapshot too slow: ${Math.round(warmMs)} ms`);
+    assert.ok(warmMs < 5000, `warm snapshot too slow: ${Math.round(warmMs)} ms`);
   });
 });

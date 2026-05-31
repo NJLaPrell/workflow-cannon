@@ -66,7 +66,7 @@ function readOutboxCounts(taskState: Record<string, unknown>): {
 
 /**
  * Closeout preflight for dashboard service mode: service health, drained outbox,
- * fresh projection, and no conflict rows. CLI task-state-* remains the fallback when
+ * fresh projection, and no conflict rows. CLI task-sync-* remains the fallback when
  * `dashboard.dataSource` is `auto` and the service is not running.
  */
 export async function buildPhaseServiceSyncPreflight(
@@ -145,7 +145,7 @@ export async function buildPhaseServiceSyncPreflight(
         severity: "blocking",
         message: `Canonical event outbox has ${undrained} pending/publishing row(s).`,
         remediation:
-          "Drain the outbox with `task-state-status` / `task-state-publish`, or wait for the dashboard service sync worker; resolve conflicts before closeout.",
+          "Drain the outbox with `task-sync-status` / `task-sync-publish`, or wait for the dashboard service sync worker; resolve conflicts before closeout.",
         details: { outbox }
       });
     }
@@ -158,7 +158,7 @@ export async function buildPhaseServiceSyncPreflight(
         severity: "blocking",
         message: `Local task-state projection is '${localProjection}', not fresh.`,
         remediation:
-          "Run `pnpm exec wk run task-state-hydrate '{\"fetch\":true,\"policyApproval\":{...}}'` or resolve conflicts per `.ai/runbooks/task-state-git-operator.md`.",
+          "Run `pnpm exec wk run task-sync-hydrate '{\"fetch\":true,\"policyApproval\":{...}}'` or resolve conflicts per `.ai/runbooks/task-state-git-operator.md`.",
         details: { localProjection, syncState: taskStateStatus.syncState ?? null }
       });
     }
@@ -173,7 +173,7 @@ export async function buildPhaseServiceSyncPreflight(
             ? `Outbox has ${conflictRows} failed/conflict row(s).`
             : "Task-state sync is in conflict posture.",
         remediation:
-          "Resolve outbox conflicts with `task-state-publish` / operator runbook recovery; do not close the phase until canonical sync is clean.",
+          "Resolve outbox conflicts with `task-sync-publish` / operator runbook recovery; do not close the phase until canonical sync is clean.",
         details: { outbox, localProjection }
       });
     }

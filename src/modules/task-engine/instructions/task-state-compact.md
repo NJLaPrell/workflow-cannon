@@ -1,13 +1,9 @@
 <!--
-agentCapsule|v=1|command=task-state-compact|module=task-engine|schema_only=pnpm exec wk run task-state-compact --schema-only '{}'
+agentCapsule|v=1|command=task-state-compact|module=task-engine|alias_of=task-sync-compact|schema_only=pnpm exec wk run task-sync-compact --schema-only '{}'
 -->
 
-# task-state-compact
+# task-state-compact (recovery alias)
 
-Dry-run retention/compaction plan for canonical task-state history (`dryRun` defaults to **true**).
+**Preferred command:** [`task-sync-compact`](./task-sync-compact.md) — same argv and policy surfaces.
 
-## Usage
-
-```
-pnpm exec wk run task-state-compact '{}'
-```
+Legacy git-oriented name retained for recovery scripts and older playbooks.

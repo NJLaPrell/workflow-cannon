@@ -25,7 +25,7 @@
    ```
 
 7. **Bump** `kit.phaseDelivery.legacyDeliveredMaxOrdinal` to **N** in `.workspace-kit/config.json` so the roster marks phases **≤ N** delivered while workspace phase stays unset.
-8. **Task-state:** `pnpm exec wk run task-state-hydrate '{"fetch":true,"policyApproval":{"confirmed":true,"rationale":"reconcile after closeout"}}'` on each workstation.
+8. **Task sync:** `pnpm exec wk run task-sync-hydrate '{"fetch":true,"policyApproval":{"confirmed":true,"rationale":"reconcile after closeout"}}'` on each workstation.
 
 ## Do not
 

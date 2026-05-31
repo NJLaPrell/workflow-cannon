@@ -5,6 +5,11 @@ import {
   type PublishTaskStateEventsResult
 } from "../task-state-git/publish-task-state-events.js";
 import { remoteBranchHeadSha, resolveTaskStateGitRef } from "../task-state-git/git-io.js";
+import { isCanonicalSyncHeadFailure } from "../sync-backends/canonical-state-sync-backend.js";
+import {
+  createGitEventLogBackendFromContext,
+  publishEventsViaGitBackend
+} from "../sync-backends/git-event-log-backend.js";
 import {
   readCanonicalPublishQueueConfig,
   type CanonicalPublishQueueConfig
@@ -31,6 +36,7 @@ export type CanonicalEventOutboxPublisherOptions = {
   ctx: ModuleLifecycleContext;
   repository: CanonicalEventOutboxRepository;
   branch?: string;
+  /** Legacy direct publish hook for unit tests; production uses GitEventLogBackend. */
   publish?: typeof publishTaskStateEvents;
   resolveHeadSha?: (workspacePath: string, branch: string) => string | null;
   setIntervalFn?: SetIntervalFn;
@@ -78,7 +84,7 @@ function failedRowsForAttempts(
 
 export class CanonicalEventOutboxPublisher {
   private readonly branch: string;
-  private readonly publishImpl: typeof publishTaskStateEvents;
+  private readonly legacyPublish: typeof publishTaskStateEvents | null;
   private readonly resolveHeadShaImpl: (workspacePath: string, branch: string) => string | null;
   private readonly setIntervalImpl: SetIntervalFn;
   private readonly clearIntervalImpl: ClearIntervalFn;
@@ -88,7 +94,7 @@ export class CanonicalEventOutboxPublisher {
 
   constructor(private readonly options: CanonicalEventOutboxPublisherOptions) {
     this.branch = options.branch?.trim() || TASK_STATE_GIT_BRANCH;
-    this.publishImpl = options.publish ?? publishTaskStateEvents;
+    this.legacyPublish = options.publish ?? null;
     this.resolveHeadShaImpl = options.resolveHeadSha ?? resolveExpectedHeadSha;
     this.setIntervalImpl = options.setIntervalFn ?? setInterval;
     this.clearIntervalImpl = options.clearIntervalFn ?? clearInterval;
@@ -103,6 +109,50 @@ export class CanonicalEventOutboxPublisher {
 
   isEnabled(): boolean {
     return this.queueConfig.enabled;
+  }
+
+  private async publishMarkedRows(
+    markedRows: CanonicalEventOutboxRow[],
+    expectedTaskVersions: Record<string, number>
+  ): Promise<PublishTaskStateEventsResult> {
+    if (this.legacyPublish) {
+      const expectedHeadSha = this.resolveHeadShaImpl(this.options.ctx.workspacePath, this.branch);
+      if (!expectedHeadSha) {
+        return {
+          ok: false,
+          code: "task-state-branch-missing",
+          message: "Canonical branch missing while publishing outbox events"
+        };
+      }
+      return this.legacyPublish({
+        workspacePath: this.options.ctx.workspacePath,
+        branch: this.branch,
+        events: markedRows.map((row) => row.event),
+        expectedHeadSha,
+        expectedTaskVersions,
+        maxAttempts: this.queueConfig.maxAttempts,
+        push: true
+      });
+    }
+
+    const backend = createGitEventLogBackendFromContext(this.options.ctx, { branch: this.branch });
+    const head = await backend.readHead();
+    if (isCanonicalSyncHeadFailure(head)) {
+      return {
+        ok: false,
+        code: head.code,
+        message: head.message
+      };
+    }
+    return publishEventsViaGitBackend(backend, {
+      events: markedRows.map((row) => row.event),
+      expectedHead: {
+        backendRevision: head.backendRevision,
+        latestSequence: head.latestSequence
+      },
+      expectedTaskVersions,
+      maxAttempts: this.queueConfig.maxAttempts
+    });
   }
 
   async runCycle(): Promise<CanonicalOutboxPublishCycleResult> {
@@ -159,8 +209,10 @@ export class CanonicalEventOutboxPublisher {
     const markedRows = pending.slice(0, markedPublishingCount);
     const markedIds = markedRows.map((row) => row.id);
     const expectedTaskVersions = mergeExpectedTaskVersions(markedRows);
-    const expectedHeadSha = this.resolveHeadShaImpl(this.options.ctx.workspacePath, this.branch);
-    if (!expectedHeadSha) {
+
+    const publishResult = await this.publishMarkedRows(markedRows, expectedTaskVersions);
+
+    if (!publishResult.ok && publishResult.code === "task-state-branch-missing") {
       const { failedIds, deferredIds } = failedRowsForAttempts(markedRows, this.queueConfig.maxAttempts);
       let failedCount = 0;
       if (failedIds.length > 0) {
@@ -181,16 +233,6 @@ export class CanonicalEventOutboxPublisher {
         publishCode: "task-state-branch-missing"
       };
     }
-
-    const publishResult: PublishTaskStateEventsResult = await this.publishImpl({
-      workspacePath: this.options.ctx.workspacePath,
-      branch: this.branch,
-      events: markedRows.map((row) => row.event),
-      expectedHeadSha,
-      expectedTaskVersions,
-      maxAttempts: this.queueConfig.maxAttempts,
-      push: true
-    });
 
     if (publishResult.ok) {
       const publishedCount = this.options.repository.markPublished(markedIds, {

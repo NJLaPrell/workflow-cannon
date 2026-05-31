@@ -1,0 +1,49 @@
+{
+  "ok": true,
+  "code": "run-args-schema",
+  "command": "task-sync-status",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "fetch": {
+        "type": "boolean"
+      },
+      "branch": {
+        "type": "string"
+      }
+    },
+    "additionalProperties": true
+  },
+  "schemaSource": "pilot-run-args-snapshot",
+  "sampleArgs": {},
+  "examples": [
+    {
+      "description": "Minimal argv example",
+      "argv": "workspace-kit run task-sync-status '{}'"
+    }
+  ],
+  "instructionPath": "src/modules/task-engine/instructions/task-sync-status.md",
+  "moduleId": "task-engine",
+  "description": "Read-only sync state vs canonical backend (default workflow-cannon/task-state git branch).",
+  "policy": {
+    "sensitivity": "non-sensitive",
+    "operationId": null,
+    "jsonApprovalRequired": false
+  },
+  "planningGeneration": {
+    "cliPrelude": false,
+    "expectedPlanningGeneration": "not required by CLI prelude"
+  },
+  "idempotency": {
+    "clientMutationId": false
+  },
+  "responseTemplate": {
+    "defaultResponseTemplateId": "default"
+  },
+  "remediationContract": ".ai/runbooks/agent-task-engine-ergonomics.md",
+  "discovery": {
+    "listCommands": "pnpm exec wk run --list-commands",
+    "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
+  },
+  "invocationId": "61820f3a-9481-436d-bec4-c207c003be95"
+}

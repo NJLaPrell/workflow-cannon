@@ -5257,18 +5257,21 @@ export function renderDashboardRootInnerHtml(
       humanGatesCount,
       phaseOrderingInputs
     ) +
-    renderPhaseCatalogOverviewSection(
-      phaseSystemSlice,
-      ws as Record<string, unknown> | null,
-      rosterDeliveredPhaseKeys,
-      legacyDeliveredMaxOrdinal,
-      activeQueuePhaseKeys
-    ) +
     renderWorkspaceBlockersPendingSection(ws as Record<string, unknown> | null) +
     renderTeamExecutionSection(d.teamExecution) +
     renderSubagentRegistrySection(d.subagentRegistry) +
     renderTaskCheckpointsSection(d.taskCheckpoints) +
     renderApprovalInboxSection(d.approvalQueue);
+
+  const phaseRosterInner = renderPhaseCatalogOverviewSection(
+    phaseSystemSlice,
+    ws as Record<string, unknown> | null,
+    rosterDeliveredPhaseKeys,
+    legacyDeliveredMaxOrdinal,
+    activeQueuePhaseKeys
+  );
+  const planArtifactInner = renderPlanArtifactDraftPanel(d.planArtifact);
+  const planningInterviewInner = renderPlanningSession(planningSession, planningWizardPanel);
 
   const caePanelContent =
     typeof embeddedCaePanelHtml === "string" && embeddedCaePanelHtml.trim().length > 0
@@ -5282,16 +5285,32 @@ export function renderDashboardRootInnerHtml(
         '</section>';
 
   const deferred = options?.deferredSections ?? new Set<DashboardSectionId>();
-  const queueInner =
-    tasksBlock + wishlistSection + renderPlanArtifactDraftPanel(d.planArtifact) + renderPlanningSession(planningSession, planningWizardPanel);
+  const queueInner = tasksBlock + wishlistSection;
   const phaseJournalInner = renderPhaseNotesOverviewSection(phaseJournal ?? null, d.phaseJournalStats);
 
   const overviewWrapped = wrapDashboardSection("overview", overviewContent, deferred.has("overview"));
+  const phaseRosterWrapped = wrapDashboardSection(
+    "phase-roster",
+    phaseRosterInner,
+    deferred.has("phase-roster")
+  );
   const ideasWrapped = wrapDashboardSection(
     "ideas",
     renderDashboardIdeasSectionInnerHtml(d.ideas),
     deferred.has("ideas")
   );
+  const planArtifactWrapped = wrapDashboardSection(
+    "plan-artifact",
+    planArtifactInner,
+    deferred.has("plan-artifact")
+  );
+  const planningInterviewWrapped = wrapDashboardSection(
+    "planning-interview",
+    planningInterviewInner,
+    deferred.has("planning-interview")
+  );
+  const planningContent =
+    phaseRosterWrapped + ideasWrapped + planArtifactWrapped + planningInterviewWrapped;
   const queueWrapped = wrapDashboardSection("queue", queueInner, deferred.has("queue"));
   const phaseJournalWrapped = wrapDashboardSection(
     "phase-journal",
@@ -5320,6 +5339,7 @@ export function renderDashboardRootInnerHtml(
     '<div class="wc-dashboard-tab-shell">' +
     '<div class="wc-tab-bar" role="tablist">' +
     '<button type="button" class="wc-tab-btn wc-tab-active" role="tab" data-wc-tab="overview">Overview</button>' +
+    '<button type="button" class="wc-tab-btn" role="tab" data-wc-tab="planning">Planning</button>' +
     '<button type="button" class="wc-tab-btn" role="tab" data-wc-tab="task-engine">Queue' +
     (totalReadyCount > 0
       ? '<span class="wc-tab-badge wc-tab-badge-ready">' + escapeHtml(String(totalReadyCount)) + "</span>"
@@ -5332,7 +5352,10 @@ export function renderDashboardRootInnerHtml(
     '<button type="button" class="wc-tab-btn" role="tab" data-wc-tab="cae">CAE</button>' +
     renderDashboardReadModeBadgeHtml(options?.readModeBadge) +
     "</div>" +
-    '<div class="wc-tab-panel" data-wc-tab="overview" role="tabpanel">' + overviewWrapped + ideasWrapped + "</div>" +
+    '<div class="wc-tab-panel" data-wc-tab="overview" role="tabpanel">' + overviewWrapped + "</div>" +
+    '<div class="wc-tab-panel" data-wc-tab="planning" role="tabpanel" style="display:none">' +
+    planningContent +
+    "</div>" +
     '<div class="wc-tab-panel" data-wc-tab="task-engine" role="tabpanel" style="display:none">' +
     taskEngineContent +
     "</div>" +

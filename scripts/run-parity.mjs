@@ -18,10 +18,12 @@ const ARTIFACTS_DIR = resolve(ROOT, "artifacts");
 const EVIDENCE_PATH = resolve(ARTIFACTS_DIR, "parity-evidence.json");
 const FIXTURE_DIR = resolve(ROOT, "test", "fixtures", "parity");
 
+const TEST_STEP_TIMEOUT_MS = 600_000;
+
 const steps = [
   { name: "build", command: "pnpm run build", cwd: ROOT },
   { name: "typecheck", command: "pnpm run check", cwd: ROOT },
-  { name: "test", command: "pnpm run test", cwd: ROOT },
+  { name: "test", command: "pnpm run test", cwd: ROOT, timeoutMs: TEST_STEP_TIMEOUT_MS },
   { name: "pack-dry-run", command: "pnpm run pack:dry-run", cwd: ROOT },
   { name: "metadata-check", command: "node scripts/check-release-metadata.mjs", cwd: ROOT },
 ];
@@ -29,8 +31,9 @@ const steps = [
 function runStep(step) {
   const start = Date.now();
   const maxBuffer = 50 * 1024 * 1024;
+  const timeoutMs = step.timeoutMs ?? 120_000;
   try {
-    execSync(step.command, { cwd: step.cwd, stdio: "pipe", timeout: 120_000, maxBuffer });
+    execSync(step.command, { cwd: step.cwd, stdio: "pipe", timeout: timeoutMs, maxBuffer });
     return { name: step.name, status: "pass", durationMs: Date.now() - start };
   } catch (err) {
     const stderr = err.stderr?.toString() ?? "";

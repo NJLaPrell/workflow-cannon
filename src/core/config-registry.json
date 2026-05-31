@@ -18,11 +18,48 @@
   "tasks.canonicalAuthority": {
     "key": "tasks.canonicalAuthority",
     "type": "string",
-    "description": "Canonical task-state authority: sqlite (legacy) or git-event-log (mutations publish to workflow-cannon/task-state).",
+    "description": "Canonical task-state authority: sqlite (legacy) or git-event-log (mutations publish to workflow-cannon/task-state). When tasks.canonicalBackend is omitted, authority selects the sync backend (git-event-log → git, sqlite → local-only).",
     "default": "sqlite",
     "allowedValues": [
       "sqlite",
       "git-event-log"
+    ],
+    "domainScope": "project",
+    "owningModule": "task-engine",
+    "sensitive": false,
+    "requiresRestart": false,
+    "requiresApproval": true,
+    "exposure": "public",
+    "writableLayers": [
+      "project",
+      "user"
+    ]
+  },
+  "tasks.canonicalBackend": {
+    "key": "tasks.canonicalBackend",
+    "type": "object",
+    "description": "Canonical task-state sync backend: type git | local-only | hosted. When omitted, derived from tasks.canonicalAuthority. Hosted is design-only until HostedApiBackend ships.",
+    "default": null,
+    "domainScope": "project",
+    "owningModule": "task-engine",
+    "sensitive": false,
+    "requiresRestart": false,
+    "requiresApproval": true,
+    "exposure": "public",
+    "writableLayers": [
+      "project",
+      "user"
+    ]
+  },
+  "tasks.canonicalBackend.type": {
+    "key": "tasks.canonicalBackend.type",
+    "type": "string",
+    "description": "Active CanonicalStateSyncBackend selector: git (workflow-cannon/task-state), local-only (in-process event log), or hosted (HTTP contract — not implemented).",
+    "default": null,
+    "allowedValues": [
+      "git",
+      "local-only",
+      "hosted"
     ],
     "domainScope": "project",
     "owningModule": "task-engine",

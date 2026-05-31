@@ -1,7 +1,7 @@
 {
   "ok": true,
   "code": "run-args-schema",
-  "command": "task-state-publish",
+  "command": "task-sync-publish",
   "schema": {
     "type": "object",
     "required": [
@@ -51,10 +51,10 @@
   "examples": [
     {
       "description": "Minimal argv example",
-      "argv": "workspace-kit run task-state-publish '{\"events\":[],\"expectedHeadSha\":\"\",\"expectedTaskVersions\":{}}'"
+      "argv": "workspace-kit run task-sync-publish '{\"events\":[],\"expectedHeadSha\":\"\",\"expectedTaskVersions\":{}}'"
     }
   ],
-  "instructionPath": "src/modules/task-engine/instructions/task-state-publish.md",
+  "instructionPath": "src/modules/task-engine/instructions/task-sync-publish.md",
   "moduleId": "task-engine",
   "description": "Publish canonical task-state events to the git branch with optimistic push and conflict detection.",
   "policy": {
@@ -77,5 +77,5 @@
     "listCommands": "pnpm exec wk run --list-commands",
     "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
   },
-  "invocationId": "6c04f482-1541-4a28-ab45-2dc9256e5a84"
+  "invocationId": "78a3459d-83cf-49ff-979f-d20e1be7b86f"
 }

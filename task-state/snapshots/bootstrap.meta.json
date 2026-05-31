@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "snapshotId": "bootstrap",
+  "throughSequence": 0,
+  "throughEventId": "bootstrap",
+  "recordedAt": "2026-05-27T04:10:10.314Z",
+  "contentPath": "task-state/snapshots/bootstrap.json",
+  "contentDigest": "e86af2b6f0983758a958ec1437032659ce2897eb67ab38b9c38cbaee3ce39742",
+  "taskCount": 1413
+}

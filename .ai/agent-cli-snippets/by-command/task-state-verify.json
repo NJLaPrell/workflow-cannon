@@ -1,7 +1,7 @@
 {
   "ok": true,
   "code": "run-args-schema",
-  "command": "task-state-verify",
+  "command": "task-sync-verify",
   "schema": {
     "type": "object",
     "properties": {
@@ -19,10 +19,10 @@
   "examples": [
     {
       "description": "Minimal argv example",
-      "argv": "workspace-kit run task-state-verify '{}'"
+      "argv": "workspace-kit run task-sync-verify '{}'"
     }
   ],
-  "instructionPath": "src/modules/task-engine/instructions/task-state-verify.md",
+  "instructionPath": "src/modules/task-engine/instructions/task-sync-verify.md",
   "moduleId": "task-engine",
   "description": "Verify task-state manifest, snapshot hashes, and event log sequence/parent/schema integrity.",
   "policy": {
@@ -45,5 +45,5 @@
     "listCommands": "pnpm exec wk run --list-commands",
     "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
   },
-  "invocationId": "f7cd339f-777a-415f-8780-ff527c47df92"
+  "invocationId": "d7db5b1f-e67d-4284-a27d-2cf1ccbc9ad2"
 }

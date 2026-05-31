@@ -19,6 +19,7 @@ import {
 } from "../persistence/phase-catalog-store.js";
 import { readKitWorkspaceStatusRow } from "../persistence/workspace-status-store.js";
 import {
+  buildDashboardCanonicalBackendSummary,
   buildDashboardPlanningStoreSummary,
   buildDashboardWorkspaceIdentity
 } from "./build-dashboard-workspace-snapshot.js";
@@ -57,6 +58,7 @@ export async function buildDashboardSystemStatus(
   const mod = moduleSlice(ctx);
   const identity = await buildDashboardWorkspaceIdentity(ctx.workspacePath);
   const planningStore = buildDashboardPlanningStoreSummary(ctx);
+  const canonicalBackend = buildDashboardCanonicalBackendSummary(ctx);
 
   const phaseRes = await runPhaseStatus(
     ctx,
@@ -170,6 +172,7 @@ export async function buildDashboardSystemStatus(
     generatedAt,
     identity,
     planningStore,
+    canonicalBackend,
     phase: phaseBlock,
     doctor: {
       schemaVersion: 1,

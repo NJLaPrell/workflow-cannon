@@ -1,7 +1,7 @@
 {
   "ok": true,
   "code": "run-args-schema",
-  "command": "task-state-hydrate",
+  "command": "task-sync-hydrate",
   "schema": {
     "type": "object",
     "properties": {
@@ -29,10 +29,10 @@
   "examples": [
     {
       "description": "Minimal argv example",
-      "argv": "workspace-kit run task-state-hydrate '{}'"
+      "argv": "workspace-kit run task-sync-hydrate '{}'"
     }
   ],
-  "instructionPath": "src/modules/task-engine/instructions/task-state-hydrate.md",
+  "instructionPath": "src/modules/task-engine/instructions/task-sync-hydrate.md",
   "moduleId": "task-engine",
   "description": "Fetch canonical task-state branch, materialize JSONL locally, and rebuild SQLite projection.",
   "policy": {
@@ -55,5 +55,5 @@
     "listCommands": "pnpm exec wk run --list-commands",
     "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
   },
-  "invocationId": "2daae8a5-ae05-4ca0-b7c8-7aefb6b8b26c"
+  "invocationId": "4cd0dd04-84ec-44f6-9906-52772e6632b7"
 }

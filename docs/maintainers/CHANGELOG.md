@@ -8,6 +8,24 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [0.99.23] - 2026-05-30
+
+Patch — **Phase 125 Pluggable sync backends** (canonical backend interface, Git and local-only adapters, backend selection, conformance harness, task-sync CLI names).
+
+### Added
+
+- `CanonicalStateSyncBackend` interface and backend-agnostic contract types (T100616).
+- `GitEventLogBackend` wrapping existing git task-state publish/hydrate/status paths (T100617).
+- `LocalOnlyBackend` for offline/tests without a Git repository (T100619).
+- Hosted API backend contract design (ADR + wire types) (T100620).
+- `tasks.canonicalBackend` selection config; doctor and dashboard report active backend (T100618).
+- Shared backend conformance test harness for Git and local-only backends (T100621).
+- Preferred `task-sync-*` CLI command names with `task-state-*` recovery aliases (T100622).
+
+### Changed
+
+- Outbox publisher and task-state runtimes route through the sync backend interface where applicable.
+
 ## [0.99.22] - 2026-05-30
 
 Patch — **Phase 124 Local dashboard service mode** (service contracts, sync worker, SSE, closeout gates).

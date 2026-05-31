@@ -33,6 +33,7 @@ import { storeCaeSession } from "../modules/context-activation/trace-store.js";
 import { cliDiscoveryEnvelope } from "../core/cli-discovery.js";
 import { buildRunCommandCatalogPayload } from "./run-command-catalog.js";
 import { createRunInvocationId, emitRunInvocationJson } from "./run-invocation-output.js";
+import { resolveTaskSyncCommandAlias } from "../core/task-sync-command-aliases.js";
 import { peelRunArgv, policyDeniedBody } from "./run-helpers.js";
 
 /** Default apply-skill preview mode for policy (dryRun true when omitted). */
@@ -136,6 +137,11 @@ export async function handleRunCommand(
     effective = resolved.effective as Record<string, unknown>;
     effectiveForRunLog = effective;
     router = new ModuleCommandRouter(registry);
+    if (subcommand) {
+      subcommand = router.describeCommand(subcommand)
+        ? subcommand
+        : resolveTaskSyncCommandAlias(subcommand);
+    }
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     writeError(`Module registry / config resolution failed: ${message}`);

@@ -1,4 +1,9 @@
 export {
+  TASK_SYNC_RECOVERY_ALIASES,
+  isTaskSyncRecoveryAlias,
+  resolveTaskSyncCommandAlias
+} from "./task-sync-command-aliases.js";
+export {
   ModuleRegistry,
   ModuleRegistryError,
   validateModuleSet,

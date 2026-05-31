@@ -168,6 +168,13 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
     "task-state-snapshot",
     "task-state-status",
     "task-state-verify",
+    "task-sync-compact",
+    "task-sync-hydrate",
+    "task-sync-init",
+    "task-sync-publish",
+    "task-sync-snapshot",
+    "task-sync-status",
+    "task-sync-verify",
     "unblock-task",
     "uninstall-git-hooks",
     "update-behavior-profile",
@@ -183,6 +190,24 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
     "workspace-edit-status",
     "workspace-status-history"
   ]);
+});
+
+test("ModuleCommandRouter registers task-state-* recovery commands alongside task-sync-*", async () => {
+  const registry = new ModuleRegistry([workspaceConfigModule, taskEngineModule]);
+  const router = new ModuleCommandRouter(registry);
+
+  const canonical = router.describeCommand("task-sync-status");
+  const alias = router.describeCommand("task-state-status");
+  assert.ok(canonical);
+  assert.ok(alias);
+  assert.ok(alias?.instructionFile?.endsWith("task-state-status.md"));
+
+  const result = await router.execute(
+    "task-state-status",
+    {},
+    { ...lifecycleContext, moduleRegistry: registry }
+  );
+  assert.equal(typeof result.ok, "boolean");
 });
 
 test("ModuleCommandRouter executes explain-config", async () => {

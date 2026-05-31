@@ -1,0 +1,59 @@
+{
+  "ok": true,
+  "code": "run-args-schema",
+  "command": "task-sync-hydrate",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "dryRun": {
+        "type": "boolean"
+      },
+      "fetch": {
+        "type": "boolean"
+      },
+      "branch": {
+        "type": "string"
+      },
+      "eventLogRelativePath": {
+        "type": "string"
+      },
+      "policyApproval": {
+        "type": "object",
+        "additionalProperties": true
+      }
+    },
+    "additionalProperties": true
+  },
+  "schemaSource": "pilot-run-args-snapshot",
+  "sampleArgs": {},
+  "examples": [
+    {
+      "description": "Minimal argv example",
+      "argv": "workspace-kit run task-sync-hydrate '{}'"
+    }
+  ],
+  "instructionPath": "src/modules/task-engine/instructions/task-sync-hydrate.md",
+  "moduleId": "task-engine",
+  "description": "Fetch canonical task-state branch, materialize JSONL locally, and rebuild SQLite projection.",
+  "policy": {
+    "sensitivity": "sensitive",
+    "operationId": "tasks.task-state-hydrate",
+    "jsonApprovalRequired": true
+  },
+  "planningGeneration": {
+    "cliPrelude": false,
+    "expectedPlanningGeneration": "not required by CLI prelude"
+  },
+  "idempotency": {
+    "clientMutationId": false
+  },
+  "responseTemplate": {
+    "defaultResponseTemplateId": "default"
+  },
+  "remediationContract": ".ai/runbooks/agent-task-engine-ergonomics.md",
+  "discovery": {
+    "listCommands": "pnpm exec wk run --list-commands",
+    "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
+  },
+  "invocationId": "6957c39d-46fd-4efc-b9f0-b2aaff786986"
+}
