@@ -143,3 +143,45 @@ export type {
   AgentTaskRoutingMetadata,
   AgentTaskStatus
 } from "./agent-task-read-contract.js";
+export type {
+  AgentCapability,
+  AgentDefinitionRole,
+  AgentDefinitionV1,
+  AgentHostHint,
+  AgentModelTier,
+  KnownOrchestrationAccessProfileId,
+  KnownOrchestrationContextProfileId,
+  KnownOrchestrationModelProfileId,
+  OrchestrationProfileId,
+  TeamAssignmentStatus
+} from "./agent-orchestration.js";
+export {
+  AGENT_CAPABILITY_VOCABULARY,
+  AGENT_DEFINITION_SCHEMA_VERSION,
+  ORCHESTRATION_ACCESS_PROFILE_IDS,
+  ORCHESTRATION_CONTEXT_PROFILE_IDS,
+  ORCHESTRATION_MODEL_PROFILE_IDS
+} from "./agent-orchestration.js";
+export type { AgentActivityKind, AgentActivityV1 } from "./agent-activity.v1.js";
+export { AGENT_ACTIVITY_KINDS, AGENT_ACTIVITY_SCHEMA_VERSION } from "./agent-activity.v1.js";
+export type { AgentSessionStatus, AgentSessionV1 } from "./agent-session.v1.js";
+export { AGENT_SESSION_SCHEMA_VERSION } from "./agent-session.v1.js";
+export type {
+  TeamAssignmentLockScope,
+  TeamAssignmentMetadataV1,
+  TeamAssignmentResourceScope
+} from "./team-execution-assignment-metadata.v1.js";
+export { TEAM_ASSIGNMENT_METADATA_SCHEMA_VERSION } from "./team-execution-assignment-metadata.v1.js";
+export type {
+  HandoffV2AcceptanceCriterion,
+  HandoffV2AcceptanceCriterionStatus,
+  HandoffV2Blocker,
+  HandoffV2CommandRun,
+  HandoffV2CommandRunStatus,
+  HandoffV2FileChange,
+  HandoffV2Risk,
+  HandoffV2Severity,
+  HandoffV2Status,
+  TeamExecutionHandoffV2
+} from "./team-execution-handoff.v2.js";
+export { TEAM_EXECUTION_HANDOFF_SCHEMA_VERSION } from "./team-execution-handoff.v2.js";
