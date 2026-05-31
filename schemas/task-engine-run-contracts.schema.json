@@ -16,7 +16,7 @@
       "const": 1
     },
     "packageVersion": {
-      "const": "0.99.22",
+      "const": "0.99.23",
       "description": "Must match package.json version."
     },
     "moduleId": {
@@ -55,6 +55,13 @@
         "planning-state-migrate-baseline",
         "task-state-migrate-baseline",
         "task-sync-verify",
+        "task-state-status",
+        "task-state-hydrate",
+        "task-state-init",
+        "task-state-verify",
+        "task-state-publish",
+        "task-state-snapshot",
+        "task-state-compact",
         "batch-transition",
         "block-task",
         "check-task-store-commit",
@@ -235,6 +242,27 @@
         },
         "task-sync-verify": {
           "$ref": "#/$defs/contractTaskStateStatus"
+        },
+        "task-state-status": {
+          "$ref": "#/$defs/contractTaskStateStatus"
+        },
+        "task-state-hydrate": {
+          "$ref": "#/$defs/contractTaskStateHydrate"
+        },
+        "task-state-init": {
+          "$ref": "#/$defs/contractTaskStateInit"
+        },
+        "task-state-verify": {
+          "$ref": "#/$defs/contractTaskStateStatus"
+        },
+        "task-state-publish": {
+          "$ref": "#/$defs/contractTaskStatePublish"
+        },
+        "task-state-snapshot": {
+          "$ref": "#/$defs/contractTaskStateSnapshot"
+        },
+        "task-state-compact": {
+          "$ref": "#/$defs/contractTaskStateCompact"
         },
         "batch-transition": {
           "$ref": "#/$defs/contractBatchTransition"

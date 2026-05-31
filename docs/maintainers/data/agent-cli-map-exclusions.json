@@ -32,19 +32,19 @@
     "remove-dependency",
     "replay-queue-snapshot",
     "sync-transcripts",
-    "task-state-hydrate",
-    "task-state-init",
-    "task-state-status",
-    "task-state-verify",
+    "task-sync-hydrate",
+    "task-sync-init",
+    "task-sync-status",
+    "task-sync-verify",
     "transcript-automation-status",
     "update-wishlist",
     "update-workspace-status",
     "workspace-status-history"
   ],
   "exclusionRationales": {
-    "task-state-status": "Phase 115 S3.2; machine canon via .ai/agent-cli-snippets and instructions/*.md",
-    "task-state-hydrate": "Phase 115 S3.2; machine canon via .ai/agent-cli-snippets and instructions/*.md",
-    "task-state-init": "Phase 115 S3.3; machine canon via snippets",
-    "task-state-verify": "Phase 115 S3.4"
+    "task-sync-status": "Phase 125 T100622; machine canon via .ai/agent-cli-snippets and task-sync-*.md",
+    "task-sync-hydrate": "Phase 125 T100622; machine canon via .ai/agent-cli-snippets and task-sync-*.md",
+    "task-sync-init": "Phase 125 T100622; machine canon via .ai/agent-cli-snippets and task-sync-*.md",
+    "task-sync-verify": "Phase 125 T100622; machine canon via .ai/agent-cli-snippets and task-sync-*.md"
   }
 }

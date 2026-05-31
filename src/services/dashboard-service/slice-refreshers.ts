@@ -1,6 +1,5 @@
 import type { ModuleLifecycleContext } from "../../contracts/module-contract.js";
 import { ModuleCommandRouter } from "../../core/module-command-router.js";
-import { TASK_SYNC_RECOVERY_ALIASES } from "../../core/task-sync-command-aliases.js";
 import { resolveRegistryAndConfig } from "../../core/module-registry-resolve.js";
 import { defaultRegistryModules } from "../../modules/index.js";
 import { runDashboardSummaryCommand } from "../../modules/task-engine/commands/task-engine-dashboard-on-command.js";
@@ -48,7 +47,7 @@ export class DashboardSliceRefresher {
       workspacePath: this.workspacePath,
       effectiveConfig: effective
     };
-    this.router = new ModuleCommandRouter(registry, { aliases: TASK_SYNC_RECOVERY_ALIASES });
+    this.router = new ModuleCommandRouter(registry);
     const opened = await this.openStores();
     this.planningGeneration = opened.sqliteDual.getPlanningGeneration();
   }

@@ -1016,6 +1016,66 @@
   },
   {
     "moduleId": "task-engine",
+    "name": "task-state-status",
+    "file": "task-state-status.md",
+    "description": "Recovery alias for task-sync-status (legacy git-oriented CLI name).",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "task-state-hydrate",
+    "file": "task-state-hydrate.md",
+    "description": "Recovery alias for task-sync-hydrate (legacy git-oriented CLI name).",
+    "policyOperationId": "tasks.task-state-hydrate",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "task-state-init",
+    "file": "task-state-init.md",
+    "description": "Recovery alias for task-sync-init (legacy git-oriented CLI name).",
+    "policyOperationId": "tasks.task-state-init",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "task-state-verify",
+    "file": "task-state-verify.md",
+    "description": "Recovery alias for task-sync-verify (legacy git-oriented CLI name).",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "task-state-publish",
+    "file": "task-state-publish.md",
+    "description": "Recovery alias for task-sync-publish (legacy git-oriented CLI name).",
+    "policyOperationId": "tasks.task-state-publish",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "task-state-snapshot",
+    "file": "task-state-snapshot.md",
+    "description": "Recovery alias for task-sync-snapshot (legacy git-oriented CLI name).",
+    "policyOperationId": "tasks.task-state-snapshot",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "task-state-compact",
+    "file": "task-state-compact.md",
+    "description": "Recovery alias for task-sync-compact (legacy git-oriented CLI name).",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
     "name": "planning-state-migrate-baseline",
     "file": "planning-state-migrate-baseline.md",
     "description": "Seed planning.* genesis events from local phase catalog and workspace status SQLite.",

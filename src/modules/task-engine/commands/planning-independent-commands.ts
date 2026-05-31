@@ -3,6 +3,7 @@
  * Keeps {@link ../task-engine-internal.ts task-engine-internal} on-command wiring thin.
  */
 import type { ModuleCommandResult, ModuleLifecycleContext } from "../../../contracts/module-contract.js";
+import { resolveTaskSyncCommandAlias } from "../../../core/task-sync-command-aliases.js";
 import { readKitSqliteUserVersion } from "../../../core/state/workspace-kit-sqlite.js";
 import { UnifiedStateDb } from "../../../core/state/unified-state-db.js";
 import { runClassifyKitState } from "../kit-state-classifier.js";
@@ -58,106 +59,107 @@ export async function routeTaskEngineBeforeOpenPlanningStores(
   ctx: ModuleLifecycleContext
 ): Promise<ModuleCommandResult | null> {
   const args = command.args ?? {};
-  if (command.name === "migrate-task-persistence") {
+  const name = resolveTaskSyncCommandAlias(command.name);
+  if (name === "migrate-task-persistence") {
     return runMigrateTaskPersistence(ctx, args as Record<string, unknown>);
   }
-  if (command.name === "task-persistence-readiness") {
+  if (name === "task-persistence-readiness") {
     return runTaskPersistenceReadiness(ctx, args as Record<string, unknown>);
   }
-  if (command.name === "backup-planning-sqlite") {
+  if (name === "backup-planning-sqlite") {
     return runBackupPlanningSqlite(ctx, args as Record<string, unknown>);
   }
-  if (command.name === "rebuild-task-state-cache") {
+  if (name === "rebuild-task-state-cache") {
     return runRebuildTaskStateCache(ctx, args as Record<string, unknown>);
   }
-  if (command.name === "apply-task-state-events") {
+  if (name === "apply-task-state-events") {
     return runApplyTaskStateEvents(ctx, args as Record<string, unknown>);
   }
-  if (command.name === "repair-task-state-cache") {
+  if (name === "repair-task-state-cache") {
     return runRepairTaskStateCache(ctx, args as Record<string, unknown>);
   }
-  if (command.name === "task-sync-status") {
+  if (name === "task-sync-status") {
     return runTaskStateStatus(ctx, args as Record<string, unknown>);
   }
-  if (command.name === "task-sync-hydrate") {
+  if (name === "task-sync-hydrate") {
     return runTaskStateHydrate(ctx, args as Record<string, unknown>);
   }
-  if (command.name === "task-sync-init") {
+  if (name === "task-sync-init") {
     return runTaskStateInit(ctx, args as Record<string, unknown>);
   }
-  if (command.name === "task-sync-verify") {
+  if (name === "task-sync-verify") {
     return runTaskStateVerify(ctx, args as Record<string, unknown>);
   }
-  if (command.name === "task-sync-publish") {
+  if (name === "task-sync-publish") {
     return runTaskStatePublish(ctx, args as Record<string, unknown>);
   }
-  if (command.name === "task-sync-snapshot") {
+  if (name === "task-sync-snapshot") {
     return runTaskStateSnapshot(ctx, args as Record<string, unknown>);
   }
-  if (command.name === "task-sync-compact") {
+  if (name === "task-sync-compact") {
     return runTaskStateCompact(ctx, args as Record<string, unknown>);
   }
-  if (command.name === "task-state-migrate-baseline") {
+  if (name === "task-state-migrate-baseline") {
     return runTaskStateMigrateBaseline(ctx, args as Record<string, unknown>);
   }
-  if (command.name === "planning-state-migrate-baseline") {
+  if (name === "planning-state-migrate-baseline") {
     return runPlanningStateMigrateBaseline(ctx, args as Record<string, unknown>);
   }
-  if (command.name === "get-kit-persistence-map") {
+  if (name === "get-kit-persistence-map") {
     return runGetKitPersistenceMap(ctx);
   }
-  if (command.name === "update-workspace-phase-snapshot") {
+  if (name === "update-workspace-phase-snapshot") {
     return runUpdateWorkspacePhaseSnapshot(ctx, args as Record<string, unknown>);
   }
-  if (command.name === "list-phase-catalog") {
+  if (name === "list-phase-catalog") {
     return runListPhaseCatalog(ctx);
   }
-  if (command.name === "get-workspace-status") {
+  if (name === "get-workspace-status") {
     return runGetWorkspaceStatus(ctx, args as Record<string, unknown>);
   }
-  if (command.name === "get-last-output") {
+  if (name === "get-last-output") {
     return runGetLastOutput(ctx, args as Record<string, unknown>);
   }
-  if (command.name === "classify-kit-state") {
+  if (name === "classify-kit-state") {
     return runClassifyKitState(ctx, args as Record<string, unknown>);
   }
-  if (command.name === "update-workspace-status") {
+  if (name === "update-workspace-status") {
     return runUpdateWorkspaceStatus(ctx, args as Record<string, unknown>);
   }
-  if (command.name === "set-current-phase") {
+  if (name === "set-current-phase") {
     return runSetCurrentPhase(ctx, args as Record<string, unknown>);
   }
-  if (command.name === "export-workspace-status") {
+  if (name === "export-workspace-status") {
     return runExportWorkspaceStatus(ctx, args as Record<string, unknown>);
   }
-  if (command.name === "workspace-status-history") {
+  if (name === "workspace-status-history") {
     return runWorkspaceStatusHistory(ctx, args as Record<string, unknown>);
   }
-  if (command.name === "claim-workspace-edit-lease") {
+  if (name === "claim-workspace-edit-lease") {
     return runClaimWorkspaceEditLease(ctx, args as Record<string, unknown>);
   }
-  if (command.name === "heartbeat-workspace-edit-lease") {
+  if (name === "heartbeat-workspace-edit-lease") {
     return runHeartbeatWorkspaceEditLease(ctx, args as Record<string, unknown>);
   }
-  if (command.name === "release-workspace-edit-lease") {
+  if (name === "release-workspace-edit-lease") {
     return runReleaseWorkspaceEditLease(ctx, args as Record<string, unknown>);
   }
-  if (command.name === "workspace-edit-status") {
+  if (name === "workspace-edit-status") {
     return runWorkspaceEditStatus(ctx, args as Record<string, unknown>);
   }
-  if (command.name === "workspace-coordination-status") {
+  if (name === "workspace-coordination-status") {
     return runWorkspaceCoordinationStatus(ctx);
   }
-  if (command.name === "install-git-hooks") {
+  if (name === "install-git-hooks") {
     return runInstallGitHooksCommand(ctx);
   }
-  if (command.name === "uninstall-git-hooks") {
+  if (name === "uninstall-git-hooks") {
     return runUninstallGitHooksCommand(ctx);
   }
-  if (command.name === "check-task-store-commit") {
+  if (name === "check-task-store-commit") {
     return runCheckTaskStoreCommit(ctx);
   }
-  if (command.name === "list-module-states" || command.name === "get-module-state") {
+  if (name === "list-module-states" || name === "get-module-state") {
     const unified = new UnifiedStateDb(ctx.workspacePath, planningSqliteDatabaseRelativePath(ctx));
     const dbAbs = unified.dbPath;
     let kitSqliteUserVersion: number | null = null;
@@ -169,7 +171,7 @@ export async function routeTaskEngineBeforeOpenPlanningStores(
     } catch {
       kitSqliteUserVersion = null;
     }
-    if (command.name === "list-module-states") {
+    if (name === "list-module-states") {
       return {
         ok: true,
         code: "module-states-listed",
@@ -195,16 +197,16 @@ export async function routeTaskEngineBeforeOpenPlanningStores(
           message: `No module state found for '${moduleId}'`
         };
   }
-  if (command.name === "dashboard-service-start") {
+  if (name === "dashboard-service-start") {
     return runDashboardServiceStart(ctx);
   }
-  if (command.name === "dashboard-service-stop") {
+  if (name === "dashboard-service-stop") {
     return runDashboardServiceStop(ctx);
   }
-  if (command.name === "dashboard-service-status") {
+  if (name === "dashboard-service-status") {
     return runDashboardServiceStatus(ctx);
   }
-  if (command.name === "dashboard-service-snapshot") {
+  if (name === "dashboard-service-snapshot") {
     return runDashboardServiceSnapshot(ctx);
   }
 

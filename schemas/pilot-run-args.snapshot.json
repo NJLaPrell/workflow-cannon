@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "sourceSchemaPackageVersion": "0.99.22",
+  "sourceSchemaPackageVersion": "0.99.23",
   "pilotCommands": [
     "accept-improvement",
     "add-dependency",
@@ -70,6 +70,7 @@
     "phase-delivery-preflight",
     "phase-focus-dashboard",
     "phase-status",
+    "planning-state-migrate-baseline",
     "propose-release-version",
     "propose-tasks-from-phase-notes",
     "queue-git-alignment",
@@ -95,11 +96,17 @@
     "sync-task-store-after-merge",
     "synthesize-transcript-churn",
     "task-persistence-readiness",
+    "task-state-compact",
+    "task-state-hydrate",
+    "task-state-init",
+    "task-state-migrate-baseline",
+    "task-state-publish",
+    "task-state-snapshot",
+    "task-state-status",
+    "task-state-verify",
     "task-sync-compact",
     "task-sync-hydrate",
     "task-sync-init",
-    "planning-state-migrate-baseline",
-    "task-state-migrate-baseline",
     "task-sync-publish",
     "task-sync-snapshot",
     "task-sync-status",
@@ -2167,6 +2174,148 @@
           "type": "integer",
           "minimum": 1,
           "maximum": 500
+        }
+      },
+      "additionalProperties": true
+    },
+    "task-state-status": {
+      "type": "object",
+      "properties": {
+        "fetch": {
+          "type": "boolean"
+        },
+        "branch": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    },
+    "task-state-hydrate": {
+      "type": "object",
+      "properties": {
+        "dryRun": {
+          "type": "boolean"
+        },
+        "fetch": {
+          "type": "boolean"
+        },
+        "branch": {
+          "type": "string"
+        },
+        "eventLogRelativePath": {
+          "type": "string"
+        },
+        "policyApproval": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "task-state-init": {
+      "type": "object",
+      "properties": {
+        "dryRun": {
+          "type": "boolean"
+        },
+        "overwriteExisting": {
+          "type": "boolean"
+        },
+        "push": {
+          "type": "boolean"
+        },
+        "branch": {
+          "type": "string"
+        },
+        "snapshotId": {
+          "type": "string"
+        },
+        "policyApproval": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "task-state-verify": {
+      "type": "object",
+      "properties": {
+        "fetch": {
+          "type": "boolean"
+        },
+        "branch": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    },
+    "task-state-publish": {
+      "type": "object",
+      "required": [
+        "events",
+        "expectedHeadSha",
+        "expectedTaskVersions"
+      ],
+      "properties": {
+        "dryRun": {
+          "type": "boolean"
+        },
+        "events": {
+          "type": "array",
+          "minItems": 1
+        },
+        "expectedHeadSha": {
+          "type": "string"
+        },
+        "expectedTaskVersions": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer"
+          }
+        },
+        "branch": {
+          "type": "string"
+        },
+        "maxAttempts": {
+          "type": "integer"
+        },
+        "push": {
+          "type": "boolean"
+        },
+        "policyApproval": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "task-state-snapshot": {
+      "type": "object",
+      "properties": {
+        "dryRun": {
+          "type": "boolean"
+        },
+        "branch": {
+          "type": "string"
+        },
+        "snapshotId": {
+          "type": "string"
+        },
+        "policyApproval": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "task-state-compact": {
+      "type": "object",
+      "properties": {
+        "dryRun": {
+          "type": "boolean"
+        },
+        "branch": {
+          "type": "string"
         }
       },
       "additionalProperties": true

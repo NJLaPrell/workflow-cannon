@@ -27,14 +27,15 @@ test("TASK_SYNC_RECOVERY_ALIASES covers seven legacy git-oriented names", () => 
   }
 });
 
-test("ModuleCommandRouter executes task-state-* recovery aliases", async () => {
+test("ModuleCommandRouter executes task-state-* recovery commands from manifest", async () => {
   const registry = new ModuleRegistry([workspaceConfigModule, taskEngineModule]);
-  const router = new ModuleCommandRouter(registry, { aliases: TASK_SYNC_RECOVERY_ALIASES });
+  const router = new ModuleCommandRouter(registry);
 
   const canonical = router.describeCommand("task-sync-status");
   const alias = router.describeCommand("task-state-status");
   assert.ok(canonical);
-  assert.deepEqual(alias, canonical);
+  assert.ok(alias);
+  assert.ok(alias?.instructionFile?.endsWith("task-state-status.md"));
 
   const result = await router.execute(
     "task-state-status",
