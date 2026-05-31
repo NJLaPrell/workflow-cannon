@@ -103,6 +103,14 @@ The Cursor Dashboard drawer sends JSON **`policyApproval`** on gated **`wk run`*
 
 Record high-signal live activity with **`pnpm exec wk run set-agent-activity '{"kind":"reviewing_pr","prNumber":192}'`** or structured fields like **`version`**, **`phaseKey`**, **`taskId`**, **`details.prUrl`**, **`details.reviewItemId`**, and **`details.validationCommand`**. Clear it with **`clear-agent-activity`** when the flow finishes; otherwise expiry returns the dashboard to derived status. Do not treat live activity as transition evidence, and do not add GitHub/network lookups to `dashboard-summary`.
 
+## AgentDefinition v1 bridge
+
+- `pnpm exec wk run list-agent-definitions '{}'`
+- `pnpm exec wk run get-agent-definition '{"agentDefinitionId":"task-worker"}'`
+- `pnpm exec wk run register-agent-definition '{"agentDefinition":{...},"expectedPlanningGeneration":<n>,"policyApproval":{"confirmed":true,"rationale":"register orchestration definition"}}'`
+- `pnpm exec wk run update-agent-definition '{"agentDefinition":{...},"expectedPlanningGeneration":<n>,"policyApproval":{"confirmed":true,"rationale":"update orchestration definition"}}'`
+- `pnpm exec wk run retire-agent-definition '{"agentDefinitionId":"task-worker","expectedPlanningGeneration":<n>,"policyApproval":{"confirmed":true,"rationale":"retire orchestration definition"}}'`
+
 ## Project memory (governed recall)
 
 Distinct from `.ai/` canon and `document-project` outputs — see `CANNON.md` and `explain-memory-precedence`.

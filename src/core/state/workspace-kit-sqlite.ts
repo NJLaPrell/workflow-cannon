@@ -12,5 +12,6 @@ export {
   prepareKitSqliteDatabase,
   kitSqliteHasRelationalTaskDdl,
   kitSqliteHasCanonicalEventOutbox,
+  kitSqliteHasAgentDefinitionBridge,
   readKitSqliteUserVersion
 } from "./kit-sqlite/planning-sqlite-kernel.js";

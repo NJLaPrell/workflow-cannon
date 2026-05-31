@@ -17,14 +17,14 @@
     "moduleId": "workspace-config",
     "name": "resolve-agent-guidance",
     "file": "resolve-agent-guidance.md",
-    "description": "Effective agent guidance tier (RPG party v1), labels, and behavioral hints — advisory only.",
+    "description": "Effective agent guidance tier (RPG party v1), labels, and behavioral hints \u2014 advisory only.",
     "policySensitivity": "non-sensitive"
   },
   {
     "moduleId": "workspace-config",
     "name": "set-agent-guidance",
     "file": "set-agent-guidance.md",
-    "description": "Persist kit.agentGuidance tier (1–5) to project config; optional interactive picker.",
+    "description": "Persist kit.agentGuidance tier (1\u20135) to project config; optional interactive picker.",
     "policySensitivity": "non-sensitive"
   },
   {
@@ -119,7 +119,7 @@
     "moduleId": "agent-behavior",
     "name": "sync-effective-behavior-cursor-rule",
     "file": "sync-effective-behavior-cursor-rule.md",
-    "description": "Render effective role × temperament into an advisory Cursor rule under .cursor/rules.",
+    "description": "Render effective role \u00d7 temperament into an advisory Cursor rule under .cursor/rules.",
     "policySensitivity": "non-sensitive"
   },
   {
@@ -383,6 +383,49 @@
     "description": "Clear current dashboard agent activity leases for the active agent/session.",
     "defaultResponseTemplateId": "default",
     "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "get-agent-definition",
+    "file": "get-agent-definition.md",
+    "description": "Read one AgentDefinition v1 bridge record.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "list-agent-definitions",
+    "file": "list-agent-definitions.md",
+    "description": "List AgentDefinition v1 bridge records.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "register-agent-definition",
+    "file": "register-agent-definition.md",
+    "description": "Register or upsert an AgentDefinition v1 row.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive",
+    "policyOperationId": "subagents.persist"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "retire-agent-definition",
+    "file": "retire-agent-definition.md",
+    "description": "Retire an AgentDefinition v1 bridge row.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive",
+    "policyOperationId": "subagents.persist"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "update-agent-definition",
+    "file": "update-agent-definition.md",
+    "description": "Update an existing AgentDefinition v1 bridge row.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive",
+    "policyOperationId": "subagents.persist"
   },
   {
     "moduleId": "task-engine",
@@ -875,7 +918,7 @@
     "moduleId": "task-engine",
     "name": "queue-git-alignment",
     "file": "queue-git-alignment.md",
-    "description": "Read-only heuristic: git HEAD vs last task transition; stale in_progress hints (merge ≠ complete guardian).",
+    "description": "Read-only heuristic: git HEAD vs last task transition; stale in_progress hints (merge \u2260 complete guardian).",
     "defaultResponseTemplateId": "default",
     "policySensitivity": "non-sensitive"
   },
@@ -1441,7 +1484,7 @@
     "moduleId": "team-execution",
     "name": "submit-assignment-handoff",
     "file": "submit-assignment-handoff.md",
-    "description": "Worker submits handoff contract v1 (assigned → submitted).",
+    "description": "Worker submits handoff contract v1 (assigned \u2192 submitted).",
     "policyOperationId": "team-execution.persist",
     "defaultResponseTemplateId": "default",
     "policySensitivity": "sensitive"
@@ -1450,7 +1493,7 @@
     "moduleId": "team-execution",
     "name": "block-assignment",
     "file": "block-assignment.md",
-    "description": "Supervisor blocks an assignment (assigned or submitted → blocked).",
+    "description": "Supervisor blocks an assignment (assigned or submitted \u2192 blocked).",
     "policyOperationId": "team-execution.persist",
     "defaultResponseTemplateId": "default",
     "policySensitivity": "sensitive"
@@ -1459,7 +1502,7 @@
     "moduleId": "team-execution",
     "name": "reconcile-assignment",
     "file": "reconcile-assignment.md",
-    "description": "Supervisor reconciles submitted handoff (submitted → reconciled).",
+    "description": "Supervisor reconciles submitted handoff (submitted \u2192 reconciled).",
     "policyOperationId": "team-execution.persist",
     "defaultResponseTemplateId": "default",
     "policySensitivity": "sensitive"
@@ -1592,7 +1635,7 @@
     "moduleId": "context-activation",
     "name": "cae-validate-registry",
     "file": "cae-validate-registry.md",
-    "description": "Alias of cae-registry-validate — validate active CAE registry (SQLite or JSON per kit.cae.registryStore).",
+    "description": "Alias of cae-registry-validate \u2014 validate active CAE registry (SQLite or JSON per kit.cae.registryStore).",
     "policySensitivity": "non-sensitive"
   },
   {
@@ -1862,7 +1905,7 @@
     "moduleId": "context-activation",
     "name": "cae-archive-retired-workspace-artifact-file",
     "file": "cae-archive-retired-workspace-artifact-file.md",
-    "description": "Move a retired workspace artifact markdown file into `.ai/cae/artifacts/_archive/…` and update the registry path.",
+    "description": "Move a retired workspace artifact markdown file into `.ai/cae/artifacts/_archive/\u2026` and update the registry path.",
     "policySensitivity": "non-sensitive"
   },
   {

@@ -1400,6 +1400,11 @@ export function kitSqliteHasCanonicalEventOutbox(db: SqliteDatabase): boolean {
   return tableExists(db, KIT_CANONICAL_EVENT_OUTBOX_TABLE);
 }
 
+/** True when AgentDefinition v1 bridge columns exist on kit_subagent_definitions (Phase 127+). */
+export function kitSqliteHasAgentDefinitionBridge(db: SqliteDatabase): boolean {
+  return tableExists(db, "kit_subagent_definitions") && columnNames(db, "kit_subagent_definitions").has("role");
+}
+
 /** True when relational task rows + envelope columns are present (post v2 migration open). */
 export function kitSqliteHasRelationalTaskDdl(db: SqliteDatabase): boolean {
   return tableExists(db, TASK_ENGINE_TASKS_TABLE) && columnNames(db, "workspace_planning_state").has("relational_tasks");

@@ -10,6 +10,7 @@ import { buildWaitForPrChecks } from "./wait-for-pr-checks-commands.js";
 import { buildReleaseStatus } from "./release-status-commands.js";
 import { runApplyTaskBatchCommand } from "./apply-task-batch-command.js";
 import { resolveAgentActivityCommands } from "./agent-activity-commands.js";
+import { resolveAgentDefinitionCommands } from "./agent-definition-commands.js";
 import { resolveFeatureRegistryReadoutCommands } from "./feature-registry-readout-commands.js";
 import { resolveFeatureTaxonomyRuntimeCommands } from "./task-feature-taxonomy-runtime-commands.js";
 import type { OpenedPlanningStores } from "../persistence/planning-open.js";
@@ -47,6 +48,11 @@ export async function dispatchTaskEnginePlanningCommands(
   const agentActivity = resolveAgentActivityCommands(command, ctx, planning);
   if (agentActivity !== null) {
     return agentActivity;
+  }
+
+  const agentDefinition = resolveAgentDefinitionCommands(command, ctx, planning);
+  if (agentDefinition !== null) {
+    return agentDefinition;
   }
 
   const agentBootstrapOrSnapshot = await resolveAgentBootstrapOrSnapshot(command, ctx, planning);
