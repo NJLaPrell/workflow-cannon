@@ -10,7 +10,7 @@ type SqliteDatabase = InstanceType<typeof Database>;
  */
 
 /** Bump and add a migration step in `migrateKitSqliteSchema` when DDL changes. Exposed for doctor / list-module-states. */
-export const KIT_SQLITE_USER_VERSION = 30;
+export const KIT_SQLITE_USER_VERSION = 31;
 
 export const TASK_ENGINE_TASKS_TABLE = "task_engine_tasks";
 export const TASK_ENGINE_DEPENDENCIES_TABLE = "task_engine_dependencies";
@@ -1142,6 +1142,30 @@ CREATE INDEX idx_workflow_ideas_linked_plan_artifact ON workflow_ideas(linked_pl
 }
 
 /** Canonical event outbox for local-first git-event-log sync (Phase 123 / T100603). */
+
+/** AgentDefinition v1 bridge columns on kit_subagent_definitions (Phase 127 / T100640). */
+function migrateV30ToV31(db: SqliteDatabase): void {
+  if (!tableExists(db, "kit_subagent_definitions")) {
+    return;
+  }
+  const cols = columnNames(db, "kit_subagent_definitions");
+  const add = (name: string, ddl: string): void => {
+    if (!cols.has(name)) {
+      db.exec(`ALTER TABLE kit_subagent_definitions ADD COLUMN ${ddl}`);
+    }
+  };
+  add("role", "role TEXT");
+  add("host_compatibility_json", "host_compatibility_json TEXT");
+  add("required_capabilities_json", "required_capabilities_json TEXT");
+  add("optional_capabilities_json", "optional_capabilities_json TEXT");
+  add("access_profile_id", "access_profile_id TEXT");
+  add("context_profile_id", "context_profile_id TEXT");
+  add("model_profile_id", "model_profile_id TEXT");
+  add("handoff_contract_id", "handoff_contract_id TEXT");
+  add("activity_contract_id", "activity_contract_id TEXT");
+  add("definition_version", "definition_version INTEGER");
+}
+
 function migrateV29ToV30(db: SqliteDatabase): void {
   if (tableExists(db, KIT_CANONICAL_EVENT_OUTBOX_TABLE)) {
     return;
@@ -1336,11 +1360,21 @@ function migrateKitSqliteSchema(db: SqliteDatabase): void {
     db.pragma("user_version = 30");
     current = 30;
   }
+  if (current < 31) {
+    migrateV30ToV31(db);
+    db.pragma("user_version = 31");
+    current = 31;
+  }
 }
 
 /** True when canonical event outbox DDL is present (Phase 123+). Safe for pre-v30 workspaces until migrate runs. */
 export function kitSqliteHasCanonicalEventOutbox(db: SqliteDatabase): boolean {
   return tableExists(db, KIT_CANONICAL_EVENT_OUTBOX_TABLE);
+}
+
+/** True when AgentDefinition v1 bridge columns exist on kit_subagent_definitions (Phase 127+). */
+export function kitSqliteHasAgentDefinitionBridge(db: SqliteDatabase): boolean {
+  return tableExists(db, "kit_subagent_definitions") && columnNames(db, "kit_subagent_definitions").has("role");
 }
 
 /** True when relational task rows + envelope columns are present (post v2 migration open). */

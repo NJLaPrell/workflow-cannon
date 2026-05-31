@@ -58,6 +58,7 @@ export function runGetKitPersistenceMap(ctx: ModuleLifecycleContext): ModuleComm
       },
       subagents: {
         minKitSqliteUserVersion: 6,
+        agentDefinitionBridgeMinUserVersion: 31,
         tables: ["kit_subagent_definitions", "kit_subagent_sessions", "kit_subagent_messages"],
         note: "Definitions + session/message audit for delegated agent work; host (e.g. Cursor) executes; kit persists provenance. See docs/maintainers/adrs/ADR-subagent-registry-v1.md."
       },
