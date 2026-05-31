@@ -12,8 +12,18 @@ import {
   listAssignments,
   submitHandoff,
   reconcileAssignment,
+  validateAssignmentMetadataWhenPresent,
   validateHandoffContractV1
 } from "../dist/modules/team-execution/assignment-store.js";
+import { fileURLToPath } from "node:url";
+
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const assignmentMetadataFixture = JSON.parse(
+  fs.readFileSync(
+    path.join(root, "fixtures/agent-orchestration/assignment-metadata-task-worker.v1.json"),
+    "utf8"
+  )
+);
 
 test("kit sqlite migrates to v7 and team assignment DDL round-trips", () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "wk-team-ex-"));
@@ -64,6 +74,66 @@ test("kit sqlite migrates to v7 and team assignment DDL round-trips", () => {
 
     const listed = listAssignments(db, { executionTaskId: "T-test-1" });
     assert.equal(listed.length, 1);
+  } finally {
+    db.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("legacy assignment metadata without schemaVersion passes validation", () => {
+  const result = validateAssignmentMetadataWhenPresent({ note: "legacy row" });
+  assert.equal(result.ok, true);
+});
+
+test("assignment metadata v1 fixture passes validation", () => {
+  const result = validateAssignmentMetadataWhenPresent(assignmentMetadataFixture);
+  assert.equal(result.ok, true);
+});
+
+test("assignment metadata v1 rejects unknown fields clearly", () => {
+  const result = validateAssignmentMetadataWhenPresent({
+    ...assignmentMetadataFixture,
+    extraScope: ["src/**"]
+  });
+  assert.equal(result.ok, false);
+  assert.equal(result.code, "unknown-orchestration-field");
+  assert.ok(result.issues.some((i) => i.path.includes("extraScope") || i.message.includes("extraScope")));
+});
+
+test("assignment metadata v1 rejects missing required profile fields", () => {
+  const result = validateAssignmentMetadataWhenPresent({
+    schemaVersion: 1,
+    agentDefinitionId: "task-worker"
+  });
+  assert.equal(result.ok, false);
+  assert.equal(result.code, "missing-required-orchestration-field");
+});
+
+test("structured metadata v1 round-trips on assignment insert", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "wk-team-ex-meta-"));
+  const dbPath = path.join(dir, "wk.db");
+  const db = new Database(dbPath);
+  try {
+    prepareKitSqliteDatabase(db);
+    const now = new Date().toISOString();
+    db.prepare(
+      `INSERT INTO task_engine_tasks (id, status, type, title, created_at, updated_at, archived, depends_on_json)
+       VALUES ('T-test-meta', 'ready', 'workspace-kit', 'fixture', ?, ?, 0, '[]')`
+    ).run(now, now);
+
+    insertAssignment(db, {
+      id: "asg-meta-v1",
+      executionTaskId: "T-test-meta",
+      supervisorId: "sup",
+      workerId: "wrk",
+      metadata: assignmentMetadataFixture,
+      now
+    });
+    const row = getAssignment(db, "asg-meta-v1");
+    assert.ok(row?.metadata);
+    assert.equal(row.metadata.schemaVersion, 1);
+    assert.equal(row.metadata.agentDefinitionId, "task-worker");
+    assert.equal(row.metadata.contextProfileId, "task_worker_context_v1");
   } finally {
     db.close();
     fs.rmSync(dir, { recursive: true, force: true });

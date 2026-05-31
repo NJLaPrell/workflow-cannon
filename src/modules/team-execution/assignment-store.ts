@@ -1,6 +1,9 @@
 import type Sqlite from "better-sqlite3";
 import type { DashboardTeamExecutionSummary } from "../../contracts/dashboard-summary-run.js";
+import { TEAM_ASSIGNMENT_METADATA_SCHEMA_VERSION } from "../../contracts/team-execution-assignment-metadata.v1.js";
 import { readKitSqliteUserVersion } from "../../core/state/workspace-kit-sqlite.js";
+import { validateAssignmentMetadataV1 } from "../../core/validation/agent-orchestration/validate-orchestration-contract.js";
+import type { OrchestrationValidationIssue } from "../../core/validation/agent-orchestration/types.js";
 
 export const TEAM_EXECUTION_KIT_MIN_USER_VERSION = 7;
 
@@ -80,6 +83,52 @@ export function parseMetadata(raw: unknown): Record<string, unknown> | null {
     return null;
   }
   return raw as Record<string, unknown>;
+}
+
+export type AssignmentMetadataValidationOutcome =
+  | { ok: true }
+  | { ok: false; code: string; message: string; issues: OrchestrationValidationIssue[] };
+
+/** Validate orchestration metadata when `schemaVersion === 1`; legacy rows pass through. */
+export function validateAssignmentMetadataWhenPresent(
+  metadata: Record<string, unknown> | null,
+  options?: { strict?: boolean }
+): AssignmentMetadataValidationOutcome {
+  if (metadata === null) {
+    return { ok: true };
+  }
+  if (metadata.schemaVersion !== TEAM_ASSIGNMENT_METADATA_SCHEMA_VERSION) {
+    return { ok: true };
+  }
+  const result = validateAssignmentMetadataV1(metadata, options);
+  if (result.ok) {
+    return { ok: true };
+  }
+  const primary = result.issues[0];
+  return {
+    ok: false,
+    code: result.code,
+    message: primary?.message ?? result.message,
+    issues: result.issues
+  };
+}
+
+function readOrchestrationStrictMetadataValidation(
+  effectiveConfig: Record<string, unknown> | undefined
+): boolean {
+  const orchestration = effectiveConfig?.orchestration;
+  if (!orchestration || typeof orchestration !== "object" || Array.isArray(orchestration)) {
+    return false;
+  }
+  return (orchestration as Record<string, unknown>).strictMetadataValidation === true;
+}
+
+export function resolveAssignmentMetadataValidationOptions(ctx: {
+  effectiveConfig?: Record<string, unknown>;
+}): { strict?: boolean } {
+  return readOrchestrationStrictMetadataValidation(ctx.effectiveConfig)
+    ? { strict: true }
+    : {};
 }
 
 export function taskExistsInRelationalStore(db: Sqlite.Database, taskId: string): boolean {

@@ -14,8 +14,10 @@ import {
   listAssignments,
   parseMetadata,
   reconcileAssignment,
+  resolveAssignmentMetadataValidationOptions,
   submitHandoff,
   taskExistsInRelationalStore,
+  validateAssignmentMetadataWhenPresent,
   validateHandoffContractV1,
   validateReconcileCheckpointV1
 } from "./assignment-store.js";
@@ -157,6 +159,18 @@ export const teamExecutionModule: WorkflowModule = {
       const metadata = parseMetadata(args.metadata);
       if (args.metadata !== undefined && args.metadata !== null && metadata === null) {
         return { ok: false, code: "invalid-args", message: "register-assignment metadata must be a JSON object" };
+      }
+      const metadataValidation = validateAssignmentMetadataWhenPresent(
+        metadata,
+        resolveAssignmentMetadataValidationOptions(ctx)
+      );
+      if (!metadataValidation.ok) {
+        return {
+          ok: false,
+          code: metadataValidation.code,
+          message: metadataValidation.message,
+          data: { issues: metadataValidation.issues }
+        };
       }
       const ts = nowIso();
       try {
