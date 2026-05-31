@@ -8,6 +8,10 @@ This root file is intentionally pointer-only to avoid split release history.
 
 - See `docs/maintainers/CHANGELOG.md` for all release notes, migration notes, and historical entries.
 
+## [0.99.24] - 2026-05-31
+
+- **Phase 126 — Agent Orchestration Foundation:** Design-gate artifact pack (inventory, architecture, contracts, commands, policy, profiles, handoff, activity, projection, test strategy, compat). Canonical persist fixes for `git-event-log` task batches. See `docs/maintainers/CHANGELOG.md`.
+
 ## [0.99.22] - 2026-05-30
 
 - **Phase 124 — Local dashboard service mode:** Versioned runtime/task-sync contracts, service-backed dashboard reads, in-process sync worker, SSE event stream, and service-mode closeout preflight gates. See `docs/maintainers/CHANGELOG.md`.

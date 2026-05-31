@@ -1,0 +1,24 @@
+{
+  "agentDefinitionId": "task-worker",
+  "displayName": "Task Work Agent",
+  "description": "Completes one bounded assignment with strict scope and structured handoff.",
+  "role": "task_worker",
+  "hostCompatibility": ["cursor", "vscode", "cli", "manual"],
+  "requiredCapabilities": [
+    "read_context",
+    "edit_files",
+    "run_commands",
+    "submit_handoff",
+    "report_activity"
+  ],
+  "optionalCapabilities": ["open_blocking_task", "open_bug_report", "read_git_diff"],
+  "allowedCommands": ["set-agent-activity", "submit-assignment-handoff", "block-assignment"],
+  "accessProfileId": "task_worker_strict_v1",
+  "contextProfileId": "task_worker_context_v1",
+  "modelProfileId": "balanced_or_cheaper_v1",
+  "handoffContractId": "implementation_handoff_v2",
+  "activityContractId": "agent_activity_v1",
+  "metadata": {},
+  "retired": false,
+  "version": 1
+}

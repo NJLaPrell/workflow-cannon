@@ -36,6 +36,8 @@ export type TaskStateEventAdmissionContext = {
   priorEvents?: TaskStateEventV1[];
   /** When the branch stores a bootstrap snapshot with no tail events yet, seed replay from snapshot. */
   initialProjection?: TaskStateProjectionV1;
+  /** Authoritative task projection at the tail boundary; prior task events are not replayed. */
+  checkpointTaskProjection?: TaskStateProjectionV1;
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -294,11 +296,16 @@ export function admitTaskStateEvent(
 /** Admit a batch in deterministic sequence order (mutates nothing; validates append chain). */
 export function admitTaskStateEventStream(
   inputs: unknown[],
-  options?: { priorEvents?: TaskStateEventV1[]; initialProjection?: TaskStateProjectionV1 }
+  options?: {
+    priorEvents?: CanonicalStateEventV1[];
+    initialProjection?: TaskStateProjectionV1;
+    checkpointTaskProjection?: TaskStateProjectionV1;
+  }
 ): { ok: true; events: TaskStateEventV1[] } | { ok: false; error: TaskStateEventAdmissionError } {
   const result = admitCanonicalStateEventStream(inputs, {
-    priorEvents: options?.priorEvents as CanonicalStateEventV1[] | undefined,
-    initialTaskProjection: options?.initialProjection
+    priorEvents: options?.priorEvents,
+    initialTaskProjection: options?.initialProjection,
+    checkpointTaskProjection: options?.checkpointTaskProjection
   });
   if (!result.ok) {
     return {

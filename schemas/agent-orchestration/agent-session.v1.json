@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workflow-cannon.dev/schemas/agent-orchestration/agent-session.v1.json",
+  "title": "AgentSession v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["sessionId", "agentDefinitionId", "agentId", "status", "startedAt", "updatedAt"],
+  "properties": {
+    "sessionId": { "type": "string", "pattern": "^session-[a-zA-Z0-9._-]+$" },
+    "agentDefinitionId": { "type": "string", "minLength": 1 },
+    "agentId": { "type": "string", "minLength": 1 },
+    "hostHint": {
+      "type": "string",
+      "enum": ["cursor", "vscode", "cli", "codex", "mcp", "service", "manual", "unknown"]
+    },
+    "hostSessionRef": { "type": "string" },
+    "status": {
+      "type": "string",
+      "enum": ["open", "idle", "active", "blocked", "closing", "closed", "stale"]
+    },
+    "modelTier": {
+      "type": "string",
+      "enum": ["cheap_fast", "balanced", "high_reasoning", "specialist", "human_review"]
+    },
+    "modelHint": { "type": "string" },
+    "currentAssignmentId": { "type": "string" },
+    "currentTaskId": { "type": "string", "pattern": "^T[0-9]+$" },
+    "currentActivityId": { "type": "string" },
+    "startedAt": { "type": "string", "format": "date-time" },
+    "updatedAt": { "type": "string", "format": "date-time" },
+    "metadata": { "type": "object", "additionalProperties": true }
+  }
+}

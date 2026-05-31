@@ -480,6 +480,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     this.refreshController = new DashboardRefreshController({
       executeRefresh: (mode, generation) => this.executeDashboardRefresh(mode, generation),
       isDeferred: () => this.isDashboardRefreshDeferred(),
+      isRefreshPaused: () => this.client.isRefreshPaused(),
       onMutationStart: () => {
         this.client.setRefreshPaused(true);
         this.readPath?.pause();
@@ -582,10 +583,24 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   }
 
   /**
+   * Skip coalesced refresh kit reads while a mutation hold is active — except the first
+   * dashboard paint bootstrap where the webview must not stall on task-state sync backlog.
+   */
+  private shouldSkipDashboardKitRefresh(): boolean {
+    return (
+      (this.client.isRefreshPaused() || this.refreshController.isSuppressed()) &&
+      this.dashboardRootHydrated
+    );
+  }
+
+  /**
    * Bootstrap / queue-upgrade reads use {@link CommandClient.runForDashboardPaint} so
    * task-state sync on the mutation lane cannot leave overview stubs at zero counts.
    */
   private shouldUseDashboardPaintLane(): boolean {
+    if (this.shouldSkipDashboardKitRefresh()) {
+      return false;
+    }
     return (
       !this.dashboardRootHydrated ||
       dashboardSummaryNeedsQueueRollupHydration(this.lastDashboardSummaryData)
@@ -595,8 +610,10 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   private runDashboardSummary(
     args: Record<string, unknown>
   ): Promise<DashboardSummaryCommandSuccess | Record<string, unknown>> {
+    const bootstrapPaint = !this.dashboardRootHydrated;
     const runner = this.shouldUseDashboardPaintLane()
-      ? (name: string, a: Record<string, unknown>) => this.client.runForDashboardPaint(name, a)
+      ? (name: string, a: Record<string, unknown>) =>
+          this.client.runForDashboardPaint(name, a, { bootstrap: bootstrapPaint })
       : (name: string, a: Record<string, unknown>) => this.client.run(name, a);
     return runner("dashboard-summary", args) as Promise<
       DashboardSummaryCommandSuccess | Record<string, unknown>
@@ -1583,6 +1600,10 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     if (!this.view || !dashboardSummaryNeedsQueueRollupHydration(this.lastDashboardSummaryData)) {
       return;
     }
+    if (this.shouldSkipDashboardKitRefresh()) {
+      this.refreshController.markDeferredRefreshNeeded();
+      return;
+    }
     logWc("dashboard", "ensureQueueRollupsHydrated: upgrading overview stub to queue projection");
     await this.patchDashboardSectionsFromSummary(["queue", "overview", "planning-interview"], updateSequence, {
       projection: "queue",
@@ -1803,6 +1824,10 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     if (!activeView || sectionIds.length === 0) {
       return;
     }
+    if (this.shouldSkipDashboardKitRefresh()) {
+      this.refreshController.markDeferredRefreshNeeded();
+      return;
+    }
     let sectionsToPatch: DashboardSectionId[] = [...sectionIds];
     const needsPhaseJournal = sectionsToPatch.includes("phase-journal");
     const needsCae = sectionsToPatch.includes("cae");
@@ -1818,7 +1843,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       raw = (options?.forcePaintLane === true
         ? ((await this.client.runForDashboardPaint(
             "dashboard-summary",
-            summaryArgs
+            summaryArgs,
+            { bootstrap: !this.dashboardRootHydrated }
           )) as DashboardSummaryCommandSuccess | Record<string, unknown>)
         : ((await this.runDashboardSummary(summaryArgs)) as
             | DashboardSummaryCommandSuccess
@@ -1934,6 +1960,10 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   private async executeLightSectionRefresh(updateSequence: number): Promise<void> {
     const activeView = this.view;
     if (!activeView) {
+      return;
+    }
+    if (this.shouldSkipDashboardKitRefresh()) {
+      this.refreshController.markDeferredRefreshNeeded();
       return;
     }
     const hydrated = DASHBOARD_SECTION_REGISTRY.map((s) => s.id).filter((id) =>
@@ -4271,6 +4301,10 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   ): Promise<void> {
     const activeView = this.view;
     if (!activeView) {
+      return;
+    }
+    if (this.shouldSkipDashboardKitRefresh()) {
+      this.refreshController.markDeferredRefreshNeeded();
       return;
     }
     const { webview } = activeView;

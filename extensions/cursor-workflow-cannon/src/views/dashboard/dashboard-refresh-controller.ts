@@ -10,6 +10,8 @@ export type DashboardRefreshControllerDeps = {
   executeRefresh: (mode: DashboardRefreshMode, generation: number) => Promise<void>;
   /** True when UI locks or host suppression defer refresh. */
   isDeferred: () => boolean;
+  /** True when kit refresh reads are paused (drawer / roster mutation hold). */
+  isRefreshPaused?: () => boolean;
   /** Called when a mutation starts so pending refresh intents can be dropped. */
   onMutationStart?: () => void;
   log?: (message: string) => void;
@@ -74,9 +76,13 @@ export class DashboardRefreshController {
     this.onDeferredCleared();
   }
 
+  private isRefreshHeld(): boolean {
+    return this.suppressed || (this.deps.isRefreshPaused?.() ?? false);
+  }
+
   /** Schedule a refresh (debounced/coalesced). */
   request(req: DashboardRefreshRequest): void {
-    if (this.suppressed) {
+    if (this.isRefreshHeld()) {
       this.refreshAfterDeferred = true;
       return;
     }
@@ -102,7 +108,7 @@ export class DashboardRefreshController {
     } else if (options?.light === true) {
       this.pendingMode = this.pendingMode === "full" ? "full" : "light";
     }
-    if (this.suppressed) {
+    if (this.isRefreshHeld()) {
       this.refreshAfterDeferred = true;
       return;
     }
@@ -127,7 +133,7 @@ export class DashboardRefreshController {
 
   /** Call when interaction locks clear to flush a deferred refresh. */
   onDeferredCleared(): void {
-    if (this.refreshAfterDeferred && !this.deps.isDeferred() && !this.suppressed) {
+    if (this.refreshAfterDeferred && !this.deps.isDeferred() && !this.isRefreshHeld()) {
       this.refreshAfterDeferred = false;
       void this.pushNow();
     }
@@ -152,7 +158,7 @@ export class DashboardRefreshController {
       const mode = this.pendingMode;
       this.pendingMode = "full";
       const generation = this.currentGeneration();
-      if (this.deps.isDeferred() || this.suppressed) {
+      if (this.deps.isDeferred() || this.isRefreshHeld()) {
         this.refreshAfterDeferred = true;
         return;
       }

@@ -18,6 +18,7 @@ test("DashboardRefreshController module exports coalesce + generation API", () =
   assert.match(controllerSrc, /bumpGeneration/);
   assert.match(controllerSrc, /isStale/);
   assert.match(controllerSrc, /notifyMutationStart/);
+  assert.match(controllerSrc, /isRefreshPaused/);
 });
 
 test("DashboardRefreshController coalesces rapid refresh requests", async () => {
@@ -59,6 +60,24 @@ test("DashboardRefreshController notifyMutationEnd flushes deferred refresh", as
   await controller.pushNow();
   assert.equal(runs, 0);
   controller.notifyMutationEnd();
+  await new Promise((r) => setTimeout(r, 0));
+  assert.equal(runs, 1);
+});
+
+test("DashboardRefreshController defers refresh while isRefreshPaused", async () => {
+  let runs = 0;
+  let paused = true;
+  const controller = new DashboardRefreshController({
+    executeRefresh: async () => {
+      runs += 1;
+    },
+    isDeferred: () => false,
+    isRefreshPaused: () => paused
+  });
+  await controller.pushNow();
+  assert.equal(runs, 0);
+  paused = false;
+  controller.onDeferredCleared();
   await new Promise((r) => setTimeout(r, 0));
   assert.equal(runs, 1);
 });

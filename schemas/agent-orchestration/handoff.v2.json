@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workflow-cannon.dev/schemas/agent-orchestration/handoff.v2.json",
+  "title": "Handoff v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "assignmentId", "agentId", "status", "summary", "evidenceRefs"],
+  "properties": {
+    "schemaVersion": { "const": 2 },
+    "assignmentId": { "type": "string", "minLength": 1 },
+    "agentId": { "type": "string", "minLength": 1 },
+    "agentDefinitionId": { "type": "string" },
+    "status": {
+      "type": "string",
+      "enum": ["completed", "blocked", "partial", "failed", "needs_review"]
+    },
+    "summary": { "type": "string", "minLength": 1 },
+    "filesChanged": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path"],
+        "properties": {
+          "path": { "type": "string", "minLength": 1 },
+          "reason": { "type": "string" }
+        }
+      }
+    },
+    "commandsRun": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["command", "status"],
+        "properties": {
+          "command": { "type": "string", "minLength": 1 },
+          "status": { "type": "string", "enum": ["passed", "failed", "skipped", "not_run"] },
+          "summary": { "type": "string" }
+        }
+      }
+    },
+    "acceptanceCriteria": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["criterion", "status"],
+        "properties": {
+          "criterion": { "type": "string", "minLength": 1 },
+          "status": { "type": "string", "enum": ["passed", "failed", "partial", "not_applicable"] },
+          "evidence": { "type": "string" }
+        }
+      }
+    },
+    "evidenceRefs": { "type": "array", "items": { "type": "string" } },
+    "blockers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["summary"],
+        "properties": {
+          "summary": { "type": "string", "minLength": 1 },
+          "taskId": { "type": "string", "pattern": "^T[0-9]+$" },
+          "severity": { "type": "string", "enum": ["low", "medium", "high", "critical"] }
+        }
+      }
+    },
+    "risks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["risk", "severity"],
+        "properties": {
+          "risk": { "type": "string", "minLength": 1 },
+          "severity": { "type": "string", "enum": ["low", "medium", "high", "critical"] },
+          "recommendation": { "type": "string" }
+        }
+      }
+    },
+    "nextRecommendedAction": { "type": "string" }
+  }
+}

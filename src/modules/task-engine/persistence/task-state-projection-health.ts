@@ -41,7 +41,8 @@ function maxSequence(events: TaskStateEventV1[]): number {
   return max;
 }
 
-function maxRawSequence(events: unknown[]): number {
+/** Max `sequence` field in raw JSONL rows (no admission replay). */
+export function maxRawSequenceFromEventLog(events: unknown[]): number {
   let max = 0;
   for (const event of events) {
     if (
@@ -79,7 +80,7 @@ export function evaluateTaskStateProjectionHealth(
   const appliedSequence = meta?.appliedSequence ?? 0;
   const syncStatus = meta?.syncStatus ?? null;
   const raw = readTaskStateEventLogJsonl(workspacePath, eventLogRelativePath);
-  const rawMaxSequence = maxRawSequence(raw);
+  const rawMaxSequence = maxRawSequenceFromEventLog(raw);
   const admitted = admitTaskStateEventStream(raw);
   if (!admitted.ok) {
     if (syncStatus === "fresh" && appliedSequence >= rawMaxSequence && rawMaxSequence > 0) {

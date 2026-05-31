@@ -262,6 +262,9 @@ export function activate(context: vscode.ExtensionContext): void {
     statusBar.name = "Workflow Cannon";
     statusBar.command = "workflowCannon.lease.pickAction";
     const updateStatusBar = async () => {
+      if (client.isRefreshPaused()) {
+        return;
+      }
       const r = await client.run("dashboard-summary", {});
       if (!r.ok) {
         statusBar.text = "$(warning) WC: unavailable";
@@ -279,13 +282,32 @@ export function activate(context: vscode.ExtensionContext): void {
       statusBar.tooltip = `${leaseUi.tooltip}\nWorkflow Cannon coordination ${posture}; ready queue ${ready}.`;
       statusBar.show();
     };
+    let statusBarTimer: ReturnType<typeof setTimeout> | undefined;
+    const scheduleStatusBarUpdate = (): void => {
+      if (client.isRefreshPaused()) {
+        return;
+      }
+      if (statusBarTimer) {
+        clearTimeout(statusBarTimer);
+      }
+      statusBarTimer = setTimeout(() => {
+        statusBarTimer = undefined;
+        void updateStatusBar();
+      }, 500);
+    };
     let behaviorRuleSyncTimer: ReturnType<typeof setTimeout> | undefined;
     const scheduleEffectiveBehaviorRuleSync = (): void => {
+      if (client.isRefreshPaused()) {
+        return;
+      }
       if (behaviorRuleSyncTimer) {
         clearTimeout(behaviorRuleSyncTimer);
       }
       behaviorRuleSyncTimer = setTimeout(() => {
         behaviorRuleSyncTimer = undefined;
+        if (client.isRefreshPaused()) {
+          return;
+        }
         void client.run("sync-effective-behavior-cursor-rule", {}).then((r) => {
           if (!r.ok && process.env.WORKSPACE_KIT_DEBUG_EXTENSION === "1") {
             logWc("extension", `sync-effective-behavior-cursor-rule FAIL ${String(r.code ?? "")} ${String(r.message ?? "")}`);
@@ -295,7 +317,7 @@ export function activate(context: vscode.ExtensionContext): void {
     };
     void updateStatusBar();
     onKitStateChanged(() => {
-      void updateStatusBar();
+      scheduleStatusBarUpdate();
       scheduleEffectiveBehaviorRuleSync();
     });
     context.subscriptions.push(statusBar);

@@ -1,0 +1,20 @@
+{
+  "activityId": "current:phase-126-delivery-worker:default",
+  "agentId": "phase-126-delivery-worker",
+  "agentDefinitionId": "task-worker",
+  "sessionId": "default",
+  "assignmentId": "A-phase126-T100625",
+  "taskId": "T100625",
+  "phaseKey": "126",
+  "kind": "working_task",
+  "label": "Drafting AGENT_ORCHESTRATION_CONTRACTS.md",
+  "currentStep": "Writing schema sections",
+  "command": "pnpm run check",
+  "hostHint": "cursor",
+  "modelTier": "balanced",
+  "modelHint": "gpt-5.5-high",
+  "startedAt": "2026-05-31T08:26:44.738Z",
+  "updatedAt": "2026-05-31T08:30:00.000Z",
+  "expiresAt": "2026-05-31T08:31:30.000Z",
+  "details": {}
+}

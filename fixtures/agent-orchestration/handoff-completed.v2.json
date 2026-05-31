@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 2,
+  "assignmentId": "A-phase126-T100625",
+  "agentId": "phase-126-delivery-worker",
+  "agentDefinitionId": "task-worker",
+  "status": "completed",
+  "summary": "Drafted AGENT_ORCHESTRATION_CONTRACTS.md with v1 schemas, enums, examples, and malformed-field rules.",
+  "filesChanged": [
+    { "path": "AGENT_ORCHESTRATION_CONTRACTS.md", "reason": "A-SCHEMA contract pack" },
+    { "path": "schemas/agent-orchestration/agent-definition.v1.json", "reason": "JSON Schema" }
+  ],
+  "commandsRun": [{ "command": "pnpm run check", "status": "passed", "summary": "Repo gate green" }],
+  "acceptanceCriteria": [
+    { "criterion": "Schemas match the foundation document", "status": "passed", "evidence": "AGENT_ORCHESTRATION_CONTRACTS.md §3–7" },
+    { "criterion": "Examples exist for Orchestration Agent and Task Work Agent", "status": "passed", "evidence": "§3.6, fixtures/agent-orchestration/" }
+  ],
+  "evidenceRefs": ["check:pnpm-run-check"],
+  "blockers": [],
+  "risks": [],
+  "nextRecommendedAction": "Human sign-off on A-SCHEMA; proceed to A-COMMANDS (T100626)."
+}

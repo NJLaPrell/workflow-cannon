@@ -5,7 +5,7 @@ import {
   materializeTaskStoreDocument
 } from "../task-state-events/event-applier.js";
 import type { TaskStateEventV1 } from "../task-state-events/event-payloads.js";
-import type { TaskStateProjectionV1 } from "../task-state-events/projection-types.js";
+import type { TaskStateProjectionV1, TaskVersionRecordV1 } from "../task-state-events/projection-types.js";
 
 export type TaskStateSnapshotContentV1 = {
   schemaVersion: 1;
@@ -23,6 +23,67 @@ export function documentFromSnapshotContent(content: TaskStateSnapshotContentV1)
     mutationLog: content.mutations ?? [],
     lastUpdated: new Date().toISOString()
   };
+}
+
+function payloadTaskId(event: TaskStateEventV1): string | undefined {
+  const payload = event.payload;
+  if (payload && typeof payload === "object" && "taskId" in payload) {
+    const taskId = (payload as { taskId?: unknown }).taskId;
+    return typeof taskId === "string" ? taskId : undefined;
+  }
+  return undefined;
+}
+
+function inferTaskVersionRecordsFromEvents(
+  events: TaskStateEventV1[],
+  fallbackRecordedAt: string
+): TaskVersionRecordV1[] {
+  const sorted = [...events].sort((a, b) => {
+    if (a.sequence !== b.sequence) {
+      return a.sequence - b.sequence;
+    }
+    return a.eventId.localeCompare(b.eventId);
+  });
+  const byTask = new Map<string, TaskVersionRecordV1>();
+  for (const event of sorted) {
+    const taskId = payloadTaskId(event);
+    if (!taskId) {
+      continue;
+    }
+    const version =
+      event.expectedTaskVersion !== undefined
+        ? event.expectedTaskVersion + 1
+        : event.kind === "task.created"
+          ? 1
+          : (byTask.get(taskId)?.version ?? 0) + 1;
+    byTask.set(taskId, {
+      taskId,
+      version,
+      eventId: event.eventId,
+      sequence: event.sequence,
+      recordedAt: event.recordedAt ?? fallbackRecordedAt
+    });
+  }
+  return [...byTask.values()];
+}
+
+/** SQLite task document as a projection checkpoint (snapshot-seeded git logs). */
+export function buildCheckpointTaskProjectionFromStore(
+  document: TaskStoreDocument,
+  appliedSequence: number,
+  priorTaskEvents: TaskStateEventV1[]
+): TaskStateProjectionV1 {
+  const projection = projectionFromSnapshotContent({
+    schemaVersion: 1,
+    projectionKind: "task-store-document",
+    tasks: document.tasks,
+    transitions: document.transitionLog,
+    mutations: document.mutationLog
+  });
+  projection.lastEventSequence = appliedSequence;
+  projection.lastUpdated = document.lastUpdated;
+  projection.taskVersions = inferTaskVersionRecordsFromEvents(priorTaskEvents, document.lastUpdated);
+  return projection;
 }
 
 export function projectionFromSnapshotContent(content: TaskStateSnapshotContentV1): TaskStateProjectionV1 {

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "sourceSchemaPackageVersion": "0.99.23",
+  "sourceSchemaPackageVersion": "0.99.24",
   "pilotCommands": [
     "accept-improvement",
     "add-dependency",
@@ -29,6 +29,10 @@
     "create-task",
     "create-task-from-plan",
     "create-wishlist",
+    "dashboard-service-snapshot",
+    "dashboard-service-start",
+    "dashboard-service-status",
+    "dashboard-service-stop",
     "dashboard-summary",
     "demote-task",
     "derive-publish-artifacts",
@@ -696,6 +700,18 @@
       ],
       "additionalProperties": true
     },
+    "dashboard-service-snapshot": {
+      "type": "object"
+    },
+    "dashboard-service-start": {
+      "type": "object"
+    },
+    "dashboard-service-status": {
+      "type": "object"
+    },
+    "dashboard-service-stop": {
+      "type": "object"
+    },
     "dashboard-summary": {
       "type": "object",
       "properties": {
@@ -1284,6 +1300,9 @@
       },
       "additionalProperties": true
     },
+    "planning-state-migrate-baseline": {
+      "type": "object"
+    },
     "propose-release-version": {
       "type": "object",
       "properties": {
@@ -1765,6 +1784,151 @@
       "type": "object",
       "additionalProperties": true
     },
+    "task-state-compact": {
+      "type": "object",
+      "properties": {
+        "dryRun": {
+          "type": "boolean"
+        },
+        "branch": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    },
+    "task-state-hydrate": {
+      "type": "object",
+      "properties": {
+        "dryRun": {
+          "type": "boolean"
+        },
+        "fetch": {
+          "type": "boolean"
+        },
+        "branch": {
+          "type": "string"
+        },
+        "eventLogRelativePath": {
+          "type": "string"
+        },
+        "policyApproval": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "task-state-init": {
+      "type": "object",
+      "properties": {
+        "dryRun": {
+          "type": "boolean"
+        },
+        "overwriteExisting": {
+          "type": "boolean"
+        },
+        "push": {
+          "type": "boolean"
+        },
+        "branch": {
+          "type": "string"
+        },
+        "snapshotId": {
+          "type": "string"
+        },
+        "policyApproval": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "task-state-migrate-baseline": {
+      "type": "object"
+    },
+    "task-state-publish": {
+      "type": "object",
+      "required": [
+        "events",
+        "expectedHeadSha",
+        "expectedTaskVersions"
+      ],
+      "properties": {
+        "dryRun": {
+          "type": "boolean"
+        },
+        "events": {
+          "type": "array",
+          "minItems": 1
+        },
+        "expectedHeadSha": {
+          "type": "string"
+        },
+        "expectedTaskVersions": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer"
+          }
+        },
+        "branch": {
+          "type": "string"
+        },
+        "maxAttempts": {
+          "type": "integer"
+        },
+        "push": {
+          "type": "boolean"
+        },
+        "policyApproval": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "task-state-snapshot": {
+      "type": "object",
+      "properties": {
+        "dryRun": {
+          "type": "boolean"
+        },
+        "branch": {
+          "type": "string"
+        },
+        "snapshotId": {
+          "type": "string"
+        },
+        "policyApproval": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "task-state-status": {
+      "type": "object",
+      "properties": {
+        "fetch": {
+          "type": "boolean"
+        },
+        "branch": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    },
+    "task-state-verify": {
+      "type": "object",
+      "properties": {
+        "fetch": {
+          "type": "boolean"
+        },
+        "branch": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    },
     "task-sync-compact": {
       "type": "object",
       "properties": {
@@ -1823,12 +1987,6 @@
         }
       },
       "additionalProperties": true
-    },
-    "planning-state-migrate-baseline": {
-      "type": "object"
-    },
-    "task-state-migrate-baseline": {
-      "type": "object"
     },
     "task-sync-publish": {
       "type": "object",
@@ -2174,148 +2332,6 @@
           "type": "integer",
           "minimum": 1,
           "maximum": 500
-        }
-      },
-      "additionalProperties": true
-    },
-    "task-state-status": {
-      "type": "object",
-      "properties": {
-        "fetch": {
-          "type": "boolean"
-        },
-        "branch": {
-          "type": "string"
-        }
-      },
-      "additionalProperties": true
-    },
-    "task-state-hydrate": {
-      "type": "object",
-      "properties": {
-        "dryRun": {
-          "type": "boolean"
-        },
-        "fetch": {
-          "type": "boolean"
-        },
-        "branch": {
-          "type": "string"
-        },
-        "eventLogRelativePath": {
-          "type": "string"
-        },
-        "policyApproval": {
-          "type": "object",
-          "additionalProperties": true
-        }
-      },
-      "additionalProperties": true
-    },
-    "task-state-init": {
-      "type": "object",
-      "properties": {
-        "dryRun": {
-          "type": "boolean"
-        },
-        "overwriteExisting": {
-          "type": "boolean"
-        },
-        "push": {
-          "type": "boolean"
-        },
-        "branch": {
-          "type": "string"
-        },
-        "snapshotId": {
-          "type": "string"
-        },
-        "policyApproval": {
-          "type": "object",
-          "additionalProperties": true
-        }
-      },
-      "additionalProperties": true
-    },
-    "task-state-verify": {
-      "type": "object",
-      "properties": {
-        "fetch": {
-          "type": "boolean"
-        },
-        "branch": {
-          "type": "string"
-        }
-      },
-      "additionalProperties": true
-    },
-    "task-state-publish": {
-      "type": "object",
-      "required": [
-        "events",
-        "expectedHeadSha",
-        "expectedTaskVersions"
-      ],
-      "properties": {
-        "dryRun": {
-          "type": "boolean"
-        },
-        "events": {
-          "type": "array",
-          "minItems": 1
-        },
-        "expectedHeadSha": {
-          "type": "string"
-        },
-        "expectedTaskVersions": {
-          "type": "object",
-          "additionalProperties": {
-            "type": "integer"
-          }
-        },
-        "branch": {
-          "type": "string"
-        },
-        "maxAttempts": {
-          "type": "integer"
-        },
-        "push": {
-          "type": "boolean"
-        },
-        "policyApproval": {
-          "type": "object",
-          "additionalProperties": true
-        }
-      },
-      "additionalProperties": true
-    },
-    "task-state-snapshot": {
-      "type": "object",
-      "properties": {
-        "dryRun": {
-          "type": "boolean"
-        },
-        "branch": {
-          "type": "string"
-        },
-        "snapshotId": {
-          "type": "string"
-        },
-        "policyApproval": {
-          "type": "object",
-          "additionalProperties": true
-        }
-      },
-      "additionalProperties": true
-    },
-    "task-state-compact": {
-      "type": "object",
-      "properties": {
-        "dryRun": {
-          "type": "boolean"
-        },
-        "branch": {
-          "type": "string"
         }
       },
       "additionalProperties": true
