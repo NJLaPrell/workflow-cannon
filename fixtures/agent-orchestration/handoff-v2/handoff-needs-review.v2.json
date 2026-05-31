@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 2,
+  "assignmentId": "A126",
+  "agentId": "phase-126-delivery-worker",
+  "agentDefinitionId": "task-worker",
+  "status": "needs_review",
+  "summary": "Contracts pack ready for human schema review before validator implementation.",
+  "filesChanged": [{ "path": "AGENT_ORCHESTRATION_CONTRACTS.md", "reason": "Full A-SCHEMA draft" }],
+  "commandsRun": [{ "command": "pnpm run check", "status": "passed", "summary": "Repo gate green" }],
+  "acceptanceCriteria": [
+    {
+      "criterion": "Verification evidence recorded with operator sign-off",
+      "status": "partial",
+      "evidence": "§10 sign-off table pending human"
+    }
+  ],
+  "evidenceRefs": ["pr:pending"],
+  "blockers": [],
+  "risks": [
+    {
+      "risk": "Strict validation rules may differ from operator intent",
+      "severity": "low",
+      "recommendation": "Complete §10 sign-off before WP-3 validators."
+    }
+  ],
+  "nextRecommendedAction": "Route to maintainer for A-SCHEMA approval (§10.2)."
+}

@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 2,
+  "assignmentId": "A124",
+  "agentId": "phase-126-delivery-worker",
+  "status": "partial",
+  "summary": "Contract markdown drafted; JSON Schema files deferred to follow-up.",
+  "filesChanged": [{ "path": "AGENT_ORCHESTRATION_CONTRACTS.md", "reason": "Primary deliverable" }],
+  "commandsRun": [{ "command": "pnpm run check", "status": "passed", "summary": "No schema test yet" }],
+  "acceptanceCriteria": [
+    { "criterion": "Handoff v2 has examples for all statuses", "status": "passed" },
+    { "criterion": "JSON Schema pack under schemas/agent-orchestration/", "status": "partial", "evidence": "Pending T-AO-110" }
+  ],
+  "evidenceRefs": [],
+  "blockers": [],
+  "risks": [],
+  "nextRecommendedAction": "Assign schema extraction task or extend this assignment."
+}

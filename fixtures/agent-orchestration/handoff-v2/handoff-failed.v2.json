@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 2,
+  "assignmentId": "A125",
+  "agentId": "phase-126-delivery-worker",
+  "status": "failed",
+  "summary": "pnpm run check failed after contracts edit; could not merge.",
+  "filesChanged": [{ "path": "AGENT_ORCHESTRATION_CONTRACTS.md", "reason": "WIP with broken cross-ref" }],
+  "commandsRun": [{ "command": "pnpm run check", "status": "failed", "summary": "lint or test failure" }],
+  "acceptanceCriteria": [{ "criterion": "pnpm run check passes", "status": "failed", "evidence": "exit code non-zero" }],
+  "evidenceRefs": ["check:pnpm-run-check:failed"],
+  "blockers": [],
+  "risks": [
+    {
+      "risk": "Broken doc links block downstream A-COMMANDS",
+      "severity": "medium",
+      "recommendation": "Fix check failures before reconcile."
+    }
+  ],
+  "nextRecommendedAction": "Orchestrator: assign fix-up or cancel assignment."
+}
