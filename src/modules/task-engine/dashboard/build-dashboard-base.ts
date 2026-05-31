@@ -452,7 +452,7 @@ export async function buildDashboardBase(
     ? readCurrentAgentActivityLease(sqliteDual.getDatabase(), systemStatus.generatedAt)
     : null;
   const agentStatus = liveActivity
-    ? agentActivityLeaseToDashboardStatus(liveActivity)
+    ? agentActivityLeaseToDashboardStatus(liveActivity, systemStatus.generatedAt)
     : derivedAgentStatus;
 
   const wsForDelivery =

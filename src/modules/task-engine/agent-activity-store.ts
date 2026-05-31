@@ -1,8 +1,10 @@
 import type Database from "better-sqlite3";
+import type { AgentActivityV1 } from "../../contracts/agent-activity.v1.js";
 import type {
   DashboardAgentStatusKind,
   DashboardAgentStatusSummary
 } from "../../contracts/dashboard-summary-run.js";
+import { validateAgentActivityV1 } from "../../core/validation/agent-orchestration/index.js";
 
 const TABLE = "kit_agent_activity_leases";
 
@@ -24,13 +26,21 @@ export const DASHBOARD_AGENT_STATUS_KINDS: readonly DashboardAgentStatusKind[] =
 
 const KIND_SET = new Set<string>(DASHBOARD_AGENT_STATUS_KINDS);
 
+export type AgentActivityLifecycle = "fresh" | "aging" | "stale" | "expired";
+
 export type AgentActivityLease = {
   schemaVersion: 1;
   activityId: string;
   agentId: string;
   sessionId: string;
+  agentDefinitionId: string | null;
+  assignmentId: string | null;
   kind: DashboardAgentStatusKind;
   label: string;
+  currentStep: string | null;
+  hostHint: string | null;
+  modelTier: string | null;
+  modelHint: string | null;
   startedAt: string;
   updatedAt: string;
   expiresAt: string;
@@ -46,8 +56,14 @@ export type SetAgentActivityInput = {
   activityId: string;
   agentId: string;
   sessionId?: string | null;
+  agentDefinitionId?: string | null;
+  assignmentId?: string | null;
   kind: DashboardAgentStatusKind;
   label: string;
+  currentStep?: string | null;
+  hostHint?: string | null;
+  modelTier?: string | null;
+  modelHint?: string | null;
   now: string;
   expiresAt: string;
   taskId?: string | null;
@@ -94,9 +110,81 @@ function validIsoMillis(value: string): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
+
+export function deriveAgentActivityLifecycle(
+  lease: Pick<AgentActivityLease, "updatedAt" | "expiresAt">,
+  now: string
+): AgentActivityLifecycle {
+  const nowMs = validIsoMillis(now);
+  const updatedMs = validIsoMillis(lease.updatedAt);
+  const expiresMs = validIsoMillis(lease.expiresAt);
+  if (nowMs === null || updatedMs === null || expiresMs === null) {
+    return "expired";
+  }
+  if (nowMs >= expiresMs) {
+    return "expired";
+  }
+  const ageMs = nowMs - updatedMs;
+  if (ageMs > 60_000) {
+    return "stale";
+  }
+  if (ageMs > 30_000) {
+    return "aging";
+  }
+  return "fresh";
+}
+
+export function agentActivityLifecycleConfidence(
+  lifecycle: AgentActivityLifecycle
+): DashboardAgentStatusSummary["confidence"] {
+  switch (lifecycle) {
+    case "fresh":
+      return "high";
+    case "aging":
+      return "medium";
+    case "stale":
+    case "expired":
+    default:
+      return "low";
+  }
+}
+
+export function agentActivityLeaseToV1(lease: AgentActivityLease): AgentActivityV1 {
+  const activity: AgentActivityV1 = {
+    activityId: lease.activityId,
+    agentId: lease.agentId,
+    sessionId: lease.sessionId,
+    kind: lease.kind,
+    label: lease.label,
+    updatedAt: lease.updatedAt,
+    expiresAt: lease.expiresAt
+  };
+  if (lease.agentDefinitionId) activity.agentDefinitionId = lease.agentDefinitionId;
+  if (lease.assignmentId) activity.assignmentId = lease.assignmentId;
+  if (lease.taskId) activity.taskId = lease.taskId;
+  if (lease.phaseKey) activity.phaseKey = lease.phaseKey;
+  if (lease.currentStep) activity.currentStep = lease.currentStep;
+  if (lease.command) activity.command = lease.command;
+  if (lease.hostHint) activity.hostHint = lease.hostHint;
+  if (lease.modelTier) activity.modelTier = lease.modelTier as AgentActivityV1["modelTier"];
+  if (lease.modelHint) activity.modelHint = lease.modelHint;
+  if (lease.startedAt) activity.startedAt = lease.startedAt;
+  if (lease.details && Object.keys(lease.details).length > 0) {
+    activity.details = lease.details;
+  }
+  return activity;
+}
+
 export function normalizeAgentActivityKind(raw: unknown): DashboardAgentStatusKind | null {
   const value = cleanText(raw);
   return KIND_SET.has(value) ? (value as DashboardAgentStatusKind) : null;
+}
+
+function assertPersistedActivityV1(lease: AgentActivityLease): void {
+  const validated = validateAgentActivityV1(agentActivityLeaseToV1(lease));
+  if (!validated.ok) {
+    throw new Error(validated.message ?? "AgentActivity v1 validation failed after persist");
+  }
 }
 
 function rowToLease(row: Record<string, unknown>): AgentActivityLease | null {
@@ -119,8 +207,14 @@ function rowToLease(row: Record<string, unknown>): AgentActivityLease | null {
     activityId,
     agentId,
     sessionId,
+    agentDefinitionId: cleanText(row.agent_definition_id) || null,
+    assignmentId: cleanText(row.assignment_id) || null,
     kind,
     label,
+    currentStep: cleanText(row.current_step) || null,
+    hostHint: cleanText(row.host_hint) || null,
+    modelTier: cleanText(row.model_tier) || null,
+    modelHint: cleanText(row.model_hint) || null,
     startedAt,
     updatedAt,
     expiresAt,
@@ -159,14 +253,21 @@ export function setAgentActivityLease(
   const startedAt = cleanText(existing?.started_at, input.now);
   db.prepare(
     `INSERT INTO ${TABLE} (
-      activity_id, agent_id, session_id, kind, label, task_id, command, phase_key, pr_number,
+      activity_id, agent_id, session_id, agent_definition_id, assignment_id, kind, label,
+      current_step, host_hint, model_tier, model_hint, task_id, command, phase_key, pr_number,
       version, details_json, started_at, updated_at, expires_at
-    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     ON CONFLICT(activity_id) DO UPDATE SET
       agent_id = excluded.agent_id,
       session_id = excluded.session_id,
+      agent_definition_id = excluded.agent_definition_id,
+      assignment_id = excluded.assignment_id,
       kind = excluded.kind,
       label = excluded.label,
+      current_step = excluded.current_step,
+      host_hint = excluded.host_hint,
+      model_tier = excluded.model_tier,
+      model_hint = excluded.model_hint,
       task_id = excluded.task_id,
       command = excluded.command,
       phase_key = excluded.phase_key,
@@ -179,8 +280,14 @@ export function setAgentActivityLease(
     activityId,
     agentId,
     sessionId,
+    input.agentDefinitionId ?? null,
+    input.assignmentId ?? null,
     input.kind,
     label,
+    input.currentStep ?? null,
+    input.hostHint ?? null,
+    input.modelTier ?? null,
+    input.modelHint ?? null,
     input.taskId ?? null,
     input.command ?? null,
     input.phaseKey ?? null,
@@ -198,6 +305,7 @@ export function setAgentActivityLease(
   if (!lease) {
     throw new Error(`Unable to read persisted agent activity lease '${activityId}'`);
   }
+  assertPersistedActivityV1(lease);
   return lease;
 }
 
@@ -223,7 +331,11 @@ export function heartbeatAgentActivityLease(
   const row = db.prepare(`SELECT * FROM ${TABLE} WHERE activity_id = ?`).get(activityId) as
     | Record<string, unknown>
     | undefined;
-  return row ? rowToLease(row) : null;
+  const lease = row ? rowToLease(row) : null;
+  if (lease) {
+    assertPersistedActivityV1(lease);
+  }
+  return lease;
 }
 
 export function clearAgentActivityLeases(
@@ -285,18 +397,21 @@ export function readCurrentAgentActivityLease(
 }
 
 export function agentActivityLeaseToDashboardStatus(
-  lease: AgentActivityLease
+  lease: AgentActivityLease,
+  now?: string
 ): DashboardAgentStatusSummary {
   const detailTaskId =
     typeof lease.details?.taskId === "string" && lease.details.taskId.trim().length > 0
       ? lease.details.taskId.trim()
       : null;
+  const referenceNow = cleanText(now, lease.updatedAt);
+  const lifecycle = deriveAgentActivityLifecycle(lease, referenceNow);
   return {
     schemaVersion: 1,
     source: "live_activity",
     kind: lease.kind,
     label: lease.label,
-    confidence: "high",
+    confidence: agentActivityLifecycleConfidence(lifecycle),
     updatedAt: lease.updatedAt,
     taskId: lease.taskId ?? detailTaskId,
     phaseKey: lease.phaseKey,
