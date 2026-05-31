@@ -8,6 +8,21 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [0.99.24] - 2026-05-31
+
+Patch — **Phase 126 Agent Orchestration Foundation** (contracts and design gates; documentation-only deliverables).
+
+### Added
+
+- Agent orchestration design artifact pack: inventory, architecture, contracts/schemas/fixtures, commands, policy, profiles, handoff v2 rubric, activity lifecycle, dashboard projection contract, test strategy, and compatibility notes (`AGENT_ORCHESTRATION_*.md`).
+- Handoff v2 golden fixtures under `fixtures/agent-orchestration/handoff-v2/`.
+- JSON Schema fixtures under `schemas/agent-orchestration/`.
+
+### Fixed
+
+- `persist-planning-execution-drafts` publishes canonical `task.created` events under `git-event-log` authority (T100634).
+- Rich-create canonical publish no longer duplicates `clientMutationId` across paired `task.created` + `task.updated` events.
+
 ## [0.99.23] - 2026-05-30
 
 Patch — **Phase 125 Pluggable sync backends** (canonical backend interface, Git and local-only adapters, backend selection, conformance harness, task-sync CLI names).
