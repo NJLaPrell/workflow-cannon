@@ -18,6 +18,10 @@ import {
   readKitWorkspaceStatusRow,
   workspaceStatusTableAvailable
 } from "./persistence/workspace-status-store.js";
+import { parseKitPhaseNumberFromYaml } from "./phase-resolution.js";
+import { collectDoctorPhaseProjectionCountIssues } from "./sync-backends/git-event-log-phase-projection-guard.js";
+import { TaskStore } from "./persistence/store.js";
+import { SqliteDualPlanningStore } from "./persistence/sqlite-dual-planning.js";
 
 export type DoctorTaskStateGitHealthIssue = { path: string; reason: string };
 
@@ -79,6 +83,9 @@ export async function collectDoctorTaskStateGitHealthIssues(
     return issues;
   }
 
+  let phaseKey: string | null = parseKitPhaseNumberFromYaml(
+    String((effective.kit as Record<string, unknown> | undefined)?.currentPhaseNumber ?? "")
+  );
   let db: InstanceType<typeof DatabaseCtor>;
   try {
     db = new Database(dbAbs, { readonly: true });
@@ -93,6 +100,7 @@ export async function collectDoctorTaskStateGitHealthIssues(
     ) {
       const rolloverCount = countSetCurrentPhaseEvents(db);
       const ws = readKitWorkspaceStatusRow(db);
+      phaseKey = parseKitPhaseNumberFromYaml(ws?.currentKitPhase ?? null) ?? phaseKey;
       if (ws && ws.workspaceRevision >= 5 && rolloverCount === 0) {
         issues.push({
           path: dbRel,
@@ -115,6 +123,22 @@ export async function collectDoctorTaskStateGitHealthIssues(
     }
   } finally {
     db.close();
+  }
+
+  try {
+    const dual = new SqliteDualPlanningStore(cwd, dbRel);
+    dual.loadFromDisk();
+    const store = TaskStore.forSqliteDual(dual);
+    await store.load();
+    const projectionIssues = await collectDoctorPhaseProjectionCountIssues(
+      cwd,
+      effective,
+      store.getActiveTasks(),
+      phaseKey
+    );
+    issues.push(...projectionIssues);
+  } catch {
+    // phase projection guard is advisory when store cannot be read
   }
 
   return issues;

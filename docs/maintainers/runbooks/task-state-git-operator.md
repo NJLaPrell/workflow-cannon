@@ -68,8 +68,28 @@ See **`.ai/playbooks/phase-closeout-and-release.md`** § **3a**. Summary:
 1. On **`release/phase-<N>`** tip: publish outstanding task-state events and push **`workflow-cannon/task-state`**.
 2. **`task-sync-verify`** against **`origin/workflow-cannon/task-state`**.
 3. Require an outbox-drained closeout check (or explicit maintainer waiver) before phase → `main`.
-4. Merge phase branch to **`main`** **without** committing **`workspace-kit.db`** / **`task-state-events.jsonl`** as closeout artifacts.
-5. After updating **`main`**: every clone runs **hydrate** (above).
+4. **`phase-delivery-preflight`** must pass **`data.phaseProjection`** (git-event-log workspaces): local SQLite phase delivery task counts must match git canonical replay; blocking when tasks vanish from projection or sqlite-only rows remain unpublished.
+5. Merge phase branch to **`main`** **without** committing **`workspace-kit.db`** / **`task-state-events.jsonl`** as closeout artifacts.
+6. After updating **`main`**: every clone runs **hydrate** (above).
+
+### Repro: phase task rows vanish from SQLite projection (T100634)
+
+Observed on Phase 126 (2026-05-31): **`T100624`–`T100633`** appeared in SQLite after plan persist, then **`list-tasks`** dropped to a single row after delivery/hydrate while **`phase-closeout-readiness`** still passed (SQLite-only read).
+
+| Step | Symptom | Mechanism |
+| --- | --- | --- |
+| Plan materialize | 11+ phase tasks visible in SQLite | **`persist-planning-execution-drafts`** (pre-fix) or batch scripts wrote SQLite without **`task.created`** on git |
+| Delivery / hydrate | Phase task count collapses | **`task-sync-hydrate`** rebuilds SQLite from **`workflow-cannon/task-state`**; unpublished rows are dropped |
+| Closeout preflight | False green | **`phase-closeout-readiness`** counted only local SQLite; git replay was not compared |
+| **`task-sync-verify`** | Many **`event-schema-validation-failed`** | Invalid or legacy-shaped events on canonical branch block trustworthy replay |
+
+**Bounded mitigations (Phase 127+):**
+
+- **`persist-planning-execution-drafts`** publishes **`task.created`** when **`tasks.canonicalAuthority`** is **`git-event-log`** (same as **`apply-task-batch`**).
+- **`phase-delivery-preflight`** embeds **`phaseProjection`**: blocks closeout when local phase delivery counts differ from git canonical replay or verify reports schema failures.
+- **`doctor`** surfaces the same drift via **`collectDoctorPhaseProjectionCountIssues`**.
+
+**Operator recovery:** publish missing tasks with **`apply-task-batch`** / **`create-task`**, drain outbox, **`task-sync-hydrate`** with fetch, re-run preflight before closeout.
 
 ---
 

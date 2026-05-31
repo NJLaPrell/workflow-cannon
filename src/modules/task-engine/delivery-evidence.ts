@@ -269,6 +269,21 @@ export function isPhaseDeliveryTask(task: TaskEntity): boolean {
   return inferTaskPhaseKey(task) !== null;
 }
 
+/** Count non-archived phase delivery tasks for a stable phaseKey (SQLite or projection rows). */
+export function countPhaseDeliveryTasksForKey(tasks: TaskEntity[], phaseKey: string): number {
+  const key = phaseKey.trim();
+  return tasks.filter((task) => isPhaseDeliveryTask(task) && inferTaskPhaseKey(task) === key).length;
+}
+
+/** Sorted task ids for phase delivery rows in a phase (audit diffs). */
+export function listPhaseDeliveryTaskIdsForKey(tasks: TaskEntity[], phaseKey: string): string[] {
+  const key = phaseKey.trim();
+  return tasks
+    .filter((task) => isPhaseDeliveryTask(task) && inferTaskPhaseKey(task) === key)
+    .map((task) => task.id)
+    .sort();
+}
+
 function violationMessageForCode(code: string): string {
   switch (code) {
     case "delivery-evidence-malformed-v1":
