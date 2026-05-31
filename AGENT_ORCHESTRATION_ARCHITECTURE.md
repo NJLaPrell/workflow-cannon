@@ -377,7 +377,7 @@ Dependent tasks (**T100625**, **T100626**, **T100633**, T-AO-110+) should treat 
 | No parallel assignment store | §1, §4 |
 | Dashboard read-only boundary | §7 |
 | v1 non-goals listed | §8 |
-| `pnpm run check` (repo gate) | Recorded at PR / task completion |
+| `pnpm run check` (repo gate) | Pass — exit 0 on 2026-05-31 (feature/T100624-orchestration-architecture) |
 
 ---
 
