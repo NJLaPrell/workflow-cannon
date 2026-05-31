@@ -63,6 +63,24 @@ export {
   assessLocalOnlyCloseoutWarning
 } from "./local-only-closeout.js";
 export type {
+  BuildPhaseProjectionCountGuardInput,
+  DoctorPhaseProjectionCountIssue,
+  PhaseProjectionCountGuardFinding,
+  PhaseProjectionCountGuardFindingCode,
+  PhaseProjectionCountGuardReport
+} from "./git-event-log-phase-projection-guard.js";
+export {
+  PHASE_PROJECTION_COUNT_REGRESSION_CODE,
+  PHASE_PROJECTION_LOCAL_EXCEEDS_REMOTE_CODE,
+  PHASE_PROJECTION_REMOTE_UNREADABLE_CODE,
+  PHASE_PROJECTION_VERIFY_SCHEMA_FAILURES_CODE,
+  buildPhaseProjectionCountGuard,
+  buildPhaseProjectionCountGuardAsync,
+  collectDoctorPhaseProjectionCountIssues,
+  isPhaseProjectionCountGuardActive,
+  isPhaseProjectionCountGuardActiveForContext
+} from "./git-event-log-phase-projection-guard.js";
+export type {
   BackendConformanceHarnessOptions,
   BackendConformanceReport,
   BackendConformanceScenario,
