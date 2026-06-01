@@ -1,0 +1,15 @@
+<svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- App icon tile with rounded corners -->
+  <rect width="32" height="32" rx="7" fill="#0F0F0F"/>
+  <!-- Simplified cannon: barrel + wheel -->
+  <!-- Wheel -->
+  <circle cx="14" cy="23" r="5" stroke="#FF5F1F" stroke-width="2"/>
+  <circle cx="14" cy="23" r="1.5" fill="#FF5F1F"/>
+  <!-- Barrel group, angled -->
+  <g transform="rotate(-14, 10, 17)">
+    <!-- Breech -->
+    <rect x="5" y="12" width="8" height="10" rx="2" fill="#FF5F1F"/>
+    <!-- Barrel -->
+    <rect x="11" y="14" width="15" height="6" rx="2" fill="#FF5F1F"/>
+  </g>
+</svg>

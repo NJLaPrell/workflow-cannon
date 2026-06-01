@@ -18,3 +18,27 @@ id = "gw2hoUsT-9pyJGQxsj4NL"
 uri = "file://attached_assets/generated_images/wc-wordmark.png"
 type = "image"
 title = "generated_image"
+
+[[generated]]
+id = "1vLmHgv8hD6nO9laiQ9UG"
+uri = "file://attached_assets/generated_images/wc-cannon-mark-hq.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "xxWTqUUMIrzE2Y2wWGEFT"
+uri = "file://attached_assets/generated_images/wc-app-icon.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "ZVKtqkElCcO8SnX7zYQ6s"
+uri = "file://attached_assets/brand/favicon-512.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "Z6bBJMrVoZzwYYBUBVopS"
+uri = "file://attached_assets/brand/apple-touch-icon.png"
+type = "image"
+title = "generated_image"

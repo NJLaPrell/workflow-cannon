@@ -1,0 +1,18 @@
+<svg viewBox="0 0 320 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <text
+    x="0" y="38"
+    font-family="'Inter', 'DM Sans', -apple-system, sans-serif"
+    font-size="38"
+    font-weight="800"
+    letter-spacing="-0.02em"
+    fill="#FF5F1F"
+  >Workflow</text>
+  <text
+    x="196" y="38"
+    font-family="'Inter', 'DM Sans', -apple-system, sans-serif"
+    font-size="38"
+    font-weight="800"
+    letter-spacing="-0.02em"
+    fill="#F0F0F0"
+  >Cannon</text>
+</svg>
