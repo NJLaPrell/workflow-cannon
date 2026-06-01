@@ -3,7 +3,7 @@
   "private": true,
   "displayName": "Workflow Cannon",
   "description": "Thin client UI for Workflow Cannon — dashboard, tasks, and config via workspace-kit CLI.",
-  "version": "0.1.14",
+  "version": "0.1.15",
   "publisher": "workflow-cannon",
   "license": "MIT",
   "repository": {
@@ -37,7 +37,7 @@
         {
           "id": "workflow-cannon",
           "title": "Workflow Cannon",
-          "icon": "media/icon.svg"
+          "icon": "media/icon.png"
         }
       ]
     },
