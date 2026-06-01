@@ -1,0 +1,20 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "KiobeuBONBnDTXbBs-XoZ"
+uri = "file://attached_assets/generated_images/wc-logo-mark-abstract.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "3zTHII8RnRUgQFomDcM0H"
+uri = "file://attached_assets/generated_images/wc-logo-cannon.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "gw2hoUsT-9pyJGQxsj4NL"
+uri = "file://attached_assets/generated_images/wc-wordmark.png"
+type = "image"
+title = "generated_image"
