@@ -2,27 +2,20 @@
 
 **Artifact:** `TASK_SYNC_FIX.md` (repo root)
 
-| Document | Role |
-| --- | --- |
-| **`TASK_SYNC_FIX.md`** | Planner-ready implementation instructions for stabilizing task/planning sync across branches |
-| `.ai/runbooks/task-state-sync-path-inventory.md` | Existing sync-path inventory and source-of-truth notes |
-| `AGENT_ORCHESTRATION_FOUNDATION.md` | Related future orchestration foundation; depends on reliable task state |
-| `AGENT_ORCHESTRATION_TASKS.md` | Related orchestration WBS; should not start deep multi-agent work until this stabilization is handled |
-
 ## Scope
 
-This WBS fixes task/planning sync instability where tasks or planning rows can disappear from local SQLite after branch changes, hydrate/rebuild/apply cycles, or queue-mode canonical publishing delays.
+This is the planner-ready WBS for stabilizing Workflow Cannon task/planning sync across branches, startup sync, hydrate/rebuild/apply cycles, queue-mode canonical publishing, and multi-worktree agent activity.
 
-The primary problem is not a normal delete. It is projection loss:
+The core bug class is projection loss:
 
 ```text
 local SQLite contains task/planning rows
 canonical git event stream does not yet contain the matching events
-hydrate/rebuild/apply overwrites local projection from canonical stream
+hydrate/rebuild/apply replaces local projection from canonical stream
 the local-only rows disappear
 ```
 
-This plan makes the architecture stable enough for branch-heavy and multi-agent workflows by preventing destructive projection overwrites, preserving pending local events, and introducing a path toward remote-base plus local-pending overlay semantics.
+This plan prevents that by treating SQLite as a cache plus local outbox, not as a branch-portable database.
 
 ---
 
@@ -33,7 +26,7 @@ Workflow Cannon should safely support this loop:
 ```text
 Agent or human creates/updates tasks or planning rows
 → canonical events are published immediately or queued locally
-→ branch changes, hydrate, rebuild, and dashboard refresh may occur
+→ branch changes, startup sync, hydrate, rebuild, and dashboard refresh may occur
 → local pending work remains visible and recoverable
 → canonical remote state and local pending overlay reconcile cleanly
 → no task disappears unless an explicit supported removal/supersession flow exists
@@ -43,10 +36,11 @@ Success means:
 
 ```text
 No task or planning row is silently dropped by sync.
-Local pending work survives branch changes.
+Local pending work survives startup sync and branch changes.
 Hydrate/rebuild/apply is safe in queue-mode workflows.
 Task ID allocation refuses stale state.
 The extension sync coordinator obeys sync safety state instead of blindly hydrating.
+Agents have an explicit flush/publish path before hydrate/branch/closeout.
 ```
 
 ---
@@ -76,29 +70,7 @@ Never let hydrate overwrite unpublished local events.
 
 ---
 
-## 3. Current failure mode to fix
-
-The current architecture says git-event-log is canonical and SQLite is a projection. That is correct.
-
-However, queue/local workflows temporarily make SQLite look canonical before the outbox publishes. Hydrate/rebuild/apply can then overwrite SQLite from a canonical stream that lacks local queued events.
-
-Known danger paths:
-
-```text
-create-task / persist-planning-execution-drafts in git-canonical queue mode
-→ local SQLite updated
-→ canonical event queued but not published
-→ branch checkout / merge / git HEAD change triggers sync
-→ hydrate/rebuild/apply runs from canonical branch
-→ canonical stream lacks local event
-→ local task/planning row disappears
-```
-
-The immediate goal is to prevent this class of data loss before deeper architecture work begins.
-
----
-
-## 4. Non-goals / constraints
+## 3. Non-goals / constraints
 
 | Constraint | Decision |
 | --- | --- |
@@ -108,17 +80,15 @@ The immediate goal is to prevent this class of data loss before deeper architect
 | Treat SQLite as branch-portable canonical DB | No. SQLite remains projection/cache plus local outbox. |
 | Allow hydrate to overwrite local pending rows | No. This is the bug class being fixed. |
 | Add normal task delete semantics | No. If task rows disappear without explicit supported event, treat as unsafe. |
-| Let extension background sync choose destructive operations blindly | No. It must obey status/recommendedAction/outbox safety. |
+| Let extension background/startup sync choose replacement operations blindly | No. It must obey status/recommendedAction/outbox safety. |
 | Allocate T### IDs from stale projections | No. Guard allocation until sync is safe. |
 | Solve all multi-agent orchestration issues here | No. This is foundational stability work needed before deeper orchestration. |
 
 ---
 
-## 5. Architecture anchors
+## 4. Architecture anchors
 
-### 5.1 Remote base + local pending overlay
-
-Target model:
+### 4.1 Remote base + local pending overlay
 
 ```text
 remote_projection
@@ -131,13 +101,11 @@ effective_projection
   remote_projection + local_pending_overlay
 ```
 
-All normal reads should use the effective projection.
+All normal reads should use the effective projection. Hydrate/rebuild may update remote projection, but must not erase local pending overlay.
 
-Hydrate/rebuild may update remote projection, but must not erase local pending overlay.
+### 4.2 Sync safety before projection replacement
 
-### 5.2 Sync safety before destructive projection writes
-
-Before any command overwrites task/planning projection tables, it must check:
+Before any command replaces task/planning projection tables, it must check:
 
 ```text
 outbox.pending === 0
@@ -150,24 +118,33 @@ new projection would not drop existing local task IDs unexpectedly
 
 If unsafe, fail closed with an agent-readable error.
 
-### 5.3 Branch/worktree safety
+### 4.3 Explicit flush/publish path
 
-Git HEAD changes should trigger a status check, not immediate destructive hydrate.
-
-Safe listener behavior:
+Blocking unsafe hydrate is not enough. Agents and the extension need a clean next action:
 
 ```text
-HEAD changed
+task-state-status says local-ahead / run-publish / wait
+→ run explicit flush/publish command
+→ verify outbox is clean or conflict is surfaced
+→ then hydrate/rebuild/branch/closeout may proceed
+```
+
+### 4.4 Branch/worktree/startup safety
+
+Git HEAD changes and extension/workspace startup should trigger status checks, not immediate hydrate.
+
+```text
+sync requested because HEAD changed or workspace opened
 → task-state-status fetch:true
-→ if outbox dirty: do not hydrate; surface local-ahead/wait
+→ if outbox dirty: do not hydrate; surface local-ahead/wait/run-publish
 → if conflict: surface repair required
 → if clean and behind: hydrate
 → if none: no-op/apply safe tail
 ```
 
-### 5.4 Planning persistence must become non-destructive by default
+### 4.5 Planning persistence must be non-replacing by default
 
-Planning projection persistence currently replaces whole local domains. The stable model should use merge-preserve-local by default and reserve destructive replace for explicit repair paths.
+Planning projection persistence should use `merge-preserve-local` by default and reserve `repair-replace` for explicit repair paths.
 
 Planning domains:
 
@@ -180,372 +157,189 @@ ideas
 module_state
 ```
 
+Planning mutations in git-canonical mode must not create silent SQLite-only rows. They must publish/enqueue canonical planning events or mark rows as pending local overlay state.
+
+### 4.6 Repair replacement must be explicit and policy-gated
+
+Normal hydrate/rebuild/apply must never use repair-replace semantics.
+
+```text
+repair-replace requires explicit repair command or flag + policyApproval + clear operator-facing warning
+```
+
+### 4.7 Failed/conflict overlay events are visible but not clean
+
+```text
+pending/publishing overlay rows = local-ahead effective state
+failed/conflict overlay rows = visible at-risk local state requiring repair/retry
+```
+
+### 4.8 Projection metadata invariants
+
+```text
+remoteAppliedSequence must never move backward except explicit repair
+effectiveAppliedSequence >= remoteAppliedSequence when local overlay exists
+sourceCommit/sourceRef/headSha should be recorded for remote projection
+lastCanonicalEventId should be recorded when available
+local overlay count/status should be recorded
+```
+
 ---
 
-## 6. Recommended delivery phases
+## 5. Recommended delivery phases
 
 Use exactly three planner-facing phases.
 
 | Phase | Theme | Exit criteria |
 | --- | --- | --- |
-| **Phase 1 — Data-Loss Hotfix & Safety Gates** | Inventory, safety contracts, sync guard, dirty-outbox blocking, would-drop detection, extension coordinator safety, regression tests | Hydrate/rebuild/apply cannot drop local pending tasks; extension does not hydrate while outbox is dirty; tests reproduce and prevent the bug. |
-| **Phase 2 — Effective Projection Overlay** | Remote projection + local pending overlay, outbox replay as local event source, status metadata, safe hydrate/apply semantics | Reads can include pending local work; hydrate updates remote base without erasing overlay; status distinguishes remote/effective/local-ahead/conflict. |
-| **Phase 3 — Planning Merge Safety & Branch Hardening** | Non-destructive planning persistence, domain-level sync posture, branch/worktree guards, task ID allocation guard, repair docs/E2E | Planning rows are preserved unless explicitly repaired; branch changes are guarded; stale task ID allocation is blocked; E2E proves branch-heavy workflows are stable. |
-
-Phase mapping summary:
-
-```text
-Phase 1 = stop data loss immediately
-Phase 2 = implement the right projection model
-Phase 3 = harden planning, branch changes, and operator workflows
-```
+| **Phase 1 — Data-Loss Hotfix & Safety Gates** | Inventory, safety contracts, sync guard, dirty-outbox blocking, would-drop detection, extension/startup coordinator safety, explicit flush path, regression tests | Hydrate/rebuild/apply cannot drop local pending tasks; extension/startup sync does not hydrate while outbox is dirty; agents can flush/publish or receive repair guidance; tests reproduce and prevent the bug. |
+| **Phase 2 — Effective Projection Overlay** | Remote projection + local pending overlay, outbox replay as local event source, status metadata, invariant checks, safe hydrate/apply semantics | Reads can include pending local work; hydrate updates remote base without erasing overlay; status distinguishes remote/effective/local-ahead/conflict; metadata invariants catch stale/corrupt projections. |
+| **Phase 3 — Planning Merge Safety & Branch Hardening** | Non-replacing planning persistence, domain-level sync posture, branch/worktree guards, task ID allocation guard, multi-worktree E2E, repair docs | Planning rows are preserved unless explicitly repaired; branch changes are guarded; stale task ID allocation is blocked; branch-heavy and multi-worktree E2E prove stability. |
 
 ---
 
-## 7. Required human-reviewed artifacts
+## 6. Required human-reviewed artifacts
 
-These artifacts must be produced and approved before dependent coding starts.
-
-| ID | Artifact | What it must contain | Produced by | Human approves | Blocks |
-| --- | --- | --- | --- | --- | --- |
-| **A-INV** | Task/planning sync surface inventory | Current hydrate/rebuild/apply/publish/outbox/status/extension/planning persistence paths; destructive write points; task-drop reproduction path; branch-change triggers | T-TSF-000 | Inventory complete; no missing destructive path | A-ARCH, A-SAFETY, implementation work |
-| **A-ARCH** | Sync stabilization architecture note | Remote projection vs local overlay model; source-of-truth hierarchy; staged migration; outbox semantics; what remains git-backed; future hosted backend note | T-TSF-010 | Architecture direction approved | Phase 2, Phase 3 implementation |
-| **A-SAFETY** | Sync safety contract | Dirty outbox rules; would-drop task detection; failure codes; command behavior for hydrate/rebuild/apply/status; exact data returned to agents | T-TSF-020 | Fail-closed behavior accepted | T-TSF-110, T-TSF-120, T-TSF-130 |
-| **A-STATUS** | Task-state status contract update | New/reused fields: recommendedAction, outbox, localProjection, remoteAppliedSequence, effectiveAppliedSequence, pendingLocalEventCount, localOverlayStatus, dropRisk | T-TSF-030 | Status is sufficient for CLI/dashboard/extension decisions | T-TSF-140, T-TSF-230 |
-| **A-PLANNING** | Planning merge-safety design | Domain-level persistence modes; merge-preserve-local default; repair-replace semantics; domain sync posture; local pending planning rows | T-TSF-040 | No destructive default planning writes | T-TSF-310, T-TSF-320 |
-| **A-BRANCH** | Branch/worktree guard design | When to block checkout/merge/rebase/closeout; extension HEAD listener behavior; command/remediation wording; safe manual repair path | T-TSF-050 | Branch workflow policy accepted | T-TSF-330, T-TSF-340 |
-| **A-TEST** | Regression and E2E test strategy | Bug reproduction fixtures; outbox states; branch change simulation; extension coordinator tests; planning preservation tests; task ID allocation stale-state tests | T-TSF-060 | Coverage adequate before implementation | All implementation phases |
-| **A-COMPAT** | Compatibility/migration note | Current git-event-log behavior that stays; config compatibility; queue mode behavior; fallback for old projection metadata; operator impact | T-TSF-070 | Existing operators not broken silently | Phase 2/3 implementation |
-
-### Requires column legend
-
-| Mark | Meaning |
-| --- | --- |
-| — | No prerequisite artifact beyond normal task dependencies |
-| **A-*** | Approved artifact must exist before starting |
-| **→ A-*** | This task produces artifact A-* for human review |
-| **⛔** | Hard stop until approved |
+| ID | Artifact | What it must contain | Produced by | Blocks |
+| --- | --- | --- | --- | --- |
+| **A-INV** | Task/planning sync surface inventory | hydrate/rebuild/apply/publish/outbox/status/extension/startup/planning paths; replacement points; task-drop repro; branch/startup triggers | T-TSF-000 | A-ARCH, A-SAFETY, implementation |
+| **A-ARCH** | Sync stabilization architecture note | remote projection vs overlay; outbox semantics; failed/conflict overlay rules; metadata invariants; future hosted backend note | T-TSF-010 | Phase 2/3 implementation |
+| **A-SAFETY** | Sync safety contract | dirty outbox rules; would-drop detection; failure codes; command behavior; repair boundary; data returned to agents | T-TSF-020 | T-TSF-110, T-TSF-120, T-TSF-130 |
+| **A-STATUS** | Task-state status contract update | recommendedAction, outbox, localProjection, remote/effective sequence, pending count, overlay status, dropRisk, syncSafety, source commit/ref, last canonical event | T-TSF-030 | T-TSF-140, T-TSF-170, T-TSF-230, T-TSF-250 |
+| **A-PLANNING** | Planning merge-safety design | persistence modes; domain posture; pending planning rows; no silent SQLite-only planning mutations | T-TSF-040 | T-TSF-310, T-TSF-320 |
+| **A-BRANCH** | Branch/worktree/startup guard design | checkout/merge/rebase/closeout/startup behavior; HEAD listener behavior; remediation wording; repair path | T-TSF-050 | T-TSF-140, T-TSF-170, T-TSF-330, T-TSF-340 |
+| **A-TEST** | Regression and E2E test strategy | bug repro; outbox states; startup; branch; multi-worktree; extension coordinator; planning preservation; task ID stale-state tests | T-TSF-060 | All implementation phases |
+| **A-COMPAT** | Compatibility/migration note | existing git-event-log behavior; queue mode behavior; old projection metadata fallback; operator impact | T-TSF-070 | Phase 2/3 implementation |
 
 ---
 
-## 8. Work Breakdown Structure
-
-## WP-A — Phase 1: Decision artifacts and bug proof
+## 7. Work Breakdown Structure
 
 ### T-TSF-000 — Inventory current task/planning sync surfaces
 
+**Phase:** Phase 1  
 **Type:** research / inventory  
 **Priority:** P0  
 **Severity:** Critical  
-**Recommended phase:** Phase 1 — Data-Loss Hotfix & Safety Gates  
-**Requires:** —  
-**Produces:** A-INV  
-**Value:** Prevents missing a destructive projection path.
+**Produces:** A-INV
 
-**Scope**
+Inventory hydrate, rebuild, apply, publish/outbox, status, extension coordinator, startup sync, Git HEAD listener, planning persistence, task ID allocation, planning draft persistence, and current tests.
 
-Inventory:
-
-- `task-state-hydrate`
-- `rebuild-task-state-cache`
-- `apply-task-state-events`
-- canonical event outbox store/runtime/publisher
-- task-state status and recommended action behavior
-- extension task-state sync coordinator
-- Git HEAD listener
-- planning projection persistence
-- task ID allocation path
-- planning draft persistence path
-- current tests covering queue mode, hydrate, branch sync, and planning domains
-
-**Acceptance criteria**
-
-- A-INV lists destructive projection write points.
-- A-INV identifies exactly where tasks/planning rows can be dropped.
-- A-INV includes the minimum reproduction scenario.
-- A-INV recommends which existing utilities to reuse.
-
----
+**Acceptance criteria:** destructive projection paths, task-drop reproduction, startup/branch triggers, and reusable utilities are documented.
 
 ### T-TSF-010 — Draft sync stabilization architecture note
 
+**Phase:** Phase 1  
 **Type:** architecture  
 **Priority:** P0  
 **Severity:** Critical  
-**Recommended phase:** Phase 1 — Data-Loss Hotfix & Safety Gates  
 **Requires:** A-INV  
-**Produces:** A-ARCH  
-**Value:** Locks the remote-base/local-overlay direction before implementation.
+**Produces:** A-ARCH
 
-**Scope**
-
-Create `TASK_SYNC_ARCHITECTURE.md` or an approved sectioned artifact covering:
-
-- source-of-truth hierarchy
-- why SQLite-only rows are unsafe
-- outbox as local pending event source
-- remote projection + local pending overlay + effective projection
-- hydrate/rebuild/apply safety rules
-- planning domain merge strategy
-- branch/worktree guard strategy
-- future hosted backend note
-
-**Acceptance criteria**
-
-- Architecture explicitly says hydrate must not erase unpublished local events.
-- Architecture identifies what is hotfix vs deeper refactor.
-- Human approval is recorded before Phase 2 overlay implementation.
-
----
+Define source-of-truth hierarchy, overlay architecture, safety rules, planning merge strategy, branch/startup guard, failed/conflict overlay semantics, projection metadata invariants, and future hosted backend note.
 
 ### T-TSF-020 — Draft sync safety contract
 
+**Phase:** Phase 1  
 **Type:** contract / safety  
 **Priority:** P0  
 **Severity:** Critical  
-**Recommended phase:** Phase 1 — Data-Loss Hotfix & Safety Gates  
 **Requires:** A-INV  
-**Produces:** A-SAFETY  
-**Value:** Defines fail-closed behavior for destructive commands.
+**Produces:** A-SAFETY
 
-**Scope**
+Define dirty outbox detection, would-drop detection, conflict/corrupt behavior, repair boundary, dry-run behavior, and remediation text.
 
-Define:
-
-- dirty outbox detection
-- dirty outbox failure code/message/data
-- projection-would-drop-local-tasks detection
-- conflict/corrupt projection behavior
-- where the guard must run
-- dry-run behavior
-- override/repair behavior, if any
-- agent-readable remediation text
-
-Suggested failure codes:
+Suggested codes:
 
 ```text
 task-state-outbox-dirty
 task-state-projection-would-drop-local-tasks
 task-state-local-conflict
 task-state-sync-repair-required
+task-state-repair-requires-policy-approval
 ```
-
-**Acceptance criteria**
-
-- The contract fails closed by default.
-- It defines exact data needed for agent/operator remediation.
-- It distinguishes hotfix blocking from future overlay support.
-
----
 
 ### T-TSF-030 — Draft task-state status contract update
 
+**Phase:** Phase 1  
 **Type:** command contract  
 **Priority:** P0  
 **Severity:** High  
-**Recommended phase:** Phase 1 — Data-Loss Hotfix & Safety Gates  
 **Requires:** A-SAFETY  
-**Produces:** A-STATUS  
-**Value:** Lets CLI, dashboard, and extension make safe sync decisions.
+**Produces:** A-STATUS
 
-**Scope**
-
-Define status output additions or clarified semantics for:
-
-```text
-recommendedAction
-outbox.pending/publishing/failed/conflict
-localProjection
-remoteAppliedSequence
-effectiveAppliedSequence
-pendingLocalEventCount
-localOverlayStatus
-dropRisk
-syncSafety
-```
-
-**Acceptance criteria**
-
-- Extension coordinator can decide hydrate/wait/repair from status alone.
-- Status distinguishes clean remote freshness from local-ahead pending work.
-- Status response remains backward-compatible where possible.
-
----
+Define status fields for safe CLI/dashboard/extension decisions, including recommendedAction, outbox counts, localProjection, remote/effective sequences, overlay status, dropRisk, syncSafety, source commit/ref, and last canonical event.
 
 ### T-TSF-040 — Draft planning merge-safety design
 
+**Phase:** Phase 1  
 **Type:** architecture / persistence design  
 **Priority:** P0  
 **Severity:** High  
-**Recommended phase:** Phase 1 — Data-Loss Hotfix & Safety Gates  
 **Requires:** A-INV, A-ARCH  
-**Produces:** A-PLANNING  
-**Value:** Prevents phase notes, ideas, module state, and other planning domains from being wiped by replay gaps.
+**Produces:** A-PLANNING
 
-**Scope**
+Define `merge-preserve-local`, `replace-safe`, and `repair-replace`; domain defaults; local pending row behavior; canonical planning mutation requirements; and tests.
 
-Define persistence modes:
+### T-TSF-050 — Draft branch/worktree/startup guard design
 
-```text
-merge-preserve-local
-replace-safe
-repair-replace
-```
-
-For each planning domain, define:
-
-- default persistence mode
-- local pending row behavior
-- domain sync posture metadata
-- when destructive replacement is allowed
-- test fixtures
-
-**Acceptance criteria**
-
-- Destructive delete-replace is not the default for planning domains.
-- Explicit repair path is separated from normal hydrate.
-- Domain-level behavior is implementable without breaking current rows.
-
----
-
-### T-TSF-050 — Draft branch/worktree guard design
-
+**Phase:** Phase 1  
 **Type:** workflow / command contract  
 **Priority:** P1  
 **Severity:** High  
-**Recommended phase:** Phase 1 — Data-Loss Hotfix & Safety Gates  
 **Requires:** A-SAFETY, A-STATUS  
-**Produces:** A-BRANCH  
-**Value:** Makes branch-heavy agent work safe.
+**Produces:** A-BRANCH
 
-**Scope**
-
-Define:
-
-- preflight before checkout/merge/rebase/phase closeout
-- extension HEAD listener behavior
-- what to do with dirty outbox
-- what to do with conflict/failed outbox
-- remediation commands/messages
-- whether branch changes are blocked or warned in each context
-
-**Acceptance criteria**
-
-- Branch change flow cannot trigger destructive hydrate while outbox is dirty.
-- Agent/operator remediation is explicit.
-- Behavior is compatible with existing extension sync listener.
-
----
+Define branch preflight, startup sync behavior, HEAD listener behavior, dirty/failed/conflict outbox handling, remediation, and block/warn policy.
 
 ### T-TSF-060 — Draft regression and E2E test strategy
 
+**Phase:** Phase 1  
 **Type:** test strategy  
 **Priority:** P0  
 **Severity:** Critical  
-**Recommended phase:** Phase 1 — Data-Loss Hotfix & Safety Gates  
 **Requires:** A-SAFETY, A-STATUS  
-**Produces:** A-TEST  
-**Value:** Ensures the bug cannot return.
+**Produces:** A-TEST
 
-**Scope**
-
-Define tests for:
-
-- pending outbox blocks hydrate
-- pending outbox blocks rebuild
-- pending outbox blocks unsafe apply
-- would-drop task detection
-- extension coordinator uses recommendedAction/outbox
-- Git HEAD change does not hydrate dirty state
-- planning merge-preserve-local
-- task ID allocation stale-state guard
-- failed/conflict outbox states
-- clean hydrate still works
-
-**Acceptance criteria**
-
-- The test plan includes direct reproduction of the task-drop bug.
-- Tests cover both CLI runtime and extension coordinator.
-- Tests separate hotfix behavior from overlay behavior.
-
----
+Cover pending/failed/conflict outbox, hydrate/rebuild/apply guards, startup sync, HEAD change, flush/publish, planning preservation, task ID guard, metadata invariants, multi-worktree concurrency, and clean hydrate.
 
 ### T-TSF-070 — Draft compatibility and migration note
 
+**Phase:** Phase 1  
 **Type:** compatibility  
 **Priority:** P1  
 **Severity:** Medium  
-**Recommended phase:** Phase 1 — Data-Loss Hotfix & Safety Gates  
 **Requires:** A-ARCH  
-**Produces:** A-COMPAT  
-**Value:** Avoids breaking existing git-event-log users.
+**Produces:** A-COMPAT
 
-**Scope**
-
-Document:
-
-- existing config compatibility
-- queue mode behavior after safety gates
-- old projection metadata behavior
-- repair command guidance
-- operator-facing behavior changes
-- known limitations until overlay is implemented
-
-**Acceptance criteria**
-
-- Existing clean hydrate/rebuild flows still work.
-- Dirty local outbox behavior changes are documented.
-- Compatibility note is referenced by implementation PRs.
-
----
-
-## WP-1 — Phase 1: Immediate data-loss hotfix
+Document config compatibility, queue mode behavior, old metadata fallback, repair guidance, and operator-facing changes.
 
 ### T-TSF-110 — Add shared task-state sync safety utility
 
+**Phase:** Phase 1  
 **Type:** implementation / safety  
 **Priority:** P0  
 **Severity:** Critical  
-**Recommended phase:** Phase 1 — Data-Loss Hotfix & Safety Gates  
-**Requires:** A-SAFETY, A-TEST  
-**Value:** Centralizes unsafe-sync detection.
+**Requires:** A-SAFETY, A-TEST
 
-**Likely files**
+Likely files:
 
 ```text
 src/modules/task-engine/persistence/task-state-sync-safety.ts
 test/task-state-sync-safety.test.mjs
 ```
 
-**Scope**
+Implement dirty outbox checks, projection conflict checks, local-vs-next task ID comparison, pending touched task detection, would-drop detection, and at-risk overlay diagnostics.
 
-Implement shared checks for:
+### T-TSF-120 — Guard hydrate/rebuild/apply projection replacement
 
-- dirty outbox counts
-- failed/conflict outbox counts
-- projection meta conflict/corrupt status
-- current local task IDs vs next projected task IDs
-- pending outbox touched task IDs
-- would-drop task detection
-
-**Acceptance criteria**
-
-- Utility returns stable agent-readable failure codes.
-- Unit tests cover clean, pending, publishing, failed, conflict, and would-drop cases.
-- Utility is side-effect free.
-
----
-
-### T-TSF-120 — Guard hydrate/rebuild/apply destructive projection writes
-
+**Phase:** Phase 1  
 **Type:** implementation / runtime safety  
 **Priority:** P0  
 **Severity:** Critical  
-**Recommended phase:** Phase 1 — Data-Loss Hotfix & Safety Gates  
-**Requires:** T-TSF-110, A-SAFETY  
-**Value:** Stops the immediate task-drop bug.
+**Requires:** T-TSF-110, A-SAFETY
 
-**Likely files**
+Likely files:
 
 ```text
 src/modules/task-engine/persistence/task-state-hydrate-runtime.ts
@@ -553,485 +347,191 @@ src/modules/task-engine/persistence/rebuild-task-state-cache-runtime.ts
 src/modules/task-engine/persistence/apply-task-state-events-runtime.ts
 ```
 
-**Scope**
-
-Before calling projection persistence:
-
-- read current local task IDs
-- read outbox status
-- compute next projected task IDs
-- call sync safety utility
-- fail closed if unsafe
-
-**Acceptance criteria**
-
-- Hydrate refuses to overwrite local projection when outbox is dirty.
-- Rebuild refuses to overwrite local projection when outbox is dirty.
-- Apply refuses unsafe projection overwrite.
-- Would-drop task detection blocks unsafe replacement.
-- Clean state behavior is unchanged.
-
----
+Before projection persistence, read local IDs, read outbox status, compute next IDs, call safety utility, and fail closed if unsafe.
 
 ### T-TSF-130 — Add task-drop regression tests
 
+**Phase:** Phase 1  
 **Type:** testing  
 **Priority:** P0  
 **Severity:** Critical  
-**Recommended phase:** Phase 1 — Data-Loss Hotfix & Safety Gates  
-**Requires:** T-TSF-120, A-TEST  
-**Value:** Proves the immediate bug is fixed.
+**Requires:** T-TSF-120, A-TEST
 
-**Scope**
-
-Add regression tests:
-
-```text
-create task in git-canonical queue mode
-confirm local task exists
-confirm outbox pending
-simulate hydrate/rebuild from canonical stream without that event
-expect command fails safely
-expect task still exists locally
-```
-
-Also cover:
-
-- failed outbox blocks destructive hydrate
-- conflict outbox blocks destructive hydrate
-- clean hydrate still succeeds
-
-**Acceptance criteria**
-
-- Tests fail against old behavior and pass with guard.
-- Test names clearly describe data-loss prevention.
-
----
+Tests must prove queued local task creation cannot disappear after hydrate/rebuild/apply, including failed/conflict outbox and repair policy cases.
 
 ### T-TSF-140 — Update extension sync coordinator to obey status safety
 
+**Phase:** Phase 1  
 **Type:** implementation / extension runtime  
 **Priority:** P0  
 **Severity:** High  
-**Recommended phase:** Phase 1 — Data-Loss Hotfix & Safety Gates  
-**Requires:** A-STATUS, A-BRANCH, A-TEST  
-**Value:** Prevents background sync from triggering destructive hydrate after branch changes.
+**Requires:** A-STATUS, A-BRANCH, A-TEST
 
-**Likely files**
+Likely files:
 
 ```text
 extensions/cursor-workflow-cannon/src/runtime/task-state-sync-coordinator.ts
 extensions/cursor-workflow-cannon/src/runtime/git-task-state-sync-listener.ts
 ```
 
-**Scope**
-
-Change coordinator behavior to use:
-
-```text
-data.recommendedAction
-data.outbox
-data.localProjection
-```
-
-Expected behavior:
-
-```text
-recommendedAction=wait → do not hydrate; report skipped/waiting
-recommendedAction=resolve-conflict → do not hydrate; report skipped/conflict
-recommendedAction=hydrate → hydrate only if outbox clean
-recommendedAction=run-publish → publish/flush if supported, otherwise report needed action
-recommendedAction=none → no-op or safe apply
-```
-
-**Acceptance criteria**
-
-- Coordinator does not hydrate while outbox dirty.
-- Git HEAD change path cannot wipe pending local work.
-- Tests cover wait, hydrate, resolve-conflict, and none cases.
-
----
+Coordinator must obey recommendedAction/outbox/localProjection/syncSafety and skip hydrate when unsafe.
 
 ### T-TSF-150 — Add task ID allocation freshness guard
 
+**Phase:** Phase 1  
 **Type:** implementation / safety  
 **Priority:** P1  
 **Severity:** High  
-**Recommended phase:** Phase 1 — Data-Loss Hotfix & Safety Gates  
-**Requires:** A-STATUS, A-SAFETY, A-TEST  
-**Value:** Prevents duplicate/conflicting T### IDs from stale projections.
+**Requires:** A-STATUS, A-SAFETY, A-TEST
 
-**Likely files**
+Before `allocateId:true` in git-canonical workspaces, require safe/fresh sync posture. Fail with `task-id-allocation-requires-fresh-sync` when stale or dirty.
 
-```text
-src/modules/task-engine/commands/task-row-mutation-commands.ts
-src/modules/task-engine/mutation-utils.ts
-```
+### T-TSF-160 — Add explicit task-state flush/publish command path
 
-**Scope**
+**Phase:** Phase 1  
+**Type:** implementation / command  
+**Priority:** P0  
+**Severity:** High  
+**Requires:** A-STATUS, A-SAFETY, A-TEST
 
-Before `allocateId:true` in git-canonical workspaces, require safe/fresh sync posture.
+Add or clarify a command path to publish pending outbox rows. It must be idempotent and report published/skipped/failed/conflict counts.
 
-Fail with:
+### T-TSF-170 — Add startup/open-workspace sync safety behavior
 
-```text
-task-id-allocation-requires-fresh-sync
-```
+**Phase:** Phase 1  
+**Type:** implementation / extension runtime  
+**Priority:** P0  
+**Severity:** High  
+**Requires:** A-BRANCH, A-STATUS, A-TEST
 
-when projection is stale, dirty, local-conflicted, or not safe enough to allocate.
-
-**Acceptance criteria**
-
-- `allocateId:true` works in clean state.
-- `allocateId:true` fails in stale/dirty outbox state.
-- Error includes remediation.
-- Explicit IDs retain existing validation behavior.
-
----
-
-## WP-2 — Phase 2: Effective projection overlay
+On extension activation/workspace open, use the same status-driven safety behavior as Git HEAD sync.
 
 ### T-TSF-210 — Add effective task projection builder
 
+**Phase:** Phase 2  
 **Type:** implementation / projection  
 **Priority:** P0  
 **Severity:** Critical  
-**Recommended phase:** Phase 2 — Effective Projection Overlay  
-**Requires:** A-ARCH, A-COMPAT, A-TEST  
-**Value:** Implements remote-base plus local-pending overlay model.
+**Requires:** A-ARCH, A-COMPAT, A-TEST
 
-**Likely files**
+Likely files:
 
 ```text
 src/modules/task-engine/persistence/task-state-effective-projection.ts
 test/task-state-effective-projection.test.mjs
 ```
 
-**Scope**
-
-Build helper that accepts:
-
-- remote canonical events/projection
-- local pending outbox events
-- overlay options
-
-and returns:
-
-- remote projection
-- local overlay projection/status
-- effective task document
-- conflict/drop diagnostics
-
-**Acceptance criteria**
-
-- Remote-only replay matches existing behavior.
-- Pending local create remains visible in effective projection.
-- Pending local update overlays remote task.
-- Conflict local overlay does not silently disappear.
-
----
+Build remote projection + local overlay + effective document helper. Conflict overlay must remain visible and at-risk.
 
 ### T-TSF-220 — Use outbox rows as local pending event source
 
+**Phase:** Phase 2  
 **Type:** implementation / persistence  
 **Priority:** P0  
 **Severity:** High  
-**Recommended phase:** Phase 2 — Effective Projection Overlay  
-**Requires:** T-TSF-210  
-**Value:** Makes unpublished events durable and replayable.
+**Requires:** T-TSF-210
 
-**Likely files**
-
-```text
-src/modules/task-engine/persistence/canonical-event-outbox-store.ts
-src/modules/task-engine/persistence/canonical-event-outbox-runtime.ts
-src/modules/task-engine/persistence/task-state-effective-projection.ts
-```
-
-**Scope**
-
-Add read helpers for local overlay events from outbox rows with statuses:
-
-```text
-pending
-publishing
-failed
-conflict
-```
-
-**Acceptance criteria**
-
-- Helper returns full event JSON in deterministic order.
-- Published rows are excluded by default.
-- Failed/conflict rows can be included with flagged overlay status.
-- Tests cover all statuses.
-
----
+Add helpers to read pending, publishing, failed, and conflict outbox events in deterministic order. Published rows are excluded by default.
 
 ### T-TSF-230 — Update hydrate/status to persist and report effective projection
 
+**Phase:** Phase 2  
 **Type:** implementation / runtime  
 **Priority:** P0  
 **Severity:** Critical  
-**Recommended phase:** Phase 2 — Effective Projection Overlay  
-**Requires:** T-TSF-210, T-TSF-220, A-STATUS  
-**Value:** Makes hydrate safe while preserving pending local work.
+**Requires:** T-TSF-210, T-TSF-220, A-STATUS
 
-**Likely files**
-
-```text
-src/modules/task-engine/persistence/task-state-hydrate-runtime.ts
-src/modules/task-engine/persistence/task-state-status-runtime.ts
-src/modules/task-engine/persistence/task-state-projection-meta-store.ts
-```
-
-**Scope**
-
-Hydrate should:
-
-```text
-fetch canonical
-build remote projection
-read pending local outbox events
-build effective projection
-persist effective task view
-record remote/effective/local overlay metadata
-```
-
-Status should report:
-
-```text
-remoteAppliedSequence
-effectiveAppliedSequence
-pendingLocalEventCount
-localOverlayStatus
-dropRisk
-```
-
-**Acceptance criteria**
-
-- Hydrate with pending outbox preserves local pending tasks.
-- Status clearly reports local-ahead pending state.
-- Clean hydrate behavior remains compatible.
-
----
+Hydrate should fetch canonical state, build remote projection, replay pending local outbox events, persist effective task view, and record remote/effective/local overlay metadata.
 
 ### T-TSF-240 — Update apply/rebuild semantics for overlay model
 
+**Phase:** Phase 2  
 **Type:** implementation / runtime  
 **Priority:** P1  
 **Severity:** High  
-**Recommended phase:** Phase 2 — Effective Projection Overlay  
-**Requires:** T-TSF-230  
-**Value:** Aligns all projection writers with the overlay model.
+**Requires:** T-TSF-230
 
-**Likely files**
+Apply/rebuild must distinguish remote canonical rebuild, effective projection persistence, and explicit repair replacement.
 
-```text
-src/modules/task-engine/persistence/apply-task-state-events-runtime.ts
-src/modules/task-engine/persistence/rebuild-task-state-cache-runtime.ts
-```
+### T-TSF-250 — Add projection metadata invariant checks
 
-**Scope**
+**Phase:** Phase 2  
+**Type:** implementation / metadata safety  
+**Priority:** P1  
+**Severity:** High  
+**Requires:** A-STATUS, T-TSF-230
 
-Update apply/rebuild to distinguish:
-
-```text
-remote canonical projection rebuild
-effective projection persistence
-explicit repair replacement
-```
-
-**Acceptance criteria**
-
-- Apply/rebuild no longer drop pending local overlay rows.
-- Explicit repair behavior is separate and documented.
-- Tests cover dirty and clean outbox states.
-
----
-
-## WP-3 — Phase 3: Planning merge safety and branch hardening
+Enforce/report sequence, source commit/ref, last event, and overlay status invariants. Violations surface as unsafe/conflict unless an explicit repair flow is used.
 
 ### T-TSF-310 — Add planning persistence modes
 
+**Phase:** Phase 3  
 **Type:** implementation / planning persistence  
 **Priority:** P0  
 **Severity:** High  
-**Recommended phase:** Phase 3 — Planning Merge Safety & Branch Hardening  
-**Requires:** A-PLANNING, A-TEST  
-**Value:** Prevents planning tables from being wiped by incomplete replay.
+**Requires:** A-PLANNING, A-TEST
 
-**Likely files**
+Likely file:
 
 ```text
 src/modules/task-engine/task-state-events/planning-sqlite-persist.ts
 ```
 
-**Scope**
-
-Add persistence modes:
-
-```text
-merge-preserve-local
-replace-safe
-repair-replace
-```
-
-Default normal hydrate/apply behavior should be merge-preserve-local.
-
-**Acceptance criteria**
-
-- Normal sync does not delete local phase notes, ideas, or module state not represented in canonical replay.
-- Repair-replace remains available only through explicit repair path.
-- Tests cover each planning domain.
-
----
+Add merge-preserve-local, replace-safe, and repair-replace. Normal hydrate/apply uses merge-preserve-local.
 
 ### T-TSF-320 — Add planning domain sync posture metadata
 
+**Phase:** Phase 3  
 **Type:** implementation / metadata  
 **Priority:** P1  
 **Severity:** Medium  
-**Recommended phase:** Phase 3 — Planning Merge Safety & Branch Hardening  
-**Requires:** A-PLANNING, T-TSF-310  
-**Value:** Makes planning sync state diagnosable.
+**Requires:** A-PLANNING, T-TSF-310
 
-**Scope**
-
-Track domain-level status for:
-
-```text
-phase_catalog
-workspace_status
-phase_notes
-phase_note_suggestions
-ideas
-module_state
-```
-
-Suggested metadata:
-
-```text
-remoteAppliedSequence
-localPendingCount
-lastCanonicalEventId
-syncStatus
-replaceSafe
-```
-
-**Acceptance criteria**
-
-- Status/read path can explain which planning domains are pending/conflicted/fresh.
-- Domain metadata survives hydrate/apply.
-
----
+Track domain-level remoteAppliedSequence, localPendingCount, lastCanonicalEventId, syncStatus, and replaceSafe.
 
 ### T-TSF-330 — Add branch/worktree sync preflight
 
+**Phase:** Phase 3  
 **Type:** implementation / command safety  
 **Priority:** P0  
 **Severity:** High  
-**Recommended phase:** Phase 3 — Planning Merge Safety & Branch Hardening  
-**Requires:** A-BRANCH, A-STATUS  
-**Value:** Prevents unsafe branch changes during pending local task/planning work.
+**Requires:** A-BRANCH, A-STATUS
 
-**Scope**
-
-Add or extend preflight command/check for:
-
-- checkout
-- merge
-- rebase
-- phase closeout
-- release branch merge
-
-Block/warn when:
-
-```text
-outbox.pending/publishing/failed/conflict > 0
-localOverlayStatus !== clean
-localProjection === conflict
-```
-
-**Acceptance criteria**
-
-- Agents get clear remediation before branch changes.
-- Phase closeout cannot proceed with dirty/conflicted task-state sync.
-- Existing clean closeout remains unaffected.
-
----
+Preflight checkout, merge, rebase, phase closeout, and release branch merge. Block or escalate dirty/conflicted task-state sync.
 
 ### T-TSF-340 — Add branch-heavy E2E regression fixtures
 
+**Phase:** Phase 3  
 **Type:** E2E / regression  
 **Priority:** P0  
 **Severity:** High  
-**Recommended phase:** Phase 3 — Planning Merge Safety & Branch Hardening  
-**Requires:** T-TSF-230, T-TSF-330, A-TEST  
-**Value:** Proves the real workflow is stable.
+**Requires:** T-TSF-230, T-TSF-330, A-TEST
 
-**Scope**
-
-Create E2E scenarios:
-
-```text
-create task in queue mode
-switch branch / simulate HEAD change
-extension coordinator syncs
-pending task remains visible
-outbox publishes
-hydrate reconciles cleanly
-```
-
-And:
-
-```text
-create planning idea/note locally
-canonical replay missing row
-hydrate/apply runs
-local row is preserved or flagged pending_local
-```
-
-**Acceptance criteria**
-
-- E2E proves no task drop across branch changes.
-- E2E proves planning rows are not silently removed.
-- Evidence is suitable for release checklist.
-
----
+Prove pending tasks survive branch changes and planning rows are preserved or marked pending_local.
 
 ### T-TSF-350 — Add operator repair and release readiness docs
 
+**Phase:** Phase 3  
 **Type:** docs / release  
 **Priority:** P1  
 **Severity:** Medium  
-**Recommended phase:** Phase 3 — Planning Merge Safety & Branch Hardening  
-**Requires:** A-COMPAT, T-TSF-340  
-**Value:** Gives humans and agents a safe recovery path.
+**Requires:** A-COMPAT, T-TSF-340
 
-**Scope**
+Document dirty outbox, local-ahead, conflict, hydrate, flush/publish, repair replacement, branch preflight, and release readiness.
 
-Document:
+### T-TSF-360 — Add multi-worktree/concurrent sync E2E fixture
 
-- what dirty outbox means
-- what local-ahead means
-- what conflict means
-- when to hydrate
-- when not to hydrate
-- how to flush/publish outbox
-- how to run repair-replace intentionally
-- branch-change preflight expectations
-- release readiness checklist
+**Phase:** Phase 3  
+**Type:** E2E / concurrency  
+**Priority:** P1  
+**Severity:** High  
+**Requires:** T-TSF-230, T-TSF-250, A-TEST
 
-**Acceptance criteria**
-
-- Docs include copyable commands.
-- Docs distinguish normal sync from repair sync.
-- Agents have clear stop/escalate instructions.
+Create scenario where worktree A queues local task event, worktree B publishes remote event, A fetches/hydrates/statuses, A remains local-ahead with overlay visible, and publish either succeeds or conflicts without data loss.
 
 ---
 
-## 9. Dependency summary
+## 8. Dependency summary
 
 ```text
 T-TSF-000 → T-TSF-010
@@ -1047,22 +547,26 @@ T-TSF-110 → T-TSF-120
 T-TSF-120 → T-TSF-130
 A-STATUS + A-BRANCH → T-TSF-140
 A-STATUS + A-SAFETY → T-TSF-150
+A-STATUS + A-SAFETY → T-TSF-160
+A-BRANCH + A-STATUS → T-TSF-170
 
 A-ARCH + A-COMPAT + A-TEST → T-TSF-210
 T-TSF-210 → T-TSF-220
 T-TSF-210 + T-TSF-220 + A-STATUS → T-TSF-230
 T-TSF-230 → T-TSF-240
+T-TSF-230 + A-STATUS → T-TSF-250
 
 A-PLANNING + A-TEST → T-TSF-310
 T-TSF-310 → T-TSF-320
 A-BRANCH + A-STATUS → T-TSF-330
 T-TSF-230 + T-TSF-330 + A-TEST → T-TSF-340
 A-COMPAT + T-TSF-340 → T-TSF-350
+T-TSF-230 + T-TSF-250 + A-TEST → T-TSF-360
 ```
 
 ---
 
-## 10. Recommended work order
+## 9. Recommended work order
 
 ### Phase 1 — Data-Loss Hotfix & Safety Gates
 
@@ -1071,52 +575,63 @@ A-COMPAT + T-TSF-340 → T-TSF-350
 3. T-TSF-020 — Draft sync safety contract.
 4. T-TSF-030 — Draft task-state status contract update.
 5. T-TSF-040 — Draft planning merge-safety design.
-6. T-TSF-050 — Draft branch/worktree guard design.
+6. T-TSF-050 — Draft branch/worktree/startup guard design.
 7. T-TSF-060 — Draft regression and E2E test strategy.
 8. T-TSF-070 — Draft compatibility and migration note.
 9. T-TSF-110 — Add shared task-state sync safety utility.
-10. T-TSF-120 — Guard hydrate/rebuild/apply destructive projection writes.
+10. T-TSF-120 — Guard hydrate/rebuild/apply projection replacement.
 11. T-TSF-130 — Add task-drop regression tests.
 12. T-TSF-140 — Update extension sync coordinator to obey status safety.
 13. T-TSF-150 — Add task ID allocation freshness guard.
+14. T-TSF-160 — Add explicit task-state flush/publish command path.
+15. T-TSF-170 — Add startup/open-workspace sync safety behavior.
 
 ### Phase 2 — Effective Projection Overlay
 
-14. T-TSF-210 — Add effective task projection builder.
-15. T-TSF-220 — Use outbox rows as local pending event source.
-16. T-TSF-230 — Update hydrate/status to persist and report effective projection.
-17. T-TSF-240 — Update apply/rebuild semantics for overlay model.
+16. T-TSF-210 — Add effective task projection builder.
+17. T-TSF-220 — Use outbox rows as local pending event source.
+18. T-TSF-230 — Update hydrate/status to persist and report effective projection.
+19. T-TSF-240 — Update apply/rebuild semantics for overlay model.
+20. T-TSF-250 — Add projection metadata invariant checks.
 
 ### Phase 3 — Planning Merge Safety & Branch Hardening
 
-18. T-TSF-310 — Add planning persistence modes.
-19. T-TSF-320 — Add planning domain sync posture metadata.
-20. T-TSF-330 — Add branch/worktree sync preflight.
-21. T-TSF-340 — Add branch-heavy E2E regression fixtures.
-22. T-TSF-350 — Add operator repair and release readiness docs.
+21. T-TSF-310 — Add planning persistence modes.
+22. T-TSF-320 — Add planning domain sync posture metadata.
+23. T-TSF-330 — Add branch/worktree sync preflight.
+24. T-TSF-340 — Add branch-heavy E2E regression fixtures.
+25. T-TSF-350 — Add operator repair and release readiness docs.
+26. T-TSF-360 — Add multi-worktree/concurrent sync E2E fixture.
 
 ---
 
-## 11. Final acceptance criteria
+## 10. Final acceptance criteria
 
 The task/planning sync fix is complete when:
 
 1. Hydrate cannot drop a locally created task while canonical outbox is dirty.
 2. Rebuild cannot drop a locally created task while canonical outbox is dirty.
 3. Apply cannot perform unsafe projection replacement when it would drop local task IDs.
-4. Extension background sync does not hydrate while status says wait/resolve-conflict or while outbox is dirty.
-5. Effective task reads can include local pending outbox events.
-6. Status distinguishes remote sequence, effective sequence, pending local event count, overlay status, and drop risk.
-7. Planning persistence preserves local rows by default and reserves destructive replacement for explicit repair paths.
-8. Branch/worktree preflight blocks or escalates dirty task-state sync before checkout/merge/rebase/closeout.
-9. Task ID allocation refuses stale or dirty canonical state.
-10. Regression tests reproduce the original dropped-task bug and prove it is fixed.
-11. Branch-heavy E2E fixture proves pending tasks survive branch changes and later reconcile.
-12. Operator docs explain normal sync, dirty outbox, local-ahead, conflict, hydrate, flush/publish, and repair flows.
+4. Extension background sync does not hydrate while status says wait/run-publish/resolve-conflict or while outbox is dirty.
+5. Startup/open-workspace sync follows the same safety rules as Git HEAD sync.
+6. Agents have an explicit flush/publish command path for local-ahead outbox state.
+7. Effective task reads can include local pending outbox events.
+8. Failed/conflict overlay events remain visible but are marked at-risk, not clean committed state.
+9. Status distinguishes remote sequence, effective sequence, pending local event count, overlay status, drop risk, source commit/ref, and last canonical event.
+10. Projection metadata invariant violations are surfaced as unsafe/conflict.
+11. Planning persistence preserves local rows by default and reserves replacement for explicit repair paths.
+12. Planning mutations in git-canonical mode do not create silent SQLite-only rows.
+13. Branch/worktree preflight blocks or escalates dirty task-state sync before checkout/merge/rebase/closeout.
+14. Task ID allocation refuses stale or dirty canonical state.
+15. Regression tests reproduce the original dropped-task bug and prove it is fixed.
+16. Branch-heavy E2E fixture proves pending tasks survive branch changes and later reconcile.
+17. Multi-worktree E2E fixture proves concurrent remote movement does not erase local pending work.
+18. Operator docs explain normal sync, dirty outbox, local-ahead, conflict, hydrate, flush/publish, and repair flows.
+19. Repair replacement requires explicit repair command or flag plus policy approval.
 
 ---
 
-## 12. Planner registration guidance
+## 11. Planner registration guidance
 
 When an agent enters this WBS into the planner, use this document as the plan source:
 
@@ -1141,8 +656,10 @@ rebuild-task-state-cache
 apply-task-state-events
 planning-sync
 branch-safety
+startup-sync
 extension-sync
 projection-overlay
+multi-worktree
 data-loss-prevention
 ```
 
@@ -1150,13 +667,6 @@ Recommended task type:
 
 ```text
 bugfix
-```
-
-Recommended task sizing rule:
-
-```text
-One WBS task should fit in one focused agent session.
-If a task touches both core task-engine runtime and extension runtime, split it unless the acceptance criteria require the cross-boundary behavior.
 ```
 
 Suggested first planner action:
@@ -1167,7 +677,7 @@ Register Phase 1 first and do not register Phase 2 implementation tasks until A-
 
 ---
 
-## 13. Agent handoff expectations
+## 12. Agent handoff expectations
 
 Every implementation task handoff should include:
 
@@ -1177,8 +687,10 @@ commands/tests run
 sync scenario covered
 whether dirty outbox behavior was tested
 whether clean hydrate/rebuild behavior was preserved
+whether startup or branch sync behavior was affected
+whether projection metadata invariants were affected
 remaining risks
 next recommended task
 ```
 
-For any task touching destructive projection writes, include explicit evidence that local task IDs are not dropped unexpectedly.
+For any task touching projection replacement writes, include explicit evidence that local task IDs are not dropped unexpectedly.
