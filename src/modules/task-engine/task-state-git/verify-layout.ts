@@ -2,6 +2,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { admitTaskStateEventStream } from "../task-state-events/event-admission.js";
 import type { TaskStateEventV1 } from "../task-state-events/event-payloads.js";
+import type { TaskStateProjectionV1 } from "../task-state-events/projection-types.js";
+import type { CanonicalStateEventV1 } from "../task-state-events/canonical-state-events.js";
 import { validateTaskStateEvent } from "../task-state-events/validate-event.js";
 import { TASK_STATE_MANIFEST_RELATIVE, TASK_STATE_ROOT_DIR } from "./constants.js";
 import { digestTaskStateCanonicalJson } from "./integrity.js";
@@ -346,10 +348,29 @@ export function verifyTaskStateLayoutOnDisk(layoutRoot: string): TaskStateVerify
       })
     : rawEvents;
 
+  let checkpoint: TaskStateProjectionV1 | undefined = undefined;
+  if (snapshot) {
+    checkpoint = projectionFromSnapshotContent(snapshot.content);
+    checkpoint.lastEventSequence = snapshot.meta.throughSequence;
+  }
+
   let parsedEvents: TaskStateEventV1[] = [];
   const admitted = admitTaskStateEventStream(
     admissionEvents,
-    snapshot ? { initialProjection: projectionFromSnapshotContent(snapshot.content) } : undefined
+    snapshot
+      ? {
+          checkpointTaskProjection: checkpoint,
+          priorEvents: rawEvents.filter((event) => {
+            return (
+              event !== null &&
+              typeof event === "object" &&
+              !Array.isArray(event) &&
+              typeof (event as { sequence?: unknown }).sequence === "number" &&
+              (event as { sequence: number }).sequence <= snapshot.meta.throughSequence
+            );
+          }) as CanonicalStateEventV1[]
+        }
+      : undefined
   );
   if (!admitted.ok) {
     findings.push({

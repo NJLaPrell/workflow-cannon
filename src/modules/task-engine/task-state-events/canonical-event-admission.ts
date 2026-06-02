@@ -140,7 +140,11 @@ function buildProjections(
   });
 
   for (const event of ordered) {
-    if (checkpointTaskProjection && isTaskStateEvent(event)) {
+    if (
+      checkpointTaskProjection &&
+      isTaskStateEvent(event) &&
+      event.sequence <= checkpointTaskProjection.lastEventSequence
+    ) {
       continue;
     }
     if (isTaskStateEvent(event)) {
