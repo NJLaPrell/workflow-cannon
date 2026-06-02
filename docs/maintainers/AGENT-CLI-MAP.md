@@ -194,6 +194,11 @@ ADR: **`docs/maintainers/adrs/ADR-planning-generation-optimistic-concurrency.md`
 | Backfill task↔feature junction | `workspace-kit run backfill-task-feature-links '<json>'` | `task-engine.backfill-task-feature-links` | Copies legacy **`features_json`** into **`task_engine_task_features`** |
 | Promote transcript churn after research | `workspace-kit run synthesize-transcript-churn '<json>'` | `tasks.synthesize-transcript-churn` | **`transcript_churn` / `research`** → **`improvement` / `proposed`**; pass **`expectedPlanningGeneration`** when policy **`require`** |
 | Export taxonomy JSON from registry | `workspace-kit run export-feature-taxonomy-json '<json>'` | `task-engine.export-feature-taxonomy-json` | Writes **`src/modules/documentation/data/feature-taxonomy.json`** |
+| Open agent session record | `workspace-kit run open-agent-session '<json>'` | `task-engine.agent-sessions.persist` | Records the host/session pointers for an AgentSession v1 row |
+| Update agent session record | `workspace-kit run update-agent-session '<json>'` | `task-engine.agent-sessions.persist` | Updates an open AgentSession v1 row |
+| Close agent session record | `workspace-kit run close-agent-session '<json>'` | `task-engine.agent-sessions.persist` | Closes an AgentSession v1 row |
+| Read agent session record | `workspace-kit run get-agent-session '<json>'` | `task-engine.agent-sessions.persist` | Reads one AgentSession v1 row by id |
+| List agent sessions | `workspace-kit run list-agent-sessions '<json>'` | `task-engine.agent-sessions.persist` | Lists AgentSession v1 rows |
 | Apply skill pack (non-preview) | `workspace-kit run apply-skill '<json>'` | `skills.apply-skill` | Sensitive unless `options.dryRun === true` (default preview is dry-run; see instruction file) |
 | Register subagent definition | `workspace-kit run register-subagent '<json>'` | `subagents.persist` | Declares id + explicit `allowedCommands` (no wildcards) |
 | Retire subagent definition | `workspace-kit run retire-subagent '<json>'` | `subagents.persist` | Sets **`retired`**; does not delete rows |
@@ -203,6 +208,7 @@ ADR: **`docs/maintainers/adrs/ADR-planning-generation-optimistic-concurrency.md`
 | Register team assignment | `workspace-kit run register-assignment '<json>'` | `team-execution.persist` | Links **`executionTaskId`** to supervisor/worker ids |
 | Submit assignment handoff | `workspace-kit run submit-assignment-handoff '<json>'` | `team-execution.persist` | Worker handoff contract v1 (**`assigned` → `submitted`**) |
 | Block assignment | `workspace-kit run block-assignment '<json>'` | `team-execution.persist` | Supervisor **`assigned`/`submitted` → `blocked`** |
+| Report assignment blocker | `workspace-kit run report-assignment-blocker '<json>'` | `team-execution.persist` | Worker blocker report; creates linked defect task by default |
 | Reconcile assignment | `workspace-kit run reconcile-assignment '<json>'` | `team-execution.persist` | Supervisor **`submitted` → `reconciled`** |
 | Cancel assignment | `workspace-kit run cancel-assignment '<json>'` | `team-execution.persist` | Supervisor terminal cancel |
 | Install Claude-layout plugin (copy) | `workspace-kit run install-plugin '<json>'` | `plugins.persist` | Copies validated tree into **`plugins.discoveryRoots`**; see instruction file |

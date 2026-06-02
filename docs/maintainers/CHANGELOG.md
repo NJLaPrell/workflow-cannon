@@ -8,6 +8,19 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [0.99.25] - 2026-06-02
+
+Patch — **Phase 128 Complete & Release** (agent orchestration docs/prompts/tests, dashboard activity summary wiring, and canonical task-state schema repair for planning events).
+
+### Added
+
+- Agent orchestration activity, profile, and release-checklist runbooks and associated dashboard activity summary wiring.
+- Happy-path and blocked-worker E2E coverage for the orchestration flow.
+
+### Fixed
+
+- Canonical task-state schema validation now admits planning event kinds on `workflow-cannon/task-state`, unblocking phase delivery preflight.
+
 ## [0.99.24] - 2026-05-31
 
 Patch — **Phase 126 Agent Orchestration Foundation** (contracts and design gates; documentation-only deliverables).

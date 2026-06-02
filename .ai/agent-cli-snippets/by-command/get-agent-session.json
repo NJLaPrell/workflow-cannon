@@ -1,0 +1,52 @@
+{
+  "ok": true,
+  "code": "run-args-schema",
+  "command": "get-agent-session",
+  "schema": {
+    "type": "object",
+    "required": [
+      "sessionId"
+    ],
+    "properties": {
+      "sessionId": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "additionalProperties": false
+  },
+  "schemaSource": "pilot-run-args-snapshot",
+  "sampleArgs": {
+    "sessionId": ""
+  },
+  "examples": [
+    {
+      "description": "Minimal argv example",
+      "argv": "workspace-kit run get-agent-session '{\"sessionId\":\"\"}'"
+    }
+  ],
+  "instructionPath": "src/modules/task-engine/instructions/get-agent-session.md",
+  "moduleId": "task-engine",
+  "description": "Read one AgentSession v1 row by id.",
+  "policy": {
+    "sensitivity": "non-sensitive",
+    "operationId": null,
+    "jsonApprovalRequired": false
+  },
+  "planningGeneration": {
+    "cliPrelude": false,
+    "expectedPlanningGeneration": "not required by CLI prelude"
+  },
+  "idempotency": {
+    "clientMutationId": false
+  },
+  "responseTemplate": {
+    "defaultResponseTemplateId": "default"
+  },
+  "remediationContract": ".ai/runbooks/agent-task-engine-ergonomics.md",
+  "discovery": {
+    "listCommands": "pnpm exec wk run --list-commands",
+    "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
+  },
+  "invocationId": "7454749d-e457-4c4d-aec0-e93a201be5af"
+}

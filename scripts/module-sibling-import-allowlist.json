@@ -4,7 +4,7 @@
   "entries": [
     {
       "file": "src/modules/task-engine/commands/agent-session-commands.ts",
-      "line": "11",
+      "line": "23",
       "importLine": "import { summarizeTeamAssignmentsForNextActions } from \"../../team-execution/assignment-store.js\";",
       "rationale": "Dashboard bootstrap uses team assignment rollup; future façade TBD."
     },

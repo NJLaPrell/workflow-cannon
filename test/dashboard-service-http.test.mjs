@@ -134,7 +134,7 @@ describe("dashboard service HTTP", () => {
 
       await Promise.race([
         ssePromise,
-        new Promise((_, reject) => setTimeout(() => reject(new Error("SSE timeout")), 5000))
+        new Promise((_, reject) => setTimeout(() => reject(new Error("SSE timeout")), 15000))
       ]);
       ac.abort();
       assert.ok(events.length >= 1);

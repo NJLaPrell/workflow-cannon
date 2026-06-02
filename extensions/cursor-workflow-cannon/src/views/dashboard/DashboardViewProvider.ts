@@ -1112,11 +1112,10 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         await prefillCursorChat(
           buildPhaseCompleteReleaseChatPrompt(phasePhrase, {
             phaseKey,
-            workspaceCurrentPhase: wsCur || undefined,
-            workspaceNextPhase: wsNext || undefined,
-            seededTaskIds,
-            scope,
-            laterDeliveredPhases
+            phaseLabel: phasePhrase || undefined,
+            currentKitPhase: wsCur || undefined,
+            nextKitPhase: wsNext || undefined,
+            scope
           })
         );
       }

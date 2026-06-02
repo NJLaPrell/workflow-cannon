@@ -1,0 +1,103 @@
+{
+  "ok": true,
+  "code": "run-args-schema",
+  "command": "open-agent-session",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "sessionId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "agentId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "subagentSessionId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "hostHint": {
+        "type": "string",
+        "enum": [
+          "cursor",
+          "vscode",
+          "cli",
+          "manual"
+        ]
+      },
+      "modelTier": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "currentAssignmentId": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "currentActivityId": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "currentTaskId": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "metadata": {
+        "type": [
+          "object",
+          "null"
+        ]
+      },
+      "expectedPlanningGeneration": {
+        "type": [
+          "integer",
+          "string"
+        ]
+      },
+      "policyApproval": {
+        "type": "object"
+      }
+    },
+    "additionalProperties": true
+  },
+  "schemaSource": "pilot-run-args-snapshot",
+  "sampleArgs": {},
+  "examples": [
+    {
+      "description": "Minimal argv example",
+      "argv": "workspace-kit run open-agent-session '{}'"
+    }
+  ],
+  "instructionPath": "src/modules/task-engine/instructions/open-agent-session.md",
+  "moduleId": "task-engine",
+  "description": "Record an AgentSession v1 row for cursor/vscode/cli/manual hosts with optional subagent bridge metadata.",
+  "policy": {
+    "sensitivity": "sensitive",
+    "operationId": "task-engine.agent-sessions.persist",
+    "jsonApprovalRequired": true
+  },
+  "planningGeneration": {
+    "cliPrelude": true,
+    "expectedPlanningGeneration": "required when tasks.planningGenerationPolicy is require"
+  },
+  "idempotency": {
+    "clientMutationId": false
+  },
+  "responseTemplate": {
+    "defaultResponseTemplateId": "default"
+  },
+  "remediationContract": ".ai/runbooks/agent-task-engine-ergonomics.md",
+  "discovery": {
+    "listCommands": "pnpm exec wk run --list-commands",
+    "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
+  },
+  "invocationId": "294cefbb-a820-433d-a9be-9791cb52263d"
+}

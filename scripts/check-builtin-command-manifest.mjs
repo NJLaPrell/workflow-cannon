@@ -37,6 +37,7 @@ const KNOWN_POLICY_OPERATION_IDS = new Set([
   "improvement.ingest-transcripts",
   "task-engine.backfill-task-feature-links",
   "task-engine.export-feature-taxonomy-json",
+  "task-engine.agent-sessions.persist",
   "skills.apply-skill",
   "plugins.persist",
   "subagents.persist",

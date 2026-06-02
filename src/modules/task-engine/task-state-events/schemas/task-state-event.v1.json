@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://workflow-cannon.dev/schemas/task-state-event.v1.json",
   "title": "Task state event (envelope + payload v1)",
-  "description": "Canonical git-backed task-state event: shared envelope (S1.1) plus discriminated payload (S1.2).",
+  "description": "Canonical git-backed task-state event: shared envelope (S1.1) plus discriminated payload (S1.2). Includes planning event kinds (Phase 119/120).",
   "$ref": "#/$defs/fullEvent",
   "$defs": {
     "fullEvent": {
@@ -14,14 +14,39 @@
           "properties": {
             "kind": {
               "type": "string",
-              "enum": ["task.created", "task.updated", "task.transitioned", "task.batch_applied"]
+              "enum": [
+                "task.created",
+                "task.updated",
+                "task.transitioned",
+                "task.batch_applied",
+                "planning.phase_catalog.upserted",
+                "planning.phase_catalog.removed",
+                "planning.workspace_status.updated",
+                "planning.phase_note.created",
+                "planning.phase_note.updated",
+                "planning.phase_note.archived",
+                "planning.phase_note_suggestion.created",
+                "planning.phase_note_suggestion.updated",
+                "planning.phase_note_suggestion.removed",
+                "planning.idea.created",
+                "planning.idea.updated",
+                "planning.module_state.updated"
+              ]
             },
             "payload": {
               "oneOf": [
                 { "$ref": "#/$defs/taskCreatedPayload" },
                 { "$ref": "#/$defs/taskUpdatedPayload" },
                 { "$ref": "#/$defs/taskTransitionedPayload" },
-                { "$ref": "#/$defs/taskBatchAppliedPayload" }
+                { "$ref": "#/$defs/taskBatchAppliedPayload" },
+                { "$ref": "#/$defs/planningPhaseCatalogUpsertedPayload" },
+                { "$ref": "#/$defs/planningPhaseCatalogRemovedPayload" },
+                { "$ref": "#/$defs/planningWorkspaceStatusUpdatedPayload" },
+                { "$ref": "#/$defs/planningPhaseNotePayload" },
+                { "$ref": "#/$defs/planningPhaseNoteSuggestionPayload" },
+                { "$ref": "#/$defs/planningPhaseNoteSuggestionRemovedPayload" },
+                { "$ref": "#/$defs/planningIdeaPayload" },
+                { "$ref": "#/$defs/planningModuleStateUpdatedPayload" }
               ]
             }
           }
@@ -37,6 +62,7 @@
               "actor",
               "clientMutationId",
               "expectedTaskVersion",
+              "expectedWorkspaceRevision",
               "command",
               "workspace",
               "kind",
@@ -145,6 +171,82 @@
           "type": "array",
           "items": { "type": "string", "pattern": "^T[0-9]+$" }
         }
+      }
+    },
+    "planningPhaseCatalogUpsertedPayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["phaseKey", "updatedAt"],
+      "properties": {
+        "phaseKey": { "type": "string", "minLength": 1, "maxLength": 32 },
+        "shortDescription": { "type": ["string", "null"], "maxLength": 512 },
+        "updatedAt": { "type": "string", "minLength": 20, "maxLength": 64 }
+      }
+    },
+    "planningPhaseCatalogRemovedPayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["phaseKey"],
+      "properties": {
+        "phaseKey": { "type": "string", "minLength": 1, "maxLength": 32 }
+      }
+    },
+    "planningWorkspaceStatusUpdatedPayload": {
+      "type": "object",
+      "required": ["patch", "after"],
+      "additionalProperties": false,
+      "properties": {
+        "patch": { "type": "object", "additionalProperties": true },
+        "after": { "type": "object", "additionalProperties": true },
+        "payloadDigest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "previousCurrentKitPhase": { "type": ["string", "null"] }
+      }
+    },
+    "planningPhaseNotePayload": {
+      "type": "object",
+      "required": ["note"],
+      "additionalProperties": false,
+      "properties": {
+        "note": { "type": "object", "additionalProperties": true }
+      }
+    },
+    "planningPhaseNoteSuggestionPayload": {
+      "type": "object",
+      "required": ["suggestion"],
+      "additionalProperties": false,
+      "properties": {
+        "suggestion": { "type": "object", "additionalProperties": true }
+      }
+    },
+    "planningPhaseNoteSuggestionRemovedPayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["suggestionId", "noteId"],
+      "properties": {
+        "suggestionId": { "type": "string", "minLength": 1 },
+        "noteId": { "type": "string", "minLength": 1 }
+      }
+    },
+    "planningIdeaPayload": {
+      "type": "object",
+      "required": ["idea"],
+      "additionalProperties": false,
+      "properties": {
+        "idea": { "type": "object", "additionalProperties": true },
+        "removed": { "type": "boolean" }
+      }
+    },
+    "planningModuleStateUpdatedPayload": {
+      "type": "object",
+      "required": ["moduleId", "stateSchemaVersion", "state", "updatedAt"],
+      "additionalProperties": false,
+      "properties": {
+        "moduleId": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "stateSchemaVersion": { "type": "integer", "minimum": 0 },
+        "state": { "type": "object", "additionalProperties": true },
+        "updatedAt": { "type": "string", "minLength": 20, "maxLength": 64 },
+        "expectedStateSchemaVersion": { "type": "integer", "minimum": 0 },
+        "removed": { "type": "boolean" }
       }
     }
   }

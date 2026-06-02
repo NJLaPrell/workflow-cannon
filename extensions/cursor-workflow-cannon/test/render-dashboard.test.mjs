@@ -2415,58 +2415,65 @@ test("renderDashboardRootInnerHtml merges ready improvement and execution rollup
 test("buildPhaseCompleteReleaseChatPrompt is compact agent-oriented closeout seed", () => {
   const p = buildPhaseCompleteReleaseChatPrompt("Phase 64", {
     phaseKey: "64",
-    workspaceCurrentPhase: "64",
-    workspaceNextPhase: "65",
-    seededTaskIds: ["T900", "T901"],
+    phaseLabel: "Phase 64",
+    currentKitPhase: "64",
+    nextKitPhase: "65",
     scope: "current"
   });
-  assert.match(p, /^## Complete & Release/);
-  assert.match(p, /target phaseKey: 64/);
-  assert.match(p, /workspace current \/ next: 64 \/ 65/);
-  assert.match(p, /scope: current/);
-  assert.match(p, /integration branch: `release\/phase-64`/);
-  assert.match(p, /seeded ready ids \(preview\): T900, T901/);
-  assert.doesNotMatch(p, /mismatch:/);
+  assert.match(p, /^## Complete & Release Phase/);
+  assert.match(p, /\*\*Role:\*\* You are the Workflow Cannon Phase Orchestrator\./);
+  assert.match(p, /\* target phaseKey: `64`/);
+  assert.match(p, /\* label: `Phase 64`/);
+  assert.match(p, /\* workspace current \/ next: `64` \/ `65`/);
+  assert.match(p, /\* scope: `current`/);
+  assert.match(p, /\* integration branch: `release\/phase-64`/);
+  assert.match(p, /dashboard authorization: complete-and-release/);
+  assert.match(p, /attached Workflow Cannon runbooks, rules, CAE guidance, and machine command contracts/);
+  assert.match(p, /Treat this dashboard-launched prompt as the operator’s confirmation/);
+  assert.match(p, /## Attached authority/);
+  assert.match(p, /## Authorization and policy/);
+  assert.match(p, /## Operating mode/);
+  assert.match(p, /## Initial phase classification/);
+  assert.match(p, /## Orchestration requirements/);
+  assert.match(p, /## Ask the user only when needed/);
+  assert.match(p, /## Stop conditions/);
+  assert.match(p, /## Final response/);
   assert.match(p, /@\.ai\/playbooks\/phase-closeout-and-release\.md/);
   assert.match(p, /@\.ai\/playbooks\/task-to-phase-branch\.md/);
   assert.match(p, /@\.ai\/AGENT-CLI-MAP\.md/);
-  assert.match(p, /improvement-triage-top-three/);
-  assert.match(p, /wishlist-intake-to-execution/);
-  assert.match(p, /phase-closeout-readiness/);
-  assert.match(p, /phase-closeout-ordering-recovery/);
-  assert.match(p, /wishlist_intake/);
-  assert.match(p, /task-engine-run-contracts\.schema\.json/);
-  assert.match(p, /publish:npm/);
-  assert.match(p, /Handoff if blocked/);
+  assert.match(p, /@\.ai\/runbooks\/phase-closeout-ordering-recovery\.md/);
+  assert.match(p, /@\.ai\/playbooks\/improvement-triage-top-three\.md/);
+  assert.match(p, /@\.ai\/playbooks\/wishlist-intake-to-execution\.md/);
+  assert.match(p, /Released version:/);
+  assert.match(p, /Remaining follow-ups:/);
 });
 
-test("buildPhaseCompleteReleaseChatPrompt includes ordering risk when later phases delivered", () => {
+test("buildPhaseCompleteReleaseChatPrompt includes current and next phase context", () => {
   const p = buildPhaseCompleteReleaseChatPrompt("Phase 118", {
     phaseKey: "118",
-    workspaceCurrentPhase: "118",
-    laterDeliveredPhases: "119,120"
+    currentKitPhase: "118",
+    nextKitPhase: "119"
   });
-  assert.match(p, /ordering risk/);
-  assert.match(p, /119,120/);
-  assert.match(p, /phase-closeout-ordering-recovery/);
+  assert.match(p, /\* workspace current \/ next: `118` \/ `119`/);
+  assert.match(p, /dashboard authorization: complete-and-release/);
 });
 
 test("buildPhaseCompleteReleaseChatPrompt warns when target differs from workspace current", () => {
   const p = buildPhaseCompleteReleaseChatPrompt("Phase 100", {
     phaseKey: "100",
-    workspaceCurrentPhase: "98",
-    workspaceNextPhase: "99",
+    currentKitPhase: "98",
+    nextKitPhase: "99",
     scope: "bucket"
   });
-  assert.match(p, /\*\*mismatch:\*\*/);
-  assert.match(p, /target phaseKey 100 ≠ workspace current 98/);
-  assert.match(p, /scope: bucket/);
+  assert.match(p, /\* target phaseKey: `100`/);
+  assert.match(p, /\* scope: `bucket`/);
+  assert.match(p, /\* workspace current \/ next: `98` \/ `99`/);
 });
 
 test("buildPhaseCompleteReleaseChatPrompt without phaseKey uses placeholders", () => {
   const p = buildPhaseCompleteReleaseChatPrompt("Phase 64");
-  assert.match(p, /release\/phase-<N>/);
-  assert.doesNotMatch(p, /release\/phase-64/);
+  assert.match(p, /\* target phaseKey: `\{\{phaseKey\}\}`/);
+  assert.match(p, /\* integration branch: `release\/phase-\{\{phaseKey\}\}`/);
 });
 
 test("collectPhaseBucketTaskIds merges taskIds and top preview", () => {

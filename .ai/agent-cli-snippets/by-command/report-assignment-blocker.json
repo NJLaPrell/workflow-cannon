@@ -1,0 +1,42 @@
+{
+  "ok": true,
+  "code": "run-args-schema",
+  "command": "report-assignment-blocker",
+  "schema": {
+    "type": "object",
+    "additionalProperties": true,
+    "description": "Permissive fallback args schema for 'report-assignment-blocker'. Use instructionPath for command-specific field guidance until a stricter schema is added."
+  },
+  "schemaSource": "manifest-permissive-fallback",
+  "sampleArgs": {},
+  "examples": [
+    {
+      "description": "Minimal argv example",
+      "argv": "workspace-kit run report-assignment-blocker '{}'"
+    }
+  ],
+  "instructionPath": "src/modules/team-execution/instructions/report-assignment-blocker.md",
+  "moduleId": "team-execution",
+  "description": "Worker reports a blocker, blocks assignment, and can open a linked defect task.",
+  "policy": {
+    "sensitivity": "sensitive",
+    "operationId": "team-execution.persist",
+    "jsonApprovalRequired": true
+  },
+  "planningGeneration": {
+    "cliPrelude": true,
+    "expectedPlanningGeneration": "required when tasks.planningGenerationPolicy is require"
+  },
+  "idempotency": {
+    "clientMutationId": false
+  },
+  "responseTemplate": {
+    "defaultResponseTemplateId": "default"
+  },
+  "remediationContract": ".ai/runbooks/agent-task-engine-ergonomics.md",
+  "discovery": {
+    "listCommands": "pnpm exec wk run --list-commands",
+    "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
+  },
+  "invocationId": "f382edb3-b78d-45d9-87a6-b62811fa79a3"
+}

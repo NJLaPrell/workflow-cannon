@@ -17,7 +17,7 @@
   ],
   "instructionPath": "src/modules/team-execution/instructions/reconcile-assignment.md",
   "moduleId": "team-execution",
-  "description": "Supervisor reconciles submitted handoff (submitted → reconciled).",
+  "description": "Supervisor reconciles submitted handoff with v2-aware reconciliation hints (submitted → reconciled).",
   "policy": {
     "sensitivity": "sensitive",
     "operationId": "team-execution.persist",
@@ -38,5 +38,5 @@
     "listCommands": "pnpm exec wk run --list-commands",
     "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
   },
-  "invocationId": "02efaa45-d3f3-4dba-9096-150bfc9b97ec"
+  "invocationId": "b9dcad33-3618-4524-a912-1832fd6b7a4b"
 }

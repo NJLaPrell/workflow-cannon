@@ -1,0 +1,61 @@
+{
+  "ok": true,
+  "code": "run-args-schema",
+  "command": "close-agent-session",
+  "schema": {
+    "type": "object",
+    "required": [
+      "sessionId"
+    ],
+    "properties": {
+      "sessionId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "expectedPlanningGeneration": {
+        "type": [
+          "integer",
+          "string"
+        ]
+      },
+      "policyApproval": {
+        "type": "object"
+      }
+    },
+    "additionalProperties": true
+  },
+  "schemaSource": "pilot-run-args-snapshot",
+  "sampleArgs": {
+    "sessionId": ""
+  },
+  "examples": [
+    {
+      "description": "Minimal argv example",
+      "argv": "workspace-kit run close-agent-session '{\"sessionId\":\"\"}'"
+    }
+  ],
+  "instructionPath": "src/modules/task-engine/instructions/close-agent-session.md",
+  "moduleId": "task-engine",
+  "description": "Close an AgentSession v1 row (status lifecycle only).",
+  "policy": {
+    "sensitivity": "sensitive",
+    "operationId": "task-engine.agent-sessions.persist",
+    "jsonApprovalRequired": true
+  },
+  "planningGeneration": {
+    "cliPrelude": true,
+    "expectedPlanningGeneration": "required when tasks.planningGenerationPolicy is require"
+  },
+  "idempotency": {
+    "clientMutationId": false
+  },
+  "responseTemplate": {
+    "defaultResponseTemplateId": "default"
+  },
+  "remediationContract": ".ai/runbooks/agent-task-engine-ergonomics.md",
+  "discovery": {
+    "listCommands": "pnpm exec wk run --list-commands",
+    "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
+  },
+  "invocationId": "2a26104a-e0ab-4472-9ed3-3327230c9721"
+}

@@ -1920,6 +1920,13 @@ test("taskEngineModule onCommand dashboard-summary returns stable shape", async 
   assert.equal(d.agentStatus.kind, "ready_task");
   assert.equal(d.agentStatus.label, "Ready Task T001");
   assert.equal(d.agentStatus.taskId, "T001");
+  assert.ok(d.agentActivitySummary);
+  assert.equal(d.agentActivitySummary.schemaVersion, 1);
+  assert.equal(d.agentActivitySummary.source, "derived_only");
+  assert.equal(d.agentActivitySummary.main, null);
+  assert.equal(d.agentActivitySummary.activeCount, 0);
+  assert.equal(d.agentActivitySummary.needsAttentionCount, 0);
+  assert.equal(d.agentActivitySummary.inferredFallback?.kind, "ready_task");
   assert.ok(typeof d.planningGeneration === "number");
   assert.ok(d.transcriptChurnResearchSummary);
   assert.equal(d.transcriptChurnResearchSummary.schemaVersion, 1);
