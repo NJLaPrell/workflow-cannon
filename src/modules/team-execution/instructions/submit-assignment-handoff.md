@@ -9,3 +9,5 @@ workspace-kit run submit-assignment-handoff '{"assignmentId":"<id>","workerId":"
 ```
 
 Worker path: status **`assigned` → `submitted`**. **`handoff`** must match contract v1 (`schemaVersion` **1**, non-empty **`summary`**; optional **`evidenceRefs`** string array). **`workerId`** must match the row.
+
+Stable lifecycle errors: **`assignment-not-found`**, **`assignment-authority-denied`**, **`assignment-status-invalid`**.

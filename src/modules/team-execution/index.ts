@@ -10,14 +10,18 @@ import { readOptionalExpectedPlanningGeneration } from "../task-engine/mutation-
 import { getPlanningGenerationPolicy, mergePlanningGenerationPolicyWarnings } from "../task-engine/planning-config.js";
 import {
   assertTeamExecutionKitSchema,
+  type TeamAssignmentRow,
   blockAssignment,
+  blockAssignmentByAdmin,
   blockAssignmentFromWorker,
   cancelAssignment,
+  cancelAssignmentByAdmin,
   getAssignment,
   insertAssignment,
   listAssignments,
   parseMetadata,
   reconcileAssignment,
+  reconcileAssignmentByAdmin,
   resolveAssignmentMetadataValidationOptions,
   submitHandoff,
   taskExistsInRelationalStore,
@@ -25,6 +29,203 @@ import {
   validateHandoffContractV1,
   validateReconcileCheckpointV1
 } from "./assignment-store.js";
+
+type AssignmentLifecycleAction =
+  | "submit-assignment-handoff"
+  | "report-assignment-blocker"
+  | "block-assignment"
+  | "reconcile-assignment"
+  | "cancel-assignment";
+
+type AssignmentAuthorityRole = "worker" | "supervisor";
+
+type AssignmentValidationInput = {
+  action: AssignmentLifecycleAction;
+  assignmentId: string;
+  assignment: TeamAssignmentRow | null;
+  callerId: string | undefined;
+  expectedRole: AssignmentAuthorityRole;
+  claimedRoleId: string;
+  allowedStatuses: TeamAssignmentRow["status"][];
+  adminIds: Set<string>;
+};
+
+function readResolvedActorId(ctx: { resolvedActor?: string }): string | undefined {
+  if (typeof ctx.resolvedActor !== "string") {
+    return undefined;
+  }
+  const v = ctx.resolvedActor.trim();
+  return v.length > 0 ? v : undefined;
+}
+
+function readAdminIds(ctx: { effectiveConfig?: Record<string, unknown> }): Set<string> {
+  const out = new Set<string>();
+
+  const pushIds = (raw: unknown): void => {
+    if (!Array.isArray(raw)) {
+      return;
+    }
+    for (const item of raw) {
+      if (typeof item !== "string") {
+        continue;
+      }
+      const id = item.trim();
+      if (id.length > 0) {
+        out.add(id);
+      }
+    }
+  };
+
+  const orchestration =
+    ctx.effectiveConfig?.orchestration &&
+    typeof ctx.effectiveConfig.orchestration === "object" &&
+    !Array.isArray(ctx.effectiveConfig.orchestration)
+      ? (ctx.effectiveConfig.orchestration as Record<string, unknown>)
+      : undefined;
+  const teamExecution =
+    ctx.effectiveConfig?.teamExecution &&
+    typeof ctx.effectiveConfig.teamExecution === "object" &&
+    !Array.isArray(ctx.effectiveConfig.teamExecution)
+      ? (ctx.effectiveConfig.teamExecution as Record<string, unknown>)
+      : undefined;
+
+  pushIds(orchestration?.adminIds);
+  pushIds(teamExecution?.adminIds);
+  return out;
+}
+
+function lifecycleValidationError(input: {
+  code: "assignment-not-found" | "assignment-authority-denied" | "assignment-status-invalid";
+  action: AssignmentLifecycleAction;
+  assignmentId: string;
+  message: string;
+  expectedRole?: AssignmentAuthorityRole;
+  callerId?: string;
+  claimedRoleId?: string;
+  assignment?: TeamAssignmentRow | null;
+  allowedStatuses?: TeamAssignmentRow["status"][];
+  reason: string;
+}) {
+  return {
+    ok: false,
+    code: input.code,
+    message: input.message,
+    data: {
+      lifecycleError: {
+        code: input.code,
+        reason: input.reason,
+        action: input.action,
+        assignmentId: input.assignmentId,
+        expectedRole: input.expectedRole,
+        callerId: input.callerId,
+        claimedRoleId: input.claimedRoleId,
+        assignment: input.assignment
+          ? {
+              id: input.assignment.id,
+              status: input.assignment.status,
+              workerId: input.assignment.workerId,
+              supervisorId: input.assignment.supervisorId
+            }
+          : undefined,
+        allowedStatuses: input.allowedStatuses
+      }
+    }
+  };
+}
+
+function validateAssignmentLifecycleAuthority(input: AssignmentValidationInput): {
+  ok: true;
+  allowSupervisorAdminOverride: boolean;
+} | {
+  ok: false;
+  error: ReturnType<typeof lifecycleValidationError>;
+} {
+  const assignment = input.assignment;
+  if (!assignment) {
+    return {
+      ok: false,
+      error: lifecycleValidationError({
+        code: "assignment-not-found",
+        action: input.action,
+        assignmentId: input.assignmentId,
+        message: `${input.action} rejected: assignment '${input.assignmentId}' not found`,
+        expectedRole: input.expectedRole,
+        callerId: input.callerId,
+        claimedRoleId: input.claimedRoleId,
+        reason: "assignment-missing"
+      })
+    };
+  }
+
+  const callerIsAdmin = Boolean(input.callerId && input.adminIds.has(input.callerId));
+  const callerMatchesClaimedRoleId = !input.callerId || input.callerId === input.claimedRoleId;
+  if (!callerMatchesClaimedRoleId) {
+    return {
+      ok: false,
+      error: lifecycleValidationError({
+        code: "assignment-authority-denied",
+        action: input.action,
+        assignmentId: input.assignmentId,
+        message: `${input.action} rejected: caller does not match claimed ${input.expectedRole} id`,
+        expectedRole: input.expectedRole,
+        callerId: input.callerId,
+        claimedRoleId: input.claimedRoleId,
+        assignment,
+        reason: "caller-claimed-role-mismatch"
+      })
+    };
+  }
+
+  const roleMatch =
+    input.expectedRole === "worker"
+      ? assignment.workerId === input.claimedRoleId
+      : assignment.supervisorId === input.claimedRoleId;
+
+  if (!roleMatch) {
+    const allowSupervisorAdminOverride =
+      input.expectedRole === "supervisor" && callerIsAdmin && callerMatchesClaimedRoleId;
+    if (!allowSupervisorAdminOverride) {
+      return {
+        ok: false,
+        error: lifecycleValidationError({
+          code: "assignment-authority-denied",
+          action: input.action,
+          assignmentId: input.assignmentId,
+          message: `${input.action} rejected: assignment ${input.expectedRole} mismatch`,
+          expectedRole: input.expectedRole,
+          callerId: input.callerId,
+          claimedRoleId: input.claimedRoleId,
+          assignment,
+          reason: "assignment-role-mismatch"
+        })
+      };
+    }
+  }
+
+  if (!input.allowedStatuses.includes(assignment.status)) {
+    return {
+      ok: false,
+      error: lifecycleValidationError({
+        code: "assignment-status-invalid",
+        action: input.action,
+        assignmentId: input.assignmentId,
+        message: `${input.action} rejected: assignment status '${assignment.status}' is not allowed`,
+        expectedRole: input.expectedRole,
+        callerId: input.callerId,
+        claimedRoleId: input.claimedRoleId,
+        assignment,
+        allowedStatuses: input.allowedStatuses,
+        reason: "status-not-allowed"
+      })
+    };
+  }
+
+  return {
+    ok: true,
+    allowSupervisorAdminOverride:
+      input.expectedRole === "supervisor" && assignment.supervisorId !== input.claimedRoleId
+  };
+}
 
 function attachPlanningMeta(
   data: Record<string, unknown>,
@@ -101,6 +302,8 @@ export const teamExecutionModule: WorkflowModule = {
   async onCommand(command, ctx) {
     const args = command.args ?? {};
     const name = command.name;
+    const callerId = readResolvedActorId(ctx);
+    const adminIds = readAdminIds(ctx);
 
     let planning;
     try {
@@ -268,17 +471,28 @@ export const teamExecutionModule: WorkflowModule = {
         return { ok: false, code: "invalid-args", message: hv.message };
       }
       const ts = nowIso();
+      const before = getAssignment(db, assignmentId);
+      const validation = validateAssignmentLifecycleAuthority({
+        action: "submit-assignment-handoff",
+        assignmentId,
+        assignment: before,
+        callerId,
+        expectedRole: "worker",
+        claimedRoleId: workerId,
+        allowedStatuses: ["assigned"],
+        adminIds
+      });
+      if (!validation.ok) {
+        return validation.error;
+      }
       let ok = false;
-      const persistTaskId = getAssignment(db, assignmentId)?.executionTaskId ?? readAnyTaskId(db);
+      const persistTaskId = before?.executionTaskId ?? readAnyTaskId(db);
       try {
         planning.sqliteDual.withTransaction(
           () => {
             ok = submitHandoff(db, { assignmentId, workerId, handoffJson: hv.json, now: ts });
             if (!ok) {
-              throw new TaskEngineError(
-                "invalid-transition",
-                "submit rejected: assignment missing, worker mismatch, or status is not assigned"
-              );
+              throw new TaskEngineError("invalid-transition", "submit rejected: assignment state changed");
             }
           },
           {
@@ -289,6 +503,20 @@ export const teamExecutionModule: WorkflowModule = {
         );
       } catch (err) {
         if (err instanceof TaskEngineError) {
+          if (err.code === "invalid-transition" && err.message.includes("state changed")) {
+            return lifecycleValidationError({
+              code: "assignment-status-invalid",
+              action: "submit-assignment-handoff",
+              assignmentId,
+              message: "submit-assignment-handoff rejected: assignment state changed",
+              expectedRole: "worker",
+              callerId,
+              claimedRoleId: workerId,
+              assignment: getAssignment(db, assignmentId),
+              allowedStatuses: ["assigned"],
+              reason: "state-changed-during-mutation"
+            });
+          }
           return { ok: false, code: err.code, message: err.message };
         }
         throw err;
@@ -312,16 +540,29 @@ export const teamExecutionModule: WorkflowModule = {
         };
       }
       const ts = nowIso();
-      const persistTaskId = getAssignment(db, assignmentId)?.executionTaskId ?? readAnyTaskId(db);
+      const before = getAssignment(db, assignmentId);
+      const validation = validateAssignmentLifecycleAuthority({
+        action: "block-assignment",
+        assignmentId,
+        assignment: before,
+        callerId,
+        expectedRole: "supervisor",
+        claimedRoleId: supervisorId,
+        allowedStatuses: ["assigned", "submitted"],
+        adminIds
+      });
+      if (!validation.ok) {
+        return validation.error;
+      }
+      const persistTaskId = before?.executionTaskId ?? readAnyTaskId(db);
       try {
         planning.sqliteDual.withTransaction(
           () => {
-            const b = blockAssignment(db, { assignmentId, supervisorId, reason, now: ts });
+            const b = validation.allowSupervisorAdminOverride
+              ? blockAssignmentByAdmin(db, { assignmentId, reason, now: ts })
+              : blockAssignment(db, { assignmentId, supervisorId, reason, now: ts });
             if (!b) {
-              throw new TaskEngineError(
-                "invalid-transition",
-                "block rejected: assignment missing, supervisor mismatch, or status not assigned/submitted"
-              );
+              throw new TaskEngineError("invalid-transition", "block rejected: assignment state changed");
             }
           },
           {
@@ -332,6 +573,20 @@ export const teamExecutionModule: WorkflowModule = {
         );
       } catch (err) {
         if (err instanceof TaskEngineError) {
+          if (err.code === "invalid-transition" && err.message.includes("state changed")) {
+            return lifecycleValidationError({
+              code: "assignment-status-invalid",
+              action: "block-assignment",
+              assignmentId,
+              message: "block-assignment rejected: assignment state changed",
+              expectedRole: "supervisor",
+              callerId,
+              claimedRoleId: supervisorId,
+              assignment: getAssignment(db, assignmentId),
+              allowedStatuses: ["assigned", "submitted"],
+              reason: "state-changed-during-mutation"
+            });
+          }
           return { ok: false, code: err.code, message: err.message };
         }
         throw err;
@@ -354,17 +609,22 @@ export const teamExecutionModule: WorkflowModule = {
       }
 
       const before = getAssignment(db, assignmentId);
-      if (!before || before.workerId !== workerId || (before.status !== "assigned" && before.status !== "submitted")) {
-        return {
-          ok: false,
-          code: "invalid-transition",
-          message:
-            "report-assignment-blocker rejected: assignment missing, worker mismatch, or status is not assigned/submitted"
-        };
+      const validation = validateAssignmentLifecycleAuthority({
+        action: "report-assignment-blocker",
+        assignmentId,
+        assignment: before,
+        callerId,
+        expectedRole: "worker",
+        claimedRoleId: workerId,
+        allowedStatuses: ["assigned", "submitted"],
+        adminIds
+      });
+      if (!validation.ok) {
+        return validation.error;
       }
 
       const ts = nowIso();
-      const persistTaskId = before.executionTaskId || readAnyTaskId(db);
+      const persistTaskId = before?.executionTaskId || readAnyTaskId(db);
       try {
         planning.sqliteDual.withTransaction(
           () => {
@@ -377,7 +637,7 @@ export const teamExecutionModule: WorkflowModule = {
             if (!blocked) {
               throw new TaskEngineError(
                 "invalid-transition",
-                "report-assignment-blocker rejected: assignment missing, worker mismatch, or status is not assigned/submitted"
+                "report-assignment-blocker rejected: assignment state changed"
               );
             }
           },
@@ -389,6 +649,20 @@ export const teamExecutionModule: WorkflowModule = {
         );
       } catch (err) {
         if (err instanceof TaskEngineError) {
+          if (err.code === "invalid-transition" && err.message.includes("state changed")) {
+            return lifecycleValidationError({
+              code: "assignment-status-invalid",
+              action: "report-assignment-blocker",
+              assignmentId,
+              message: "report-assignment-blocker rejected: assignment state changed",
+              expectedRole: "worker",
+              callerId,
+              claimedRoleId: workerId,
+              assignment: getAssignment(db, assignmentId),
+              allowedStatuses: ["assigned", "submitted"],
+              reason: "state-changed-during-mutation"
+            });
+          }
           return { ok: false, code: err.code, message: err.message };
         }
         throw err;
@@ -509,21 +783,38 @@ export const teamExecutionModule: WorkflowModule = {
         return { ok: false, code: "invalid-args", message: cv.message };
       }
       const ts = nowIso();
-      const persistTaskId = getAssignment(db, assignmentId)?.executionTaskId ?? readAnyTaskId(db);
+      const before = getAssignment(db, assignmentId);
+      const validation = validateAssignmentLifecycleAuthority({
+        action: "reconcile-assignment",
+        assignmentId,
+        assignment: before,
+        callerId,
+        expectedRole: "supervisor",
+        claimedRoleId: supervisorId,
+        allowedStatuses: ["submitted"],
+        adminIds
+      });
+      if (!validation.ok) {
+        return validation.error;
+      }
+      const persistTaskId = before?.executionTaskId ?? readAnyTaskId(db);
       try {
         planning.sqliteDual.withTransaction(
           () => {
-            const b = reconcileAssignment(db, {
-              assignmentId,
-              supervisorId,
-              checkpointJson: cv.json,
-              now: ts
-            });
+            const b = validation.allowSupervisorAdminOverride
+              ? reconcileAssignmentByAdmin(db, {
+                  assignmentId,
+                  checkpointJson: cv.json,
+                  now: ts
+                })
+              : reconcileAssignment(db, {
+                  assignmentId,
+                  supervisorId,
+                  checkpointJson: cv.json,
+                  now: ts
+                });
             if (!b) {
-              throw new TaskEngineError(
-                "invalid-transition",
-                "reconcile rejected: assignment missing, supervisor mismatch, or status is not submitted"
-              );
+              throw new TaskEngineError("invalid-transition", "reconcile rejected: assignment state changed");
             }
           },
           {
@@ -534,6 +825,20 @@ export const teamExecutionModule: WorkflowModule = {
         );
       } catch (err) {
         if (err instanceof TaskEngineError) {
+          if (err.code === "invalid-transition" && err.message.includes("state changed")) {
+            return lifecycleValidationError({
+              code: "assignment-status-invalid",
+              action: "reconcile-assignment",
+              assignmentId,
+              message: "reconcile-assignment rejected: assignment state changed",
+              expectedRole: "supervisor",
+              callerId,
+              claimedRoleId: supervisorId,
+              assignment: getAssignment(db, assignmentId),
+              allowedStatuses: ["submitted"],
+              reason: "state-changed-during-mutation"
+            });
+          }
           return { ok: false, code: err.code, message: err.message };
         }
         throw err;
@@ -556,16 +861,29 @@ export const teamExecutionModule: WorkflowModule = {
         };
       }
       const ts = nowIso();
-      const persistTaskId = getAssignment(db, assignmentId)?.executionTaskId ?? readAnyTaskId(db);
+      const before = getAssignment(db, assignmentId);
+      const validation = validateAssignmentLifecycleAuthority({
+        action: "cancel-assignment",
+        assignmentId,
+        assignment: before,
+        callerId,
+        expectedRole: "supervisor",
+        claimedRoleId: supervisorId,
+        allowedStatuses: ["assigned", "submitted", "blocked"],
+        adminIds
+      });
+      if (!validation.ok) {
+        return validation.error;
+      }
+      const persistTaskId = before?.executionTaskId ?? readAnyTaskId(db);
       try {
         planning.sqliteDual.withTransaction(
           () => {
-            const b = cancelAssignment(db, { assignmentId, supervisorId, now: ts });
+            const b = validation.allowSupervisorAdminOverride
+              ? cancelAssignmentByAdmin(db, { assignmentId, now: ts })
+              : cancelAssignment(db, { assignmentId, supervisorId, now: ts });
             if (!b) {
-              throw new TaskEngineError(
-                "invalid-transition",
-                "cancel rejected: assignment missing, supervisor mismatch, or terminal status"
-              );
+              throw new TaskEngineError("invalid-transition", "cancel rejected: assignment state changed");
             }
           },
           {
@@ -576,6 +894,20 @@ export const teamExecutionModule: WorkflowModule = {
         );
       } catch (err) {
         if (err instanceof TaskEngineError) {
+          if (err.code === "invalid-transition" && err.message.includes("state changed")) {
+            return lifecycleValidationError({
+              code: "assignment-status-invalid",
+              action: "cancel-assignment",
+              assignmentId,
+              message: "cancel-assignment rejected: assignment state changed",
+              expectedRole: "supervisor",
+              callerId,
+              claimedRoleId: supervisorId,
+              assignment: getAssignment(db, assignmentId),
+              allowedStatuses: ["assigned", "submitted", "blocked"],
+              reason: "state-changed-during-mutation"
+            });
+          }
           return { ok: false, code: err.code, message: err.message };
         }
         throw err;

@@ -503,6 +503,19 @@ export function blockAssignment(
   return r.changes > 0;
 }
 
+export function blockAssignmentByAdmin(
+  db: Sqlite.Database,
+  input: { assignmentId: string; reason: string; now: string }
+): boolean {
+  const r = db
+    .prepare(
+      `UPDATE kit_team_assignments SET status = 'blocked', block_reason = ?, updated_at = ?
+       WHERE id = ? AND status IN ('assigned','submitted')`
+    )
+    .run(input.reason, input.now, input.assignmentId);
+  return r.changes > 0;
+}
+
 export function blockAssignmentFromWorker(
   db: Sqlite.Database,
   input: { assignmentId: string; workerId: string; reason: string; now: string }
@@ -529,6 +542,19 @@ export function reconcileAssignment(
   return r.changes > 0;
 }
 
+export function reconcileAssignmentByAdmin(
+  db: Sqlite.Database,
+  input: { assignmentId: string; checkpointJson: string; now: string }
+): boolean {
+  const r = db
+    .prepare(
+      `UPDATE kit_team_assignments SET status = 'reconciled', reconcile_checkpoint_json = ?, updated_at = ?
+       WHERE id = ? AND status = 'submitted'`
+    )
+    .run(input.checkpointJson, input.now, input.assignmentId);
+  return r.changes > 0;
+}
+
 export function cancelAssignment(
   db: Sqlite.Database,
   input: { assignmentId: string; supervisorId: string; now: string }
@@ -539,5 +565,18 @@ export function cancelAssignment(
        WHERE id = ? AND supervisor_id = ? AND status IN ('assigned','submitted','blocked')`
     )
     .run(input.now, input.assignmentId, input.supervisorId);
+  return r.changes > 0;
+}
+
+export function cancelAssignmentByAdmin(
+  db: Sqlite.Database,
+  input: { assignmentId: string; now: string }
+): boolean {
+  const r = db
+    .prepare(
+      `UPDATE kit_team_assignments SET status = 'cancelled', updated_at = ?
+       WHERE id = ? AND status IN ('assigned','submitted','blocked')`
+    )
+    .run(input.now, input.assignmentId);
   return r.changes > 0;
 }

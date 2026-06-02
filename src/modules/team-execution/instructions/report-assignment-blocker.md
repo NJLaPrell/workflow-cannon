@@ -10,6 +10,8 @@ workspace-kit run report-assignment-blocker '{"assignmentId":"<id>","workerId":"
 
 Worker path: sets assignment status **`assigned|submitted -> blocked`** for the matching **`workerId`** and, by default, creates a linked defect task through `report-defect`.
 
+Stable lifecycle errors: **`assignment-not-found`**, **`assignment-authority-denied`**, **`assignment-status-invalid`**.
+
 Optional fields for defect intake: `createDefect` (default `true`), `defectTitle`, `defectSummary`, `defectEvidence`, `severity`, `features`, `phaseKey`, `phase`, `actor`.
 
 Linking behavior:

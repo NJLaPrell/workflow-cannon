@@ -9,3 +9,7 @@ workspace-kit run reconcile-assignment '{"assignmentId":"<id>","supervisorId":"a
 ```
 
 Supervisor path: **`submitted` → `reconciled`**. **`checkpoint`** v1 requires **`schemaVersion` 1** and non-empty **`mergedSummary`**.
+
+Admin override: if caller actor id is listed in **`orchestration.adminIds`** or **`teamExecution.adminIds`**, supervisor lifecycle authority is accepted.
+
+Stable lifecycle errors: **`assignment-not-found`**, **`assignment-authority-denied`**, **`assignment-status-invalid`**.

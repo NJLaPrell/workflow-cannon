@@ -9,3 +9,7 @@ workspace-kit run cancel-assignment '{"assignmentId":"<id>","supervisorId":"alic
 ```
 
 Supervisor path: **`cancelled`** from **`assigned`**, **`submitted`**, or **`blocked`**.
+
+Admin override: if caller actor id is listed in **`orchestration.adminIds`** or **`teamExecution.adminIds`**, supervisor lifecycle authority is accepted.
+
+Stable lifecycle errors: **`assignment-not-found`**, **`assignment-authority-denied`**, **`assignment-status-invalid`**.
