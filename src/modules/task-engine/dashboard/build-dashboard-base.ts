@@ -64,6 +64,7 @@ import {
   type DashboardSummaryProjection
 } from "./dashboard-summary-projection.js";
 import { buildDashboardTaskStateProjectionSummary } from "./build-dashboard-task-state-projection.js";
+import { summarizeAgentRegistrySessions } from "../agent-registry-session-summary.js";
 
 /** Parse optional `dashboard-summary` argv for wishlist table paging (extension + CLI). */
 export function parseDashboardWishlistPaging(args?: Record<string, unknown>): {
@@ -423,6 +424,9 @@ export async function buildDashboardBase(
   const subagentRegistry: DashboardSubagentRegistrySummary = sqliteDual
     ? (summarizeSubagentsForDashboard(sqliteDual.getDatabase()) as DashboardSubagentRegistrySummary)
     : subagentRegistryEmpty;
+  const agentRegistrySessions = sqliteDual
+    ? summarizeAgentRegistrySessions(sqliteDual.getDatabase(), sqliteDual.dbPath)
+    : summarizeAgentRegistrySessions(undefined, "");
 
   const taskCheckpointsEmpty: DashboardTaskCheckpointsSummary = {
     schemaVersion: 1,
@@ -452,7 +456,7 @@ export async function buildDashboardBase(
     ? readCurrentAgentActivityLease(sqliteDual.getDatabase(), systemStatus.generatedAt)
     : null;
   const agentStatus = liveActivity
-    ? agentActivityLeaseToDashboardStatus(liveActivity)
+    ? agentActivityLeaseToDashboardStatus(liveActivity, systemStatus.generatedAt)
     : derivedAgentStatus;
 
   const wsForDelivery =
@@ -615,6 +619,7 @@ export async function buildDashboardBase(
     agentGuidance,
     teamExecution,
     subagentRegistry,
+    agentRegistrySessions,
     taskCheckpoints,
     systemStatus,
     taskStateProjection,

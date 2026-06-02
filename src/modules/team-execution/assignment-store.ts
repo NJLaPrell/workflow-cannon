@@ -1,6 +1,15 @@
 import type Sqlite from "better-sqlite3";
 import type { DashboardTeamExecutionSummary } from "../../contracts/dashboard-summary-run.js";
+import {
+  TEAM_ASSIGNMENT_METADATA_SCHEMA_VERSION,
+  type TeamAssignmentOrchestrationMetadataSummary
+} from "../../contracts/team-execution-assignment-metadata.v1.js";
 import { readKitSqliteUserVersion } from "../../core/state/workspace-kit-sqlite.js";
+import {
+  validateAssignmentMetadataV1,
+  validateHandoffV2
+} from "../../core/validation/agent-orchestration/validate-orchestration-contract.js";
+import type { OrchestrationValidationIssue } from "../../core/validation/agent-orchestration/types.js";
 
 export const TEAM_EXECUTION_KIT_MIN_USER_VERSION = 7;
 
@@ -18,9 +27,86 @@ export type TeamAssignmentRow = {
   reconcileCheckpoint: Record<string, unknown> | null;
   blockReason: string | null;
   metadata: Record<string, unknown> | null;
+  orchestrationMetadataSummary: TeamAssignmentOrchestrationMetadataSummary | null;
   createdAt: string;
   updatedAt: string;
 };
+
+export type ReconcileDecisionHint =
+  | "reconcile"
+  | "request_rework"
+  | "assign_blocker"
+  | "assign_review"
+  | "cancel_supersede";
+
+export type ReconcileHandoffContext = {
+  schemaVersion: 1;
+  handoffSchemaVersion: 1 | 2;
+  handoffSummary: string;
+  evidenceRefs: string[];
+  suggestedDecision: ReconcileDecisionHint;
+  suggestedDecisions: ReconcileDecisionHint[];
+  handoffStatus?: string;
+  blockersCount?: number;
+  risksCount?: number;
+  commandsRunCount?: number;
+  failedCommandCount?: number;
+  nextRecommendedAction?: string;
+};
+
+function countStringArray(value: unknown): number {
+  if (!Array.isArray(value)) {
+    return 0;
+  }
+  return value.filter((entry) => typeof entry === "string").length;
+}
+
+function readOptionalString(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() ? value : undefined;
+}
+
+export function summarizeAssignmentOrchestrationMetadata(
+  metadata: Record<string, unknown> | null
+): TeamAssignmentOrchestrationMetadataSummary | null {
+  if (!metadata) {
+    return null;
+  }
+
+  const resources =
+    metadata.resources && typeof metadata.resources === "object" && !Array.isArray(metadata.resources)
+      ? (metadata.resources as Record<string, unknown>)
+      : null;
+  const lockScope =
+    metadata.lockScope && typeof metadata.lockScope === "object" && !Array.isArray(metadata.lockScope)
+      ? (metadata.lockScope as Record<string, unknown>)
+      : null;
+  const schemaVersion = Number(metadata.schemaVersion);
+
+  return {
+    schemaVersion: Number.isFinite(schemaVersion) ? schemaVersion : 0,
+    agentDefinitionId: readOptionalString(metadata.agentDefinitionId),
+    agentSessionId: readOptionalString(metadata.agentSessionId),
+    modelTier: readOptionalString(metadata.modelTier) as TeamAssignmentOrchestrationMetadataSummary["modelTier"],
+    contextProfileId: readOptionalString(metadata.contextProfileId),
+    accessProfileId: readOptionalString(metadata.accessProfileId),
+    handoffContractId: readOptionalString(metadata.handoffContractId),
+    assignmentPromptSummary: readOptionalString(metadata.assignmentPromptSummary),
+    blockingPolicy: readOptionalString(metadata.blockingPolicy),
+    pathCounts: {
+      ownedPaths: countStringArray(metadata.ownedPaths) + countStringArray(resources?.ownedPaths),
+      readOnlyPaths: countStringArray(resources?.readOnlyPaths),
+      sharedPaths: countStringArray(metadata.sharedPaths) + countStringArray(resources?.sharedPaths),
+      forbiddenPaths: countStringArray(metadata.forbiddenPaths) + countStringArray(resources?.forbiddenPaths),
+      requiresApprovalPaths:
+        countStringArray(metadata.requiresApprovalPaths) + countStringArray(resources?.requiresApprovalPaths)
+    },
+    lockCounts: {
+      tasks: countStringArray(lockScope?.tasks),
+      modules: countStringArray(lockScope?.modules),
+      commands: countStringArray(lockScope?.commands)
+    }
+  };
+}
 
 export function assertTeamExecutionKitSchema(
   dbPathAbs: string
@@ -56,6 +142,42 @@ export function validateHandoffContractV1(
   return { ok: true, json: JSON.stringify(o) };
 }
 
+export function validateHandoffContract(
+  raw: unknown,
+  context?: { assignmentId?: string; workerId?: string }
+): { ok: true; json: string } | { ok: false; message: string } {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    return { ok: false, message: "handoff must be a JSON object" };
+  }
+
+  const schemaVersion = (raw as Record<string, unknown>).schemaVersion;
+  if (schemaVersion === 1) {
+    return validateHandoffContractV1(raw);
+  }
+
+  if (schemaVersion !== 2) {
+    return { ok: false, message: "handoff.schemaVersion must be 1 or 2" };
+  }
+
+  const v2 = validateHandoffV2(raw);
+  if (!v2.ok) {
+    return {
+      ok: false,
+      message: v2.issues[0]?.message ?? v2.message
+    };
+  }
+
+  if (context?.assignmentId && v2.data.assignmentId !== context.assignmentId) {
+    return { ok: false, message: "handoff.assignmentId must match assignmentId" };
+  }
+
+  if (context?.workerId && v2.data.agentId !== context.workerId) {
+    return { ok: false, message: "handoff.agentId must match workerId" };
+  }
+
+  return { ok: true, json: JSON.stringify(v2.data) };
+}
+
 export function validateReconcileCheckpointV1(
   raw: unknown
 ): { ok: true; json: string } | { ok: false; message: string } {
@@ -72,6 +194,90 @@ export function validateReconcileCheckpointV1(
   return { ok: true, json: JSON.stringify(o) };
 }
 
+function readStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.filter((entry): entry is string => typeof entry === "string" && entry.trim().length > 0);
+}
+
+function decideFromHandoffStatus(status: string): ReconcileDecisionHint {
+  if (status === "blocked") {
+    return "assign_blocker";
+  }
+  if (status === "needs_review") {
+    return "assign_review";
+  }
+  if (status === "partial" || status === "failed") {
+    return "request_rework";
+  }
+  return "reconcile";
+}
+
+function collectSuggestedDecisions(
+  base: ReconcileDecisionHint,
+  nextRecommendedAction: string | undefined
+): ReconcileDecisionHint[] {
+  const out: ReconcileDecisionHint[] = [base];
+  const note = typeof nextRecommendedAction === "string" ? nextRecommendedAction.toLowerCase() : "";
+  if (note.includes("supersede") || note.includes("cancel")) {
+    out.push("cancel_supersede");
+  }
+  return out;
+}
+
+export function summarizeHandoffForReconcile(
+  handoff: Record<string, unknown> | null
+): ReconcileHandoffContext | null {
+  if (!handoff) {
+    return null;
+  }
+
+  if (handoff.schemaVersion === 1) {
+    const summary = typeof handoff.summary === "string" ? handoff.summary.trim() : "";
+    if (!summary) {
+      return null;
+    }
+    return {
+      schemaVersion: 1,
+      handoffSchemaVersion: 1,
+      handoffSummary: summary,
+      evidenceRefs: readStringArray(handoff.evidenceRefs),
+      suggestedDecision: "reconcile",
+      suggestedDecisions: ["reconcile"]
+    };
+  }
+
+  if (handoff.schemaVersion !== 2) {
+    return null;
+  }
+
+  const validated = validateHandoffV2(handoff);
+  if (!validated.ok) {
+    return null;
+  }
+
+  const data = validated.data;
+  const suggestedDecision = decideFromHandoffStatus(data.status);
+  const failedCommandCount = Array.isArray(data.commandsRun)
+    ? data.commandsRun.filter((run) => run.status === "failed").length
+    : 0;
+  return {
+    schemaVersion: 1,
+    handoffSchemaVersion: 2,
+    handoffStatus: data.status,
+    handoffSummary: data.summary,
+    evidenceRefs: data.evidenceRefs,
+    blockersCount: Array.isArray(data.blockers) ? data.blockers.length : 0,
+    risksCount: Array.isArray(data.risks) ? data.risks.length : 0,
+    commandsRunCount: Array.isArray(data.commandsRun) ? data.commandsRun.length : 0,
+    failedCommandCount,
+    nextRecommendedAction: data.nextRecommendedAction,
+    suggestedDecision,
+    suggestedDecisions: collectSuggestedDecisions(suggestedDecision, data.nextRecommendedAction)
+  };
+}
+
 export function parseMetadata(raw: unknown): Record<string, unknown> | null {
   if (raw === undefined || raw === null) {
     return null;
@@ -80,6 +286,52 @@ export function parseMetadata(raw: unknown): Record<string, unknown> | null {
     return null;
   }
   return raw as Record<string, unknown>;
+}
+
+export type AssignmentMetadataValidationOutcome =
+  | { ok: true }
+  | { ok: false; code: string; message: string; issues: OrchestrationValidationIssue[] };
+
+/** Validate orchestration metadata when `schemaVersion === 1`; legacy rows pass through. */
+export function validateAssignmentMetadataWhenPresent(
+  metadata: Record<string, unknown> | null,
+  options?: { strict?: boolean }
+): AssignmentMetadataValidationOutcome {
+  if (metadata === null) {
+    return { ok: true };
+  }
+  if (metadata.schemaVersion !== TEAM_ASSIGNMENT_METADATA_SCHEMA_VERSION) {
+    return { ok: true };
+  }
+  const result = validateAssignmentMetadataV1(metadata, options);
+  if (result.ok) {
+    return { ok: true };
+  }
+  const primary = result.issues[0];
+  return {
+    ok: false,
+    code: result.code,
+    message: primary?.message ?? result.message,
+    issues: result.issues
+  };
+}
+
+function readOrchestrationStrictMetadataValidation(
+  effectiveConfig: Record<string, unknown> | undefined
+): boolean {
+  const orchestration = effectiveConfig?.orchestration;
+  if (!orchestration || typeof orchestration !== "object" || Array.isArray(orchestration)) {
+    return false;
+  }
+  return (orchestration as Record<string, unknown>).strictMetadataValidation === true;
+}
+
+export function resolveAssignmentMetadataValidationOptions(ctx: {
+  effectiveConfig?: Record<string, unknown>;
+}): { strict?: boolean } {
+  return readOrchestrationStrictMetadataValidation(ctx.effectiveConfig)
+    ? { strict: true }
+    : {};
 }
 
 export function taskExistsInRelationalStore(db: Sqlite.Database, taskId: string): boolean {
@@ -137,6 +389,7 @@ function mapRow(
     reconcileCheckpoint,
     blockReason: typeof r.block_reason === "string" ? r.block_reason : null,
     metadata,
+    orchestrationMetadataSummary: summarizeAssignmentOrchestrationMetadata(metadata),
     createdAt: String(r.created_at),
     updatedAt: String(r.updated_at)
   };
@@ -395,6 +648,32 @@ export function blockAssignment(
   return r.changes > 0;
 }
 
+export function blockAssignmentByAdmin(
+  db: Sqlite.Database,
+  input: { assignmentId: string; reason: string; now: string }
+): boolean {
+  const r = db
+    .prepare(
+      `UPDATE kit_team_assignments SET status = 'blocked', block_reason = ?, updated_at = ?
+       WHERE id = ? AND status IN ('assigned','submitted')`
+    )
+    .run(input.reason, input.now, input.assignmentId);
+  return r.changes > 0;
+}
+
+export function blockAssignmentFromWorker(
+  db: Sqlite.Database,
+  input: { assignmentId: string; workerId: string; reason: string; now: string }
+): boolean {
+  const r = db
+    .prepare(
+      `UPDATE kit_team_assignments SET status = 'blocked', block_reason = ?, updated_at = ?
+       WHERE id = ? AND worker_id = ? AND status IN ('assigned','submitted')`
+    )
+    .run(input.reason, input.now, input.assignmentId, input.workerId);
+  return r.changes > 0;
+}
+
 export function reconcileAssignment(
   db: Sqlite.Database,
   input: { assignmentId: string; supervisorId: string; checkpointJson: string; now: string }
@@ -408,6 +687,19 @@ export function reconcileAssignment(
   return r.changes > 0;
 }
 
+export function reconcileAssignmentByAdmin(
+  db: Sqlite.Database,
+  input: { assignmentId: string; checkpointJson: string; now: string }
+): boolean {
+  const r = db
+    .prepare(
+      `UPDATE kit_team_assignments SET status = 'reconciled', reconcile_checkpoint_json = ?, updated_at = ?
+       WHERE id = ? AND status = 'submitted'`
+    )
+    .run(input.checkpointJson, input.now, input.assignmentId);
+  return r.changes > 0;
+}
+
 export function cancelAssignment(
   db: Sqlite.Database,
   input: { assignmentId: string; supervisorId: string; now: string }
@@ -418,5 +710,18 @@ export function cancelAssignment(
        WHERE id = ? AND supervisor_id = ? AND status IN ('assigned','submitted','blocked')`
     )
     .run(input.now, input.assignmentId, input.supervisorId);
+  return r.changes > 0;
+}
+
+export function cancelAssignmentByAdmin(
+  db: Sqlite.Database,
+  input: { assignmentId: string; now: string }
+): boolean {
+  const r = db
+    .prepare(
+      `UPDATE kit_team_assignments SET status = 'cancelled', updated_at = ?
+       WHERE id = ? AND status IN ('assigned','submitted','blocked')`
+    )
+    .run(input.now, input.assignmentId);
   return r.changes > 0;
 }

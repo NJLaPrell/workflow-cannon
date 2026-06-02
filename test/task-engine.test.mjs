@@ -1987,6 +1987,26 @@ test("taskEngineModule onCommand dashboard-summary returns stable shape", async 
   assert.equal(d.subagentRegistry.openSessionsCount, 0);
   assert.ok(Array.isArray(d.subagentRegistry.topOpenSessions));
   assert.equal(d.subagentRegistry.topOpenSessions.length, 0);
+  assert.ok(d.agentRegistrySessions);
+  assert.equal(d.agentRegistrySessions.schemaVersion, 1);
+  assert.equal(d.agentRegistrySessions.available, true);
+  assert.equal(d.agentRegistrySessions.definitionsCount, 0);
+  assert.equal(d.agentRegistrySessions.orchestrationReadyDefinitionsCount, 0);
+  assert.equal(d.agentRegistrySessions.openSessionsCount, 0);
+  assert.equal(d.agentRegistrySessions.activeAssignmentsCount, 0);
+  assert.equal(d.agentRegistrySessions.linkedOpenSessionsCount, 0);
+  assert.deepEqual(d.agentRegistrySessions.currentPointers, { assignment: 0, task: 0, activity: 0 });
+  assert.deepEqual(d.agentRegistrySessions.hostAvailability, {
+    cursor: 0,
+    vscode: 0,
+    cli: 0,
+    manual: 0,
+    unknown: 0
+  });
+  assert.ok(Array.isArray(d.agentRegistrySessions.capabilityAvailability.required));
+  assert.ok(Array.isArray(d.agentRegistrySessions.capabilityAvailability.optional));
+  assert.ok(Array.isArray(d.agentRegistrySessions.topOpenSessions));
+  assert.equal(d.agentRegistrySessions.topOpenSessions.length, 0);
   assert.ok(d.taskCheckpoints);
   assert.equal(d.taskCheckpoints.schemaVersion, 1);
   assert.equal(d.taskCheckpoints.available, true);
@@ -2000,6 +2020,85 @@ test("taskEngineModule onCommand dashboard-summary returns stable shape", async 
   assert.ok(Array.isArray(d.approvalQueue.policyArtifacts));
   assert.ok(Array.isArray(d.pastPhaseNotes));
   assert.equal(d.pastPhaseNotes.length, 0);
+});
+
+test("taskEngineModule dashboard-summary and agent-session-snapshot include agent registry/session bridge rollup", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(makeTask({ id: "T001", status: "ready" }));
+  });
+  const ctx = sqliteTaskEngineCtx(workspace);
+
+  const registerDefinition = await taskEngineModule.onCommand(
+    {
+      name: "register-agent-definition",
+      args: {
+        agentDefinition: {
+          agentDefinitionId: "orchestrator-main",
+          displayName: "Orchestrator Main",
+          description: "Primary orchestrator",
+          role: "orchestrator",
+          hostCompatibility: ["cli", "cursor"],
+          requiredCapabilities: ["run_commands", "receive_assignment"],
+          optionalCapabilities: ["stream_activity"],
+          allowedCommands: ["dashboard-summary", "agent-session-snapshot"],
+          accessProfileId: "orchestrator_access_v1",
+          contextProfileId: "orchestrator_context_v1",
+          modelProfileId: "high_reasoning_or_balanced_v1",
+          handoffContractId: "handoff.v2",
+          activityContractId: "agent-activity.v1",
+          retired: false,
+          version: 1
+        }
+      }
+    },
+    ctx
+  );
+  assert.equal(registerDefinition.ok, true);
+
+  const openSession = await taskEngineModule.onCommand(
+    {
+      name: "open-agent-session",
+      args: {
+        sessionId: "session-main",
+        agentId: "orchestrator-main",
+        hostHint: "cli",
+        modelTier: "balanced"
+      }
+    },
+    ctx
+  );
+  assert.equal(openSession.ok, true);
+
+  const summary = await taskEngineModule.onCommand({ name: "dashboard-summary", args: {} }, ctx);
+  assert.equal(summary.ok, true);
+  assert.ok(summary.data.agentRegistrySessions);
+  assert.equal(summary.data.agentRegistrySessions.available, true);
+  assert.equal(summary.data.agentRegistrySessions.definitionsCount, 1);
+  assert.equal(summary.data.agentRegistrySessions.orchestrationReadyDefinitionsCount, 1);
+  assert.equal(summary.data.agentRegistrySessions.retiredDefinitionsCount, 0);
+  assert.equal(summary.data.agentRegistrySessions.openSessionsCount, 1);
+  assert.equal(summary.data.agentRegistrySessions.activeAssignmentsCount, 0);
+  assert.equal(summary.data.agentRegistrySessions.linkedOpenSessionsCount, 0);
+  assert.equal(summary.data.agentRegistrySessions.currentPointers.assignment, 0);
+  assert.equal(summary.data.agentRegistrySessions.currentPointers.task, 0);
+  assert.equal(summary.data.agentRegistrySessions.currentPointers.activity, 0);
+  assert.equal(summary.data.agentRegistrySessions.hostAvailability.cli, 2);
+  assert.deepEqual(summary.data.agentRegistrySessions.capabilityAvailability.required, [
+    "receive_assignment",
+    "run_commands"
+  ]);
+  assert.deepEqual(summary.data.agentRegistrySessions.capabilityAvailability.optional, ["stream_activity"]);
+  assert.equal(summary.data.agentRegistrySessions.topOpenSessions.length, 1);
+  assert.equal(summary.data.agentRegistrySessions.topOpenSessions[0].sessionId, "session-main");
+  assert.equal(summary.data.agentRegistrySessions.topOpenSessions[0].currentAssignmentId, null);
+
+  const snapshot = await taskEngineModule.onCommand({ name: "agent-session-snapshot", args: {} }, ctx);
+  assert.equal(snapshot.ok, true);
+  assert.ok(snapshot.data.agentRegistrySessionContext);
+  assert.equal(snapshot.data.agentRegistrySessionContext.available, true);
+  assert.equal(snapshot.data.agentRegistrySessionContext.openSessionsCount, 1);
+  assert.equal(snapshot.data.agentRegistrySessionContext.linkedOpenSessionsCount, 0);
 });
 
 test("taskEngineModule dashboard-summary exposes latest PlanArtifact summary", async () => {

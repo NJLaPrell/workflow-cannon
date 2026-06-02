@@ -1,5 +1,5 @@
 import type { ModuleCommandResult, ModuleLifecycleContext } from "../../../contracts/module-contract.js";
-import { resolveAgentBootstrapOrSnapshot } from "./agent-session-commands.js";
+import { resolveAgentBootstrapOrSnapshot, resolveAgentSessionRecordCommands } from "./agent-session-commands.js";
 import { buildAgentMutationPlan } from "./agent-mutation-plan-commands.js";
 import { buildCompletionPreflight } from "./completion-preflight-commands.js";
 import { buildImprovementDedupeExplain } from "./improvement-dedupe-explain-commands.js";
@@ -10,6 +10,7 @@ import { buildWaitForPrChecks } from "./wait-for-pr-checks-commands.js";
 import { buildReleaseStatus } from "./release-status-commands.js";
 import { runApplyTaskBatchCommand } from "./apply-task-batch-command.js";
 import { resolveAgentActivityCommands } from "./agent-activity-commands.js";
+import { resolveAgentDefinitionCommands } from "./agent-definition-commands.js";
 import { resolveFeatureRegistryReadoutCommands } from "./feature-registry-readout-commands.js";
 import { resolveFeatureTaxonomyRuntimeCommands } from "./task-feature-taxonomy-runtime-commands.js";
 import type { OpenedPlanningStores } from "../persistence/planning-open.js";
@@ -49,9 +50,19 @@ export async function dispatchTaskEnginePlanningCommands(
     return agentActivity;
   }
 
+  const agentDefinition = resolveAgentDefinitionCommands(command, ctx, planning);
+  if (agentDefinition !== null) {
+    return agentDefinition;
+  }
+
   const agentBootstrapOrSnapshot = await resolveAgentBootstrapOrSnapshot(command, ctx, planning);
   if (agentBootstrapOrSnapshot !== null) {
     return agentBootstrapOrSnapshot;
+  }
+
+  const agentSessionRecord = resolveAgentSessionRecordCommands(command, ctx, planning);
+  if (agentSessionRecord !== null) {
+    return agentSessionRecord;
   }
 
   const phaseDeliveryReadout = await resolvePhaseDeliveryReadoutCommands(command, ctx, planning);

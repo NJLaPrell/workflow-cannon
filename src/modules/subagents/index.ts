@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import type Sqlite from "better-sqlite3";
 import type { WorkflowModule } from "../../contracts/module-contract.js";
 import { builtinInstructionEntriesForModule } from "../../contracts/builtin-run-command-manifest.js";
 import { openPlanningStores } from "../task-engine/persistence/planning-open.js";
@@ -37,6 +38,13 @@ function attachPlanningMeta(
 
 function nowIso(): string {
   return new Date().toISOString();
+}
+
+function readAnyTaskId(db: Sqlite.Database): string | undefined {
+  const row = db.prepare("SELECT id FROM task_engine_tasks ORDER BY id LIMIT 1").get() as
+    | { id: string }
+    | undefined;
+  return row?.id;
 }
 
 const MSG_DIRECTIONS = new Set(["outbound", "inbound", "system"]);
@@ -173,6 +181,7 @@ export const subagentsModule: WorkflowModule = {
         metadata = args.metadata as Record<string, unknown>;
       }
       const ts = nowIso();
+      const persistTaskId = readAnyTaskId(db);
       try {
         planning.sqliteDual.withTransaction(
           () => {
@@ -203,7 +212,11 @@ export const subagentsModule: WorkflowModule = {
               });
             }
           },
-          { expectedPlanningGeneration: exp }
+          {
+            expectedPlanningGeneration: exp,
+            persistScope: "incremental",
+            ...(persistTaskId ? { dirtyTaskIds: [persistTaskId] } : {})
+          }
         );
       } catch (err) {
         if (err instanceof TaskEngineError) {
@@ -223,6 +236,7 @@ export const subagentsModule: WorkflowModule = {
         return { ok: false, code: "invalid-args", message: "retire-subagent requires subagentId" };
       }
       const ts = nowIso();
+      const persistTaskId = readAnyTaskId(db);
       try {
         planning.sqliteDual.withTransaction(
           () => {
@@ -231,7 +245,11 @@ export const subagentsModule: WorkflowModule = {
               throw new TaskEngineError("task-not-found", `Subagent '${sid}' not found`);
             }
           },
-          { expectedPlanningGeneration: exp }
+          {
+            expectedPlanningGeneration: exp,
+            persistScope: "incremental",
+            ...(persistTaskId ? { dirtyTaskIds: [persistTaskId] } : {})
+          }
         );
       } catch (err) {
         if (err instanceof TaskEngineError) {
@@ -271,6 +289,7 @@ export const subagentsModule: WorkflowModule = {
       }
       const sessionId = typeof args.sessionId === "string" && args.sessionId.trim() ? args.sessionId.trim() : randomUUID();
       const ts = nowIso();
+      const persistTaskId = executionTaskId ?? readAnyTaskId(db);
       try {
         planning.sqliteDual.withTransaction(
           () => {
@@ -287,7 +306,11 @@ export const subagentsModule: WorkflowModule = {
               now: ts
             });
           },
-          { expectedPlanningGeneration: exp }
+          {
+            expectedPlanningGeneration: exp,
+            persistScope: "incremental",
+            ...(persistTaskId ? { dirtyTaskIds: [persistTaskId] } : {})
+          }
         );
       } catch (err) {
         if (err instanceof TaskEngineError) {
@@ -320,6 +343,7 @@ export const subagentsModule: WorkflowModule = {
       }
       const ts = nowIso();
       let messageId = 0;
+      const persistTaskId = getSession(db, sessionId)?.executionTaskId ?? readAnyTaskId(db);
       try {
         planning.sqliteDual.withTransaction(
           () => {
@@ -333,7 +357,11 @@ export const subagentsModule: WorkflowModule = {
             messageId = insertMessage(db, { sessionId, direction, body, now: ts });
             db.prepare("UPDATE kit_subagent_sessions SET updated_at = ? WHERE id = ?").run(ts, sessionId);
           },
-          { expectedPlanningGeneration: exp }
+          {
+            expectedPlanningGeneration: exp,
+            persistScope: "incremental",
+            ...(persistTaskId ? { dirtyTaskIds: [persistTaskId] } : {})
+          }
         );
       } catch (err) {
         if (err instanceof TaskEngineError) {
@@ -352,6 +380,7 @@ export const subagentsModule: WorkflowModule = {
         return { ok: false, code: "invalid-args", message: "close-subagent-session requires sessionId" };
       }
       const ts = nowIso();
+      const persistTaskId = getSession(db, sessionId)?.executionTaskId ?? readAnyTaskId(db);
       try {
         planning.sqliteDual.withTransaction(
           () => {
@@ -361,7 +390,11 @@ export const subagentsModule: WorkflowModule = {
             }
             updateSessionStatus(db, sessionId, "closed", ts);
           },
-          { expectedPlanningGeneration: exp }
+          {
+            expectedPlanningGeneration: exp,
+            persistScope: "incremental",
+            ...(persistTaskId ? { dirtyTaskIds: [persistTaskId] } : {})
+          }
         );
       } catch (err) {
         if (err instanceof TaskEngineError) {

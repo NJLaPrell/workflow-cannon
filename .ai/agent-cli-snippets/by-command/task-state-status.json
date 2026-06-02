@@ -1,7 +1,7 @@
 {
   "ok": true,
   "code": "run-args-schema",
-  "command": "task-sync-status",
+  "command": "task-state-status",
   "schema": {
     "type": "object",
     "properties": {
@@ -19,12 +19,12 @@
   "examples": [
     {
       "description": "Minimal argv example",
-      "argv": "workspace-kit run task-sync-status '{}'"
+      "argv": "workspace-kit run task-state-status '{}'"
     }
   ],
-  "instructionPath": "src/modules/task-engine/instructions/task-sync-status.md",
+  "instructionPath": "src/modules/task-engine/instructions/task-state-status.md",
   "moduleId": "task-engine",
-  "description": "Read-only sync state vs canonical backend (default workflow-cannon/task-state git branch).",
+  "description": "Recovery alias for task-sync-status (legacy git-oriented CLI name).",
   "policy": {
     "sensitivity": "non-sensitive",
     "operationId": null,
@@ -45,5 +45,5 @@
     "listCommands": "pnpm exec wk run --list-commands",
     "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
   },
-  "invocationId": "70968587-8808-489b-ada9-bea3a93e8c8e"
+  "invocationId": "c02e59cd-e5de-4fbf-8caf-91c1b0ae02a0"
 }

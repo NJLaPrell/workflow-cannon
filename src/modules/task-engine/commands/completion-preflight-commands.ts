@@ -67,15 +67,6 @@ function guardFinding(guard: GuardResult, task: TaskEntity, planningGeneration: 
       guard.guardName
     );
   }
-  if (guard.guardName === "single-task-in-progress") {
-    return finding(
-      "error",
-      code,
-      guard.message ?? "Another task is in progress.",
-      `pnpm exec wk run list-tasks '{"status":"in_progress"}'`,
-      guard.guardName
-    );
-  }
   if (guard.guardName === "state-validity" || code === "invalid-transition") {
     const allowed = getAllowedTransitionsFrom(task.status)
       .map((e) => e.action)

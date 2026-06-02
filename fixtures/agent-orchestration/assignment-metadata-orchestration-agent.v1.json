@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "agentDefinitionId": "orchestration-agent",
+  "agentSessionId": "session-orc12701",
+  "modelTier": "high_reasoning",
+  "contextProfileId": "orchestrator_context_v1",
+  "accessProfileId": "orchestrator_access_v1",
+  "handoffContractId": "orchestration_handoff_v2",
+  "ownedPaths": ["fixtures/agent-orchestration/**", "test/agent-orchestration/**"],
+  "forbiddenPaths": [],
+  "sharedPaths": ["schemas/agent-orchestration/**"],
+  "requiresApprovalPaths": [],
+  "assignmentPromptSummary": "Deliver T100639 canonical orchestration fixtures; keep examples validator-clean and referenced from tests.",
+  "blockingPolicy": "orchestrator_may_block_or_reassign",
+  "resources": {
+    "ownedPaths": ["fixtures/agent-orchestration/**", "test/agent-orchestration/**"],
+    "readOnlyPaths": [".ai/**", "AGENT_ORCHESTRATION_CONTRACTS.md", "AGENT_ORCHESTRATION_HANDOFF.md"],
+    "sharedPaths": ["schemas/agent-orchestration/**"],
+    "forbiddenPaths": [],
+    "requiresApprovalPaths": []
+  },
+  "lockScope": {
+    "tasks": ["T100639"],
+    "modules": [],
+    "commands": ["register-assignment", "reconcile-assignment"]
+  }
+}

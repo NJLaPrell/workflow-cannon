@@ -9,3 +9,7 @@ workspace-kit run block-assignment '{"assignmentId":"<id>","supervisorId":"alice
 ```
 
 Supervisor path: sets **`blocked`** from **`assigned`** or **`submitted`**. **`supervisorId`** must match the row.
+
+Admin override: if caller actor id is listed in **`orchestration.adminIds`** or **`teamExecution.adminIds`**, supervisor lifecycle authority is accepted.
+
+Stable lifecycle errors: **`assignment-not-found`**, **`assignment-authority-denied`**, **`assignment-status-invalid`**.
