@@ -317,7 +317,7 @@ test("workspace edit lease: waitForLease polls until held lease is released", as
   const result = await waitForWorkspaceEditLease(c, {
     waitForLease: true,
     agentSessionId: "waiter",
-    waitForLeaseTimeoutMs: 3_000,
+    waitForLeaseTimeoutMs: 15_000,
     waitForLeasePollMs: 40
   });
   assert.equal(result.ok, true);

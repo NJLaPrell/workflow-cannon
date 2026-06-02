@@ -38,7 +38,8 @@ import { buildDashboardSystemStatus } from "./build-dashboard-system-status.js";
 import { buildDashboardAgentStatus } from "./dashboard-agent-status.js";
 import {
   agentActivityLeaseToDashboardStatus,
-  readCurrentAgentActivityLease
+  readCurrentAgentActivityLease,
+  listCurrentAgentActivityLeases
 } from "../agent-activity-store.js";
 import { projectDashboardTaskRow } from "../task-read-projections.js";
 import {
@@ -64,6 +65,7 @@ import {
   type DashboardSummaryProjection
 } from "./dashboard-summary-projection.js";
 import { buildDashboardTaskStateProjectionSummary } from "./build-dashboard-task-state-projection.js";
+import { buildDashboardAgentActivitySummary } from "./build-dashboard-agent-activity-summary.js";
 import { summarizeAgentRegistrySessions } from "../agent-registry-session-summary.js";
 
 /** Parse optional `dashboard-summary` argv for wishlist table paging (extension + CLI). */
@@ -455,9 +457,20 @@ export async function buildDashboardBase(
   const liveActivity = sqliteDual
     ? readCurrentAgentActivityLease(sqliteDual.getDatabase(), systemStatus.generatedAt)
     : null;
+  const liveActivityLeases = sqliteDual
+    ? listCurrentAgentActivityLeases(sqliteDual.getDatabase(), systemStatus.generatedAt)
+    : [];
   const agentStatus = liveActivity
     ? agentActivityLeaseToDashboardStatus(liveActivity, systemStatus.generatedAt)
     : derivedAgentStatus;
+  const agentActivitySummary = buildDashboardAgentActivitySummary({
+    now: systemStatus.generatedAt,
+    tasks,
+    liveActivityLeases,
+    derivedAgentStatus,
+    teamExecution,
+    subagentRegistry
+  });
 
   const wsForDelivery =
     workspaceStatus && typeof workspaceStatus === "object"
@@ -624,6 +637,7 @@ export async function buildDashboardBase(
     systemStatus,
     taskStateProjection,
     agentStatus,
+    agentActivitySummary,
     currentPhaseDelivery,
     deliveredPhaseKeys,
     rolledOutPhaseKeys,

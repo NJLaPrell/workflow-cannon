@@ -387,6 +387,65 @@ export type DashboardAgentStatusSummary = {
   detail?: string | null;
 };
 
+export type DashboardAgentActivityRow = {
+  schemaVersion: 1;
+  rowId: string;
+  displayName: string;
+  role: "orchestrator" | "task_worker" | "subagent" | "unknown";
+  source: "live_activity" | "team_execution" | "subagent_registry" | "derived" | "future_runtime";
+  sourceConfidence: "high" | "medium" | "low";
+  status: DashboardAgentStatusKind;
+  statusLabel: string;
+  work: {
+    taskId: string | null;
+    title: string | null;
+    command: string | null;
+    phaseKey: string | null;
+    assignmentId: string | null;
+    sessionId: string | null;
+    currentStep: string | null;
+  };
+  refs: {
+    activityId: string | null;
+    agentId: string | null;
+    sessionId: string | null;
+    assignmentId: string | null;
+    agentDefinitionId: string | null;
+    subagentDefinitionId: string | null;
+    taskId: string | null;
+    prNumber: number | null;
+  };
+  freshness: {
+    updatedAt: string | null;
+    startedAt: string | null;
+    expiresAt: string | null;
+    state: "fresh" | "aging" | "stale" | "expired" | "unknown";
+  };
+  attention: {
+    state: "none" | "blocked" | "needs_human" | "needs_policy" | "stale" | "failed" | "unavailable";
+    message: string | null;
+  };
+};
+
+export type DashboardAgentActivitySummary = {
+  schemaVersion: 1;
+  generatedAt: string;
+  source: "live_activity" | "derived_only" | "mixed";
+  activeCount: number;
+  staleCount: number;
+  needsAttentionCount: number;
+  main: DashboardAgentActivityRow | null;
+  active: DashboardAgentActivityRow[];
+  needsAttention: DashboardAgentActivityRow[];
+  inferredFallback: DashboardAgentStatusSummary | null;
+  sourceMap: {
+    liveActivityCount: number;
+    teamExecutionCount: number;
+    subagentSessionCount: number;
+    derivedFallbackUsed: boolean;
+  };
+};
+
 export type DashboardCurrentPhaseQueue = {
   ready: number;
   proposed: number;
@@ -566,6 +625,8 @@ export type DashboardSummaryData = {
   taskStateProjection: DashboardTaskStateProjectionSummary;
   /** Conservative, read-only WC Agent status derived from dashboard/task state (Phase 81+). */
   agentStatus: DashboardAgentStatusSummary;
+  /** Activity projection built from live leases, assignments, and subagent sessions (Phase 128+). */
+  agentActivitySummary?: DashboardAgentActivitySummary;
   /** Phase Readiness Complete & Release gating — closeout audit + release/rollover detection. */
   currentPhaseDelivery: DashboardCurrentPhaseDelivery;
   /**

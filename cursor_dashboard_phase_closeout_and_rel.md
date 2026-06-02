@@ -5,51 +5,168 @@ _Exported on 5/19/2026 at 09:13:47 MST from Cursor (3.3.27)_
 
 **User**
 
-## Complete & Release
+## Complete & Release Phase
 
-**Intent:** Dashboard Complete & Release → drain target phase → closeout → publish. Operator authorizes ship; confirm once in chat before `pnpm run publish:npm`. Tier A/B `wk run` still needs JSON `policyApproval` (`.ai/POLICY-APPROVAL.md`).
+**Role:** You are the Workflow Cannon Phase Orchestrator.
 
-**Context**
-- target phaseKey: 101
-- label: Phase 101
-- workspace current / next: 101 / 102
-- scope: current
-- integration branch: `release/phase-101`
-- seeded ready ids (preview): none (refresh via list-tasks)
+**Intent:** Complete and release the target phase using the attached Workflow Cannon runbooks, rules, CAE guidance, and machine command contracts. The dashboard button launch is the operator’s authorization to orchestrate phase completion, closeout, release, and publish if all required gates pass.
 
-**Attach:** `@.ai/playbooks/phase-closeout-and-release.md` `@.ai/playbooks/task-to-phase-branch.md` `@.ai/MACHINE-PLAYBOOKS.md` `@.ai/AGENT-CLI-MAP.md`
-**Rules:** `@.cursor/rules/maintainer-delivery-loop.mdc` `@.cursor/rules/playbook-task-to-phase-branch.mdc` `@.cursor/rules/playbook-phase-closeout.mdc`
-**If needed:** `@.ai/playbooks/improvement-triage-top-three.md` `@.ai/playbooks/wishlist-intake-to-execution.md`
+Do not ask the user for routine confirmation. Ask only when a real decision is needed.
 
-### 0 — Inventory (read-only; task store wins)
-`pnpm exec wk doctor` · `pnpm exec wk run phase-status '{}'` · `pnpm exec wk run get-next-actions '{}'` · `pnpm exec wk run resolve-maintainer-delivery-policy '{}'`
-`pnpm exec wk run phase-closeout-readiness '{"phaseKey":"101"}'`
-`pnpm exec wk run list-tasks` — filter by phaseKey for **all non-terminal** statuses and types (not execution-only).
+## Context
 
-### 1 — Drain phase (closeout §2)
-**Gate:** `phase-closeout-readiness` passed OR every remainder explicitly handled (defer/cancel/waiver needs operator confirm).
+* target phaseKey: `101`
+* label: `Phase 101`
+* workspace current / next: `101` / `102`
+* scope: `current`
+* integration branch: `release/phase-101`
+* dashboard authorization: complete-and-release
 
-| status / type | action |
-| --- | --- |
-| proposed (execution / improvement) | accept → deliver |
-| ready | branch from `release/phase-101` → `run-transition` start → implement → PR base=phase branch → merge → complete + delivery evidence |
-| in_progress | finish → complete |
-| blocked | unblock, cancel, or documented waiver |
-| wishlist_intake | `convert-wishlist` or defer to next phase (operator confirm) |
+## Attached authority
 
-One `T###` per delivery loop unless operator approves batch. Playbook: `task-to-phase-branch`.
+Follow these. Do not re-derive or restate their procedures.
 
-### 2 — Closeout & release (closeout §3–§7, `.ai/RELEASING.md`)
-1. `phase-delivery-preflight` with `baseRef=origin/release/phase-101`
-2. `pnpm run build` · `check` · `test` · `parity` · `pre-merge-gates`
-3. CHANGELOG + `package.json` version; sync `schemas/task-engine-run-contracts.schema.json` + `schemas/pilot-run-args.snapshot.json` `packageVersion`
-4. `release-evidence-manifest` with validation records
-5. `release/phase-101` → `main` PR merge
-6. Chat confirm → `pnpm run publish:npm` → `gh run watch`
-7. `set-current-phase` rollover · `phase-status` verify
-8. Playbook §7 summary — expand all tokens from CLI evidence (no placeholders)
+**Playbooks / runbooks**
 
-**Handoff if blocked:** remaining `T###` ids · branch names · last CLI JSON · next step (0, 1, or 2).
+* `@.ai/playbooks/phase-closeout-and-release.md`
+* `@.ai/playbooks/task-to-phase-branch.md`
+* `@.ai/runbooks/phase-closeout-ordering-recovery.md`
+* `@.ai/MACHINE-PLAYBOOKS.md`
+* `@.ai/AGENT-CLI-MAP.md`
+
+**Rules**
+
+* `@.cursor/rules/maintainer-delivery-loop.mdc`
+* `@.cursor/rules/playbook-task-to-phase-branch.mdc`
+* `@.cursor/rules/playbook-phase-closeout.mdc`
+
+**Use only when relevant**
+
+* `@.ai/playbooks/improvement-triage-top-three.md`
+* `@.ai/playbooks/wishlist-intake-to-execution.md`
+
+## Authorization and policy
+
+Treat this dashboard-launched prompt as the operator’s confirmation to complete and release Phase `{{phaseKey}}`, including publish, provided all required gates pass.
+
+This does **not** bypass Workflow Cannon policy. Tier A/B `wk run` commands still require JSON `policyApproval` in the command arguments according to `.ai/POLICY-APPROVAL.md`.
+
+If an attached runbook asks for chat confirmation before publish, interpret this dashboard launch as that confirmation unless the current state has materially changed, a gate failed, or a policy requires a fresh decision.
+
+## Operating mode
+
+You are the orchestrator, not the default implementer.
+
+Use Workflow Cannon state as the source of truth. Prefer `wk run` commands, runbooks, CAE guidance, and machine-readable contracts over manual interpretation.
+
+Minimize repeated discovery. Perform an initial read pass, classify the phase, act, then refresh after material changes.
+
+Use Team Assignments and subagents for ready phase work. Keep assignments, activity, handoffs, and reconciliation state current as work proceeds.
+
+Require structured worker handoff.
+
+Keep Team Assignment status current.
+
+Use the cheapest capable model/subagent for worker tasks. Reserve stronger reasoning for orchestration, reconciliation, architecture, schema, release blockers, or high-risk decisions.
+
+## Initial phase classification
+
+Refresh Workflow Cannon state and classify all tasks for phaseKey `101`.
+
+Classify the phase into exactly one path:
+
+### Path A — Empty phase
+
+Use when there are no completed tasks and no remaining non-terminal tasks.
+
+Stop and report that there is no phase work to release.
+
+### Path B — Completed-only phase
+
+Use when there is completed phase work and no remaining non-terminal phase work.
+
+Verify completion evidence, run closeout/release gates, merge the phase branch to main, release, publish, verify, and report.
+
+### Path C — Active phase work remains
+
+Use when non-terminal phase work remains.
+
+Drain the phase first. Triage all remaining work, assign ready unblocked tasks to subagents in parallel, reconcile handoffs, complete tasks with evidence, and continue until the phase reaches Path B.
+
+## Orchestration requirements
+
+For active phase work:
+
+* Assign all ready, unblocked tasks that can safely run in parallel.
+* Register the subagent used and the Team Assignment.
+* Keep Team Assignment status current.
+* Track worker activity while work is active.
+* Require structured worker handoff.
+* Reconcile each handoff before completing task work.
+* Clear or reconcile assignments when work completes.
+* Do not batch unrelated tasks into one vague assignment.
+* Do not personally implement non-trivial task work unless subagent orchestration is unavailable or inappropriate.
+
+## Ask the user only when needed
+
+Do not ask for ordinary confirmation.
+
+Ask only if:
+
+* a task must be deferred, cancelled, waived, or materially rescoped;
+* a blocked task cannot be safely resolved from repo/task evidence;
+* a release gate fails and more than one recovery path is reasonable;
+* publish would be unsafe;
+* required credentials, permissions, or external service access are missing;
+* task store state and git state conflict in a way that cannot be safely repaired;
+* the attached policy/runbooks require a fresh human decision that cannot be satisfied by the dashboard authorization or JSON `policyApproval`.
+
+## Stop conditions
+
+Stop and report instead of continuing if:
+
+* the phase is empty;
+* there is no safe release path;
+* a required policy decision is missing;
+* a required gate fails and cannot be repaired deterministically;
+* the phase has remaining work that requires operator direction.
+
+## Final response
+
+When complete, report concise evidence:
+
+```text
+Phase:
+Path taken:
+Released version:
+Published package:
+Main merge PR:
+Tag:
+Tasks completed during orchestration:
+Tasks already completed before release:
+Team Assignments used:
+Validation evidence:
+Release evidence:
+Workspace phase result:
+Remaining follow-ups:
+```
+
+If blocked, report:
+
+```text
+Phase:
+Path taken:
+Blocked reason:
+Remaining task ids:
+Blocked task ids:
+Assignment ids:
+Branches / PRs:
+Last relevant evidence:
+Decision needed:
+Recommended next step:
+```
+
+Use concrete IDs and evidence. Do not use placeholders.
 
 ---
 

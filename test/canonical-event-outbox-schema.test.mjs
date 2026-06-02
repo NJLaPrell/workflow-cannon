@@ -36,7 +36,7 @@ test("v30 migration creates kit_canonical_event_outbox", async () => {
   try {
     prepareKitSqliteDatabase(db);
     assert.equal(db.pragma("user_version", { simple: true }), KIT_SQLITE_USER_VERSION);
-    assert.equal(KIT_SQLITE_USER_VERSION, 32);
+    assert.equal(KIT_SQLITE_USER_VERSION, 33);
     assert.equal(kitSqliteHasCanonicalEventOutbox(db), true);
     const columns = db
       .prepare(`PRAGMA table_info(${KIT_CANONICAL_EVENT_OUTBOX_TABLE})`)
@@ -65,7 +65,7 @@ test("outbox migration is idempotent and upgrades v29 workspaces", async () => {
     assert.equal(kitSqliteHasCanonicalEventOutbox(db), false);
     db.pragma("user_version = 29");
     prepareKitSqliteDatabase(db);
-    assert.equal(db.pragma("user_version", { simple: true }), 32);
+    assert.equal(db.pragma("user_version", { simple: true }), 33);
     assert.equal(kitSqliteHasCanonicalEventOutbox(db), true);
   } finally {
     db.close();
