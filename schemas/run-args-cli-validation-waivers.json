@@ -27,6 +27,7 @@
     "register-assignment",
     "register-agent-definition",
     "register-subagent",
+    "report-assignment-blocker",
     "reorder-ideas",
     "rewind-to-checkpoint",
     "write-memory",

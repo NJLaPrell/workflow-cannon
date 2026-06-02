@@ -3,12 +3,15 @@ import type Sqlite from "better-sqlite3";
 import type { WorkflowModule } from "../../contracts/module-contract.js";
 import { builtinInstructionEntriesForModule } from "../../contracts/builtin-run-command-manifest.js";
 import { openPlanningStores } from "../task-engine/persistence/planning-open.js";
+import { TaskStore } from "../task-engine/persistence/store.js";
+import { runReportDefectCommand } from "../task-engine/commands/report-defect-on-command.js";
 import { TaskEngineError } from "../task-engine/transitions.js";
 import { readOptionalExpectedPlanningGeneration } from "../task-engine/mutation-utils.js";
 import { getPlanningGenerationPolicy, mergePlanningGenerationPolicyWarnings } from "../task-engine/planning-config.js";
 import {
   assertTeamExecutionKitSchema,
   blockAssignment,
+  blockAssignmentFromWorker,
   cancelAssignment,
   getAssignment,
   insertAssignment,
@@ -38,6 +41,33 @@ function attachPlanningMeta(
 
 function nowIso(): string {
   return new Date().toISOString();
+}
+
+function readOptionalStringArg(args: Record<string, unknown>, key: string): string | undefined {
+  const value = args[key];
+  return typeof value === "string" && value.trim().length > 0 ? value.trim() : undefined;
+}
+
+function readStringArrayArg(args: Record<string, unknown>, key: string): string[] {
+  const value = args[key];
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value
+    .filter((item): item is string => typeof item === "string")
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0);
+}
+
+function listHandoffEvidenceRefs(assignment: ReturnType<typeof getAssignment>): string[] {
+  if (!assignment?.handoff) {
+    return [];
+  }
+  const refs = assignment.handoff.evidenceRefs;
+  if (!Array.isArray(refs)) {
+    return [];
+  }
+  return refs.filter((ref): ref is string => typeof ref === "string" && ref.trim().length > 0);
 }
 
 function readAnyTaskId(db: Sqlite.Database): string | undefined {
@@ -309,6 +339,157 @@ export const teamExecutionModule: WorkflowModule = {
       const data: Record<string, unknown> = { assignment: getAssignment(db, assignmentId) };
       attachPlanningMeta(data, ctx, planning.sqliteDual.getPlanningGeneration());
       return { ok: true, code: "assignment-blocked", message: `Blocked '${assignmentId}'`, data };
+    }
+
+    if (name === "report-assignment-blocker") {
+      const assignmentId = readOptionalStringArg(args, "assignmentId") ?? "";
+      const workerId = readOptionalStringArg(args, "workerId") ?? "";
+      const reason = readOptionalStringArg(args, "reason") ?? "";
+      if (!assignmentId || !workerId || !reason) {
+        return {
+          ok: false,
+          code: "invalid-args",
+          message: "report-assignment-blocker requires assignmentId, workerId, and non-empty reason"
+        };
+      }
+
+      const before = getAssignment(db, assignmentId);
+      if (!before || before.workerId !== workerId || (before.status !== "assigned" && before.status !== "submitted")) {
+        return {
+          ok: false,
+          code: "invalid-transition",
+          message:
+            "report-assignment-blocker rejected: assignment missing, worker mismatch, or status is not assigned/submitted"
+        };
+      }
+
+      const ts = nowIso();
+      const persistTaskId = before.executionTaskId || readAnyTaskId(db);
+      try {
+        planning.sqliteDual.withTransaction(
+          () => {
+            const blocked = blockAssignmentFromWorker(db, {
+              assignmentId,
+              workerId,
+              reason,
+              now: ts
+            });
+            if (!blocked) {
+              throw new TaskEngineError(
+                "invalid-transition",
+                "report-assignment-blocker rejected: assignment missing, worker mismatch, or status is not assigned/submitted"
+              );
+            }
+          },
+          {
+            expectedPlanningGeneration: exp,
+            persistScope: "incremental",
+            ...(persistTaskId ? { dirtyTaskIds: [persistTaskId] } : {})
+          }
+        );
+      } catch (err) {
+        if (err instanceof TaskEngineError) {
+          return { ok: false, code: err.code, message: err.message };
+        }
+        throw err;
+      }
+
+      const assignment = getAssignment(db, assignmentId);
+      const createDefect = args.createDefect !== false;
+      const outputRefs = Array.from(new Set([...readStringArrayArg(args, "outputRefs"), ...listHandoffEvidenceRefs(assignment)]));
+
+      if (!createDefect) {
+        const data: Record<string, unknown> = {
+          assignment,
+          blockerReport: {
+            reason,
+            outputRefs,
+            defectCreated: false
+          }
+        };
+        attachPlanningMeta(data, ctx, planning.sqliteDual.getPlanningGeneration());
+        return {
+          ok: true,
+          code: "assignment-blocker-reported",
+          message: `Blocked '${assignmentId}' without creating a defect task`,
+          data
+        };
+      }
+
+      const store = TaskStore.forSqliteDual(planning.sqliteDual);
+      await store.load();
+      const defectTitle = readOptionalStringArg(args, "defectTitle") ?? `Assignment blocker: ${assignmentId}`;
+      const defectSummary =
+        readOptionalStringArg(args, "defectSummary") ?? `Worker '${workerId}' blocked assignment '${assignmentId}': ${reason}`;
+      const defectEvidence =
+        readOptionalStringArg(args, "defectEvidence") ??
+        (outputRefs.length > 0 ? `Assignment output refs: ${outputRefs.join(", ")}` : `Blocker reason: ${reason}`);
+
+      const defectArgs: Record<string, unknown> = {
+        title: defectTitle,
+        summary: defectSummary,
+        evidence: defectEvidence,
+        relatedTaskId: assignment?.executionTaskId,
+        expectedPlanningGeneration: planning.sqliteDual.getPlanningGeneration(),
+        actor: readOptionalStringArg(args, "actor")
+      };
+      const severity = readOptionalStringArg(args, "severity");
+      if (severity) {
+        defectArgs.severity = severity;
+      }
+      const features = readStringArrayArg(args, "features");
+      if (features.length > 0) {
+        defectArgs.features = features;
+      }
+      const phaseKey = readOptionalStringArg(args, "phaseKey");
+      if (phaseKey) {
+        defectArgs.phaseKey = phaseKey;
+      }
+      const phase = readOptionalStringArg(args, "phase");
+      if (phase) {
+        defectArgs.phase = phase;
+      }
+
+      const defectResult = await runReportDefectCommand(ctx, planning, store, defectArgs);
+      if (!defectResult.ok) {
+        const data: Record<string, unknown> = {
+          assignment,
+          blockerReport: {
+            reason,
+            outputRefs,
+            defectCreated: false,
+            defectError: {
+              code: defectResult.code,
+              message: defectResult.message
+            }
+          }
+        };
+        attachPlanningMeta(data, ctx, planning.sqliteDual.getPlanningGeneration());
+        return {
+          ok: false,
+          code: "assignment-blocked-defect-create-failed",
+          message: `Blocked '${assignmentId}', but defect creation failed: ${defectResult.message}`,
+          data
+        };
+      }
+
+      const data: Record<string, unknown> = {
+        assignment,
+        blockerReport: {
+          reason,
+          outputRefs,
+          defectCreated: true
+        },
+        defectTask: defectResult.data && typeof defectResult.data === "object" ? defectResult.data.task : undefined,
+        defect: defectResult.data
+      };
+      attachPlanningMeta(data, ctx, planning.sqliteDual.getPlanningGeneration());
+      return {
+        ok: true,
+        code: "assignment-blocker-reported",
+        message: `Blocked '${assignmentId}' and created a defect task`,
+        data
+      };
     }
 
     if (name === "reconcile-assignment") {

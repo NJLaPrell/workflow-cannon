@@ -10,6 +10,7 @@ import {
   insertAssignment,
   getAssignment,
   listAssignments,
+  blockAssignmentFromWorker,
   submitHandoff,
   reconcileAssignment,
   validateAssignmentMetadataWhenPresent,
@@ -145,6 +146,44 @@ test("structured metadata v1 round-trips on assignment insert", () => {
     assert.equal(row.orchestrationMetadataSummary.accessProfileId, "task_worker_strict_v1");
     assert.equal(row.orchestrationMetadataSummary.handoffContractId, "implementation_handoff_v2");
     assert.ok(row.orchestrationMetadataSummary.pathCounts.ownedPaths > 0);
+  } finally {
+    db.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("worker blocker transition sets blocked status and reason", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "wk-team-ex-worker-block-"));
+  const dbPath = path.join(dir, "wk.db");
+  const db = new Database(dbPath);
+  try {
+    prepareKitSqliteDatabase(db);
+    const now = new Date().toISOString();
+    db.prepare(
+      `INSERT INTO task_engine_tasks (id, status, type, title, created_at, updated_at, archived, depends_on_json)
+       VALUES ('T-test-worker-block', 'ready', 'workspace-kit', 'fixture', ?, ?, 0, '[]')`
+    ).run(now, now);
+
+    insertAssignment(db, {
+      id: "asg-worker-block",
+      executionTaskId: "T-test-worker-block",
+      supervisorId: "sup",
+      workerId: "wrk",
+      metadata: null,
+      now
+    });
+
+    const changed = blockAssignmentFromWorker(db, {
+      assignmentId: "asg-worker-block",
+      workerId: "wrk",
+      reason: "blocked on missing API contract",
+      now
+    });
+    assert.equal(changed, true);
+
+    const row = getAssignment(db, "asg-worker-block");
+    assert.equal(row?.status, "blocked");
+    assert.equal(row?.blockReason, "blocked on missing API contract");
   } finally {
     db.close();
     fs.rmSync(dir, { recursive: true, force: true });

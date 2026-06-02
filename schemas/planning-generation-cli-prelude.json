@@ -32,6 +32,7 @@
     "open-agent-session",
     "persist-planning-execution-drafts",
     "reject-improvement",
+    "report-assignment-blocker",
     "register-assignment",
     "register-subagent",
     "remove-dependency",

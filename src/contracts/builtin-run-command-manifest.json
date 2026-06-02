@@ -1543,6 +1543,15 @@
   },
   {
     "moduleId": "team-execution",
+    "name": "report-assignment-blocker",
+    "file": "report-assignment-blocker.md",
+    "description": "Worker reports a blocker, blocks assignment, and can open a linked defect task.",
+    "policyOperationId": "team-execution.persist",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "team-execution",
     "name": "reconcile-assignment",
     "file": "reconcile-assignment.md",
     "description": "Supervisor reconciles submitted handoff (submitted \u2192 reconciled).",

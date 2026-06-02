@@ -503,6 +503,19 @@ export function blockAssignment(
   return r.changes > 0;
 }
 
+export function blockAssignmentFromWorker(
+  db: Sqlite.Database,
+  input: { assignmentId: string; workerId: string; reason: string; now: string }
+): boolean {
+  const r = db
+    .prepare(
+      `UPDATE kit_team_assignments SET status = 'blocked', block_reason = ?, updated_at = ?
+       WHERE id = ? AND worker_id = ? AND status IN ('assigned','submitted')`
+    )
+    .run(input.reason, input.now, input.assignmentId, input.workerId);
+  return r.changes > 0;
+}
+
 export function reconcileAssignment(
   db: Sqlite.Database,
   input: { assignmentId: string; supervisorId: string; checkpointJson: string; now: string }
