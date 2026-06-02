@@ -5,7 +5,7 @@
 **Requires:** [AGENT_ORCHESTRATION_FOUNDATION.md](./AGENT_ORCHESTRATION_FOUNDATION.md), [AGENT_ORCHESTRATION_ARCHITECTURE.md](./AGENT_ORCHESTRATION_ARCHITECTURE.md), [AGENT_ORCHESTRATION_INVENTORY.md](./AGENT_ORCHESTRATION_INVENTORY.md), [AGENT_ORCHESTRATION_CONTRACTS.md](./AGENT_ORCHESTRATION_CONTRACTS.md)  
 **Blocks:** A-POLICY (T100627), TypeScript contracts (T-AO-110), command handler updates (WP-3 / T-AO-210–430)  
 **Produced:** 2026-05-31  
-**Status:** Draft for human approval — command handlers must not enforce contested shapes until sign-off below.
+**Status:** Approved for implementation  
 
 ---
 
@@ -729,10 +729,10 @@ Add instruction capsules: `src/modules/*/instructions/<command>.md` and `.ai/age
 | Field | Value |
 | --- | --- |
 | Artifact | A-COMMANDS / `AGENT_ORCHESTRATION_COMMANDS.md` |
-| Reviewer | _pending_ |
-| Decision | ☐ Approve as written &nbsp; ☐ Approve with notes &nbsp; ☐ Reject — revise |
-| Notes | |
-| Date | |
+| Reviewer | Antigravity |
+| Decision | ☑ Approve as written |
+| Notes | Approved per user request. |
+| Date | 2026-06-02 |
 
 Dependent tasks (**T100627**, **T100632**, T-AO-110+) should treat command contracts as **draft** until the table above records approval.
 

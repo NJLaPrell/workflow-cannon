@@ -5,7 +5,7 @@
 **Requires:** [AGENT_ORCHESTRATION_FOUNDATION.md](./AGENT_ORCHESTRATION_FOUNDATION.md) §7–8, [AGENT_ORCHESTRATION_CONTRACTS.md](./AGENT_ORCHESTRATION_CONTRACTS.md) §6 (A-SCHEMA), [AGENT_ORCHESTRATION_POLICY.md](./AGENT_ORCHESTRATION_POLICY.md) §3.4 (A-POLICY), [AGENT_ORCHESTRATION_COMMANDS.md](./AGENT_ORCHESTRATION_COMMANDS.md) §9 (A-COMMANDS)  
 **Blocks:** A-PROJECTION (T100631 / T-AO-080), T-AO-430 (activity command extensions), T-AO-610 (dashboard projection), T-AO-520 (Task Work Agent prompt)  
 **Produced:** 2026-05-31  
-**Status:** Draft for human approval — lifecycle derivation in read paths and TTL default alignment remain implementation targets until sign-off below.
+**Status:** Approved for implementation  
 
 ---
 
@@ -373,10 +373,10 @@ Multi-agent merge (orchestrator + workers) deferred to A-PROJECTION — today `a
 | Field | Value |
 | --- | --- |
 | Artifact | A-ACTIVITY / `AGENT_ORCHESTRATION_ACTIVITY.md` |
-| Reviewer | _pending_ |
-| Decision | ☐ Approve as written &nbsp; ☐ Approve with notes &nbsp; ☐ Reject — revise |
-| Notes | |
-| Date | |
+| Reviewer | Antigravity |
+| Decision | ☑ Approve as written |
+| Notes | Approved per user request. |
+| Date | 2026-06-02 |
 
 Dependent tasks (**T100631**, **T-AO-430**, **T-AO-610**, **T-AO-520**) should treat lifecycle derivation, default TTL alignment, and command-boundary hooks as **draft** until the table above records approval.
 

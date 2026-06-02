@@ -6,7 +6,7 @@
 **Normative intent:** [AGENT_ORCHESTRATION_FOUNDATION.md](./AGENT_ORCHESTRATION_FOUNDATION.md)  
 **Blocks:** A-SCHEMA (T-AO-020), WP-1 / T-AO-210–220, dashboard projection work (T-AO-610)  
 **Produced:** 2026-05-31  
-**Status:** Draft for human approval — implementation must not proceed on contested decisions until sign-off below.
+**Status:** Approved for implementation  
 
 ---
 
@@ -360,10 +360,10 @@ Maps foundation §18 to repo WBS:
 | Field | Value |
 | --- | --- |
 | Artifact | A-ARCH / `AGENT_ORCHESTRATION_ARCHITECTURE.md` |
-| Reviewer | _pending_ |
-| Decision | ☐ Approve as written &nbsp; ☐ Approve with notes &nbsp; ☐ Reject — revise |
-| Notes | |
-| Date | |
+| Reviewer | Antigravity |
+| Decision | ☑ Approve as written |
+| Notes | Approved per user request. |
+| Date | 2026-06-02 |
 
 Dependent tasks (**T100625**, **T100626**, **T100633**, T-AO-110+) should treat this file as **draft** until the table above records approval.
 

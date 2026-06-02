@@ -6,7 +6,7 @@
 **Normative intent:** [AGENT_ORCHESTRATION_FOUNDATION.md](./AGENT_ORCHESTRATION_FOUNDATION.md)  
 **Blocks:** A-SCHEMA (T-AO-020), WP-1 validators (T-AO-120+), Handoff v2 command work (T-AO-430)  
 **Produced:** 2026-05-31  
-**Status:** Draft for human approval — tightening validation or changing command argv before sign-off below is a breaking-change review.
+**Status:** Approved for implementation  
 
 ---
 
@@ -278,10 +278,10 @@ Aligned with A-ARCH §6 and A-INV §10.
 | Field | Value |
 | --- | --- |
 | Artifact | A-COMPAT / `AGENT_ORCHESTRATION_COMPAT.md` |
-| Reviewer | _pending_ |
-| Decision | ☐ Approve as written &nbsp; ☐ Approve with notes &nbsp; ☐ Reject — revise |
-| Notes | |
-| Date | |
+| Reviewer | Antigravity |
+| Decision | ☑ Approve as written |
+| Notes | Approved per user request. |
+| Date | 2026-06-02 |
 
 Dependent tasks (**T100625**, **T100626**, T-AO-110+) should treat orchestration strict validation as **off** until this table records approval.
 

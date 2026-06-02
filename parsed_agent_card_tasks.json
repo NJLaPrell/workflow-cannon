@@ -1,0 +1,426 @@
+[
+  {
+    "wbsId": "T-AC-000",
+    "title": "Produce and approve agent activity decision artifacts",
+    "type": "design / prerequisite artifacts",
+    "priority": "P0",
+    "phase": "Phase 0",
+    "requires": [],
+    "approach": "Prevents parallel agents from implementing identity, contract, projection, and refresh behavior inconsistently.",
+    "technicalScope": [
+      "A-PROJECTION — Agent activity projection source map",
+      "A-ID — Agent identity + row merge model",
+      "A-CONTRACT — Agent activity dashboard contract",
+      "A-REFRESH — Agent activity slice/refresh plan",
+      "A-UX — Narrow dashboard UX spec",
+      "A-INSTRUMENTATION — Activity reporting convention",
+      "A-TEST — Fixture and compatibility matrix"
+    ],
+    "acceptanceCriteria": [
+      "All required decisions are recorded.",
+      "Coding tasks reference the approved artifacts.",
+      "No implementation task begins before the relevant artifact is approved."
+    ]
+  },
+  {
+    "wbsId": "T-AC-001",
+    "title": "Inventory current and expected future agent activity data flow",
+    "type": "research",
+    "priority": "P0",
+    "phase": "Phase 0",
+    "requires": [],
+    "approach": "Prevents building a projection that only fits today’s backend.",
+    "technicalScope": [
+      "Locate current overview agent card renderer.",
+      "Trace dashboard data from `dashboard-summary` to render HTML.",
+      "Confirm how `agentStatus`, `teamExecution`, `subagentRegistry`, `taskCheckpoints`, and live leases are currently included.",
+      "Identify expected future task-engine sources likely to feed activity.",
+      "Identify tests that cover current rendering."
+    ],
+    "acceptanceCriteria": [
+      "Notes list current renderer functions and data fields.",
+      "Notes list what the current card displays.",
+      "Notes list missing fields for multi-agent display.",
+      "Notes list future backend concepts the projection should anticipate."
+    ]
+  },
+  {
+    "wbsId": "T-AC-002",
+    "title": "Decide `DashboardAgentActivitySummary` projection contract",
+    "type": "design / contract",
+    "priority": "P0",
+    "phase": "Phase 0",
+    "requires": [],
+    "approach": "Establishes stable payload before UI work.",
+    "technicalScope": [
+      "Decide where the new payload lives.",
+      "Define `DashboardAgentActivityRow` and `DashboardAgentActivitySummary`.",
+      "Include compatibility policy for existing `agentStatus`.",
+      "Include source-map fields.",
+      "Include display-name derivation rules.",
+      "Include fixture examples."
+    ],
+    "acceptanceCriteria": [
+      "Contract shape is documented.",
+      "Existing `agentStatus` remains unchanged or backward compatible.",
+      "The contract supports multiple active agents.",
+      "The contract is source-agnostic enough for future task-engine changes."
+    ]
+  },
+  {
+    "wbsId": "T-AC-050",
+    "title": "Implement Agent Activity Projection Builder",
+    "type": "implementation",
+    "priority": "P0",
+    "phase": "Phase A",
+    "requires": [
+      "A-PROJECTION",
+      "A-ID",
+      "A-CONTRACT"
+    ],
+    "approach": "Creates the stability boundary between volatile backend state and dashboard UI.",
+    "technicalScope": [
+      "Normalize current sources into `DashboardAgentActivitySummary`.",
+      "Implement row id generation.",
+      "Implement display-name resolution.",
+      "Implement main-agent selection.",
+      "Implement source precedence.",
+      "Implement duplicate merge rules.",
+      "Implement freshness and attention calculation.",
+      "Preserve derived fallback."
+    ],
+    "acceptanceCriteria": [
+      "Projection can be built from current live activity leases.",
+      "Projection can include/enrich from task/team/subagent data.",
+      "Duplicate sources do not create duplicate rows for the same work.",
+      "Renderer does not need to know source-specific shapes."
+    ]
+  },
+  {
+    "wbsId": "T-AC-101",
+    "title": "Feed all active live activity leases into the projection",
+    "type": "implementation",
+    "priority": "P0",
+    "phase": "Phase A",
+    "requires": [
+      "T-AC-050"
+    ],
+    "approach": "Unlocks multi-agent visibility from current data.",
+    "technicalScope": [
+      "Use `listCurrentAgentActivityLeases` rather than only `readCurrentAgentActivityLease`.",
+      "Pass leases into the projection builder.",
+      "Preserve existing single `agentStatus` behavior.",
+      "Include active count and generatedAt."
+    ],
+    "acceptanceCriteria": [
+      "Multiple active leases appear in projected summary.",
+      "Expired leases are excluded from active rows.",
+      "Existing `agentStatus` still works.",
+      "When no live leases exist, derived status remains available."
+    ]
+  },
+  {
+    "wbsId": "T-AC-102",
+    "title": "Enrich projection rows with task title and phase context",
+    "type": "implementation",
+    "priority": "P0",
+    "phase": "Phase A",
+    "requires": [
+      "T-AC-050"
+    ],
+    "approach": "Makes rows human-readable.",
+    "technicalScope": [
+      "Join `taskId` to task title where available.",
+      "Preserve raw task id if task does not exist.",
+      "Include phase key from lease or task fallback.",
+      "Include task status if cheap and useful."
+    ],
+    "acceptanceCriteria": [
+      "Activity rows display `T### — title` when task exists.",
+      "Missing task does not fail dashboard summary.",
+      "Phase key is populated from best available source."
+    ]
+  },
+  {
+    "wbsId": "T-AC-103",
+    "title": "Parse useful custom agent metadata from `details`",
+    "type": "implementation",
+    "priority": "P1",
+    "phase": "Phase A",
+    "requires": [
+      "T-AC-050"
+    ],
+    "approach": "Allows custom agents to identify themselves without a new table.",
+    "technicalScope": [],
+    "acceptanceCriteria": [
+      "Known detail keys appear in structured row fields or expanded metadata.",
+      "Unknown detail keys are not rendered in compact card.",
+      "Malformed details do not break dashboard summary."
+    ]
+  },
+  {
+    "wbsId": "T-AC-201",
+    "title": "Render compact Agent Activity Board from projection only",
+    "type": "implementation / UI",
+    "priority": "P0",
+    "phase": "Phase B",
+    "requires": [
+      "T-AC-050",
+      "A-UX"
+    ],
+    "approach": "Converts data into immediate human understanding.",
+    "technicalScope": [
+      "header with freshness/source",
+      "Main Agent",
+      "Active Agents",
+      "Needs Attention",
+      "footer summary"
+    ],
+    "acceptanceCriteria": [
+      "One live activity renders as main agent.",
+      "Multiple live activities render in active list.",
+      "No live activity renders derived fallback.",
+      "Empty state is clear and not alarming.",
+      "Renderer does not depend on raw lease/team/subagent shapes."
+    ]
+  },
+  {
+    "wbsId": "T-AC-202",
+    "title": "Add status chips and attention sorting",
+    "type": "implementation / UI",
+    "priority": "P0",
+    "phase": "Phase B",
+    "requires": [
+      "A-UX"
+    ],
+    "approach": "Makes action-required states visible first.",
+    "technicalScope": [
+      "Map `DashboardAgentStatusKind` to human chip labels.",
+      "Sort needs-attention states first.",
+      "Separate routine active agents from attention rows."
+    ],
+    "acceptanceCriteria": [
+      "Awaiting approval/human gate rows appear before routine work.",
+      "Blocked rows appear in Needs Attention.",
+      "Working/validating/planning rows appear in Active Agents."
+    ]
+  },
+  {
+    "wbsId": "T-AC-203",
+    "title": "Add freshness labels and stale handling",
+    "type": "implementation / UI",
+    "priority": "P1",
+    "phase": "Phase B",
+    "requires": [
+      "A-INSTRUMENTATION",
+      "A-UX"
+    ],
+    "approach": "Prevents stale activity from misleading users.",
+    "technicalScope": [
+      "Show relative updated time.",
+      "Label stale activities.",
+      "Hide expired activities from active rows.",
+      "Defer recently active rows unless cheap."
+    ],
+    "acceptanceCriteria": [
+      "Fresh lease says updated seconds/minutes ago.",
+      "Stale lease is labeled stale.",
+      "Expired lease is not shown as active."
+    ]
+  },
+  {
+    "wbsId": "T-AC-204",
+    "title": "Add expandable row details",
+    "type": "implementation / UI",
+    "priority": "P2",
+    "phase": "Phase B / v1.1",
+    "requires": [
+      "A-UX"
+    ],
+    "approach": "Keeps overview clean while preserving inspectability.",
+    "technicalScope": [],
+    "acceptanceCriteria": [
+      "Compact view remains readable.",
+      "Expanded row reveals technical context.",
+      "Raw JSON is hidden unless explicitly expanded/debug."
+    ]
+  },
+  {
+    "wbsId": "T-AC-301",
+    "title": "Add agent activity projection/slice",
+    "type": "implementation",
+    "priority": "P0",
+    "phase": "Phase C",
+    "requires": [
+      "A-REFRESH",
+      "T-AC-050"
+    ],
+    "approach": "Enables frequent updates without full dashboard refresh.",
+    "technicalScope": [],
+    "acceptanceCriteria": [
+      "Agent activity can be refreshed independently.",
+      "Projection excludes heavy queue/status rollups.",
+      "Existing full/overview projections remain compatible."
+    ]
+  },
+  {
+    "wbsId": "T-AC-302",
+    "title": "Poll/patch activity slice while dashboard is visible",
+    "type": "implementation",
+    "priority": "P1",
+    "phase": "Phase C",
+    "requires": [
+      "A-REFRESH"
+    ],
+    "approach": "Makes the panel feel live before the service/event stream exists.",
+    "technicalScope": [
+      "Poll every 2–5 seconds while overview/dashboard is visible.",
+      "Pause/defer during mutation locks if needed.",
+      "Patch only the agent activity card/section."
+    ],
+    "acceptanceCriteria": [
+      "Updating `set-agent-activity` is visible within 5 seconds.",
+      "No full dashboard reload is required.",
+      "Mutations are not blocked by this polling."
+    ]
+  },
+  {
+    "wbsId": "T-AC-303",
+    "title": "Prepare event-stream compatibility",
+    "type": "architecture / implementation",
+    "priority": "P2",
+    "phase": "Phase E",
+    "requires": [
+      "A-REFRESH"
+    ],
+    "approach": "Avoids rework when dashboard service arrives.",
+    "technicalScope": [
+      "Keep renderer data-source agnostic.",
+      "Define event payload shape for future service.",
+      "Document update path."
+    ],
+    "acceptanceCriteria": [
+      "Future service can emit `agentActivity.updated` or slice update events into same renderer contract."
+    ]
+  },
+  {
+    "wbsId": "T-AC-401",
+    "title": "Add agent-facing activity usage guidance",
+    "type": "docs",
+    "priority": "P0",
+    "phase": "Phase D",
+    "requires": [
+      "A-INSTRUMENTATION"
+    ],
+    "approach": "The panel is only as good as the activity agents report.",
+    "technicalScope": [
+      "starting task work",
+      "changing step",
+      "blocking",
+      "validating",
+      "reviewing PR/item",
+      "releasing",
+      "waiting on approval",
+      "clearing activity"
+    ],
+    "acceptanceCriteria": [
+      "Agent docs include rich example payload.",
+      "Docs define useful `details` keys.",
+      "Docs explain TTL/heartbeat expectations."
+    ]
+  },
+  {
+    "wbsId": "T-AC-402",
+    "title": "Add automatic activity hooks at known command boundaries",
+    "type": "implementation / DX",
+    "priority": "P1",
+    "phase": "Phase D",
+    "requires": [
+      "A-INSTRUMENTATION"
+    ],
+    "approach": "Reduces reliance on agents remembering to report activity.",
+    "technicalScope": [
+      "`run-transition start`",
+      "validation commands",
+      "review commands",
+      "release commands",
+      "policy approval gates",
+      "human gates"
+    ],
+    "acceptanceCriteria": [
+      "Key commands record useful activity without manual agent effort.",
+      "Manual `set-agent-activity` remains supported.",
+      "Hooks do not create noisy or misleading long-lived leases."
+    ]
+  },
+  {
+    "wbsId": "T-AC-501",
+    "title": "Add comprehensive render fixtures",
+    "type": "testing",
+    "priority": "P0",
+    "phase": "Phase B/C",
+    "requires": [
+      "A-TEST"
+    ],
+    "approach": "Prevents dashboard regressions.",
+    "technicalScope": [
+      "no activity / inferred fallback",
+      "one live main activity",
+      "multiple live activities",
+      "custom agent metadata",
+      "subagent definition id fallback/enrichment",
+      "team execution fallback/enrichment",
+      "waiting on human gate",
+      "policy approval",
+      "blocked",
+      "validating/reviewing/releasing",
+      "stale/expired leases",
+      "old payload compatibility",
+      "malformed details"
+    ],
+    "acceptanceCriteria": [
+      "Render tests cover all key states.",
+      "Sorting is deterministic.",
+      "HTML is accessible and stable."
+    ]
+  },
+  {
+    "wbsId": "T-AC-502",
+    "title": "Add dashboard data contract/projection tests",
+    "type": "testing",
+    "priority": "P0",
+    "phase": "Phase A",
+    "requires": [
+      "A-CONTRACT",
+      "A-PROJECTION",
+      "A-TEST"
+    ],
+    "approach": "Protects backend summary shape and projection behavior.",
+    "technicalScope": [
+      "Contract test for multiple current activity leases.",
+      "Contract test for enriched task title.",
+      "Contract test for unknown/missing fields.",
+      "Projection test for duplicate source merge.",
+      "Projection test for live + derived fallback coexistence."
+    ],
+    "acceptanceCriteria": [
+      "Dashboard summary payload remains versioned and stable.",
+      "Tests fail if multiple activities regress to single activity.",
+      "Tests fail if duplicate sources produce duplicate active rows.",
+      "The dashboard overview has an Agent Activity panel/card.",
+      "The panel renders only from `DashboardAgentActivitySummary` or equivalent stable projection.",
+      "The panel shows multiple active agents, not only one inferred status.",
+      "Custom agents can be identified when they provide metadata.",
+      "Subagent sessions can be identified by definition/session/task without duplicating live rows.",
+      "Main agent selection follows the approved projection/identity model.",
+      "Human intervention states are visually prioritized.",
+      "Live vs inferred status is clearly labeled.",
+      "Freshness is shown and stale activity is not misleading.",
+      "Agent activity updates within 5 seconds while the dashboard is visible.",
+      "The renderer is tested with representative multi-agent states.",
+      "Projection tests cover current and anticipated source combinations.",
+      "Agent docs show how to provide richer activity data.",
+      "Known command boundaries report activity where practical."
+    ]
+  }
+]

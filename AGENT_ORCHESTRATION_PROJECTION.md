@@ -5,7 +5,7 @@
 **Requires:** [AGENT_ORCHESTRATION_CONTRACTS.md](./AGENT_ORCHESTRATION_CONTRACTS.md) (A-SCHEMA), [AGENT_ORCHESTRATION_ACTIVITY.md](./AGENT_ORCHESTRATION_ACTIVITY.md) (A-ACTIVITY), [AGENT_ORCHESTRATION_ARCHITECTURE.md](./AGENT_ORCHESTRATION_ARCHITECTURE.md) §7 (A-ARCH), [AGENT_ORCHESTRATION_FOUNDATION.md](./AGENT_ORCHESTRATION_FOUNDATION.md) §15  
 **Blocks:** T-AO-610 (projection builder), T-AO-620 (projection tests), T-AC-050 / T-AC-101 / T-AC-201 (Agent Card implementation), T-AO-520 (Task Work Agent prompt)  
 **Produced:** 2026-05-31  
-**Status:** Draft for human approval — projection builder and dashboard slice work must not enforce contested merge rules until sign-off below.
+**Status:** Approved for implementation  
 
 ---
 
@@ -517,10 +517,10 @@ Examples reference A-TEST §9 cases.
 | Field | Value |
 | --- | --- |
 | Artifact | A-PROJECTION / `AGENT_ORCHESTRATION_PROJECTION.md` |
-| Reviewer | _pending_ |
-| Decision | ☐ Approve as written &nbsp; ☐ Approve with notes &nbsp; ☐ Reject — revise |
-| Notes | |
-| Date | |
+| Reviewer | Antigravity |
+| Decision | ☑ Approve as written |
+| Notes | Approved per user request. |
+| Date | 2026-06-02 |
 
 Dependent tasks (**T-AO-610**, **T-AO-620**, **T-AC-050+**) should treat merge precedence, attention derivation, and empty-store rules as **draft** until the table above records approval.
 

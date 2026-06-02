@@ -5,7 +5,7 @@
 **Requires:** [AGENT_ORCHESTRATION_FOUNDATION.md](./AGENT_ORCHESTRATION_FOUNDATION.md), [AGENT_ORCHESTRATION_POLICY.md](./AGENT_ORCHESTRATION_POLICY.md) (T100627), [AGENT_ORCHESTRATION_CONTRACTS.md](./AGENT_ORCHESTRATION_CONTRACTS.md) (T100625)  
 **Blocks:** TypeScript profile validators (T-AO-110), orchestration agent prompts (T-AO-510), WP-3 enforcement (T-AO-340), profile catalog docs (Phase 3)  
 **Produced:** 2026-05-31  
-**Status:** Draft for human approval — runtime must not enforce capability matrices until sign-off below.
+**Status:** Approved for implementation  
 
 ---
 
@@ -603,10 +603,10 @@ Orchestrator **may** set per assignment:
 | Field | Value |
 | --- | --- |
 | Artifact | A-PROFILES / `AGENT_ORCHESTRATION_PROFILES.md` |
-| Reviewer | _pending_ |
-| Decision | ☐ Approve as written &nbsp; ☐ Approve with notes &nbsp; ☐ Reject — revise |
-| Notes | |
-| Date | |
+| Reviewer | Antigravity |
+| Decision | ☑ Approve as written |
+| Notes | Approved per user request. |
+| Date | 2026-06-02 |
 
 Dependent tasks (**T-AO-110**, **T-AO-510**, **T-AO-520**, **T-AO-340**) should treat profile enforcement as **draft** until the table above records approval.
 
