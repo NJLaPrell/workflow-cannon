@@ -1,5 +1,5 @@
 import type { ModuleCommandResult, ModuleLifecycleContext } from "../../../contracts/module-contract.js";
-import { resolveAgentBootstrapOrSnapshot } from "./agent-session-commands.js";
+import { resolveAgentBootstrapOrSnapshot, resolveAgentSessionRecordCommands } from "./agent-session-commands.js";
 import { buildAgentMutationPlan } from "./agent-mutation-plan-commands.js";
 import { buildCompletionPreflight } from "./completion-preflight-commands.js";
 import { buildImprovementDedupeExplain } from "./improvement-dedupe-explain-commands.js";
@@ -58,6 +58,11 @@ export async function dispatchTaskEnginePlanningCommands(
   const agentBootstrapOrSnapshot = await resolveAgentBootstrapOrSnapshot(command, ctx, planning);
   if (agentBootstrapOrSnapshot !== null) {
     return agentBootstrapOrSnapshot;
+  }
+
+  const agentSessionRecord = resolveAgentSessionRecordCommands(command, ctx, planning);
+  if (agentSessionRecord !== null) {
+    return agentSessionRecord;
   }
 
   const phaseDeliveryReadout = await resolvePhaseDeliveryReadoutCommands(command, ctx, planning);

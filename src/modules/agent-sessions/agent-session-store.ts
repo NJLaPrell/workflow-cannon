@@ -1,7 +1,7 @@
 import type Database from "better-sqlite3";
 import { readKitSqliteUserVersion } from "../../core/state/workspace-kit-sqlite.js";
 
-export const AGENT_SESSIONS_KIT_MIN_USER_VERSION = 31;
+export const AGENT_SESSIONS_KIT_MIN_USER_VERSION = 33;
 
 export type AgentSessionRow = {
   id: string;

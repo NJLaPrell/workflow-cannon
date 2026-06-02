@@ -18,6 +18,7 @@
     "complete-task",
     "demote-task",
     "close-subagent-session",
+    "close-agent-session",
     "convert-wishlist",
     "convert-phase-note-to-task",
     "create-task",
@@ -28,6 +29,7 @@
     "message-subagent",
     "migrate-task-persistence",
     "pause-task",
+    "open-agent-session",
     "persist-planning-execution-drafts",
     "reject-improvement",
     "register-assignment",
@@ -41,6 +43,7 @@
     "synthesize-transcript-churn",
     "submit-assignment-handoff",
     "unblock-task",
+    "update-agent-session",
     "update-task",
     "update-wishlist",
     "update-workspace-phase-snapshot"

@@ -916,6 +916,49 @@
   },
   {
     "moduleId": "task-engine",
+    "name": "open-agent-session",
+    "file": "open-agent-session.md",
+    "description": "Record an AgentSession v1 row for cursor/vscode/cli/manual hosts with optional subagent bridge metadata.",
+    "defaultResponseTemplateId": "default",
+    "policyOperationId": "task-engine.agent-sessions.persist",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "update-agent-session",
+    "file": "update-agent-session.md",
+    "description": "Update AgentSession host/model/task pointers and metadata without mutating assignment/activity ownership.",
+    "defaultResponseTemplateId": "default",
+    "policyOperationId": "task-engine.agent-sessions.persist",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "close-agent-session",
+    "file": "close-agent-session.md",
+    "description": "Close an AgentSession v1 row (status lifecycle only).",
+    "defaultResponseTemplateId": "default",
+    "policyOperationId": "task-engine.agent-sessions.persist",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "get-agent-session",
+    "file": "get-agent-session.md",
+    "description": "Read one AgentSession v1 row by id.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "list-agent-sessions",
+    "file": "list-agent-sessions.md",
+    "description": "List AgentSession v1 rows with optional agent/status filters.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
     "name": "queue-git-alignment",
     "file": "queue-git-alignment.md",
     "description": "Read-only heuristic: git HEAD vs last task transition; stale in_progress hints (merge \u2260 complete guardian).",
