@@ -2,18 +2,18 @@
 kit_export_envelope:
   schema_version: 1
   authoritative: false
-  generated_at: "2026-06-02T16:50:20.154Z"
-  source_sequence: 25
+  generated_at: "2026-06-02T19:13:31.614Z"
+  source_sequence: 26
   source_kind: "kit_workspace_status"
   role: "sqlite-projection-export"
 schema_version: 1
-current_kit_phase: "128"
-next_kit_phase: "128"
-last_updated: "2026-06-02T16:50:08.768Z"
-active_focus: "Phase 128 — projection/docs/hardening kickoff"
+current_kit_phase: "129"
+next_kit_phase: "130"
+last_updated: "2026-06-02T19:13:22.169Z"
+active_focus: "Phase 129 delivery"
 blockers: []
 pending_decisions: []
 next_agent_actions:
-  - "Open Queue tab and pick up ready work for this phase"
-# workspace_revision: 25
-# updated_at: "2026-06-02T16:50:08.836Z"
+  - "Start Phase 129 delivery"
+# workspace_revision: 26
+# updated_at: "2026-06-02T19:13:22.231Z"
