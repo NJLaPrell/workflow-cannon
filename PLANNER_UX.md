@@ -1,7 +1,7 @@
 # PlanArtifact v1 — dashboard UX mockups (**A-UX**)
 
 **Artifact:** `PLANNER_UX.md` (repo root)  
-**Status:** Draft for human review (**A-UX**)  
+**Status:** Approved for implementation (**A-UX**)  
 **Product:** [`PLANNER.md`](./PLANNER.md) Step 7 · **Compat:** [`PLANNER_ARCHITECTURE.md`](./PLANNER_ARCHITECTURE.md) §8  
 **Contracts:** [`PLANNER_COMMANDS.md`](./PLANNER_COMMANDS.md) · **Summary fields:** T-7.1 (`dashboard-summary.planArtifact`)
 
@@ -265,7 +265,7 @@ Styleguide: existing dashboard webview CSS modules; no new brand palette.
 
 ## 13. Exit criteria (**A-UX**)
 
-- [ ] Maintainer signs off layout and state flow (this doc or linked Figma).
+- [x] Maintainer signs off layout and state flow (this doc or linked Figma).
 - [ ] **A-COMPAT** dual-surface copy approved (§9).
 - [ ] T-7.1 contract fields confirmed against §11.
 - [ ] WP-7 UI tasks (T-7.1–T-7.5) may start after sign-off.

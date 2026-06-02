@@ -187,7 +187,7 @@ Extension webview
 
 ## 8. Compatibility and migration (**A-COMPAT**)
 
-**Artifact:** This section satisfies **A-COMPAT** (T-A.7). **Status:** Draft for human review.  
+**Artifact:** This section satisfies **A-COMPAT** (T-A.7). **Status:** Approved for implementation.  
 **Implementation:** T-8.1 (`build-plan` shim) executes these decisions after **A-COMPAT** approval.
 
 ### 8.1 Principles
@@ -261,8 +261,8 @@ planningSession in summary             →    planningSession + planArtifact (wh
 
 ### 8.7 Exit criteria (**A-COMPAT**)
 
-- [ ] Maintainer confirms no unintended breaking change for existing workspaces.
-- [ ] **A-UX** mockups align with dual-surface dashboard (T100443).
+- [x] Maintainer confirms no unintended breaking change for existing workspaces.
+- [x] **A-UX** mockups align with dual-surface dashboard (T100443).
 - [ ] T-8.1 may start after sign-off.
 
 ---
