@@ -2,18 +2,18 @@
 kit_export_envelope:
   schema_version: 1
   authoritative: false
-  generated_at: "2026-05-31T07:48:23.664Z"
-  source_sequence: 22
+  generated_at: "2026-06-02T16:50:20.154Z"
+  source_sequence: 25
   source_kind: "kit_workspace_status"
   role: "sqlite-projection-export"
 schema_version: 1
-current_kit_phase: "126"
-next_kit_phase: "127"
-last_updated: "2026-05-31T07:47:57.699Z"
-active_focus: "Agent Orchestration Foundation — Phase 126 contracts & design gates"
+current_kit_phase: "128"
+next_kit_phase: "128"
+last_updated: "2026-06-02T16:50:08.768Z"
+active_focus: "Phase 128 — projection/docs/hardening kickoff"
 blockers: []
 pending_decisions: []
 next_agent_actions:
-  - "Start T100623 — inventory orchestration surfaces on release/phase-126"
-# workspace_revision: 22
-# updated_at: "2026-05-31T07:47:57.827Z"
+  - "Open Queue tab and pick up ready work for this phase"
+# workspace_revision: 25
+# updated_at: "2026-06-02T16:50:08.836Z"
