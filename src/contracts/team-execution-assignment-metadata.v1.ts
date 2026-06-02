@@ -39,3 +39,31 @@ export type TeamAssignmentMetadataV1 = {
   resources?: TeamAssignmentResourceScope;
   lockScope?: TeamAssignmentLockScope;
 };
+
+/**
+ * Additive response summary used by assignment lifecycle commands so callers
+ * can quickly identify orchestration linkage without parsing full metadata.
+ */
+export type TeamAssignmentOrchestrationMetadataSummary = {
+  schemaVersion: number;
+  agentDefinitionId?: string;
+  agentSessionId?: string;
+  modelTier?: AgentModelTier;
+  contextProfileId?: string;
+  accessProfileId?: string;
+  handoffContractId?: string;
+  assignmentPromptSummary?: string;
+  blockingPolicy?: string;
+  pathCounts: {
+    ownedPaths: number;
+    readOnlyPaths: number;
+    sharedPaths: number;
+    forbiddenPaths: number;
+    requiresApprovalPaths: number;
+  };
+  lockCounts: {
+    tasks: number;
+    modules: number;
+    commands: number;
+  };
+};

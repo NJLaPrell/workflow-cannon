@@ -169,6 +169,7 @@ export type { AgentSessionStatus, AgentSessionV1 } from "./agent-session.v1.js";
 export { AGENT_SESSION_SCHEMA_VERSION } from "./agent-session.v1.js";
 export type {
   TeamAssignmentLockScope,
+  TeamAssignmentOrchestrationMetadataSummary,
   TeamAssignmentMetadataV1,
   TeamAssignmentResourceScope
 } from "./team-execution-assignment-metadata.v1.js";

@@ -53,6 +53,8 @@ test("kit sqlite migrates to v7 and team assignment DDL round-trips", () => {
     assert.ok(row);
     assert.equal(row.status, "assigned");
     assert.equal(row.executionTaskId, "T-test-1");
+    assert.ok(row.orchestrationMetadataSummary);
+    assert.equal(row.orchestrationMetadataSummary.schemaVersion, 0);
 
     const bad = validateHandoffContractV1({ schemaVersion: 1 });
     assert.equal(bad.ok, false);
@@ -61,6 +63,7 @@ test("kit sqlite migrates to v7 and team assignment DDL round-trips", () => {
     assert.equal(hv.ok, true);
     assert.ok(submitHandoff(db, { assignmentId: "asg-1", workerId: "wrk", handoffJson: hv.json, now }));
     assert.equal(getAssignment(db, "asg-1").status, "submitted");
+    assert.equal(getAssignment(db, "asg-1").orchestrationMetadataSummary.schemaVersion, 0);
 
     assert.ok(
       reconcileAssignment(db, {
@@ -134,6 +137,14 @@ test("structured metadata v1 round-trips on assignment insert", () => {
     assert.equal(row.metadata.schemaVersion, 1);
     assert.equal(row.metadata.agentDefinitionId, "task-worker");
     assert.equal(row.metadata.contextProfileId, "task_worker_context_v1");
+    assert.ok(row.orchestrationMetadataSummary);
+    assert.equal(row.orchestrationMetadataSummary.schemaVersion, 1);
+    assert.equal(row.orchestrationMetadataSummary.agentDefinitionId, "task-worker");
+    assert.equal(row.orchestrationMetadataSummary.agentSessionId, "session-abc123");
+    assert.equal(row.orchestrationMetadataSummary.contextProfileId, "task_worker_context_v1");
+    assert.equal(row.orchestrationMetadataSummary.accessProfileId, "task_worker_strict_v1");
+    assert.equal(row.orchestrationMetadataSummary.handoffContractId, "implementation_handoff_v2");
+    assert.ok(row.orchestrationMetadataSummary.pathCounts.ownedPaths > 0);
   } finally {
     db.close();
     fs.rmSync(dir, { recursive: true, force: true });

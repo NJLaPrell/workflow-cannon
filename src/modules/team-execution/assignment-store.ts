@@ -1,6 +1,9 @@
 import type Sqlite from "better-sqlite3";
 import type { DashboardTeamExecutionSummary } from "../../contracts/dashboard-summary-run.js";
-import { TEAM_ASSIGNMENT_METADATA_SCHEMA_VERSION } from "../../contracts/team-execution-assignment-metadata.v1.js";
+import {
+  TEAM_ASSIGNMENT_METADATA_SCHEMA_VERSION,
+  type TeamAssignmentOrchestrationMetadataSummary
+} from "../../contracts/team-execution-assignment-metadata.v1.js";
 import { readKitSqliteUserVersion } from "../../core/state/workspace-kit-sqlite.js";
 import { validateAssignmentMetadataV1 } from "../../core/validation/agent-orchestration/validate-orchestration-contract.js";
 import type { OrchestrationValidationIssue } from "../../core/validation/agent-orchestration/types.js";
@@ -21,9 +24,64 @@ export type TeamAssignmentRow = {
   reconcileCheckpoint: Record<string, unknown> | null;
   blockReason: string | null;
   metadata: Record<string, unknown> | null;
+  orchestrationMetadataSummary: TeamAssignmentOrchestrationMetadataSummary | null;
   createdAt: string;
   updatedAt: string;
 };
+
+function countStringArray(value: unknown): number {
+  if (!Array.isArray(value)) {
+    return 0;
+  }
+  return value.filter((entry) => typeof entry === "string").length;
+}
+
+function readOptionalString(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() ? value : undefined;
+}
+
+export function summarizeAssignmentOrchestrationMetadata(
+  metadata: Record<string, unknown> | null
+): TeamAssignmentOrchestrationMetadataSummary | null {
+  if (!metadata) {
+    return null;
+  }
+
+  const resources =
+    metadata.resources && typeof metadata.resources === "object" && !Array.isArray(metadata.resources)
+      ? (metadata.resources as Record<string, unknown>)
+      : null;
+  const lockScope =
+    metadata.lockScope && typeof metadata.lockScope === "object" && !Array.isArray(metadata.lockScope)
+      ? (metadata.lockScope as Record<string, unknown>)
+      : null;
+  const schemaVersion = Number(metadata.schemaVersion);
+
+  return {
+    schemaVersion: Number.isFinite(schemaVersion) ? schemaVersion : 0,
+    agentDefinitionId: readOptionalString(metadata.agentDefinitionId),
+    agentSessionId: readOptionalString(metadata.agentSessionId),
+    modelTier: readOptionalString(metadata.modelTier) as TeamAssignmentOrchestrationMetadataSummary["modelTier"],
+    contextProfileId: readOptionalString(metadata.contextProfileId),
+    accessProfileId: readOptionalString(metadata.accessProfileId),
+    handoffContractId: readOptionalString(metadata.handoffContractId),
+    assignmentPromptSummary: readOptionalString(metadata.assignmentPromptSummary),
+    blockingPolicy: readOptionalString(metadata.blockingPolicy),
+    pathCounts: {
+      ownedPaths: countStringArray(metadata.ownedPaths) + countStringArray(resources?.ownedPaths),
+      readOnlyPaths: countStringArray(resources?.readOnlyPaths),
+      sharedPaths: countStringArray(metadata.sharedPaths) + countStringArray(resources?.sharedPaths),
+      forbiddenPaths: countStringArray(metadata.forbiddenPaths) + countStringArray(resources?.forbiddenPaths),
+      requiresApprovalPaths:
+        countStringArray(metadata.requiresApprovalPaths) + countStringArray(resources?.requiresApprovalPaths)
+    },
+    lockCounts: {
+      tasks: countStringArray(lockScope?.tasks),
+      modules: countStringArray(lockScope?.modules),
+      commands: countStringArray(lockScope?.commands)
+    }
+  };
+}
 
 export function assertTeamExecutionKitSchema(
   dbPathAbs: string
@@ -186,6 +244,7 @@ function mapRow(
     reconcileCheckpoint,
     blockReason: typeof r.block_reason === "string" ? r.block_reason : null,
     metadata,
+    orchestrationMetadataSummary: summarizeAssignmentOrchestrationMetadata(metadata),
     createdAt: String(r.created_at),
     updatedAt: String(r.updated_at)
   };

@@ -10,4 +10,6 @@ workspace-kit run register-assignment '{"executionTaskId":"T665","supervisorId":
 
 Creates an **`assigned`** row. **`executionTaskId`** must exist in **`task_engine_tasks`**. Optional **`assignmentId`** (UUID if omitted), **`metadata`** object.
 
+When metadata is provided, response rows include additive **`orchestrationMetadataSummary`** with key linkage fields and path/lock counts.
+
 Mutating: JSON **`policyApproval`** + **`expectedPlanningGeneration`** when planning policy requires it.
