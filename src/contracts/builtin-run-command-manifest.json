@@ -1527,7 +1527,7 @@
     "moduleId": "team-execution",
     "name": "submit-assignment-handoff",
     "file": "submit-assignment-handoff.md",
-    "description": "Worker submits handoff contract v1 (assigned \u2192 submitted).",
+    "description": "Worker submits handoff contract v1/v2 (assigned \u2192 submitted).",
     "policyOperationId": "team-execution.persist",
     "defaultResponseTemplateId": "default",
     "policySensitivity": "sensitive"

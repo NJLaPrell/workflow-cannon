@@ -5,7 +5,10 @@ import {
   type TeamAssignmentOrchestrationMetadataSummary
 } from "../../contracts/team-execution-assignment-metadata.v1.js";
 import { readKitSqliteUserVersion } from "../../core/state/workspace-kit-sqlite.js";
-import { validateAssignmentMetadataV1 } from "../../core/validation/agent-orchestration/validate-orchestration-contract.js";
+import {
+  validateAssignmentMetadataV1,
+  validateHandoffV2
+} from "../../core/validation/agent-orchestration/validate-orchestration-contract.js";
 import type { OrchestrationValidationIssue } from "../../core/validation/agent-orchestration/types.js";
 
 export const TEAM_EXECUTION_KIT_MIN_USER_VERSION = 7;
@@ -115,6 +118,42 @@ export function validateHandoffContractV1(
     }
   }
   return { ok: true, json: JSON.stringify(o) };
+}
+
+export function validateHandoffContract(
+  raw: unknown,
+  context?: { assignmentId?: string; workerId?: string }
+): { ok: true; json: string } | { ok: false; message: string } {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    return { ok: false, message: "handoff must be a JSON object" };
+  }
+
+  const schemaVersion = (raw as Record<string, unknown>).schemaVersion;
+  if (schemaVersion === 1) {
+    return validateHandoffContractV1(raw);
+  }
+
+  if (schemaVersion !== 2) {
+    return { ok: false, message: "handoff.schemaVersion must be 1 or 2" };
+  }
+
+  const v2 = validateHandoffV2(raw);
+  if (!v2.ok) {
+    return {
+      ok: false,
+      message: v2.issues[0]?.message ?? v2.message
+    };
+  }
+
+  if (context?.assignmentId && v2.data.assignmentId !== context.assignmentId) {
+    return { ok: false, message: "handoff.assignmentId must match assignmentId" };
+  }
+
+  if (context?.workerId && v2.data.agentId !== context.workerId) {
+    return { ok: false, message: "handoff.agentId must match workerId" };
+  }
+
+  return { ok: true, json: JSON.stringify(v2.data) };
 }
 
 export function validateReconcileCheckpointV1(

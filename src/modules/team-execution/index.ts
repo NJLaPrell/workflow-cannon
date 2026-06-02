@@ -26,7 +26,7 @@ import {
   submitHandoff,
   taskExistsInRelationalStore,
   validateAssignmentMetadataWhenPresent,
-  validateHandoffContractV1,
+  validateHandoffContract,
   validateReconcileCheckpointV1
 } from "./assignment-store.js";
 
@@ -466,7 +466,7 @@ export const teamExecutionModule: WorkflowModule = {
           message: "submit-assignment-handoff requires assignmentId and workerId"
         };
       }
-      const hv = validateHandoffContractV1(args.handoff);
+      const hv = validateHandoffContract(args.handoff, { assignmentId, workerId });
       if (!hv.ok) {
         return { ok: false, code: "invalid-args", message: hv.message };
       }

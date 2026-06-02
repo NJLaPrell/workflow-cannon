@@ -291,6 +291,53 @@ test("handoff submit replay returns stable assignment-status-invalid code", asyn
   assert.deepEqual(replay.data.lifecycleError.allowedStatuses, ["assigned"]);
 });
 
+test("submit-assignment-handoff accepts handoff v2 payloads", async () => {
+  const workspace = await tmpDir();
+  const setupCtx = sqliteCtx(workspace);
+  await seedExecutionTask(workspace, "T8606", "Worker task 6");
+
+  const registered = await teamExecutionModule.onCommand(
+    {
+      name: "register-assignment",
+      args: {
+        assignmentId: "asg-8606",
+        executionTaskId: "T8606",
+        supervisorId: "sup-6",
+        workerId: "wrk-6"
+      }
+    },
+    setupCtx
+  );
+  assert.equal(registered.ok, true);
+
+  const submitted = await teamExecutionModule.onCommand(
+    {
+      name: "submit-assignment-handoff",
+      args: {
+        assignmentId: "asg-8606",
+        workerId: "wrk-6",
+        handoff: {
+          schemaVersion: 2,
+          assignmentId: "asg-8606",
+          agentId: "wrk-6",
+          status: "completed",
+          summary: "Worker completed the implementation",
+          evidenceRefs: ["artifacts/evidence-8606.txt"]
+        },
+        expectedPlanningGeneration: registered.data.planningGeneration
+      }
+    },
+    sqliteCtxWithActor(workspace, "wrk-6")
+  );
+
+  assert.equal(submitted.ok, true);
+  assert.equal(submitted.code, "assignment-handoff-submitted");
+  assert.equal(submitted.data.assignment.status, "submitted");
+  assert.equal(submitted.data.assignment.handoff.schemaVersion, 2);
+  assert.equal(submitted.data.assignment.handoff.assignmentId, "asg-8606");
+  assert.equal(submitted.data.assignment.handoff.agentId, "wrk-6");
+});
+
 test("admin actor may execute supervisor lifecycle actions", async () => {
   const workspace = await tmpDir();
   const setupCtx = sqliteCtx(workspace);

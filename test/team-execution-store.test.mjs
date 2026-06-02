@@ -14,6 +14,7 @@ import {
   submitHandoff,
   reconcileAssignment,
   validateAssignmentMetadataWhenPresent,
+  validateHandoffContract,
   validateHandoffContractV1
 } from "../dist/modules/team-execution/assignment-store.js";
 import { fileURLToPath } from "node:url";
@@ -24,6 +25,9 @@ const assignmentMetadataFixture = JSON.parse(
     path.join(root, "fixtures/agent-orchestration/assignment-metadata-task-worker.v1.json"),
     "utf8"
   )
+);
+const handoffV2Fixture = JSON.parse(
+  fs.readFileSync(path.join(root, "fixtures/agent-orchestration/handoff-v2/handoff-completed.v2.json"), "utf8")
 );
 
 test("kit sqlite migrates to v7 and team assignment DDL round-trips", () => {
@@ -188,4 +192,41 @@ test("worker blocker transition sets blocked status and reason", () => {
     db.close();
     fs.rmSync(dir, { recursive: true, force: true });
   }
+});
+
+test("handoff contract validator accepts v2 and enforces assignment/worker coherence", () => {
+  const ok = validateHandoffContract(handoffV2Fixture, {
+    assignmentId: handoffV2Fixture.assignmentId,
+    workerId: handoffV2Fixture.agentId
+  });
+  assert.equal(ok.ok, true);
+
+  const assignmentMismatch = validateHandoffContract(handoffV2Fixture, {
+    assignmentId: "asg-other",
+    workerId: handoffV2Fixture.agentId
+  });
+  assert.equal(assignmentMismatch.ok, false);
+  assert.equal(assignmentMismatch.message, "handoff.assignmentId must match assignmentId");
+
+  const workerMismatch = validateHandoffContract(handoffV2Fixture, {
+    assignmentId: handoffV2Fixture.assignmentId,
+    workerId: "worker-other"
+  });
+  assert.equal(workerMismatch.ok, false);
+  assert.equal(workerMismatch.message, "handoff.agentId must match workerId");
+});
+
+test("handoff contract validator remains backward compatible for v1 payload", () => {
+  const v1 = validateHandoffContract(
+    {
+      schemaVersion: 1,
+      summary: "done",
+      evidenceRefs: ["artifacts/log.txt"]
+    },
+    {
+      assignmentId: "asg-v1",
+      workerId: "wrk-v1"
+    }
+  );
+  assert.equal(v1.ok, true);
 });
