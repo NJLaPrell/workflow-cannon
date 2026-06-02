@@ -235,6 +235,51 @@ export type DashboardPhaseSystemSlice = {
   };
 };
 
+export type DashboardAgentRegistrySessionTopOpenSessionRow = {
+  sessionId: string;
+  agentId: string;
+  hostHint: string | null;
+  modelTier: string | null;
+  currentAssignmentId: string | null;
+  currentTaskId: string | null;
+  currentActivityId: string | null;
+  status: string;
+  updatedAt: string;
+};
+
+/**
+ * Read-only orchestration bridge summary for dashboard/status surfaces.
+ * Derived from agent definitions, agent sessions, and team assignments.
+ */
+export type DashboardAgentRegistrySessionSummary = {
+  schemaVersion: 1;
+  /** False when bridge/session SQLite prerequisites are unavailable. */
+  available: boolean;
+  definitionsCount: number;
+  orchestrationReadyDefinitionsCount: number;
+  retiredDefinitionsCount: number;
+  openSessionsCount: number;
+  activeAssignmentsCount: number;
+  linkedOpenSessionsCount: number;
+  hostAvailability: {
+    cursor: number;
+    vscode: number;
+    cli: number;
+    manual: number;
+    unknown: number;
+  };
+  capabilityAvailability: {
+    required: string[];
+    optional: string[];
+  };
+  currentPointers: {
+    assignment: number;
+    task: number;
+    activity: number;
+  };
+  topOpenSessions: DashboardAgentRegistrySessionTopOpenSessionRow[];
+};
+
 export type DashboardModuleActivationSlice = {
   schemaVersion: 1;
   enabledModuleIds: string[];
@@ -511,6 +556,8 @@ export type DashboardSummaryData = {
   teamExecution: DashboardTeamExecutionSummary;
   /** Subagent definitions + open sessions from `kit_subagent_*` (Phase 60+). */
   subagentRegistry: DashboardSubagentRegistrySummary;
+  /** Agent definition/session bridge rollup from `kit_subagent_*`, `kit_agent_sessions`, and assignments. */
+  agentRegistrySessions?: DashboardAgentRegistrySessionSummary;
   /** Task-linked git checkpoints from `kit_task_checkpoints` (Phase 64+). */
   taskCheckpoints: DashboardTaskCheckpointsSummary;
   /** Phase/drift, doctor contract, module activation, CAE lines — status tab aggregate (Phase 79+). */

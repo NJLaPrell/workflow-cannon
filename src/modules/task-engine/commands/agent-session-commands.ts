@@ -27,6 +27,7 @@ import { buildTaskIntakeReadoutBundle } from "../task-intake-readout-hints.js";
 import { buildWorkspaceCoordinationStatus } from "../coordination/build-workspace-coordination-status.js";
 import { isWishlistIntakeTask } from "../wishlist/wishlist-intake.js";
 import { buildPhaseFocusDashboard } from "../dashboard/build-phase-focus-dashboard.js";
+import { summarizeAgentRegistrySessionsForAgentSnapshot } from "../agent-registry-session-summary.js";
 
 const AGENT_SESSION_HOST_HINTS = new Set(["cursor", "vscode", "cli", "manual"]);
 const AGENT_SESSION_STATUSES = new Set(["open", "closed"]);
@@ -575,6 +576,10 @@ export async function composeAgentSessionSnapshotPayload(
     planning.sqliteDual.getDatabase(),
     (id) => taskTitleById.get(id) ?? null
   );
+  const agentRegistrySessionContext = summarizeAgentRegistrySessionsForAgentSnapshot(
+    planning.sqliteDual.getDatabase(),
+    planning.sqliteDual.dbPath
+  );
   const maintainerDelivery = buildMaintainerDeliveryHints({
     tasks,
     canonicalPhaseKey: phaseRes.canonicalPhaseKey,
@@ -624,6 +629,7 @@ export async function composeAgentSessionSnapshotPayload(
     },
     doctorKitPhaseIssues,
     teamExecutionContext,
+    agentRegistrySessionContext,
     maintainerDelivery,
     ...intakeBundle,
     ...(phaseJournal ? { phaseJournal } : {}),

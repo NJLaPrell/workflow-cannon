@@ -101,6 +101,7 @@ export {
   isHostedApiConflictResponse
 } from "./hosted-api-backend.js";
 export type {
+  DashboardAgentRegistrySessionSummary,
   DashboardAgentGuidanceSummary,
   DashboardSummaryCommandSuccess,
   DashboardCurrentPhaseDelivery,
