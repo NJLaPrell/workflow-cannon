@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import type Sqlite from "better-sqlite3";
 import type { WorkflowModule } from "../../contracts/module-contract.js";
 import { builtinInstructionEntriesForModule } from "../../contracts/builtin-run-command-manifest.js";
 import { openPlanningStores } from "../task-engine/persistence/planning-open.js";
@@ -37,6 +38,13 @@ function attachPlanningMeta(
 
 function nowIso(): string {
   return new Date().toISOString();
+}
+
+function readAnyTaskId(db: Sqlite.Database): string | undefined {
+  const row = db.prepare("SELECT id FROM task_engine_tasks ORDER BY id LIMIT 1").get() as
+    | { id: string }
+    | undefined;
+  return row?.id;
 }
 
 export const teamExecutionModule: WorkflowModule = {
@@ -173,6 +181,7 @@ export const teamExecutionModule: WorkflowModule = {
         };
       }
       const ts = nowIso();
+      const persistTaskId = executionTaskId || readAnyTaskId(db);
       try {
         planning.sqliteDual.withTransaction(
           () => {
@@ -194,7 +203,11 @@ export const teamExecutionModule: WorkflowModule = {
               now: ts
             });
           },
-          { expectedPlanningGeneration: exp }
+          {
+            expectedPlanningGeneration: exp,
+            persistScope: "incremental",
+            ...(persistTaskId ? { dirtyTaskIds: [persistTaskId] } : {})
+          }
         );
       } catch (err) {
         if (err instanceof TaskEngineError) {
@@ -226,6 +239,7 @@ export const teamExecutionModule: WorkflowModule = {
       }
       const ts = nowIso();
       let ok = false;
+      const persistTaskId = getAssignment(db, assignmentId)?.executionTaskId ?? readAnyTaskId(db);
       try {
         planning.sqliteDual.withTransaction(
           () => {
@@ -237,7 +251,11 @@ export const teamExecutionModule: WorkflowModule = {
               );
             }
           },
-          { expectedPlanningGeneration: exp }
+          {
+            expectedPlanningGeneration: exp,
+            persistScope: "incremental",
+            ...(persistTaskId ? { dirtyTaskIds: [persistTaskId] } : {})
+          }
         );
       } catch (err) {
         if (err instanceof TaskEngineError) {
@@ -264,6 +282,7 @@ export const teamExecutionModule: WorkflowModule = {
         };
       }
       const ts = nowIso();
+      const persistTaskId = getAssignment(db, assignmentId)?.executionTaskId ?? readAnyTaskId(db);
       try {
         planning.sqliteDual.withTransaction(
           () => {
@@ -275,7 +294,11 @@ export const teamExecutionModule: WorkflowModule = {
               );
             }
           },
-          { expectedPlanningGeneration: exp }
+          {
+            expectedPlanningGeneration: exp,
+            persistScope: "incremental",
+            ...(persistTaskId ? { dirtyTaskIds: [persistTaskId] } : {})
+          }
         );
       } catch (err) {
         if (err instanceof TaskEngineError) {
@@ -305,6 +328,7 @@ export const teamExecutionModule: WorkflowModule = {
         return { ok: false, code: "invalid-args", message: cv.message };
       }
       const ts = nowIso();
+      const persistTaskId = getAssignment(db, assignmentId)?.executionTaskId ?? readAnyTaskId(db);
       try {
         planning.sqliteDual.withTransaction(
           () => {
@@ -321,7 +345,11 @@ export const teamExecutionModule: WorkflowModule = {
               );
             }
           },
-          { expectedPlanningGeneration: exp }
+          {
+            expectedPlanningGeneration: exp,
+            persistScope: "incremental",
+            ...(persistTaskId ? { dirtyTaskIds: [persistTaskId] } : {})
+          }
         );
       } catch (err) {
         if (err instanceof TaskEngineError) {
@@ -347,6 +375,7 @@ export const teamExecutionModule: WorkflowModule = {
         };
       }
       const ts = nowIso();
+      const persistTaskId = getAssignment(db, assignmentId)?.executionTaskId ?? readAnyTaskId(db);
       try {
         planning.sqliteDual.withTransaction(
           () => {
@@ -358,7 +387,11 @@ export const teamExecutionModule: WorkflowModule = {
               );
             }
           },
-          { expectedPlanningGeneration: exp }
+          {
+            expectedPlanningGeneration: exp,
+            persistScope: "incremental",
+            ...(persistTaskId ? { dirtyTaskIds: [persistTaskId] } : {})
+          }
         );
       } catch (err) {
         if (err instanceof TaskEngineError) {

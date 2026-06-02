@@ -1,1 +1,1 @@
-cd extensions/cursor-workflow-cannon && npm run compile && npx @vscode/vsce package --no-dependencies
+pnpm run build && cd extensions/cursor-workflow-cannon && npm run compile && npx @vscode/vsce package --no-dependencies

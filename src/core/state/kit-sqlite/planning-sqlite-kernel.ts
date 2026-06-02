@@ -10,7 +10,7 @@ type SqliteDatabase = InstanceType<typeof Database>;
  */
 
 /** Bump and add a migration step in `migrateKitSqliteSchema` when DDL changes. Exposed for doctor / list-module-states. */
-export const KIT_SQLITE_USER_VERSION = 32;
+export const KIT_SQLITE_USER_VERSION = 33;
 
 export const TASK_ENGINE_TASKS_TABLE = "task_engine_tasks";
 export const TASK_ENGINE_DEPENDENCIES_TABLE = "task_engine_dependencies";
@@ -1216,6 +1216,31 @@ CREATE INDEX idx_kit_canonical_event_outbox_status_created
 `);
 }
 
+/** AgentSession registry/table (Phase 127 / T100641): kit_agent_sessions. */
+function migrateV32ToV33(db: SqliteDatabase): void {
+  if (tableExists(db, "kit_agent_sessions")) {
+    return;
+  }
+  db.exec(`
+CREATE TABLE kit_agent_sessions (
+  id TEXT PRIMARY KEY NOT NULL,
+  agent_id TEXT NOT NULL,
+  host_hint TEXT,
+  model_tier TEXT,
+  current_assignment_id TEXT,
+  current_activity_id TEXT,
+  current_task_id TEXT,
+  status TEXT NOT NULL DEFAULT 'open',
+  metadata_json TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  FOREIGN KEY (current_task_id) REFERENCES task_engine_tasks(id) ON DELETE SET NULL
+);
+CREATE INDEX idx_kit_agent_sessions_agent_id ON kit_agent_sessions(agent_id);
+CREATE INDEX idx_kit_agent_sessions_status_updated ON kit_agent_sessions(status, updated_at);
+`);
+}
+
 /**
  * Shared SQLite setup for workspace-kit.db: pragmas, centralized user_version migrations.
  * Call after `new Database(path)` for every open (read/write).
@@ -1392,6 +1417,11 @@ function migrateKitSqliteSchema(db: SqliteDatabase): void {
     migrateV31ToV32(db);
     db.pragma("user_version = 32");
     current = 32;
+  }
+  if (current < 33) {
+    migrateV32ToV33(db);
+    db.pragma("user_version = 33");
+    current = 33;
   }
 }
 
