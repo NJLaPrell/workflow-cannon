@@ -32,6 +32,28 @@ export type TeamAssignmentRow = {
   updatedAt: string;
 };
 
+export type ReconcileDecisionHint =
+  | "reconcile"
+  | "request_rework"
+  | "assign_blocker"
+  | "assign_review"
+  | "cancel_supersede";
+
+export type ReconcileHandoffContext = {
+  schemaVersion: 1;
+  handoffSchemaVersion: 1 | 2;
+  handoffSummary: string;
+  evidenceRefs: string[];
+  suggestedDecision: ReconcileDecisionHint;
+  suggestedDecisions: ReconcileDecisionHint[];
+  handoffStatus?: string;
+  blockersCount?: number;
+  risksCount?: number;
+  commandsRunCount?: number;
+  failedCommandCount?: number;
+  nextRecommendedAction?: string;
+};
+
 function countStringArray(value: unknown): number {
   if (!Array.isArray(value)) {
     return 0;
@@ -170,6 +192,90 @@ export function validateReconcileCheckpointV1(
     return { ok: false, message: "checkpoint.mergedSummary must be a non-empty string" };
   }
   return { ok: true, json: JSON.stringify(o) };
+}
+
+function readStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.filter((entry): entry is string => typeof entry === "string" && entry.trim().length > 0);
+}
+
+function decideFromHandoffStatus(status: string): ReconcileDecisionHint {
+  if (status === "blocked") {
+    return "assign_blocker";
+  }
+  if (status === "needs_review") {
+    return "assign_review";
+  }
+  if (status === "partial" || status === "failed") {
+    return "request_rework";
+  }
+  return "reconcile";
+}
+
+function collectSuggestedDecisions(
+  base: ReconcileDecisionHint,
+  nextRecommendedAction: string | undefined
+): ReconcileDecisionHint[] {
+  const out: ReconcileDecisionHint[] = [base];
+  const note = typeof nextRecommendedAction === "string" ? nextRecommendedAction.toLowerCase() : "";
+  if (note.includes("supersede") || note.includes("cancel")) {
+    out.push("cancel_supersede");
+  }
+  return out;
+}
+
+export function summarizeHandoffForReconcile(
+  handoff: Record<string, unknown> | null
+): ReconcileHandoffContext | null {
+  if (!handoff) {
+    return null;
+  }
+
+  if (handoff.schemaVersion === 1) {
+    const summary = typeof handoff.summary === "string" ? handoff.summary.trim() : "";
+    if (!summary) {
+      return null;
+    }
+    return {
+      schemaVersion: 1,
+      handoffSchemaVersion: 1,
+      handoffSummary: summary,
+      evidenceRefs: readStringArray(handoff.evidenceRefs),
+      suggestedDecision: "reconcile",
+      suggestedDecisions: ["reconcile"]
+    };
+  }
+
+  if (handoff.schemaVersion !== 2) {
+    return null;
+  }
+
+  const validated = validateHandoffV2(handoff);
+  if (!validated.ok) {
+    return null;
+  }
+
+  const data = validated.data;
+  const suggestedDecision = decideFromHandoffStatus(data.status);
+  const failedCommandCount = Array.isArray(data.commandsRun)
+    ? data.commandsRun.filter((run) => run.status === "failed").length
+    : 0;
+  return {
+    schemaVersion: 1,
+    handoffSchemaVersion: 2,
+    handoffStatus: data.status,
+    handoffSummary: data.summary,
+    evidenceRefs: data.evidenceRefs,
+    blockersCount: Array.isArray(data.blockers) ? data.blockers.length : 0,
+    risksCount: Array.isArray(data.risks) ? data.risks.length : 0,
+    commandsRunCount: Array.isArray(data.commandsRun) ? data.commandsRun.length : 0,
+    failedCommandCount,
+    nextRecommendedAction: data.nextRecommendedAction,
+    suggestedDecision,
+    suggestedDecisions: collectSuggestedDecisions(suggestedDecision, data.nextRecommendedAction)
+  };
 }
 
 export function parseMetadata(raw: unknown): Record<string, unknown> | null {

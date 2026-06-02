@@ -338,6 +338,90 @@ test("submit-assignment-handoff accepts handoff v2 payloads", async () => {
   assert.equal(submitted.data.assignment.handoff.agentId, "wrk-6");
 });
 
+test("reconcile-assignment consumes handoff v2 context and supports decision hints", async () => {
+  const workspace = await tmpDir();
+  const setupCtx = sqliteCtx(workspace);
+  const cases = [
+    { assignmentId: "asg-8610", workerId: "wrk-8610", status: "blocked", expectedDecision: "assign_blocker" },
+    { assignmentId: "asg-8611", workerId: "wrk-8611", status: "partial", expectedDecision: "request_rework" },
+    { assignmentId: "asg-8612", workerId: "wrk-8612", status: "needs_review", expectedDecision: "assign_review" }
+  ];
+
+  for (const c of cases) {
+    const taskId = `T-${c.assignmentId}`;
+    await seedExecutionTask(workspace, taskId, `Worker task ${c.assignmentId}`);
+
+    const registered = await teamExecutionModule.onCommand(
+      {
+        name: "register-assignment",
+        args: {
+          assignmentId: c.assignmentId,
+          executionTaskId: taskId,
+          supervisorId: "sup-8",
+          workerId: c.workerId
+        }
+      },
+      setupCtx
+    );
+    assert.equal(registered.ok, true);
+
+    const submitted = await teamExecutionModule.onCommand(
+      {
+        name: "submit-assignment-handoff",
+        args: {
+          assignmentId: c.assignmentId,
+          workerId: c.workerId,
+          handoff: {
+            schemaVersion: 2,
+            assignmentId: c.assignmentId,
+            agentId: c.workerId,
+            status: c.status,
+            summary: `handoff-${c.status}`,
+            evidenceRefs: [`artifacts/${c.assignmentId}.txt`],
+            nextRecommendedAction: "supersede current assignment"
+          },
+          expectedPlanningGeneration: registered.data.planningGeneration
+        }
+      },
+      sqliteCtxWithActor(workspace, c.workerId)
+    );
+    assert.equal(submitted.ok, true);
+
+    const reconcileArgs = {
+      assignmentId: c.assignmentId,
+      supervisorId: "sup-8",
+      expectedPlanningGeneration: submitted.data.planningGeneration
+    };
+    if (c.status !== "blocked") {
+      reconcileArgs.checkpoint = {
+        schemaVersion: 1,
+        mergedSummary: `supervisor-summary-${c.status}`
+      };
+    }
+
+    const reconciled = await teamExecutionModule.onCommand(
+      {
+        name: "reconcile-assignment",
+        args: reconcileArgs
+      },
+      sqliteCtxWithActor(workspace, "sup-8")
+    );
+
+    assert.equal(reconciled.ok, true);
+    assert.equal(reconciled.data.assignment.status, "reconciled");
+    assert.equal(reconciled.data.reconciliation.handoffContext.handoffSchemaVersion, 2);
+    assert.equal(reconciled.data.reconciliation.handoffContext.handoffStatus, c.status);
+    assert.equal(reconciled.data.reconciliation.suggestedDecision, c.expectedDecision);
+    assert.equal(reconciled.data.assignment.reconcileCheckpoint.handoffContext.suggestedDecision, c.expectedDecision);
+    assert.ok(reconciled.data.assignment.reconcileCheckpoint.handoffContext.suggestedDecisions.includes("cancel_supersede"));
+
+    if (c.status === "blocked") {
+      assert.equal(reconciled.data.reconciliation.checkpointDerivedFromHandoff, true);
+      assert.equal(reconciled.data.assignment.reconcileCheckpoint.mergedSummary, "handoff-blocked");
+    }
+  }
+});
+
 test("admin actor may execute supervisor lifecycle actions", async () => {
   const workspace = await tmpDir();
   const setupCtx = sqliteCtx(workspace);

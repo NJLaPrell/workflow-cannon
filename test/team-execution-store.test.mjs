@@ -13,6 +13,7 @@ import {
   blockAssignmentFromWorker,
   submitHandoff,
   reconcileAssignment,
+  summarizeHandoffForReconcile,
   validateAssignmentMetadataWhenPresent,
   validateHandoffContract,
   validateHandoffContractV1
@@ -229,4 +230,40 @@ test("handoff contract validator remains backward compatible for v1 payload", ()
     }
   );
   assert.equal(v1.ok, true);
+});
+
+test("reconcile handoff summary supports v2 status decision hints", () => {
+  const cases = [
+    { status: "blocked", expected: "assign_blocker" },
+    { status: "partial", expected: "request_rework" },
+    { status: "needs_review", expected: "assign_review" }
+  ];
+
+  for (const c of cases) {
+    const context = summarizeHandoffForReconcile({
+      ...handoffV2Fixture,
+      status: c.status,
+      summary: `summary-${c.status}`,
+      nextRecommendedAction: "supersede this assignment"
+    });
+    assert.ok(context);
+    assert.equal(context.handoffSchemaVersion, 2);
+    assert.equal(context.handoffStatus, c.status);
+    assert.equal(context.suggestedDecision, c.expected);
+    assert.ok(context.suggestedDecisions.includes("cancel_supersede"));
+  }
+});
+
+test("reconcile handoff summary remains compatible with v1 handoff", () => {
+  const context = summarizeHandoffForReconcile({
+    schemaVersion: 1,
+    summary: "legacy handoff",
+    evidenceRefs: ["artifacts/log.txt"]
+  });
+
+  assert.ok(context);
+  assert.equal(context.handoffSchemaVersion, 1);
+  assert.equal(context.handoffSummary, "legacy handoff");
+  assert.equal(context.suggestedDecision, "reconcile");
+  assert.deepEqual(context.evidenceRefs, ["artifacts/log.txt"]);
 });

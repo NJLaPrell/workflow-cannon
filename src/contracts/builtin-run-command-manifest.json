@@ -1554,7 +1554,7 @@
     "moduleId": "team-execution",
     "name": "reconcile-assignment",
     "file": "reconcile-assignment.md",
-    "description": "Supervisor reconciles submitted handoff (submitted \u2192 reconciled).",
+    "description": "Supervisor reconciles submitted handoff with v2-aware reconciliation hints (submitted \u2192 reconciled).",
     "policyOperationId": "team-execution.persist",
     "defaultResponseTemplateId": "default",
     "policySensitivity": "sensitive"

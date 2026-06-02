@@ -24,6 +24,7 @@ import {
   reconcileAssignmentByAdmin,
   resolveAssignmentMetadataValidationOptions,
   submitHandoff,
+  summarizeHandoffForReconcile,
   taskExistsInRelationalStore,
   validateAssignmentMetadataWhenPresent,
   validateHandoffContract,
@@ -778,12 +779,36 @@ export const teamExecutionModule: WorkflowModule = {
           message: "reconcile-assignment requires assignmentId and supervisorId"
         };
       }
-      const cv = validateReconcileCheckpointV1(args.checkpoint);
-      if (!cv.ok) {
-        return { ok: false, code: "invalid-args", message: cv.message };
-      }
       const ts = nowIso();
       const before = getAssignment(db, assignmentId);
+      const handoffContext = summarizeHandoffForReconcile(before?.handoff ?? null);
+      let checkpoint: Record<string, unknown>;
+      if (args.checkpoint === undefined || args.checkpoint === null) {
+        if (!handoffContext) {
+          return {
+            ok: false,
+            code: "invalid-args",
+            message: "reconcile-assignment requires checkpoint or submitted handoff summary"
+          };
+        }
+        checkpoint = {
+          schemaVersion: 1,
+          mergedSummary: handoffContext.handoffSummary
+        };
+      } else {
+        const cv = validateReconcileCheckpointV1(args.checkpoint);
+        if (!cv.ok) {
+          return { ok: false, code: "invalid-args", message: cv.message };
+        }
+        checkpoint = JSON.parse(cv.json) as Record<string, unknown>;
+      }
+      if (handoffContext) {
+        checkpoint.handoffContext = handoffContext;
+      }
+      const checkpointValidation = validateReconcileCheckpointV1(checkpoint);
+      if (!checkpointValidation.ok) {
+        return { ok: false, code: "invalid-args", message: checkpointValidation.message };
+      }
       const validation = validateAssignmentLifecycleAuthority({
         action: "reconcile-assignment",
         assignmentId,
@@ -804,13 +829,13 @@ export const teamExecutionModule: WorkflowModule = {
             const b = validation.allowSupervisorAdminOverride
               ? reconcileAssignmentByAdmin(db, {
                   assignmentId,
-                  checkpointJson: cv.json,
+                  checkpointJson: checkpointValidation.json,
                   now: ts
                 })
               : reconcileAssignment(db, {
                   assignmentId,
                   supervisorId,
-                  checkpointJson: cv.json,
+                  checkpointJson: checkpointValidation.json,
                   now: ts
                 });
             if (!b) {
@@ -843,7 +868,25 @@ export const teamExecutionModule: WorkflowModule = {
         }
         throw err;
       }
-      const data: Record<string, unknown> = { assignment: getAssignment(db, assignmentId) };
+      const assignment = getAssignment(db, assignmentId);
+      const persistedCheckpoint = assignment?.reconcileCheckpoint;
+      const persistedHandoffContext =
+        persistedCheckpoint &&
+        typeof persistedCheckpoint.handoffContext === "object" &&
+        !Array.isArray(persistedCheckpoint.handoffContext)
+          ? (persistedCheckpoint.handoffContext as Record<string, unknown>)
+          : undefined;
+      const data: Record<string, unknown> = {
+        assignment,
+        reconciliation: {
+          checkpointDerivedFromHandoff: args.checkpoint === undefined || args.checkpoint === null,
+          handoffContext: handoffContext ?? null,
+          suggestedDecision:
+            typeof persistedHandoffContext?.suggestedDecision === "string"
+              ? persistedHandoffContext.suggestedDecision
+              : undefined
+        }
+      };
       attachPlanningMeta(data, ctx, planning.sqliteDual.getPlanningGeneration());
       return { ok: true, code: "assignment-reconciled", message: `Reconciled '${assignmentId}'`, data };
     }
