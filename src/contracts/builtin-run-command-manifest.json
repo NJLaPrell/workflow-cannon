@@ -1446,14 +1446,6 @@
   },
   {
     "moduleId": "team-execution",
-    "name": "agent-execution-packet",
-    "file": "agent-execution-packet.md",
-    "description": "Build a bounded worker execution packet for one assignment without reading the full queue.",
-    "defaultResponseTemplateId": "default",
-    "policySensitivity": "non-sensitive"
-  },
-  {
-    "moduleId": "team-execution",
     "name": "register-assignment",
     "file": "register-assignment.md",
     "description": "Create a supervisor/worker assignment row and persist bounded packet metadata when available.",
