@@ -149,6 +149,14 @@
   },
   {
     "moduleId": "task-engine",
+    "name": "phase-release-orchestration-state",
+    "file": "phase-release-orchestration-state.md",
+    "description": "Classify current phase release path into one of six bounded verdicts with reference-first next actions.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
     "name": "phase-delivery-preflight",
     "file": "phase-delivery-preflight.md",
     "description": "Read-only audit for phase task PR/merge/check evidence or explicit delivery waivers.",
@@ -291,7 +299,7 @@
     "moduleId": "task-engine",
     "name": "derive-publish-artifacts",
     "file": "derive-publish-artifacts.md",
-    "description": "Derive publishArtifacts fragment for release-evidence-manifest from gh/npm signals.",
+    "description": "Derive publishArtifacts plus bounded release readiness checks for release-evidence-manifest from changelog/schema/gh/npm signals.",
     "defaultResponseTemplateId": "default",
     "policySensitivity": "non-sensitive"
   },
@@ -1425,6 +1433,14 @@
     "name": "list-assignments",
     "file": "list-assignments.md",
     "description": "List team assignments in kit SQLite with packet audit and stale-context metadata when present.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "team-execution",
+    "name": "agent-execution-packet",
+    "file": "agent-execution-packet.md",
+    "description": "Build a bounded worker execution packet for one assignment without reading the full queue.",
     "defaultResponseTemplateId": "default",
     "policySensitivity": "non-sensitive"
   },

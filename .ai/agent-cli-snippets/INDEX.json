@@ -853,6 +853,11 @@
       "moduleId": "task-engine"
     },
     {
+      "name": "phase-release-orchestration-state",
+      "path": ".ai/agent-cli-snippets/by-command/phase-release-orchestration-state.json",
+      "moduleId": "task-engine"
+    },
+    {
       "name": "phase-status",
       "path": ".ai/agent-cli-snippets/by-command/phase-status.json",
       "moduleId": "task-engine"

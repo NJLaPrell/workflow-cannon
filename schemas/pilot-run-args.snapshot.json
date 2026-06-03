@@ -73,6 +73,7 @@
     "phase-closeout-readiness",
     "phase-delivery-preflight",
     "phase-focus-dashboard",
+    "phase-release-orchestration-state",
     "phase-status",
     "planning-state-migrate-baseline",
     "propose-release-version",
@@ -1283,6 +1284,9 @@
       "type": "object"
     },
     "phase-focus-dashboard": {
+      "type": "object"
+    },
+    "phase-release-orchestration-state": {
       "type": "object"
     },
     "phase-status": {

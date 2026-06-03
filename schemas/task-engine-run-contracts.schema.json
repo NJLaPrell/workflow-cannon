@@ -96,6 +96,7 @@
         "phase-closeout-readiness",
         "phase-delivery-preflight",
         "phase-focus-dashboard",
+        "phase-release-orchestration-state",
         "phase-status",
         "planning-state-migrate-baseline",
         "propose-release-version",
@@ -361,6 +362,9 @@
           "$ref": "#/$defs/contractBase"
         },
         "phase-focus-dashboard": {
+          "$ref": "#/$defs/contractBase"
+        },
+        "phase-release-orchestration-state": {
           "$ref": "#/$defs/contractBase"
         },
         "derive-publish-artifacts": {
