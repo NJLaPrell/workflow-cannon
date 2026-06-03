@@ -2,10 +2,11 @@ import type { DashboardMutationKind } from "./dashboard-section-invalidation.js"
 import type { DashboardSectionId } from "./dashboard-section-registry.js";
 import type { DashboardSliceName } from "./dashboard-snapshot-types.js";
 
-export type DashboardPollGroupId = "critical" | "queue" | "ops" | "status";
+export type DashboardPollGroupId = "critical" | "live" | "queue" | "ops" | "status";
 
 export const DASHBOARD_POLL_GROUP_INTERVAL_MS: Readonly<Record<DashboardPollGroupId, number>> = {
   critical: 2000,
+  live: 3000,
   queue: 5000,
   ops: 10000,
   status: 30000
@@ -127,8 +128,8 @@ export const DASHBOARD_SLICE_REGISTRY: readonly DashboardSliceDescriptor[] = [
     sectionId: "overview",
     command: "dashboard-summary",
     args: { projection: "agentActivity" },
-    pollGroup: "critical",
-    visibleOnly: false,
+    pollGroup: "live",
+    visibleOnly: true,
     freshnessTtlMs: 10_000,
     freshnessSlaMs: 10_000,
     staleOnMutationKinds: ["task-queue", "workspace-wide"],

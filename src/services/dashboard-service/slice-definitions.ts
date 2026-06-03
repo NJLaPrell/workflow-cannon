@@ -92,7 +92,7 @@ export const DASHBOARD_SERVICE_SLICE_DEFINITIONS: readonly DashboardServiceSlice
   },
   {
     name: "agentActivity",
-    pollGroup: "critical",
+    pollGroup: "live",
     command: "dashboard-summary",
     args: { projection: "agentActivity" },
     source: "dashboard-summary:agentActivity",
