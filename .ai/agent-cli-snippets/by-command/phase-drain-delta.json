@@ -1,23 +1,23 @@
 {
   "ok": true,
   "code": "run-args-schema",
-  "command": "update-behavior-profile",
+  "command": "phase-drain-delta",
   "schema": {
     "type": "object",
     "additionalProperties": true,
-    "description": "Permissive fallback args schema for 'update-behavior-profile'. Use instructionPath for command-specific field guidance until a stricter schema is added."
+    "description": "Permissive fallback args schema for 'phase-drain-delta'. Use instructionPath for command-specific field guidance until a stricter schema is added."
   },
   "schemaSource": "manifest-permissive-fallback",
   "sampleArgs": {},
   "examples": [
     {
       "description": "Minimal argv example",
-      "argv": "workspace-kit run update-behavior-profile '{}'"
+      "argv": "workspace-kit run phase-drain-delta '{}'"
     }
   ],
-  "instructionPath": "src/modules/agent-behavior/instructions/update-behavior-profile.md",
-  "moduleId": "agent-behavior",
-  "description": "Patch a custom behavior profile.",
+  "instructionPath": "src/modules/task-engine/instructions/phase-drain-delta.md",
+  "moduleId": "task-engine",
+  "description": "Generation-aware delta for phase drain refreshes with bounded changed task and assignment slices.",
   "policy": {
     "sensitivity": "non-sensitive",
     "operationId": null,
@@ -31,12 +31,12 @@
     "clientMutationId": false
   },
   "responseTemplate": {
-    "defaultResponseTemplateId": null
+    "defaultResponseTemplateId": "default"
   },
   "remediationContract": ".ai/runbooks/agent-task-engine-ergonomics.md",
   "discovery": {
     "listCommands": "pnpm exec wk run --list-commands",
     "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
   },
-  "invocationId": "5e61d883-86e8-4523-a9aa-876774a242a9"
+  "invocationId": "d170b973-d171-4221-83a0-e7acd8e279fd"
 }

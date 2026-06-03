@@ -149,6 +149,14 @@
   },
   {
     "moduleId": "task-engine",
+    "name": "phase-drain-delta",
+    "file": "phase-drain-delta.md",
+    "description": "Generation-aware delta for phase drain refreshes with bounded changed task and assignment slices.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
     "name": "phase-release-orchestration-state",
     "file": "phase-release-orchestration-state.md",
     "description": "Classify current phase release path into one of six bounded verdicts with reference-first next actions.",

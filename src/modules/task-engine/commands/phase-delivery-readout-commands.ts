@@ -22,7 +22,12 @@ import { proposeReleaseVersion } from "../propose-release-version-runtime.js";
 import { buildPhaseServiceSyncPreflight } from "../phase-service-sync-preflight.js";
 import { buildPhaseProjectionCountGuardAsync } from "../sync-backends/git-event-log-phase-projection-guard.js";
 import { wasWorkspacePhaseRolledOut } from "../dashboard/phase-delivery-status.js";
-import { buildPhaseReleaseOrchestrationState } from "../phase-release-orchestration-state-runtime.js";
+import {
+  buildPhaseDrainDelta,
+  buildPhaseReleaseOrchestrationState,
+  parsePhaseDrainDeltaCursor
+} from "../phase-release-orchestration-state-runtime.js";
+import { listAssignments } from "../../team-execution/assignment-store.js";
 import { runPrepareReleaseArtifactsCommand } from "../prepare-release-artifacts-runtime.js";
 
 /**
@@ -92,6 +97,57 @@ export async function resolvePhaseDeliveryReadoutCommands(
       ok: true,
       code: "phase-release-orchestration-state",
       message: `Phase release orchestration verdict: ${phaseState.verdict}`,
+      data
+    };
+  }
+
+  if (command.name === "phase-drain-delta") {
+    const workspaceStatus = readWorkspaceStatusSnapshotFromDual(planning.sqliteDual);
+    const phaseRes = resolveCanonicalPhase({
+      effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined,
+      workspaceStatus
+    });
+    const phaseKey = phaseRes.canonicalPhaseKey;
+    const parsedCursor = Object.hasOwn(args, "cursor") ? parsePhaseDrainDeltaCursor(args.cursor) : null;
+    const delta = buildPhaseDrainDelta({
+      workspacePath: ctx.workspacePath,
+      effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined,
+      tasks: store.getActiveTasks(),
+      assignments: listAssignments(planning.sqliteDual.getDatabase(), {}),
+      phaseKey,
+      currentKitPhase: workspaceStatus?.currentKitPhase ?? null,
+      rolledOut: phaseKey ? wasWorkspacePhaseRolledOut(planning.sqliteDual.getDatabase(), phaseKey) : false,
+      planningGeneration: planning.sqliteDual.getPlanningGeneration(),
+      cursor: parsedCursor,
+      taskLimit: typeof args.taskLimit === "number" ? args.taskLimit : undefined,
+      assignmentLimit: typeof args.assignmentLimit === "number" ? args.assignmentLimit : undefined
+    });
+    const data: Record<string, unknown> = {
+      ...delta,
+      canonicalPhase: phaseRes
+    };
+    if (Object.hasOwn(args, "cursor") && parsedCursor === null) {
+      data.cursorAccepted = false;
+      data.cursorStatus = "invalid";
+      data.cursorStatusReason = "Cursor must match the phase-drain-delta schema and carry valid high-water marks.";
+      data.refreshRecommendation = {
+        mode: "full-refresh",
+        reason: "invalid-cursor",
+        ref: {
+          command: "phase-release-orchestration-state",
+          commandLine: "pnpm exec wk run phase-release-orchestration-state '{}'",
+          instructionPath: "src/modules/task-engine/instructions/phase-release-orchestration-state.md"
+        }
+      };
+    }
+    attachPolicyMeta(data, ctx, planning.sqliteDual.getPlanningGeneration());
+    return {
+      ok: true,
+      code: "phase-drain-delta",
+      message:
+        data.refreshRecommendation && (data.refreshRecommendation as { mode: string }).mode === "full-refresh"
+          ? "Phase drain delta requires a safe full refresh"
+          : `Phase drain delta returned ${delta.changedTasks.length} task change(s) and ${delta.changedAssignments.length} assignment change(s)`,
       data
     };
   }
