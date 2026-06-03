@@ -3831,7 +3831,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         return false;
       }
       ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
-      this.closeDashboardDrawer();
+      await this.closeDashboardDrawer();
+      await this.applyDashboardMutationInvalidation("task-queue");
       this.notifyKitStateChanged();
       this.queueDrawerNotify(r.message ?? "Session closed");
       return true;

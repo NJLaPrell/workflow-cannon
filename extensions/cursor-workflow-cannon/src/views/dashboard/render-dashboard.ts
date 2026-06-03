@@ -1155,7 +1155,15 @@ function phaseSegmentTotal(segments: PhaseSnapshotSegments): number {
 /** Delivery has started — readiness score locks at 100% for the rest of the phase. */
 function phaseWorkHasBegun(snapshot: PhaseSnapshot): boolean {
   const s = snapshot.segments;
-  return s.completed > 0 || s.inProgress > 0 || s.cancelled > 0;
+  return (
+    s.completed > 0 ||
+    s.inProgress > 0 ||
+    s.cancelled > 0 ||
+    snapshot.terminalCount > 0 ||
+    snapshot.checkedTaskCount > 0 ||
+    snapshot.closeoutPassed ||
+    snapshot.released
+  );
 }
 
 type PhaseReadinessCheck = {
@@ -1170,16 +1178,23 @@ function buildPhaseReadinessChecks(args: {
   curPhase: string;
   blockers: string[];
   pending: string[];
-  queue: PhaseSnapshotQueue;
-  segments: PhaseSnapshotSegments;
+  snapshot: PhaseSnapshot | null;
   workBegun: boolean;
 }): PhaseReadinessCheck[] {
-  const { curPhase, blockers, pending, queue, segments, workBegun } = args;
+  const { curPhase, blockers, pending, snapshot, workBegun } = args;
+  const queue = snapshot?.queue ?? EMPTY_PHASE_QUEUE;
+  const segments = snapshot?.segments ?? EMPTY_PHASE_SEGMENTS;
   const runnable = queue.ready + queue.inProgress;
   const phaseBlocked = queue.blocked;
   const phaseProposed = queue.proposed;
+  const assignedCount = Math.max(
+    phaseSegmentTotal(segments),
+    snapshot?.checkedTaskCount ?? 0,
+    queue.ready + queue.inProgress + queue.proposed + queue.blocked + queue.research
+  );
+  const hasAssignedTasks = assignedCount > 0;
 
-  const readyWorkOk = workBegun || runnable > 0;
+  const readyWorkOk = workBegun || hasAssignedTasks;
   let readyWorkMeta: string | undefined;
   if (workBegun && runnable === 0) {
     readyWorkMeta =
@@ -1190,8 +1205,10 @@ function buildPhaseReadinessChecks(args: {
     readyWorkMeta = String(queue.ready) + " ready · " + String(queue.inProgress) + " in progress";
   } else if (phaseProposed > 0) {
     readyWorkMeta = String(phaseProposed) + " waiting to be accepted";
+  } else if (hasAssignedTasks) {
+    readyWorkMeta = String(assignedCount) + " assigned";
   } else {
-    readyWorkMeta = "nothing to pick up yet";
+    readyWorkMeta = "no tasks assigned";
   }
 
   const checks: PhaseReadinessCheck[] = [
@@ -1203,11 +1220,11 @@ function buildPhaseReadinessChecks(args: {
         "Open the Config tab and set your current phase. You need this before work in the phase can begin."
     },
     {
-      label: "Tasks ready to pick up",
+      label: "Tasks assigned to this phase",
       ok: readyWorkOk,
       statusMeta: readyWorkMeta,
       failHelp:
-        "Open the Queue tab and accept proposed tasks, or move tasks to Ready, so you have work waiting when this phase starts."
+        "Assign at least one task to this phase on the Queue tab before starting delivery."
     },
     {
       label: "No blocked tasks",
@@ -1322,9 +1339,15 @@ function phaseDeliveryBarPercent(segments: PhaseSnapshotSegments): number {
 function phaseProgressOverallPercent(
   snapshot: PhaseSnapshot,
   humanGateCount: number,
-  orderingRisk?: PhaseCloseoutOrderingRisk | null
+  orderingRisk?: PhaseCloseoutOrderingRisk | null,
+  phaseReleased?: boolean
 ): number {
-  const checks = buildPhaseProgressChecks({ snapshot, humanGateCount, orderingRisk });
+  const checks = buildPhaseProgressChecks({
+    snapshot,
+    humanGateCount,
+    orderingRisk,
+    phaseReleased
+  });
   if (checks.length === 0) {
     return 0;
   }
@@ -1450,14 +1473,16 @@ function buildPhaseProgressChecks(args: {
   snapshot: PhaseSnapshot;
   humanGateCount: number;
   orderingRisk?: PhaseCloseoutOrderingRisk | null;
+  phaseReleased?: boolean;
 }): PhaseProgressCheck[] {
-  const { snapshot, humanGateCount, orderingRisk } = args;
+  const { snapshot, humanGateCount, orderingRisk, phaseReleased } = args;
   const segments = snapshot.segments;
   const started = phaseWorkHasBegun(snapshot);
   const checked = snapshot.checkedTaskCount;
   const evidenceOk = snapshot.deliveryEvidenceViolationCount === 0;
   const releaseReady = snapshot.releaseReadyPercent >= 100;
   const orderingOk = orderingRisk == null;
+  const released = phaseReleased ?? snapshot.released;
 
   return [
     {
@@ -1511,8 +1536,8 @@ function buildPhaseProgressChecks(args: {
     },
     {
       label: "Phase released",
-      ok: snapshot.released,
-      statusMeta: snapshot.released ? "delivered" : "still current",
+      ok: released,
+      statusMeta: released ? "delivered" : "still current",
       failHelp: "Use Complete & Release when every check above passes."
     },
     {
@@ -1523,6 +1548,18 @@ function buildPhaseProgressChecks(args: {
         "Finish remaining delivery tasks and evidence before you release this phase."
     }
   ];
+}
+
+function deliveredPhaseKeysInclude(
+  delivered: ReadonlySet<string> | readonly string[] | undefined,
+  phaseKey: string
+): boolean {
+  const target = phaseKey.trim();
+  if (target.length === 0 || !delivered) {
+    return false;
+  }
+  const values = Array.isArray(delivered) ? delivered : Array.from(delivered.values());
+  return values.some((value: string) => String(value).trim() === target);
 }
 
 function renderPhaseRosterEditButton(phaseKey: string): string {
@@ -1609,16 +1646,13 @@ function renderPhaseReadinessCard(
     ? (ws!.pendingDecisions as unknown[]).map((x) => String(x)).filter((s) => s.trim().length > 0)
     : [];
 
-  const queue = snapshot?.queue ?? EMPTY_PHASE_QUEUE;
-  const segments = snapshot?.segments ?? EMPTY_PHASE_SEGMENTS;
   const workBegun = snapshot ? phaseWorkHasBegun(snapshot) : false;
 
   const checks = buildPhaseReadinessChecks({
     curPhase,
     blockers,
     pending,
-    queue,
-    segments,
+    snapshot,
     workBegun
   });
   const score = computePhaseReadinessScore(checks, workBegun);
@@ -1720,11 +1754,14 @@ function renderPhaseProgressCard(
     return "";
   }
   const orderingRisk = resolvePhaseCloseoutOrderingRisk(ws, orderingInputs);
+  const phaseReleased =
+    snapshot.released ||
+    deliveredPhaseKeysInclude(orderingInputs?.deliveredPhaseKeys, snapshot.phaseKey ?? curPhase);
   const nextPhase =
     ws?.nextKitPhase != null ? String(ws.nextKitPhase).trim() : "";
   const segments = snapshot?.segments ?? EMPTY_PHASE_SEGMENTS;
   const barPct = phaseDeliveryBarPercent(segments);
-  const overallPct = phaseProgressOverallPercent(snapshot, humanGateCount, orderingRisk);
+  const overallPct = phaseProgressOverallPercent(snapshot, humanGateCount, orderingRisk, phaseReleased);
   const terminal = snapshot?.terminalCount ?? 0;
   const checked = snapshot?.checkedTaskCount ?? 0;
   const remaining = snapshot?.remainingCount ?? 0;
@@ -1750,7 +1787,12 @@ function renderPhaseProgressCard(
       ? '<p class="muted">Finish remaining delivery tasks in this phase before you release it.</p>'
       : "";
 
-  const progressChecks = buildPhaseProgressChecks({ snapshot, humanGateCount, orderingRisk });
+  const progressChecks = buildPhaseProgressChecks({
+    snapshot,
+    humanGateCount,
+    orderingRisk,
+    phaseReleased
+  });
   const progressChecksSection =
     '<div class="wc-cae-checks wc-phase-progress-checks">' +
     progressChecks.map((c) => renderPhaseCheckRow(c)).join("") +
@@ -5420,7 +5462,6 @@ export function renderDashboardRootInnerHtml(
 
   const tasksQuickActionsPanel =
     '<div class="dash-quick-actions" role="toolbar" aria-label="Chat playbook shortcuts">' +
-    '<button type="button" class="wc-btn wc-btn-md wc-btn-secondary" data-wc-action="add-wishlist-item" title="Add a new wishlist item">Add Wishlist Item</button>' +
     '<button type="button" class="wc-btn wc-btn-md wc-btn-primary" data-wc-action="generate-features-chat" title="New chat with /generate-features as text (same as slash command)">Generate Features</button>' +
     "</div>";
 
