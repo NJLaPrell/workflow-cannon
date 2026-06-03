@@ -123,6 +123,18 @@ export const DASHBOARD_SLICE_REGISTRY: readonly DashboardSliceDescriptor[] = [
       pick(data, [...SHARED_META_KEYS, "agentStatus", "agentGuidance", "suggestedNext"])
   },
   {
+    name: "agentActivity",
+    sectionId: "overview",
+    command: "dashboard-summary",
+    args: { projection: "agentActivity" },
+    pollGroup: "critical",
+    visibleOnly: false,
+    freshnessTtlMs: 10_000,
+    freshnessSlaMs: 10_000,
+    staleOnMutationKinds: ["task-queue", "workspace-wide"],
+    extractPayload: (data) => pick(data, [...SHARED_META_KEYS, "agentActivitySummary"])
+  },
+  {
     name: "queue",
     sectionId: "queue",
     command: "dashboard-summary",

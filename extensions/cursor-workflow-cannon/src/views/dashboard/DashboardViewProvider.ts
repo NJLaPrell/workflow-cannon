@@ -669,7 +669,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
 
   private ingestDashboardSummaryIntoStore(
     data: Record<string, unknown>,
-    projection: "full" | "overview" | "queue" | "status"
+    projection: "full" | "overview" | "queue" | "status" | "agentActivity"
   ): void {
     const planningGeneration =
       typeof data.planningGeneration === "number" ? data.planningGeneration : null;

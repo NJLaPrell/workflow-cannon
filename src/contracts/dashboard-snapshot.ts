@@ -12,6 +12,7 @@ export type DashboardServiceSliceName =
   | "phaseJournal"
   | "status"
   | "agent"
+  | "agentActivity"
   | "team"
   | "subagents"
   | "checkpoints"

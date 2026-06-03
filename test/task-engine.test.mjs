@@ -2578,6 +2578,48 @@ test("taskEngineModule dashboard-summary overview projection omits queue rollups
   assert.ok(JSON.stringify(overview.data).length < JSON.stringify(full.data).length);
 });
 
+test("taskEngineModule dashboard-summary agentActivity projection refreshes live activity without queue or status rollups", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(makeTask({ id: "T902", status: "ready", priority: "P1", phaseKey: "81" }));
+  });
+
+  const ctx = sqliteTaskEngineCtx(workspace);
+  const db = new Database(path.join(workspace, ".workspace-kit", "tasks", "workspace-kit.db"));
+  try {
+    prepareKitSqliteDatabase(db);
+    setAgentActivityLease(db, {
+      activityId: "copilot:activity",
+      agentId: "copilot",
+      sessionId: "activity",
+      kind: "working_task",
+      label: "Working on Task T902",
+      now: "2026-06-02T18:00:00.000Z",
+      expiresAt: "2999-01-01T00:00:00.000Z"
+    });
+  } finally {
+    db.close();
+  }
+
+  const result = await taskEngineModule.onCommand(
+    { name: "dashboard-summary", args: { projection: "agentActivity" } },
+    ctx
+  );
+  assert.equal(result.ok, true);
+  assert.equal(result.data.dashboardProjection, "agentActivity");
+  assert.ok(result.data.agentActivitySummary);
+  assert.equal(result.data.agentActivitySummary.schemaVersion, 1);
+  assert.equal(result.data.agentActivitySummary.source, "live_activity");
+  assert.equal(result.data.agentActivitySummary.main?.source, "live_activity");
+  assert.equal(result.data.agentActivitySummary.main?.status, "working_task");
+  assert.equal(result.data.agentActivitySummary.main?.work.taskId, null);
+  assert.equal(result.data.agentActivitySummary.sourceMap.liveActivityCount, 1);
+  assert.equal("readyQueueCount" in result.data, false);
+  assert.equal("blockedSummary" in result.data, false);
+  assert.equal("systemStatus" in result.data, false);
+  assert.equal("agentStatus" in result.data, false);
+});
+
 test("taskEngineModule dashboard-summary splits ready improvements vs execution", async () => {
   const workspace = await tmpDir();
   await seedSqliteStore(workspace, (store) => {
