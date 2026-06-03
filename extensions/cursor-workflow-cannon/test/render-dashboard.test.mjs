@@ -1190,9 +1190,14 @@ test("renderDashboardRootInnerHtml renders compact Agent Activity board from pro
         main: makeAgentActivityRow({
           displayName: "Dashboard UX Worker <script>",
           statusLabel: "Working on Task T123",
+          metadata: {
+            agentDisplayName: "UX <Worker>",
+            customAgentName: "Dashboard Scout"
+          },
           work: {
             taskId: "T123",
             title: "Build activity board",
+            taskStatus: "in_progress",
             command: "pnpm run test",
             phaseKey: "95",
             currentStep: "Rendering board"
@@ -1234,10 +1239,19 @@ test("renderDashboardRootInnerHtml renders compact Agent Activity board from pro
   assert.match(html, /Agent Activity/);
   assert.match(html, /Working/);
   assert.match(html, /Source: Live/);
+  assert.match(html, /<details class="dash-agent-row dash-agent-activity-row dash-agent-activity-row--main"/);
+  assert.match(html, /<summary class="dash-agent-row-summary">/);
   assert.match(html, /data-agent-row-kind="main"/);
+  assert.match(html, /data-agent-row-id="row:main"/);
   assert.match(html, /dash-agent-row/);
   assert.match(html, /aria-label="Dashboard UX Worker &lt;script&gt;, Working, Main Agent"/);
   assert.match(html, /T123/);
+  assert.match(html, /<dt>Task status<\/dt><dd>in_progress<\/dd>/);
+  assert.match(html, /<dt>Activity<\/dt><dd>lease-main<\/dd>/);
+  assert.match(html, /<dt>Session<\/dt><dd>sess-main<\/dd>/);
+  assert.match(html, /<dt>Custom agent<\/dt><dd>Dashboard Scout<\/dd>/);
+  assert.match(html, /<dt>Agent display<\/dt><dd>UX &lt;Worker&gt;<\/dd>/);
+  assert.doesNotMatch(html, /"agentDisplayName"/);
   assert.doesNotMatch(html, /<script>/);
   assert.ok(html.indexOf("Agent Activity") < html.indexOf("Current Phase"));
 });

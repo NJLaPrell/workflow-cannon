@@ -4230,6 +4230,60 @@ function dashboardAgentActivityDetail(row: DashboardAgentActivityRow): string {
   return parts.length > 0 ? parts.join(" · ") : "No task metadata";
 }
 
+function dashboardAgentActivityDetailItems(row: DashboardAgentActivityRow): Array<[string, string]> {
+  const items: Array<[string, string]> = [];
+  const add = (label: string, value: unknown): void => {
+    const text = cleanDashboardText(value);
+    if (text) {
+      items.push([label, text]);
+    }
+  };
+  add("Row", row.rowId);
+  add("Task", row.work.taskId);
+  add("Title", row.work.title);
+  add("Task status", row.work.taskStatus);
+  add("Phase", row.work.phaseKey ? `Phase ${row.work.phaseKey}` : "");
+  add("Command", row.work.command);
+  add("Current step", row.work.currentStep);
+  add("Activity", row.refs.activityId);
+  add("Agent", row.refs.agentId);
+  add("Session", row.refs.sessionId ?? row.work.sessionId);
+  add("Assignment", row.refs.assignmentId ?? row.work.assignmentId);
+  add("Agent definition", row.refs.agentDefinitionId);
+  add("Subagent definition", row.refs.subagentDefinitionId);
+  add("PR", row.refs.prNumber != null ? `#${String(row.refs.prNumber)}` : "");
+  add("Updated", row.freshness.updatedAt);
+  add("Started", row.freshness.startedAt);
+  add("Expires", row.freshness.expiresAt);
+  add("Custom agent", row.metadata?.customAgentName);
+  add("Agent display", row.metadata?.agentDisplayName);
+  if (row.attention.message) {
+    add("Attention", row.attention.message);
+  }
+  return items;
+}
+
+function renderDashboardAgentActivityExpandedDetails(row: DashboardAgentActivityRow): string {
+  const items = dashboardAgentActivityDetailItems(row);
+  if (items.length === 0) {
+    return '<p class="muted">No expanded context is available.</p>';
+  }
+  return (
+    '<dl class="dash-agent-row-expanded">' +
+    items
+      .map(
+        ([label, value]) =>
+          "<div><dt>" +
+          escapeHtml(label) +
+          "</dt><dd>" +
+          escapeHtml(value) +
+          "</dd></div>"
+      )
+      .join("") +
+    "</dl>"
+  );
+}
+
 function renderDashboardAgentActivityChip(label: string, kind: string): string {
   if (!label) {
     return "";
@@ -4269,15 +4323,18 @@ function renderDashboardAgentActivityRow(
     .join("");
   const aria = `${labelText}, ${statusText}, ${rowKind === "main" ? "Main Agent" : rowKind === "attention" ? "Needs Attention" : "Active Agent"}`;
   return (
-    '<div class="dash-agent-row dash-agent-activity-row dash-agent-activity-row--' +
+    '<details class="dash-agent-row dash-agent-activity-row dash-agent-activity-row--' +
     rowKind +
     '" role="listitem" data-agent-row-kind="' +
     escapeHtmlAttr(rowKind) +
     '" data-agent-row-source="' +
     escapeHtmlAttr(row.source) +
+    '" data-agent-row-id="' +
+    escapeHtmlAttr(row.rowId) +
     '" aria-label="' +
     escapeHtmlAttr(aria) +
     '">' +
+    '<summary class="dash-agent-row-summary">' +
     '<span class="dash-agent-row-icon" aria-hidden="true">●</span>' +
     '<span class="dash-agent-row-main"><b>' +
     escapeHtml(labelText) +
@@ -4290,7 +4347,11 @@ function renderDashboardAgentActivityRow(
     '<span class="dash-agent-row-meta">' +
     chips +
     "</span>" +
-    "</div>"
+    "</summary>" +
+    '<div class="dash-agent-row-details" aria-label="Expanded agent activity context">' +
+    renderDashboardAgentActivityExpandedDetails(row) +
+    "</div>" +
+    "</details>"
   );
 }
 
