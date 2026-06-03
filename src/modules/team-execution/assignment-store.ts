@@ -4,6 +4,7 @@ import {
   TEAM_ASSIGNMENT_METADATA_SCHEMA_VERSION,
   type TeamAssignmentMetadataV1,
   type TeamAssignmentOrchestrationMetadataSummary,
+  type TeamAssignmentValidationCommand,
   type WorkerPacketModelTierLabel,
   type WorkerPacketModelTierRecommendation
 } from "../../contracts/team-execution-assignment-metadata.v1.js";
@@ -21,6 +22,16 @@ export const TEAM_EXECUTION_KIT_MIN_USER_VERSION = 7;
 const ASSIGNMENT_STATUSES = new Set(["assigned", "submitted", "blocked", "reconciled", "cancelled"]);
 
 export type TeamAssignmentStatus = "assigned" | "submitted" | "blocked" | "reconciled" | "cancelled";
+
+export type AssignmentPacketRegistryRow = {
+  packetId: string;
+  packetDigest: string;
+  assignmentId: string;
+  executionTaskId: string;
+  body: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+};
 
 export type TeamAssignmentRow = {
   id: string;
@@ -64,6 +75,19 @@ function countStringArray(value: unknown): number {
     return 0;
   }
   return value.filter((entry) => typeof entry === "string").length;
+}
+
+function countValidationCommands(value: unknown): number {
+  if (!Array.isArray(value)) {
+    return 0;
+  }
+  return value.filter((entry) => {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+      return false;
+    }
+    const command = (entry as Record<string, unknown>).command;
+    return typeof command === "string" && command.trim().length > 0;
+  }).length;
 }
 
 function readOptionalString(value: unknown): string | undefined {
@@ -152,6 +176,12 @@ function normalizedAssignmentPacketMetadataFields(metadata: TeamAssignmentMetada
     normalized.modelTierRationale = recommendation.rationale;
     normalized.modelTierRecommendation = recommendation;
   }
+  const validationCommands = normalizeAssignmentValidationCommands(metadata.validationCommands);
+  if (validationCommands) {
+    normalized.validationCommands = validationCommands;
+  } else {
+    delete normalized.validationCommands;
+  }
   return normalized;
 }
 
@@ -188,7 +218,7 @@ export function normalizeAssignmentPacketMetadata(input: {
   }
 
   const normalized = normalizedAssignmentPacketMetadataFields(input.metadata);
-  const packetDigest = buildAssignmentPacketDigest(input);
+  const packetDigest = readOptionalString(input.metadata.packetDigest) ?? buildAssignmentPacketDigest(input);
   if (packetDigest) {
     normalized.packetDigest = packetDigest;
   }
@@ -219,12 +249,14 @@ export function summarizeAssignmentOrchestrationMetadata(
     modelTier: readOptionalString(metadata.modelTier) as TeamAssignmentOrchestrationMetadataSummary["modelTier"],
     modelTierRationale: readOptionalString(metadata.modelTierRationale),
     modelTierRecommendation: buildAssignmentPacketModelTierRecommendation(metadata) ?? undefined,
+    packetId: readOptionalString(metadata.packetId),
     packetDigest: readOptionalString(metadata.packetDigest),
     contextProfileId: readOptionalString(metadata.contextProfileId),
     accessProfileId: readOptionalString(metadata.accessProfileId),
     handoffContractId: readOptionalString(metadata.handoffContractId),
     assignmentPromptSummary: readOptionalString(metadata.assignmentPromptSummary),
     blockingPolicy: readOptionalString(metadata.blockingPolicy),
+    validationCommandCount: countValidationCommands(metadata.validationCommands),
     pathCounts: {
       ownedPaths: countStringArray(metadata.ownedPaths) + countStringArray(resources?.ownedPaths),
       readOnlyPaths: countStringArray(resources?.readOnlyPaths),
@@ -602,6 +634,129 @@ export function listAssignments(db: Sqlite.Database, filter: ListAssignmentsFilt
     ...params
   ) as Record<string, unknown>[];
   return rows.map(mapRow);
+}
+
+export function buildAssignmentPacketRegistryId(input: {
+  assignmentId: string;
+  packetDigest: string;
+}): string {
+  return `packet:${input.assignmentId}:${input.packetDigest}`;
+}
+
+function parseJsonRecord(value: unknown): Record<string, unknown> | null {
+  if (typeof value !== "string" || !value.trim()) {
+    return null;
+  }
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? (parsed as Record<string, unknown>)
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function mapAssignmentPacketRegistryRow(r: Record<string, unknown>): AssignmentPacketRegistryRow | null {
+  const body = parseJsonRecord(r.body_json);
+  if (!body) {
+    return null;
+  }
+  return {
+    packetId: String(r.packet_id),
+    packetDigest: String(r.packet_digest),
+    assignmentId: String(r.assignment_id),
+    executionTaskId: String(r.execution_task_id),
+    body,
+    createdAt: String(r.created_at),
+    updatedAt: String(r.updated_at)
+  };
+}
+
+export function upsertAssignmentPacketRegistryRow(
+  db: Sqlite.Database,
+  input: {
+    packetId: string;
+    packetDigest: string;
+    assignmentId: string;
+    executionTaskId: string;
+    body: Record<string, unknown>;
+    now: string;
+  }
+): void {
+  db.prepare(
+    `INSERT INTO kit_assignment_packets (
+      packet_id, packet_digest, assignment_id, execution_task_id, body_json, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(packet_id) DO UPDATE SET
+      packet_digest = excluded.packet_digest,
+      assignment_id = excluded.assignment_id,
+      execution_task_id = excluded.execution_task_id,
+      body_json = excluded.body_json,
+      updated_at = excluded.updated_at`
+  ).run(
+    input.packetId,
+    input.packetDigest,
+    input.assignmentId,
+    input.executionTaskId,
+    JSON.stringify(input.body),
+    input.now,
+    input.now
+  );
+}
+
+export function getAssignmentPacketRegistryRowById(
+  db: Sqlite.Database,
+  packetId: string
+): AssignmentPacketRegistryRow | null {
+  const row = db.prepare("SELECT * FROM kit_assignment_packets WHERE packet_id = ?").get(packetId) as Record<
+    string,
+    unknown
+  > | undefined;
+  return row ? mapAssignmentPacketRegistryRow(row) : null;
+}
+
+export function getAssignmentPacketRegistryRowByDigest(
+  db: Sqlite.Database,
+  packetDigest: string
+): AssignmentPacketRegistryRow | null {
+  const row = db.prepare("SELECT * FROM kit_assignment_packets WHERE packet_digest = ?").get(packetDigest) as Record<
+    string,
+    unknown
+  > | undefined;
+  return row ? mapAssignmentPacketRegistryRow(row) : null;
+}
+
+export function normalizeAssignmentValidationCommands(
+  value: unknown
+): TeamAssignmentValidationCommand[] | undefined {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+  const normalized = value.flatMap((entry): TeamAssignmentValidationCommand[] => {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+      return [];
+    }
+    const record = entry as Record<string, unknown>;
+    const command = readOptionalString(record.command);
+    if (!command) {
+      return [];
+    }
+    const normalizedEntry: TeamAssignmentValidationCommand = { command };
+    const rationale = readOptionalString(record.rationale);
+    if (rationale) {
+      normalizedEntry.rationale = rationale;
+    }
+    const result = readOptionalString(record.result);
+    if (result) {
+      normalizedEntry.result = result;
+    }
+    if (typeof record.exitCode === "number" && Number.isInteger(record.exitCode)) {
+      normalizedEntry.exitCode = record.exitCode;
+    }
+    return [normalizedEntry];
+  });
+  return normalized.length > 0 ? normalized : undefined;
 }
 
 function emptyTeamDashboardSummary(): DashboardTeamExecutionSummary {

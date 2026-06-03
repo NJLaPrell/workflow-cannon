@@ -209,6 +209,9 @@ test("agent-execution-packet returns bounded worker context without queue reads"
   assert.equal(packetResult.data.packet.packetDigest.startsWith("sha256:"), true);
   assert.equal(JSON.stringify(packetResult.data.packet).includes("Unrelated queue work"), false);
   assert.ok(packetResult.data.packet.stopConditions.some((item) => item.includes("owned paths")));
+  assert.equal(packetResult.data.packetAudit.stale, false);
+  assert.equal(packetResult.data.packetAudit.registryAvailable, true);
+  assert.equal(packetResult.data.storedPacket.packetDigest, packetResult.data.packet.packetDigest);
 });
 
 test("agent-execution-packet keeps path boundaries explicit when assignment metadata is absent", async () => {
@@ -333,7 +336,13 @@ test("report-assignment-blocker blocks assignment and creates linked defect task
 test("register-assignment persists packet digest and tier recommendation in the response", async () => {
   const workspace = await tmpDir();
   const ctx = sqliteCtx(workspace);
-  await seedExecutionTask(workspace, "T8600", "Worker packet task");
+  await seedExecutionTask(workspace, "T8600", "Worker packet task", {
+    phase: "Phase 130",
+    phaseKey: "130",
+    summary: "Persist packet metadata and registry context.",
+    approach: "Store the bounded packet body alongside the assignment row.",
+    acceptanceCriteria: ["Packet metadata is persisted."]
+  });
 
   const registered = await teamExecutionModule.onCommand(
     {
@@ -350,12 +359,89 @@ test("register-assignment persists packet digest and tier recommendation in the 
   );
 
   assert.equal(registered.ok, true);
-  assert.equal(registered.data.assignment.metadata.packetDigest.length, 64);
-  assert.equal(registered.data.assignment.orchestrationMetadataSummary.packetDigest, registered.data.assignment.metadata.packetDigest);
+  assert.equal(registered.data.assignment.metadata.packetDigest.startsWith("sha256:"), true);
+  assert.equal(registered.data.assignment.metadata.packetId.startsWith("packet:asg-8600:"), true);
+  assert.ok(registered.data.assignment.metadata.validationCommands.length > 0);
+  assert.equal(
+    registered.data.assignment.orchestrationMetadataSummary.packetDigest,
+    registered.data.assignment.metadata.packetDigest
+  );
+  assert.equal(
+    registered.data.assignment.orchestrationMetadataSummary.packetId,
+    registered.data.assignment.metadata.packetId
+  );
   assert.equal(registered.data.assignment.orchestrationMetadataSummary.modelTierRecommendation.label, "tier_2");
+  assert.equal(registered.data.assignment.orchestrationMetadataSummary.validationCommandCount > 0, true);
+  assert.equal(registered.data.assignment.orchestrationMetadataSummary.packetContextStatus, "current");
+  assert.equal(registered.data.assignment.orchestrationMetadataSummary.packetRegistryStatus, "stored");
+  assert.equal(registered.data.assignment.packetAudit.stale, false);
+  assert.equal(registered.data.assignment.packetAudit.registryAvailable, true);
   assert.equal(
     registered.data.assignment.orchestrationMetadataSummary.modelTierRationale,
     registered.data.assignment.metadata.modelTierRationale
+  );
+});
+
+test("list-assignments flags stale packet context after task changes", async () => {
+  const workspace = await tmpDir();
+  const ctx = sqliteCtx(workspace);
+  await seedExecutionTask(workspace, "T8604", "Worker packet drift", {
+    phase: "Phase 130",
+    phaseKey: "130",
+    summary: "Original worker packet summary.",
+    approach: "Initial packet body state.",
+    acceptanceCriteria: ["Audit detects stale packet context."]
+  });
+
+  const registered = await teamExecutionModule.onCommand(
+    {
+      name: "register-assignment",
+      args: {
+        assignmentId: "asg-8604",
+        executionTaskId: "T8604",
+        supervisorId: "sup-4",
+        workerId: "wrk-4",
+        metadata: assignmentMetadataFixture
+      }
+    },
+    ctx
+  );
+  assert.equal(registered.ok, true);
+
+  const dbPath = path.join(workspace, ".workspace-kit", "tasks", "workspace-kit.db");
+  const db = new Database(dbPath);
+  try {
+    db.prepare("UPDATE task_engine_tasks SET summary = ?, updated_at = ? WHERE id = ?").run(
+      "Changed summary that should invalidate the stored packet context.",
+      new Date().toISOString(),
+      "T8604"
+    );
+  } finally {
+    db.close();
+  }
+
+  const listed = await teamExecutionModule.onCommand(
+    {
+      name: "list-assignments",
+      args: {
+        executionTaskId: "T8604"
+      }
+    },
+    ctx
+  );
+
+  assert.equal(listed.ok, true);
+  assert.equal(listed.data.assignments.length, 1);
+  assert.equal(listed.data.assignments[0].orchestrationMetadataSummary.packetContextStatus, "stale");
+  assert.equal(listed.data.assignments[0].orchestrationMetadataSummary.packetRegistryStatus, "stored");
+  assert.equal(listed.data.assignments[0].packetAudit.stale, true);
+  assert.equal(
+    listed.data.assignments[0].packetAudit.storedPacketDigest,
+    registered.data.assignment.metadata.packetDigest
+  );
+  assert.notEqual(
+    listed.data.assignments[0].packetAudit.currentPacketDigest,
+    registered.data.assignment.metadata.packetDigest
   );
 });
 
