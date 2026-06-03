@@ -99,7 +99,7 @@ function taskDisplayName(taskId: string | null, byId: Map<string, TaskEntity>): 
 }
 
 function readDetailText(details: Record<string, unknown> | null | undefined, keys: string[]): string {
-  if (!details || typeof details !== "object") {
+  if (!details || typeof details !== "object" || Array.isArray(details)) {
     return "";
   }
   for (const key of keys) {
@@ -109,6 +109,35 @@ function readDetailText(details: Record<string, unknown> | null | undefined, key
     }
   }
   return "";
+}
+
+function readKnownDetailMetadata(
+  details: Record<string, unknown> | null | undefined
+): DashboardAgentActivityRow["metadata"] | undefined {
+  if (!details || typeof details !== "object" || Array.isArray(details)) {
+    return undefined;
+  }
+  const metadata: NonNullable<DashboardAgentActivityRow["metadata"]> = {};
+  const agentDisplayName = readDetailText(details, ["agentDisplayName"]);
+  const customAgentName = readDetailText(details, ["customAgentName"]);
+  if (agentDisplayName) {
+    metadata.agentDisplayName = agentDisplayName;
+  }
+  if (customAgentName) {
+    metadata.customAgentName = customAgentName;
+  }
+  return Object.keys(metadata).length > 0 ? metadata : undefined;
+}
+
+function mergeMetadata(
+  winner: DashboardAgentActivityRow["metadata"] | undefined,
+  loser: DashboardAgentActivityRow["metadata"] | undefined
+): DashboardAgentActivityRow["metadata"] | undefined {
+  const metadata = {
+    ...(loser ?? {}),
+    ...(winner ?? {})
+  };
+  return Object.keys(metadata).length > 0 ? metadata : undefined;
 }
 
 function freshnessState(lifecycle: AgentActivityLifecycle | "unknown"): DashboardAgentActivityRow["freshness"]["state"] {
@@ -353,7 +382,8 @@ function mergeRow(existing: RowCandidate | undefined, candidate: RowCandidate): 
       prNumber: winner.refs.prNumber ?? loser.refs.prNumber
     },
     freshness: freshnessBest(winner, loser).freshness,
-    attention: attentionBest(winner, loser).attention
+    attention: attentionBest(winner, loser).attention,
+    metadata: mergeMetadata(winner.metadata, loser.metadata)
   };
 }
 
@@ -458,7 +488,8 @@ function buildLiveActivityRows(
           prNumber: lease.prNumber
         },
         freshness,
-        attention: attentionFromStatus(status.kind, freshness.state)
+        attention: attentionFromStatus(status.kind, freshness.state),
+        metadata: readKnownDetailMetadata(lease.details)
       },
       "live_activity",
       keyParts

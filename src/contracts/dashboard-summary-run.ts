@@ -426,6 +426,10 @@ export type DashboardAgentActivityRow = {
     state: "none" | "blocked" | "needs_human" | "needs_policy" | "stale" | "failed" | "unavailable";
     message: string | null;
   };
+  metadata?: {
+    agentDisplayName?: string;
+    customAgentName?: string;
+  };
 };
 
 export type DashboardAgentActivitySummary = {
