@@ -88,7 +88,7 @@ test("buildDashboardAgentActivitySummary merges live activity with assignment co
   assert.equal(summary.staleCount, 0);
   assert.equal(summary.needsAttentionCount, 0);
   assert.ok(summary.main);
-  assert.equal(summary.main.rowId, "assignment:assign-1");
+  assert.equal(summary.main.rowId, "row:assign-1");
   assert.equal(summary.main.source, "live_activity");
   assert.equal(summary.main.work.taskId, "T100650");
   assert.equal(summary.main.refs.assignmentId, "assign-1");
@@ -97,8 +97,170 @@ test("buildDashboardAgentActivitySummary merges live activity with assignment co
   assert.equal(summary.sourceMap.subagentSessionCount, 1);
   assert.equal(summary.sourceMap.derivedFallbackUsed, false);
   assert.equal(summary.inferredFallback, null);
-  assert.equal(summary.active.length, 1);
+  assert.equal(summary.active.length, 2);
   assert.equal(summary.needsAttention.length, 0);
+});
+
+test("buildDashboardAgentActivitySummary keeps stale live leases visible and attentioned", () => {
+  const now = "2026-06-02T17:00:00.000Z";
+  const summary = buildDashboardAgentActivitySummary({
+    now,
+    tasks: [{ id: "T100651", title: "Stale lease task", phaseKey: "128" }],
+    liveActivityLeases: [
+      {
+        schemaVersion: 1,
+        activityId: "copilot:session-stale",
+        agentId: "copilot",
+        sessionId: "session-stale",
+        agentDefinitionId: null,
+        assignmentId: null,
+        kind: "working_task",
+        label: "Working on stale lease task",
+        currentStep: null,
+        hostHint: "cursor",
+        modelTier: "balanced",
+        modelHint: null,
+        startedAt: "2026-06-02T16:55:00.000Z",
+        updatedAt: "2026-06-02T16:58:15.000Z",
+        expiresAt: "2026-06-02T17:30:00.000Z",
+        taskId: "T100651",
+        command: null,
+        phaseKey: "128",
+        prNumber: null,
+        version: null,
+        details: null
+      }
+    ],
+    derivedAgentStatus: {
+      schemaVersion: 1,
+      source: "derived",
+      kind: "ready_task",
+      label: "Ready Task T100651",
+      confidence: "low",
+      updatedAt: now,
+      taskId: "T100651",
+      phaseKey: "128",
+      command: null,
+      prNumber: null,
+      version: null,
+      detail: null
+    },
+    teamExecution: {
+      schemaVersion: 1,
+      available: false,
+      totalCount: 0,
+      activeCount: 0,
+      byStatus: { assigned: 0, submitted: 0, blocked: 0, reconciled: 0, cancelled: 0 },
+      topActive: []
+    },
+    subagentRegistry: {
+      schemaVersion: 1,
+      available: false,
+      definitionsCount: 0,
+      retiredDefinitionsCount: 0,
+      openSessionsCount: 0,
+      topOpenSessions: []
+    }
+  });
+
+  assert.equal(summary.source, "live_activity");
+  assert.equal(summary.activeCount, 0);
+  assert.equal(summary.active.length, 1);
+  assert.equal(summary.active[0]?.freshness.state, "stale");
+  assert.equal(summary.needsAttentionCount, 1);
+  assert.equal(summary.needsAttention[0]?.attention.state, "stale");
+  assert.equal(summary.main?.attention.state, "stale");
+});
+
+test("buildDashboardAgentActivitySummary collapses duplicate live leases by latest update", () => {
+  const now = "2026-06-02T17:00:00.000Z";
+  const summary = buildDashboardAgentActivitySummary({
+    now,
+    tasks: [{ id: "T100652", title: "Duplicate lease task", phaseKey: "128" }],
+    liveActivityLeases: [
+      {
+        schemaVersion: 1,
+        activityId: "copilot:session-dup",
+        agentId: "copilot",
+        sessionId: "session-dup",
+        agentDefinitionId: null,
+        assignmentId: "assign-dup",
+        kind: "working_task",
+        label: "Older name",
+        currentStep: null,
+        hostHint: "cursor",
+        modelTier: "balanced",
+        modelHint: null,
+        startedAt: "2026-06-02T16:40:00.000Z",
+        updatedAt: "2026-06-02T16:45:00.000Z",
+        expiresAt: "2026-06-02T17:30:00.000Z",
+        taskId: "T100652",
+        command: null,
+        phaseKey: "128",
+        prNumber: null,
+        version: null,
+        details: { agentDisplayName: "Older name" }
+      },
+      {
+        schemaVersion: 1,
+        activityId: "copilot:session-dup",
+        agentId: "copilot",
+        sessionId: "session-dup",
+        agentDefinitionId: null,
+        assignmentId: "assign-dup",
+        kind: "working_task",
+        label: "Newer name",
+        currentStep: null,
+        hostHint: "cursor",
+        modelTier: "balanced",
+        modelHint: null,
+        startedAt: "2026-06-02T16:40:00.000Z",
+        updatedAt: "2026-06-02T16:59:59.000Z",
+        expiresAt: "2026-06-02T17:30:00.000Z",
+        taskId: "T100652",
+        command: null,
+        phaseKey: "128",
+        prNumber: null,
+        version: null,
+        details: { agentDisplayName: "Newest name" }
+      }
+    ],
+    derivedAgentStatus: {
+      schemaVersion: 1,
+      source: "derived",
+      kind: "ready_task",
+      label: "Ready Task T100652",
+      confidence: "low",
+      updatedAt: now,
+      taskId: "T100652",
+      phaseKey: "128",
+      command: null,
+      prNumber: null,
+      version: null,
+      detail: null
+    },
+    teamExecution: {
+      schemaVersion: 1,
+      available: false,
+      totalCount: 0,
+      activeCount: 0,
+      byStatus: { assigned: 0, submitted: 0, blocked: 0, reconciled: 0, cancelled: 0 },
+      topActive: []
+    },
+    subagentRegistry: {
+      schemaVersion: 1,
+      available: false,
+      definitionsCount: 0,
+      retiredDefinitionsCount: 0,
+      openSessionsCount: 0,
+      topOpenSessions: []
+    }
+  });
+
+  assert.equal(summary.active.length, 1);
+  assert.equal(summary.main?.rowId, "row:assign-dup");
+  assert.equal(summary.main?.displayName, "Newest name");
+  assert.equal(summary.main?.source, "live_activity");
 });
 
 test("buildDashboardAgentActivitySummary falls back to derived status when no sources exist", () => {
