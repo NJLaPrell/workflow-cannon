@@ -2632,6 +2632,12 @@ test("taskEngineModule dashboard-summary agentActivity projection includes activ
   const db = new Database(path.join(workspace, ".workspace-kit", "tasks", "workspace-kit.db"));
   try {
     prepareKitSqliteDatabase(db);
+    const taskSeededAt = "2026-06-02T18:00:00.000Z";
+    const seedTaskRow = db.prepare(
+      "INSERT OR IGNORE INTO task_engine_tasks (id, status, type, title, created_at, updated_at, archived, depends_on_json) VALUES (?, 'ready', 'workspace-kit', ?, ?, ?, 0, '[]')"
+    );
+    seedTaskRow.run("T903", "Current task", taskSeededAt, taskSeededAt);
+    seedTaskRow.run("T904", "Second task", taskSeededAt, taskSeededAt);
     setAgentActivityLease(db, {
       activityId: "copilot:current",
       agentId: "copilot",
