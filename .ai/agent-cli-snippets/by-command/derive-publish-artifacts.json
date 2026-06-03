@@ -15,7 +15,7 @@
   ],
   "instructionPath": "src/modules/task-engine/instructions/derive-publish-artifacts.md",
   "moduleId": "task-engine",
-  "description": "Derive publishArtifacts fragment for release-evidence-manifest from gh/npm signals.",
+  "description": "Derive publishArtifacts plus bounded release readiness checks for release-evidence-manifest from changelog/schema/gh/npm signals.",
   "policy": {
     "sensitivity": "non-sensitive",
     "operationId": null,
@@ -36,5 +36,5 @@
     "listCommands": "pnpm exec wk run --list-commands",
     "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
   },
-  "invocationId": "17da2464-412b-4640-8d19-874f158f7330"
+  "invocationId": "d6847030-4584-4874-8191-47da90368814"
 }

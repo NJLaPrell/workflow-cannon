@@ -299,7 +299,7 @@
     "moduleId": "task-engine",
     "name": "derive-publish-artifacts",
     "file": "derive-publish-artifacts.md",
-    "description": "Derive publishArtifacts fragment for release-evidence-manifest from gh/npm signals.",
+    "description": "Derive publishArtifacts plus bounded release readiness checks for release-evidence-manifest from changelog/schema/gh/npm signals.",
     "defaultResponseTemplateId": "default",
     "policySensitivity": "non-sensitive"
   },
