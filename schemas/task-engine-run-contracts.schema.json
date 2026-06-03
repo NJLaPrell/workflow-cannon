@@ -95,6 +95,7 @@
         "persist-planning-execution-drafts",
         "phase-closeout-readiness",
         "phase-delivery-preflight",
+        "phase-drain-delta",
         "phase-focus-dashboard",
         "phase-release-orchestration-state",
         "phase-status",
@@ -360,6 +361,9 @@
           "$ref": "#/$defs/contractBase"
         },
         "phase-delivery-preflight": {
+          "$ref": "#/$defs/contractBase"
+        },
+        "phase-drain-delta": {
           "$ref": "#/$defs/contractBase"
         },
         "phase-focus-dashboard": {

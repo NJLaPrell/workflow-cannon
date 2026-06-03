@@ -15,6 +15,12 @@
       "rationale": "Queue readout mirrors dashboard team slice; future façade TBD."
     },
     {
+      "file": "src/modules/task-engine/commands/phase-delivery-readout-commands.ts",
+      "line": "30",
+      "importLine": "import { listAssignments } from \"../../team-execution/assignment-store.js\";",
+      "rationale": "Phase drain delta needs direct phase-scoped assignment refresh rows until a task-engine read facade exists."
+    },
+    {
       "file": "src/modules/task-engine/commands/task-engine-dashboard-on-command.ts",
       "line": "8",
       "importLine": "import { listIdeas } from \"../../ideas/idea-store.js\";",

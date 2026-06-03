@@ -7,9 +7,14 @@ import {
 } from "./maintainer-delivery-policy-resolver.js";
 import { inferTaskPhaseKey, parseLeadingPhaseOrdinal } from "./phase-resolution.js";
 import type { TaskEntity } from "./types.js";
+import { listAssignments, type TeamAssignmentRow } from "../team-execution/assignment-store.js";
 
 export const PHASE_RELEASE_ORCHESTRATION_STATE_SCHEMA_VERSION = 1 as const;
 export const PHASE_RELEASE_ORCHESTRATION_TOP_LIMIT = 10;
+export const PHASE_DRAIN_DELTA_SCHEMA_VERSION = 1 as const;
+export const PHASE_DRAIN_DELTA_TASK_LIMIT = 10;
+export const PHASE_DRAIN_DELTA_ASSIGNMENT_LIMIT = 10;
+export const PHASE_DRAIN_DELTA_OVERFLOW_REF_LIMIT = 10;
 
 export type PhaseReleasePathVerdict =
   | "ready-to-ship"
@@ -58,8 +63,256 @@ export type PhaseReleasePathInputs = {
   rolledOut: boolean;
 };
 
+export type PhaseDrainDeltaHighWaterMark = {
+  updatedAt: string | null;
+  ids: string[];
+};
+
+export type PhaseDrainDeltaCursor = {
+  schemaVersion: 1;
+  phaseKey: string | null;
+  planningGeneration: number;
+  verdict: PhaseReleasePathVerdict;
+  task: PhaseDrainDeltaHighWaterMark;
+  assignment: PhaseDrainDeltaHighWaterMark;
+};
+
+export type PhaseDrainDeltaTaskRow = {
+  taskId: string;
+  title: string;
+  status: string;
+  priority: string | null;
+  updatedAt: string;
+  blockedBy: string[];
+};
+
+export type PhaseDrainDeltaAssignmentRow = {
+  assignmentId: string;
+  executionTaskId: string;
+  workerId: string;
+  supervisorId: string;
+  status: string;
+  updatedAt: string;
+  packetDigest: string | null;
+};
+
+export type PhaseDrainDeltaOverflow = {
+  truncated: boolean;
+  totalChanged: number;
+  returnedCount: number;
+  overflowCount: number;
+  overflowRefs: string[];
+};
+
+export type PhaseDrainDeltaRefreshRecommendation = {
+  mode: "delta" | "full-refresh";
+  reason: string;
+  ref: PhaseReleaseCommandRef;
+};
+
 function nonNegative(value: number): number {
   return Number.isFinite(value) && value > 0 ? Math.floor(value) : 0;
+}
+
+function parseIsoTime(value: string | null | undefined): number | null {
+  if (typeof value !== "string" || value.trim().length === 0) {
+    return null;
+  }
+  const parsed = Date.parse(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function compareRowCursor(updatedAt: string, id: string, cursor: PhaseDrainDeltaHighWaterMark): number {
+  const rowTime = parseIsoTime(updatedAt);
+  const cursorTime = parseIsoTime(cursor.updatedAt);
+  if (rowTime === null && cursorTime === null) {
+    return cursor.ids.includes(id) ? 0 : 1;
+  }
+  if (rowTime === null) {
+    return -1;
+  }
+  if (cursorTime === null) {
+    return 1;
+  }
+  if (rowTime !== cursorTime) {
+    return rowTime - cursorTime;
+  }
+  return cursor.ids.includes(id) ? 0 : 1;
+}
+
+function isRowAfterCursor(updatedAt: string, id: string, cursor: PhaseDrainDeltaHighWaterMark): boolean {
+  return compareRowCursor(updatedAt, id, cursor) > 0;
+}
+
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((entry) => typeof entry === "string");
+}
+
+function normalizeHighWaterMark(value: unknown): PhaseDrainDeltaHighWaterMark | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+  const record = value as Record<string, unknown>;
+  const updatedAt = record.updatedAt;
+  const ids = record.ids;
+  if (updatedAt !== null && typeof updatedAt !== "string") {
+    return null;
+  }
+  if (!isStringArray(ids)) {
+    return null;
+  }
+  if (typeof updatedAt === "string" && parseIsoTime(updatedAt) === null) {
+    return null;
+  }
+  return { updatedAt: typeof updatedAt === "string" ? updatedAt : null, ids };
+}
+
+export function parsePhaseDrainDeltaCursor(value: unknown): PhaseDrainDeltaCursor | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+  const record = value as Record<string, unknown>;
+  if (record.schemaVersion !== PHASE_DRAIN_DELTA_SCHEMA_VERSION) {
+    return null;
+  }
+  const planningGeneration = Number(record.planningGeneration);
+  const verdict = record.verdict;
+  const phaseKey = record.phaseKey;
+  const task = normalizeHighWaterMark(record.task);
+  const assignment = normalizeHighWaterMark(record.assignment);
+  if (!Number.isInteger(planningGeneration) || planningGeneration < 0) {
+    return null;
+  }
+  if (phaseKey !== null && typeof phaseKey !== "string") {
+    return null;
+  }
+  if (
+    verdict !== "ready-to-ship" &&
+    verdict !== "tasks-remaining" &&
+    verdict !== "blocked" &&
+    verdict !== "closeout-pending" &&
+    verdict !== "release-running" &&
+    verdict !== "post-release"
+  ) {
+    return null;
+  }
+  if (!task || !assignment) {
+    return null;
+  }
+  return {
+    schemaVersion: PHASE_DRAIN_DELTA_SCHEMA_VERSION,
+    phaseKey: typeof phaseKey === "string" ? phaseKey : null,
+    planningGeneration,
+    verdict,
+    task,
+    assignment
+  };
+}
+
+function buildHighWaterMark<T extends { updatedAt: string }>(
+  rows: T[],
+  readId: (row: T) => string
+): PhaseDrainDeltaHighWaterMark {
+  if (rows.length === 0) {
+    return { updatedAt: null, ids: [] };
+  }
+  const sorted = [...rows].sort((left, right) => {
+    const leftTime = parseIsoTime(left.updatedAt) ?? 0;
+    const rightTime = parseIsoTime(right.updatedAt) ?? 0;
+    if (leftTime !== rightTime) {
+      return leftTime - rightTime;
+    }
+    return readId(left).localeCompare(readId(right));
+  });
+  const latest = sorted.at(-1);
+  if (!latest) {
+    return { updatedAt: null, ids: [] };
+  }
+  const updatedAt = latest.updatedAt;
+  return {
+    updatedAt,
+    ids: sorted.filter((row) => row.updatedAt === updatedAt).map(readId)
+  };
+}
+
+function capRows<T extends { taskId?: string; assignmentId?: string }>(
+  rows: T[],
+  limit: number,
+  formatOverflowRef: (row: T) => string
+): { rows: T[]; overflow: PhaseDrainDeltaOverflow } {
+  const boundedLimit = Math.max(0, Math.floor(limit));
+  const returned = rows.slice(0, boundedLimit);
+  const overflowRows = rows.slice(boundedLimit);
+  return {
+    rows: returned,
+    overflow: {
+      truncated: overflowRows.length > 0,
+      totalChanged: rows.length,
+      returnedCount: returned.length,
+      overflowCount: overflowRows.length,
+      overflowRefs: overflowRows.slice(0, PHASE_DRAIN_DELTA_OVERFLOW_REF_LIMIT).map(formatOverflowRef)
+    }
+  };
+}
+
+function readTaskPriority(task: TaskEntity): string | null {
+  return typeof task.priority === "string" && task.priority.trim().length > 0 ? task.priority : null;
+}
+
+function mapChangedTaskRow(task: TaskEntity, completedIds: Set<string>): PhaseDrainDeltaTaskRow {
+  return {
+    taskId: task.id,
+    title: task.title,
+    status: task.status,
+    priority: readTaskPriority(task),
+    updatedAt: task.updatedAt,
+    blockedBy: (task.dependsOn ?? []).filter((depId) => !completedIds.has(depId))
+  };
+}
+
+function readAssignmentPacketDigest(row: TeamAssignmentRow): string | null {
+  const summary = row.orchestrationMetadataSummary;
+  return typeof summary?.packetDigest === "string" && summary.packetDigest.trim().length > 0
+    ? summary.packetDigest
+    : null;
+}
+
+function mapChangedAssignmentRow(row: TeamAssignmentRow): PhaseDrainDeltaAssignmentRow {
+  return {
+    assignmentId: row.id,
+    executionTaskId: row.executionTaskId,
+    workerId: row.workerId,
+    supervisorId: row.supervisorId,
+    status: row.status,
+    updatedAt: row.updatedAt,
+    packetDigest: readAssignmentPacketDigest(row)
+  };
+}
+
+function buildFullRefreshRecommendation(reason: string, phaseKey: string | null): PhaseDrainDeltaRefreshRecommendation {
+  return {
+    mode: "full-refresh",
+    reason,
+    ref: buildCommandRef("phase-release-orchestration-state", phaseKey)
+  };
+}
+
+function buildDeltaRecommendation(): PhaseDrainDeltaRefreshRecommendation {
+  return {
+    mode: "delta",
+    reason: "cursor-valid",
+    ref: buildCommandRef("phase-release-orchestration-state", null)
+  };
+}
+
+function scopePhaseAssignments(tasks: TaskEntity[], phaseKey: string | null, assignments: TeamAssignmentRow[]): TeamAssignmentRow[] {
+  if (!phaseKey) {
+    return [];
+  }
+  const phaseTaskIds = new Set(
+    tasks.filter((task) => !task.archived && inferTaskPhaseKey(task) === phaseKey).map((task) => task.id)
+  );
+  return assignments.filter((row) => phaseTaskIds.has(row.executionTaskId));
 }
 
 export function classifyPhaseReleasePath(inputs: PhaseReleasePathInputs): PhaseReleasePathVerdict {
@@ -493,6 +746,241 @@ export function buildPhaseReleaseOrchestrationState(args: {
         "src/modules/task-engine/instructions/phase-delivery-preflight.md",
         "src/modules/task-engine/instructions/phase-closeout-readiness.md"
       ]
+    }
+  };
+}
+
+export function buildPhaseDrainDelta(args: {
+  workspacePath: string;
+  effectiveConfig: Record<string, unknown> | undefined;
+  tasks: TaskEntity[];
+  assignments: TeamAssignmentRow[];
+  phaseKey: string | null;
+  currentKitPhase: string | null;
+  rolledOut: boolean;
+  planningGeneration: number;
+  cursor?: PhaseDrainDeltaCursor | null;
+  taskLimit?: number;
+  assignmentLimit?: number;
+}): {
+  schemaVersion: 1;
+  phaseKey: string | null;
+  planningGeneration: number;
+  refreshRecommendation: PhaseDrainDeltaRefreshRecommendation;
+  cursorAccepted: boolean;
+  cursorStatus: "valid" | "invalid" | "stale" | "initial";
+  cursorStatusReason: string;
+  nextCursor: PhaseDrainDeltaCursor;
+  phasePath: {
+    changed: boolean;
+    verdict: PhaseReleasePathVerdict;
+    nextAction: string;
+    nextActionRef: {
+      summary: string;
+      ref: PhaseReleaseCommandRef;
+    };
+  };
+  changedTasks: PhaseDrainDeltaTaskRow[];
+  changedAssignments: PhaseDrainDeltaAssignmentRow[];
+  newlyReadyTop: Array<{ taskId: string; title: string; priority: string | null }>;
+  blockedDecisionTop: Array<{ taskId: string; title: string; blockedBy: string[] }>;
+  submittedAssignmentsTop: Array<{ assignmentId: string; executionTaskId: string; workerId: string }>;
+  overflow: {
+    changedTasks: PhaseDrainDeltaOverflow;
+    changedAssignments: PhaseDrainDeltaOverflow;
+  };
+} {
+  const phaseState = buildPhaseReleaseOrchestrationState({
+    workspacePath: args.workspacePath,
+    effectiveConfig: args.effectiveConfig,
+    tasks: args.tasks,
+    phaseKey: args.phaseKey,
+    currentKitPhase: args.currentKitPhase,
+    rolledOut: args.rolledOut
+  });
+  const scopedTasks = args.phaseKey
+    ? args.tasks.filter((task) => !task.archived && inferTaskPhaseKey(task) === args.phaseKey)
+    : [];
+  const scopedAssignments = scopePhaseAssignments(args.tasks, args.phaseKey, args.assignments);
+  const nextCursor: PhaseDrainDeltaCursor = {
+    schemaVersion: PHASE_DRAIN_DELTA_SCHEMA_VERSION,
+    phaseKey: args.phaseKey,
+    planningGeneration: args.planningGeneration,
+    verdict: phaseState.verdict,
+    task: buildHighWaterMark(scopedTasks, (row) => row.id),
+    assignment: buildHighWaterMark(scopedAssignments, (row) => row.id)
+  };
+
+  const cursor = args.cursor ?? null;
+  if (!cursor) {
+    return {
+      schemaVersion: PHASE_DRAIN_DELTA_SCHEMA_VERSION,
+      phaseKey: args.phaseKey,
+      planningGeneration: args.planningGeneration,
+      refreshRecommendation: buildFullRefreshRecommendation("initial-cursor-required", args.phaseKey),
+      cursorAccepted: false,
+      cursorStatus: "initial",
+      cursorStatusReason: "Provide the prior nextCursor from phase-drain-delta or perform a full refresh first.",
+      nextCursor,
+      phasePath: {
+        changed: true,
+        verdict: phaseState.verdict,
+        nextAction: phaseState.nextAction,
+        nextActionRef: phaseState.nextActionRef
+      },
+      changedTasks: [],
+      changedAssignments: [],
+      newlyReadyTop: [],
+      blockedDecisionTop: [],
+      submittedAssignmentsTop: [],
+      overflow: {
+        changedTasks: {
+          truncated: false,
+          totalChanged: 0,
+          returnedCount: 0,
+          overflowCount: 0,
+          overflowRefs: []
+        },
+        changedAssignments: {
+          truncated: false,
+          totalChanged: 0,
+          returnedCount: 0,
+          overflowCount: 0,
+          overflowRefs: []
+        }
+      }
+    };
+  }
+
+  if (cursor.phaseKey !== args.phaseKey) {
+    return {
+      schemaVersion: PHASE_DRAIN_DELTA_SCHEMA_VERSION,
+      phaseKey: args.phaseKey,
+      planningGeneration: args.planningGeneration,
+      refreshRecommendation: buildFullRefreshRecommendation("phase-mismatch", args.phaseKey),
+      cursorAccepted: false,
+      cursorStatus: "stale",
+      cursorStatusReason: "Cursor phase does not match the current canonical phase.",
+      nextCursor,
+      phasePath: {
+        changed: true,
+        verdict: phaseState.verdict,
+        nextAction: phaseState.nextAction,
+        nextActionRef: phaseState.nextActionRef
+      },
+      changedTasks: [],
+      changedAssignments: [],
+      newlyReadyTop: [],
+      blockedDecisionTop: [],
+      submittedAssignmentsTop: [],
+      overflow: {
+        changedTasks: { truncated: false, totalChanged: 0, returnedCount: 0, overflowCount: 0, overflowRefs: [] },
+        changedAssignments: { truncated: false, totalChanged: 0, returnedCount: 0, overflowCount: 0, overflowRefs: [] }
+      }
+    };
+  }
+
+  if (
+    compareRowCursor(nextCursor.task.updatedAt ?? "", "", cursor.task) < 0 ||
+    compareRowCursor(nextCursor.assignment.updatedAt ?? "", "", cursor.assignment) < 0
+  ) {
+    return {
+      schemaVersion: PHASE_DRAIN_DELTA_SCHEMA_VERSION,
+      phaseKey: args.phaseKey,
+      planningGeneration: args.planningGeneration,
+      refreshRecommendation: buildFullRefreshRecommendation("cursor-ahead-of-store", args.phaseKey),
+      cursorAccepted: false,
+      cursorStatus: "stale",
+      cursorStatusReason: "Cursor high-water marks are ahead of the current store projection.",
+      nextCursor,
+      phasePath: {
+        changed: true,
+        verdict: phaseState.verdict,
+        nextAction: phaseState.nextAction,
+        nextActionRef: phaseState.nextActionRef
+      },
+      changedTasks: [],
+      changedAssignments: [],
+      newlyReadyTop: [],
+      blockedDecisionTop: [],
+      submittedAssignmentsTop: [],
+      overflow: {
+        changedTasks: { truncated: false, totalChanged: 0, returnedCount: 0, overflowCount: 0, overflowRefs: [] },
+        changedAssignments: { truncated: false, totalChanged: 0, returnedCount: 0, overflowCount: 0, overflowRefs: [] }
+      }
+    };
+  }
+
+  const completedIds = new Set(scopedTasks.filter((task) => task.status === "completed").map((task) => task.id));
+  const changedTaskRows = scopedTasks
+    .filter((task) => isRowAfterCursor(task.updatedAt, task.id, cursor.task))
+    .sort((left, right) => {
+      const leftTime = parseIsoTime(left.updatedAt) ?? 0;
+      const rightTime = parseIsoTime(right.updatedAt) ?? 0;
+      if (leftTime !== rightTime) {
+        return leftTime - rightTime;
+      }
+      return left.id.localeCompare(right.id);
+    })
+    .map((task) => mapChangedTaskRow(task, completedIds));
+  const changedAssignmentRows = scopedAssignments
+    .filter((row) => isRowAfterCursor(row.updatedAt, row.id, cursor.assignment))
+    .sort((left, right) => {
+      const leftTime = parseIsoTime(left.updatedAt) ?? 0;
+      const rightTime = parseIsoTime(right.updatedAt) ?? 0;
+      if (leftTime !== rightTime) {
+        return leftTime - rightTime;
+      }
+      return left.id.localeCompare(right.id);
+    })
+    .map(mapChangedAssignmentRow);
+  const cappedTasks = capRows(
+    changedTaskRows,
+    args.taskLimit ?? PHASE_DRAIN_DELTA_TASK_LIMIT,
+    (row) => `task:${row.taskId}`
+  );
+  const cappedAssignments = capRows(
+    changedAssignmentRows,
+    args.assignmentLimit ?? PHASE_DRAIN_DELTA_ASSIGNMENT_LIMIT,
+    (row) => `assignment:${row.assignmentId}`
+  );
+
+  return {
+    schemaVersion: PHASE_DRAIN_DELTA_SCHEMA_VERSION,
+    phaseKey: args.phaseKey,
+    planningGeneration: args.planningGeneration,
+    refreshRecommendation: buildDeltaRecommendation(),
+    cursorAccepted: true,
+    cursorStatus: "valid",
+    cursorStatusReason: "Cursor matches the current phase and high-water marks are monotonic.",
+    nextCursor,
+    phasePath: {
+      changed: cursor.verdict !== phaseState.verdict,
+      verdict: phaseState.verdict,
+      nextAction: phaseState.nextAction,
+      nextActionRef: phaseState.nextActionRef
+    },
+    changedTasks: cappedTasks.rows,
+    changedAssignments: cappedAssignments.rows,
+    newlyReadyTop: changedTaskRows
+      .filter((row) => row.status === "ready" && row.blockedBy.length === 0)
+      .slice(0, PHASE_RELEASE_ORCHESTRATION_TOP_LIMIT)
+      .map((row) => ({ taskId: row.taskId, title: row.title, priority: row.priority })),
+    blockedDecisionTop: changedTaskRows
+      .filter((row) => row.status === "blocked" || row.status === "awaiting_review" || row.status === "awaiting_policy_approval" || row.status === "awaiting_external_decision")
+      .slice(0, PHASE_RELEASE_ORCHESTRATION_TOP_LIMIT)
+      .map((row) => ({ taskId: row.taskId, title: row.title, blockedBy: row.blockedBy })),
+    submittedAssignmentsTop: changedAssignmentRows
+      .filter((row) => row.status === "submitted" || row.status === "blocked")
+      .slice(0, PHASE_RELEASE_ORCHESTRATION_TOP_LIMIT)
+      .map((row) => ({
+        assignmentId: row.assignmentId,
+        executionTaskId: row.executionTaskId,
+        workerId: row.workerId
+      })),
+    overflow: {
+      changedTasks: cappedTasks.overflow,
+      changedAssignments: cappedAssignments.overflow
     }
   };
 }
