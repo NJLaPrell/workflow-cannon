@@ -12,7 +12,6 @@ export type {
   WorkflowModule
 } from "./module-contract.js";
 export type {
-  DashboardServiceAgentActivityUpdatedEvent,
   DashboardServiceEvent,
   DashboardServiceErrorEvent,
   DashboardServiceSliceUpdatedEvent,

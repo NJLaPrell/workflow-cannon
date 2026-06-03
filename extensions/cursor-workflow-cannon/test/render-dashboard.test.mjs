@@ -93,84 +93,6 @@ function extractMutedParagraphs(html) {
     .filter(Boolean);
 }
 
-function makeAgentActivityRow(overrides = {}) {
-  const base = {
-    schemaVersion: 1,
-    rowId: "row:main",
-    displayName: "Main Agent",
-    role: "task_worker",
-    source: "live_activity",
-    sourceConfidence: "high",
-    status: "working_task",
-    statusLabel: "Working on Task T123",
-    work: {
-      taskId: "T123",
-      title: "Agent Activity",
-      command: "pnpm run test",
-      phaseKey: "95",
-      assignmentId: "asg-main",
-      sessionId: "sess-main",
-      currentStep: "Running tests"
-    },
-    refs: {
-      activityId: "lease-main",
-      agentId: "agent-main",
-      sessionId: "sess-main",
-      assignmentId: "asg-main",
-      agentDefinitionId: "agent-definition-main",
-      subagentDefinitionId: null,
-      taskId: "T123",
-      prNumber: 612
-    },
-    freshness: {
-      updatedAt: "2026-05-06T00:00:08.000Z",
-      startedAt: "2026-05-06T00:00:00.000Z",
-      expiresAt: "2026-05-06T00:01:00.000Z",
-      state: "fresh"
-    },
-    attention: {
-      state: "none",
-      message: null
-    }
-  };
-  return {
-    ...base,
-    ...overrides,
-    work: { ...base.work, ...(overrides.work ?? {}) },
-    refs: { ...base.refs, ...(overrides.refs ?? {}) },
-    freshness: { ...base.freshness, ...(overrides.freshness ?? {}) },
-    attention: { ...base.attention, ...(overrides.attention ?? {}) }
-  };
-}
-
-function makeAgentActivitySummary(overrides = {}) {
-  const main = overrides.main ?? makeAgentActivityRow();
-  const active = overrides.active ?? [main];
-  return {
-    schemaVersion: 1,
-    generatedAt: "2026-05-06T00:00:08.000Z",
-    source: "live_activity",
-    activeCount: active.filter((row) => row.freshness?.state === "fresh" || row.freshness?.state === "aging").length,
-    staleCount: 0,
-    needsAttentionCount: (overrides.needsAttention ?? []).length,
-    main,
-    active,
-    needsAttention: overrides.needsAttention ?? [],
-    inferredFallback: overrides.inferredFallback ?? null,
-    sourceMap: {
-      liveActivityCount: overrides.sourceMap?.liveActivityCount ?? active.filter((row) => row.source === "live_activity").length,
-      teamExecutionCount: overrides.sourceMap?.teamExecutionCount ?? 0,
-      subagentSessionCount: overrides.sourceMap?.subagentSessionCount ?? 0,
-      derivedFallbackUsed: overrides.sourceMap?.derivedFallbackUsed ?? false
-    },
-    ...overrides
-  };
-}
-
-function isoFromNow(offsetMs) {
-  return new Date(Date.now() + offsetMs).toISOString();
-}
-
 test("escapeHtml escapes angle brackets and ampersands", () => {
   assert.equal(escapeHtml("a<b>&c"), "a&lt;b&gt;&amp;c");
 });
@@ -287,18 +209,15 @@ test("renderDashboardRootInnerHtml truncates long idea notes", () => {
 test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () => {
   const fixturePath = path.join(__dirname, "../docs/fixtures/dashboard-summary.example.json");
   const fixture = JSON.parse(readFileSync(fixturePath, "utf8"));
-  fixture.data.agentActivitySummary = makeAgentActivitySummary();
   const html = renderDashboardRootInnerHtml(fixture);
   assert.match(html, /dash-card/);
   assert.match(html, /dash-agent-status-banner/);
   assert.ok(html.indexOf("dash-agent-status-banner") < html.indexOf("wc-cae-readiness"));
   assert.ok(html.indexOf("wc-rec-next") < html.indexOf("wc-cae-readiness"));
   assert.ok(html.indexOf("wc-tab-bar") < html.indexOf("wc-cae-readiness"));
-  assert.match(html, /<b>Agent Activity<\/b> <span class="dash-agent-status-label">Live · updated .* ago<\/span>/);
-  assert.match(html, /Source: Live/);
-  assert.match(html, /Main Agent/);
-  assert.match(html, /No additional active agents\./);
-  assert.match(html, /aria-label="Main Agent, Working, Main Agent"/);
+  assert.match(html, /<b>WC Agent is:<\/b> <span class="dash-agent-status-label">Awaiting Instruction<\/span>/);
+  assert.match(html, /dash-agent-row-list/);
+  assert.match(html, /aria-label="Awaiting Instruction, Current agent"/);
   const overviewPanelIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="overview"');
   const planningPanelIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="planning"');
   const taskEnginePanelIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="task-engine"');
@@ -338,7 +257,6 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.match(overviewPanel, /wc-stat-num-human/);
   assert.match(overviewPanel, /wc-context-help/);
   assert.match(overviewPanel, /data-wc-help-text="[^"]*Every check below must pass to reach 100%/);
-  assert.match(overviewPanel, /data-agent-activity-source="live_activity"/);
   assert.doesNotMatch(taskEnginePanel, /dashboard-approvals/);
   assert.match(html, /Phase Readiness · Phase 14/);
   assert.match(html, /aria-label="Phase readiness · Phase 14"/);
@@ -1182,42 +1100,19 @@ test("renderDashboardRootInnerHtml renders editor integration state when provide
   assert.match(statusPanel, /<b>Chat prefill<\/b> VS Code Chat/);
 });
 
-test("renderDashboardRootInnerHtml renders compact Agent Activity board from projection", () => {
+test("renderDashboardRootInnerHtml renders escaped WC Agent status banner from agentStatus", () => {
   const html = renderDashboardRootInnerHtml({
     ok: true,
     data: {
-      agentActivitySummary: makeAgentActivitySummary({
-        main: makeAgentActivityRow({
-          displayName: "Dashboard UX Worker <script>",
-          statusLabel: "Working on Task T123",
-          metadata: {
-            agentDisplayName: "UX <Worker>",
-            customAgentName: "Dashboard Scout"
-          },
-          work: {
-            taskId: "T123",
-            title: "Build activity board",
-            taskStatus: "in_progress",
-            command: "pnpm run test",
-            phaseKey: "95",
-            currentStep: "Rendering board"
-          },
-          freshness: {
-            updatedAt: "2026-05-06T00:00:08.000Z",
-            startedAt: "2026-05-06T00:00:00.000Z",
-            expiresAt: "2026-05-06T00:01:00.000Z",
-            state: "fresh"
-          }
-        }),
-        active: [],
-        needsAttention: [],
-        sourceMap: {
-          liveActivityCount: 1,
-          teamExecutionCount: 0,
-          subagentSessionCount: 0,
-          derivedFallbackUsed: false
-        }
-      }),
+      agentStatus: {
+        schemaVersion: 1,
+        source: "derived",
+        kind: "working_task",
+        label: "Working on Task T123 <script>",
+        confidence: "medium",
+        updatedAt: "2026-05-06T00:00:00.000Z",
+        taskId: "T123"
+      },
       stateSummary: { proposed: 0, ready: 0, in_progress: 1, blocked: 0, completed: 0 },
       proposedImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
       proposedExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
@@ -1235,224 +1130,29 @@ test("renderDashboardRootInnerHtml renders compact Agent Activity board from pro
       dependencyOverview: deliverTestDepOverview
     }
   });
-  assert.match(html, /data-agent-activity-source="live_activity"/);
-  assert.match(html, /Agent Activity/);
-  assert.match(html, /Working/);
-  assert.match(html, /Source: Live/);
-  assert.match(html, /<details class="dash-agent-row dash-agent-activity-row dash-agent-activity-row--main"/);
-  assert.match(html, /<summary class="dash-agent-row-summary">/);
-  assert.match(html, /data-agent-row-kind="main"/);
-  assert.match(html, /data-agent-row-id="row:main"/);
+  assert.match(html, /data-agent-status-kind="working_task"/);
+  assert.match(html, /Working on Task T123 &lt;script&gt;/);
   assert.match(html, /dash-agent-row/);
-  assert.match(html, /aria-label="Dashboard UX Worker &lt;script&gt;, Working, Main Agent"/);
+  assert.match(html, /aria-label="Working on Task T123 &lt;script&gt;, Current agent"/);
   assert.match(html, /T123/);
-  assert.match(html, /<dt>Task status<\/dt><dd>in_progress<\/dd>/);
-  assert.match(html, /<dt>Activity<\/dt><dd>lease-main<\/dd>/);
-  assert.match(html, /<dt>Session<\/dt><dd>sess-main<\/dd>/);
-  assert.match(html, /<dt>Custom agent<\/dt><dd>Dashboard Scout<\/dd>/);
-  assert.match(html, /<dt>Agent display<\/dt><dd>UX &lt;Worker&gt;<\/dd>/);
-  assert.doesNotMatch(html, /"agentDisplayName"/);
   assert.doesNotMatch(html, /<script>/);
-  assert.ok(html.indexOf("Agent Activity") < html.indexOf("Current Phase"));
+  assert.ok(html.indexOf("WC Agent is:") < html.indexOf("Current Phase"));
 });
 
-test("renderDashboardRootInnerHtml renders multiple live activities and ignores raw source shapes", () => {
-  const freshUpdatedAt = isoFromNow(-12_000);
-  const staleUpdatedAt = isoFromNow(-125_000);
-  const expiredUpdatedAt = isoFromNow(-245_000);
+test("renderDashboardRootInnerHtml renders many agent and subagent rows", () => {
   const html = renderDashboardRootInnerHtml({
     ok: true,
     data: {
-      agentActivitySummary: makeAgentActivitySummary({
-        main: makeAgentActivityRow({
-          rowId: "row:main",
-          displayName: "Orchestrator Main",
-          status: "working_task",
-          statusLabel: "Working on Task T700",
-          work: {
-            taskId: "T700",
-            title: "Coordinate dashboard rows",
-            phaseKey: "95",
-            command: "pnpm run check"
-          },
-          freshness: {
-            updatedAt: "2026-05-06T00:00:00.000Z",
-            startedAt: "2026-05-06T00:00:00.000Z",
-            expiresAt: "2026-05-06T00:05:00.000Z",
-            state: "fresh"
-          }
-        }),
-        active: [
-          makeAgentActivityRow({
-            rowId: "row:active-1",
-            displayName: "Dashboard UX Worker",
-            status: "validating",
-            statusLabel: "Validating dashboard rows",
-            work: {
-              taskId: "T701",
-              title: "Review dashboard rows",
-              phaseKey: "95",
-              command: "pnpm run test"
-            },
-            freshness: {
-              updatedAt: freshUpdatedAt,
-              startedAt: freshUpdatedAt,
-              expiresAt: isoFromNow(240_000),
-              state: "aging"
-            }
-          }),
-          makeAgentActivityRow({
-            rowId: "row:active-3",
-            displayName: "PR Review Agent",
-            status: "reviewing_pr",
-            statusLabel: "Reviewing Pull Request 192",
-            work: {
-              taskId: "T703",
-              title: "Review dashboard rows",
-              phaseKey: "95",
-              command: "review-item"
-            },
-            freshness: {
-              updatedAt: freshUpdatedAt,
-              startedAt: freshUpdatedAt,
-              expiresAt: isoFromNow(240_000),
-              state: "fresh"
-            }
-          }),
-          makeAgentActivityRow({
-            rowId: "row:active-2",
-            displayName: "Docs Worker",
-            status: "planning",
-            statusLabel: "Planning runbook updates",
-            work: {
-              taskId: "T702",
-              title: "Update runbook",
-              phaseKey: "95",
-              command: "pnpm run docs"
-            },
-            freshness: {
-              updatedAt: freshUpdatedAt,
-              startedAt: freshUpdatedAt,
-              expiresAt: isoFromNow(240_000),
-              state: "fresh"
-            }
-          }),
-          makeAgentActivityRow({
-            rowId: "row:active-stale",
-            displayName: "Stale Agent",
-            status: "planning",
-            statusLabel: "Planning stale cleanup",
-            work: {
-              taskId: "T706",
-              title: "Handle stale activity",
-              phaseKey: "95",
-              command: "heartbeat"
-            },
-            freshness: {
-              updatedAt: staleUpdatedAt,
-              startedAt: staleUpdatedAt,
-              expiresAt: isoFromNow(240_000),
-              state: "stale"
-            }
-          }),
-          makeAgentActivityRow({
-            rowId: "row:active-expired",
-            displayName: "Expired Active Agent",
-            status: "working_task",
-            statusLabel: "Working on expired work",
-            work: {
-              taskId: "T707",
-              title: "Expired active row",
-              phaseKey: "95",
-              command: "run-transition"
-            },
-            freshness: {
-              updatedAt: expiredUpdatedAt,
-              startedAt: expiredUpdatedAt,
-              expiresAt: isoFromNow(-5_000),
-              state: "expired"
-            }
-          })
-        ],
-        needsAttention: [
-          makeAgentActivityRow({
-            rowId: "row:attention-2",
-            displayName: "Blocked Agent",
-            status: "blocked",
-            statusLabel: "Blocked on missing dependency",
-            sourceConfidence: "medium",
-            work: {
-              taskId: "T704",
-              title: "Fix blocked dashboard rows",
-              phaseKey: "95",
-              command: "run-transition"
-            },
-            freshness: {
-              updatedAt: "2026-05-06T00:04:00.000Z",
-              startedAt: "2026-05-06T00:04:00.000Z",
-              expiresAt: "2026-05-06T00:08:00.000Z",
-              state: "fresh"
-            },
-            attention: {
-              state: "blocked",
-              message: "Blocked on missing dependency"
-            }
-          }),
-          makeAgentActivityRow({
-            rowId: "row:attention-expired",
-            displayName: "Expired Attention",
-            status: "awaiting_human_gate",
-            statusLabel: "Waiting on human",
-            sourceConfidence: "low",
-            work: {
-              taskId: "T705",
-              title: "Expired attention row",
-              phaseKey: "95",
-              command: "gate-check"
-            },
-            freshness: {
-              updatedAt: expiredUpdatedAt,
-              startedAt: expiredUpdatedAt,
-              expiresAt: isoFromNow(-5_000),
-              state: "expired"
-            },
-            attention: {
-              state: "needs_human",
-              message: "Waiting on human"
-            }
-          }),
-          makeAgentActivityRow({
-            rowId: "row:attention-1",
-            displayName: "Approval Agent",
-            status: "awaiting_policy_approval",
-            statusLabel: "Awaiting policy approval",
-            sourceConfidence: "medium",
-            work: {
-              taskId: "T703",
-              title: "Approve release candidate",
-              phaseKey: "95",
-              command: "review-item"
-            },
-            freshness: {
-              updatedAt: "2026-05-06T00:03:00.000Z",
-              startedAt: "2026-05-06T00:03:00.000Z",
-              expiresAt: "2026-05-06T00:07:00.000Z",
-              state: "fresh"
-            },
-            attention: {
-              state: "needs_policy",
-              message: "Awaiting policy approval"
-            }
-          })
-        ],
-        source: "mixed",
-        sourceMap: {
-          liveActivityCount: 4,
-          teamExecutionCount: 1,
-          subagentSessionCount: 1,
-          derivedFallbackUsed: false
-        }
-      }),
+      agentStatus: {
+        schemaVersion: 1,
+        source: "live_activity",
+        kind: "working_task",
+        label: "Working on Task T700",
+        confidence: "high",
+        updatedAt: "2026-05-06T00:00:00.000Z",
+        taskId: "T700",
+        phaseKey: "95"
+      },
       teamExecution: {
         schemaVersion: 1,
         available: true,
@@ -1461,8 +1161,8 @@ test("renderDashboardRootInnerHtml renders multiple live activities and ignores 
         byStatus: { assigned: 1, submitted: 0, blocked: 0, reconciled: 0, cancelled: 0 },
         topActive: [
           {
-            executionTaskId: "RAW TEAM TITLE SHOULD NOT APPEAR",
-            executionTaskTitle: "RAW TEAM TITLE SHOULD NOT APPEAR",
+            executionTaskId: "T701",
+            executionTaskTitle: "Review dashboard rows",
             supervisorId: "operator",
             workerId: "tab-2",
             status: "assigned",
@@ -1479,8 +1179,8 @@ test("renderDashboardRootInnerHtml renders multiple live activities and ignores 
         topOpenSessions: [
           {
             sessionId: "S1",
-            definitionId: "RAW SUBAGENT NAME SHOULD NOT APPEAR",
-            executionTaskId: "RAW SUBAGENT TASK SHOULD NOT APPEAR",
+            definitionId: "test-subagent",
+            executionTaskId: "T702",
             status: "open",
             updatedAt: "2026-05-06T00:02:00.000Z"
           }
@@ -1500,241 +1200,15 @@ test("renderDashboardRootInnerHtml renders multiple live activities and ignores 
       taskStoreLastUpdated: "2026-01-01T00:00:00.000Z",
       workspaceStatus: { currentKitPhase: "95", nextKitPhase: "96", activeFocus: "Test" },
       blockingAnalysis: [],
-      dependencyOverview: deliverTestDepOverview,
-      activeCount: 4,
-      staleCount: 1,
-      needsAttentionCount: 2
+      dependencyOverview: deliverTestDepOverview
     }
   });
-  const overviewPanelIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="overview"');
-  const planningPanelIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="planning"');
-  const overviewPanel = html.slice(overviewPanelIdx, planningPanelIdx > overviewPanelIdx ? planningPanelIdx : undefined);
-  const activityBoardStart = html.indexOf('<section class="dash-agent-status-banner dash-agent-activity-board"');
-  const activityBoardEnd = html.indexOf("</section>", activityBoardStart);
-  const activityBoard = html.slice(activityBoardStart, activityBoardEnd > activityBoardStart ? activityBoardEnd : undefined);
-  assert.match(html, /Agent Activity/);
-  assert.match(html, /Dashboard UX Worker/);
-  assert.match(html, /Docs Worker/);
-  assert.match(html, /PR Review Agent/);
-  assert.match(html, /Approval Agent/);
-  assert.match(html, /Stale Agent/);
-  assert.match(html, /Active Agents<\/b> <span class="muted">\((?:4)\)<\/span>/);
-  assert.match(html, /Needs Attention<\/b> <span class="muted">\((?:2)\)<\/span>/);
-  assert.match(html, /data-agent-chip-kind="status-reviewing_pr">PR review<\/span>/);
-  assert.match(html, /data-agent-chip-kind="status-awaiting_policy_approval">Needs approval<\/span>/);
-  assert.match(html, /data-agent-chip-kind="status-blocked">Blocked<\/span>/);
-  assert.match(html, /data-agent-chip-kind="freshness-fresh">updated \d+s ago<\/span>/);
-  assert.match(html, /data-agent-chip-kind="freshness-stale">stale · updated \d+m ago<\/span>/);
-  const needsAttentionIdx = html.indexOf('dash-agent-activity-section--attention');
-  const activeIdx = html.indexOf('dash-agent-activity-section--active');
-  assert.ok(needsAttentionIdx !== -1 && activeIdx !== -1 && needsAttentionIdx < activeIdx);
-  const approvalIdx = html.indexOf("Approval Agent");
-  const blockedIdx = html.indexOf("Blocked Agent");
-  const validatingIdx = html.indexOf("Dashboard UX Worker");
-  const planningIdx = html.indexOf("Docs Worker");
-  assert.ok(approvalIdx !== -1 && blockedIdx !== -1 && approvalIdx < blockedIdx);
-  assert.ok(validatingIdx !== -1 && planningIdx !== -1 && validatingIdx < planningIdx);
-  assert.doesNotMatch(activityBoard, /Expired Active Agent/);
-  assert.doesNotMatch(activityBoard, /Expired Attention/);
-  assert.doesNotMatch(activityBoard, /RAW TEAM TITLE SHOULD NOT APPEAR/);
-  assert.doesNotMatch(activityBoard, /RAW SUBAGENT NAME SHOULD NOT APPEAR/);
-  assert.doesNotMatch(activityBoard, /RAW SUBAGENT TASK SHOULD NOT APPEAR/);
-});
-
-test("renderDashboardRootInnerHtml renders comprehensive Agent Activity row fixtures deterministically", () => {
-  const summary = makeAgentActivitySummary({
-    generatedAt: "2026-05-06T00:10:00.000Z",
-    source: "mixed",
-    main: makeAgentActivityRow({
-      rowId: "row:main-fixture",
-      displayName: "Main Orchestrator",
-      role: "orchestrator",
-      status: "working_task",
-      statusLabel: "Working on Task T800",
-      work: {
-        taskId: "T800",
-        title: "Coordinate fixture coverage",
-        phaseKey: "129",
-        command: "pnpm run test",
-        taskStatus: "in_progress"
-      },
-      metadata: {
-        agentDisplayName: "Main Orchestrator",
-        customAgentName: "Fixture Lead"
-      },
-      freshness: {
-        updatedAt: "2026-05-06T00:09:30.000Z",
-        startedAt: "2026-05-06T00:00:00.000Z",
-        expiresAt: "2026-05-06T00:30:00.000Z",
-        state: "fresh"
-      }
-    }),
-    active: [
-      makeAgentActivityRow({
-        rowId: "row:active-planning",
-        displayName: "Planning Agent",
-        status: "planning",
-        statusLabel: "Planning render fixture",
-        work: { taskId: "T801", title: "Plan fixture", phaseKey: "129", command: "plan" },
-        freshness: {
-          updatedAt: "2026-05-06T00:04:00.000Z",
-          startedAt: "2026-05-06T00:01:00.000Z",
-          expiresAt: "2026-05-06T00:20:00.000Z",
-          state: "fresh"
-        }
-      }),
-      makeAgentActivityRow({
-        rowId: "row:active-validating",
-        displayName: "Validation Agent",
-        status: "validating",
-        statusLabel: "Validating render fixture",
-        work: { taskId: "T802", title: "Validate fixture", phaseKey: "129", command: "node --test" },
-        freshness: {
-          updatedAt: "2026-05-06T00:03:00.000Z",
-          startedAt: "2026-05-06T00:02:00.000Z",
-          expiresAt: "2026-05-06T00:20:00.000Z",
-          state: "aging"
-        }
-      }),
-      makeAgentActivityRow({
-        rowId: "row:active-reviewing",
-        displayName: "Review Agent",
-        status: "reviewing_pr",
-        statusLabel: "Reviewing Pull Request 633",
-        refs: { prNumber: 633 },
-        work: { taskId: "T803", title: "Review fixture", phaseKey: "129", command: "review-pr" },
-        freshness: {
-          updatedAt: "2026-05-06T00:05:00.000Z",
-          startedAt: "2026-05-06T00:03:00.000Z",
-          expiresAt: "2026-05-06T00:20:00.000Z",
-          state: "fresh"
-        }
-      }),
-      makeAgentActivityRow({
-        rowId: "row:active-expired",
-        displayName: "Expired Active Fixture",
-        status: "working_task",
-        statusLabel: "Expired active fixture",
-        work: { taskId: "T804", title: "Expired active", phaseKey: "129", command: "expired" },
-        freshness: {
-          updatedAt: "2026-05-05T23:55:00.000Z",
-          startedAt: "2026-05-05T23:50:00.000Z",
-          expiresAt: "2026-05-06T00:00:00.000Z",
-          state: "expired"
-        }
-      })
-    ],
-    needsAttention: [
-      makeAgentActivityRow({
-        rowId: "row:attention-stale",
-        displayName: "Stale Fixture",
-        status: "working_task",
-        statusLabel: "Working but stale",
-        work: { taskId: "T805", title: "Stale fixture", phaseKey: "129", command: "heartbeat" },
-        freshness: {
-          updatedAt: "2026-05-06T00:00:30.000Z",
-          startedAt: "2026-05-06T00:00:00.000Z",
-          expiresAt: "2026-05-06T00:30:00.000Z",
-          state: "stale"
-        },
-        attention: { state: "stale", message: "Heartbeat overdue" }
-      }),
-      makeAgentActivityRow({
-        rowId: "row:attention-blocked",
-        displayName: "Blocked Fixture",
-        status: "blocked",
-        statusLabel: "Blocked on fixture dependency",
-        work: { taskId: "T806", title: "Blocked fixture", phaseKey: "129", command: "run-transition" },
-        freshness: {
-          updatedAt: "2026-05-06T00:08:00.000Z",
-          startedAt: "2026-05-06T00:06:00.000Z",
-          expiresAt: "2026-05-06T00:30:00.000Z",
-          state: "fresh"
-        },
-        attention: { state: "blocked", message: "Blocked on fixture dependency" }
-      }),
-      makeAgentActivityRow({
-        rowId: "row:attention-policy",
-        displayName: "Policy Fixture",
-        status: "awaiting_policy_approval",
-        statusLabel: "Awaiting policy approval",
-        work: { taskId: "T807", title: "Policy fixture", phaseKey: "129", command: "review-item" },
-        freshness: {
-          updatedAt: "2026-05-06T00:07:00.000Z",
-          startedAt: "2026-05-06T00:06:00.000Z",
-          expiresAt: "2026-05-06T00:30:00.000Z",
-          state: "fresh"
-        },
-        attention: { state: "needs_policy", message: "Awaiting policy approval" }
-      }),
-      makeAgentActivityRow({
-        rowId: "row:attention-expired",
-        displayName: "Expired Attention Fixture",
-        status: "awaiting_human_gate",
-        statusLabel: "Waiting on expired gate",
-        work: { taskId: "T808", title: "Expired attention", phaseKey: "129", command: "gate" },
-        freshness: {
-          updatedAt: "2026-05-05T23:58:00.000Z",
-          startedAt: "2026-05-05T23:55:00.000Z",
-          expiresAt: "2026-05-06T00:00:00.000Z",
-          state: "expired"
-        },
-        attention: { state: "needs_human", message: "Waiting on expired gate" }
-      })
-    ],
-    staleCount: 1,
-    sourceMap: {
-      liveActivityCount: 6,
-      teamExecutionCount: 1,
-      subagentSessionCount: 1,
-      derivedFallbackUsed: false
-    }
-  });
-  const data = {
-    agentActivitySummary: summary,
-    stateSummary: { proposed: 0, ready: 0, in_progress: 1, blocked: 0, completed: 0 },
-    proposedImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
-    proposedExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
-    readyImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
-    readyExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
-    wishlist: { openCount: 0, totalCount: 0, openTop: [] },
-    blockedSummary: { count: 0, top: [] },
-    readyQueueTop: [],
-    readyQueueCount: 0,
-    suggestedNext: null,
-    planningSession: null,
-    taskStoreLastUpdated: "2026-01-01T00:00:00.000Z",
-    workspaceStatus: { currentKitPhase: "129", nextKitPhase: "130", activeFocus: "Test" },
-    blockingAnalysis: [],
-    dependencyOverview: deliverTestDepOverview
-  };
-  const html = renderDashboardRootInnerHtml({ ok: true, data });
-  const htmlAgain = renderDashboardRootInnerHtml({ ok: true, data });
-  const activityBoardStart = html.indexOf('<section class="dash-agent-status-banner dash-agent-activity-board"');
-  const activityBoardEnd = html.indexOf("</section>", activityBoardStart);
-  const activityBoard = html.slice(activityBoardStart, activityBoardEnd > activityBoardStart ? activityBoardEnd : undefined);
-
-  assert.equal(html, htmlAgain);
-  assert.equal((activityBoard.match(/<details class="dash-agent-row/g) ?? []).length, 7);
-  assert.equal((activityBoard.match(/role="listitem"/g) ?? []).length, 7);
-  assert.equal((activityBoard.match(/<summary class="dash-agent-row-summary">/g) ?? []).length, 7);
-  assert.match(activityBoard, /Active Agents<\/b> <span class="muted">\((?:3)\)<\/span>/);
-  assert.match(activityBoard, /Needs Attention<\/b> <span class="muted">\((?:3)\)<\/span>/);
-  assert.match(activityBoard, /data-agent-chip-kind="freshness-stale">stale · updated \d+d ago<\/span>/);
-  assert.match(activityBoard, /<dt>Custom agent<\/dt><dd>Fixture Lead<\/dd>/);
-  assert.match(activityBoard, /<dt>PR<\/dt><dd>#633<\/dd>/);
-  assert.doesNotMatch(activityBoard, /Expired Active Fixture/);
-  assert.doesNotMatch(activityBoard, /Expired Attention Fixture/);
-  assert.doesNotMatch(activityBoard, /"rowId"/);
-
-  const policyIdx = activityBoard.indexOf("Policy Fixture");
-  const blockedIdx = activityBoard.indexOf("Blocked Fixture");
-  const staleIdx = activityBoard.indexOf("Stale Fixture");
-  const validatingIdx = activityBoard.indexOf("Validation Agent");
-  const reviewIdx = activityBoard.indexOf("Review Agent");
-  const planningIdx = activityBoard.indexOf("Planning Agent");
-  assert.ok(policyIdx !== -1 && blockedIdx !== -1 && staleIdx !== -1 && policyIdx < blockedIdx && blockedIdx < staleIdx);
-  assert.ok(validatingIdx !== -1 && planningIdx !== -1 && reviewIdx !== -1 && validatingIdx < planningIdx && planningIdx < reviewIdx);
+  assert.match(html, /Working on Task T700/);
+  assert.match(html, /tab-2/);
+  assert.match(html, /Review dashboard rows/);
+  assert.match(html, /test-subagent/);
+  assert.match(html, /dash-agent-row--subagent/);
+  assert.match(html, /aria-label="test-subagent, Subagent"/);
 });
 
 test("renderDashboardRootInnerHtml team execution empty state offers create assignment", () => {
@@ -2752,83 +2226,14 @@ test("renderDashboardRootInnerHtml renders human gates section with resume actio
       planningSession: null,
       taskStoreLastUpdated: "2026-01-01T00:00:00.000Z",
       workspaceStatus: { currentKitPhase: "100", nextKitPhase: "101", activeFocus: "Test" },
-      agentActivitySummary: {
+      agentStatus: {
         schemaVersion: 1,
-        generatedAt: "2026-01-01T00:00:00.000Z",
-        source: "derived_only",
-        activeCount: 0,
-        staleCount: 0,
-        needsAttentionCount: 0,
-        main: null,
-        active: [],
-        needsAttention: [],
-        inferredFallback: {
-          schemaVersion: 1,
-          source: "derived",
-          kind: "awaiting_human_gate",
-          label: "Awaiting review · T900",
-          confidence: "high",
-          updatedAt: "2026-01-01T00:00:00.000Z",
-          taskId: "T900"
-        },
-        sourceMap: {
-          liveActivityCount: 0,
-          teamExecutionCount: 0,
-          subagentSessionCount: 0,
-          derivedFallbackUsed: true
-        }
-      },
-      agentActivitySummary: {
-        schemaVersion: 1,
-        generatedAt: "2026-01-01T00:00:00.000Z",
-        source: "derived_only",
-        activeCount: 0,
-        staleCount: 0,
-        needsAttentionCount: 0,
-        main: null,
-        active: [],
-        needsAttention: [],
-        inferredFallback: {
-          schemaVersion: 1,
-          source: "derived",
-          kind: "awaiting_human_gate",
-          label: "Awaiting review · T900",
-          confidence: "high",
-          updatedAt: "2026-01-01T00:00:00.000Z",
-          taskId: "T900"
-        },
-        sourceMap: {
-          liveActivityCount: 0,
-          teamExecutionCount: 0,
-          subagentSessionCount: 0,
-          derivedFallbackUsed: true
-        }
-      },
-      agentActivitySummary: {
-        schemaVersion: 1,
-        generatedAt: "2026-01-01T00:00:00.000Z",
-        source: "derived_only",
-        activeCount: 0,
-        staleCount: 0,
-        needsAttentionCount: 0,
-        main: null,
-        active: [],
-        needsAttention: [],
-        inferredFallback: {
-          schemaVersion: 1,
-          source: "derived",
-          kind: "awaiting_human_gate",
-          label: "Awaiting review · T900",
-          confidence: "high",
-          updatedAt: "2026-01-01T00:00:00.000Z",
-          taskId: "T900"
-        },
-        sourceMap: {
-          liveActivityCount: 0,
-          teamExecutionCount: 0,
-          subagentSessionCount: 0,
-          derivedFallbackUsed: true
-        }
+        source: "derived",
+        kind: "awaiting_human_gate",
+        label: "Awaiting review · T900",
+        confidence: "high",
+        updatedAt: "2026-01-01T00:00:00.000Z",
+        taskId: "T900"
       },
       blockingAnalysis: [],
       dependencyOverview: deliverTestDepOverview
@@ -2840,8 +2245,7 @@ test("renderDashboardRootInnerHtml renders human gates section with resume actio
   assert.match(html, /Awaiting review/);
   assert.match(html, /data-wc-action="human-gate-resume-ready"/);
   assert.match(html, /data-wc-action="human-gate-resume-work"/);
-  assert.match(html, /data-agent-activity-source="derived_only"/);
-  assert.match(html, /Source: Inferred/);
+  assert.match(html, /data-agent-status-kind="awaiting_human_gate"/);
   assert.match(html, /Awaiting review · T900/);
 });
 
@@ -3011,65 +2415,58 @@ test("renderDashboardRootInnerHtml merges ready improvement and execution rollup
 test("buildPhaseCompleteReleaseChatPrompt is compact agent-oriented closeout seed", () => {
   const p = buildPhaseCompleteReleaseChatPrompt("Phase 64", {
     phaseKey: "64",
-    phaseLabel: "Phase 64",
-    currentKitPhase: "64",
-    nextKitPhase: "65",
+    workspaceCurrentPhase: "64",
+    workspaceNextPhase: "65",
+    seededTaskIds: ["T900", "T901"],
     scope: "current"
   });
-  assert.match(p, /^## Complete & Release Phase/);
-  assert.match(p, /\*\*Role:\*\* You are the Workflow Cannon Phase Orchestrator\./);
-  assert.match(p, /\* target phaseKey: `64`/);
-  assert.match(p, /\* label: `Phase 64`/);
-  assert.match(p, /\* workspace current \/ next: `64` \/ `65`/);
-  assert.match(p, /\* scope: `current`/);
-  assert.match(p, /\* integration branch: `release\/phase-64`/);
-  assert.match(p, /dashboard authorization: complete-and-release/);
-  assert.match(p, /attached Workflow Cannon runbooks, rules, CAE guidance, and machine command contracts/);
-  assert.match(p, /Treat this dashboard-launched prompt as the operator’s confirmation/);
-  assert.match(p, /## Attached authority/);
-  assert.match(p, /## Authorization and policy/);
-  assert.match(p, /## Operating mode/);
-  assert.match(p, /## Initial phase classification/);
-  assert.match(p, /## Orchestration requirements/);
-  assert.match(p, /## Ask the user only when needed/);
-  assert.match(p, /## Stop conditions/);
-  assert.match(p, /## Final response/);
+  assert.match(p, /^## Complete & Release/);
+  assert.match(p, /target phaseKey: 64/);
+  assert.match(p, /workspace current \/ next: 64 \/ 65/);
+  assert.match(p, /scope: current/);
+  assert.match(p, /integration branch: `release\/phase-64`/);
+  assert.match(p, /seeded ready ids \(preview\): T900, T901/);
+  assert.doesNotMatch(p, /mismatch:/);
   assert.match(p, /@\.ai\/playbooks\/phase-closeout-and-release\.md/);
   assert.match(p, /@\.ai\/playbooks\/task-to-phase-branch\.md/);
   assert.match(p, /@\.ai\/AGENT-CLI-MAP\.md/);
-  assert.match(p, /@\.ai\/runbooks\/phase-closeout-ordering-recovery\.md/);
-  assert.match(p, /@\.ai\/playbooks\/improvement-triage-top-three\.md/);
-  assert.match(p, /@\.ai\/playbooks\/wishlist-intake-to-execution\.md/);
-  assert.match(p, /Released version:/);
-  assert.match(p, /Remaining follow-ups:/);
+  assert.match(p, /improvement-triage-top-three/);
+  assert.match(p, /wishlist-intake-to-execution/);
+  assert.match(p, /phase-closeout-readiness/);
+  assert.match(p, /phase-closeout-ordering-recovery/);
+  assert.match(p, /wishlist_intake/);
+  assert.match(p, /task-engine-run-contracts\.schema\.json/);
+  assert.match(p, /publish:npm/);
+  assert.match(p, /Handoff if blocked/);
 });
 
-test("buildPhaseCompleteReleaseChatPrompt includes current and next phase context", () => {
+test("buildPhaseCompleteReleaseChatPrompt includes ordering risk when later phases delivered", () => {
   const p = buildPhaseCompleteReleaseChatPrompt("Phase 118", {
     phaseKey: "118",
-    currentKitPhase: "118",
-    nextKitPhase: "119"
+    workspaceCurrentPhase: "118",
+    laterDeliveredPhases: "119,120"
   });
-  assert.match(p, /\* workspace current \/ next: `118` \/ `119`/);
-  assert.match(p, /dashboard authorization: complete-and-release/);
+  assert.match(p, /ordering risk/);
+  assert.match(p, /119,120/);
+  assert.match(p, /phase-closeout-ordering-recovery/);
 });
 
 test("buildPhaseCompleteReleaseChatPrompt warns when target differs from workspace current", () => {
   const p = buildPhaseCompleteReleaseChatPrompt("Phase 100", {
     phaseKey: "100",
-    currentKitPhase: "98",
-    nextKitPhase: "99",
+    workspaceCurrentPhase: "98",
+    workspaceNextPhase: "99",
     scope: "bucket"
   });
-  assert.match(p, /\* target phaseKey: `100`/);
-  assert.match(p, /\* scope: `bucket`/);
-  assert.match(p, /\* workspace current \/ next: `98` \/ `99`/);
+  assert.match(p, /\*\*mismatch:\*\*/);
+  assert.match(p, /target phaseKey 100 ≠ workspace current 98/);
+  assert.match(p, /scope: bucket/);
 });
 
 test("buildPhaseCompleteReleaseChatPrompt without phaseKey uses placeholders", () => {
   const p = buildPhaseCompleteReleaseChatPrompt("Phase 64");
-  assert.match(p, /\* target phaseKey: `\{\{phaseKey\}\}`/);
-  assert.match(p, /\* integration branch: `release\/phase-\{\{phaseKey\}\}`/);
+  assert.match(p, /release\/phase-<N>/);
+  assert.doesNotMatch(p, /release\/phase-64/);
 });
 
 test("collectPhaseBucketTaskIds merges taskIds and top preview", () => {
