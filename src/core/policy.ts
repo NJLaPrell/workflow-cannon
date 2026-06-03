@@ -45,6 +45,7 @@ export type PolicyOperationId =
   | "approvals.review-item"
   | "improvement.generate-recommendations"
   | "improvement.ingest-transcripts"
+  | "task-engine.prepare-release-artifacts"
   | "task-engine.backfill-task-feature-links"
   | "task-engine.export-feature-taxonomy-json"
   | "task-engine.agent-sessions.persist"
@@ -146,6 +147,9 @@ export function isSensitiveModuleCommand(
       return false;
     }
     if (canonical === "finalize-plan-to-phase" && args.dryRun !== false) {
+      return false;
+    }
+    if (canonical === "prepare-release-artifacts" && args.dryRun !== false) {
       return false;
     }
     const options =

@@ -109,6 +109,65 @@ async function writeWorkspaceStatusYaml(workspace, lines) {
   await writeFile(path.join(yamlDir, "workspace-kit-status.yaml"), [...lines, ""].join("\n"), "utf8");
 }
 
+async function createReleasePrepWorkspace() {
+  const workspace = await tmpDir("wk-release-prep-");
+  await mkdir(path.join(workspace, "docs", "maintainers"), { recursive: true });
+  await mkdir(path.join(workspace, "schemas"), { recursive: true });
+  await mkdir(path.join(workspace, ".workspace-kit", "tasks"), { recursive: true });
+  await writeFile(
+    path.join(workspace, "package.json"),
+    JSON.stringify({ name: "@workflow-cannon/workspace-kit", version: "0.99.26" }, null, 2) + "\n",
+    "utf8"
+  );
+  await writeFile(
+    path.join(workspace, "CHANGELOG.md"),
+    [
+      "# Changelog",
+      "",
+      "Canonical changelog location: `docs/maintainers/CHANGELOG.md`.",
+      "",
+      "## [Unreleased]",
+      "",
+      "- See `docs/maintainers/CHANGELOG.md` for release notes, migration notes, and historical entries.",
+      "",
+      "## [0.99.26] - 2026-06-03",
+      "",
+      "- See `docs/maintainers/CHANGELOG.md`."
+    ].join("\n") + "\n",
+    "utf8"
+  );
+  await writeFile(
+    path.join(workspace, "docs", "maintainers", "CHANGELOG.md"),
+    [
+      "# Changelog",
+      "",
+      "All notable changes to `@workflow-cannon/workspace-kit` are documented in this file.",
+      "",
+      "## [Unreleased]",
+      "",
+      "### Added",
+      "",
+      "- Worker-facing deterministic release prep command.",
+      "",
+      "## [0.99.26] - 2026-06-03",
+      "",
+      "Patch release."
+    ].join("\n") + "\n",
+    "utf8"
+  );
+  await writeFile(
+    path.join(workspace, "schemas", "task-engine-run-contracts.schema.json"),
+    JSON.stringify({ properties: { packageVersion: { const: "0.99.26" } } }, null, 2) + "\n",
+    "utf8"
+  );
+  await writeFile(
+    path.join(workspace, "schemas", "pilot-run-args.snapshot.json"),
+    JSON.stringify({ schemaVersion: 1, sourceSchemaPackageVersion: "0.99.26" }, null, 2) + "\n",
+    "utf8"
+  );
+  return workspace;
+}
+
 test("classifyKitStatePath distinguishes durable, generated, volatile, and unknown kit paths", () => {
   assert.equal(
     classifyKitStatePath(".workspace-kit/tasks/workspace-kit.db").classification,
@@ -894,6 +953,90 @@ test("taskEngineModule release-evidence-manifest reconciles follow-up task refs"
 
   assert.equal(result.ok, false);
   assert.equal(result.code, "release-evidence-followup-task-missing");
+});
+
+test("taskEngineModule prepare-release-artifacts dry-run reports script diff output without policyApproval", async () => {
+  const workspace = await createReleasePrepWorkspace();
+  try {
+    const result = await taskEngineModule.onCommand(
+      {
+        name: "prepare-release-artifacts",
+        args: { version: "0.99.27", date: "2026-06-04" }
+      },
+      sqliteTaskEngineCtx(workspace)
+    );
+
+    assert.equal(result.ok, true);
+    assert.equal(result.code, "prepare-release-artifacts-dry-run");
+    assert.equal(result.data.dryRun, true);
+    assert.deepEqual(
+      result.data.changes.map((entry) => entry.path),
+      [
+        "package.json",
+        "CHANGELOG.md",
+        "docs/maintainers/CHANGELOG.md",
+        "schemas/task-engine-run-contracts.schema.json",
+        "schemas/pilot-run-args.snapshot.json"
+      ]
+    );
+    assert.equal(result.data.releaseEvidenceFragmentWritten, false);
+    assert.equal(result.data.releaseEvidenceFragmentPath, ".workspace-kit/release-evidence/0.99.27/prepared-artifacts.json");
+    assert.ok(result.data.releaseEvidenceRefs.every((entry) => Array.isArray(entry.refs) && entry.refs.length >= 1));
+  } finally {
+    await rm(workspace, { recursive: true, force: true });
+  }
+});
+
+test("taskEngineModule prepare-release-artifacts apply mode requires policyApproval", async () => {
+  const workspace = await createReleasePrepWorkspace();
+  try {
+    const result = await taskEngineModule.onCommand(
+      {
+        name: "prepare-release-artifacts",
+        args: { version: "0.99.27", date: "2026-06-04", dryRun: false }
+      },
+      sqliteTaskEngineCtx(workspace)
+    );
+
+    assert.equal(result.ok, false);
+    assert.equal(result.code, "prepare-release-artifacts-policy-approval-required");
+  } finally {
+    await rm(workspace, { recursive: true, force: true });
+  }
+});
+
+test("taskEngineModule prepare-release-artifacts apply mode writes fragment refs for changed artifacts", async () => {
+  const workspace = await createReleasePrepWorkspace();
+  try {
+    const result = await taskEngineModule.onCommand(
+      {
+        name: "prepare-release-artifacts",
+        args: {
+          version: "0.99.27",
+          date: "2026-06-04",
+          dryRun: false,
+          policyApproval: { confirmed: true, rationale: "prepare release artifacts in test" }
+        }
+      },
+      sqliteTaskEngineCtx(workspace)
+    );
+
+    assert.equal(result.ok, true);
+    assert.equal(result.code, "prepare-release-artifacts-applied");
+    assert.equal(result.data.releaseEvidenceFragmentWritten, true);
+
+    const packageJson = JSON.parse(await readFile(path.join(workspace, "package.json"), "utf8"));
+    assert.equal(packageJson.version, "0.99.27");
+
+    const fragment = JSON.parse(
+      await readFile(path.join(workspace, ".workspace-kit", "release-evidence", "0.99.27", "prepared-artifacts.json"), "utf8")
+    );
+    assert.equal(fragment.fragmentKind, "preparedArtifacts");
+    assert.equal(fragment.changedArtifacts.length, 5);
+    assert.ok(fragment.changedArtifacts.every((entry) => Array.isArray(entry.refs) && entry.refs[0]?.kind === "artifact"));
+  } finally {
+    await rm(workspace, { recursive: true, force: true });
+  }
 });
 
 // ---------------------------------------------------------------------------
