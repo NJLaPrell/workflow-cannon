@@ -38,6 +38,26 @@ export type RecordAgentActivityInput = AgentActivityIdentityInput & {
   ttlSeconds?: number | null;
 };
 
+export type CommandBoundaryActivityInput = {
+  command: string;
+  kind: DashboardAgentStatusKind;
+  activityId?: string | null;
+  label?: string | null;
+  agentDefinitionId?: string | null;
+  assignmentId?: string | null;
+  currentStep?: string | null;
+  hostHint?: string | null;
+  modelTier?: string | null;
+  modelHint?: string | null;
+  taskId?: string | null;
+  phaseKey?: string | null;
+  prNumber?: number | null;
+  version?: string | null;
+  details?: Record<string, unknown> | null;
+  now?: string | null;
+  ttlSeconds?: number | null;
+};
+
 export type ClearAgentActivityInput = AgentActivityIdentityInput & {
   taskId?: string | null;
 };
@@ -113,6 +133,16 @@ function cleanTtlSeconds(value: unknown): number {
   return Math.min(60 * 60, Math.max(30, Math.floor(n)));
 }
 
+function autoCommandBoundaryActivityId(identity: { agentId: string; sessionId: string }, command: string, taskId?: string | null): string {
+  const suffix = cleanText(taskId) || "general";
+  return `auto:${identity.agentId}:${identity.sessionId}:${command}:${suffix}`;
+}
+
+function resolveCommandBoundaryIdentity(ctx: ModuleLifecycleContext): { agentId: string; sessionId: string } {
+  const identity = resolveAgentActivityIdentity(ctx, {});
+  return { agentId: identity.agentId, sessionId: identity.sessionId };
+}
+
 export function resolveAgentActivityIdentity(
   ctx: ModuleLifecycleContext,
   input: AgentActivityIdentityInput = {}
@@ -158,7 +188,11 @@ export function buildAgentActivityLabel(args: {
         ? `Awaiting Policy Approval for ${resolveReviewItem(args)}`
         : "Awaiting Policy Approval";
     case "awaiting_human_gate":
-      return command ? `Awaiting Human Gate for ${command}` : "Awaiting Human Gate";
+      return detailsText(args.details, ["detail", "reason", "nextStep"])
+        ? `Awaiting Human Gate - ${detailsText(args.details, ["detail", "reason", "nextStep"])}`
+        : command
+          ? `Awaiting Human Gate for ${command}`
+          : "Awaiting Human Gate";
     case "delegating_task":
       return taskId ? `Delegating Task ${taskId}` : "Delegating Task";
     case "ready_task":
@@ -280,5 +314,55 @@ export function recordTaskTransitionActivityBestEffort(
   }
   if (["complete", "pause", "cancel", "decline", "reject"].includes(args.action)) {
     clearAgentActivityBestEffort(ctx, planning, { taskId: args.taskId });
+  }
+}
+
+export function recordCommandBoundaryActivityBestEffort(
+  ctx: ModuleLifecycleContext,
+  planning: OpenedPlanningStores,
+  input: CommandBoundaryActivityInput
+): AgentActivityLease | null {
+  const identity = resolveCommandBoundaryIdentity(ctx);
+  const activityId = cleanText(input.activityId, autoCommandBoundaryActivityId(identity, input.command, input.taskId));
+  return recordAgentActivityBestEffort(ctx, planning, {
+    activityId,
+    agentId: identity.agentId,
+    sessionId: identity.sessionId,
+    kind: input.kind,
+    label: input.label,
+    agentDefinitionId: input.agentDefinitionId,
+    assignmentId: input.assignmentId,
+    currentStep: input.currentStep,
+    hostHint: input.hostHint,
+    modelTier: input.modelTier,
+    modelHint: input.modelHint,
+    taskId: input.taskId,
+    command: input.command,
+    phaseKey: input.phaseKey,
+    prNumber: input.prNumber,
+    version: input.version,
+    details: input.details,
+    now: input.now,
+    ttlSeconds: input.ttlSeconds
+  });
+}
+
+export async function withCommandBoundaryActivityBestEffort<T>(
+  ctx: ModuleLifecycleContext,
+  planning: OpenedPlanningStores,
+  input: CommandBoundaryActivityInput,
+  run: () => Promise<T>
+): Promise<T> {
+  const lease = recordCommandBoundaryActivityBestEffort(ctx, planning, input);
+  try {
+    return await run();
+  } finally {
+    if (lease) {
+      clearAgentActivityBestEffort(ctx, planning, {
+        activityId: lease.activityId,
+        agentId: lease.agentId,
+        sessionId: lease.sessionId
+      });
+    }
   }
 }

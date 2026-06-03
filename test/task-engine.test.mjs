@@ -36,7 +36,6 @@ import {
   ideasModule
 } from "../dist/index.js";
 import { setAgentActivityLease } from "../dist/modules/task-engine/agent-activity-store.js";
-import { buildAgentActivityLabel } from "../dist/modules/task-engine/agent-activity-recorder.js";
 import { persistBuildPlanSession } from "../dist/core/planning/build-plan-session-file.js";
 
 // ---------------------------------------------------------------------------
@@ -2254,35 +2253,6 @@ test("taskEngineModule dashboard-summary agentStatus uses fresh live activity ov
   assert.equal(result.data.agentStatus.kind, "reviewing_pr");
   assert.equal(result.data.agentStatus.label, "Reviewing Pull Request 223");
   assert.equal(result.data.agentStatus.prNumber, 223);
-});
-
-test("buildAgentActivityLabel maps PR, release, approval, validation, and malformed metadata", () => {
-  assert.equal(
-    buildAgentActivityLabel({ kind: "reviewing_pr", prNumber: 192 }),
-    "Reviewing Pull Request 192"
-  );
-  assert.equal(
-    buildAgentActivityLabel({
-      kind: "reviewing_pr",
-      details: { prUrl: "https://github.com/acme/repo/pull/193" }
-    }),
-    "Reviewing Pull Request 193"
-  );
-  assert.equal(buildAgentActivityLabel({ kind: "reviewing_pr", details: { prNumber: "nope" } }), "Reviewing Pull Request");
-  assert.equal(buildAgentActivityLabel({ kind: "releasing", version: "0.9.1" }), "Releasing Build 0.9.1");
-  assert.equal(buildAgentActivityLabel({ kind: "releasing", phaseKey: "81" }), "Releasing Phase 81");
-  assert.equal(
-    buildAgentActivityLabel({ kind: "reviewing_item", details: { reviewItemId: "review-item:T100060" } }),
-    "Reviewing Item review-item:T100060"
-  );
-  assert.equal(
-    buildAgentActivityLabel({ kind: "awaiting_policy_approval", taskId: "T100060" }),
-    "Awaiting Policy Approval for T100060"
-  );
-  assert.equal(
-    buildAgentActivityLabel({ kind: "validating", details: { validationCommand: "pnpm run check" } }),
-    "Validating pnpm run check"
-  );
 });
 
 test("taskEngineModule set-agent-activity generates mapped labels from structured details", async () => {

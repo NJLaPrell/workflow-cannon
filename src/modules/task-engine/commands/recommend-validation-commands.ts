@@ -8,6 +8,10 @@ import type { OpenedPlanningStores } from "../persistence/planning-open.js";
 import type { TaskStore } from "../persistence/store.js";
 import type { TaskEntity } from "../types.js";
 import { readPlanString } from "./task-intent-commands.js";
+import {
+  clearAgentActivityBestEffort,
+  recordCommandBoundaryActivityBestEffort
+} from "../agent-activity-recorder.js";
 
 export type ValidationRecommendation = {
   priority: number;
@@ -156,19 +160,28 @@ export function buildRecommendValidation(
     };
   }
 
-  const features = [...new Set([...taskFeatures(task), ...extraFeatures])];
-  const signals = pathSignals(paths);
-  const recommendations: ValidationRecommendation[] = [];
-  const seen = new Set<string>();
+  const activityLease = recordCommandBoundaryActivityBestEffort(ctx, planning, {
+    command: "recommend-validation",
+    kind: "validating",
+    taskId: taskId ?? null,
+    details: {
+      validationLabel: taskId ? `task ${taskId} validation plan` : "validation plan"
+    }
+  });
+  try {
+    const features = [...new Set([...taskFeatures(task), ...extraFeatures])];
+    const signals = pathSignals(paths);
+    const recommendations: ValidationRecommendation[] = [];
+    const seen = new Set<string>();
 
-  addRecommendation(
-    recommendations,
-    seen,
-    10,
-    BASE_CHECK,
-    "Default maintainer gate: metadata, manifests, and consistency scripts.",
-    "check"
-  );
+    addRecommendation(
+      recommendations,
+      seen,
+      10,
+      BASE_CHECK,
+      "Default maintainer gate: metadata, manifests, and consistency scripts.",
+      "check"
+    );
 
   if (signals.schemas || signals.contracts || features.includes("policy-registry")) {
     addRecommendation(
@@ -278,41 +291,50 @@ export function buildRecommendValidation(
     addRecommendation(recommendations, seen, 5, cmd, "Prior delivery evidence on this task used this command.", "prior-delivery");
   }
 
-  recommendations.sort((a, b) => a.priority - b.priority);
+    recommendations.sort((a, b) => a.priority - b.priority);
 
-  const planningGeneration = planning.sqliteDual.getPlanningGeneration();
-  const data: Record<string, unknown> = {
-    schemaVersion: 1,
-    taskId: taskId ?? null,
-    taskStatus: task?.status ?? null,
-    features,
-    touchedPathCount: paths.length,
-    recommendations,
-    deliveryEvidenceHint: {
-      schemaVersion: 2,
-      validationCommands: recommendations.slice(0, 5).map((r) => ({
-        command: r.command,
-        result: "success"
-      })),
-      checks: recommendations.slice(0, 5).map((r) => ({
-        name: r.expectedEvidenceFields.checks[0]?.name ?? "validation",
-        conclusion: "success"
-      }))
-    },
-    remediation: {
-      instructionPath: CLI_REMEDIATION_INSTRUCTIONS.recommendValidation,
-      docPath: CLI_REMEDIATION_DOCS.agentCliMap
+    const planningGeneration = planning.sqliteDual.getPlanningGeneration();
+    const data: Record<string, unknown> = {
+      schemaVersion: 1,
+      taskId: taskId ?? null,
+      taskStatus: task?.status ?? null,
+      features,
+      touchedPathCount: paths.length,
+      recommendations,
+      deliveryEvidenceHint: {
+        schemaVersion: 2,
+        validationCommands: recommendations.slice(0, 5).map((r) => ({
+          command: r.command,
+          result: "success"
+        })),
+        checks: recommendations.slice(0, 5).map((r) => ({
+          name: r.expectedEvidenceFields.checks[0]?.name ?? "validation",
+          conclusion: "success"
+        }))
+      },
+      remediation: {
+        instructionPath: CLI_REMEDIATION_INSTRUCTIONS.recommendValidation,
+        docPath: CLI_REMEDIATION_DOCS.agentCliMap
+      }
+    };
+    attachPolicyMeta(data, ctx, planningGeneration);
+
+    return {
+      ok: true,
+      code: "recommend-validation",
+      message:
+        taskId && task
+          ? `Validation plan for ${taskId} (${recommendations.length} command(s))`
+          : `Validation plan from paths/features (${recommendations.length} command(s))`,
+      data
+    };
+  } finally {
+    if (activityLease) {
+      clearAgentActivityBestEffort(ctx, planning, {
+        activityId: activityLease.activityId,
+        agentId: activityLease.agentId,
+        sessionId: activityLease.sessionId
+      });
     }
-  };
-  attachPolicyMeta(data, ctx, planningGeneration);
-
-  return {
-    ok: true,
-    code: "recommend-validation",
-    message:
-      taskId && task
-        ? `Validation plan for ${taskId} (${recommendations.length} command(s))`
-        : `Validation plan from paths/features (${recommendations.length} command(s))`,
-    data
-  };
+  }
 }

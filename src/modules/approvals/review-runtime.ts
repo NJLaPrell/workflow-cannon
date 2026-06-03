@@ -7,6 +7,10 @@ import {
   computeDecisionFingerprint,
   readDecisionFingerprints
 } from "./decisions-store.js";
+import {
+  clearAgentActivityBestEffort,
+  recordCommandBoundaryActivityBestEffort
+} from "../task-engine/agent-activity-recorder.js";
 
 function getEvidenceKey(task: Pick<TaskEntity, "id" | "metadata">): string {
   const m = task.metadata;
@@ -62,6 +66,12 @@ export async function runReviewItem(
     };
   }
 
+  const activityLease = recordCommandBoundaryActivityBestEffort(ctx, planning, {
+    command: "review-item",
+    kind: "reviewing_item",
+    taskId,
+    details: { reviewItemId: taskId, detail: `decision ${decision}` }
+  });
   const hookBus = createKitLifecycleHookBus(
     ctx.workspacePath,
     (ctx.effectiveConfig ?? {}) as Record<string, unknown>
@@ -102,6 +112,14 @@ export async function runReviewItem(
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     return { ok: false, code: "transition-failed", message: msg };
+  } finally {
+    if (activityLease) {
+      clearAgentActivityBestEffort(ctx, planning, {
+        activityId: activityLease.activityId,
+        agentId: activityLease.agentId,
+        sessionId: activityLease.sessionId
+      });
+    }
   }
 
   const finalTask = store.getTask(taskId);

@@ -16,6 +16,10 @@ import { planningGenPolicyGate } from "../planning-generation-gate.js";
 import { mutationEvidence, nowIso, planningConcurrencySaveOpts } from "../mutation-utils.js";
 import type { TaskStore } from "../persistence/store.js";
 import { buildRecommendValidation } from "./recommend-validation-commands.js";
+import {
+  clearAgentActivityBestEffort,
+  recordCommandBoundaryActivityBestEffort
+} from "../agent-activity-recorder.js";
 
 const INSTRUCTION = "src/modules/task-engine/instructions/harvest-delivery-evidence.md";
 
@@ -61,34 +65,45 @@ export async function buildHarvestDeliveryEvidence(
 
   const dryRun = args.apply !== true;
   const planningGeneration = planning.sqliteDual.getPlanningGeneration();
-
-  if (!dryRun) {
-    if (!taskId || !task) {
-      return {
-        ok: false,
-        code: "invalid-run-args",
-        message: "harvest-delivery-evidence apply requires taskId.",
-        remediation: { instructionPath: INSTRUCTION }
-      };
-    }
-    if (!parsePolicyApproval(args)) {
-      return {
-        ok: false,
-        code: "policy-approval-required",
-        message: "harvest-delivery-evidence apply requires JSON policyApproval on the run argv.",
-        remediation: {
-          instructionPath: INSTRUCTION,
-          docPath: CLI_REMEDIATION_DOCS.policyApproval
+  const activityLease = taskId
+    ? recordCommandBoundaryActivityBestEffort(ctx, planning, {
+        command: "harvest-delivery-evidence",
+        kind: "validating",
+        taskId,
+        details: {
+          validationLabel: dryRun ? `task ${taskId} delivery evidence preview` : `task ${taskId} delivery evidence`
         }
-      };
-    }
-    const pg = planningGenPolicyGate(ctx, args, INSTRUCTION, planningGeneration);
-    if (pg.block) {
-      return pg.block;
-    }
-  }
+      })
+    : null;
 
-  const resolved = resolveMaintainerDeliveryPolicy({
+  try {
+    if (!dryRun) {
+      if (!taskId || !task) {
+        return {
+          ok: false,
+          code: "invalid-run-args",
+          message: "harvest-delivery-evidence apply requires taskId.",
+          remediation: { instructionPath: INSTRUCTION }
+        };
+      }
+      if (!parsePolicyApproval(args)) {
+        return {
+          ok: false,
+          code: "policy-approval-required",
+          message: "harvest-delivery-evidence apply requires JSON policyApproval on the run argv.",
+          remediation: {
+            instructionPath: INSTRUCTION,
+            docPath: CLI_REMEDIATION_DOCS.policyApproval
+          }
+        };
+      }
+      const pg = planningGenPolicyGate(ctx, args, INSTRUCTION, planningGeneration);
+      if (pg.block) {
+        return pg.block;
+      }
+    }
+
+    const resolved = resolveMaintainerDeliveryPolicy({
     effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined,
     task: task ?? null,
     taskId: taskId ?? null,
@@ -99,27 +114,27 @@ export async function buildHarvestDeliveryEvidence(
     warnings: resolved.warnings
   });
 
-  let validationCommands = readValidationCommandsFromArgs(args);
-  if (!validationCommands && taskId) {
-    const rec = buildRecommendValidation(ctx, planning, store, { taskId });
-    if (rec.ok && rec.data && typeof rec.data === "object") {
-      const hint = (rec.data as Record<string, unknown>).deliveryEvidenceHint;
-      if (hint && typeof hint === "object" && !Array.isArray(hint)) {
-        const cmds = (hint as Record<string, unknown>).validationCommands;
-        if (Array.isArray(cmds)) {
-          validationCommands = cmds
-            .filter((row): row is Record<string, unknown> => Boolean(row && typeof row === "object" && !Array.isArray(row)))
-            .map((row) => ({
-              command: String(row.command ?? ""),
-              result: typeof row.result === "string" ? row.result : "success"
-            }))
-            .filter((row) => row.command.length > 0);
+    let validationCommands = readValidationCommandsFromArgs(args);
+    if (!validationCommands && taskId) {
+      const rec = buildRecommendValidation(ctx, planning, store, { taskId });
+      if (rec.ok && rec.data && typeof rec.data === "object") {
+        const hint = (rec.data as Record<string, unknown>).deliveryEvidenceHint;
+        if (hint && typeof hint === "object" && !Array.isArray(hint)) {
+          const cmds = (hint as Record<string, unknown>).validationCommands;
+          if (Array.isArray(cmds)) {
+            validationCommands = cmds
+              .filter((row): row is Record<string, unknown> => Boolean(row && typeof row === "object" && !Array.isArray(row)))
+              .map((row) => ({
+                command: String(row.command ?? ""),
+                result: typeof row.result === "string" ? row.result : "success"
+              }))
+              .filter((row) => row.command.length > 0);
+          }
         }
       }
     }
-  }
 
-  const preview = harvestDeliveryEvidencePreview({
+    const preview = harvestDeliveryEvidencePreview({
     workspacePath: ctx.workspacePath,
     branchName:
       typeof args.branchName === "string" && args.branchName.trim() ? args.branchName.trim() : null,
@@ -130,9 +145,9 @@ export async function buildHarvestDeliveryEvidence(
     mergeSha: typeof args.mergeSha === "string" && args.mergeSha.trim() ? args.mergeSha.trim() : null,
     validationCommands,
     policyOptions: policyContext
-  });
+    });
 
-  const data: Record<string, unknown> = {
+    const data: Record<string, unknown> = {
     schemaVersion: preview.schemaVersion,
     taskId: taskId ?? null,
     dryRun,
@@ -150,75 +165,84 @@ export async function buildHarvestDeliveryEvidence(
       instructionPath: INSTRUCTION,
       docPath: CLI_REMEDIATION_DOCS.agentCliMap
     }
-  };
+    };
 
-  if (dryRun) {
+    if (dryRun) {
+      attachPolicyMeta(data, ctx, planningGeneration);
+      return {
+        ok: true,
+        code: "harvest-delivery-evidence-preview",
+        message:
+          preview.missingFields.length === 0
+            ? "Delivery evidence preview is complete for apply."
+            : `Delivery evidence preview missing ${preview.missingFields.length} field(s).`,
+        data
+      };
+    }
+
+    if (!preview.validation.ok) {
+      attachPolicyMeta(data, ctx, planningGeneration);
+      return {
+        ok: false,
+        code: "invalid-evidence",
+        message: `harvest-delivery-evidence apply rejected harvested evidence: ${preview.validation.message}`,
+        data: {
+          ...data,
+          missingFields: preview.validation.missingFields,
+          validationCode: preview.validation.code
+        },
+        remediation: { instructionPath: CLI_REMEDIATION_INSTRUCTIONS.updateTask }
+      };
+    }
+
+    const actor =
+      typeof args.actor === "string"
+        ? args.actor
+        : ctx.resolvedActor !== undefined
+          ? ctx.resolvedActor
+          : undefined;
+    const updatedTask = {
+      ...task!,
+      metadata: {
+        ...(task!.metadata ?? {}),
+        deliveryEvidence: preview.deliveryEvidence
+      },
+      updatedAt: nowIso()
+    };
+    const revalidate = validateDeliveryEvidenceMetadata(updatedTask.metadata?.deliveryEvidence, policyContext);
+    if (!revalidate.ok) {
+      return {
+        ok: false,
+        code: "invalid-evidence",
+        message: revalidate.message,
+        data: { missingFields: revalidate.missingFields }
+      };
+    }
+
+    store.updateTask(updatedTask);
+    store.addMutationEvidence(
+      mutationEvidence("update-task", taskId!, actor, {
+        source: "harvest-delivery-evidence",
+        applied: true,
+        missingFieldCount: 0
+      })
+    );
+    await store.save(planningConcurrencySaveOpts(args as Record<string, unknown>));
+
     attachPolicyMeta(data, ctx, planningGeneration);
     return {
       ok: true,
-      code: "harvest-delivery-evidence-preview",
-      message:
-        preview.missingFields.length === 0
-          ? "Delivery evidence preview is complete for apply."
-          : `Delivery evidence preview missing ${preview.missingFields.length} field(s).`,
-      data
+      code: "harvest-delivery-evidence-applied",
+      message: `Applied metadata.deliveryEvidence to ${taskId}`,
+      data: { ...data, task: updatedTask, applied: true }
     };
+  } finally {
+    if (activityLease) {
+      clearAgentActivityBestEffort(ctx, planning, {
+        activityId: activityLease.activityId,
+        agentId: activityLease.agentId,
+        sessionId: activityLease.sessionId
+      });
+    }
   }
-
-  if (!preview.validation.ok) {
-    attachPolicyMeta(data, ctx, planningGeneration);
-    return {
-      ok: false,
-      code: "invalid-evidence",
-      message: `harvest-delivery-evidence apply rejected harvested evidence: ${preview.validation.message}`,
-      data: {
-        ...data,
-        missingFields: preview.validation.missingFields,
-        validationCode: preview.validation.code
-      },
-      remediation: { instructionPath: CLI_REMEDIATION_INSTRUCTIONS.updateTask }
-    };
-  }
-
-  const actor =
-    typeof args.actor === "string"
-      ? args.actor
-      : ctx.resolvedActor !== undefined
-        ? ctx.resolvedActor
-        : undefined;
-  const updatedTask = {
-    ...task!,
-    metadata: {
-      ...(task!.metadata ?? {}),
-      deliveryEvidence: preview.deliveryEvidence
-    },
-    updatedAt: nowIso()
-  };
-  const revalidate = validateDeliveryEvidenceMetadata(updatedTask.metadata?.deliveryEvidence, policyContext);
-  if (!revalidate.ok) {
-    return {
-      ok: false,
-      code: "invalid-evidence",
-      message: revalidate.message,
-      data: { missingFields: revalidate.missingFields }
-    };
-  }
-
-  store.updateTask(updatedTask);
-  store.addMutationEvidence(
-    mutationEvidence("update-task", taskId!, actor, {
-      source: "harvest-delivery-evidence",
-      applied: true,
-      missingFieldCount: 0
-    })
-  );
-  await store.save(planningConcurrencySaveOpts(args as Record<string, unknown>));
-
-  attachPolicyMeta(data, ctx, planningGeneration);
-  return {
-    ok: true,
-    code: "harvest-delivery-evidence-applied",
-    message: `Applied metadata.deliveryEvidence to ${taskId}`,
-    data: { ...data, task: updatedTask, applied: true }
-  };
 }
