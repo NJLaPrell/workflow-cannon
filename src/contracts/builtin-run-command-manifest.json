@@ -149,6 +149,14 @@
   },
   {
     "moduleId": "task-engine",
+    "name": "phase-release-orchestration-state",
+    "file": "phase-release-orchestration-state.md",
+    "description": "Classify current phase release path into one of six bounded verdicts with reference-first next actions.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
     "name": "phase-delivery-preflight",
     "file": "phase-delivery-preflight.md",
     "description": "Read-only audit for phase task PR/merge/check evidence or explicit delivery waivers.",
