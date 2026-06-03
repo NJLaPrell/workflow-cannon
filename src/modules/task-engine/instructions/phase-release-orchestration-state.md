@@ -28,6 +28,9 @@ No required args. The command reads phase/task state from the configured task st
 - `phaseKey`, `workspace.currentKitPhase`, `workspace.releaseBranch`, `workspace.gitBranch`
 - `counts` (`completedCount`, `nonTerminalCount`, `blockedCount`, `preflightViolationCount`, `readinessRemainingCount`)
 - `verdict`, `nextAction`
+- `nextActionRef` with exact `command`, `commandLine`, and `instructionPath`
+- `readiness` with bounded `remainingTop[]` and `missingArtifactsTop[]` evidence refs
+- `publishSafety` with `safeToPublish`, branch context, and blocking `reasons[]`
 - bounded `readyUnblockedTop[]` and `blockedTop[]`
 - `refs.commands[]` and `refs.instructions[]` for follow-on steps
 

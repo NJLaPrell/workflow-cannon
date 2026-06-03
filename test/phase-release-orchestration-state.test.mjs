@@ -94,4 +94,80 @@ test("buildPhaseReleaseOrchestrationState is bounded and reference-first", () =>
   assert.equal(Array.isArray(packet.refs.instructions), true);
   assert.equal(packet.refs.commands.length > 0, true);
   assert.equal(packet.refs.instructions.length > 0, true);
+  assert.equal(typeof packet.nextActionRef.summary, "string");
+  assert.equal(typeof packet.nextActionRef.ref.commandLine, "string");
+  assert.equal(Array.isArray(packet.readiness.remainingTop), true);
+  assert.equal(Array.isArray(packet.readiness.missingArtifactsTop), true);
+  assert.equal(typeof packet.publishSafety.safeToPublish, "boolean");
+  assert.equal(Array.isArray(packet.publishSafety.reasons), true);
+});
+
+test("buildPhaseReleaseOrchestrationState projects remaining readiness findings without broad reads", () => {
+  const packet = buildPhaseReleaseOrchestrationState({
+    workspacePath: process.cwd(),
+    effectiveConfig: undefined,
+    tasks: [
+      task("T-blocked", "blocked", { title: "Blocked task" }),
+      task("T-progress", "in_progress", { title: "In progress task" }),
+      task("T-ready", "ready", { title: "Ready task" }),
+      task("T-done", "completed", { title: "Done task" })
+    ],
+    phaseKey: "130",
+    currentKitPhase: "130",
+    rolledOut: false
+  });
+
+  assert.equal(packet.readiness.status, "action-required");
+  assert.deepEqual(packet.readiness.remainingTop.map((row) => row.taskId), [
+    "T-blocked",
+    "T-progress",
+    "T-ready"
+  ]);
+  assert.deepEqual(packet.readiness.remainingTop.map((row) => row.status), [
+    "blocked",
+    "in_progress",
+    "ready"
+  ]);
+});
+
+test("buildPhaseReleaseOrchestrationState lists missing artifacts with compact evidence refs", () => {
+  const packet = buildPhaseReleaseOrchestrationState({
+    workspacePath: process.cwd(),
+    effectiveConfig: undefined,
+    tasks: [task("T-complete", "completed", { title: "Completed task" })],
+    phaseKey: "130",
+    currentKitPhase: "130",
+    rolledOut: false
+  });
+
+  assert.equal(packet.readiness.missingArtifactCount, 1);
+  assert.deepEqual(packet.readiness.missingArtifactsTop, [
+    {
+      taskId: "T-complete",
+      title: "Completed task",
+      status: "completed",
+      code: "delivery-evidence-missing",
+      message: "Phase delivery completion requires metadata.deliveryEvidence or metadata.deliveryWaiver.",
+      evidenceRefs: ["deliveryEvidence", "deliveryWaiver"]
+    }
+  ]);
+});
+
+test("buildPhaseReleaseOrchestrationState exposes structured publish safety and exact next-action refs", () => {
+  const packet = buildPhaseReleaseOrchestrationState({
+    workspacePath: process.cwd(),
+    effectiveConfig: undefined,
+    tasks: [task("T-complete", "completed", { title: "Completed task" })],
+    phaseKey: "130",
+    currentKitPhase: "130",
+    rolledOut: false
+  });
+
+  assert.equal(packet.publishSafety.status, "blocked");
+  assert.equal(packet.publishSafety.safeToPublish, false);
+  assert.equal(packet.publishSafety.reasons[0].code, "closeout-gaps");
+  assert.equal(packet.publishSafety.reasons[0].ref.command, "phase-delivery-preflight");
+  assert.match(packet.publishSafety.reasons[0].ref.commandLine, /phase-delivery-preflight/);
+  assert.equal(packet.nextActionRef.ref.command, "closeout-pending" === packet.verdict ? "phase-delivery-preflight" : packet.nextActionRef.ref.command);
+  assert.match(packet.nextActionRef.ref.instructionPath, /instructions\/.+\.md$/);
 });
