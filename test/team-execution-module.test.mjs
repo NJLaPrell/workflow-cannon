@@ -1,11 +1,18 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import fs from "node:fs";
 import { mkdir, mkdtemp } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import Database from "better-sqlite3";
+import { fileURLToPath } from "node:url";
 
 import { prepareKitSqliteDatabase, taskEngineModule, teamExecutionModule } from "../dist/index.js";
+
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const assignmentMetadataFixture = JSON.parse(
+  fs.readFileSync(path.join(root, "fixtures/agent-orchestration/assignment-metadata-task-worker.v1.json"), "utf8")
+);
 
 async function tmpDir(prefix = "team-exec-mod-") {
   return mkdtemp(path.join(os.tmpdir(), prefix));
@@ -133,6 +140,35 @@ test("report-assignment-blocker blocks assignment and creates linked defect task
   assert.equal(fetched.data.task.priority, "P1");
   assert.equal(fetched.data.task.metadata.relatedTaskId, "T8601");
   assert.match(fetched.data.task.metadata.issue, /asg-8601/);
+});
+
+test("register-assignment persists packet digest and tier recommendation in the response", async () => {
+  const workspace = await tmpDir();
+  const ctx = sqliteCtx(workspace);
+  await seedExecutionTask(workspace, "T8600", "Worker packet task");
+
+  const registered = await teamExecutionModule.onCommand(
+    {
+      name: "register-assignment",
+      args: {
+        assignmentId: "asg-8600",
+        executionTaskId: "T8600",
+        supervisorId: "sup-0",
+        workerId: "wrk-0",
+        metadata: assignmentMetadataFixture
+      }
+    },
+    ctx
+  );
+
+  assert.equal(registered.ok, true);
+  assert.equal(registered.data.assignment.metadata.packetDigest.length, 64);
+  assert.equal(registered.data.assignment.orchestrationMetadataSummary.packetDigest, registered.data.assignment.metadata.packetDigest);
+  assert.equal(registered.data.assignment.orchestrationMetadataSummary.modelTierRecommendation.label, "tier_2");
+  assert.equal(
+    registered.data.assignment.orchestrationMetadataSummary.modelTierRationale,
+    registered.data.assignment.metadata.modelTierRationale
+  );
 });
 
 test("report-assignment-blocker supports blocker-only mode without defect creation", async () => {

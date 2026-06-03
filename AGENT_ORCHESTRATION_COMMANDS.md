@@ -329,6 +329,11 @@ pnpm exec wk run register-assignment '{
     "agentDefinitionId": "task-worker",
     "agentSessionId": "session-a4bb2fd2",
     "modelTier": "balanced",
+    "modelTierRationale": "Bounded implementation work inside owned paths fits the default worker tier without escalation.",
+    "modelTierRecommendation": {
+      "label": "tier_2",
+      "rationale": "Bounded implementation work inside owned paths fits the default worker tier without escalation."
+    },
     "contextProfileId": "task_worker_context_v1",
     "accessProfileId": "task_worker_strict_v1",
     "handoffContractId": "implementation_handoff_v2",
@@ -346,12 +351,12 @@ pnpm exec wk run register-assignment '{
 
 | Command | Role | Notes |
 | --- | --- | --- |
-| `list-assignments` | Both | Filter by `workerId`, `supervisorId`, `executionTaskId`, `status`; returns metadata verbatim |
+| `list-assignments` | Both | Filter by `workerId`, `supervisorId`, `executionTaskId`, `status`; returns metadata plus read-model packet digest / tier projection |
 | `reconcile-assignment` | **Orchestrator** (supervisorId) | After Handoff v2 review; sets `reconciled` |
 | `cancel-assignment` | **Orchestrator** | Terminal cancel |
 | `block-assignment` | **Orchestrator** (supervisorId) | Sets `blocked` from `assigned`/`submitted`; **not** worker self-service |
 
-Argv shapes unchanged; optional `metadata` echo on responses.
+Argv shapes unchanged; optional `metadata` echo on responses now includes packet digest and packet-tier recommendation fields when assignment metadata v1 is present.
 
 ### 6.3 Proposed: `report-assignment-blocked`
 
