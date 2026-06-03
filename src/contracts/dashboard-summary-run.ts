@@ -401,6 +401,7 @@ export type DashboardAgentActivityRow = {
     title: string | null;
     command: string | null;
     phaseKey: string | null;
+    taskStatus?: string | null;
     assignmentId: string | null;
     sessionId: string | null;
     currentStep: string | null;

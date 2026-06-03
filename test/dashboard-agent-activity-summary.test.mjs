@@ -44,7 +44,7 @@ test("buildDashboardAgentActivitySummary merges live activity with assignment co
   const now = "2026-06-02T17:00:00.000Z";
   const summary = buildDashboardAgentActivitySummary({
     now,
-    tasks: [{ id: "T100650", title: "Agent activity docs", phaseKey: "128" }],
+    tasks: [{ id: "T100650", title: "Agent activity docs", status: "in_progress", phaseKey: "128" }],
     liveActivityLeases: [
       {
         schemaVersion: 1,
@@ -128,7 +128,11 @@ test("buildDashboardAgentActivitySummary merges live activity with assignment co
   assert.ok(summary.main);
   assert.equal(summary.main.rowId, "row:assign-1");
   assert.equal(summary.main.source, "live_activity");
+  assert.equal(summary.main.displayName, "T100650 · Agent activity docs");
   assert.equal(summary.main.work.taskId, "T100650");
+  assert.equal(summary.main.work.title, "Agent activity docs");
+  assert.equal(summary.main.work.phaseKey, "128");
+  assert.equal(summary.main.work.taskStatus, "in_progress");
   assert.equal(summary.main.refs.assignmentId, "assign-1");
   assert.equal(summary.sourceMap.liveActivityCount, 1);
   assert.equal(summary.sourceMap.teamExecutionCount, 1);
@@ -297,7 +301,7 @@ test("buildDashboardAgentActivitySummary collapses duplicate live leases by late
 
   assert.equal(summary.active.length, 1);
   assert.equal(summary.main?.rowId, "row:assign-dup");
-  assert.equal(summary.main?.displayName, "Newest name");
+  assert.equal(summary.main?.displayName, "T100652 · Duplicate lease task");
   assert.equal(summary.main?.source, "live_activity");
 });
 
@@ -349,13 +353,153 @@ test("buildDashboardAgentActivitySummary falls back to derived status when no so
   assert.equal(summary.sourceMap.derivedFallbackUsed, true);
 });
 
+test("buildDashboardAgentActivitySummary enriches live rows with task title, phase, and status", () => {
+  const now = "2026-06-02T17:00:00.000Z";
+  const summary = buildDashboardAgentActivitySummary({
+    now,
+    tasks: [{ id: "T100653", title: "Projected task title", phaseKey: "129", status: "in_progress" }],
+    liveActivityLeases: [
+      {
+        schemaVersion: 1,
+        activityId: "worker:session-enriched",
+        agentId: "worker",
+        sessionId: "session-enriched",
+        agentDefinitionId: null,
+        assignmentId: null,
+        kind: "working_task",
+        label: "Worker activity",
+        currentStep: null,
+        hostHint: "cursor",
+        modelTier: "balanced",
+        modelHint: null,
+        startedAt: "2026-06-02T16:50:00.000Z",
+        updatedAt: "2026-06-02T16:59:59.000Z",
+        expiresAt: "2026-06-02T17:30:00.000Z",
+        taskId: "T100653",
+        command: null,
+        phaseKey: null,
+        prNumber: null,
+        version: null,
+        details: null
+      }
+    ],
+    derivedAgentStatus: {
+      schemaVersion: 1,
+      source: "derived",
+      kind: "ready_task",
+      label: "Ready Task T100653",
+      confidence: "low",
+      updatedAt: now,
+      taskId: "T100653",
+      phaseKey: "129",
+      command: null,
+      prNumber: null,
+      version: null,
+      detail: null
+    },
+    teamExecution: {
+      schemaVersion: 1,
+      available: false,
+      totalCount: 0,
+      activeCount: 0,
+      byStatus: { assigned: 0, submitted: 0, blocked: 0, reconciled: 0, cancelled: 0 },
+      topActive: []
+    },
+    subagentRegistry: {
+      schemaVersion: 1,
+      available: false,
+      definitionsCount: 0,
+      retiredDefinitionsCount: 0,
+      openSessionsCount: 0,
+      topOpenSessions: []
+    }
+  });
+
+  assert.equal(summary.active.length, 1);
+  assert.equal(summary.main?.displayName, "T100653 · Projected task title");
+  assert.equal(summary.main?.work.title, "Projected task title");
+  assert.equal(summary.main?.work.phaseKey, "129");
+  assert.equal(summary.main?.work.taskStatus, "in_progress");
+});
+
+test("buildDashboardAgentActivitySummary preserves live activity rows when task metadata is missing", () => {
+  const now = "2026-06-02T17:00:00.000Z";
+  const summary = buildDashboardAgentActivitySummary({
+    now,
+    tasks: [],
+    liveActivityLeases: [
+      {
+        schemaVersion: 1,
+        activityId: "worker:session-missing-task",
+        agentId: "worker",
+        sessionId: "session-missing-task",
+        agentDefinitionId: null,
+        assignmentId: null,
+        kind: "working_task",
+        label: "Worker activity",
+        currentStep: null,
+        hostHint: "cursor",
+        modelTier: "balanced",
+        modelHint: null,
+        startedAt: "2026-06-02T16:50:00.000Z",
+        updatedAt: "2026-06-02T16:59:59.000Z",
+        expiresAt: "2026-06-02T17:30:00.000Z",
+        taskId: "T999999",
+        command: null,
+        phaseKey: "129",
+        prNumber: null,
+        version: null,
+        details: null
+      }
+    ],
+    derivedAgentStatus: {
+      schemaVersion: 1,
+      source: "derived",
+      kind: "ready_task",
+      label: "Ready Task T999999",
+      confidence: "low",
+      updatedAt: now,
+      taskId: "T999999",
+      phaseKey: "129",
+      command: null,
+      prNumber: null,
+      version: null,
+      detail: null
+    },
+    teamExecution: {
+      schemaVersion: 1,
+      available: false,
+      totalCount: 0,
+      activeCount: 0,
+      byStatus: { assigned: 0, submitted: 0, blocked: 0, reconciled: 0, cancelled: 0 },
+      topActive: []
+    },
+    subagentRegistry: {
+      schemaVersion: 1,
+      available: false,
+      definitionsCount: 0,
+      retiredDefinitionsCount: 0,
+      openSessionsCount: 0,
+      topOpenSessions: []
+    }
+  });
+
+  assert.equal(summary.active.length, 1);
+  assert.equal(summary.main?.displayName, "T999999");
+  assert.equal(summary.main?.work.taskId, "T999999");
+  assert.equal(summary.main?.work.title, "Worker activity");
+  assert.equal(summary.main?.work.phaseKey, "129");
+  assert.equal(summary.main?.work.taskStatus, null);
+  assert.equal(summary.sourceMap.derivedFallbackUsed, false);
+});
+
 test("buildDashboardAgentActivitySummary keeps multiple live activities separate and title-enriched", () => {
   const now = "2026-06-02T17:00:00.000Z";
   const summary = buildDashboardAgentActivitySummary({
     now,
     tasks: [
-      { id: "T100650", title: "Agent activity docs", phaseKey: "128" },
-      { id: "T100651", title: "Second live activity", phaseKey: "128" }
+      { id: "T100650", title: "Agent activity docs", status: "in_progress", phaseKey: "128" },
+      { id: "T100651", title: "Second live activity", status: "ready", phaseKey: "128" }
     ],
     liveActivityLeases: [
       {
@@ -442,6 +586,10 @@ test("buildDashboardAgentActivitySummary keeps multiple live activities separate
   assert.equal(summary.activeCount, 2);
   assert.equal(summary.active.length, 2);
   assert.deepEqual(
+    summary.active.map((row) => row.displayName).sort(),
+    ["T100650 · Agent activity docs", "T100651 · Second live activity"]
+  );
+  assert.deepEqual(
     summary.active.map((row) => row.work.title).sort(),
     ["Agent activity docs", "Second live activity"]
   );
@@ -455,7 +603,7 @@ test("buildDashboardAgentActivitySummary merges duplicate sources into a single 
   const now = "2026-06-02T17:00:00.000Z";
   const summary = buildDashboardAgentActivitySummary({
     now,
-    tasks: [{ id: "T100652", title: "Duplicate source task", phaseKey: "128" }],
+    tasks: [{ id: "T100652", title: "Duplicate source task", status: "ready", phaseKey: "128" }],
     liveActivityLeases: [
       {
         schemaVersion: 1,
@@ -529,7 +677,79 @@ test("buildDashboardAgentActivitySummary merges duplicate sources into a single 
   assert.equal(summary.active.length, 1);
   assert.equal(summary.main?.rowId, "row:assign-dup");
   assert.equal(summary.main?.source, "live_activity");
+  assert.equal(summary.main?.displayName, "T100652 · Duplicate source task");
   assert.equal(summary.active[0]?.work.title, "Duplicate source task");
   assert.equal(summary.sourceMap.liveActivityCount, 1);
   assert.equal(summary.sourceMap.teamExecutionCount, 1);
+});
+
+test("buildDashboardAgentActivitySummary preserves missing task ids and lease phase fallback", () => {
+  const now = "2026-06-02T17:00:00.000Z";
+  const summary = buildDashboardAgentActivitySummary({
+    now,
+    tasks: [],
+    liveActivityLeases: [
+      {
+        schemaVersion: 1,
+        activityId: "copilot:session-missing",
+        agentId: "copilot",
+        sessionId: "session-missing",
+        agentDefinitionId: null,
+        assignmentId: null,
+        kind: "working_task",
+        label: "Working on missing task",
+        currentStep: null,
+        hostHint: "cursor",
+        modelTier: "balanced",
+        modelHint: null,
+        startedAt: "2026-06-02T16:55:00.000Z",
+        updatedAt: "2026-06-02T16:59:59.000Z",
+        expiresAt: "2026-06-02T17:30:00.000Z",
+        taskId: "T999999",
+        command: null,
+        phaseKey: "128",
+        prNumber: null,
+        version: null,
+        details: null
+      }
+    ],
+    derivedAgentStatus: {
+      schemaVersion: 1,
+      source: "derived",
+      kind: "ready_task",
+      label: "Ready Task T999999",
+      confidence: "low",
+      updatedAt: now,
+      taskId: "T999999",
+      phaseKey: "128",
+      command: null,
+      prNumber: null,
+      version: null,
+      detail: null
+    },
+    teamExecution: {
+      schemaVersion: 1,
+      available: false,
+      totalCount: 0,
+      activeCount: 0,
+      byStatus: { assigned: 0, submitted: 0, blocked: 0, reconciled: 0, cancelled: 0 },
+      topActive: []
+    },
+    subagentRegistry: {
+      schemaVersion: 1,
+      available: false,
+      definitionsCount: 0,
+      retiredDefinitionsCount: 0,
+      openSessionsCount: 0,
+      topOpenSessions: []
+    }
+  });
+
+  assert.equal(summary.activeCount, 1);
+  assert.equal(summary.main?.displayName, "T999999");
+  assert.equal(summary.main?.work.taskId, "T999999");
+  assert.equal(summary.main?.work.title, "Working on missing task");
+  assert.equal(summary.main?.work.phaseKey, "128");
+  assert.equal(summary.main?.work.taskStatus, null);
+  assert.equal(summary.main?.source, "live_activity");
 });

@@ -72,6 +72,32 @@ function taskTitle(taskId: string | null, byId: Map<string, TaskEntity>): string
   return task ? task.title : null;
 }
 
+function taskPhaseKey(taskId: string | null, byId: Map<string, TaskEntity>): string | null {
+  if (!taskId) {
+    return null;
+  }
+  return byId.get(taskId)?.phaseKey ?? null;
+}
+
+function taskStatus(taskId: string | null, byId: Map<string, TaskEntity>): string | null {
+  if (!taskId) {
+    return null;
+  }
+  return byId.get(taskId)?.status ?? null;
+}
+
+function taskDisplayName(taskId: string | null, byId: Map<string, TaskEntity>): string | null {
+  if (!taskId) {
+    return null;
+  }
+  const task = byId.get(taskId);
+  if (!task) {
+    return taskId;
+  }
+  const title = cleanText(task.title);
+  return title ? `${taskId} · ${title}` : taskId;
+}
+
 function readDetailText(details: Record<string, unknown> | null | undefined, keys: string[]): string {
   if (!details || typeof details !== "object") {
     return "";
@@ -301,20 +327,21 @@ function mergeRow(existing: RowCandidate | undefined, candidate: RowCandidate): 
           ? candidate
           : existing;
   const loser = winner === candidate ? existing : candidate;
-  return {
-    ...winner,
-    displayName: displayNameBest(winner, loser).displayName,
-    role: roleBest(winner, loser).role,
-    statusLabel: cleanText(winner.statusLabel) || cleanText(loser.statusLabel) || winner.statusLabel,
-    work: {
-      taskId: winner.work.taskId ?? loser.work.taskId,
-      title: cleanText(winner.work.title) || loser.work.title,
-      command: cleanText(winner.work.command) || loser.work.command,
-      phaseKey: winner.work.phaseKey ?? loser.work.phaseKey,
-      assignmentId: winner.work.assignmentId ?? loser.work.assignmentId,
-      sessionId: winner.work.sessionId ?? loser.work.sessionId,
-      currentStep: cleanText(winner.work.currentStep) || loser.work.currentStep
-    },
+    return {
+      ...winner,
+      displayName: displayNameBest(winner, loser).displayName,
+      role: roleBest(winner, loser).role,
+      statusLabel: cleanText(winner.statusLabel) || cleanText(loser.statusLabel) || winner.statusLabel,
+      work: {
+        taskId: winner.work.taskId ?? loser.work.taskId,
+        title: cleanText(winner.work.title) || loser.work.title,
+        command: cleanText(winner.work.command) || loser.work.command,
+        phaseKey: winner.work.phaseKey ?? loser.work.phaseKey,
+        taskStatus: winner.work.taskStatus ?? loser.work.taskStatus,
+        assignmentId: winner.work.assignmentId ?? loser.work.assignmentId,
+        sessionId: winner.work.sessionId ?? loser.work.sessionId,
+        currentStep: cleanText(winner.work.currentStep) || loser.work.currentStep
+      },
     refs: {
       activityId: winner.refs.activityId ?? loser.refs.activityId,
       agentId: winner.refs.agentId ?? loser.refs.agentId,
@@ -379,14 +406,13 @@ function buildLiveActivityRows(
       continue;
     }
     const status = agentActivityLeaseToDashboardStatus(lease, input.now);
-    const taskTitleValue = taskTitle(lease.taskId, byTaskId);
-    const taskValue = taskTitleValue ?? null;
     const displayName =
+      cleanText(taskDisplayName(lease.taskId, byTaskId)) ||
       cleanText(readDetailText(lease.details, ["agentDisplayName", "customAgentName", "displayName"])) ||
-      cleanText(taskValue) ||
       cleanText(lease.label) ||
       cleanText(lease.agentId) ||
       titleCase(lease.agentId);
+    const taskTitleValue = taskTitle(lease.taskId, byTaskId);
     const keyParts = lease.assignmentId
       ? [lease.assignmentId]
       : lease.sessionId
@@ -413,9 +439,10 @@ function buildLiveActivityRows(
         statusLabel: status.label,
         work: {
           taskId: lease.taskId,
-          title: taskValue ?? lease.label,
+          title: taskTitleValue ?? lease.label,
           command: lease.command,
-          phaseKey: lease.phaseKey,
+          phaseKey: lease.phaseKey ?? taskPhaseKey(lease.taskId, byTaskId),
+          taskStatus: taskStatus(lease.taskId, byTaskId),
           assignmentId: lease.assignmentId,
           sessionId: lease.sessionId,
           currentStep: lease.currentStep
@@ -488,7 +515,7 @@ function buildAssignmentRows(
         schemaVersion: 1 as const,
         rowId: normalizeRowId(keyParts),
         displayName:
-          cleanText(taskTitleValue) ||
+          cleanText(taskDisplayName(assignment.executionTaskId, byTaskId)) ||
           cleanText(assignment.executionTaskTitle) ||
           cleanText(assignment.executionTaskId) ||
           cleanText(assignment.workerId) ||
@@ -502,7 +529,8 @@ function buildAssignmentRows(
           taskId: assignment.executionTaskId,
           title: taskTitleValue,
           command: null,
-          phaseKey: byTaskId.get(assignment.executionTaskId)?.phaseKey ?? null,
+          phaseKey: taskPhaseKey(assignment.executionTaskId, byTaskId),
+          taskStatus: taskStatus(assignment.executionTaskId, byTaskId),
           assignmentId: assignment.id,
           sessionId: null,
           currentStep: null
@@ -550,7 +578,7 @@ function buildSubagentRows(
         schemaVersion: 1 as const,
         rowId: normalizeRowId([session.definitionId, session.sessionId]),
         displayName:
-          cleanText(taskTitleValue) ||
+          cleanText(taskDisplayName(session.executionTaskId, byTaskId)) ||
           titleCase(session.definitionId) ||
           cleanText(session.definitionId) ||
           cleanText(session.sessionId),
@@ -563,7 +591,8 @@ function buildSubagentRows(
           taskId: session.executionTaskId,
           title: taskTitleValue,
           command: null,
-          phaseKey: byTaskId.get(session.executionTaskId ?? "")?.phaseKey ?? null,
+          phaseKey: taskPhaseKey(session.executionTaskId, byTaskId),
+          taskStatus: taskStatus(session.executionTaskId, byTaskId),
           assignmentId: null,
           sessionId: session.sessionId,
           currentStep: null
