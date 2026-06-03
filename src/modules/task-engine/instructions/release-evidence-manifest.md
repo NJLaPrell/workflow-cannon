@@ -44,6 +44,7 @@ workspace-kit run release-evidence-manifest '{"fromFile":".workspace-kit/release
 | `validations` | object[] | no | Validation command/artifact records. |
 | `risks` | object[] | no | Known risks/caveats/migration/security notes. |
 | `publishArtifacts` | object[] | no | Tag, GitHub release, npm package, CI publish run, or similar proof. May be empty before publish. |
+| `readinessChecks` | object[] | no | Bounded release readiness findings with exact remediation refs for version, changelog, schema mirror, and publish-state checks. |
 | `followUpScan` | object | yes | Requires `scannedAt`. If `followUpTasks` is empty, also requires `rationale` so agents cannot claim zero follow-ups without evidence. |
 | `followUpTasks` | object[] | no | Follow-up task references. Each `taskId` must exist in the task engine when supplied. |
 | `fromFile` | string | no | Path to a partial JSON object merged before inline args. |
@@ -55,7 +56,7 @@ workspace-kit run release-evidence-manifest '{"fromFile":".workspace-kit/release
 Success `data.manifest` includes:
 
 - `schemaVersion`, `createdAt`, `releaseVersion`, `packageName`, `phaseKey`
-- `git`, `approval`, `releaseNotes`, `validations`, `risks`, `publishArtifacts`
+- `git`, `approval`, `releaseNotes`, `validations`, `risks`, `publishArtifacts`, `readinessChecks`
 - `taskDeliveryEvidence[]` using the `metadata.deliveryEvidence` / `metadata.deliveryWaiver` vocabulary from `phase-delivery-preflight`
 - `followUpScan`, `followUpTasks[]`, and `followUpSummary`
 

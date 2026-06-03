@@ -236,6 +236,7 @@ export function buildReleaseEvidenceManifest(args: {
     validations: normalizeRecordArray(args.commandArgs.validations),
     risks: normalizeRecordArray(args.commandArgs.risks),
     publishArtifacts: normalizeRecordArray(args.commandArgs.publishArtifacts),
+    readinessChecks: normalizeRecordArray(args.commandArgs.readinessChecks),
     taskDeliveryEvidence: completedPhaseTaskEvidence(args.tasks, phaseKey),
     followUpScan,
     followUpTasks,
