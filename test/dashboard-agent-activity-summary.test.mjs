@@ -1,6 +1,44 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { mkdtemp, mkdir } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+import Database from "better-sqlite3";
+import { prepareKitSqliteDatabase, taskEngineModule, teamExecutionModule } from "../dist/index.js";
+import { setAgentActivityLease } from "../dist/modules/task-engine/agent-activity-store.js";
 import { buildDashboardAgentActivitySummary } from "../dist/modules/task-engine/dashboard/build-dashboard-agent-activity-summary.js";
+
+async function tmpWorkspace(prefix = "dash-agent-activity-contract-") {
+  return mkdtemp(path.join(os.tmpdir(), prefix));
+}
+
+async function seedTask(workspacePath, taskId, title) {
+  await mkdir(path.join(workspacePath, ".workspace-kit", "tasks"), { recursive: true });
+  const db = new Database(path.join(workspacePath, ".workspace-kit", "tasks", "workspace-kit.db"));
+  try {
+    prepareKitSqliteDatabase(db);
+    const now = "2026-06-02T17:00:00.000Z";
+    db.prepare(
+      `INSERT OR REPLACE INTO task_engine_tasks (id, status, type, title, created_at, updated_at, archived, depends_on_json)
+       VALUES (?, 'ready', 'workspace-kit', ?, ?, ?, 0, '[]')`
+    ).run(taskId, title, now, now);
+  } finally {
+    db.close();
+  }
+}
+
+function sqliteCtx(workspacePath) {
+  return {
+    runtimeVersion: "0.1",
+    workspacePath,
+    effectiveConfig: {
+      tasks: {
+        persistenceBackend: "sqlite",
+        sqliteDatabaseRelativePath: ".workspace-kit/tasks/workspace-kit.db"
+      }
+    }
+  };
+}
 
 test("buildDashboardAgentActivitySummary merges live activity with assignment context", () => {
   const now = "2026-06-02T17:00:00.000Z";
@@ -309,4 +347,189 @@ test("buildDashboardAgentActivitySummary falls back to derived status when no so
   assert.equal(summary.needsAttentionCount, 0);
   assert.equal(summary.inferredFallback?.kind, "ready_task");
   assert.equal(summary.sourceMap.derivedFallbackUsed, true);
+});
+
+test("buildDashboardAgentActivitySummary keeps multiple live activities separate and title-enriched", () => {
+  const now = "2026-06-02T17:00:00.000Z";
+  const summary = buildDashboardAgentActivitySummary({
+    now,
+    tasks: [
+      { id: "T100650", title: "Agent activity docs", phaseKey: "128" },
+      { id: "T100651", title: "Second live activity", phaseKey: "128" }
+    ],
+    liveActivityLeases: [
+      {
+        schemaVersion: 1,
+        activityId: "orchestrator-main:session-1",
+        agentId: "orchestrator-main",
+        sessionId: "session-1",
+        agentDefinitionId: "orchestrator-main",
+        assignmentId: "assign-1",
+        kind: "working_task",
+        label: "Working on Agent Activity",
+        currentStep: null,
+        hostHint: "cursor",
+        modelTier: "balanced",
+        modelHint: null,
+        startedAt: "2026-06-02T16:40:00.000Z",
+        updatedAt: "2026-06-02T16:59:59.000Z",
+        expiresAt: "2026-06-02T17:30:00.000Z",
+        taskId: "T100650",
+        command: null,
+        phaseKey: "128",
+        prNumber: null,
+        version: null,
+        details: { agentDisplayName: "Orchestrator Main" }
+      },
+      {
+        schemaVersion: 1,
+        activityId: "worker-main:session-2",
+        agentId: "worker-main",
+        sessionId: "session-2",
+        agentDefinitionId: null,
+        assignmentId: "assign-2",
+        kind: "working_task",
+        label: "Working on Second Activity",
+        currentStep: null,
+        hostHint: "cursor",
+        modelTier: "balanced",
+        modelHint: null,
+        startedAt: "2026-06-02T16:41:00.000Z",
+        updatedAt: "2026-06-02T17:00:00.000Z",
+        expiresAt: "2026-06-02T17:30:00.000Z",
+        taskId: "T100651",
+        command: null,
+        phaseKey: "128",
+        prNumber: null,
+        version: null,
+        details: { displayName: "Worker Main" }
+      }
+    ],
+    derivedAgentStatus: {
+      schemaVersion: 1,
+      source: "derived",
+      kind: "ready_task",
+      label: "Ready Task T100650",
+      confidence: "low",
+      updatedAt: now,
+      taskId: "T100650",
+      phaseKey: "128",
+      command: null,
+      prNumber: null,
+      version: null,
+      detail: null
+    },
+    teamExecution: {
+      schemaVersion: 1,
+      available: false,
+      totalCount: 0,
+      activeCount: 0,
+      byStatus: { assigned: 0, submitted: 0, blocked: 0, reconciled: 0, cancelled: 0 },
+      topActive: []
+    },
+    subagentRegistry: {
+      schemaVersion: 1,
+      available: false,
+      definitionsCount: 0,
+      retiredDefinitionsCount: 0,
+      openSessionsCount: 0,
+      topOpenSessions: []
+    }
+  });
+
+  assert.equal(summary.schemaVersion, 1);
+  assert.equal(summary.source, "live_activity");
+  assert.equal(summary.activeCount, 2);
+  assert.equal(summary.active.length, 2);
+  assert.deepEqual(
+    summary.active.map((row) => row.work.title).sort(),
+    ["Agent activity docs", "Second live activity"]
+  );
+  assert.equal(summary.main?.rowId, "row:assign-1");
+  assert.equal(summary.main?.source, "live_activity");
+  assert.equal(summary.sourceMap.liveActivityCount, 2);
+  assert.equal(summary.sourceMap.derivedFallbackUsed, false);
+});
+
+test("buildDashboardAgentActivitySummary merges duplicate sources into a single active row", () => {
+  const now = "2026-06-02T17:00:00.000Z";
+  const summary = buildDashboardAgentActivitySummary({
+    now,
+    tasks: [{ id: "T100652", title: "Duplicate source task", phaseKey: "128" }],
+    liveActivityLeases: [
+      {
+        schemaVersion: 1,
+        activityId: "copilot:session-dup",
+        agentId: "copilot",
+        sessionId: "session-dup",
+        agentDefinitionId: null,
+        assignmentId: "assign-dup",
+        kind: "working_task",
+        label: "Older label",
+        currentStep: null,
+        hostHint: "cursor",
+        modelTier: "balanced",
+        modelHint: null,
+        startedAt: "2026-06-02T16:40:00.000Z",
+        updatedAt: "2026-06-02T16:45:00.000Z",
+        expiresAt: "2026-06-02T17:30:00.000Z",
+        taskId: "T100652",
+        command: null,
+        phaseKey: "128",
+        prNumber: null,
+        version: null,
+        details: { agentDisplayName: "Older name" }
+      }
+    ],
+    derivedAgentStatus: {
+      schemaVersion: 1,
+      source: "derived",
+      kind: "ready_task",
+      label: "Ready Task T100652",
+      confidence: "low",
+      updatedAt: now,
+      taskId: "T100652",
+      phaseKey: "128",
+      command: null,
+      prNumber: null,
+      version: null,
+      detail: null
+    },
+    teamExecution: {
+      schemaVersion: 1,
+      available: true,
+      totalCount: 1,
+      activeCount: 1,
+      byStatus: { assigned: 1, submitted: 0, blocked: 0, reconciled: 0, cancelled: 0 },
+      topActive: [
+        {
+          id: "assign-dup",
+          executionTaskId: "T100652",
+          executionTaskTitle: "Assignment title",
+          supervisorId: "phase-128-orchestrator",
+          workerId: "copilot",
+          status: "assigned",
+          updatedAt: now
+        }
+      ]
+    },
+    subagentRegistry: {
+      schemaVersion: 1,
+      available: false,
+      definitionsCount: 0,
+      retiredDefinitionsCount: 0,
+      openSessionsCount: 0,
+      topOpenSessions: []
+    }
+  });
+
+  assert.equal(summary.schemaVersion, 1);
+  assert.equal(summary.source, "live_activity");
+  assert.equal(summary.activeCount, 0);
+  assert.equal(summary.active.length, 1);
+  assert.equal(summary.main?.rowId, "row:assign-dup");
+  assert.equal(summary.main?.source, "live_activity");
+  assert.equal(summary.active[0]?.work.title, "Duplicate source task");
+  assert.equal(summary.sourceMap.liveActivityCount, 1);
+  assert.equal(summary.sourceMap.teamExecutionCount, 1);
 });
