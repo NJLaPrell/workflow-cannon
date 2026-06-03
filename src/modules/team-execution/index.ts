@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type Sqlite from "better-sqlite3";
-import type { WorkflowModule } from "../../contracts/module-contract.js";
+import type { ModuleLifecycleContext, WorkflowModule } from "../../contracts/module-contract.js";
 import { builtinInstructionEntriesForModule } from "../../contracts/builtin-run-command-manifest.js";
 import { openPlanningStores } from "../task-engine/persistence/planning-open.js";
 import { TaskStore } from "../task-engine/persistence/store.js";
@@ -13,15 +13,20 @@ import { getPlanningGenerationPolicy, mergePlanningGenerationPolicyWarnings } fr
 import type { TaskEntity } from "../task-engine/types.js";
 import {
   assertTeamExecutionKitSchema,
+  type AssignmentPacketRegistryRow,
   type TeamAssignmentRow,
   blockAssignment,
   blockAssignmentByAdmin,
   blockAssignmentFromWorker,
+  buildAssignmentPacketRegistryId,
   cancelAssignment,
   cancelAssignmentByAdmin,
   getAssignment,
+  getAssignmentPacketRegistryRowByDigest,
+  getAssignmentPacketRegistryRowById,
   insertAssignment,
   listAssignments,
+  normalizeAssignmentValidationCommands,
   parseMetadata,
   reconcileAssignment,
   reconcileAssignmentByAdmin,
@@ -29,6 +34,7 @@ import {
   submitHandoff,
   summarizeHandoffForReconcile,
   taskExistsInRelationalStore,
+  upsertAssignmentPacketRegistryRow,
   validateAssignmentMetadataWhenPresent,
   validateHandoffContract,
   validateReconcileCheckpointV1
@@ -426,6 +432,155 @@ async function createSingleTaskStore(task: TaskEntity): Promise<TaskStore> {
   return store;
 }
 
+type AssignmentPacketContext = {
+  task: TaskEntity;
+  packet: ReturnType<typeof buildAgentExecutionPacket>;
+  packetId: string;
+  validationCommands: ReturnType<typeof normalizeAssignmentValidationCommands>;
+};
+
+function readValidationRecommendations(
+  validationResult: ReturnType<typeof buildRecommendValidation>
+): Array<{
+  command: string;
+  rationale: string;
+  priority: number;
+  expectedEvidenceFields: {
+    validationCommands: Array<{ command: string; result: string }>;
+    checks: Array<{ name: string; conclusion: string }>;
+  };
+}> {
+  return validationResult.ok && validationResult.data && typeof validationResult.data === "object"
+    ? (((validationResult.data as Record<string, unknown>).recommendations ?? []) as Array<{
+        command: string;
+        rationale: string;
+        priority: number;
+        expectedEvidenceFields: {
+          validationCommands: Array<{ command: string; result: string }>;
+          checks: Array<{ name: string; conclusion: string }>;
+        };
+      }>)
+    : [];
+}
+
+async function resolveAssignmentPacketContext(args: {
+  assignment: TeamAssignmentRow;
+  db: Sqlite.Database;
+  ctx: ModuleLifecycleContext;
+  planning: Awaited<ReturnType<typeof openPlanningStores>>;
+}): Promise<AssignmentPacketContext | null> {
+  const task = readRelationalTask(args.db, args.assignment.executionTaskId);
+  if (!task) {
+    return null;
+  }
+
+  const boundaries = readAgentExecutionPacketBoundaries(args.assignment.metadata);
+  const store = await createSingleTaskStore(task);
+  const validationResult = buildRecommendValidation(args.ctx, args.planning, store, {
+    taskId: task.id,
+    touchedPaths: boundaries.ownedPaths
+  });
+  const recommendations = readValidationRecommendations(validationResult);
+  const resolvedPolicy = resolveMaintainerDeliveryPolicy({
+    effectiveConfig: args.ctx.effectiveConfig as Record<string, unknown> | undefined,
+    task
+  });
+  const packet = buildAgentExecutionPacket({
+    assignment: args.assignment,
+    task,
+    policy: resolvedPolicy.resolvedPolicy,
+    validationRecommendations: recommendations
+  });
+  return {
+    task,
+    packet,
+    packetId: buildAssignmentPacketRegistryId({
+      assignmentId: args.assignment.id,
+      packetDigest: packet.packetDigest
+    }),
+    validationCommands: normalizeAssignmentValidationCommands(packet.validationCommands)
+  };
+}
+
+function materializeAssignmentMetadataFromPacket(
+  metadata: Record<string, unknown> | null,
+  packetContext: AssignmentPacketContext | null
+): Record<string, unknown> | null {
+  if (!metadata || metadata.schemaVersion !== 1 || !packetContext) {
+    return metadata;
+  }
+  const next: Record<string, unknown> = { ...metadata };
+  next.packetId = packetContext.packetId;
+  next.packetDigest = packetContext.packet.packetDigest;
+  if (packetContext.validationCommands && packetContext.validationCommands.length > 0) {
+    next.validationCommands = packetContext.validationCommands;
+  } else {
+    delete next.validationCommands;
+  }
+  return next;
+}
+
+function readStoredPacketRegistryRow(
+  db: Sqlite.Database,
+  assignment: TeamAssignmentRow
+): AssignmentPacketRegistryRow | null {
+  const packetId = readOptionalStringValue(assignment.metadata?.packetId);
+  if (packetId) {
+    return getAssignmentPacketRegistryRowById(db, packetId);
+  }
+  const packetDigest = readOptionalStringValue(assignment.metadata?.packetDigest);
+  return packetDigest ? getAssignmentPacketRegistryRowByDigest(db, packetDigest) : null;
+}
+
+function attachPacketAudit(args: {
+  assignment: TeamAssignmentRow;
+  packetContext: AssignmentPacketContext | null;
+  registryRow: AssignmentPacketRegistryRow | null;
+}): TeamAssignmentRow & {
+  packetAudit?: {
+    packetId: string | null;
+    storedPacketDigest: string | null;
+    currentPacketDigest: string | null;
+    stale: boolean;
+    registryAvailable: boolean;
+  };
+} {
+  const { assignment, packetContext, registryRow } = args;
+  const packetId = readOptionalStringValue(assignment.metadata?.packetId) ?? registryRow?.packetId ?? null;
+  const storedPacketDigest =
+    readOptionalStringValue(assignment.metadata?.packetDigest) ?? registryRow?.packetDigest ?? null;
+  const currentPacketDigest = packetContext?.packet.packetDigest ?? null;
+  const packetContextStatus =
+    storedPacketDigest && currentPacketDigest
+      ? storedPacketDigest === currentPacketDigest
+        ? "current"
+        : "stale"
+      : "missing";
+
+  return {
+    ...assignment,
+    orchestrationMetadataSummary: assignment.orchestrationMetadataSummary
+      ? {
+          ...assignment.orchestrationMetadataSummary,
+          packetId: packetId ?? assignment.orchestrationMetadataSummary.packetId,
+          packetDigest: storedPacketDigest ?? assignment.orchestrationMetadataSummary.packetDigest,
+          packetContextStatus,
+          packetRegistryStatus: registryRow ? "stored" : "missing"
+        }
+      : assignment.orchestrationMetadataSummary,
+    packetAudit:
+      packetId || storedPacketDigest || currentPacketDigest || registryRow
+        ? {
+            packetId,
+            storedPacketDigest,
+            currentPacketDigest,
+            stale: packetContextStatus === "stale",
+            registryAvailable: Boolean(registryRow)
+          }
+        : undefined
+  };
+}
+
 export const teamExecutionModule: WorkflowModule = {
   registration: {
     id: "team-execution",
@@ -510,12 +665,27 @@ export const teamExecutionModule: WorkflowModule = {
         supervisorId,
         workerId
       });
-      const data: Record<string, unknown> = { assignments, count: assignments.length };
+      const auditedAssignments = await Promise.all(
+        assignments.map(async (assignment) => {
+          const packetContext = await resolveAssignmentPacketContext({
+            assignment,
+            db,
+            ctx,
+            planning
+          });
+          return attachPacketAudit({
+            assignment,
+            packetContext,
+            registryRow: readStoredPacketRegistryRow(db, assignment)
+          });
+        })
+      );
+      const data: Record<string, unknown> = { assignments: auditedAssignments, count: auditedAssignments.length };
       attachPlanningMeta(data, ctx, gen);
       return {
         ok: true,
         code: "assignments-listed",
-        message: `${assignments.length} assignment(s)`,
+        message: `${auditedAssignments.length} assignment(s)`,
         data
       };
     }
@@ -548,8 +718,13 @@ export const teamExecutionModule: WorkflowModule = {
         };
       }
 
-      const task = readRelationalTask(db, assignment.executionTaskId);
-      if (!task) {
+      const packetContext = await resolveAssignmentPacketContext({
+        assignment,
+        db,
+        ctx,
+        planning
+      });
+      if (!packetContext) {
         return {
           ok: false,
           code: "task-not-found",
@@ -557,35 +732,18 @@ export const teamExecutionModule: WorkflowModule = {
         };
       }
 
-      const boundaries = readAgentExecutionPacketBoundaries(assignment.metadata);
-      const store = await createSingleTaskStore(task);
-      const validationResult = buildRecommendValidation(ctx, planning, store, {
-        taskId: task.id,
-        touchedPaths: boundaries.ownedPaths
-      });
-      const recommendations =
-        validationResult.ok && validationResult.data && typeof validationResult.data === "object"
-          ? (((validationResult.data as Record<string, unknown>).recommendations ?? []) as Array<{
-              command: string;
-              rationale: string;
-              priority: number;
-              expectedEvidenceFields: {
-                validationCommands: Array<{ command: string; result: string }>;
-                checks: Array<{ name: string; conclusion: string }>;
-              };
-            }>)
-          : [];
-      const resolvedPolicy = resolveMaintainerDeliveryPolicy({
-        effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined,
-        task
-      });
-      const packet = buildAgentExecutionPacket({
-        assignment,
-        task,
-        policy: resolvedPolicy.resolvedPolicy,
-        validationRecommendations: recommendations
-      });
-      const data: Record<string, unknown> = { packet };
+      const registryRow = readStoredPacketRegistryRow(db, assignment);
+      const data: Record<string, unknown> = {
+        packet: packetContext.packet,
+        packetAudit: attachPacketAudit({
+          assignment,
+          packetContext,
+          registryRow
+        }).packetAudit
+      };
+      if (registryRow) {
+        data.storedPacket = registryRow.body;
+      }
       attachPlanningMeta(data, ctx, planning.sqliteDual.getPlanningGeneration());
       return {
         ok: true,
@@ -638,6 +796,27 @@ export const teamExecutionModule: WorkflowModule = {
       }
       const ts = nowIso();
       const persistTaskId = executionTaskId || readAnyTaskId(db);
+      const assignmentForPacket: TeamAssignmentRow = {
+        id: assignmentId,
+        executionTaskId,
+        supervisorId,
+        workerId,
+        status: "assigned",
+        handoff: null,
+        reconcileCheckpoint: null,
+        blockReason: null,
+        metadata,
+        orchestrationMetadataSummary: null,
+        createdAt: ts,
+        updatedAt: ts
+      };
+      const packetContext = await resolveAssignmentPacketContext({
+        assignment: assignmentForPacket,
+        db,
+        ctx,
+        planning
+      });
+      const persistedMetadata = materializeAssignmentMetadataFromPacket(metadata, packetContext);
       try {
         planning.sqliteDual.withTransaction(
           () => {
@@ -655,9 +834,19 @@ export const teamExecutionModule: WorkflowModule = {
               executionTaskId,
               supervisorId,
               workerId,
-              metadata,
+              metadata: persistedMetadata,
               now: ts
             });
+            if (packetContext) {
+              upsertAssignmentPacketRegistryRow(db, {
+                packetId: packetContext.packetId,
+                packetDigest: packetContext.packet.packetDigest,
+                assignmentId,
+                executionTaskId,
+                body: packetContext.packet,
+                now: ts
+              });
+            }
           },
           {
             expectedPlanningGeneration: exp,
@@ -672,7 +861,13 @@ export const teamExecutionModule: WorkflowModule = {
         throw err;
       }
       const row = getAssignment(db, assignmentId)!;
-      const data: Record<string, unknown> = { assignment: row };
+      const data: Record<string, unknown> = {
+        assignment: attachPacketAudit({
+          assignment: row,
+          packetContext,
+          registryRow: readStoredPacketRegistryRow(db, row)
+        })
+      };
       attachPlanningMeta(data, ctx, planning.sqliteDual.getPlanningGeneration());
       return { ok: true, code: "assignment-registered", message: `Assignment '${assignmentId}'`, data };
     }

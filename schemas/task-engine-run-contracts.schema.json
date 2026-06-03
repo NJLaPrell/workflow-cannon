@@ -31,11 +31,6 @@
         "agent-bootstrap",
         "agent-mutation-plan",
         "agent-session-snapshot",
-        "open-agent-session",
-        "update-agent-session",
-        "close-agent-session",
-        "get-agent-session",
-        "list-agent-sessions",
         "apply-task-batch",
         "apply-task-state-events",
         "archive-task",
@@ -69,7 +64,6 @@
         "explain-task-engine-model",
         "export-feature-taxonomy-json",
         "export-workspace-status",
-        "get-agent-definition",
         "get-blocked-summary",
         "get-dependency-graph",
         "get-kit-persistence-map",
@@ -89,7 +83,6 @@
         "improvement-dedupe-explain",
         "improvement-workflow-summary",
         "install-git-hooks",
-        "list-agent-definitions",
         "list-components",
         "list-features",
         "list-module-states",
@@ -111,7 +104,6 @@
         "queue-health",
         "rebuild-task-state-cache",
         "recommend-validation",
-        "register-agent-definition",
         "reject-improvement",
         "release-evidence-manifest",
         "release-status",
@@ -122,7 +114,6 @@
         "report-defect",
         "resolve-maintainer-delivery-policy",
         "resolve-task-intake-policy",
-        "retire-agent-definition",
         "review-planning-execution-drafts",
         "run-transition",
         "set-agent-activity",
@@ -149,7 +140,6 @@
         "task-sync-verify",
         "unblock-task",
         "uninstall-git-hooks",
-        "update-agent-definition",
         "update-phase-note",
         "update-task",
         "update-wishlist",
@@ -207,21 +197,6 @@
         },
         "agent-session-snapshot": {
           "$ref": "#/$defs/contractAgentSessionSnapshot"
-        },
-        "open-agent-session": {
-          "$ref": "#/$defs/contractOpenAgentSession"
-        },
-        "update-agent-session": {
-          "$ref": "#/$defs/contractUpdateAgentSession"
-        },
-        "close-agent-session": {
-          "$ref": "#/$defs/contractCloseAgentSession"
-        },
-        "get-agent-session": {
-          "$ref": "#/$defs/contractGetAgentSession"
-        },
-        "list-agent-sessions": {
-          "$ref": "#/$defs/contractListAgentSessions"
         },
         "clear-agent-activity": {
           "$ref": "#/$defs/contractBase"
@@ -552,21 +527,6 @@
         },
         "list-module-states": {
           "$ref": "#/$defs/contractListModuleStates"
-        },
-        "get-agent-definition": {
-          "$ref": "#/$defs/contractBase"
-        },
-        "list-agent-definitions": {
-          "$ref": "#/$defs/contractBase"
-        },
-        "register-agent-definition": {
-          "$ref": "#/$defs/contractBase"
-        },
-        "retire-agent-definition": {
-          "$ref": "#/$defs/contractBase"
-        },
-        "update-agent-definition": {
-          "$ref": "#/$defs/contractBase"
         }
       }
     }

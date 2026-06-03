@@ -38,6 +38,7 @@ test("prepareKitSqliteDatabase applies user_version and baseline tables", async 
     assert.ok(names.includes("phase_note_task_suggestions"));
     assert.ok(names.includes("kit_agent_activity_leases"));
     assert.ok(names.includes("kit_task_state_projection_meta"));
+    assert.ok(names.includes("kit_assignment_packets"));
     assert.ok(names.includes("workflow_ideas"));
     assert.ok(names.includes("kit_canonical_event_outbox"));
     const ideaColumns = db

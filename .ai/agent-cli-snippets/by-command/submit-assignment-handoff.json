@@ -17,7 +17,7 @@
   ],
   "instructionPath": "src/modules/team-execution/instructions/submit-assignment-handoff.md",
   "moduleId": "team-execution",
-  "description": "Worker submits handoff contract v1/v2 (assigned → submitted).",
+  "description": "Worker submits handoff contract v1 (assigned → submitted).",
   "policy": {
     "sensitivity": "sensitive",
     "operationId": "team-execution.persist",
@@ -38,5 +38,5 @@
     "listCommands": "pnpm exec wk run --list-commands",
     "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
   },
-  "invocationId": "8795b146-aa62-4ab7-a225-90cd652512b1"
+  "invocationId": "5aedd916-61a5-4a6a-b630-4bd01ea44a60"
 }

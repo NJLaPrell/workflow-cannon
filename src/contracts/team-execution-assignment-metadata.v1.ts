@@ -17,6 +17,13 @@ export type WorkerPacketModelTierRecommendation = {
   rationale: string;
 };
 
+export type TeamAssignmentValidationCommand = {
+  command: string;
+  rationale?: string;
+  result?: string;
+  exitCode?: number;
+};
+
 export type TeamAssignmentResourceScope = {
   ownedPaths?: string[];
   readOnlyPaths?: string[];
@@ -38,6 +45,7 @@ export type TeamAssignmentMetadataV1 = {
   modelTier?: AgentModelTier;
   modelTierRationale?: string;
   modelTierRecommendation?: WorkerPacketModelTierRecommendation;
+  packetId?: string;
   packetDigest?: string;
   contextProfileId: string;
   accessProfileId: string;
@@ -48,6 +56,7 @@ export type TeamAssignmentMetadataV1 = {
   requiresApprovalPaths?: string[];
   assignmentPromptSummary?: string;
   blockingPolicy?: string;
+  validationCommands?: TeamAssignmentValidationCommand[];
   resources?: TeamAssignmentResourceScope;
   lockScope?: TeamAssignmentLockScope;
 };
@@ -63,12 +72,16 @@ export type TeamAssignmentOrchestrationMetadataSummary = {
   modelTier?: AgentModelTier;
   modelTierRationale?: string;
   modelTierRecommendation?: WorkerPacketModelTierRecommendation;
+  packetId?: string;
   packetDigest?: string;
   contextProfileId?: string;
   accessProfileId?: string;
   handoffContractId?: string;
   assignmentPromptSummary?: string;
   blockingPolicy?: string;
+  validationCommandCount: number;
+  packetContextStatus?: "current" | "stale" | "missing";
+  packetRegistryStatus?: "stored" | "missing";
   pathCounts: {
     ownedPaths: number;
     readOnlyPaths: number;

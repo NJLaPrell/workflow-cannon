@@ -1424,7 +1424,7 @@
     "moduleId": "team-execution",
     "name": "list-assignments",
     "file": "list-assignments.md",
-    "description": "List team assignments in kit SQLite (user_version 7+) with optional filters.",
+    "description": "List team assignments in kit SQLite with packet audit and stale-context metadata when present.",
     "defaultResponseTemplateId": "default",
     "policySensitivity": "non-sensitive"
   },
@@ -1440,7 +1440,7 @@
     "moduleId": "team-execution",
     "name": "register-assignment",
     "file": "register-assignment.md",
-    "description": "Create a supervisor/worker assignment row linked to an execution task id.",
+    "description": "Create a supervisor/worker assignment row and persist bounded packet metadata when available.",
     "policyOperationId": "team-execution.persist",
     "defaultResponseTemplateId": "default",
     "policySensitivity": "sensitive"

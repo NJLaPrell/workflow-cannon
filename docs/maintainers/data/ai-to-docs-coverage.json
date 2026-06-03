@@ -55,6 +55,18 @@
       "output": "docs/maintainers/runbooks/agent-guidance-onboarding.md"
     },
     {
+      "source": ".ai/runbooks/agent-orchestration-activity.md",
+      "output": "docs/maintainers/runbooks/agent-orchestration-activity.md"
+    },
+    {
+      "source": ".ai/runbooks/agent-orchestration-profiles.md",
+      "output": "docs/maintainers/runbooks/agent-orchestration-profiles.md"
+    },
+    {
+      "source": ".ai/runbooks/agent-orchestration-release-checklist.md",
+      "output": "docs/maintainers/runbooks/agent-orchestration-release-checklist.md"
+    },
+    {
       "source": ".ai/runbooks/agent-playbooks.md",
       "output": "docs/maintainers/runbooks/agent-playbooks.md"
     },
