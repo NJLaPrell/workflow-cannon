@@ -1281,6 +1281,24 @@ test("renderDashboardRootInnerHtml renders multiple live activities and ignores 
             }
           }),
           makeAgentActivityRow({
+            rowId: "row:active-3",
+            displayName: "PR Review Agent",
+            status: "reviewing_pr",
+            statusLabel: "Reviewing Pull Request 192",
+            work: {
+              taskId: "T703",
+              title: "Review dashboard rows",
+              phaseKey: "95",
+              command: "review-item"
+            },
+            freshness: {
+              updatedAt: "2026-05-06T00:00:30.000Z",
+              startedAt: "2026-05-06T00:00:30.000Z",
+              expiresAt: "2026-05-06T00:05:00.000Z",
+              state: "fresh"
+            }
+          }),
+          makeAgentActivityRow({
             rowId: "row:active-2",
             displayName: "Docs Worker",
             status: "planning",
@@ -1301,8 +1319,31 @@ test("renderDashboardRootInnerHtml renders multiple live activities and ignores 
         ],
         needsAttention: [
           makeAgentActivityRow({
-            rowId: "row:attention",
-            displayName: "Review Agent",
+            rowId: "row:attention-2",
+            displayName: "Blocked Agent",
+            status: "blocked",
+            statusLabel: "Blocked on missing dependency",
+            sourceConfidence: "medium",
+            work: {
+              taskId: "T704",
+              title: "Fix blocked dashboard rows",
+              phaseKey: "95",
+              command: "run-transition"
+            },
+            freshness: {
+              updatedAt: "2026-05-06T00:04:00.000Z",
+              startedAt: "2026-05-06T00:04:00.000Z",
+              expiresAt: "2026-05-06T00:08:00.000Z",
+              state: "fresh"
+            },
+            attention: {
+              state: "blocked",
+              message: "Blocked on missing dependency"
+            }
+          }),
+          makeAgentActivityRow({
+            rowId: "row:attention-1",
+            displayName: "Approval Agent",
             status: "awaiting_policy_approval",
             statusLabel: "Awaiting policy approval",
             sourceConfidence: "medium",
@@ -1381,7 +1422,7 @@ test("renderDashboardRootInnerHtml renders multiple live activities and ignores 
       blockingAnalysis: [],
       dependencyOverview: deliverTestDepOverview
     }
-  });
+        });
   const overviewPanelIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="overview"');
   const planningPanelIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="planning"');
   const overviewPanel = html.slice(overviewPanelIdx, planningPanelIdx > overviewPanelIdx ? planningPanelIdx : undefined);
@@ -1391,12 +1432,22 @@ test("renderDashboardRootInnerHtml renders multiple live activities and ignores 
   assert.match(html, /Agent Activity/);
   assert.match(html, /Dashboard UX Worker/);
   assert.match(html, /Docs Worker/);
-  assert.match(html, /Review Agent/);
-  assert.match(html, /Active Agents<\/b> <span class="muted">\((?:2)\)<\/span>/);
-  assert.match(html, /Needs Attention<\/b> <span class="muted">\((?:1)\)<\/span>/);
-  assert.match(html, /Validating/);
-  assert.match(html, /Planning/);
-  assert.match(html, /Needs approval/);
+  assert.match(html, /PR Review Agent/);
+  assert.match(html, /Approval Agent/);
+  assert.match(html, /Active Agents<\/b> <span class="muted">\((?:3)\)<\/span>/);
+  assert.match(html, /Needs Attention<\/b> <span class="muted">\((?:2)\)<\/span>/);
+  assert.match(html, /data-agent-chip-kind="status-reviewing_pr">PR review<\/span>/);
+  assert.match(html, /data-agent-chip-kind="status-awaiting_policy_approval">Needs approval<\/span>/);
+  assert.match(html, /data-agent-chip-kind="status-blocked">Blocked<\/span>/);
+  const needsAttentionIdx = html.indexOf('dash-agent-activity-section--attention');
+  const activeIdx = html.indexOf('dash-agent-activity-section--active');
+  assert.ok(needsAttentionIdx !== -1 && activeIdx !== -1 && needsAttentionIdx < activeIdx);
+  const approvalIdx = html.indexOf("Approval Agent");
+  const blockedIdx = html.indexOf("Blocked Agent");
+  const validatingIdx = html.indexOf("Dashboard UX Worker");
+  const planningIdx = html.indexOf("Docs Worker");
+  assert.ok(approvalIdx !== -1 && blockedIdx !== -1 && approvalIdx < blockedIdx);
+  assert.ok(validatingIdx !== -1 && planningIdx !== -1 && validatingIdx < planningIdx);
   assert.doesNotMatch(activityBoard, /RAW TEAM TITLE SHOULD NOT APPEAR/);
   assert.doesNotMatch(activityBoard, /RAW SUBAGENT NAME SHOULD NOT APPEAR/);
   assert.doesNotMatch(activityBoard, /RAW SUBAGENT TASK SHOULD NOT APPEAR/);
