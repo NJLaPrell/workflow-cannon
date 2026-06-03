@@ -1455,6 +1455,14 @@
   },
   {
     "moduleId": "team-execution",
+    "name": "assignment-reconciliation-preflight",
+    "file": "assignment-reconciliation-preflight.md",
+    "description": "Classify a worker handoff into a bounded reconciliation verdict packet without expanding raw diffs.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "team-execution",
     "name": "register-assignment",
     "file": "register-assignment.md",
     "description": "Create a supervisor/worker assignment row and persist bounded packet metadata when available.",

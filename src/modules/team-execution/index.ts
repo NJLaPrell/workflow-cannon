@@ -42,6 +42,7 @@ import {
 import { buildAgentExecutionPacket, readAgentExecutionPacketBoundaries } from "./agent-execution-packet.js";
 
 type AssignmentLifecycleAction =
+  | "assignment-reconciliation-preflight"
   | "submit-assignment-handoff"
   | "report-assignment-blocker"
   | "block-assignment"
@@ -60,6 +61,431 @@ type AssignmentValidationInput = {
   allowedStatuses: TeamAssignmentRow["status"][];
   adminIds: Set<string>;
 };
+
+const ASSIGNMENT_RECONCILIATION_PRELIGHT_VERDICTS = [
+  "ready_to_reconcile",
+  "needs_worker_followup",
+  "needs_orchestrator_review",
+  "needs_user_decision",
+  "unsafe"
+] as const;
+
+type AssignmentReconciliationPreflightVerdict = (typeof ASSIGNMENT_RECONCILIATION_PRELIGHT_VERDICTS)[number];
+
+type AssignmentReconciliationReasonCategory =
+  | "worker_followup"
+  | "orchestrator_review"
+  | "user_decision"
+  | "unsafe";
+
+type AssignmentReconciliationReason = {
+  category: AssignmentReconciliationReasonCategory;
+  code: string;
+  message: string;
+  paths?: string[];
+  commands?: string[];
+  criteria?: string[];
+};
+
+type AssignmentReconciliationPathSummary = {
+  total: number;
+  sample: string[];
+  owned: string[];
+  shared: string[];
+  requiresApproval: string[];
+  forbidden: string[];
+  outsideOwned: string[];
+};
+
+type AssignmentReconciliationAcceptanceSummary = {
+  taskCriteria: string[];
+  reportedCriteria: Array<{ criterion: string; status: string }>;
+  missingCriteria: string[];
+  unresolvedCriteria: Array<{ criterion: string; status: string }>;
+};
+
+type AssignmentReconciliationValidationSummary = {
+  requiredCommands: string[];
+  reportedCommands: string[];
+  missingCommands: string[];
+  failedCommands: string[];
+};
+
+function normalizeMatchablePath(value: string): string {
+  return value.trim().replace(/\\/g, "/").replace(/^\.\//, "");
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[|\\{}()[\]^$+?.]/g, "\\$&");
+}
+
+function pathPatternToRegExp(pattern: string): RegExp {
+  const normalized = normalizeMatchablePath(pattern);
+  let source = "^";
+  for (let index = 0; index < normalized.length; index += 1) {
+    const char = normalized[index];
+    if (char === "*") {
+      if (normalized[index + 1] === "*") {
+        source += ".*";
+        index += 1;
+      } else {
+        source += "[^/]*";
+      }
+      continue;
+    }
+    source += escapeRegExp(char);
+  }
+  source += "$";
+  return new RegExp(source);
+}
+
+function matchesAnyPathPattern(pathValue: string, patterns: string[]): boolean {
+  const normalizedPath = normalizeMatchablePath(pathValue);
+  return patterns.some((pattern) => pathPatternToRegExp(pattern).test(normalizedPath));
+}
+
+function readHandoffChangedPaths(handoff: Record<string, unknown> | null): string[] {
+  if (!handoff || handoff.schemaVersion !== 2 || !Array.isArray(handoff.filesChanged)) {
+    return [];
+  }
+  const paths = handoff.filesChanged
+    .filter((entry): entry is Record<string, unknown> => Boolean(entry) && typeof entry === "object" && !Array.isArray(entry))
+    .map((entry) => readOptionalStringValue(entry.path))
+    .filter((entry): entry is string => Boolean(entry));
+  return Array.from(new Set(paths.map((entry) => normalizeMatchablePath(entry))));
+}
+
+function readHandoffCommandRuns(
+  handoff: Record<string, unknown> | null
+): Array<{ command: string; status: string }> {
+  if (!handoff || handoff.schemaVersion !== 2 || !Array.isArray(handoff.commandsRun)) {
+    return [];
+  }
+  return handoff.commandsRun
+    .filter((entry): entry is Record<string, unknown> => Boolean(entry) && typeof entry === "object" && !Array.isArray(entry))
+    .map((entry) => ({
+      command: readOptionalStringValue(entry.command) ?? "",
+      status: readOptionalStringValue(entry.status) ?? "unknown"
+    }))
+    .filter((entry) => entry.command.length > 0);
+}
+
+function readHandoffAcceptanceCriteria(
+  handoff: Record<string, unknown> | null
+): Array<{ criterion: string; status: string }> {
+  if (!handoff || handoff.schemaVersion !== 2 || !Array.isArray(handoff.acceptanceCriteria)) {
+    return [];
+  }
+  return handoff.acceptanceCriteria
+    .filter((entry): entry is Record<string, unknown> => Boolean(entry) && typeof entry === "object" && !Array.isArray(entry))
+    .map((entry) => ({
+      criterion: readOptionalStringValue(entry.criterion) ?? "",
+      status: readOptionalStringValue(entry.status) ?? "unknown"
+    }))
+    .filter((entry) => entry.criterion.length > 0);
+}
+
+function readExpectedValidationCommands(packetContext: AssignmentPacketContext): string[] {
+  return Array.from(
+    new Set(
+      (packetContext.validationCommands ?? [])
+        .map((entry) => readOptionalStringValue(entry.command))
+        .filter((entry): entry is string => Boolean(entry))
+    )
+  );
+}
+
+function summarizeReconciliationPathSafety(args: {
+  changedPaths: string[];
+  boundaries: ReturnType<typeof readAgentExecutionPacketBoundaries>;
+}): AssignmentReconciliationPathSummary {
+  const owned: string[] = [];
+  const shared: string[] = [];
+  const requiresApproval: string[] = [];
+  const forbidden: string[] = [];
+  const outsideOwned: string[] = [];
+
+  for (const changedPath of args.changedPaths) {
+    const isForbidden =
+      matchesAnyPathPattern(changedPath, args.boundaries.forbiddenPaths) ||
+      matchesAnyPathPattern(changedPath, args.boundaries.readOnlyPaths);
+    const isRequiresApproval = matchesAnyPathPattern(changedPath, args.boundaries.requiresApprovalPaths);
+    const isShared = matchesAnyPathPattern(changedPath, args.boundaries.sharedPaths);
+    const isOwned = matchesAnyPathPattern(changedPath, args.boundaries.ownedPaths);
+
+    if (isForbidden) {
+      forbidden.push(changedPath);
+      continue;
+    }
+    if (isRequiresApproval) {
+      requiresApproval.push(changedPath);
+      continue;
+    }
+    if (isOwned) {
+      owned.push(changedPath);
+      continue;
+    }
+    if (isShared) {
+      shared.push(changedPath);
+      continue;
+    }
+    outsideOwned.push(changedPath);
+  }
+
+  return {
+    total: args.changedPaths.length,
+    sample: args.changedPaths.slice(0, 5),
+    owned,
+    shared,
+    requiresApproval,
+    forbidden,
+    outsideOwned
+  };
+}
+
+function summarizeReconciliationAcceptance(args: {
+  task: TaskEntity;
+  handoff: Record<string, unknown> | null;
+}): AssignmentReconciliationAcceptanceSummary {
+  const taskCriteria = Array.isArray(args.task.acceptanceCriteria) ? args.task.acceptanceCriteria : [];
+  const reportedCriteria = readHandoffAcceptanceCriteria(args.handoff);
+  const reportedByCriterion = new Map(reportedCriteria.map((entry) => [entry.criterion, entry.status]));
+  const missingCriteria = taskCriteria.filter((criterion) => !reportedByCriterion.has(criterion));
+  const unresolvedCriteria = reportedCriteria.filter(
+    (entry) => entry.status !== "passed" && entry.status !== "not_applicable"
+  );
+  return {
+    taskCriteria,
+    reportedCriteria,
+    missingCriteria,
+    unresolvedCriteria
+  };
+}
+
+function summarizeReconciliationValidation(args: {
+  packetContext: AssignmentPacketContext;
+  handoff: Record<string, unknown> | null;
+}): AssignmentReconciliationValidationSummary {
+  const requiredCommands = readExpectedValidationCommands(args.packetContext);
+  const reportedRuns = readHandoffCommandRuns(args.handoff);
+  const reportedCommands = reportedRuns.map((entry) => entry.command);
+  const reportedByCommand = new Map(reportedRuns.map((entry) => [entry.command, entry.status]));
+  const missingCommands = requiredCommands.filter((command) => !reportedByCommand.has(command));
+  const failedCommands = requiredCommands.filter((command) => reportedByCommand.get(command) === "failed");
+  return {
+    requiredCommands,
+    reportedCommands,
+    missingCommands,
+    failedCommands
+  };
+}
+
+function selectAssignmentReconciliationVerdict(
+  reasons: AssignmentReconciliationReason[]
+): AssignmentReconciliationPreflightVerdict {
+  if (reasons.some((reason) => reason.category === "unsafe")) {
+    return "unsafe";
+  }
+  if (reasons.some((reason) => reason.category === "user_decision")) {
+    return "needs_user_decision";
+  }
+  if (reasons.some((reason) => reason.category === "worker_followup")) {
+    return "needs_worker_followup";
+  }
+  if (reasons.some((reason) => reason.category === "orchestrator_review")) {
+    return "needs_orchestrator_review";
+  }
+  return "ready_to_reconcile";
+}
+
+function buildAssignmentReconciliationPreflight(args: {
+  assignment: TeamAssignmentRow;
+  task: TaskEntity;
+  packetContext: AssignmentPacketContext;
+  registryRow: AssignmentPacketRegistryRow | null;
+}) {
+  const assignmentWithAudit = attachPacketAudit({
+    assignment: args.assignment,
+    packetContext: args.packetContext,
+    registryRow: args.registryRow
+  });
+  const boundaries = readAgentExecutionPacketBoundaries(args.assignment.metadata);
+  const handoffContext = summarizeHandoffForReconcile(args.assignment.handoff);
+  const changedPaths = readHandoffChangedPaths(args.assignment.handoff);
+  const pathSummary = summarizeReconciliationPathSafety({ changedPaths, boundaries });
+  const validationSummary = summarizeReconciliationValidation({
+    packetContext: args.packetContext,
+    handoff: args.assignment.handoff
+  });
+  const acceptanceSummary = summarizeReconciliationAcceptance({
+    task: args.task,
+    handoff: args.assignment.handoff
+  });
+  const evidenceRefs = handoffContext?.evidenceRefs ?? listHandoffEvidenceRefs(args.assignment);
+
+  const reasons: AssignmentReconciliationReason[] = [];
+
+  if (!args.assignment.handoff || !handoffContext) {
+    reasons.push({
+      category: "worker_followup",
+      code: "handoff-missing",
+      message: "Submitted handoff is missing or invalid for reconciliation preflight."
+    });
+  }
+
+  if (args.assignment.status === "assigned") {
+    reasons.push({
+      category: "worker_followup",
+      code: "assignment-not-submitted",
+      message: "Assignment has not reached submitted status yet."
+    });
+  } else if (args.assignment.status !== "submitted") {
+    reasons.push({
+      category: "orchestrator_review",
+      code: "assignment-status-changed",
+      message: `Assignment is in '${args.assignment.status}' status, not 'submitted'.`
+    });
+  }
+
+  if (evidenceRefs.length === 0) {
+    reasons.push({
+      category: "worker_followup",
+      code: "evidence-missing",
+      message: "Worker handoff must include at least one compact evidence ref."
+    });
+  }
+
+  if (validationSummary.missingCommands.length > 0) {
+    reasons.push({
+      category: "worker_followup",
+      code: "validation-missing",
+      message: "Required validation commands are missing from the handoff.",
+      commands: validationSummary.missingCommands
+    });
+  }
+
+  if (validationSummary.failedCommands.length > 0) {
+    reasons.push({
+      category: "worker_followup",
+      code: "validation-failed",
+      message: "Required validation commands failed in the handoff.",
+      commands: validationSummary.failedCommands
+    });
+  }
+
+  if (acceptanceSummary.missingCriteria.length > 0) {
+    reasons.push({
+      category: "worker_followup",
+      code: "acceptance-missing",
+      message: "Task acceptance criteria were not all addressed in the handoff.",
+      criteria: acceptanceSummary.missingCriteria
+    });
+  }
+
+  if (acceptanceSummary.unresolvedCriteria.length > 0) {
+    reasons.push({
+      category: "worker_followup",
+      code: "acceptance-unresolved",
+      message: "Some acceptance criteria remain partial or failed in the handoff.",
+      criteria: acceptanceSummary.unresolvedCriteria.map((entry) => `${entry.criterion}:${entry.status}`)
+    });
+  }
+
+  if (handoffContext?.handoffStatus === "partial" || handoffContext?.handoffStatus === "failed") {
+    reasons.push({
+      category: "worker_followup",
+      code: "handoff-status-followup",
+      message: `Handoff status '${handoffContext.handoffStatus}' requires worker follow-up before reconcile.`
+    });
+  }
+
+  if (pathSummary.forbidden.length > 0) {
+    reasons.push({
+      category: "unsafe",
+      code: "forbidden-path-change",
+      message: "Handoff reports changes in forbidden or read-only paths.",
+      paths: pathSummary.forbidden
+    });
+  }
+
+  if (pathSummary.outsideOwned.length > 0) {
+    reasons.push({
+      category: "unsafe",
+      code: "outside-owned-path-change",
+      message: "Handoff reports changes outside owned, shared, and approval-scoped paths.",
+      paths: pathSummary.outsideOwned
+    });
+  }
+
+  if (pathSummary.requiresApproval.length > 0) {
+    reasons.push({
+      category: "user_decision",
+      code: "approval-path-change",
+      message: "Handoff touched approval-gated paths that need explicit maintainer decision.",
+      paths: pathSummary.requiresApproval
+    });
+  }
+
+  if (handoffContext?.handoffStatus === "blocked" || (handoffContext?.blockersCount ?? 0) > 0) {
+    reasons.push({
+      category: "user_decision",
+      code: "handoff-blocked",
+      message: "Worker reported blockers that require supervisor or maintainer decision."
+    });
+  }
+
+  if (handoffContext?.handoffStatus === "needs_review" || (handoffContext?.risksCount ?? 0) > 0) {
+    reasons.push({
+      category: "orchestrator_review",
+      code: "review-needed",
+      message: "Handoff includes review-needed status or explicit risks that need orchestrator inspection."
+    });
+  }
+
+  const verdict = selectAssignmentReconciliationVerdict(reasons);
+  const checkpointDraft = handoffContext
+    ? {
+        schemaVersion: 1,
+        mergedSummary: handoffContext.handoffSummary
+      }
+    : null;
+
+  const nextAction =
+    verdict === "ready_to_reconcile"
+      ? "Run reconcile-assignment with the checkpoint draft and compact evidence refs."
+      : verdict === "needs_worker_followup"
+        ? "Ask the worker to refresh the handoff, validation evidence, or acceptance coverage before reconciling."
+        : verdict === "needs_orchestrator_review"
+          ? "Inspect the bounded review reasons before deciding whether to reconcile or request follow-up."
+          : verdict === "needs_user_decision"
+            ? "Escalate for supervisor or maintainer decision before reconciling this assignment."
+            : "Stop and repair the unsafe path violation before any reconcile action.";
+
+  return {
+    assignment: assignmentWithAudit,
+    verdict,
+    supportedVerdicts: [...ASSIGNMENT_RECONCILIATION_PRELIGHT_VERDICTS],
+    reasons,
+    nextAction,
+    compactEvidence: {
+      refs: evidenceRefs.slice(0, 5),
+      handoffSummary: handoffContext?.handoffSummary ?? null,
+      handoffStatus: handoffContext?.handoffStatus ?? null,
+      fileChangeSummary: pathSummary,
+      validationSummary,
+      acceptanceSummary: {
+        taskCriteria: acceptanceSummary.taskCriteria,
+        missingCriteria: acceptanceSummary.missingCriteria,
+        unresolvedCriteria: acceptanceSummary.unresolvedCriteria
+      }
+    },
+    reconciliation: {
+      checkpointDraft,
+      suggestedDecision: handoffContext?.suggestedDecision ?? null,
+      suggestedDecisions: handoffContext?.suggestedDecisions ?? []
+    }
+  };
+}
 
 function readResolvedActorId(ctx: { resolvedActor?: string }): string | undefined {
   if (typeof ctx.resolvedActor !== "string") {
@@ -824,6 +1250,69 @@ export const teamExecutionModule: WorkflowModule = {
         ok: true,
         code: "agent-execution-packet",
         message: `Execution packet for '${assignmentId}'`,
+        data
+      };
+    }
+
+    if (name === "assignment-reconciliation-preflight") {
+      const assignmentId = readOptionalStringArg(args, "assignmentId") ?? "";
+      const supervisorId = readOptionalStringArg(args, "supervisorId") ?? "";
+      if (!assignmentId || !supervisorId) {
+        return {
+          ok: false,
+          code: "invalid-args",
+          message: "assignment-reconciliation-preflight requires assignmentId and supervisorId"
+        };
+      }
+
+      const assignment = getAssignment(db, assignmentId);
+      if (!assignment) {
+        return {
+          ok: false,
+          code: "assignment-not-found",
+          message: `assignment '${assignmentId}' not found`
+        };
+      }
+      const validation = validateAssignmentLifecycleAuthority({
+        action: "assignment-reconciliation-preflight",
+        assignmentId,
+        assignment,
+        callerId,
+        expectedRole: "supervisor",
+        claimedRoleId: supervisorId,
+        allowedStatuses: ["assigned", "submitted", "blocked", "reconciled"],
+        adminIds
+      });
+      if (!validation.ok) {
+        return validation.error;
+      }
+
+      const packetContext = await resolveAssignmentPacketContext({
+        assignment,
+        db,
+        ctx,
+        planning
+      });
+      if (!packetContext) {
+        return {
+          ok: false,
+          code: "task-not-found",
+          message: `execution task '${assignment.executionTaskId}' not found`
+        };
+      }
+
+      const registryRow = readStoredPacketRegistryRow(db, assignment);
+      const data = buildAssignmentReconciliationPreflight({
+        assignment,
+        task: packetContext.task,
+        packetContext,
+        registryRow
+      });
+      attachPlanningMeta(data, ctx, planning.sqliteDual.getPlanningGeneration());
+      return {
+        ok: true,
+        code: "assignment-reconciliation-preflight",
+        message: `Reconciliation preflight for '${assignmentId}'`,
         data
       };
     }
