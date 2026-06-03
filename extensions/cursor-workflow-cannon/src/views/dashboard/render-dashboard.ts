@@ -4011,6 +4011,47 @@ const DASHBOARD_AGENT_STATUS_LABELS: Record<DashboardAgentStatusKind, string> = 
   awaiting_human_gate: "Waiting on human"
 };
 
+const DASHBOARD_AGENT_STATUS_CHIP_LABELS: Record<DashboardAgentStatusKind, string> = {
+  unavailable: "Unavailable",
+  planning: "Planning",
+  blocked: "Blocked",
+  working_task: "Working",
+  delegating_task: "Delegating",
+  ready_task: "Ready",
+  awaiting_instruction: "Idle",
+  reviewing_item: "Review item",
+  reviewing_pr: "PR review",
+  validating: "Validating",
+  releasing: "Releasing",
+  awaiting_policy_approval: "Needs approval",
+  awaiting_human_gate: "Human gate"
+};
+
+const DASHBOARD_AGENT_ACTIVE_STATUS_ORDER: DashboardAgentStatusKind[] = [
+  "working_task",
+  "validating",
+  "planning",
+  "reviewing_pr",
+  "reviewing_item",
+  "releasing",
+  "delegating_task",
+  "ready_task",
+  "awaiting_instruction",
+  "unavailable",
+  "blocked",
+  "awaiting_policy_approval",
+  "awaiting_human_gate"
+];
+
+const DASHBOARD_AGENT_ATTENTION_STATE_ORDER: DashboardAgentActivityRow["attention"]["state"][] = [
+  "needs_policy",
+  "needs_human",
+  "blocked",
+  "stale",
+  "failed",
+  "unavailable"
+];
+
 const DASHBOARD_AGENT_ROLE_LABELS: Record<DashboardAgentActivityRow["role"], string> = {
   orchestrator: "Orchestrator",
   task_worker: "Task worker",
@@ -4032,8 +4073,75 @@ function dashboardAgentStatusLabel(kind: DashboardAgentStatusKind): string {
   return DASHBOARD_AGENT_STATUS_LABELS[kind] ?? humanizeDashboardToken(kind);
 }
 
+function dashboardAgentStatusChipLabel(kind: DashboardAgentStatusKind): string {
+  return DASHBOARD_AGENT_STATUS_CHIP_LABELS[kind] ?? dashboardAgentStatusLabel(kind);
+}
+
 function dashboardAgentAttentionLabel(state: DashboardAgentActivityRow["attention"]["state"]): string {
   return DASHBOARD_AGENT_ATTENTION_LABELS[state] ?? "";
+}
+
+function compareDashboardAgentText(a: string, b: string): number {
+  return a.localeCompare(b, undefined, { sensitivity: "base" });
+}
+
+function compareDashboardAgentUpdatedAt(a: string | null, b: string | null): number {
+  const aMs = a ? Date.parse(a) : Number.NaN;
+  const bMs = b ? Date.parse(b) : Number.NaN;
+  const aOk = Number.isFinite(aMs);
+  const bOk = Number.isFinite(bMs);
+  if (aOk && bOk) {
+    if (aMs !== bMs) {
+      return bMs - aMs;
+    }
+  } else if (aOk !== bOk) {
+    return aOk ? -1 : 1;
+  }
+  return 0;
+}
+
+function compareDashboardAgentStatusKind(a: DashboardAgentStatusKind, b: DashboardAgentStatusKind): number {
+  const aIdx = DASHBOARD_AGENT_ACTIVE_STATUS_ORDER.indexOf(a);
+  const bIdx = DASHBOARD_AGENT_ACTIVE_STATUS_ORDER.indexOf(b);
+  if (aIdx !== bIdx) {
+    return (aIdx === -1 ? Number.MAX_SAFE_INTEGER : aIdx) - (bIdx === -1 ? Number.MAX_SAFE_INTEGER : bIdx);
+  }
+  return 0;
+}
+
+function compareDashboardAgentAttentionState(
+  a: DashboardAgentActivityRow["attention"]["state"],
+  b: DashboardAgentActivityRow["attention"]["state"]
+): number {
+  const aIdx = DASHBOARD_AGENT_ATTENTION_STATE_ORDER.indexOf(a);
+  const bIdx = DASHBOARD_AGENT_ATTENTION_STATE_ORDER.indexOf(b);
+  if (aIdx !== bIdx) {
+    return (aIdx === -1 ? Number.MAX_SAFE_INTEGER : aIdx) - (bIdx === -1 ? Number.MAX_SAFE_INTEGER : bIdx);
+  }
+  return 0;
+}
+
+function compareDashboardAgentActivityRows(
+  a: DashboardAgentActivityRow,
+  b: DashboardAgentActivityRow,
+  kind: "active" | "attention"
+): number {
+  if (kind === "attention") {
+    const attentionOrder = compareDashboardAgentAttentionState(a.attention.state, b.attention.state);
+    if (attentionOrder !== 0) {
+      return attentionOrder;
+    }
+  } else {
+    const statusOrder = compareDashboardAgentStatusKind(a.status, b.status);
+    if (statusOrder !== 0) {
+      return statusOrder;
+    }
+  }
+  const updatedOrder = compareDashboardAgentUpdatedAt(a.freshness.updatedAt, b.freshness.updatedAt);
+  if (updatedOrder !== 0) {
+    return updatedOrder;
+  }
+  return compareDashboardAgentText(a.displayName, b.displayName);
 }
 
 function dashboardAgentSourceLabel(
@@ -4141,6 +4249,7 @@ function renderDashboardAgentActivityRow(
 ): string {
   const labelText = cleanDashboardText(row.displayName) || "Unnamed agent";
   const statusText = dashboardAgentStatusLabel(row.status);
+  const statusChipText = dashboardAgentStatusChipLabel(row.status);
   const roleText = DASHBOARD_AGENT_ROLE_LABELS[row.role] ?? "Agent";
   const freshnessText = formatDashboardAgentFreshness(row.freshness);
   const sourceText = dashboardAgentSourceLabel(row.source);
@@ -4148,7 +4257,7 @@ function renderDashboardAgentActivityRow(
   const taskId = cleanDashboardText(row.work.taskId);
   const phaseKey = cleanDashboardText(row.work.phaseKey);
   const chips = [
-    renderDashboardAgentActivityChip(statusText, `status-${row.status}`),
+    renderDashboardAgentActivityChip(statusChipText, `status-${row.status}`),
     renderDashboardAgentActivityChip(roleText, `role-${row.role}`),
     renderDashboardAgentActivityChip(sourceText, row.source),
     renderDashboardAgentActivityChip(freshnessText, `freshness-${row.freshness.state}`),
@@ -4220,12 +4329,13 @@ function renderDashboardAgentActivityRows(
   rows: DashboardAgentActivityRow[],
   rowKind: "active" | "attention"
 ): string {
-  if (rows.length === 0) {
+  const sortedRows = [...rows].sort((a, b) => compareDashboardAgentActivityRows(a, b, rowKind));
+  if (sortedRows.length === 0) {
     return rowKind === "active"
       ? '<p class="muted">No additional active agents.</p>'
       : '<p class="muted">No agents need attention.</p>';
   }
-  return '<div class="dash-agent-row-list" role="list">' + rows.map((row) => renderDashboardAgentActivityRow(row, rowKind)).join("") + "</div>";
+  return '<div class="dash-agent-row-list" role="list">' + sortedRows.map((row) => renderDashboardAgentActivityRow(row, rowKind)).join("") + "</div>";
 }
 
 function renderDashboardAgentActivityFooter(summary: DashboardAgentActivitySummary): string {
@@ -4284,17 +4394,17 @@ function renderDashboardAgentActivityBoard(summary: DashboardAgentActivitySummar
     "<p><b>Main Agent</b></p>" +
     mainRowHtml +
     "</div>" +
-    '<div class="dash-agent-activity-section dash-agent-activity-section--active" aria-label="Active Agents">' +
-    "<p><b>Active Agents</b> <span class=\"muted\">(" +
-    escapeHtml(String(activeRows.length)) +
-    ")</span></p>" +
-    renderDashboardAgentActivityRows(activeRows, "active") +
-    "</div>" +
     '<div class="dash-agent-activity-section dash-agent-activity-section--attention" aria-label="Needs Attention">' +
     "<p><b>Needs Attention</b> <span class=\"muted\">(" +
     escapeHtml(String(attentionRows.length)) +
     ")</span></p>" +
     renderDashboardAgentActivityRows(attentionRows, "attention") +
+    "</div>" +
+    '<div class="dash-agent-activity-section dash-agent-activity-section--active" aria-label="Active Agents">' +
+    "<p><b>Active Agents</b> <span class=\"muted\">(" +
+    escapeHtml(String(activeRows.length)) +
+    ")</span></p>" +
+    renderDashboardAgentActivityRows(activeRows, "active") +
     "</div>" +
     renderDashboardAgentActivityFooter(summary) +
     "</section>"
