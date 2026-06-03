@@ -4195,9 +4195,9 @@ function formatDashboardAgentFreshness(freshness: DashboardAgentActivityRow["fre
   const base = formatDashboardRelativeAge(freshness.updatedAt);
   switch (freshness.state) {
     case "stale":
-      return `stale · last seen ${base.replace(/^updated /, "")}`;
+      return `stale · ${base}`;
     case "expired":
-      return `expired · last seen ${base.replace(/^updated /, "")}`;
+      return `expired · ${base}`;
     default:
       return base;
   }
@@ -4365,14 +4365,15 @@ function renderDashboardAgentActivityBoard(summary: DashboardAgentActivitySummar
       "</section>"
     );
   }
-  const mainRow = summary.main;
+  const mainRow = summary.main?.freshness.state === "expired" ? null : summary.main;
   const mainRowHtml = mainRow ? renderDashboardAgentActivityRow(mainRow, "main") : renderDashboardAgentActivityFallback(summary);
   const mainRowId = mainRow?.rowId ?? "";
   const activeRows = summary.active.filter(
-    (row: DashboardAgentActivityRow) => row.rowId !== mainRowId && row.attention.state === "none"
+    (row: DashboardAgentActivityRow) =>
+      row.rowId !== mainRowId && row.attention.state === "none" && row.freshness.state !== "expired"
   );
   const attentionRows = summary.needsAttention.filter(
-    (row: DashboardAgentActivityRow) => row.rowId !== mainRowId
+    (row: DashboardAgentActivityRow) => row.rowId !== mainRowId && row.freshness.state !== "expired"
   );
   const headerSource = dashboardAgentSourceLabel(summary.source);
   const headerFreshness = formatDashboardRelativeAge(summary.generatedAt);

@@ -167,6 +167,10 @@ function makeAgentActivitySummary(overrides = {}) {
   };
 }
 
+function isoFromNow(offsetMs) {
+  return new Date(Date.now() + offsetMs).toISOString();
+}
+
 test("escapeHtml escapes angle brackets and ampersands", () => {
   assert.equal(escapeHtml("a<b>&c"), "a&lt;b&gt;&amp;c");
 });
@@ -1239,6 +1243,9 @@ test("renderDashboardRootInnerHtml renders compact Agent Activity board from pro
 });
 
 test("renderDashboardRootInnerHtml renders multiple live activities and ignores raw source shapes", () => {
+  const freshUpdatedAt = isoFromNow(-12_000);
+  const staleUpdatedAt = isoFromNow(-125_000);
+  const expiredUpdatedAt = isoFromNow(-245_000);
   const html = renderDashboardRootInnerHtml({
     ok: true,
     data: {
@@ -1274,9 +1281,9 @@ test("renderDashboardRootInnerHtml renders multiple live activities and ignores 
               command: "pnpm run test"
             },
             freshness: {
-              updatedAt: "2026-05-06T00:01:00.000Z",
-              startedAt: "2026-05-06T00:01:00.000Z",
-              expiresAt: "2026-05-06T00:05:00.000Z",
+              updatedAt: freshUpdatedAt,
+              startedAt: freshUpdatedAt,
+              expiresAt: isoFromNow(240_000),
               state: "aging"
             }
           }),
@@ -1292,9 +1299,9 @@ test("renderDashboardRootInnerHtml renders multiple live activities and ignores 
               command: "review-item"
             },
             freshness: {
-              updatedAt: "2026-05-06T00:00:30.000Z",
-              startedAt: "2026-05-06T00:00:30.000Z",
-              expiresAt: "2026-05-06T00:05:00.000Z",
+              updatedAt: freshUpdatedAt,
+              startedAt: freshUpdatedAt,
+              expiresAt: isoFromNow(240_000),
               state: "fresh"
             }
           }),
@@ -1310,10 +1317,46 @@ test("renderDashboardRootInnerHtml renders multiple live activities and ignores 
               command: "pnpm run docs"
             },
             freshness: {
-              updatedAt: "2026-05-06T00:02:00.000Z",
-              startedAt: "2026-05-06T00:02:00.000Z",
-              expiresAt: "2026-05-06T00:06:00.000Z",
+              updatedAt: freshUpdatedAt,
+              startedAt: freshUpdatedAt,
+              expiresAt: isoFromNow(240_000),
               state: "fresh"
+            }
+          }),
+          makeAgentActivityRow({
+            rowId: "row:active-stale",
+            displayName: "Stale Agent",
+            status: "planning",
+            statusLabel: "Planning stale cleanup",
+            work: {
+              taskId: "T706",
+              title: "Handle stale activity",
+              phaseKey: "95",
+              command: "heartbeat"
+            },
+            freshness: {
+              updatedAt: staleUpdatedAt,
+              startedAt: staleUpdatedAt,
+              expiresAt: isoFromNow(240_000),
+              state: "stale"
+            }
+          }),
+          makeAgentActivityRow({
+            rowId: "row:active-expired",
+            displayName: "Expired Active Agent",
+            status: "working_task",
+            statusLabel: "Working on expired work",
+            work: {
+              taskId: "T707",
+              title: "Expired active row",
+              phaseKey: "95",
+              command: "run-transition"
+            },
+            freshness: {
+              updatedAt: expiredUpdatedAt,
+              startedAt: expiredUpdatedAt,
+              expiresAt: isoFromNow(-5_000),
+              state: "expired"
             }
           })
         ],
@@ -1342,6 +1385,29 @@ test("renderDashboardRootInnerHtml renders multiple live activities and ignores 
             }
           }),
           makeAgentActivityRow({
+            rowId: "row:attention-expired",
+            displayName: "Expired Attention",
+            status: "awaiting_human_gate",
+            statusLabel: "Waiting on human",
+            sourceConfidence: "low",
+            work: {
+              taskId: "T705",
+              title: "Expired attention row",
+              phaseKey: "95",
+              command: "gate-check"
+            },
+            freshness: {
+              updatedAt: expiredUpdatedAt,
+              startedAt: expiredUpdatedAt,
+              expiresAt: isoFromNow(-5_000),
+              state: "expired"
+            },
+            attention: {
+              state: "needs_human",
+              message: "Waiting on human"
+            }
+          }),
+          makeAgentActivityRow({
             rowId: "row:attention-1",
             displayName: "Approval Agent",
             status: "awaiting_policy_approval",
@@ -1367,7 +1433,7 @@ test("renderDashboardRootInnerHtml renders multiple live activities and ignores 
         ],
         source: "mixed",
         sourceMap: {
-          liveActivityCount: 3,
+          liveActivityCount: 4,
           teamExecutionCount: 1,
           subagentSessionCount: 1,
           derivedFallbackUsed: false
@@ -1420,9 +1486,12 @@ test("renderDashboardRootInnerHtml renders multiple live activities and ignores 
       taskStoreLastUpdated: "2026-01-01T00:00:00.000Z",
       workspaceStatus: { currentKitPhase: "95", nextKitPhase: "96", activeFocus: "Test" },
       blockingAnalysis: [],
-      dependencyOverview: deliverTestDepOverview
+      dependencyOverview: deliverTestDepOverview,
+      activeCount: 4,
+      staleCount: 1,
+      needsAttentionCount: 2
     }
-        });
+  });
   const overviewPanelIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="overview"');
   const planningPanelIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="planning"');
   const overviewPanel = html.slice(overviewPanelIdx, planningPanelIdx > overviewPanelIdx ? planningPanelIdx : undefined);
@@ -1434,11 +1503,14 @@ test("renderDashboardRootInnerHtml renders multiple live activities and ignores 
   assert.match(html, /Docs Worker/);
   assert.match(html, /PR Review Agent/);
   assert.match(html, /Approval Agent/);
-  assert.match(html, /Active Agents<\/b> <span class="muted">\((?:3)\)<\/span>/);
+  assert.match(html, /Stale Agent/);
+  assert.match(html, /Active Agents<\/b> <span class="muted">\((?:4)\)<\/span>/);
   assert.match(html, /Needs Attention<\/b> <span class="muted">\((?:2)\)<\/span>/);
   assert.match(html, /data-agent-chip-kind="status-reviewing_pr">PR review<\/span>/);
   assert.match(html, /data-agent-chip-kind="status-awaiting_policy_approval">Needs approval<\/span>/);
   assert.match(html, /data-agent-chip-kind="status-blocked">Blocked<\/span>/);
+  assert.match(html, /data-agent-chip-kind="freshness-fresh">updated \d+s ago<\/span>/);
+  assert.match(html, /data-agent-chip-kind="freshness-stale">stale · updated \d+m ago<\/span>/);
   const needsAttentionIdx = html.indexOf('dash-agent-activity-section--attention');
   const activeIdx = html.indexOf('dash-agent-activity-section--active');
   assert.ok(needsAttentionIdx !== -1 && activeIdx !== -1 && needsAttentionIdx < activeIdx);
@@ -1448,6 +1520,8 @@ test("renderDashboardRootInnerHtml renders multiple live activities and ignores 
   const planningIdx = html.indexOf("Docs Worker");
   assert.ok(approvalIdx !== -1 && blockedIdx !== -1 && approvalIdx < blockedIdx);
   assert.ok(validatingIdx !== -1 && planningIdx !== -1 && validatingIdx < planningIdx);
+  assert.doesNotMatch(activityBoard, /Expired Active Agent/);
+  assert.doesNotMatch(activityBoard, /Expired Attention/);
   assert.doesNotMatch(activityBoard, /RAW TEAM TITLE SHOULD NOT APPEAR/);
   assert.doesNotMatch(activityBoard, /RAW SUBAGENT NAME SHOULD NOT APPEAR/);
   assert.doesNotMatch(activityBoard, /RAW SUBAGENT TASK SHOULD NOT APPEAR/);
