@@ -3,6 +3,12 @@
   "agentDefinitionId": "task-worker",
   "agentSessionId": "session-abc123",
   "modelTier": "balanced",
+  "modelTierRationale": "Bounded implementation work inside owned paths fits the default worker tier without escalation.",
+  "modelTierRecommendation": {
+    "label": "tier_2",
+    "rationale": "Bounded implementation work inside owned paths fits the default worker tier without escalation."
+  },
+  "packetDigest": "2dd755b20cf3389b0c37cb86f5778882b7e3916c3f212259a53be3b44e29d594",
   "contextProfileId": "task_worker_context_v1",
   "accessProfileId": "task_worker_strict_v1",
   "handoffContractId": "implementation_handoff_v2",

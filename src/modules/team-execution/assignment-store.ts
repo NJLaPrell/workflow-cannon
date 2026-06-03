@@ -2,14 +2,19 @@ import type Sqlite from "better-sqlite3";
 import type { DashboardTeamExecutionSummary } from "../../contracts/dashboard-summary-run.js";
 import {
   TEAM_ASSIGNMENT_METADATA_SCHEMA_VERSION,
-  type TeamAssignmentOrchestrationMetadataSummary
+  type TeamAssignmentMetadataV1,
+  type TeamAssignmentOrchestrationMetadataSummary,
+  type WorkerPacketModelTierLabel,
+  type WorkerPacketModelTierRecommendation
 } from "../../contracts/team-execution-assignment-metadata.v1.js";
+import type { AgentModelTier } from "../../contracts/agent-orchestration.js";
 import { readKitSqliteUserVersion } from "../../core/state/workspace-kit-sqlite.js";
 import {
   validateAssignmentMetadataV1,
   validateHandoffV2
 } from "../../core/validation/agent-orchestration/validate-orchestration-contract.js";
 import type { OrchestrationValidationIssue } from "../../core/validation/agent-orchestration/types.js";
+import { digestPayload } from "../task-engine/mutation-utils.js";
 
 export const TEAM_EXECUTION_KIT_MIN_USER_VERSION = 7;
 
@@ -65,6 +70,131 @@ function readOptionalString(value: unknown): string | undefined {
   return typeof value === "string" && value.trim() ? value : undefined;
 }
 
+function readModelTierRecommendation(value: unknown): WorkerPacketModelTierRecommendation | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return undefined;
+  }
+  const record = value as Record<string, unknown>;
+  const label = readOptionalString(record.label);
+  const rationale = readOptionalString(record.rationale);
+  if (!rationale) {
+    return undefined;
+  }
+  if (label !== "tier_1" && label !== "tier_2" && label !== "tier_3") {
+    return undefined;
+  }
+  return { label, rationale };
+}
+
+function isAssignmentMetadataV1(metadata: Record<string, unknown> | null): metadata is TeamAssignmentMetadataV1 {
+  return metadata?.schemaVersion === TEAM_ASSIGNMENT_METADATA_SCHEMA_VERSION;
+}
+
+function mapAgentModelTierToPacketLabel(modelTier: AgentModelTier | undefined): WorkerPacketModelTierLabel {
+  switch (modelTier) {
+    case "cheap_fast":
+      return "tier_1";
+    case "balanced":
+      return "tier_2";
+    case "high_reasoning":
+    case "specialist":
+    case "human_review":
+    default:
+      return "tier_3";
+  }
+}
+
+function buildDefaultPacketTierRationale(metadata: TeamAssignmentMetadataV1, label: WorkerPacketModelTierLabel): string {
+  if (metadata.modelTier === "cheap_fast") {
+    return "Mechanical or low-risk worker execution can stay on the lightest packet tier.";
+  }
+  if (metadata.modelTier === "balanced") {
+    return "Bounded implementation work inside owned paths fits the default worker tier without escalation.";
+  }
+  if (metadata.modelTier === "high_reasoning") {
+    return "Cross-module or higher-risk worker execution needs the highest packet tier for deeper reasoning.";
+  }
+  if (metadata.modelTier === "specialist") {
+    return "Specialist worker execution is routed to the highest packet tier to preserve domain depth.";
+  }
+  if (metadata.modelTier === "human_review") {
+    return "Human-reviewed execution remains at the highest packet tier because it represents a release gate.";
+  }
+  if (metadata.agentDefinitionId === "task-worker" && label === "tier_2") {
+    return "Task-worker assignments default to the middle packet tier unless risk or complexity forces escalation.";
+  }
+  return "Assignment context requires the highest packet tier until a narrower worker tier is set explicitly.";
+}
+
+export function buildAssignmentPacketModelTierRecommendation(
+  metadata: Record<string, unknown> | null
+): WorkerPacketModelTierRecommendation | null {
+  if (!isAssignmentMetadataV1(metadata)) {
+    return null;
+  }
+
+  const explicit = readModelTierRecommendation(metadata.modelTierRecommendation);
+  const modelTier = readOptionalString(metadata.modelTier) as AgentModelTier | undefined;
+  const label = mapAgentModelTierToPacketLabel(modelTier);
+  const rationale =
+    readOptionalString(metadata.modelTierRationale) ??
+    explicit?.rationale ??
+    buildDefaultPacketTierRationale(metadata, label);
+
+  return { label, rationale };
+}
+
+function normalizedAssignmentPacketMetadataFields(metadata: TeamAssignmentMetadataV1): Record<string, unknown> {
+  const recommendation = buildAssignmentPacketModelTierRecommendation(metadata);
+  const normalized: Record<string, unknown> = { ...metadata };
+  delete normalized.packetDigest;
+  if (recommendation) {
+    normalized.modelTierRationale = recommendation.rationale;
+    normalized.modelTierRecommendation = recommendation;
+  }
+  return normalized;
+}
+
+export function buildAssignmentPacketDigest(input: {
+  assignmentId: string;
+  executionTaskId: string;
+  supervisorId: string;
+  workerId: string;
+  metadata: Record<string, unknown> | null;
+}): string | null {
+  if (!isAssignmentMetadataV1(input.metadata)) {
+    return null;
+  }
+
+  return digestPayload({
+    schemaVersion: 1,
+    assignmentId: input.assignmentId,
+    executionTaskId: input.executionTaskId,
+    supervisorId: input.supervisorId,
+    workerId: input.workerId,
+    metadata: normalizedAssignmentPacketMetadataFields(input.metadata)
+  });
+}
+
+export function normalizeAssignmentPacketMetadata(input: {
+  assignmentId: string;
+  executionTaskId: string;
+  supervisorId: string;
+  workerId: string;
+  metadata: Record<string, unknown> | null;
+}): Record<string, unknown> | null {
+  if (!isAssignmentMetadataV1(input.metadata)) {
+    return input.metadata;
+  }
+
+  const normalized = normalizedAssignmentPacketMetadataFields(input.metadata);
+  const packetDigest = buildAssignmentPacketDigest(input);
+  if (packetDigest) {
+    normalized.packetDigest = packetDigest;
+  }
+  return normalized;
+}
+
 export function summarizeAssignmentOrchestrationMetadata(
   metadata: Record<string, unknown> | null
 ): TeamAssignmentOrchestrationMetadataSummary | null {
@@ -87,6 +217,9 @@ export function summarizeAssignmentOrchestrationMetadata(
     agentDefinitionId: readOptionalString(metadata.agentDefinitionId),
     agentSessionId: readOptionalString(metadata.agentSessionId),
     modelTier: readOptionalString(metadata.modelTier) as TeamAssignmentOrchestrationMetadataSummary["modelTier"],
+    modelTierRationale: readOptionalString(metadata.modelTierRationale),
+    modelTierRecommendation: buildAssignmentPacketModelTierRecommendation(metadata) ?? undefined,
+    packetDigest: readOptionalString(metadata.packetDigest),
     contextProfileId: readOptionalString(metadata.contextProfileId),
     accessProfileId: readOptionalString(metadata.accessProfileId),
     handoffContractId: readOptionalString(metadata.handoffContractId),
@@ -406,7 +539,14 @@ export function insertAssignment(
     now: string;
   }
 ): void {
-  const metaStr = input.metadata ? JSON.stringify(input.metadata) : null;
+  const normalizedMetadata = normalizeAssignmentPacketMetadata({
+    assignmentId: input.id,
+    executionTaskId: input.executionTaskId,
+    supervisorId: input.supervisorId,
+    workerId: input.workerId,
+    metadata: input.metadata
+  });
+  const metaStr = normalizedMetadata ? JSON.stringify(normalizedMetadata) : null;
   db.prepare(
     `INSERT INTO kit_team_assignments (
       id, execution_task_id, supervisor_id, worker_id, status,
