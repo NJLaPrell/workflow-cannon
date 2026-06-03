@@ -70,7 +70,7 @@ blob mirrors.
 
 **Mutating CLI (Tier B + `policyApproval`; add `expectedPlanningGeneration` when policy `require`)**
 
-- **Team:** `list-assignments`, `register-assignment`, `submit-assignment-handoff`, `reconcile-assignment`, `block-assignment`, `cancel-assignment` — `src/modules/team-execution/instructions/*.md`.
+- **Team:** `list-assignments`, `agent-execution-packet`, `assignment-reconciliation-preflight`, `register-assignment`, `submit-assignment-handoff`, `reconcile-assignment`, `block-assignment`, `cancel-assignment` — `src/modules/team-execution/instructions/*.md`.
 - **Subagents:** `register-subagent`, `spawn-subagent`, `message-subagent`, `close-subagent-session`, … plus read-only `list-*` / `get-*` — **`.ai/runbooks/subagent-registry.md`**.
 
 **Cursor extension:** dashboard consumes packaged **`dashboard-summary`** JSON (`extensions/cursor-workflow-cannon/README.md`).

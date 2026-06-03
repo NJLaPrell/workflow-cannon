@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-06-03T19:42:49.724Z",
+  "generatedAt": "2026-06-03T20:32:18.409Z",
   "commands": [
     {
       "name": "accept-improvement",
@@ -71,6 +71,11 @@
       "name": "assign-task-phase",
       "path": ".ai/agent-cli-snippets/by-command/assign-task-phase.json",
       "moduleId": "task-engine"
+    },
+    {
+      "name": "assignment-reconciliation-preflight",
+      "path": ".ai/agent-cli-snippets/by-command/assignment-reconciliation-preflight.json",
+      "moduleId": "team-execution"
     },
     {
       "name": "backfill-task-feature-links",

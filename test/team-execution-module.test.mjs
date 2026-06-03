@@ -732,6 +732,245 @@ test("reconcile-assignment consumes handoff v2 context and supports decision hin
   }
 });
 
+test("assignment-reconciliation-preflight classifies clean handoffs without raw diff expansion", async () => {
+  const workspace = await tmpDir();
+  const setupCtx = sqliteCtx(workspace);
+  await seedExecutionTask(workspace, "T8616", "Worker task 8616", {
+    phase: "Phase 130",
+    phaseKey: "130",
+    acceptanceCriteria: ["Verdict is clean", "Validation command ran"]
+  });
+
+  const registered = await teamExecutionModule.onCommand(
+    {
+      name: "register-assignment",
+      args: {
+        assignmentId: "asg-8616",
+        executionTaskId: "T8616",
+        supervisorId: "sup-16",
+        workerId: "wrk-16",
+        metadata: {
+          schemaVersion: 1,
+          agentDefinitionId: "task-worker",
+          contextProfileId: "task_worker_context_v1",
+          accessProfileId: "task_worker_strict_v1",
+          handoffContractId: "implementation_handoff_v2",
+          validationCommands: [{ command: "pnpm run build" }],
+          ownedPaths: ["src/modules/team-execution/**"],
+          forbiddenPaths: ["docs/maintainers/**"],
+          requiresApprovalPaths: ["src/contracts/**"]
+        }
+      }
+    },
+    setupCtx
+  );
+  assert.equal(registered.ok, true);
+
+  const requiredValidationRuns = registered.data.assignment.metadata.validationCommands.map((entry) => ({
+    command: entry.command,
+    status: "passed"
+  }));
+
+  const submitted = await teamExecutionModule.onCommand(
+    {
+      name: "submit-assignment-handoff",
+      args: {
+        assignmentId: "asg-8616",
+        workerId: "wrk-16",
+        handoff: {
+          schemaVersion: 2,
+          assignmentId: "asg-8616",
+          agentId: "wrk-16",
+          status: "completed",
+          summary: "Implemented the requested bounded change",
+          filesChanged: [{ path: "src/modules/team-execution/index.ts" }],
+          commandsRun: requiredValidationRuns,
+          acceptanceCriteria: [
+            { criterion: "Verdict is clean", status: "passed" },
+            { criterion: "Validation command ran", status: "passed" }
+          ],
+          evidenceRefs: ["artifacts/evidence-8616.txt"]
+        },
+        expectedPlanningGeneration: registered.data.planningGeneration
+      }
+    },
+    sqliteCtxWithActor(workspace, "wrk-16")
+  );
+  assert.equal(submitted.ok, true);
+
+  const result = await teamExecutionModule.onCommand(
+    {
+      name: "assignment-reconciliation-preflight",
+      args: {
+        assignmentId: "asg-8616",
+        supervisorId: "sup-16"
+      }
+    },
+    sqliteCtxWithActor(workspace, "sup-16")
+  );
+
+  assert.equal(result.ok, true);
+  assert.equal(result.code, "assignment-reconciliation-preflight");
+  assert.equal(result.data.verdict, "ready_to_reconcile");
+  assert.deepEqual(result.data.supportedVerdicts, [
+    "ready_to_reconcile",
+    "needs_worker_followup",
+    "needs_orchestrator_review",
+    "needs_user_decision",
+    "unsafe"
+  ]);
+  assert.deepEqual(result.data.compactEvidence.refs, ["artifacts/evidence-8616.txt"]);
+  assert.equal(result.data.compactEvidence.fileChangeSummary.total, 1);
+  assert.equal(result.data.reconciliation.checkpointDraft.mergedSummary, "Implemented the requested bounded change");
+});
+
+test("assignment-reconciliation-preflight represents all non-clean verdicts", async () => {
+  const workspace = await tmpDir();
+  const setupCtx = sqliteCtx(workspace);
+  const cases = [
+    {
+      assignmentId: "asg-8617",
+      workerId: "wrk-8617",
+      taskId: "T8617",
+      verdict: "needs_worker_followup",
+      handoff: {
+        schemaVersion: 2,
+        assignmentId: "asg-8617",
+        agentId: "wrk-8617",
+        status: "partial",
+        summary: "Partial handoff",
+        filesChanged: [{ path: "src/modules/team-execution/index.ts" }],
+        commandsRun: [],
+        acceptanceCriteria: [{ criterion: "Need evidence", status: "partial" }],
+        evidenceRefs: []
+      }
+    },
+    {
+      assignmentId: "asg-8618",
+      workerId: "wrk-8618",
+      taskId: "T8618",
+      verdict: "needs_orchestrator_review",
+      handoff: {
+        schemaVersion: 2,
+        assignmentId: "asg-8618",
+        agentId: "wrk-8618",
+        status: "needs_review",
+        summary: "Needs orchestrator review",
+        filesChanged: [{ path: "src/modules/team-execution/index.ts" }],
+        commandsRun: [{ command: "pnpm run build", status: "passed" }],
+        acceptanceCriteria: [{ criterion: "Reviewed", status: "passed" }],
+        evidenceRefs: ["artifacts/evidence-8618.txt"],
+        risks: [{ risk: "Higher-order review still needed", severity: "medium" }]
+      }
+    },
+    {
+      assignmentId: "asg-8619",
+      workerId: "wrk-8619",
+      taskId: "T8619",
+      verdict: "needs_user_decision",
+      handoff: {
+        schemaVersion: 2,
+        assignmentId: "asg-8619",
+        agentId: "wrk-8619",
+        status: "blocked",
+        summary: "Blocked on approval-only path",
+        filesChanged: [{ path: "src/contracts/new-contract.ts" }],
+        commandsRun: [{ command: "pnpm run build", status: "passed" }],
+        acceptanceCriteria: [{ criterion: "Approval path acknowledged", status: "passed" }],
+        evidenceRefs: ["artifacts/evidence-8619.txt"],
+        blockers: [{ summary: "Needs maintainer decision", severity: "high" }]
+      }
+    },
+    {
+      assignmentId: "asg-8620",
+      workerId: "wrk-8620",
+      taskId: "T8620",
+      verdict: "unsafe",
+      handoff: {
+        schemaVersion: 2,
+        assignmentId: "asg-8620",
+        agentId: "wrk-8620",
+        status: "completed",
+        summary: "Touched forbidden files",
+        filesChanged: [{ path: "docs/maintainers/unsafe.md" }],
+        commandsRun: [{ command: "pnpm run build", status: "passed" }],
+        acceptanceCriteria: [{ criterion: "Unsafe path detected", status: "passed" }],
+        evidenceRefs: ["artifacts/evidence-8620.txt"]
+      }
+    }
+  ];
+
+  for (const c of cases) {
+    await seedExecutionTask(workspace, c.taskId, `Worker task ${c.assignmentId}`, {
+      phase: "Phase 130",
+      phaseKey: "130",
+      acceptanceCriteria: [String(c.handoff.acceptanceCriteria[0].criterion)]
+    });
+
+    const registered = await teamExecutionModule.onCommand(
+      {
+        name: "register-assignment",
+        args: {
+          assignmentId: c.assignmentId,
+          executionTaskId: c.taskId,
+          supervisorId: "sup-17",
+          workerId: c.workerId,
+          metadata: {
+            schemaVersion: 1,
+            agentDefinitionId: "task-worker",
+            contextProfileId: "task_worker_context_v1",
+            accessProfileId: "task_worker_strict_v1",
+            handoffContractId: "implementation_handoff_v2",
+            validationCommands: [{ command: "pnpm run build" }],
+            ownedPaths: ["src/modules/team-execution/**"],
+            forbiddenPaths: ["docs/maintainers/**"],
+            requiresApprovalPaths: ["src/contracts/**"]
+          }
+        }
+      },
+      setupCtx
+    );
+    assert.equal(registered.ok, true);
+
+    const requiredValidationRuns = registered.data.assignment.metadata.validationCommands.map((entry) => ({
+      command: entry.command,
+      status: "passed"
+    }));
+
+    if (c.verdict !== "needs_worker_followup") {
+      c.handoff.commandsRun = requiredValidationRuns;
+    }
+
+    const submitted = await teamExecutionModule.onCommand(
+      {
+        name: "submit-assignment-handoff",
+        args: {
+          assignmentId: c.assignmentId,
+          workerId: c.workerId,
+          handoff: c.handoff,
+          expectedPlanningGeneration: registered.data.planningGeneration
+        }
+      },
+      sqliteCtxWithActor(workspace, c.workerId)
+    );
+    assert.equal(submitted.ok, true);
+
+    const result = await teamExecutionModule.onCommand(
+      {
+        name: "assignment-reconciliation-preflight",
+        args: {
+          assignmentId: c.assignmentId,
+          supervisorId: "sup-17"
+        }
+      },
+      sqliteCtxWithActor(workspace, "sup-17")
+    );
+
+    assert.equal(result.ok, true);
+    assert.equal(result.data.verdict, c.verdict);
+  }
+});
+
 test("admin actor may execute supervisor lifecycle actions", async () => {
   const workspace = await tmpDir();
   const setupCtx = sqliteCtx(workspace);
