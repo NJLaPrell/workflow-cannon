@@ -60,12 +60,13 @@ test("Option 2: service bench script documents SLA gates", () => {
   assert.match(bench, /createDashboardService/);
 });
 
-test("Option 2: kit poll tiers match handoff (≤2s / ≤5s / ≤10s)", () => {
+test("Option 2: kit poll tiers match handoff (≤2s / ≤3s / ≤5s / ≤10s)", () => {
   const pollGroups = readFileSync(
     path.join(repoRoot, "src/services/dashboard-service/poll-groups.ts"),
     "utf8"
   );
   assert.match(pollGroups, /critical:\s*2000/);
+  assert.match(pollGroups, /live:\s*3000/);
   assert.match(pollGroups, /queue:\s*5000/);
   assert.match(pollGroups, /ops:\s*10000/);
 });

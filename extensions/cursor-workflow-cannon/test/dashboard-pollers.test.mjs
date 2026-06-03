@@ -79,13 +79,13 @@ test("DashboardPollerCoordinator start/stop manages poll group intervals", () =>
     const { coordinator } = makeCoordinator();
     assert.equal(created.length, 0);
     coordinator.start();
-    assert.equal(created.length, 4, "critical, queue, ops, status groups");
+    assert.equal(created.length, 5, "critical, live, queue, ops, status groups");
     coordinator.stop();
-    assert.equal(cleared.length, 4);
+    assert.equal(cleared.length, 5);
     coordinator.start();
-    assert.equal(created.length, 8);
+    assert.equal(created.length, 10);
     coordinator.stop();
-    assert.equal(cleared.length, 8);
+    assert.equal(cleared.length, 10);
   } finally {
     globalThis.setInterval = originalSetInterval;
     globalThis.clearInterval = originalClearInterval;
@@ -132,6 +132,42 @@ test("DashboardPollerCoordinator pause and suppression skip kit reads", async ()
   refreshController.notifyMutationEnd();
   await coordinator.refreshSlicesNow(["queue"]);
   assert.equal(runs.length, 1);
+});
+
+test("DashboardPollerCoordinator only polls agentActivity while overview is visible", async () => {
+  const runs = [];
+  const { coordinator } = makeCoordinator({
+    isSliceVisible: () => false,
+    run: async (command, args) => {
+      runs.push({ command, args });
+      return { ok: true, data: { schemaVersion: 7, planningGeneration: 1 } };
+    }
+  });
+
+  const originalSetInterval = globalThis.setInterval;
+  const callbacks = [];
+  globalThis.setInterval = (fn, ms) => {
+    callbacks.push({ fn, ms });
+    return originalSetInterval(fn, ms);
+  };
+
+  try {
+    coordinator.start();
+    assert.equal(callbacks.length, 5);
+    const liveTick = callbacks[1];
+    liveTick.fn();
+    await Promise.resolve();
+    assert.equal(runs.length, 0, "live poll is gated when overview is hidden");
+
+    coordinator.setVisibleSections(["overview"]);
+    liveTick.fn();
+    await Promise.resolve();
+    assert.equal(runs.length, 1, "live poll runs when overview is visible");
+    assert.equal(runs[0].args.projection, "agentActivity");
+  } finally {
+    coordinator.stop();
+    globalThis.setInterval = originalSetInterval;
+  }
 });
 
 test("DashboardPollerCoordinator discards stale generation results", async () => {
