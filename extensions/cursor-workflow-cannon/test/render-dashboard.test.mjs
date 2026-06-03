@@ -93,6 +93,80 @@ function extractMutedParagraphs(html) {
     .filter(Boolean);
 }
 
+function makeAgentActivityRow(overrides = {}) {
+  const base = {
+    schemaVersion: 1,
+    rowId: "row:main",
+    displayName: "Main Agent",
+    role: "task_worker",
+    source: "live_activity",
+    sourceConfidence: "high",
+    status: "working_task",
+    statusLabel: "Working on Task T123",
+    work: {
+      taskId: "T123",
+      title: "Agent Activity",
+      command: "pnpm run test",
+      phaseKey: "95",
+      assignmentId: "asg-main",
+      sessionId: "sess-main",
+      currentStep: "Running tests"
+    },
+    refs: {
+      activityId: "lease-main",
+      agentId: "agent-main",
+      sessionId: "sess-main",
+      assignmentId: "asg-main",
+      agentDefinitionId: "agent-definition-main",
+      subagentDefinitionId: null,
+      taskId: "T123",
+      prNumber: 612
+    },
+    freshness: {
+      updatedAt: "2026-05-06T00:00:08.000Z",
+      startedAt: "2026-05-06T00:00:00.000Z",
+      expiresAt: "2026-05-06T00:01:00.000Z",
+      state: "fresh"
+    },
+    attention: {
+      state: "none",
+      message: null
+    }
+  };
+  return {
+    ...base,
+    ...overrides,
+    work: { ...base.work, ...(overrides.work ?? {}) },
+    refs: { ...base.refs, ...(overrides.refs ?? {}) },
+    freshness: { ...base.freshness, ...(overrides.freshness ?? {}) },
+    attention: { ...base.attention, ...(overrides.attention ?? {}) }
+  };
+}
+
+function makeAgentActivitySummary(overrides = {}) {
+  const main = overrides.main ?? makeAgentActivityRow();
+  const active = overrides.active ?? [main];
+  return {
+    schemaVersion: 1,
+    generatedAt: "2026-05-06T00:00:08.000Z",
+    source: "live_activity",
+    activeCount: active.filter((row) => row.freshness?.state === "fresh" || row.freshness?.state === "aging").length,
+    staleCount: 0,
+    needsAttentionCount: (overrides.needsAttention ?? []).length,
+    main,
+    active,
+    needsAttention: overrides.needsAttention ?? [],
+    inferredFallback: overrides.inferredFallback ?? null,
+    sourceMap: {
+      liveActivityCount: overrides.sourceMap?.liveActivityCount ?? active.filter((row) => row.source === "live_activity").length,
+      teamExecutionCount: overrides.sourceMap?.teamExecutionCount ?? 0,
+      subagentSessionCount: overrides.sourceMap?.subagentSessionCount ?? 0,
+      derivedFallbackUsed: overrides.sourceMap?.derivedFallbackUsed ?? false
+    },
+    ...overrides
+  };
+}
+
 test("escapeHtml escapes angle brackets and ampersands", () => {
   assert.equal(escapeHtml("a<b>&c"), "a&lt;b&gt;&amp;c");
 });
@@ -209,15 +283,18 @@ test("renderDashboardRootInnerHtml truncates long idea notes", () => {
 test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () => {
   const fixturePath = path.join(__dirname, "../docs/fixtures/dashboard-summary.example.json");
   const fixture = JSON.parse(readFileSync(fixturePath, "utf8"));
+  fixture.data.agentActivitySummary = makeAgentActivitySummary();
   const html = renderDashboardRootInnerHtml(fixture);
   assert.match(html, /dash-card/);
   assert.match(html, /dash-agent-status-banner/);
   assert.ok(html.indexOf("dash-agent-status-banner") < html.indexOf("wc-cae-readiness"));
   assert.ok(html.indexOf("wc-rec-next") < html.indexOf("wc-cae-readiness"));
   assert.ok(html.indexOf("wc-tab-bar") < html.indexOf("wc-cae-readiness"));
-  assert.match(html, /<b>WC Agent is:<\/b> <span class="dash-agent-status-label">Awaiting Instruction<\/span>/);
-  assert.match(html, /dash-agent-row-list/);
-  assert.match(html, /aria-label="Awaiting Instruction, Current agent"/);
+  assert.match(html, /<b>Agent Activity<\/b> <span class="dash-agent-status-label">Live · updated .* ago<\/span>/);
+  assert.match(html, /Source: Live/);
+  assert.match(html, /Main Agent/);
+  assert.match(html, /No additional active agents\./);
+  assert.match(html, /aria-label="Main Agent, Working, Main Agent"/);
   const overviewPanelIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="overview"');
   const planningPanelIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="planning"');
   const taskEnginePanelIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="task-engine"');
@@ -257,6 +334,7 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.match(overviewPanel, /wc-stat-num-human/);
   assert.match(overviewPanel, /wc-context-help/);
   assert.match(overviewPanel, /data-wc-help-text="[^"]*Every check below must pass to reach 100%/);
+  assert.match(overviewPanel, /data-agent-activity-source="live_activity"/);
   assert.doesNotMatch(taskEnginePanel, /dashboard-approvals/);
   assert.match(html, /Phase Readiness · Phase 14/);
   assert.match(html, /aria-label="Phase readiness · Phase 14"/);
@@ -1100,19 +1178,37 @@ test("renderDashboardRootInnerHtml renders editor integration state when provide
   assert.match(statusPanel, /<b>Chat prefill<\/b> VS Code Chat/);
 });
 
-test("renderDashboardRootInnerHtml renders escaped WC Agent status banner from agentStatus", () => {
+test("renderDashboardRootInnerHtml renders compact Agent Activity board from projection", () => {
   const html = renderDashboardRootInnerHtml({
     ok: true,
     data: {
-      agentStatus: {
-        schemaVersion: 1,
-        source: "derived",
-        kind: "working_task",
-        label: "Working on Task T123 <script>",
-        confidence: "medium",
-        updatedAt: "2026-05-06T00:00:00.000Z",
-        taskId: "T123"
-      },
+      agentActivitySummary: makeAgentActivitySummary({
+        main: makeAgentActivityRow({
+          displayName: "Dashboard UX Worker <script>",
+          statusLabel: "Working on Task T123",
+          work: {
+            taskId: "T123",
+            title: "Build activity board",
+            command: "pnpm run test",
+            phaseKey: "95",
+            currentStep: "Rendering board"
+          },
+          freshness: {
+            updatedAt: "2026-05-06T00:00:08.000Z",
+            startedAt: "2026-05-06T00:00:00.000Z",
+            expiresAt: "2026-05-06T00:01:00.000Z",
+            state: "fresh"
+          }
+        }),
+        active: [],
+        needsAttention: [],
+        sourceMap: {
+          liveActivityCount: 1,
+          teamExecutionCount: 0,
+          subagentSessionCount: 0,
+          derivedFallbackUsed: false
+        }
+      }),
       stateSummary: { proposed: 0, ready: 0, in_progress: 1, blocked: 0, completed: 0 },
       proposedImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
       proposedExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
@@ -1130,29 +1226,112 @@ test("renderDashboardRootInnerHtml renders escaped WC Agent status banner from a
       dependencyOverview: deliverTestDepOverview
     }
   });
-  assert.match(html, /data-agent-status-kind="working_task"/);
-  assert.match(html, /Working on Task T123 &lt;script&gt;/);
+  assert.match(html, /data-agent-activity-source="live_activity"/);
+  assert.match(html, /Agent Activity/);
+  assert.match(html, /Working/);
+  assert.match(html, /Source: Live/);
+  assert.match(html, /data-agent-row-kind="main"/);
   assert.match(html, /dash-agent-row/);
-  assert.match(html, /aria-label="Working on Task T123 &lt;script&gt;, Current agent"/);
+  assert.match(html, /aria-label="Dashboard UX Worker &lt;script&gt;, Working, Main Agent"/);
   assert.match(html, /T123/);
   assert.doesNotMatch(html, /<script>/);
-  assert.ok(html.indexOf("WC Agent is:") < html.indexOf("Current Phase"));
+  assert.ok(html.indexOf("Agent Activity") < html.indexOf("Current Phase"));
 });
 
-test("renderDashboardRootInnerHtml renders many agent and subagent rows", () => {
+test("renderDashboardRootInnerHtml renders multiple live activities and ignores raw source shapes", () => {
   const html = renderDashboardRootInnerHtml({
     ok: true,
     data: {
-      agentStatus: {
-        schemaVersion: 1,
-        source: "live_activity",
-        kind: "working_task",
-        label: "Working on Task T700",
-        confidence: "high",
-        updatedAt: "2026-05-06T00:00:00.000Z",
-        taskId: "T700",
-        phaseKey: "95"
-      },
+      agentActivitySummary: makeAgentActivitySummary({
+        main: makeAgentActivityRow({
+          rowId: "row:main",
+          displayName: "Orchestrator Main",
+          status: "working_task",
+          statusLabel: "Working on Task T700",
+          work: {
+            taskId: "T700",
+            title: "Coordinate dashboard rows",
+            phaseKey: "95",
+            command: "pnpm run check"
+          },
+          freshness: {
+            updatedAt: "2026-05-06T00:00:00.000Z",
+            startedAt: "2026-05-06T00:00:00.000Z",
+            expiresAt: "2026-05-06T00:05:00.000Z",
+            state: "fresh"
+          }
+        }),
+        active: [
+          makeAgentActivityRow({
+            rowId: "row:active-1",
+            displayName: "Dashboard UX Worker",
+            status: "validating",
+            statusLabel: "Validating dashboard rows",
+            work: {
+              taskId: "T701",
+              title: "Review dashboard rows",
+              phaseKey: "95",
+              command: "pnpm run test"
+            },
+            freshness: {
+              updatedAt: "2026-05-06T00:01:00.000Z",
+              startedAt: "2026-05-06T00:01:00.000Z",
+              expiresAt: "2026-05-06T00:05:00.000Z",
+              state: "aging"
+            }
+          }),
+          makeAgentActivityRow({
+            rowId: "row:active-2",
+            displayName: "Docs Worker",
+            status: "planning",
+            statusLabel: "Planning runbook updates",
+            work: {
+              taskId: "T702",
+              title: "Update runbook",
+              phaseKey: "95",
+              command: "pnpm run docs"
+            },
+            freshness: {
+              updatedAt: "2026-05-06T00:02:00.000Z",
+              startedAt: "2026-05-06T00:02:00.000Z",
+              expiresAt: "2026-05-06T00:06:00.000Z",
+              state: "fresh"
+            }
+          })
+        ],
+        needsAttention: [
+          makeAgentActivityRow({
+            rowId: "row:attention",
+            displayName: "Review Agent",
+            status: "awaiting_policy_approval",
+            statusLabel: "Awaiting policy approval",
+            sourceConfidence: "medium",
+            work: {
+              taskId: "T703",
+              title: "Approve release candidate",
+              phaseKey: "95",
+              command: "review-item"
+            },
+            freshness: {
+              updatedAt: "2026-05-06T00:03:00.000Z",
+              startedAt: "2026-05-06T00:03:00.000Z",
+              expiresAt: "2026-05-06T00:07:00.000Z",
+              state: "fresh"
+            },
+            attention: {
+              state: "needs_policy",
+              message: "Awaiting policy approval"
+            }
+          })
+        ],
+        source: "mixed",
+        sourceMap: {
+          liveActivityCount: 3,
+          teamExecutionCount: 1,
+          subagentSessionCount: 1,
+          derivedFallbackUsed: false
+        }
+      }),
       teamExecution: {
         schemaVersion: 1,
         available: true,
@@ -1161,8 +1340,8 @@ test("renderDashboardRootInnerHtml renders many agent and subagent rows", () => 
         byStatus: { assigned: 1, submitted: 0, blocked: 0, reconciled: 0, cancelled: 0 },
         topActive: [
           {
-            executionTaskId: "T701",
-            executionTaskTitle: "Review dashboard rows",
+            executionTaskId: "RAW TEAM TITLE SHOULD NOT APPEAR",
+            executionTaskTitle: "RAW TEAM TITLE SHOULD NOT APPEAR",
             supervisorId: "operator",
             workerId: "tab-2",
             status: "assigned",
@@ -1179,8 +1358,8 @@ test("renderDashboardRootInnerHtml renders many agent and subagent rows", () => 
         topOpenSessions: [
           {
             sessionId: "S1",
-            definitionId: "test-subagent",
-            executionTaskId: "T702",
+            definitionId: "RAW SUBAGENT NAME SHOULD NOT APPEAR",
+            executionTaskId: "RAW SUBAGENT TASK SHOULD NOT APPEAR",
             status: "open",
             updatedAt: "2026-05-06T00:02:00.000Z"
           }
@@ -1203,12 +1382,24 @@ test("renderDashboardRootInnerHtml renders many agent and subagent rows", () => 
       dependencyOverview: deliverTestDepOverview
     }
   });
-  assert.match(html, /Working on Task T700/);
-  assert.match(html, /tab-2/);
-  assert.match(html, /Review dashboard rows/);
-  assert.match(html, /test-subagent/);
-  assert.match(html, /dash-agent-row--subagent/);
-  assert.match(html, /aria-label="test-subagent, Subagent"/);
+  const overviewPanelIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="overview"');
+  const planningPanelIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="planning"');
+  const overviewPanel = html.slice(overviewPanelIdx, planningPanelIdx > overviewPanelIdx ? planningPanelIdx : undefined);
+  const activityBoardStart = html.indexOf('<section class="dash-agent-status-banner dash-agent-activity-board"');
+  const activityBoardEnd = html.indexOf("</section>", activityBoardStart);
+  const activityBoard = html.slice(activityBoardStart, activityBoardEnd > activityBoardStart ? activityBoardEnd : undefined);
+  assert.match(html, /Agent Activity/);
+  assert.match(html, /Dashboard UX Worker/);
+  assert.match(html, /Docs Worker/);
+  assert.match(html, /Review Agent/);
+  assert.match(html, /Active Agents<\/b> <span class="muted">\((?:2)\)<\/span>/);
+  assert.match(html, /Needs Attention<\/b> <span class="muted">\((?:1)\)<\/span>/);
+  assert.match(html, /Validating/);
+  assert.match(html, /Planning/);
+  assert.match(html, /Needs approval/);
+  assert.doesNotMatch(activityBoard, /RAW TEAM TITLE SHOULD NOT APPEAR/);
+  assert.doesNotMatch(activityBoard, /RAW SUBAGENT NAME SHOULD NOT APPEAR/);
+  assert.doesNotMatch(activityBoard, /RAW SUBAGENT TASK SHOULD NOT APPEAR/);
 });
 
 test("renderDashboardRootInnerHtml team execution empty state offers create assignment", () => {
@@ -2226,14 +2417,83 @@ test("renderDashboardRootInnerHtml renders human gates section with resume actio
       planningSession: null,
       taskStoreLastUpdated: "2026-01-01T00:00:00.000Z",
       workspaceStatus: { currentKitPhase: "100", nextKitPhase: "101", activeFocus: "Test" },
-      agentStatus: {
+      agentActivitySummary: {
         schemaVersion: 1,
-        source: "derived",
-        kind: "awaiting_human_gate",
-        label: "Awaiting review · T900",
-        confidence: "high",
-        updatedAt: "2026-01-01T00:00:00.000Z",
-        taskId: "T900"
+        generatedAt: "2026-01-01T00:00:00.000Z",
+        source: "derived_only",
+        activeCount: 0,
+        staleCount: 0,
+        needsAttentionCount: 0,
+        main: null,
+        active: [],
+        needsAttention: [],
+        inferredFallback: {
+          schemaVersion: 1,
+          source: "derived",
+          kind: "awaiting_human_gate",
+          label: "Awaiting review · T900",
+          confidence: "high",
+          updatedAt: "2026-01-01T00:00:00.000Z",
+          taskId: "T900"
+        },
+        sourceMap: {
+          liveActivityCount: 0,
+          teamExecutionCount: 0,
+          subagentSessionCount: 0,
+          derivedFallbackUsed: true
+        }
+      },
+      agentActivitySummary: {
+        schemaVersion: 1,
+        generatedAt: "2026-01-01T00:00:00.000Z",
+        source: "derived_only",
+        activeCount: 0,
+        staleCount: 0,
+        needsAttentionCount: 0,
+        main: null,
+        active: [],
+        needsAttention: [],
+        inferredFallback: {
+          schemaVersion: 1,
+          source: "derived",
+          kind: "awaiting_human_gate",
+          label: "Awaiting review · T900",
+          confidence: "high",
+          updatedAt: "2026-01-01T00:00:00.000Z",
+          taskId: "T900"
+        },
+        sourceMap: {
+          liveActivityCount: 0,
+          teamExecutionCount: 0,
+          subagentSessionCount: 0,
+          derivedFallbackUsed: true
+        }
+      },
+      agentActivitySummary: {
+        schemaVersion: 1,
+        generatedAt: "2026-01-01T00:00:00.000Z",
+        source: "derived_only",
+        activeCount: 0,
+        staleCount: 0,
+        needsAttentionCount: 0,
+        main: null,
+        active: [],
+        needsAttention: [],
+        inferredFallback: {
+          schemaVersion: 1,
+          source: "derived",
+          kind: "awaiting_human_gate",
+          label: "Awaiting review · T900",
+          confidence: "high",
+          updatedAt: "2026-01-01T00:00:00.000Z",
+          taskId: "T900"
+        },
+        sourceMap: {
+          liveActivityCount: 0,
+          teamExecutionCount: 0,
+          subagentSessionCount: 0,
+          derivedFallbackUsed: true
+        }
       },
       blockingAnalysis: [],
       dependencyOverview: deliverTestDepOverview
@@ -2245,7 +2505,8 @@ test("renderDashboardRootInnerHtml renders human gates section with resume actio
   assert.match(html, /Awaiting review/);
   assert.match(html, /data-wc-action="human-gate-resume-ready"/);
   assert.match(html, /data-wc-action="human-gate-resume-work"/);
-  assert.match(html, /data-agent-status-kind="awaiting_human_gate"/);
+  assert.match(html, /data-agent-activity-source="derived_only"/);
+  assert.match(html, /Source: Inferred/);
   assert.match(html, /Awaiting review · T900/);
 });
 
