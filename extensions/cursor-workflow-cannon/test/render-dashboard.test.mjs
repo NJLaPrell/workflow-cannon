@@ -1541,6 +1541,202 @@ test("renderDashboardRootInnerHtml renders multiple live activities and ignores 
   assert.doesNotMatch(activityBoard, /RAW SUBAGENT TASK SHOULD NOT APPEAR/);
 });
 
+test("renderDashboardRootInnerHtml renders comprehensive Agent Activity row fixtures deterministically", () => {
+  const summary = makeAgentActivitySummary({
+    generatedAt: "2026-05-06T00:10:00.000Z",
+    source: "mixed",
+    main: makeAgentActivityRow({
+      rowId: "row:main-fixture",
+      displayName: "Main Orchestrator",
+      role: "orchestrator",
+      status: "working_task",
+      statusLabel: "Working on Task T800",
+      work: {
+        taskId: "T800",
+        title: "Coordinate fixture coverage",
+        phaseKey: "129",
+        command: "pnpm run test",
+        taskStatus: "in_progress"
+      },
+      metadata: {
+        agentDisplayName: "Main Orchestrator",
+        customAgentName: "Fixture Lead"
+      },
+      freshness: {
+        updatedAt: "2026-05-06T00:09:30.000Z",
+        startedAt: "2026-05-06T00:00:00.000Z",
+        expiresAt: "2026-05-06T00:30:00.000Z",
+        state: "fresh"
+      }
+    }),
+    active: [
+      makeAgentActivityRow({
+        rowId: "row:active-planning",
+        displayName: "Planning Agent",
+        status: "planning",
+        statusLabel: "Planning render fixture",
+        work: { taskId: "T801", title: "Plan fixture", phaseKey: "129", command: "plan" },
+        freshness: {
+          updatedAt: "2026-05-06T00:04:00.000Z",
+          startedAt: "2026-05-06T00:01:00.000Z",
+          expiresAt: "2026-05-06T00:20:00.000Z",
+          state: "fresh"
+        }
+      }),
+      makeAgentActivityRow({
+        rowId: "row:active-validating",
+        displayName: "Validation Agent",
+        status: "validating",
+        statusLabel: "Validating render fixture",
+        work: { taskId: "T802", title: "Validate fixture", phaseKey: "129", command: "node --test" },
+        freshness: {
+          updatedAt: "2026-05-06T00:03:00.000Z",
+          startedAt: "2026-05-06T00:02:00.000Z",
+          expiresAt: "2026-05-06T00:20:00.000Z",
+          state: "aging"
+        }
+      }),
+      makeAgentActivityRow({
+        rowId: "row:active-reviewing",
+        displayName: "Review Agent",
+        status: "reviewing_pr",
+        statusLabel: "Reviewing Pull Request 633",
+        refs: { prNumber: 633 },
+        work: { taskId: "T803", title: "Review fixture", phaseKey: "129", command: "review-pr" },
+        freshness: {
+          updatedAt: "2026-05-06T00:05:00.000Z",
+          startedAt: "2026-05-06T00:03:00.000Z",
+          expiresAt: "2026-05-06T00:20:00.000Z",
+          state: "fresh"
+        }
+      }),
+      makeAgentActivityRow({
+        rowId: "row:active-expired",
+        displayName: "Expired Active Fixture",
+        status: "working_task",
+        statusLabel: "Expired active fixture",
+        work: { taskId: "T804", title: "Expired active", phaseKey: "129", command: "expired" },
+        freshness: {
+          updatedAt: "2026-05-05T23:55:00.000Z",
+          startedAt: "2026-05-05T23:50:00.000Z",
+          expiresAt: "2026-05-06T00:00:00.000Z",
+          state: "expired"
+        }
+      })
+    ],
+    needsAttention: [
+      makeAgentActivityRow({
+        rowId: "row:attention-stale",
+        displayName: "Stale Fixture",
+        status: "working_task",
+        statusLabel: "Working but stale",
+        work: { taskId: "T805", title: "Stale fixture", phaseKey: "129", command: "heartbeat" },
+        freshness: {
+          updatedAt: "2026-05-06T00:00:30.000Z",
+          startedAt: "2026-05-06T00:00:00.000Z",
+          expiresAt: "2026-05-06T00:30:00.000Z",
+          state: "stale"
+        },
+        attention: { state: "stale", message: "Heartbeat overdue" }
+      }),
+      makeAgentActivityRow({
+        rowId: "row:attention-blocked",
+        displayName: "Blocked Fixture",
+        status: "blocked",
+        statusLabel: "Blocked on fixture dependency",
+        work: { taskId: "T806", title: "Blocked fixture", phaseKey: "129", command: "run-transition" },
+        freshness: {
+          updatedAt: "2026-05-06T00:08:00.000Z",
+          startedAt: "2026-05-06T00:06:00.000Z",
+          expiresAt: "2026-05-06T00:30:00.000Z",
+          state: "fresh"
+        },
+        attention: { state: "blocked", message: "Blocked on fixture dependency" }
+      }),
+      makeAgentActivityRow({
+        rowId: "row:attention-policy",
+        displayName: "Policy Fixture",
+        status: "awaiting_policy_approval",
+        statusLabel: "Awaiting policy approval",
+        work: { taskId: "T807", title: "Policy fixture", phaseKey: "129", command: "review-item" },
+        freshness: {
+          updatedAt: "2026-05-06T00:07:00.000Z",
+          startedAt: "2026-05-06T00:06:00.000Z",
+          expiresAt: "2026-05-06T00:30:00.000Z",
+          state: "fresh"
+        },
+        attention: { state: "needs_policy", message: "Awaiting policy approval" }
+      }),
+      makeAgentActivityRow({
+        rowId: "row:attention-expired",
+        displayName: "Expired Attention Fixture",
+        status: "awaiting_human_gate",
+        statusLabel: "Waiting on expired gate",
+        work: { taskId: "T808", title: "Expired attention", phaseKey: "129", command: "gate" },
+        freshness: {
+          updatedAt: "2026-05-05T23:58:00.000Z",
+          startedAt: "2026-05-05T23:55:00.000Z",
+          expiresAt: "2026-05-06T00:00:00.000Z",
+          state: "expired"
+        },
+        attention: { state: "needs_human", message: "Waiting on expired gate" }
+      })
+    ],
+    staleCount: 1,
+    sourceMap: {
+      liveActivityCount: 6,
+      teamExecutionCount: 1,
+      subagentSessionCount: 1,
+      derivedFallbackUsed: false
+    }
+  });
+  const data = {
+    agentActivitySummary: summary,
+    stateSummary: { proposed: 0, ready: 0, in_progress: 1, blocked: 0, completed: 0 },
+    proposedImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
+    proposedExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
+    readyImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
+    readyExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
+    wishlist: { openCount: 0, totalCount: 0, openTop: [] },
+    blockedSummary: { count: 0, top: [] },
+    readyQueueTop: [],
+    readyQueueCount: 0,
+    suggestedNext: null,
+    planningSession: null,
+    taskStoreLastUpdated: "2026-01-01T00:00:00.000Z",
+    workspaceStatus: { currentKitPhase: "129", nextKitPhase: "130", activeFocus: "Test" },
+    blockingAnalysis: [],
+    dependencyOverview: deliverTestDepOverview
+  };
+  const html = renderDashboardRootInnerHtml({ ok: true, data });
+  const htmlAgain = renderDashboardRootInnerHtml({ ok: true, data });
+  const activityBoardStart = html.indexOf('<section class="dash-agent-status-banner dash-agent-activity-board"');
+  const activityBoardEnd = html.indexOf("</section>", activityBoardStart);
+  const activityBoard = html.slice(activityBoardStart, activityBoardEnd > activityBoardStart ? activityBoardEnd : undefined);
+
+  assert.equal(html, htmlAgain);
+  assert.equal((activityBoard.match(/<details class="dash-agent-row/g) ?? []).length, 7);
+  assert.equal((activityBoard.match(/role="listitem"/g) ?? []).length, 7);
+  assert.equal((activityBoard.match(/<summary class="dash-agent-row-summary">/g) ?? []).length, 7);
+  assert.match(activityBoard, /Active Agents<\/b> <span class="muted">\((?:3)\)<\/span>/);
+  assert.match(activityBoard, /Needs Attention<\/b> <span class="muted">\((?:3)\)<\/span>/);
+  assert.match(activityBoard, /data-agent-chip-kind="freshness-stale">stale · updated \d+d ago<\/span>/);
+  assert.match(activityBoard, /<dt>Custom agent<\/dt><dd>Fixture Lead<\/dd>/);
+  assert.match(activityBoard, /<dt>PR<\/dt><dd>#633<\/dd>/);
+  assert.doesNotMatch(activityBoard, /Expired Active Fixture/);
+  assert.doesNotMatch(activityBoard, /Expired Attention Fixture/);
+  assert.doesNotMatch(activityBoard, /"rowId"/);
+
+  const policyIdx = activityBoard.indexOf("Policy Fixture");
+  const blockedIdx = activityBoard.indexOf("Blocked Fixture");
+  const staleIdx = activityBoard.indexOf("Stale Fixture");
+  const validatingIdx = activityBoard.indexOf("Validation Agent");
+  const reviewIdx = activityBoard.indexOf("Review Agent");
+  const planningIdx = activityBoard.indexOf("Planning Agent");
+  assert.ok(policyIdx !== -1 && blockedIdx !== -1 && staleIdx !== -1 && policyIdx < blockedIdx && blockedIdx < staleIdx);
+  assert.ok(validatingIdx !== -1 && planningIdx !== -1 && reviewIdx !== -1 && validatingIdx < planningIdx && planningIdx < reviewIdx);
+});
+
 test("renderDashboardRootInnerHtml team execution empty state offers create assignment", () => {
   const html = renderDashboardRootInnerHtml({
     ok: true,
