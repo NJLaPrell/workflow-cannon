@@ -51,6 +51,7 @@
     "test:run": "find test -name '*.test.mjs' -print0 | xargs -0 node --test",
     "test:plan-artifact-fixtures": "node scripts/check-plan-artifact-fixtures.mjs && node --test test/plan-artifact-review-fixtures.integration.test.mjs test/plan-artifact-e2e-cli.test.mjs",
     "pack:dry-run": "pnpm run build && pnpm pack --pack-destination ./artifacts/workspace-kit-pack",
+    "prepare-release-artifacts": "node scripts/prepare-release-artifacts.mjs",
     "check-release-metadata": "node scripts/check-release-metadata.mjs",
     "parity": "node scripts/run-parity.mjs",
     "check-compatibility": "pnpm run build && node scripts/check-compatibility.mjs",
