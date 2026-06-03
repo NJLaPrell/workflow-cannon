@@ -2620,6 +2620,68 @@ test("taskEngineModule dashboard-summary agentActivity projection refreshes live
   assert.equal("agentStatus" in result.data, false);
 });
 
+test("taskEngineModule dashboard-summary agentActivity projection includes active leases while keeping single agentStatus", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(makeTask({ id: "T903", status: "ready", priority: "P1", phaseKey: "81", title: "Current task" }));
+    store.addTask(makeTask({ id: "T904", status: "ready", priority: "P1", phaseKey: "81", title: "Second task" }));
+  });
+
+  const ctx = sqliteTaskEngineCtx(workspace);
+  const now = new Date().toISOString();
+  const db = new Database(path.join(workspace, ".workspace-kit", "tasks", "workspace-kit.db"));
+  try {
+    prepareKitSqliteDatabase(db);
+    setAgentActivityLease(db, {
+      activityId: "copilot:current",
+      agentId: "copilot",
+      sessionId: "current",
+      kind: "working_task",
+      label: "Working on Current task",
+      taskId: "T903",
+      now,
+      expiresAt: "2999-01-01T00:00:00.000Z"
+    });
+    setAgentActivityLease(db, {
+      activityId: "copilot:second",
+      agentId: "copilot",
+      sessionId: "second",
+      kind: "working_task",
+      label: "Working on Second task",
+      taskId: "T904",
+      now,
+      expiresAt: "2999-01-01T00:00:00.000Z"
+    });
+    setAgentActivityLease(db, {
+      activityId: "copilot:expired",
+      agentId: "copilot",
+      sessionId: "expired",
+      kind: "working_task",
+      label: "Expired activity",
+      taskId: "T904",
+      now,
+      expiresAt: "2000-01-01T00:00:00.000Z"
+    });
+  } finally {
+    db.close();
+  }
+
+  const result = await taskEngineModule.onCommand({ name: "dashboard-summary", args: {} }, ctx);
+  assert.equal(result.ok, true);
+  assert.ok(result.data.agentStatus);
+  assert.equal(result.data.agentStatus.source, "live_activity");
+  assert.ok(result.data.agentActivitySummary);
+  assert.equal(typeof result.data.agentActivitySummary.generatedAt, "string");
+  assert.equal(result.data.agentActivitySummary.activeCount, 2);
+  assert.equal(result.data.agentActivitySummary.active.length, 2);
+  assert.equal(result.data.agentActivitySummary.sourceMap.liveActivityCount, 2);
+  assert.equal(
+    result.data.agentActivitySummary.active.some((row) => row.work.title === "Expired activity"),
+    false
+  );
+  assert.equal(result.data.agentActivitySummary.source, "live_activity");
+});
+
 test("taskEngineModule dashboard-summary splits ready improvements vs execution", async () => {
   const workspace = await tmpDir();
   await seedSqliteStore(workspace, (store) => {
