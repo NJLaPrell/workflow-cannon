@@ -125,6 +125,7 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
     "phase-closeout-readiness",
     "phase-delivery-preflight",
     "phase-focus-dashboard",
+    "phase-release-orchestration-state",
     "phase-status",
     "planning-state-migrate-baseline",
     "propose-release-version",
