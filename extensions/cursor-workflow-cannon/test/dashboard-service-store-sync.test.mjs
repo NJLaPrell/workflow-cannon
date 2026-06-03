@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import http from "node:http";
 import { describe, it } from "node:test";
 import { DashboardDataStore } from "../dist/views/dashboard/dashboard-data-store.js";
 import { DashboardServiceStoreSync } from "../dist/views/dashboard/dashboard-service-store-sync.js";
@@ -116,5 +117,86 @@ describe("DashboardServiceStoreSync", () => {
     assert.equal(statusSlice.value?.taskSyncStatus?.syncState, "current");
     assert.equal(statusSlice.source, "task-sync:status");
     await sync.stop();
+  });
+
+  it("normalizes agentActivity.updated into the agentActivity slice refresh path", async () => {
+    const store = new DashboardDataStore();
+    const server = http.createServer((req, res) => {
+      const url = req.url ?? "";
+      if (url === "/dashboard/slices/agentActivity") {
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(
+          JSON.stringify({
+            name: "agentActivity",
+            status: "fresh",
+            updatedAt: "2026-05-30T03:00:01.000Z",
+            source: "dashboard-summary:agentActivity",
+            sourceArgs: { projection: "agentActivity" },
+            planningGeneration: 99,
+            value: {
+              schemaVersion: 1,
+              generatedAt: "2026-05-30T03:00:01.000Z",
+              source: "live_activity",
+              activeCount: 1
+            }
+          })
+        );
+        return;
+      }
+      res.writeHead(404);
+      res.end("");
+    });
+    await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const port = server.address().port;
+    const dataSource = {
+      runtime: { host: "127.0.0.1", port },
+      async start() {},
+      async stop() {},
+      async refreshSlice() {},
+      async getSnapshot() {
+        return {
+          schemaVersion: 1,
+          generation: 1,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+          planningGeneration: 99,
+          slices: {}
+        };
+      },
+      getRuntime() {
+        return this.runtime;
+      },
+      subscribe(listener) {
+        this.listener = listener;
+        return { dispose() {} };
+      }
+    };
+
+    const sync = new DashboardServiceStoreSync(dataSource, store);
+    await sync.start();
+    dataSource.listener({
+      type: "agentActivity.updated",
+      generation: 2,
+      updatedAt: "2026-05-30T03:00:01.000Z"
+    });
+    await new Promise((resolve, reject) => {
+      const deadline = setTimeout(() => reject(new Error("agentActivity refresh timeout")), 2000);
+      const check = () => {
+        if (store.getSlice("agentActivity").status === "fresh") {
+          clearTimeout(deadline);
+          resolve();
+          return;
+        }
+        setTimeout(check, 20);
+      };
+      check();
+    });
+
+    const agentActivity = store.getSlice("agentActivity");
+    assert.equal(agentActivity.status, "fresh");
+    assert.equal(agentActivity.value?.activeCount, 1);
+    assert.equal(agentActivity.source, "dashboard-summary:agentActivity");
+    await sync.stop();
+    await new Promise((resolve) => server.close(resolve));
   });
 });
