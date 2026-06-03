@@ -21,6 +21,8 @@ import { buildPhaseFocusDashboard } from "../dashboard/build-phase-focus-dashboa
 import { proposeReleaseVersion } from "../propose-release-version-runtime.js";
 import { buildPhaseServiceSyncPreflight } from "../phase-service-sync-preflight.js";
 import { buildPhaseProjectionCountGuardAsync } from "../sync-backends/git-event-log-phase-projection-guard.js";
+import { wasWorkspacePhaseRolledOut } from "../dashboard/phase-delivery-status.js";
+import { buildPhaseReleaseOrchestrationState } from "../phase-release-orchestration-state-runtime.js";
 
 /**
  * Phase / release readout commands that need an open task store + SQLite dual reader.
@@ -63,6 +65,34 @@ export async function resolvePhaseDeliveryReadoutCommands(
       db: planning.sqliteDual.getDatabase(),
       dbPath: planning.sqliteDual.dbPath
     });
+  }
+
+  if (command.name === "phase-release-orchestration-state") {
+    const workspaceStatus = readWorkspaceStatusSnapshotFromDual(planning.sqliteDual);
+    const phaseRes = resolveCanonicalPhase({
+      effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined,
+      workspaceStatus
+    });
+    const phaseKey = phaseRes.canonicalPhaseKey;
+    const phaseState = buildPhaseReleaseOrchestrationState({
+      workspacePath: ctx.workspacePath,
+      effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined,
+      tasks: store.getActiveTasks(),
+      phaseKey,
+      currentKitPhase: workspaceStatus?.currentKitPhase ?? null,
+      rolledOut: phaseKey ? wasWorkspacePhaseRolledOut(planning.sqliteDual.getDatabase(), phaseKey) : false
+    });
+    const data: Record<string, unknown> = {
+      ...phaseState,
+      canonicalPhase: phaseRes
+    };
+    attachPolicyMeta(data, ctx, planning.sqliteDual.getPlanningGeneration());
+    return {
+      ok: true,
+      code: "phase-release-orchestration-state",
+      message: `Phase release orchestration verdict: ${phaseState.verdict}`,
+      data
+    };
   }
 
   if (command.name === "propose-release-version") {

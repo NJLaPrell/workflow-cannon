@@ -50,6 +50,13 @@ export {
   isPhaseServiceSyncPreflightActive
 } from "./phase-service-sync-preflight.js";
 export { buildReleaseEvidenceManifest } from "./release-evidence-manifest.js";
+export {
+  buildPhaseReleaseOrchestrationState,
+  classifyPhaseReleasePath,
+  PHASE_RELEASE_ORCHESTRATION_STATE_SCHEMA_VERSION,
+  PHASE_RELEASE_ORCHESTRATION_TOP_LIMIT
+} from "./phase-release-orchestration-state-runtime.js";
+export type { PhaseReleasePathInputs, PhaseReleasePathVerdict } from "./phase-release-orchestration-state-runtime.js";
 export { classifyKitStatePath } from "./kit-state-classifier.js";
 export type { KitStateClassification } from "./kit-state-classifier.js";
 export type {
