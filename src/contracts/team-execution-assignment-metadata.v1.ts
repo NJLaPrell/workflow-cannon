@@ -8,6 +8,15 @@ import type { AgentModelTier } from "./agent-orchestration.js";
 
 export const TEAM_ASSIGNMENT_METADATA_SCHEMA_VERSION = 1 as const;
 
+export const WORKER_PACKET_MODEL_TIER_LABELS = ["tier_1", "tier_2", "tier_3"] as const;
+
+export type WorkerPacketModelTierLabel = (typeof WORKER_PACKET_MODEL_TIER_LABELS)[number];
+
+export type WorkerPacketModelTierRecommendation = {
+  label: WorkerPacketModelTierLabel;
+  rationale: string;
+};
+
 export type TeamAssignmentResourceScope = {
   ownedPaths?: string[];
   readOnlyPaths?: string[];
@@ -27,6 +36,9 @@ export type TeamAssignmentMetadataV1 = {
   agentDefinitionId: string;
   agentSessionId?: string;
   modelTier?: AgentModelTier;
+  modelTierRationale?: string;
+  modelTierRecommendation?: WorkerPacketModelTierRecommendation;
+  packetDigest?: string;
   contextProfileId: string;
   accessProfileId: string;
   handoffContractId: string;
@@ -49,6 +61,9 @@ export type TeamAssignmentOrchestrationMetadataSummary = {
   agentDefinitionId?: string;
   agentSessionId?: string;
   modelTier?: AgentModelTier;
+  modelTierRationale?: string;
+  modelTierRecommendation?: WorkerPacketModelTierRecommendation;
+  packetDigest?: string;
   contextProfileId?: string;
   accessProfileId?: string;
   handoffContractId?: string;

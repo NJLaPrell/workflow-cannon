@@ -7,9 +7,12 @@ import Database from "better-sqlite3";
 import { prepareKitSqliteDatabase, KIT_SQLITE_USER_VERSION } from "../dist/core/state/workspace-kit-sqlite.js";
 import {
   assertTeamExecutionKitSchema,
+  buildAssignmentPacketDigest,
+  buildAssignmentPacketModelTierRecommendation,
   insertAssignment,
   getAssignment,
   listAssignments,
+  normalizeAssignmentPacketMetadata,
   blockAssignmentFromWorker,
   submitHandoff,
   reconcileAssignment,
@@ -99,6 +102,49 @@ test("assignment metadata v1 fixture passes validation", () => {
   assert.equal(result.ok, true);
 });
 
+test("packet metadata normalization computes recommendation and stable digest", () => {
+  const first = normalizeAssignmentPacketMetadata({
+    assignmentId: "asg-packet-1",
+    executionTaskId: "T9001",
+    supervisorId: "sup-packet",
+    workerId: "wrk-packet",
+    metadata: assignmentMetadataFixture
+  });
+  const second = normalizeAssignmentPacketMetadata({
+    assignmentId: "asg-packet-1",
+    executionTaskId: "T9001",
+    supervisorId: "sup-packet",
+    workerId: "wrk-packet",
+    metadata: { ...assignmentMetadataFixture }
+  });
+
+  assert.equal(first?.modelTierRecommendation?.label, "tier_2");
+  assert.equal(first?.modelTierRationale, first?.modelTierRecommendation?.rationale);
+  assert.match(first?.packetDigest ?? "", /^[a-f0-9]{64}$/);
+  assert.equal(first?.packetDigest, second?.packetDigest);
+
+  const changedTask = buildAssignmentPacketDigest({
+    assignmentId: "asg-packet-1",
+    executionTaskId: "T9002",
+    supervisorId: "sup-packet",
+    workerId: "wrk-packet",
+    metadata: assignmentMetadataFixture
+  });
+  assert.notEqual(first?.packetDigest, changedTask);
+
+  const changedPrompt = buildAssignmentPacketDigest({
+    assignmentId: "asg-packet-1",
+    executionTaskId: "T9001",
+    supervisorId: "sup-packet",
+    workerId: "wrk-packet",
+    metadata: {
+      ...assignmentMetadataFixture,
+      assignmentPromptSummary: "Different worker packet summary"
+    }
+  });
+  assert.notEqual(first?.packetDigest, changedPrompt);
+});
+
 test("assignment metadata v1 rejects unknown fields clearly", () => {
   const result = validateAssignmentMetadataWhenPresent({
     ...assignmentMetadataFixture,
@@ -147,6 +193,9 @@ test("structured metadata v1 round-trips on assignment insert", () => {
     assert.equal(row.orchestrationMetadataSummary.schemaVersion, 1);
     assert.equal(row.orchestrationMetadataSummary.agentDefinitionId, "task-worker");
     assert.equal(row.orchestrationMetadataSummary.agentSessionId, "session-abc123");
+    assert.equal(row.orchestrationMetadataSummary.modelTierRecommendation.label, "tier_2");
+    assert.equal(row.orchestrationMetadataSummary.modelTierRationale, row.metadata.modelTierRationale);
+    assert.equal(row.orchestrationMetadataSummary.packetDigest, row.metadata.packetDigest);
     assert.equal(row.orchestrationMetadataSummary.contextProfileId, "task_worker_context_v1");
     assert.equal(row.orchestrationMetadataSummary.accessProfileId, "task_worker_strict_v1");
     assert.equal(row.orchestrationMetadataSummary.handoffContractId, "implementation_handoff_v2");
@@ -155,6 +204,18 @@ test("structured metadata v1 round-trips on assignment insert", () => {
     db.close();
     fs.rmSync(dir, { recursive: true, force: true });
   }
+});
+
+test("recommendation helper escalates high reasoning work to packet tier_3", () => {
+  const recommendation = buildAssignmentPacketModelTierRecommendation({
+    ...assignmentMetadataFixture,
+    modelTier: "high_reasoning"
+  });
+  assert.equal(recommendation?.label, "tier_3");
+  assert.equal(
+    recommendation?.rationale,
+    assignmentMetadataFixture.modelTierRationale
+  );
 });
 
 test("worker blocker transition sets blocked status and reason", () => {

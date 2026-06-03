@@ -13,6 +13,17 @@
       "type": "string",
       "enum": ["cheap_fast", "balanced", "high_reasoning", "specialist", "human_review"]
     },
+    "modelTierRationale": { "type": "string", "minLength": 1 },
+    "modelTierRecommendation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["label", "rationale"],
+      "properties": {
+        "label": { "type": "string", "enum": ["tier_1", "tier_2", "tier_3"] },
+        "rationale": { "type": "string", "minLength": 1 }
+      }
+    },
+    "packetDigest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
     "contextProfileId": { "type": "string", "minLength": 1 },
     "accessProfileId": { "type": "string", "minLength": 1 },
     "handoffContractId": { "type": "string", "minLength": 1 },
