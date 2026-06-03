@@ -2,6 +2,10 @@ import type { ModuleCommandResult, ModuleLifecycleContext } from "../../../contr
 import { attachPolicyMeta } from "../attach-planning-response-meta.js";
 import type { OpenedPlanningStores } from "../persistence/planning-open.js";
 import { waitForPrChecks } from "../wait-for-pr-checks-runtime.js";
+import {
+  clearAgentActivityBestEffort,
+  recordCommandBoundaryActivityBestEffort
+} from "../agent-activity-recorder.js";
 
 const INSTRUCTION = "src/modules/task-engine/instructions/wait-for-pr-checks.md";
 
@@ -49,31 +53,46 @@ export function buildWaitForPrChecks(
   const timeoutSec = readPositiveInt(args, "timeoutSec", 1800);
   const intervalSec = readPositiveInt(args, "intervalSec", 20);
   const requiredOnly = args.requiredOnly !== false;
-
-  const result = waitForPrChecks({
-    workspacePath: ctx.workspacePath,
-    pr,
-    timeoutSec,
-    intervalSec,
-    requiredOnly
+  const activityLease = recordCommandBoundaryActivityBestEffort(ctx, planning, {
+    command: "wait-for-pr-checks",
+    kind: "validating",
+    prNumber: pr,
+    details: { validationLabel: `PR #${pr} checks` }
   });
+  try {
+    const result = waitForPrChecks({
+      workspacePath: ctx.workspacePath,
+      pr,
+      timeoutSec,
+      intervalSec,
+      requiredOnly
+    });
 
-  const data: Record<string, unknown> = {
-    ...result,
-    requiredOnly,
-    timeoutSec,
-    intervalSec,
-    remediation: { instructionPath: INSTRUCTION }
-  };
-  attachPolicyMeta(data, ctx, planning.sqliteDual.getPlanningGeneration());
+    const data: Record<string, unknown> = {
+      ...result,
+      requiredOnly,
+      timeoutSec,
+      intervalSec,
+      remediation: { instructionPath: INSTRUCTION }
+    };
+    attachPolicyMeta(data, ctx, planning.sqliteDual.getPlanningGeneration());
 
-  const passed = result.state === "passed";
-  return {
-    ok: passed,
-    code: passed ? "wait-for-pr-checks-passed" : `wait-for-pr-checks-${result.state}`,
-    message: passed
-      ? `PR #${pr} checks passed after ${result.elapsedSec}s (${result.pollCount} poll(s))`
-      : `PR #${pr} checks ended with state '${result.state}' after ${result.elapsedSec}s`,
-    data
-  };
+    const passed = result.state === "passed";
+    return {
+      ok: passed,
+      code: passed ? "wait-for-pr-checks-passed" : `wait-for-pr-checks-${result.state}`,
+      message: passed
+        ? `PR #${pr} checks passed after ${result.elapsedSec}s (${result.pollCount} poll(s))`
+        : `PR #${pr} checks ended with state '${result.state}' after ${result.elapsedSec}s`,
+      data
+    };
+  } finally {
+    if (activityLease) {
+      clearAgentActivityBestEffort(ctx, planning, {
+        activityId: activityLease.activityId,
+        agentId: activityLease.agentId,
+        sessionId: activityLease.sessionId
+      });
+    }
+  }
 }
