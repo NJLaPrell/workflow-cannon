@@ -23,7 +23,8 @@
         "rationale": { "type": "string", "minLength": 1 }
       }
     },
-    "packetDigest": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "packetId": { "type": "string", "minLength": 1 },
+    "packetDigest": { "type": "string", "pattern": "^(sha256:)?[a-f0-9]{64}$" },
     "contextProfileId": { "type": "string", "minLength": 1 },
     "accessProfileId": { "type": "string", "minLength": 1 },
     "handoffContractId": { "type": "string", "minLength": 1 },
@@ -33,6 +34,20 @@
     "requiresApprovalPaths": { "type": "array", "items": { "type": "string" } },
     "assignmentPromptSummary": { "type": "string" },
     "blockingPolicy": { "type": "string" },
+    "validationCommands": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["command"],
+        "properties": {
+          "command": { "type": "string", "minLength": 1 },
+          "rationale": { "type": "string" },
+          "result": { "type": "string" },
+          "exitCode": { "type": "integer" }
+        }
+      }
+    },
     "resources": {
       "type": "object",
       "additionalProperties": false,
