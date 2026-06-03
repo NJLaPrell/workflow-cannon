@@ -91,6 +91,14 @@ export const DASHBOARD_SERVICE_SLICE_DEFINITIONS: readonly DashboardServiceSlice
       pick(data, [...SHARED_META_KEYS, "agentStatus", "agentGuidance", "suggestedNext"])
   },
   {
+    name: "agentActivity",
+    pollGroup: "critical",
+    command: "dashboard-summary",
+    args: { projection: "agentActivity" },
+    source: "dashboard-summary:agentActivity",
+    extractPayload: (data) => pick(data, [...SHARED_META_KEYS, "agentActivitySummary"])
+  },
+  {
     name: "queue",
     pollGroup: "queue",
     command: "dashboard-summary",

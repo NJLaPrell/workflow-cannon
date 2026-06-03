@@ -155,5 +155,6 @@ test("sliceNamesForMutation maps registry staleOnMutationKinds", () => {
   const queueSlices = sliceNamesForMutation("task-queue");
   assert.ok(queueSlices.includes("queue"));
   assert.ok(queueSlices.includes("overview"));
+  assert.ok(queueSlices.includes("agentActivity"));
   assert.ok(!queueSlices.includes("cae"));
 });

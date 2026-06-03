@@ -3,6 +3,7 @@ import type { SqliteDualPlanningStore } from "../persistence/sqlite-dual-plannin
 import type { TaskStore } from "../persistence/store.js";
 import {
   buildDashboardBase,
+  buildDashboardAgentActivityProjection,
   buildDashboardFullProjection,
   buildDashboardOverviewProjection,
   buildDashboardQueueProjection,
@@ -28,6 +29,8 @@ export async function runDashboardSummaryCommand(
   const data =
     projection === "overview"
       ? buildDashboardOverviewProjection(base)
+      : projection === "agentActivity"
+        ? buildDashboardAgentActivityProjection(base)
       : projection === "queue"
         ? buildDashboardQueueProjection(base)
         : projection === "status"

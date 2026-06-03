@@ -58,6 +58,7 @@ import { buildDashboardHumanGatesSummary } from "./build-dashboard-human-gates.j
 import { buildDashboardPhaseJournalStats } from "./build-dashboard-phase-journal-stats.js";
 import {
   dashboardSummaryNeedsPastPhaseNotes,
+  dashboardSummaryNeedsAgentActivityRollups,
   dashboardSummaryNeedsPhaseJournalStats,
   dashboardSummaryNeedsQueueRollups,
   dashboardSummaryNeedsStatusRollups,
@@ -206,8 +207,9 @@ export async function buildDashboardBase(
   const projection = parseDashboardSummaryProjection(commandArgs);
   const needsQueueRollups = dashboardSummaryNeedsQueueRollups(projection);
   const needsStatusRollups = dashboardSummaryNeedsStatusRollups(projection);
-  const skipPlanningSessionRead = projection === "overview";
-  const skipAgentGuidanceBuild = projection === "queue";
+  const needsAgentActivityRollups = dashboardSummaryNeedsAgentActivityRollups(projection);
+  const skipPlanningSessionRead = projection === "overview" || projection === "agentActivity";
+  const skipAgentGuidanceBuild = projection === "queue" || projection === "agentActivity";
 
   const tasks = store.getActiveTasks();
   const dualForStatus = sqliteDual ?? openSqliteDualForWorkspaceStatus(ctx);
@@ -463,14 +465,16 @@ export async function buildDashboardBase(
   const agentStatus = liveActivity
     ? agentActivityLeaseToDashboardStatus(liveActivity, systemStatus.generatedAt)
     : derivedAgentStatus;
-  const agentActivitySummary = buildDashboardAgentActivitySummary({
-    now: systemStatus.generatedAt,
-    tasks,
-    liveActivityLeases,
-    derivedAgentStatus,
-    teamExecution,
-    subagentRegistry
-  });
+  const agentActivitySummary = needsAgentActivityRollups
+    ? buildDashboardAgentActivitySummary({
+        now: systemStatus.generatedAt,
+        tasks,
+        liveActivityLeases,
+        derivedAgentStatus,
+        teamExecution,
+        subagentRegistry
+      })
+    : null;
 
   const wsForDelivery =
     workspaceStatus && typeof workspaceStatus === "object"
@@ -637,7 +641,7 @@ export async function buildDashboardBase(
     systemStatus,
     taskStateProjection,
     agentStatus,
-    agentActivitySummary,
+    ...(agentActivitySummary ? { agentActivitySummary } : {}),
     currentPhaseDelivery,
     deliveredPhaseKeys,
     rolledOutPhaseKeys,
@@ -679,5 +683,9 @@ export function buildDashboardQueueProjection(base: DashboardBuildBase): Dashboa
 }
 
 export function buildDashboardStatusProjection(base: DashboardBuildBase): DashboardSummaryData {
+  return base.data;
+}
+
+export function buildDashboardAgentActivityProjection(base: DashboardBuildBase): DashboardSummaryData {
   return base.data;
 }

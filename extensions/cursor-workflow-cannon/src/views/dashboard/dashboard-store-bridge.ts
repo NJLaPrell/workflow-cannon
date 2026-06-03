@@ -31,7 +31,7 @@ export function wrapSectionHtmlWithFreshness(html: string, slice: DashboardSlice
 
 /** Ingest a dashboard-summary `data` object into all matching store slices. */
 export function sliceNamesForDashboardSummaryProjection(
-  projection: "full" | "overview" | "queue" | "status"
+  projection: "full" | "overview" | "queue" | "status" | "agentActivity"
 ): DashboardSliceName[] {
   return DASHBOARD_SLICE_REGISTRY.filter((desc) => {
     if (desc.command !== "dashboard-summary") {
