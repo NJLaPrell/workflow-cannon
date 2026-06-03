@@ -18,6 +18,12 @@ export type DashboardServiceSliceUpdatedEvent = {
   updatedAt: string;
 };
 
+export type DashboardServiceAgentActivityUpdatedEvent = {
+  type: "agentActivity.updated";
+  generation: number;
+  updatedAt: string;
+};
+
 export type DashboardServiceErrorEvent = {
   type: "dashboard.service.error";
   message: string;
@@ -33,12 +39,28 @@ export type TaskSyncStatusChangedEvent = {
 export type DashboardServiceEvent =
   | DashboardServiceSnapshotUpdatedEvent
   | DashboardServiceSliceUpdatedEvent
+  | DashboardServiceAgentActivityUpdatedEvent
   | DashboardServiceErrorEvent
   | TaskSyncStatusChangedEvent;
 
 export const DASHBOARD_SERVICE_EVENT_TYPES = [
   "dashboard.snapshot.updated",
   "dashboard.slice.updated",
+  "agentActivity.updated",
   "dashboard.service.error",
   "task-sync.status.changed"
 ] as const;
+
+export function normalizeDashboardServiceEvent(
+  event: DashboardServiceEvent
+): DashboardServiceSnapshotUpdatedEvent | DashboardServiceSliceUpdatedEvent | DashboardServiceErrorEvent | TaskSyncStatusChangedEvent {
+  if (event.type === "agentActivity.updated") {
+    return {
+      type: "dashboard.slice.updated",
+      generation: event.generation,
+      slice: "agentActivity",
+      updatedAt: event.updatedAt
+    };
+  }
+  return event;
+}

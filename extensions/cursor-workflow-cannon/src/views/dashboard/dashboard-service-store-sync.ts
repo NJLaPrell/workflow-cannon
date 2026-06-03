@@ -1,4 +1,6 @@
-import type { DashboardServiceEvent } from "@workflow-cannon/workspace-kit/contracts/dashboard-events";
+import {
+  type DashboardServiceEvent
+} from "@workflow-cannon/workspace-kit/contracts/dashboard-events";
 import type * as vscode from "vscode";
 import type { DashboardDataSource } from "./dashboard-data-source.js";
 import type { DashboardDataStore } from "./dashboard-data-store.js";
@@ -9,6 +11,26 @@ import type { DashboardServiceRuntimeV1 } from "./dashboard-service-mapper.js";
 type ServiceDataSource = DashboardDataSource & {
   getRuntime(): DashboardServiceRuntimeV1 | null;
 };
+
+type AgentActivityUpdatedEvent = {
+  type: "agentActivity.updated";
+  generation: number;
+  updatedAt: string;
+};
+
+function normalizeDashboardServiceEvent(
+  event: DashboardServiceEvent | AgentActivityUpdatedEvent
+): DashboardServiceEvent {
+  if (event.type === "agentActivity.updated") {
+    return {
+      type: "dashboard.slice.updated",
+      generation: event.generation,
+      slice: "agentActivity",
+      updatedAt: event.updatedAt
+    };
+  }
+  return event;
+}
 
 /** Applies warm service snapshots/events into {@link DashboardDataStore}. */
 export class DashboardServiceStoreSync {
@@ -53,19 +75,20 @@ export class DashboardServiceStoreSync {
     if (!this.running) {
       return;
     }
-    if (event.type === "dashboard.service.error") {
+    const normalized = normalizeDashboardServiceEvent(event);
+    if (normalized.type === "dashboard.service.error") {
       return;
     }
-    if (event.type === "task-sync.status.changed") {
-      await this.applyTaskSyncStatus(event.status);
+    if (normalized.type === "task-sync.status.changed") {
+      await this.applyTaskSyncStatus(normalized.status);
       return;
     }
-    if (event.type === "dashboard.slice.updated") {
-      const name = event.slice as DashboardSliceName;
+    if (normalized.type === "dashboard.slice.updated") {
+      const name = normalized.slice as DashboardSliceName;
       await this.ingestSlice(name);
       return;
     }
-    if (event.type === "dashboard.snapshot.updated") {
+    if (normalized.type === "dashboard.snapshot.updated") {
       await this.ingestFullSnapshot();
     }
   }

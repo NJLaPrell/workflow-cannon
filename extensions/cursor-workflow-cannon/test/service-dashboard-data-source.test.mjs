@@ -193,4 +193,75 @@ describe("ServiceDashboardDataSource", () => {
     assert.equal(events[0].slice, "overview");
     assert.equal(events[1].slice, "queue");
   });
+
+  it("normalizes agentActivity.updated SSE events to the agentActivity slice contract", async () => {
+    const events = [];
+    const fetchFn = async (url) => {
+      if (url.endsWith("/health")) {
+        return new Response(JSON.stringify({ ok: true }), { status: 200 });
+      }
+      if (url.endsWith("/dashboard/snapshot")) {
+        return new Response(
+          JSON.stringify({
+            schemaVersion: 1,
+            serviceVersion: "0.99.21",
+            generatedAt: "2026-05-30T03:00:00.000Z",
+            generation: 2,
+            planningGeneration: 42,
+            slices: {}
+          }),
+          { status: 200 }
+        );
+      }
+      if (url.endsWith("/dashboard/events")) {
+        const stream = new ReadableStream({
+          start(controller) {
+            controller.enqueue(
+              new TextEncoder().encode(
+                `data: ${JSON.stringify({
+                  type: "agentActivity.updated",
+                  generation: 3,
+                  updatedAt: "2026-05-30T03:00:01.000Z"
+                })}\n\n`
+              )
+            );
+            queueMicrotask(() => controller.close());
+          }
+        });
+        return new Response(stream, { status: 200 });
+      }
+      return new Response("not found", { status: 404 });
+    };
+
+    const ds = new ServiceDashboardDataSource({
+      workspacePath: "/tmp/wk",
+      fetchFn,
+      sseReconnectDelayMs: 20,
+      readRuntimeFile: async () => JSON.stringify(RUNTIME)
+    });
+
+    ds.subscribe((event) => {
+      events.push(event);
+    });
+
+    await ds.start();
+
+    await new Promise((resolve, reject) => {
+      const deadline = setTimeout(() => reject(new Error("agentActivity SSE timeout")), 2000);
+      const check = () => {
+        if (events.length >= 1) {
+          clearTimeout(deadline);
+          resolve();
+          return;
+        }
+        setTimeout(check, 20);
+      };
+      check();
+    });
+
+    await ds.stop();
+
+    assert.equal(events[0].type, "dashboard.slice.updated");
+    assert.equal(events[0].slice, "agentActivity");
+  });
 });

@@ -22,6 +22,26 @@ export type ServiceDashboardDataSourceOptions = {
 
 type FetchFn = typeof fetch;
 
+type AgentActivityUpdatedEvent = {
+  type: "agentActivity.updated";
+  generation: number;
+  updatedAt: string;
+};
+
+function normalizeDashboardServiceEvent(
+  event: DashboardServiceEvent | AgentActivityUpdatedEvent
+): DashboardServiceEvent {
+  if (event.type === "agentActivity.updated") {
+    return {
+      type: "dashboard.slice.updated",
+      generation: event.generation,
+      slice: "agentActivity",
+      updatedAt: event.updatedAt
+    };
+  }
+  return event;
+}
+
 /** Lightweight health probe for auto mode (no SSE connection). */
 export async function probeDashboardServiceHealth(
   workspacePath: string,
@@ -206,7 +226,9 @@ export class ServiceDashboardDataSource implements DashboardDataSource {
               continue;
             }
             try {
-              const event = JSON.parse(line.slice(6)) as DashboardServiceEvent;
+              const event = normalizeDashboardServiceEvent(
+                JSON.parse(line.slice(6)) as DashboardServiceEvent
+              );
               for (const listener of this.listeners) {
                 listener(event);
               }
