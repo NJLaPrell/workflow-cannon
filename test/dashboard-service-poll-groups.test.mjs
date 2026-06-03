@@ -17,6 +17,7 @@ describe("dashboard service poll groups", () => {
   it("maps slices to poll groups", () => {
     assert.deepEqual(dashboardServiceSliceNamesForPollGroup("critical").sort(), [
       "agent",
+      "agentActivity",
       "overview",
       "phase"
     ]);
