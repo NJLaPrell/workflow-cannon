@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-06-03T17:39:21.059Z",
+  "generatedAt": "2026-06-03T18:45:33.999Z",
   "commands": [
     {
       "name": "accept-improvement",
@@ -26,6 +26,11 @@
       "name": "agent-bootstrap",
       "path": ".ai/agent-cli-snippets/by-command/agent-bootstrap.json",
       "moduleId": "task-engine"
+    },
+    {
+      "name": "agent-execution-packet",
+      "path": ".ai/agent-cli-snippets/by-command/agent-execution-packet.json",
+      "moduleId": "team-execution"
     },
     {
       "name": "agent-mutation-plan",

@@ -41,7 +41,7 @@ function sqliteCtxWithActor(workspace, actor, adminIds = []) {
   };
 }
 
-async function seedExecutionTask(workspace, taskId, title) {
+async function seedExecutionTask(workspace, taskId, title, options = {}) {
   const tasksDir = path.join(workspace, ".workspace-kit", "tasks");
   await mkdir(tasksDir, { recursive: true });
   const dbPath = path.join(tasksDir, "workspace-kit.db");
@@ -49,14 +49,202 @@ async function seedExecutionTask(workspace, taskId, title) {
   try {
     prepareKitSqliteDatabase(db);
     const now = new Date().toISOString();
+    const status = typeof options.status === "string" ? options.status : "ready";
+    const type = typeof options.type === "string" ? options.type : "workspace-kit";
+    const phase = typeof options.phase === "string" ? options.phase : null;
+    const phaseKey = typeof options.phaseKey === "string" ? options.phaseKey : null;
+    const approach = typeof options.approach === "string" ? options.approach : null;
+    const summary = typeof options.summary === "string" ? options.summary : null;
+    const acceptanceCriteria = Array.isArray(options.acceptanceCriteria) ? options.acceptanceCriteria : [];
+    const technicalScope = Array.isArray(options.technicalScope) ? options.technicalScope : [];
+    const metadata = options.metadata && typeof options.metadata === "object" ? options.metadata : null;
+    const features = Array.isArray(options.features) ? options.features : [];
     db.prepare(
-      `INSERT OR REPLACE INTO task_engine_tasks (id, status, type, title, created_at, updated_at, archived, depends_on_json)
-       VALUES (?, 'ready', 'workspace-kit', ?, ?, ?, 0, '[]')`
-    ).run(taskId, title, now, now);
+      `INSERT OR REPLACE INTO task_engine_tasks (
+        id, status, type, title, created_at, updated_at, archived, archived_at,
+        priority, phase, phase_key, ownership, approach,
+        depends_on_json, unblocks_json, technical_scope_json, acceptance_criteria_json,
+        summary, description, risk, queue_namespace, evidence_key, evidence_kind, metadata_json, features_json,
+        routing_category, routing_confidence_tier, routing_blocked_reason_category, routing_tags_json
+      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`
+    ).run(
+      taskId,
+      status,
+      type,
+      title,
+      now,
+      now,
+      0,
+      null,
+      null,
+      phase,
+      phaseKey,
+      null,
+      approach,
+      "[]",
+      "[]",
+      JSON.stringify(technicalScope),
+      JSON.stringify(acceptanceCriteria),
+      summary,
+      null,
+      null,
+      null,
+      null,
+      null,
+      metadata ? JSON.stringify(metadata) : null,
+      JSON.stringify(features),
+      null,
+      null,
+      null,
+      null
+    );
   } finally {
     db.close();
   }
 }
+
+test("agent-execution-packet returns bounded worker context without queue reads", async () => {
+  const workspace = await tmpDir();
+  const ctx = sqliteCtx(workspace);
+  await seedExecutionTask(workspace, "T8613", "Add packet builder", {
+    phase: "Phase 130",
+    phaseKey: "130",
+    summary: "Build a bounded packet for worker startup.",
+    approach: "Implement packet command and runtime wiring.",
+    acceptanceCriteria: [
+      "Packet includes explicit boundaries.",
+      "Worker can start from the packet."
+    ],
+    technicalScope: ["src/modules/team-execution/**", "src/modules/task-engine/**"]
+  });
+  await seedExecutionTask(workspace, "T8614", "Unrelated queue work", {
+    phase: "Phase 130",
+    phaseKey: "130",
+    summary: "Should not appear in the packet."
+  });
+
+  const metadata = {
+    schemaVersion: 1,
+    agentDefinitionId: "task-worker",
+    contextProfileId: "task_worker_context_v1",
+    accessProfileId: "task_worker_strict_v1",
+    handoffContractId: "implementation_handoff_v2",
+    modelTier: "balanced",
+    assignmentPromptSummary: "Implement the packet core for bounded worker starts.",
+    ownedPaths: ["src/modules/team-execution/**"],
+    forbiddenPaths: ["extensions/cursor-workflow-cannon/**"],
+    requiresApprovalPaths: ["src/contracts/**"],
+    resources: {
+      ownedPaths: ["src/modules/task-engine/**"],
+      readOnlyPaths: [".ai/**", "AGENT_ORCHESTRATION_HANDOFF.md"],
+      forbiddenPaths: ["docs/maintainers/**"]
+    }
+  };
+
+  const registered = await teamExecutionModule.onCommand(
+    {
+      name: "register-assignment",
+      args: {
+        assignmentId: "asg-8613",
+        executionTaskId: "T8613",
+        supervisorId: "sup-13",
+        workerId: "wrk-13",
+        metadata
+      }
+    },
+    ctx
+  );
+  assert.equal(registered.ok, true);
+
+  const packetResult = await teamExecutionModule.onCommand(
+    {
+      name: "agent-execution-packet",
+      args: {
+        assignmentId: "asg-8613",
+        workerId: "wrk-13"
+      }
+    },
+    sqliteCtxWithActor(workspace, "wrk-13")
+  );
+
+  assert.equal(packetResult.ok, true);
+  assert.equal(packetResult.code, "agent-execution-packet");
+  assert.equal(packetResult.data.packet.taskId, "T8613");
+  assert.equal(packetResult.data.packet.phaseKey, "130");
+  assert.equal(packetResult.data.packet.assignmentIntent, metadata.assignmentPromptSummary);
+  assert.equal(packetResult.data.packet.title, "Add packet builder");
+  assert.equal(packetResult.data.packet.summary, "Build a bounded packet for worker startup.");
+  assert.deepEqual(packetResult.data.packet.acceptanceCriteria, [
+    "Packet includes explicit boundaries.",
+    "Worker can start from the packet."
+  ]);
+  assert.deepEqual(packetResult.data.packet.ownedPaths, [
+    "src/modules/team-execution/**",
+    "src/modules/task-engine/**"
+  ]);
+  assert.deepEqual(packetResult.data.packet.readOnlyPaths, [".ai/**", "AGENT_ORCHESTRATION_HANDOFF.md"]);
+  assert.deepEqual(packetResult.data.packet.forbiddenPaths, [
+    "extensions/cursor-workflow-cannon/**",
+    "docs/maintainers/**"
+  ]);
+  assert.equal(packetResult.data.packet.baseBranch, "release/phase-130");
+  assert.match(packetResult.data.packet.suggestedWorkerBranch, /^feature\/T8613-/);
+  assert.ok(packetResult.data.packet.validationCommands.length > 0);
+  assert.equal(packetResult.data.packet.handoffContract.contractId, "implementation_handoff_v2");
+  assert.equal(packetResult.data.packet.handoffContract.expectedAssignmentId, "asg-8613");
+  assert.equal(packetResult.data.packet.handoffContract.expectedWorkerId, "wrk-13");
+  assert.ok(packetResult.data.packet.refs.instructions.includes(".ai/playbooks/task-to-phase-branch.md"));
+  assert.ok(
+    packetResult.data.packet.refs.instructions.includes(
+      "src/modules/team-execution/instructions/agent-execution-packet.md"
+    )
+  );
+  assert.equal(packetResult.data.packet.packetDigest.startsWith("sha256:"), true);
+  assert.equal(JSON.stringify(packetResult.data.packet).includes("Unrelated queue work"), false);
+  assert.ok(packetResult.data.packet.stopConditions.some((item) => item.includes("owned paths")));
+});
+
+test("agent-execution-packet keeps path boundaries explicit when assignment metadata is absent", async () => {
+  const workspace = await tmpDir();
+  const ctx = sqliteCtx(workspace);
+  await seedExecutionTask(workspace, "T8615", "Fallback packet task", {
+    phase: "Phase 130",
+    phaseKey: "130",
+    summary: "Fallback summary",
+    acceptanceCriteria: ["Return explicit empty boundary arrays."]
+  });
+
+  const registered = await teamExecutionModule.onCommand(
+    {
+      name: "register-assignment",
+      args: {
+        assignmentId: "asg-8615",
+        executionTaskId: "T8615",
+        supervisorId: "sup-15",
+        workerId: "wrk-15"
+      }
+    },
+    ctx
+  );
+  assert.equal(registered.ok, true);
+
+  const packetResult = await teamExecutionModule.onCommand(
+    {
+      name: "agent-execution-packet",
+      args: {
+        assignmentId: "asg-8615"
+      }
+    },
+    ctx
+  );
+
+  assert.equal(packetResult.ok, true);
+  assert.deepEqual(packetResult.data.packet.ownedPaths, []);
+  assert.deepEqual(packetResult.data.packet.readOnlyPaths, []);
+  assert.deepEqual(packetResult.data.packet.forbiddenPaths, []);
+  assert.deepEqual(packetResult.data.packet.requiresApprovalPaths, []);
+  assert.ok(packetResult.data.packet.stopConditions.some((item) => item.includes("explicit owned paths")));
+});
 
 test("report-assignment-blocker blocks assignment and creates linked defect task", async () => {
   const workspace = await tmpDir();

@@ -5,9 +5,12 @@ import { builtinInstructionEntriesForModule } from "../../contracts/builtin-run-
 import { openPlanningStores } from "../task-engine/persistence/planning-open.js";
 import { TaskStore } from "../task-engine/persistence/store.js";
 import { runReportDefectCommand } from "../task-engine/commands/report-defect-on-command.js";
+import { buildRecommendValidation } from "../task-engine/commands/recommend-validation-commands.js";
+import { resolveMaintainerDeliveryPolicy } from "../task-engine/maintainer-delivery-policy-resolver.js";
 import { TaskEngineError } from "../task-engine/transitions.js";
 import { readOptionalExpectedPlanningGeneration } from "../task-engine/mutation-utils.js";
 import { getPlanningGenerationPolicy, mergePlanningGenerationPolicyWarnings } from "../task-engine/planning-config.js";
+import type { TaskEntity } from "../task-engine/types.js";
 import {
   assertTeamExecutionKitSchema,
   type TeamAssignmentRow,
@@ -30,6 +33,7 @@ import {
   validateHandoffContract,
   validateReconcileCheckpointV1
 } from "./assignment-store.js";
+import { buildAgentExecutionPacket, readAgentExecutionPacketBoundaries } from "./agent-execution-packet.js";
 
 type AssignmentLifecycleAction =
   | "submit-assignment-handoff"
@@ -261,6 +265,10 @@ function readStringArrayArg(args: Record<string, unknown>, key: string): string[
     .filter((item) => item.length > 0);
 }
 
+function readOptionalStringValue(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim().length > 0 ? value.trim() : undefined;
+}
+
 function listHandoffEvidenceRefs(assignment: ReturnType<typeof getAssignment>): string[] {
   if (!assignment?.handoff) {
     return [];
@@ -277,6 +285,145 @@ function readAnyTaskId(db: Sqlite.Database): string | undefined {
     | { id: string }
     | undefined;
   return row?.id;
+}
+
+function parseOptionalJsonArray(raw: unknown): string[] | undefined {
+  if (typeof raw !== "string" || raw.trim().length === 0) {
+    return undefined;
+  }
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) {
+      return undefined;
+    }
+    const values = parsed
+      .filter((entry): entry is string => typeof entry === "string")
+      .map((entry) => entry.trim())
+      .filter((entry) => entry.length > 0);
+    return values.length > 0 ? values : [];
+  } catch {
+    return undefined;
+  }
+}
+
+function parseOptionalJsonObject(raw: unknown): Record<string, unknown> | undefined {
+  if (typeof raw !== "string" || raw.trim().length === 0) {
+    return undefined;
+  }
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? (parsed as Record<string, unknown>)
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function readRelationalTask(db: Sqlite.Database, taskId: string): TaskEntity | null {
+  const row = db.prepare(
+    `SELECT
+      id, status, type, title, created_at, updated_at, archived, archived_at,
+      priority, phase, phase_key, ownership, approach,
+      depends_on_json, unblocks_json, technical_scope_json, acceptance_criteria_json,
+      summary, description, risk, metadata_json, features_json
+     FROM task_engine_tasks
+     WHERE id = ?
+     LIMIT 1`
+  ).get(taskId) as Record<string, unknown> | undefined;
+
+  if (!row) {
+    return null;
+  }
+
+  const task: TaskEntity = {
+    id: String(row.id),
+    status: String(row.status) as TaskEntity["status"],
+    type: String(row.type),
+    title: String(row.title),
+    createdAt: String(row.created_at),
+    updatedAt: String(row.updated_at),
+    archived: row.archived === 1 || row.archived === true
+  };
+
+  const archivedAt = readOptionalStringValue(row.archived_at);
+  if (archivedAt) {
+    task.archivedAt = archivedAt;
+  }
+  const priority = readOptionalStringValue(row.priority);
+  if (priority) {
+    task.priority = priority as TaskEntity["priority"];
+  }
+  const phase = readOptionalStringValue(row.phase);
+  if (phase) {
+    task.phase = phase;
+  }
+  const phaseKey = readOptionalStringValue(row.phase_key);
+  if (phaseKey) {
+    task.phaseKey = phaseKey;
+  }
+  const ownership = readOptionalStringValue(row.ownership);
+  if (ownership) {
+    task.ownership = ownership;
+  }
+  const approach = readOptionalStringValue(row.approach);
+  if (approach) {
+    task.approach = approach;
+  }
+  const dependsOn = parseOptionalJsonArray(row.depends_on_json);
+  if (dependsOn) {
+    task.dependsOn = dependsOn;
+  }
+  const unblocks = parseOptionalJsonArray(row.unblocks_json);
+  if (unblocks) {
+    task.unblocks = unblocks;
+  }
+  const technicalScope = parseOptionalJsonArray(row.technical_scope_json);
+  if (technicalScope) {
+    task.technicalScope = technicalScope;
+  }
+  const acceptanceCriteria = parseOptionalJsonArray(row.acceptance_criteria_json);
+  if (acceptanceCriteria) {
+    task.acceptanceCriteria = acceptanceCriteria;
+  }
+  const summary = readOptionalStringValue(row.summary);
+  if (summary) {
+    task.summary = summary;
+  }
+  const description = readOptionalStringValue(row.description);
+  if (description) {
+    task.description = description;
+  }
+  const risk = readOptionalStringValue(row.risk);
+  if (risk) {
+    task.risk = risk;
+  }
+  const metadata = parseOptionalJsonObject(row.metadata_json);
+  if (metadata) {
+    task.metadata = metadata;
+  }
+  const features = parseOptionalJsonArray(row.features_json);
+  if (features) {
+    task.features = features;
+  }
+  return task;
+}
+
+async function createSingleTaskStore(task: TaskEntity): Promise<TaskStore> {
+  const doc = {
+    schemaVersion: 1 as const,
+    tasks: [task],
+    transitionLog: [],
+    mutationLog: [],
+    lastUpdated: nowIso()
+  };
+  const store = new TaskStore({
+    pathLabel: `agent-execution-packet:${task.id}`,
+    loadDocument: async () => doc,
+    saveDocument: async () => undefined
+  });
+  await store.load();
+  return store;
 }
 
 export const teamExecutionModule: WorkflowModule = {
@@ -369,6 +516,81 @@ export const teamExecutionModule: WorkflowModule = {
         ok: true,
         code: "assignments-listed",
         message: `${assignments.length} assignment(s)`,
+        data
+      };
+    }
+
+    if (name === "agent-execution-packet") {
+      const assignmentId = readOptionalStringArg(args, "assignmentId") ?? "";
+      const workerId = readOptionalStringArg(args, "workerId");
+      if (!assignmentId) {
+        return {
+          ok: false,
+          code: "invalid-args",
+          message: "agent-execution-packet requires assignmentId"
+        };
+      }
+
+      const assignment = getAssignment(db, assignmentId);
+      if (!assignment) {
+        return {
+          ok: false,
+          code: "assignment-not-found",
+          message: `assignment '${assignmentId}' not found`
+        };
+      }
+
+      if (workerId && assignment.workerId !== workerId) {
+        return {
+          ok: false,
+          code: "assignment-authority-denied",
+          message: `assignment '${assignmentId}' is assigned to worker '${assignment.workerId}', not '${workerId}'`
+        };
+      }
+
+      const task = readRelationalTask(db, assignment.executionTaskId);
+      if (!task) {
+        return {
+          ok: false,
+          code: "task-not-found",
+          message: `execution task '${assignment.executionTaskId}' not found`
+        };
+      }
+
+      const boundaries = readAgentExecutionPacketBoundaries(assignment.metadata);
+      const store = await createSingleTaskStore(task);
+      const validationResult = buildRecommendValidation(ctx, planning, store, {
+        taskId: task.id,
+        touchedPaths: boundaries.ownedPaths
+      });
+      const recommendations =
+        validationResult.ok && validationResult.data && typeof validationResult.data === "object"
+          ? (((validationResult.data as Record<string, unknown>).recommendations ?? []) as Array<{
+              command: string;
+              rationale: string;
+              priority: number;
+              expectedEvidenceFields: {
+                validationCommands: Array<{ command: string; result: string }>;
+                checks: Array<{ name: string; conclusion: string }>;
+              };
+            }>)
+          : [];
+      const resolvedPolicy = resolveMaintainerDeliveryPolicy({
+        effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined,
+        task
+      });
+      const packet = buildAgentExecutionPacket({
+        assignment,
+        task,
+        policy: resolvedPolicy.resolvedPolicy,
+        validationRecommendations: recommendations
+      });
+      const data: Record<string, unknown> = { packet };
+      attachPlanningMeta(data, ctx, planning.sqliteDual.getPlanningGeneration());
+      return {
+        ok: true,
+        code: "agent-execution-packet",
+        message: `Execution packet for '${assignmentId}'`,
         data
       };
     }
