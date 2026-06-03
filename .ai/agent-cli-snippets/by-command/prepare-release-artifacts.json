@@ -1,0 +1,42 @@
+{
+  "ok": true,
+  "code": "run-args-schema",
+  "command": "prepare-release-artifacts",
+  "schema": {
+    "type": "object",
+    "additionalProperties": true,
+    "description": "Permissive fallback args schema for 'prepare-release-artifacts'. Use instructionPath for command-specific field guidance until a stricter schema is added."
+  },
+  "schemaSource": "manifest-permissive-fallback",
+  "sampleArgs": {},
+  "examples": [
+    {
+      "description": "Minimal argv example",
+      "argv": "workspace-kit run prepare-release-artifacts '{}'"
+    }
+  ],
+  "instructionPath": "src/modules/task-engine/instructions/prepare-release-artifacts.md",
+  "moduleId": "task-engine",
+  "description": "Preview or apply the deterministic release artifact update script and emit release-evidence refs.",
+  "policy": {
+    "sensitivity": "sensitive-with-dryrun",
+    "operationId": "task-engine.prepare-release-artifacts",
+    "jsonApprovalRequired": "when dryRun is false or omitted by command policy"
+  },
+  "planningGeneration": {
+    "cliPrelude": false,
+    "expectedPlanningGeneration": "not required by CLI prelude"
+  },
+  "idempotency": {
+    "clientMutationId": false
+  },
+  "responseTemplate": {
+    "defaultResponseTemplateId": "default"
+  },
+  "remediationContract": ".ai/runbooks/agent-task-engine-ergonomics.md",
+  "discovery": {
+    "listCommands": "pnpm exec wk run --list-commands",
+    "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
+  },
+  "invocationId": "8650799a-fae4-4fd1-8a2f-1bd868a3170e"
+}

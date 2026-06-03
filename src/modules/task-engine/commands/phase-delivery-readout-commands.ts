@@ -23,6 +23,7 @@ import { buildPhaseServiceSyncPreflight } from "../phase-service-sync-preflight.
 import { buildPhaseProjectionCountGuardAsync } from "../sync-backends/git-event-log-phase-projection-guard.js";
 import { wasWorkspacePhaseRolledOut } from "../dashboard/phase-delivery-status.js";
 import { buildPhaseReleaseOrchestrationState } from "../phase-release-orchestration-state-runtime.js";
+import { runPrepareReleaseArtifactsCommand } from "../prepare-release-artifacts-runtime.js";
 
 /**
  * Phase / release readout commands that need an open task store + SQLite dual reader.
@@ -327,6 +328,14 @@ export async function resolvePhaseDeliveryReadoutCommands(
       message: "Built release evidence manifest",
       data
     };
+  }
+
+  if (command.name === "prepare-release-artifacts") {
+    const result = await runPrepareReleaseArtifactsCommand(ctx, args as Record<string, unknown>);
+    if (result.ok && result.data) {
+      attachPolicyMeta(result.data, ctx, planning.sqliteDual.getPlanningGeneration());
+    }
+    return result;
   }
 
   return null;

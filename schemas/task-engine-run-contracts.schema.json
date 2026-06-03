@@ -99,6 +99,7 @@
         "phase-release-orchestration-state",
         "phase-status",
         "planning-state-migrate-baseline",
+        "prepare-release-artifacts",
         "propose-release-version",
         "propose-tasks-from-phase-notes",
         "queue-git-alignment",
@@ -365,6 +366,9 @@
           "$ref": "#/$defs/contractBase"
         },
         "phase-release-orchestration-state": {
+          "$ref": "#/$defs/contractBase"
+        },
+        "prepare-release-artifacts": {
           "$ref": "#/$defs/contractBase"
         },
         "derive-publish-artifacts": {

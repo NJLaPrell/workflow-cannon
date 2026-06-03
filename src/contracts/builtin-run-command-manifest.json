@@ -321,6 +321,15 @@
   },
   {
     "moduleId": "task-engine",
+    "name": "prepare-release-artifacts",
+    "file": "prepare-release-artifacts.md",
+    "description": "Preview or apply the deterministic release artifact update script and emit release-evidence refs.",
+    "policyOperationId": "task-engine.prepare-release-artifacts",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive-with-dryrun"
+  },
+  {
+    "moduleId": "task-engine",
     "name": "release-status",
     "file": "release-status.md",
     "description": "Read-only release/phase snapshot: git, npm dist-tags, GitHub release URL, and kit phase fields.",

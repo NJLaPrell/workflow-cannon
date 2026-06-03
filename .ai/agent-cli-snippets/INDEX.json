@@ -868,6 +868,11 @@
       "moduleId": "task-engine"
     },
     {
+      "name": "prepare-release-artifacts",
+      "path": ".ai/agent-cli-snippets/by-command/prepare-release-artifacts.json",
+      "moduleId": "task-engine"
+    },
+    {
       "name": "propose-release-version",
       "path": ".ai/agent-cli-snippets/by-command/propose-release-version.json",
       "moduleId": "task-engine"
