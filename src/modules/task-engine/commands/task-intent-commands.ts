@@ -19,7 +19,11 @@ import { TaskEngineError } from "../transitions.js";
 import type { TaskEntity } from "../types.js";
 import { readIdempotencyValue, readOptionalExpectedPlanningGeneration } from "../mutation-utils.js";
 import { readQueueNamespaceArg } from "../queue-namespace-args.js";
-import { recordTaskTransitionActivityBestEffort } from "../agent-activity-recorder.js";
+import {
+  clearAgentActivityBestEffort,
+  recordCommandBoundaryActivityBestEffort,
+  recordTaskTransitionActivityBestEffort
+} from "../agent-activity-recorder.js";
 
 export function readPlanString(args: Record<string, unknown>, field: string): string | undefined {
   const value = args[field];
@@ -60,6 +64,49 @@ function hasPriorTransitionForClientMutationId(store: TaskStore, clientMutationI
     clientMutationId !== undefined &&
     store.getTransitionLog().some((entry) => entry.clientMutationId === clientMutationId)
   );
+}
+
+function buildTransitionActivityBoundary(
+  commandName: string,
+  taskId: string,
+  action: string,
+  task?: TaskEntity
+): Parameters<typeof recordCommandBoundaryActivityBestEffort>[2] | null {
+  const phaseKey = task?.phaseKey ?? null;
+  if (action === "start" || action === "unblock" || action === "resume_work") {
+    return { command: commandName, kind: "working_task", taskId, phaseKey };
+  }
+  if (action === "block") {
+    return { command: commandName, kind: "blocked", taskId, phaseKey };
+  }
+  if (action === "complete") {
+    return {
+      command: commandName,
+      kind: "validating",
+      taskId,
+      phaseKey,
+      details: { validationLabel: `task ${taskId} completion` }
+    };
+  }
+  if (action === "await_policy_approval") {
+    return {
+      command: commandName,
+      kind: "awaiting_policy_approval",
+      taskId,
+      phaseKey,
+      details: { reviewItemId: taskId }
+    };
+  }
+  if (action === "await_review" || action === "await_external_decision") {
+    return {
+      command: commandName,
+      kind: "awaiting_human_gate",
+      taskId,
+      phaseKey,
+      details: { detail: `task ${taskId} ${action}` }
+    };
+  }
+  return null;
 }
 
 export async function runTaskIntentTransition(
@@ -107,7 +154,15 @@ export async function runTaskIntentTransition(
     ],
     hookBus.isEnabled() ? hookBus : undefined
   );
+  let activityLease: { activityId: string; agentId: string; sessionId: string } | null = null;
   try {
+    const boundary = buildTransitionActivityBoundary(
+      commandName,
+      taskId,
+      action,
+      planning.taskStore.getTask(taskId)
+    );
+    activityLease = boundary ? recordCommandBoundaryActivityBestEffort(ctx, planning, boundary) : null;
     const result = await service.runTransition({
       taskId,
       action,
@@ -143,6 +198,14 @@ export async function runTaskIntentTransition(
       return { ok: false, code: err.code, message: err.message };
     }
     throw err;
+  } finally {
+    if (activityLease) {
+      clearAgentActivityBestEffort(ctx, planning, {
+        activityId: activityLease.activityId,
+        agentId: activityLease.agentId,
+        sessionId: activityLease.sessionId
+      });
+    }
   }
 }
 
@@ -233,7 +296,14 @@ export async function runClaimNextTaskIntent(
     ],
     hookBus.isEnabled() ? hookBus : undefined
   );
+  let activityLease: { activityId: string; agentId: string; sessionId: string } | null = null;
   try {
+    activityLease = recordCommandBoundaryActivityBestEffort(ctx, planning, {
+      command: "claim-next-task",
+      kind: "working_task",
+      taskId: suggested.id,
+      phaseKey: current?.phaseKey ?? null
+    });
     const result = await service.runTransition({
       taskId: suggested.id,
       action: "start",
@@ -270,5 +340,13 @@ export async function runClaimNextTaskIntent(
       return { ok: false, code: err.code, message: err.message };
     }
     throw err;
+  } finally {
+    if (activityLease) {
+      clearAgentActivityBestEffort(ctx, planning, {
+        activityId: activityLease.activityId,
+        agentId: activityLease.agentId,
+        sessionId: activityLease.sessionId
+      });
+    }
   }
 }

@@ -1,8 +1,14 @@
 import type { DashboardSummaryData } from "../../../contracts/dashboard-summary-run.js";
 
-export type DashboardSummaryProjection = "full" | "overview" | "queue" | "status";
+export type DashboardSummaryProjection = "full" | "overview" | "queue" | "status" | "agentActivity";
 
-const PROJECTIONS: readonly DashboardSummaryProjection[] = ["full", "overview", "queue", "status"];
+const PROJECTIONS: readonly DashboardSummaryProjection[] = [
+  "full",
+  "overview",
+  "queue",
+  "status",
+  "agentActivity"
+];
 
 export function parseDashboardSummaryProjection(args?: Record<string, unknown>): DashboardSummaryProjection {
   const raw = args?.projection;
@@ -22,6 +28,12 @@ export function dashboardSummaryNeedsOverviewRollups(projection: DashboardSummar
 
 export function dashboardSummaryNeedsStatusRollups(projection: DashboardSummaryProjection): boolean {
   return projection === "full" || projection === "status";
+}
+
+export function dashboardSummaryNeedsAgentActivityRollups(
+  projection: DashboardSummaryProjection
+): boolean {
+  return projection === "full" || projection === "agentActivity";
 }
 
 export function dashboardSummaryNeedsPastPhaseNotes(projection: DashboardSummaryProjection): boolean {
@@ -141,6 +153,17 @@ export function finalizeDashboardSummaryProjection(
       phaseKeysWithActiveQueueWork: data.phaseKeysWithActiveQueueWork,
       pastPhaseNotes: []
     };
+  }
+
+  if (projection === "agentActivity") {
+    return {
+      schemaVersion: data.schemaVersion,
+      planningGeneration: data.planningGeneration,
+      planningGenerationPolicy: data.planningGenerationPolicy,
+      taskStoreLastUpdated: data.taskStoreLastUpdated,
+      dashboardProjection: projection,
+      agentActivitySummary: data.agentActivitySummary,
+    } as DashboardSummaryData;
   }
 
   if (projection === "queue") {

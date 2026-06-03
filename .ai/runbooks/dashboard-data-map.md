@@ -29,6 +29,7 @@ Each row documents: data point, source command, builder/read path, UI section, f
 | Current phase delivery | overview projection | `buildDashboardCurrentPhaseDelivery` | overview, phase | phase | 10s | `task-queue`, `phase-journal`, `overview`, `workspace-wide` | no | last good slice |
 | Plan artifacts | overview/status projection | `listPlanArtifactSummaries` | overview, status | overview, status | 5s / 30s | `overview`, `status`, `workspace-wide` | status tab lazy | last good slice |
 | Agent guidance / RPG party | overview projection | `buildDashboardAgentStatus` / agent guidance builders | overview, status | agent | 10s (poll 2s) | `task-queue`, `config`, `workspace-wide` | no | last good slice |
+| Agent activity summary | agentActivity projection | `buildDashboardAgentActivitySummary` | overview | agentActivity | 10s (poll 2s) | `task-queue`, `workspace-wide` | no | last good slice |
 | Task-state projection | status projection | `buildDashboardTaskStateProjectionSummary` | status, overview | status, overview | 30s / 5s | `status`, `workspace-wide` | status tab lazy | last good slice |
 | System status (doctor/modules/phase) | `dashboard-summary` `{ projection: "status" }` | `buildDashboardSystemStatus` | status | status | 30s | `status`, `config`, `cae`, `workspace-wide` | on-tab-activate | last good slice |
 | Team execution | status projection (ops) | `summarizeTeamAssignmentsForDashboard` (SQLite `kit_team_assignments`) | status | team | 10s | `task-queue`, `workspace-wide` | on-tab-activate | last good slice |

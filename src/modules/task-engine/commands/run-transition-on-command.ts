@@ -23,7 +23,11 @@ import { TaskStore } from "../persistence/store.js";
 import { planningGenPolicyGate } from "../planning-generation-gate.js";
 import { TransitionService } from "../service.js";
 import { TaskEngineError } from "../transitions.js";
-import { recordTaskTransitionActivityBestEffort } from "../agent-activity-recorder.js";
+import {
+  clearAgentActivityBestEffort,
+  recordCommandBoundaryActivityBestEffort,
+  recordTaskTransitionActivityBestEffort
+} from "../agent-activity-recorder.js";
 import { waitForWorkspaceEditLease } from "../workspace-edit-lease-commands-runtime.js";
 import { isGitTaskStateCanonicalAuthority } from "../persistence/task-state-canonical-authority.js";
 import { commitCanonicalTaskStateEvents } from "../persistence/task-state-canonical-commit.js";
@@ -76,7 +80,53 @@ export async function runTransitionOnCommand(
     return pgTransition.block;
   }
 
+  const transitionTask = store.getTask(taskId);
+  let activityLease: { activityId: string; agentId: string; sessionId: string } | null = null;
+
   try {
+    const activityBoundary =
+      action === "start" || action === "unblock" || action === "resume_work"
+        ? {
+            kind: "working_task" as const,
+            taskId,
+            command: "run-transition",
+            phaseKey: transitionTask?.phaseKey ?? undefined
+          }
+        : action === "block"
+          ? {
+              kind: "blocked" as const,
+              taskId,
+              command: "run-transition",
+              phaseKey: transitionTask?.phaseKey ?? undefined
+            }
+          : action === "complete"
+            ? {
+                kind: "validating" as const,
+                taskId,
+                command: "run-transition",
+                phaseKey: transitionTask?.phaseKey ?? undefined,
+                details: { validationLabel: `task ${taskId} completion` }
+              }
+            : action === "await_policy_approval"
+              ? {
+                  kind: "awaiting_policy_approval" as const,
+                  taskId,
+                  command: "run-transition",
+                  phaseKey: transitionTask?.phaseKey ?? undefined,
+                  details: { reviewItemId: taskId }
+                }
+              : action === "await_review" || action === "await_external_decision"
+                ? {
+                    kind: "awaiting_human_gate" as const,
+                    taskId,
+                    command: "run-transition",
+                    phaseKey: transitionTask?.phaseKey ?? undefined,
+                    details: { detail: `task ${taskId} ${action}` }
+                  }
+                : null;
+    activityLease = activityBoundary
+      ? recordCommandBoundaryActivityBestEffort(ctx, planning, activityBoundary)
+      : null;
     const hookBus = createKitLifecycleHookBus(
       ctx.workspacePath,
       (ctx.effectiveConfig ?? {}) as Record<string, unknown>
@@ -104,10 +154,10 @@ export async function runTransitionOnCommand(
     );
 
     const db = planning.sqliteDual.getDatabase();
-    const transitionTask = store.getTask(taskId);
+    const persistedTask = transitionTask;
     const phaseResolution = resolveRunTransitionPhaseNotes(
       args as Record<string, unknown>,
-      transitionTask,
+      persistedTask,
       readKitUserVersion(db),
       (tid) => store.getTask(tid)
     );
@@ -157,7 +207,7 @@ export async function runTransitionOnCommand(
           moduleId: "task-engine",
           actorId: actor,
           clientMutationId,
-          phaseKey: transitionTask?.phaseKey ?? undefined
+          phaseKey: persistedTask?.phaseKey ?? undefined
         }
       });
       const canonical = await commitCanonicalTaskStateEvents({
@@ -217,5 +267,14 @@ export async function runTransitionOnCommand(
       code: "invalid-transition",
       message: (err as Error).message
     };
+  } finally {
+    // Best-effort auto lease only; manual `set-agent-activity` remains authoritative when present.
+    if (activityLease) {
+      clearAgentActivityBestEffort(ctx, planning, {
+        activityId: activityLease.activityId,
+        agentId: activityLease.agentId,
+        sessionId: activityLease.sessionId
+      });
+    }
   }
 }

@@ -1,6 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mergeSlicePayloadIntoSummary } from "../dist/views/dashboard/dashboard-store-bridge.js";
+import {
+  mergeSlicePayloadIntoSummary,
+  sliceNamesForDashboardSummaryProjection
+} from "../dist/views/dashboard/dashboard-store-bridge.js";
 import { lookupDashboardSlice } from "../dist/views/dashboard/dashboard-slice-registry.js";
 
 test("overview slice merge does not clobber queue rollups hydrated from queue slice", () => {
@@ -36,4 +39,8 @@ test("overview slice merge does not clobber queue rollups hydrated from queue sl
   assert.equal(summary.workspaceStatus.currentKitPhase, "126");
   assert.equal(summary.readyQueueCount, 83, "queue-owned readyQueueCount must survive overview poll");
   assert.equal(summary.readyExecutionSummary.count, 11, "queue-owned rollups must survive overview poll");
+});
+
+test("agentActivity dashboard-summary projection maps to the agentActivity slice only", () => {
+  assert.deepEqual(sliceNamesForDashboardSummaryProjection("agentActivity"), ["agentActivity"]);
 });

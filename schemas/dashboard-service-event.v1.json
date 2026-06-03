@@ -6,6 +6,7 @@
   "oneOf": [
     { "$ref": "#/$defs/dashboardSnapshotUpdated" },
     { "$ref": "#/$defs/dashboardSliceUpdated" },
+    { "$ref": "#/$defs/agentActivityUpdated" },
     { "$ref": "#/$defs/dashboardServiceError" },
     { "$ref": "#/$defs/taskSyncStatusChanged" }
   ],
@@ -32,6 +33,16 @@
         "type": { "const": "dashboard.slice.updated" },
         "generation": { "type": "integer", "minimum": 0 },
         "slice": { "type": "string", "minLength": 1 },
+        "updatedAt": { "type": "string", "minLength": 1 }
+      }
+    },
+    "agentActivityUpdated": {
+      "type": "object",
+      "required": ["type", "generation", "updatedAt"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "agentActivity.updated" },
+        "generation": { "type": "integer", "minimum": 0 },
         "updatedAt": { "type": "string", "minLength": 1 }
       }
     },

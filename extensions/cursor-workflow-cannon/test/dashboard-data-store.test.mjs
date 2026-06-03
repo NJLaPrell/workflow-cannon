@@ -86,4 +86,5 @@ test("dashboardSliceNamesForMutation maps task-queue to critical slices", () => 
   assert.ok(names.includes("queue"));
   assert.ok(names.includes("phase"));
   assert.ok(names.includes("agent"));
+  assert.ok(names.includes("agentActivity"));
 });

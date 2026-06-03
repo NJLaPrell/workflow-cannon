@@ -101,7 +101,7 @@ The Cursor Dashboard drawer sends JSON **`policyApproval`** on gated **`wk run`*
 
 `dashboard-summary.data.agentStatus` is a status hint for operators. `source: "derived"` comes from existing task/dashboard facts and is enough for `Awaiting Instruction`, active planning, blocked work, in-progress work, delegation, or suggested ready work. `source: "live_activity"` comes from a fresh expiring lease and is for intent that cannot be inferred, such as PR review, approval queue review, validation, release, policy approval, or human gates.
 
-Record high-signal live activity with **`pnpm exec wk run set-agent-activity '{"kind":"reviewing_pr","prNumber":192}'`** or structured fields like **`version`**, **`phaseKey`**, **`taskId`**, **`details.prUrl`**, **`details.reviewItemId`**, and **`details.validationCommand`**. Clear it with **`clear-agent-activity`** when the flow finishes; otherwise expiry returns the dashboard to derived status. Do not treat live activity as transition evidence, and do not add GitHub/network lookups to `dashboard-summary`.
+Record high-signal live activity with **`pnpm exec wk run set-agent-activity '{"kind":"reviewing_pr","prNumber":192}'`** or structured fields like **`version`**, **`phaseKey`**, **`taskId`**, **`details.prUrl`**, **`details.reviewItemId`**, **`details.validationCommand`**, and **`details.detail`**. Use `set-agent-activity` to mark a boundary change, `heartbeat-agent-activity-lease` to refresh the same boundary, and `clear-agent-activity` when the flow finishes; otherwise expiry returns the dashboard to derived status. Do not treat live activity as transition evidence, and do not add GitHub/network lookups to `dashboard-summary`.
 
 ## AgentDefinition v1 bridge
 

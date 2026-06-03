@@ -8,6 +8,21 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [0.99.26] - 2026-06-03
+
+Patch — **Phase 129 Agent Activity Board** (multi-agent live activity projection, renderer, polling, freshness, details, and regression fixtures).
+
+### Added
+
+- Multi-lease Agent Activity projection with task title/status/phase enrichment, custom agent metadata parsing, and contract coverage.
+- Cursor dashboard Agent Activity Board with status chips, attention sorting, freshness/stale labels, expandable row details, and deterministic render fixtures.
+- Activity-slice refresh path, polling integration, command-boundary activity hooks, and event-stream compatibility for future service updates.
+
+### Fixed
+
+- Dashboard agent activity rendering excludes expired rows from active/attention sections while preserving stale rows as visible attention signals.
+- Agent-facing activity guidance documents useful structured details keys and TTL/heartbeat expectations.
+
 ## [0.99.25] - 2026-06-02
 
 Patch — **Phase 128 Complete & Release** (agent orchestration docs/prompts/tests, dashboard activity summary wiring, and canonical task-state schema repair for planning events).

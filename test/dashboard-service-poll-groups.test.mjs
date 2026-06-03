@@ -20,8 +20,9 @@ describe("dashboard service poll groups", () => {
       "overview",
       "phase"
     ]);
+    assert.deepEqual(dashboardServiceSliceNamesForPollGroup("live").sort(), ["agentActivity"]);
     assert.deepEqual(dashboardServiceSliceNamesForPollGroup("queue").sort(), ["ideas", "queue"]);
     assert.ok(dashboardServiceSliceNamesForPollGroup("manual").includes("cae"));
-    assert.equal(listDashboardServicePollGroups().length, 4);
+    assert.equal(listDashboardServicePollGroups().length, 5);
   });
 });

@@ -669,7 +669,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
 
   private ingestDashboardSummaryIntoStore(
     data: Record<string, unknown>,
-    projection: "full" | "overview" | "queue" | "status"
+    projection: "full" | "overview" | "queue" | "status" | "agentActivity"
   ): void {
     const planningGeneration =
       typeof data.planningGeneration === "number" ? data.planningGeneration : null;
@@ -5143,7 +5143,16 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     .dash-agent-status-banner p { margin: 0; line-height: 1.35; }
     .dash-agent-status-label { overflow-wrap: anywhere; }
     .dash-agent-row-list { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
-    .dash-agent-row { display: grid; grid-template-columns: auto minmax(92px, 1.2fr) minmax(92px, 1fr) minmax(70px, auto); gap: 6px; align-items: center; padding: 4px 5px; border-radius: 4px; background: var(--vscode-textCodeBlock-background); }
+    .dash-agent-row { padding: 4px 5px; border-radius: 4px; background: var(--vscode-textCodeBlock-background); }
+    .dash-agent-row:not(details), .dash-agent-row-summary { display: grid; grid-template-columns: auto minmax(92px, 1.2fr) minmax(92px, 1fr) minmax(70px, auto); gap: 6px; align-items: center; }
+    .dash-agent-row-summary { cursor: pointer; list-style: none; }
+    .dash-agent-row-summary::-webkit-details-marker { display: none; }
+    .dash-agent-row[open] .dash-agent-row-summary { padding-bottom: 4px; border-bottom: 1px solid var(--vscode-widget-border, rgba(127,127,127,.25)); }
+    .dash-agent-row-details { padding: 5px 0 1px 16px; }
+    .dash-agent-row-expanded { display: grid; grid-template-columns: repeat(auto-fit, minmax(145px, 1fr)); gap: 4px 8px; margin: 0; font-size: 11px; }
+    .dash-agent-row-expanded div { min-width: 0; }
+    .dash-agent-row-expanded dt { color: var(--vscode-descriptionForeground); font-size: 10px; line-height: 1.25; }
+    .dash-agent-row-expanded dd { margin: 0; overflow-wrap: anywhere; line-height: 1.25; }
     .dash-agent-row--subagent { margin-left: 14px; border-left: 2px solid var(--vscode-textLink-foreground); }
     .dash-agent-row-icon { font-size: 10px; opacity: 0.75; }
     .dash-agent-row-main { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
@@ -5347,8 +5356,9 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     .wc-dashboard-tab-shell > .dash-agent-status-banner p { margin: 0; }
     .wc-dashboard-tab-shell > .dash-agent-status-banner .dash-agent-row-list { margin-top: 5px; }
     @media (max-width: 520px) {
-      .dash-agent-row { grid-template-columns: auto minmax(0, 1fr); }
+      .dash-agent-row:not(details), .dash-agent-row-summary { grid-template-columns: auto minmax(0, 1fr); }
       .dash-agent-row-detail, .dash-agent-row-meta { grid-column: 2; justify-content: flex-start; }
+      .dash-agent-row-details { padding-left: 14px; }
     }
     .wc-tab-bar {
       display: flex;

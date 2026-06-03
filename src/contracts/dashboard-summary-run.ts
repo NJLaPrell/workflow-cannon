@@ -401,6 +401,7 @@ export type DashboardAgentActivityRow = {
     title: string | null;
     command: string | null;
     phaseKey: string | null;
+    taskStatus?: string | null;
     assignmentId: string | null;
     sessionId: string | null;
     currentStep: string | null;
@@ -424,6 +425,10 @@ export type DashboardAgentActivityRow = {
   attention: {
     state: "none" | "blocked" | "needs_human" | "needs_policy" | "stale" | "failed" | "unavailable";
     message: string | null;
+  };
+  metadata?: {
+    agentDisplayName?: string;
+    customAgentName?: string;
   };
 };
 
@@ -693,4 +698,4 @@ export type DashboardSummaryCommandSuccess = {
 };
 
 /** Section slice selector for lazy dashboard hydration (T100396). Default CLI path is `full`. */
-export type DashboardSummaryProjection = "full" | "overview" | "queue" | "status";
+export type DashboardSummaryProjection = "full" | "overview" | "queue" | "status" | "agentActivity";

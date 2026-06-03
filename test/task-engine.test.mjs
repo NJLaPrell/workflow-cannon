@@ -36,7 +36,6 @@ import {
   ideasModule
 } from "../dist/index.js";
 import { setAgentActivityLease } from "../dist/modules/task-engine/agent-activity-store.js";
-import { buildAgentActivityLabel } from "../dist/modules/task-engine/agent-activity-recorder.js";
 import { persistBuildPlanSession } from "../dist/core/planning/build-plan-session-file.js";
 
 // ---------------------------------------------------------------------------
@@ -2256,35 +2255,6 @@ test("taskEngineModule dashboard-summary agentStatus uses fresh live activity ov
   assert.equal(result.data.agentStatus.prNumber, 223);
 });
 
-test("buildAgentActivityLabel maps PR, release, approval, validation, and malformed metadata", () => {
-  assert.equal(
-    buildAgentActivityLabel({ kind: "reviewing_pr", prNumber: 192 }),
-    "Reviewing Pull Request 192"
-  );
-  assert.equal(
-    buildAgentActivityLabel({
-      kind: "reviewing_pr",
-      details: { prUrl: "https://github.com/acme/repo/pull/193" }
-    }),
-    "Reviewing Pull Request 193"
-  );
-  assert.equal(buildAgentActivityLabel({ kind: "reviewing_pr", details: { prNumber: "nope" } }), "Reviewing Pull Request");
-  assert.equal(buildAgentActivityLabel({ kind: "releasing", version: "0.9.1" }), "Releasing Build 0.9.1");
-  assert.equal(buildAgentActivityLabel({ kind: "releasing", phaseKey: "81" }), "Releasing Phase 81");
-  assert.equal(
-    buildAgentActivityLabel({ kind: "reviewing_item", details: { reviewItemId: "review-item:T100060" } }),
-    "Reviewing Item review-item:T100060"
-  );
-  assert.equal(
-    buildAgentActivityLabel({ kind: "awaiting_policy_approval", taskId: "T100060" }),
-    "Awaiting Policy Approval for T100060"
-  );
-  assert.equal(
-    buildAgentActivityLabel({ kind: "validating", details: { validationCommand: "pnpm run check" } }),
-    "Validating pnpm run check"
-  );
-});
-
 test("taskEngineModule set-agent-activity generates mapped labels from structured details", async () => {
   const workspace = await tmpDir();
   await seedSqliteStore(workspace, () => {});
@@ -2606,6 +2576,116 @@ test("taskEngineModule dashboard-summary overview projection omits queue rollups
   assert.equal(overview.data.pastPhaseNotes.length, 0);
   assert.equal(overview.data.phaseJournalStats.available, false);
   assert.ok(JSON.stringify(overview.data).length < JSON.stringify(full.data).length);
+});
+
+test("taskEngineModule dashboard-summary agentActivity projection refreshes live activity without queue or status rollups", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(makeTask({ id: "T902", status: "ready", priority: "P1", phaseKey: "81" }));
+  });
+
+  const ctx = sqliteTaskEngineCtx(workspace);
+  const db = new Database(path.join(workspace, ".workspace-kit", "tasks", "workspace-kit.db"));
+  try {
+    prepareKitSqliteDatabase(db);
+    setAgentActivityLease(db, {
+      activityId: "copilot:activity",
+      agentId: "copilot",
+      sessionId: "activity",
+      kind: "working_task",
+      label: "Working on Task T902",
+      now: "2026-06-02T18:00:00.000Z",
+      expiresAt: "2999-01-01T00:00:00.000Z"
+    });
+  } finally {
+    db.close();
+  }
+
+  const result = await taskEngineModule.onCommand(
+    { name: "dashboard-summary", args: { projection: "agentActivity" } },
+    ctx
+  );
+  assert.equal(result.ok, true);
+  assert.equal(result.data.dashboardProjection, "agentActivity");
+  assert.ok(result.data.agentActivitySummary);
+  assert.equal(result.data.agentActivitySummary.schemaVersion, 1);
+  assert.equal(result.data.agentActivitySummary.source, "live_activity");
+  assert.equal(result.data.agentActivitySummary.main?.source, "live_activity");
+  assert.equal(result.data.agentActivitySummary.main?.status, "working_task");
+  assert.equal(result.data.agentActivitySummary.main?.work.taskId, null);
+  assert.equal(result.data.agentActivitySummary.sourceMap.liveActivityCount, 1);
+  assert.equal("readyQueueCount" in result.data, false);
+  assert.equal("blockedSummary" in result.data, false);
+  assert.equal("systemStatus" in result.data, false);
+  assert.equal("agentStatus" in result.data, false);
+});
+
+test("taskEngineModule dashboard-summary agentActivity projection includes active leases while keeping single agentStatus", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(makeTask({ id: "T903", status: "ready", priority: "P1", phaseKey: "81", title: "Current task" }));
+    store.addTask(makeTask({ id: "T904", status: "ready", priority: "P1", phaseKey: "81", title: "Second task" }));
+  });
+
+  const ctx = sqliteTaskEngineCtx(workspace);
+  const now = new Date().toISOString();
+  const db = new Database(path.join(workspace, ".workspace-kit", "tasks", "workspace-kit.db"));
+  try {
+    prepareKitSqliteDatabase(db);
+    const taskSeededAt = "2026-06-02T18:00:00.000Z";
+    const seedTaskRow = db.prepare(
+      "INSERT OR IGNORE INTO task_engine_tasks (id, status, type, title, created_at, updated_at, archived, depends_on_json) VALUES (?, 'ready', 'workspace-kit', ?, ?, ?, 0, '[]')"
+    );
+    seedTaskRow.run("T903", "Current task", taskSeededAt, taskSeededAt);
+    seedTaskRow.run("T904", "Second task", taskSeededAt, taskSeededAt);
+    setAgentActivityLease(db, {
+      activityId: "copilot:current",
+      agentId: "copilot",
+      sessionId: "current",
+      kind: "working_task",
+      label: "Working on Current task",
+      taskId: "T903",
+      now,
+      expiresAt: "2999-01-01T00:00:00.000Z"
+    });
+    setAgentActivityLease(db, {
+      activityId: "copilot:second",
+      agentId: "copilot",
+      sessionId: "second",
+      kind: "working_task",
+      label: "Working on Second task",
+      taskId: "T904",
+      now,
+      expiresAt: "2999-01-01T00:00:00.000Z"
+    });
+    setAgentActivityLease(db, {
+      activityId: "copilot:expired",
+      agentId: "copilot",
+      sessionId: "expired",
+      kind: "working_task",
+      label: "Expired activity",
+      taskId: "T904",
+      now,
+      expiresAt: "2000-01-01T00:00:00.000Z"
+    });
+  } finally {
+    db.close();
+  }
+
+  const result = await taskEngineModule.onCommand({ name: "dashboard-summary", args: {} }, ctx);
+  assert.equal(result.ok, true);
+  assert.ok(result.data.agentStatus);
+  assert.equal(result.data.agentStatus.source, "live_activity");
+  assert.ok(result.data.agentActivitySummary);
+  assert.equal(typeof result.data.agentActivitySummary.generatedAt, "string");
+  assert.equal(result.data.agentActivitySummary.activeCount, 2);
+  assert.equal(result.data.agentActivitySummary.active.length, 2);
+  assert.equal(result.data.agentActivitySummary.sourceMap.liveActivityCount, 2);
+  assert.equal(
+    result.data.agentActivitySummary.active.some((row) => row.work.title === "Expired activity"),
+    false
+  );
+  assert.equal(result.data.agentActivitySummary.source, "live_activity");
 });
 
 test("taskEngineModule dashboard-summary splits ready improvements vs execution", async () => {
