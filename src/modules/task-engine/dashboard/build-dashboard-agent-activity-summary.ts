@@ -23,6 +23,10 @@ type RowSource = DashboardAgentActivityRow["source"];
 
 type RowCandidate = DashboardAgentActivityRow & {
   sourceRank: number;
+  mergeKey: string;
+  freshnessRank: number;
+  attentionRank: number;
+  sourceUpdatedAtMs: number;
 };
 
 const SOURCE_RANK: Record<RowSource, number> = {
@@ -32,6 +36,13 @@ const SOURCE_RANK: Record<RowSource, number> = {
   derived: 3,
   future_runtime: 4
 };
+
+const DISPLAY_NAME_PRIORITY = {
+  live: 0,
+  task: 1,
+  label: 2,
+  agent: 3
+} as const;
 
 function cleanText(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
@@ -43,6 +54,10 @@ function titleCase(value: string): string {
     .filter(Boolean)
     .map((part) => part.slice(0, 1).toUpperCase() + part.slice(1).toLowerCase())
     .join(" ");
+}
+
+function isoMillis(value: string | null): number {
+  return value ? Date.parse(value) : Number.NaN;
 }
 
 function taskMap(tasks: TaskEntity[]): Map<string, TaskEntity> {
@@ -57,139 +72,39 @@ function taskTitle(taskId: string | null, byId: Map<string, TaskEntity>): string
   return task ? task.title : null;
 }
 
+function readDetailText(details: Record<string, unknown> | null | undefined, keys: string[]): string {
+  if (!details || typeof details !== "object") {
+    return "";
+  }
+  for (const key of keys) {
+    const value = cleanText(details[key]);
+    if (value) {
+      return value;
+    }
+  }
+  return "";
+}
+
 function freshnessState(lifecycle: AgentActivityLifecycle | "unknown"): DashboardAgentActivityRow["freshness"]["state"] {
   return lifecycle;
 }
 
-function attentionFromStatus(
-  status: DashboardAgentActivityRow["status"],
-  freshness: DashboardAgentActivityRow["freshness"]["state"]
-): DashboardAgentActivityRow["attention"] {
-  if (freshness === "stale") {
-    return { state: "stale", message: "Lease is stale but still visible" };
-  }
-  if (freshness === "expired") {
-    return { state: "stale", message: "Lease has expired" };
-  }
-  switch (status) {
-    case "blocked":
-      return { state: "blocked", message: "Blocking work" };
-    case "awaiting_policy_approval":
-      return { state: "needs_policy", message: "Awaiting policy approval" };
-    case "awaiting_human_gate":
-    case "reviewing_item":
-      return { state: "needs_human", message: "Awaiting human review" };
-    case "unavailable":
-      return { state: "unavailable", message: "Agent activity unavailable" };
-    default:
-      return { state: "none", message: null };
+function freshnessRank(value: DashboardAgentActivityRow["freshness"]["state"]): number {
+  switch (value) {
+    case "fresh":
+      return 0;
+    case "aging":
+      return 1;
+    case "unknown":
+      return 2;
+    case "stale":
+      return 3;
+    case "expired":
+      return 4;
   }
 }
 
-function roleFromAgentId(agentId: string | null, kind: DashboardAgentActivityRow["status"]): DashboardAgentActivityRow["role"] {
-  const value = cleanText(agentId).toLowerCase();
-  if (value.includes("orchestrator") || value.includes("supervisor")) {
-    return "orchestrator";
-  }
-  if (value.includes("worker") || kind === "working_task" || kind === "delegating_task") {
-    return "task_worker";
-  }
-  return "unknown";
-}
-
-function baseRow(candidate: Omit<RowCandidate, "sourceRank">, rank: RowSource): RowCandidate {
-  return { ...candidate, sourceRank: SOURCE_RANK[rank] };
-}
-
-function mergeRow(existing: RowCandidate | undefined, candidate: RowCandidate): RowCandidate {
-  if (!existing) {
-    return candidate;
-  }
-  const winner = candidate.sourceRank <= existing.sourceRank ? candidate : existing;
-  const loser = candidate.sourceRank <= existing.sourceRank ? existing : candidate;
-  return {
-    ...winner,
-    displayName: cleanText(winner.displayName) || loser.displayName,
-    statusLabel: cleanText(winner.statusLabel) || loser.statusLabel,
-    work: {
-      taskId: winner.work.taskId ?? loser.work.taskId,
-      title: winner.work.title ?? loser.work.title,
-      command: winner.work.command ?? loser.work.command,
-      phaseKey: winner.work.phaseKey ?? loser.work.phaseKey,
-      assignmentId: winner.work.assignmentId ?? loser.work.assignmentId,
-      sessionId: winner.work.sessionId ?? loser.work.sessionId,
-      currentStep: winner.work.currentStep ?? loser.work.currentStep
-    },
-    refs: {
-      activityId: winner.refs.activityId ?? loser.refs.activityId,
-      agentId: winner.refs.agentId ?? loser.refs.agentId,
-      sessionId: winner.refs.sessionId ?? loser.refs.sessionId,
-      assignmentId: winner.refs.assignmentId ?? loser.refs.assignmentId,
-      agentDefinitionId: winner.refs.agentDefinitionId ?? loser.refs.agentDefinitionId,
-      subagentDefinitionId: winner.refs.subagentDefinitionId ?? loser.refs.subagentDefinitionId,
-      taskId: winner.refs.taskId ?? loser.refs.taskId,
-      prNumber: winner.refs.prNumber ?? loser.refs.prNumber
-    },
-    freshness: winner.sourceRank <= existing.sourceRank ? winner.freshness : existing.freshness,
-    attention: winner.sourceRank <= existing.sourceRank ? winner.attention : existing.attention
-  };
-}
-
-function sortRows(rows: RowCandidate[]): DashboardAgentActivityRow[] {
-  return rows
-    .sort((a, b) => {
-      const freshnessRank = (value: DashboardAgentActivityRow["freshness"]["state"]): number => {
-        switch (value) {
-          case "fresh":
-            return 0;
-          case "aging":
-            return 1;
-          case "unknown":
-            return 2;
-          case "stale":
-            return 3;
-          case "expired":
-            return 4;
-        }
-      };
-      const attentionRank = (value: DashboardAgentActivityRow["attention"]["state"]): number => {
-        switch (value) {
-          case "blocked":
-            return 0;
-          case "needs_policy":
-            return 1;
-          case "needs_human":
-            return 2;
-          case "stale":
-            return 3;
-          case "failed":
-            return 4;
-          case "unavailable":
-            return 5;
-          case "none":
-          default:
-            return 6;
-        }
-      };
-      const freshnessDelta = freshnessRank(a.freshness.state) - freshnessRank(b.freshness.state);
-      if (freshnessDelta !== 0) {
-        return freshnessDelta;
-      }
-      const attentionDelta = attentionRank(a.attention.state) - attentionRank(b.attention.state);
-      if (attentionDelta !== 0) {
-        return attentionDelta;
-      }
-      const updatedA = Date.parse(a.freshness.updatedAt ?? "");
-      const updatedB = Date.parse(b.freshness.updatedAt ?? "");
-      if (Number.isFinite(updatedA) && Number.isFinite(updatedB) && updatedA !== updatedB) {
-        return updatedB - updatedA;
-      }
-      return a.rowId.localeCompare(b.rowId);
-    })
-    .map(({ sourceRank, ...row }) => row);
-}
-
-function attentionSeverityRank(value: DashboardAgentActivityRow["attention"]["state"]): number {
+function attentionRank(value: DashboardAgentActivityRow["attention"]["state"]): number {
   switch (value) {
     case "blocked":
       return 0;
@@ -209,27 +124,284 @@ function attentionSeverityRank(value: DashboardAgentActivityRow["attention"]["st
   }
 }
 
+function roleRank(value: DashboardAgentActivityRow["role"]): number {
+  switch (value) {
+    case "orchestrator":
+      return 0;
+    case "task_worker":
+      return 1;
+    case "subagent":
+      return 2;
+    case "unknown":
+    default:
+      return 3;
+  }
+}
+
+function displayNameRank(value: string, source: DashboardAgentActivityRow["source"]): number {
+  if (source === "live_activity" && value) {
+    return DISPLAY_NAME_PRIORITY.live;
+  }
+  if (source === "team_execution" && value) {
+    return DISPLAY_NAME_PRIORITY.task;
+  }
+  if (source === "subagent_registry" && value) {
+    return DISPLAY_NAME_PRIORITY.label;
+  }
+  return value ? DISPLAY_NAME_PRIORITY.agent : DISPLAY_NAME_PRIORITY.agent;
+}
+
+function displayNameBest(existing: RowCandidate, candidate: RowCandidate): RowCandidate {
+  const existingRank = displayNameRank(existing.displayName, existing.source);
+  const candidateRank = displayNameRank(candidate.displayName, candidate.source);
+  if (candidateRank < existingRank) {
+    return candidate;
+  }
+  if (candidateRank > existingRank) {
+    return existing;
+  }
+  if (candidate.sourceRank < existing.sourceRank) {
+    return candidate;
+  }
+  if (candidate.sourceRank > existing.sourceRank) {
+    return existing;
+  }
+  return candidate.sourceUpdatedAtMs > existing.sourceUpdatedAtMs ? candidate : existing;
+}
+
+function roleBest(existing: RowCandidate, candidate: RowCandidate): RowCandidate {
+  if (roleRank(candidate.role) < roleRank(existing.role)) {
+    return candidate;
+  }
+  if (roleRank(candidate.role) > roleRank(existing.role)) {
+    return existing;
+  }
+  return candidate.sourceRank < existing.sourceRank
+    ? candidate
+    : candidate.sourceRank > existing.sourceRank
+      ? existing
+      : candidate.sourceUpdatedAtMs > existing.sourceUpdatedAtMs
+        ? candidate
+        : existing;
+}
+
+function attentionBest(existing: RowCandidate, candidate: RowCandidate): RowCandidate {
+  if (attentionRank(candidate.attention.state) < attentionRank(existing.attention.state)) {
+    return candidate;
+  }
+  if (attentionRank(candidate.attention.state) > attentionRank(existing.attention.state)) {
+    return existing;
+  }
+  if (candidate.sourceRank < existing.sourceRank) {
+    return candidate;
+  }
+  if (candidate.sourceRank > existing.sourceRank) {
+    return existing;
+  }
+  return candidate.sourceUpdatedAtMs > existing.sourceUpdatedAtMs ? candidate : existing;
+}
+
+function freshnessBest(existing: RowCandidate, candidate: RowCandidate): RowCandidate {
+  const existingLive = existing.source === "live_activity";
+  const candidateLive = candidate.source === "live_activity";
+  if (candidateLive && !existingLive) {
+    return candidate;
+  }
+  if (!candidateLive && existingLive) {
+    return existing;
+  }
+  const existingMs = isoMillis(existing.freshness.updatedAt);
+  const candidateMs = isoMillis(candidate.freshness.updatedAt);
+  if (Number.isFinite(candidateMs) && Number.isFinite(existingMs)) {
+    return candidateMs > existingMs ? candidate : existing;
+  }
+  if (Number.isFinite(candidateMs)) {
+    return candidate;
+  }
+  if (Number.isFinite(existingMs)) {
+    return existing;
+  }
+  return candidate.sourceRank < existing.sourceRank
+    ? candidate
+    : candidate.sourceRank > existing.sourceRank
+      ? existing
+      : candidate.sourceUpdatedAtMs > existing.sourceUpdatedAtMs
+        ? candidate
+        : existing;
+}
+
+function attentionFromStatus(
+  status: DashboardAgentActivityRow["status"],
+  freshness: DashboardAgentActivityRow["freshness"]["state"]
+): DashboardAgentActivityRow["attention"] {
+  switch (status) {
+    case "blocked":
+      return { state: "blocked", message: "Blocking work" };
+    case "awaiting_policy_approval":
+      return { state: "needs_policy", message: "Awaiting policy approval" };
+    case "awaiting_human_gate":
+    case "reviewing_item":
+      return { state: "needs_human", message: "Awaiting human review" };
+    case "unavailable":
+      return { state: "unavailable", message: "Agent activity unavailable" };
+    default:
+      if (freshness === "stale") {
+        return { state: "stale", message: "Heartbeat overdue" };
+      }
+      return { state: "none", message: null };
+  }
+}
+
+function roleFromAgentId(agentId: string | null, kind: DashboardAgentActivityRow["status"]): DashboardAgentActivityRow["role"] {
+  const value = cleanText(agentId).toLowerCase();
+  if (value.includes("orchestrator") || value.includes("supervisor")) {
+    return "orchestrator";
+  }
+  if (value.includes("worker") || kind === "working_task" || kind === "delegating_task") {
+    return "task_worker";
+  }
+  return "unknown";
+}
+
+function normalizeRowId(parts: string[]): string {
+  return `row:${parts.map((part) => cleanText(part) || "unknown").join(":")}`;
+}
+
+function sourceUpdatedAtMs(value: string): number {
+  const ms = Date.parse(value);
+  return Number.isFinite(ms) ? ms : Number.NEGATIVE_INFINITY;
+}
+
+function makeRow(
+  row: Omit<RowCandidate, "sourceRank" | "mergeKey" | "freshnessRank" | "attentionRank" | "sourceUpdatedAtMs">,
+  source: RowSource,
+  keyParts: string[]
+): RowCandidate {
+  const sourceRank = SOURCE_RANK[source];
+  return {
+    ...row,
+    sourceRank,
+    mergeKey: keyParts.join("|"),
+    freshnessRank: freshnessRank(row.freshness.state),
+    attentionRank: attentionRank(row.attention.state),
+    sourceUpdatedAtMs: sourceUpdatedAtMs(row.freshness.updatedAt ?? "")
+  };
+}
+
+function mergeRow(existing: RowCandidate | undefined, candidate: RowCandidate): RowCandidate {
+  if (!existing) {
+    return candidate;
+  }
+  const winner =
+    candidate.sourceRank < existing.sourceRank
+      ? candidate
+      : candidate.sourceRank > existing.sourceRank
+        ? existing
+        : candidate.sourceUpdatedAtMs > existing.sourceUpdatedAtMs
+          ? candidate
+          : existing;
+  const loser = winner === candidate ? existing : candidate;
+  return {
+    ...winner,
+    displayName: displayNameBest(winner, loser).displayName,
+    role: roleBest(winner, loser).role,
+    statusLabel: cleanText(winner.statusLabel) || cleanText(loser.statusLabel) || winner.statusLabel,
+    work: {
+      taskId: winner.work.taskId ?? loser.work.taskId,
+      title: cleanText(winner.work.title) || loser.work.title,
+      command: cleanText(winner.work.command) || loser.work.command,
+      phaseKey: winner.work.phaseKey ?? loser.work.phaseKey,
+      assignmentId: winner.work.assignmentId ?? loser.work.assignmentId,
+      sessionId: winner.work.sessionId ?? loser.work.sessionId,
+      currentStep: cleanText(winner.work.currentStep) || loser.work.currentStep
+    },
+    refs: {
+      activityId: winner.refs.activityId ?? loser.refs.activityId,
+      agentId: winner.refs.agentId ?? loser.refs.agentId,
+      sessionId: winner.refs.sessionId ?? loser.refs.sessionId,
+      assignmentId: winner.refs.assignmentId ?? loser.refs.assignmentId,
+      agentDefinitionId: winner.refs.agentDefinitionId ?? loser.refs.agentDefinitionId,
+      subagentDefinitionId: winner.refs.subagentDefinitionId ?? loser.refs.subagentDefinitionId,
+      taskId: winner.refs.taskId ?? loser.refs.taskId,
+      prNumber: winner.refs.prNumber ?? loser.refs.prNumber
+    },
+    freshness: freshnessBest(winner, loser).freshness,
+    attention: attentionBest(winner, loser).attention
+  };
+}
+
+function sortRows(rows: RowCandidate[]): DashboardAgentActivityRow[] {
+  return rows
+    .sort((a, b) => {
+      const freshnessDelta = a.freshnessRank - b.freshnessRank;
+      if (freshnessDelta !== 0) {
+        return freshnessDelta;
+      }
+      const attentionDelta = a.attentionRank - b.attentionRank;
+      if (attentionDelta !== 0) {
+        return attentionDelta;
+      }
+      const updatedA = isoMillis(a.freshness.updatedAt);
+      const updatedB = isoMillis(b.freshness.updatedAt);
+      if (Number.isFinite(updatedA) && Number.isFinite(updatedB) && updatedA !== updatedB) {
+        return updatedB - updatedA;
+      }
+      return a.rowId.localeCompare(b.rowId);
+    })
+    .map(({ sourceRank, mergeKey, freshnessRank: _freshnessRank, attentionRank: _attentionRank, sourceUpdatedAtMs, ...row }) => row);
+}
+
+function sortAttentionRows(rows: DashboardAgentActivityRow[]): DashboardAgentActivityRow[] {
+  return rows
+    .sort((a, b) => {
+      const attentionDelta = attentionRank(a.attention.state) - attentionRank(b.attention.state);
+      if (attentionDelta !== 0) {
+        return attentionDelta;
+      }
+      const updatedA = isoMillis(a.freshness.updatedAt);
+      const updatedB = isoMillis(b.freshness.updatedAt);
+      if (Number.isFinite(updatedA) && Number.isFinite(updatedB) && updatedA !== updatedB) {
+        return updatedB - updatedA;
+      }
+      return a.rowId.localeCompare(b.rowId);
+    })
+    .map((row) => row);
+}
+
 function buildLiveActivityRows(
   input: BuildDashboardAgentActivitySummaryInput,
   byTaskId: Map<string, TaskEntity>
 ): RowCandidate[] {
-  return input.liveActivityLeases.map((lease) => {
+  const byKey = new Map<string, RowCandidate>();
+  for (const lease of input.liveActivityLeases) {
     const lifecycle = deriveAgentActivityLifecycle(lease, input.now);
+    if (lifecycle === "expired") {
+      continue;
+    }
     const status = agentActivityLeaseToDashboardStatus(lease, input.now);
-    const rowId = lease.assignmentId
-      ? `assignment:${lease.assignmentId}`
+    const taskTitleValue = taskTitle(lease.taskId, byTaskId);
+    const taskValue = taskTitleValue ?? null;
+    const displayName =
+      cleanText(readDetailText(lease.details, ["agentDisplayName", "customAgentName", "displayName"])) ||
+      cleanText(taskValue) ||
+      cleanText(lease.label) ||
+      cleanText(lease.agentId) ||
+      titleCase(lease.agentId);
+    const keyParts = lease.assignmentId
+      ? [lease.assignmentId]
       : lease.sessionId
-        ? `session:${lease.sessionId}`
-        : `activity:${lease.activityId}`;
-    const taskTitleValue = taskTitle(lease.taskId, byTaskId) ?? lease.label;
-    const displayName = cleanText(taskTitleValue) || lease.label;
+        ? [lease.agentId, lease.sessionId]
+        : lease.taskId
+          ? [lease.agentId, lease.taskId]
+          : [lease.activityId];
+    const rowId = normalizeRowId(keyParts);
     const freshness = {
       updatedAt: lease.updatedAt,
       startedAt: lease.startedAt,
       expiresAt: lease.expiresAt,
       state: freshnessState(lifecycle)
     };
-    return baseRow(
+    const candidate = makeRow(
       {
         schemaVersion: 1 as const,
         rowId,
@@ -241,7 +413,7 @@ function buildLiveActivityRows(
         statusLabel: status.label,
         work: {
           taskId: lease.taskId,
-          title: taskTitleValue,
+          title: taskValue ?? lease.label,
           command: lease.command,
           phaseKey: lease.phaseKey,
           assignmentId: lease.assignmentId,
@@ -261,9 +433,15 @@ function buildLiveActivityRows(
         freshness,
         attention: attentionFromStatus(status.kind, freshness.state)
       },
-      "live_activity"
+      "live_activity",
+      keyParts
     );
-  });
+    const current = byKey.get(candidate.mergeKey);
+    if (!current || candidate.sourceUpdatedAtMs > current.sourceUpdatedAtMs) {
+      byKey.set(candidate.mergeKey, candidate);
+    }
+  }
+  return [...byKey.values()];
 }
 
 function assignmentToStatus(assignment: DashboardTeamAssignmentRow): DashboardAgentActivityRow["status"] {
@@ -294,7 +472,8 @@ function buildAssignmentRows(
   input: BuildDashboardAgentActivitySummaryInput,
   byTaskId: Map<string, TaskEntity>
 ): RowCandidate[] {
-  return input.teamExecution.topActive.map((assignment) => {
+  const byKey = new Map<string, RowCandidate>();
+  for (const assignment of input.teamExecution.topActive) {
     const taskTitleValue = taskTitle(assignment.executionTaskId, byTaskId);
     const freshness = {
       updatedAt: assignment.updatedAt,
@@ -303,11 +482,17 @@ function buildAssignmentRows(
       state: "unknown" as const
     };
     const status = assignmentToStatus(assignment);
-    return baseRow(
+    const keyParts = [assignment.id];
+    const candidate = makeRow(
       {
         schemaVersion: 1 as const,
-        rowId: `assignment:${assignment.id}`,
-        displayName: cleanText(taskTitleValue) || assignment.executionTaskId,
+        rowId: normalizeRowId(keyParts),
+        displayName:
+          cleanText(taskTitleValue) ||
+          cleanText(assignment.executionTaskTitle) ||
+          cleanText(assignment.executionTaskId) ||
+          cleanText(assignment.workerId) ||
+          titleCase(assignment.workerId),
         role: "task_worker",
         source: "team_execution",
         sourceConfidence: "medium",
@@ -335,16 +520,23 @@ function buildAssignmentRows(
         freshness,
         attention: attentionFromStatus(status, freshness.state)
       },
-      "team_execution"
+      "team_execution",
+      keyParts
     );
-  });
+    const current = byKey.get(candidate.mergeKey);
+    if (!current || candidate.sourceUpdatedAtMs > current.sourceUpdatedAtMs) {
+      byKey.set(candidate.mergeKey, candidate);
+    }
+  }
+  return [...byKey.values()];
 }
 
 function buildSubagentRows(
   input: BuildDashboardAgentActivitySummaryInput,
   byTaskId: Map<string, TaskEntity>
 ): RowCandidate[] {
-  return input.subagentRegistry.topOpenSessions.map((session) => {
+  const byKey = new Map<string, RowCandidate>();
+  for (const session of input.subagentRegistry.topOpenSessions) {
     const taskTitleValue = taskTitle(session.executionTaskId, byTaskId);
     const freshness = {
       updatedAt: session.updatedAt,
@@ -353,11 +545,15 @@ function buildSubagentRows(
       state: "unknown" as const
     };
     const status: DashboardAgentActivityRow["status"] = session.executionTaskId ? "delegating_task" : "awaiting_instruction";
-    return baseRow(
+    const candidate = makeRow(
       {
         schemaVersion: 1 as const,
-        rowId: `session:${session.sessionId}`,
-        displayName: cleanText(taskTitleValue) || session.definitionId,
+        rowId: normalizeRowId([session.definitionId, session.sessionId]),
+        displayName:
+          cleanText(taskTitleValue) ||
+          titleCase(session.definitionId) ||
+          cleanText(session.definitionId) ||
+          cleanText(session.sessionId),
         role: "subagent",
         source: "subagent_registry",
         sourceConfidence: "medium",
@@ -385,9 +581,15 @@ function buildSubagentRows(
         freshness,
         attention: attentionFromStatus(status, freshness.state)
       },
-      "subagent_registry"
+      "subagent_registry",
+      [session.definitionId, session.sessionId]
     );
-  });
+    const current = byKey.get(candidate.mergeKey);
+    if (!current || candidate.sourceUpdatedAtMs > current.sourceUpdatedAtMs) {
+      byKey.set(candidate.mergeKey, candidate);
+    }
+  }
+  return [...byKey.values()];
 }
 
 function buildDerivedFallbackRow(
@@ -396,26 +598,10 @@ function buildDerivedFallbackRow(
   return input.derivedAgentStatus;
 }
 
-function rowBucket(row: RowCandidate): string {
-  if (row.refs.assignmentId) {
-    return `assignment:${row.refs.assignmentId}`;
-  }
-  if (row.refs.sessionId) {
-    return `session:${row.refs.sessionId}`;
-  }
-  if (row.refs.activityId) {
-    return `activity:${row.refs.activityId}`;
-  }
-  if (row.refs.taskId) {
-    return `task:${row.refs.taskId}`;
-  }
-  return row.rowId;
-}
-
 function toRows(candidates: RowCandidate[]): DashboardAgentActivityRow[] {
   const buckets = new Map<string, RowCandidate[]>();
   for (const candidate of candidates) {
-    const bucket = rowBucket(candidate);
+    const bucket = candidate.mergeKey;
     const bucketRows = buckets.get(bucket) ?? [];
     bucketRows.push(candidate);
     buckets.set(bucket, bucketRows);
@@ -423,7 +609,15 @@ function toRows(candidates: RowCandidate[]): DashboardAgentActivityRow[] {
 
   const merged: RowCandidate[] = [];
   for (const bucketRows of buckets.values()) {
-    bucketRows.sort((a, b) => a.sourceRank - b.sourceRank);
+    bucketRows.sort((a, b) => {
+      if (a.sourceRank !== b.sourceRank) {
+        return a.sourceRank - b.sourceRank;
+      }
+      if (a.sourceUpdatedAtMs !== b.sourceUpdatedAtMs) {
+        return b.sourceUpdatedAtMs - a.sourceUpdatedAtMs;
+      }
+      return a.rowId.localeCompare(b.rowId);
+    });
     let current = bucketRows[0]!;
     for (let index = 1; index < bucketRows.length; index++) {
       current = mergeRow(current, bucketRows[index]!);
@@ -437,19 +631,46 @@ function selectMainRow(rows: DashboardAgentActivityRow[]): DashboardAgentActivit
   if (rows.length === 0) {
     return null;
   }
-  const liveFresh = rows.find((row) => row.source === "live_activity" && (row.freshness.state === "fresh" || row.freshness.state === "aging"));
+  const activeRows = rows.filter((row) => row.freshness.state === "fresh" || row.freshness.state === "aging");
+  const liveOrchestrator = activeRows.find(
+    (row) =>
+      row.source === "live_activity" &&
+      (row.role === "orchestrator") &&
+      (row.freshness.state === "fresh" || row.freshness.state === "aging")
+  );
+  if (liveOrchestrator) {
+    return liveOrchestrator;
+  }
+  const liveFresh = activeRows.find((row) => row.source === "live_activity");
   if (liveFresh) {
     return liveFresh;
   }
-  const fresh = rows.find((row) => row.freshness.state === "fresh" || row.freshness.state === "aging");
-  if (fresh) {
-    return fresh;
-  }
-  const attention = rows.slice().sort((a, b) => attentionSeverityRank(a.attention.state) - attentionSeverityRank(b.attention.state))[0];
+  const attention = rows
+    .slice()
+    .sort((a, b) => {
+      const rankDelta = attentionRank(a.attention.state) - attentionRank(b.attention.state);
+      if (rankDelta !== 0) {
+        return rankDelta;
+      }
+      const updatedA = isoMillis(a.freshness.updatedAt);
+      const updatedB = isoMillis(b.freshness.updatedAt);
+      if (Number.isFinite(updatedA) && Number.isFinite(updatedB) && updatedA !== updatedB) {
+        return updatedB - updatedA;
+      }
+      return a.rowId.localeCompare(b.rowId);
+    })[0];
   if (attention && attention.attention.state !== "none") {
     return attention;
   }
-  return rows[0] ?? null;
+  const activeByUpdatedAt = activeRows.slice().sort((a, b) => {
+    const updatedA = isoMillis(a.freshness.updatedAt);
+    const updatedB = isoMillis(b.freshness.updatedAt);
+    if (Number.isFinite(updatedA) && Number.isFinite(updatedB) && updatedA !== updatedB) {
+      return updatedB - updatedA;
+    }
+    return a.rowId.localeCompare(b.rowId);
+  });
+  return activeByUpdatedAt[0] ?? null;
 }
 
 export function buildDashboardAgentActivitySummary(
@@ -462,9 +683,9 @@ export function buildDashboardAgentActivitySummary(
     ...buildSubagentRows(input, byTaskId)
   ];
   const rows = toRows(rawRows);
-  const active = rows.filter((row) => row.freshness.state === "fresh" || row.freshness.state === "aging");
+  const active = rows.filter((row) => row.freshness.state !== "expired");
   const needsAttention = rows.filter(
-    (row) => row.attention.state !== "none" || row.freshness.state === "stale" || row.freshness.state === "expired"
+    (row) => row.attention.state !== "none"
   );
   const source =
     rows.some((row) => row.source === "live_activity") && rows.some((row) => row.source !== "live_activity")
@@ -476,12 +697,12 @@ export function buildDashboardAgentActivitySummary(
     schemaVersion: 1,
     generatedAt: input.now,
     source,
-    activeCount: active.length,
+    activeCount: rows.filter((row) => row.freshness.state === "fresh" || row.freshness.state === "aging").length,
     staleCount: rows.filter((row) => row.freshness.state === "stale").length,
     needsAttentionCount: needsAttention.length,
     main: selectMainRow(rows),
     active,
-    needsAttention,
+    needsAttention: sortAttentionRows(needsAttention),
     inferredFallback: rows.length === 0 ? buildDerivedFallbackRow(input) : null,
     sourceMap: {
       liveActivityCount: input.liveActivityLeases.length,
