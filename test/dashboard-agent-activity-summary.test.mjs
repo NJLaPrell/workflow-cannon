@@ -422,6 +422,159 @@ test("buildDashboardAgentActivitySummary enriches live rows with task title, pha
   assert.equal(summary.main?.work.taskStatus, "in_progress");
 });
 
+test("buildDashboardAgentActivitySummary extracts known custom agent metadata from live details", () => {
+  const now = "2026-06-02T17:00:00.000Z";
+  const summary = buildDashboardAgentActivitySummary({
+    now,
+    tasks: [{ id: "T100654", title: "Custom agent metadata", phaseKey: "129", status: "in_progress" }],
+    liveActivityLeases: [
+      {
+        schemaVersion: 1,
+        activityId: "custom:session-metadata",
+        agentId: "custom-agent",
+        sessionId: "session-metadata",
+        agentDefinitionId: null,
+        assignmentId: "assign-metadata",
+        kind: "working_task",
+        label: "Working with metadata",
+        currentStep: null,
+        hostHint: "cursor",
+        modelTier: "balanced",
+        modelHint: null,
+        startedAt: "2026-06-02T16:50:00.000Z",
+        updatedAt: "2026-06-02T16:59:59.000Z",
+        expiresAt: "2026-06-02T17:30:00.000Z",
+        taskId: "T100654",
+        command: null,
+        phaseKey: null,
+        prNumber: null,
+        version: null,
+        details: {
+          agentDisplayName: "Ada",
+          customAgentName: "Release Scout",
+          unknownCompactLabel: "Do not render me"
+        }
+      }
+    ],
+    derivedAgentStatus: {
+      schemaVersion: 1,
+      source: "derived",
+      kind: "ready_task",
+      label: "Ready Task T100654",
+      confidence: "low",
+      updatedAt: now,
+      taskId: "T100654",
+      phaseKey: "129",
+      command: null,
+      prNumber: null,
+      version: null,
+      detail: null
+    },
+    teamExecution: {
+      schemaVersion: 1,
+      available: true,
+      totalCount: 1,
+      activeCount: 1,
+      byStatus: { assigned: 1, submitted: 0, blocked: 0, reconciled: 0, cancelled: 0 },
+      topActive: [
+        {
+          id: "assign-metadata",
+          executionTaskId: "T100654",
+          executionTaskTitle: "Custom agent metadata",
+          supervisorId: "phase-129-orchestrator",
+          workerId: "custom-agent",
+          status: "assigned",
+          updatedAt: now
+        }
+      ]
+    },
+    subagentRegistry: {
+      schemaVersion: 1,
+      available: false,
+      definitionsCount: 0,
+      retiredDefinitionsCount: 0,
+      openSessionsCount: 0,
+      topOpenSessions: []
+    }
+  });
+
+  assert.equal(summary.active.length, 1);
+  assert.equal(summary.main?.displayName, "T100654 · Custom agent metadata");
+  assert.deepEqual(summary.main?.metadata, {
+    agentDisplayName: "Ada",
+    customAgentName: "Release Scout"
+  });
+  assert.equal(summary.main?.metadata?.unknownCompactLabel, undefined);
+  assert.doesNotMatch(summary.main?.displayName ?? "", /Do not render me/);
+});
+
+test("buildDashboardAgentActivitySummary ignores malformed live details", () => {
+  const now = "2026-06-02T17:00:00.000Z";
+  const summary = buildDashboardAgentActivitySummary({
+    now,
+    tasks: [],
+    liveActivityLeases: [
+      {
+        schemaVersion: 1,
+        activityId: "custom:session-malformed",
+        agentId: "custom-agent",
+        sessionId: "session-malformed",
+        agentDefinitionId: null,
+        assignmentId: null,
+        kind: "working_task",
+        label: "Malformed details activity",
+        currentStep: null,
+        hostHint: "cursor",
+        modelTier: "balanced",
+        modelHint: null,
+        startedAt: "2026-06-02T16:50:00.000Z",
+        updatedAt: "2026-06-02T16:59:59.000Z",
+        expiresAt: "2026-06-02T17:30:00.000Z",
+        taskId: null,
+        command: null,
+        phaseKey: "129",
+        prNumber: null,
+        version: null,
+        details: "not-an-object"
+      }
+    ],
+    derivedAgentStatus: {
+      schemaVersion: 1,
+      source: "derived",
+      kind: "ready_task",
+      label: "Ready Task T100654",
+      confidence: "low",
+      updatedAt: now,
+      taskId: "T100654",
+      phaseKey: "129",
+      command: null,
+      prNumber: null,
+      version: null,
+      detail: null
+    },
+    teamExecution: {
+      schemaVersion: 1,
+      available: false,
+      totalCount: 0,
+      activeCount: 0,
+      byStatus: { assigned: 0, submitted: 0, blocked: 0, reconciled: 0, cancelled: 0 },
+      topActive: []
+    },
+    subagentRegistry: {
+      schemaVersion: 1,
+      available: false,
+      definitionsCount: 0,
+      retiredDefinitionsCount: 0,
+      openSessionsCount: 0,
+      topOpenSessions: []
+    }
+  });
+
+  assert.equal(summary.active.length, 1);
+  assert.equal(summary.main?.displayName, "Malformed details activity");
+  assert.equal(summary.main?.metadata, undefined);
+});
+
 test("buildDashboardAgentActivitySummary preserves live activity rows when task metadata is missing", () => {
   const now = "2026-06-02T17:00:00.000Z";
   const summary = buildDashboardAgentActivitySummary({
