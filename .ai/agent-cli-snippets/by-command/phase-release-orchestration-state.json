@@ -1,23 +1,21 @@
 {
   "ok": true,
   "code": "run-args-schema",
-  "command": "cae-retire-activation",
+  "command": "phase-release-orchestration-state",
   "schema": {
-    "type": "object",
-    "additionalProperties": true,
-    "description": "Permissive fallback args schema for 'cae-retire-activation'. Use instructionPath for command-specific field guidance until a stricter schema is added."
+    "type": "object"
   },
-  "schemaSource": "manifest-permissive-fallback",
+  "schemaSource": "pilot-run-args-snapshot",
   "sampleArgs": {},
   "examples": [
     {
       "description": "Minimal argv example",
-      "argv": "workspace-kit run cae-retire-activation '{}'"
+      "argv": "workspace-kit run phase-release-orchestration-state '{}'"
     }
   ],
-  "instructionPath": "src/modules/context-activation/instructions/cae-retire-activation.md",
-  "moduleId": "context-activation",
-  "description": "Set retired_at on a CAE activation row.",
+  "instructionPath": "src/modules/task-engine/instructions/phase-release-orchestration-state.md",
+  "moduleId": "task-engine",
+  "description": "Classify current phase release path into one of six bounded verdicts with reference-first next actions.",
   "policy": {
     "sensitivity": "non-sensitive",
     "operationId": null,
@@ -31,12 +29,12 @@
     "clientMutationId": false
   },
   "responseTemplate": {
-    "defaultResponseTemplateId": null
+    "defaultResponseTemplateId": "default"
   },
   "remediationContract": ".ai/runbooks/agent-task-engine-ergonomics.md",
   "discovery": {
     "listCommands": "pnpm exec wk run --list-commands",
     "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
   },
-  "invocationId": "e10fdf42-498a-4786-a962-9ea183c8a1cb"
+  "invocationId": "a45ef013-650c-4ffa-aa12-b975f773cd31"
 }
