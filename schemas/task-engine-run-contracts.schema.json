@@ -108,6 +108,7 @@
         "rebuild-task-state-cache",
         "recommend-validation",
         "reject-improvement",
+        "release-closeout-result",
         "release-evidence-manifest",
         "release-status",
         "release-workspace-edit-lease",
@@ -382,6 +383,9 @@
           "$ref": "#/$defs/contractBase"
         },
         "release-evidence-manifest": {
+          "$ref": "#/$defs/contractBase"
+        },
+        "release-closeout-result": {
           "$ref": "#/$defs/contractBase"
         },
         "release-status": {

@@ -868,6 +868,11 @@
       "moduleId": "task-engine"
     },
     {
+      "name": "release-closeout-result",
+      "path": ".ai/agent-cli-snippets/by-command/release-closeout-result.json",
+      "moduleId": "task-engine"
+    },
+    {
       "name": "phase-status",
       "path": ".ai/agent-cli-snippets/by-command/phase-status.json",
       "moduleId": "task-engine"

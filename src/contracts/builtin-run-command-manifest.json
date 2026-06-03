@@ -165,6 +165,14 @@
   },
   {
     "moduleId": "task-engine",
+    "name": "release-closeout-result",
+    "file": "release-closeout-result.md",
+    "description": "Build the final placeholder-free phase release result packet with concrete evidence refs and packet sequence.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
     "name": "phase-delivery-preflight",
     "file": "phase-delivery-preflight.md",
     "description": "Read-only audit for phase task PR/merge/check evidence or explicit delivery waivers.",

@@ -14,6 +14,8 @@ Worker path: status **`assigned` → `submitted`**.
 - v1: `schemaVersion` **1**, non-empty **`summary`**, optional **`evidenceRefs`** string array.
 - v2: `schemaVersion` **2**, full Handoff v2 payload. For coherence, **`handoff.assignmentId`** must match **`assignmentId`** and **`handoff.agentId`** must match **`workerId`**.
 
+For v2, treat the JSON fields as the primary handoff contract. Required fields are **`schemaVersion`**, **`assignmentId`**, **`agentId`**, **`status`**, **`summary`**, and **`evidenceRefs`**; machine-checkable fields such as **`filesChanged`**, **`commandsRun`**, **`acceptanceCriteria`**, **`blockers`**, **`risks`**, and **`nextRecommendedAction`** should carry reconciliation evidence. The **`summary`** prose is a compact human aid, not the source of truth for preflight checks.
+
 **`workerId`** must match the assignment row authority checks.
 
 Stable lifecycle errors: **`assignment-not-found`**, **`assignment-authority-denied`**, **`assignment-status-invalid`**.

@@ -29,6 +29,7 @@ import {
 } from "../phase-release-orchestration-state-runtime.js";
 import { listAssignments } from "../../team-execution/assignment-store.js";
 import { runPrepareReleaseArtifactsCommand } from "../prepare-release-artifacts-runtime.js";
+import { buildReleaseCloseoutResult } from "../release-closeout-result-runtime.js";
 
 /**
  * Phase / release readout commands that need an open task store + SQLite dual reader.
@@ -392,6 +393,47 @@ export async function resolvePhaseDeliveryReadoutCommands(
       attachPolicyMeta(result.data, ctx, planning.sqliteDual.getPlanningGeneration());
     }
     return result;
+  }
+
+  if (command.name === "release-closeout-result") {
+    const argObj = args as Record<string, unknown>;
+    const workspaceStatus = readWorkspaceStatusSnapshotFromDual(planning.sqliteDual);
+    const phaseRes = resolveCanonicalPhase({
+      effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined,
+      workspaceStatus
+    });
+    const phaseKey =
+      typeof argObj.phaseKey === "string" && argObj.phaseKey.trim().length > 0
+        ? argObj.phaseKey.trim()
+        : phaseRes.canonicalPhaseKey;
+    const result = buildReleaseCloseoutResult({
+      workspacePath: ctx.workspacePath,
+      tasks: store.getActiveTasks(),
+      commandArgs: argObj,
+      phaseKey,
+      planningGeneration: planning.sqliteDual.getPlanningGeneration()
+    });
+    if (!result.ok) {
+      return {
+        ok: false,
+        code: result.code,
+        message: result.message,
+        data: result.details ? { details: result.details, canonicalPhase: phaseRes } : { canonicalPhase: phaseRes },
+        remediation: { instructionPath: "src/modules/task-engine/instructions/release-closeout-result.md" }
+      };
+    }
+    const data: Record<string, unknown> = {
+      ...result.packet,
+      canonicalPhase: phaseRes
+    };
+    attachPolicyMeta(data, ctx, planning.sqliteDual.getPlanningGeneration());
+    return {
+      ok: true,
+      code: "release-closeout-result",
+      message: `Built final release closeout result for phase ${phaseKey ?? "unknown"}`,
+      data,
+      remediation: { instructionPath: "src/modules/task-engine/instructions/release-closeout-result.md" }
+    };
   }
 
   return null;
