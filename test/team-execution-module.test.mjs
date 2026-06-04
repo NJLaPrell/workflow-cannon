@@ -204,6 +204,11 @@ test("agent-execution-packet returns bounded worker context without queue reads"
   assert.ok(
     packetResult.data.packet.modelTierEscalationTriggers.some((item) => item.includes("approval-gated paths"))
   );
+  assert.equal(packetResult.data.packet.guidanceCards.source, "static-fallback");
+  assert.ok(packetResult.data.packet.guidanceCards.refs.includes(
+    "src/modules/team-execution/instructions/agent-execution-packet.md"
+  ));
+  assert.ok(packetResult.data.packet.guidanceCards.stop.some((card) => card.title === "Boundary"));
   assert.equal(packetResult.data.packet.handoffContract.contractId, "implementation_handoff_v2");
   assert.equal(packetResult.data.packet.handoffContract.expectedAssignmentId, "asg-8613");
   assert.equal(packetResult.data.packet.handoffContract.expectedWorkerId, "wrk-13");
@@ -288,6 +293,9 @@ test("agent-execution-packet returns task-first draft packet before assignment r
     packetResult.data.packet.modelTierRecommendation.label
   );
   assert.deepEqual(packetResult.data.packet.modelTierEscalationTriggers, []);
+  assert.equal(packetResult.data.packet.guidanceCards.source, "static-fallback");
+  assert.ok(packetResult.data.packet.guidanceCards.think.length > 0);
+  assert.ok(packetResult.data.packet.guidanceCards.do.some((card) => card.title === "Register"));
   assert.equal(packetResult.data.packet.recommendedAssignmentMetadata.lockScope.tasks[0], "T8616");
   assert.equal(packetResult.data.packet.registerAssignmentRef.command, "register-assignment");
   assert.equal(packetResult.data.packet.registerAssignmentRef.args.executionTaskId, "T8616");

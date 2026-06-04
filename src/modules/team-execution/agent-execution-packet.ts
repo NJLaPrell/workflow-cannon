@@ -36,6 +36,7 @@ export type AgentExecutionPacket = {
   modelTierRecommendation: WorkerPacketModelTierRecommendation;
   modelTierRationale: string;
   modelTierEscalationTriggers: string[];
+  guidanceCards: PacketGuidanceCards;
   handoffContract: {
     contractId: string | null;
     submitCommand: string;
@@ -79,6 +80,7 @@ export type AgentExecutionDraftPacket = {
   modelTierRecommendation: WorkerPacketModelTierRecommendation;
   modelTierRationale: string;
   modelTierEscalationTriggers: string[];
+  guidanceCards: PacketGuidanceCards;
   boundaryRecommendations: PacketBoundaryRecommendations;
   recommendedAssignmentMetadata: TeamAssignmentMetadataV1;
   registerAssignmentRef: {
@@ -136,6 +138,20 @@ type PacketBoundaryRecommendations = {
   forbiddenPaths: PacketBoundaryRecommendation[];
   sharedPaths: PacketBoundaryRecommendation[];
   requiresApprovalPaths: PacketBoundaryRecommendation[];
+};
+
+type PacketGuidanceCard = {
+  title: string;
+  body: string;
+};
+
+type PacketGuidanceCards = {
+  source: "static-fallback";
+  refs: string[];
+  think: PacketGuidanceCard[];
+  do: PacketGuidanceCard[];
+  review: PacketGuidanceCard[];
+  stop: PacketGuidanceCard[];
 };
 
 function readString(value: unknown): string | null {
@@ -432,6 +448,53 @@ function materializeRecommendedPaths(recommendations: PacketBoundaryRecommendati
     .map((recommendation) => recommendation.path);
 }
 
+function buildGuidanceCards(args: {
+  packetKind: "assignment" | "draft";
+  boundaries: PacketBoundaries;
+}): PacketGuidanceCards {
+  const hasOwnedPaths = args.boundaries.ownedPaths.length > 0;
+  return {
+    source: "static-fallback",
+    refs: [
+      "src/modules/team-execution/instructions/agent-execution-packet.md",
+      "src/modules/team-execution/instructions/submit-assignment-handoff.md"
+    ],
+    think: [
+      {
+        title: "Scope",
+        body: hasOwnedPaths
+          ? "Plan changes inside owned paths and keep advisory boundaries visible."
+          : "Confirm owned paths before implementation."
+      },
+      {
+        title: "Evidence",
+        body: "Track acceptance criteria, changed files, validation commands, and unresolved risks."
+      }
+    ],
+    do: [
+      {
+        title: args.packetKind === "draft" ? "Register" : "Implement",
+        body:
+          args.packetKind === "draft"
+            ? "Use the draft metadata to register a bounded assignment before coding."
+            : "Work from the locked assignment packet and keep activity current."
+      }
+    ],
+    review: [
+      {
+        title: "Validate",
+        body: "Run the packet validation commands or record why a narrower equivalent is sufficient."
+      }
+    ],
+    stop: [
+      {
+        title: "Boundary",
+        body: "Stop when required edits leave owned paths or touch read-only, forbidden, or approval-gated paths."
+      }
+    ]
+  };
+}
+
 function buildStopConditions(args: {
   assignment: TeamAssignmentRow;
   boundaries: PacketBoundaries;
@@ -506,6 +569,7 @@ export function buildAgentExecutionPacket(args: {
     modelTierRecommendation: modelTierDecision.recommendation,
     modelTierRationale: modelTierDecision.rationale,
     modelTierEscalationTriggers: modelTierDecision.escalationTriggers,
+    guidanceCards: buildGuidanceCards({ packetKind: "assignment", boundaries }),
     handoffContract: {
       contractId: readString(typedMetadata?.handoffContractId),
       submitCommand: "submit-assignment-handoff",
@@ -643,6 +707,7 @@ export function buildAgentExecutionDraftPacket(args: {
     modelTierRecommendation: modelTierDecision.recommendation,
     modelTierRationale: modelTierDecision.rationale,
     modelTierEscalationTriggers: modelTierDecision.escalationTriggers,
+    guidanceCards: buildGuidanceCards({ packetKind: "draft", boundaries }),
     boundaryRecommendations,
     recommendedAssignmentMetadata,
     registerAssignmentRef: {
