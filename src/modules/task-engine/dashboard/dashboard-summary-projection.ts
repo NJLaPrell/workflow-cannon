@@ -33,7 +33,7 @@ export function dashboardSummaryNeedsStatusRollups(projection: DashboardSummaryP
 export function dashboardSummaryNeedsAgentActivityRollups(
   projection: DashboardSummaryProjection
 ): boolean {
-  return projection === "full" || projection === "agentActivity";
+  return projection === "full" || projection === "agentActivity" || projection === "overview";
 }
 
 export function dashboardSummaryNeedsPastPhaseNotes(projection: DashboardSummaryProjection): boolean {
@@ -105,6 +105,7 @@ export function finalizeDashboardSummaryProjection(
   if (projection === "overview") {
     return {
       ...base,
+      agentActivitySummary: data.agentActivitySummary,
       planningSession: null,
       planArtifact: data.planArtifact,
       transcriptChurnResearchSummary: emptyListSummary(),

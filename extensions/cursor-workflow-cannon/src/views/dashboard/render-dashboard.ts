@@ -317,8 +317,8 @@ function renderQueueTaskActionButtons(taskId: string): string {
   }
   return (
     '<span class="dash-row-actions wc-task-actions">' +
-    renderPhaseAssignButton(taskId) +
     renderTaskDetailButton(taskId) +
+    renderPhaseAssignButton(taskId) +
     renderTaskCommentsButton(taskId, "view") +
     renderTaskCommentsButton(taskId, "add") +
     "</span>"
@@ -336,8 +336,8 @@ function renderProposedQueueTaskActionButtons(
   const idAttr = escapeHtml(taskId);
   return (
     '<span class="dash-row-actions wc-task-actions dash-row-actions-grid">' +
-    renderPhaseAssignButton(taskId) +
     renderTaskDetailButton(taskId) +
+    renderPhaseAssignButton(taskId) +
     renderTaskCommentsButton(taskId, "view") +
     renderTaskCommentsButton(taskId, "add") +
     '<button type="button" class="wc-btn wc-btn-sm wc-btn-success" data-wc-action="' +
@@ -1160,7 +1160,6 @@ function phaseWorkHasBegun(snapshot: PhaseSnapshot): boolean {
     s.inProgress > 0 ||
     s.cancelled > 0 ||
     snapshot.terminalCount > 0 ||
-    snapshot.checkedTaskCount > 0 ||
     snapshot.closeoutPassed ||
     snapshot.released
   );

@@ -12,6 +12,8 @@ Use when driving **one execution task** through **`release/phase-<N>`** (not **`
 3. Tier A **`run-transition`**: JSON **`policyApproval`** in the **third** argument; pass **`expectedPlanningGeneration`** when policy **`require`**. Chat-only approval **does not** satisfy policy.
 4. Copy-paste shapes: **`.ai/AGENT-CLI-MAP.md`**, lanes: **`.ai/POLICY-APPROVAL.md`**.
 5. Long sessions: **`.ai/LONG-SESSION-RELOAD.md`**.
+6. **Subagent sessions:** Ensure all subagent sessions opened for the task are closed using `close-subagent-session` before completing the task.
+
 
 **Non-goals:** bypass **`workspace-kit`**, hand-edit SQLite task rows for lifecycle, or treat env **`WORKSPACE_KIT_POLICY_APPROVAL`** as **`run`** approval.
 
