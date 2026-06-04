@@ -2676,7 +2676,7 @@ test("taskEngineModule dashboard-summary wishlist openTop includes backing taskI
   const created = await taskEngineModule.onCommand({ name: "create-wishlist", args: wl }, ctx);
   assert.equal(created.ok, true);
   const backingTaskId = created.data.taskId;
-  const summary = await taskEngineModule.onCommand({ name: "dashboard-summary", args: {} }, ctx);
+  const summary = await taskEngineModule.onCommand({ name: "dashboard-summary", args: { includeWishlist: true } }, ctx);
   assert.equal(summary.ok, true);
   const row = summary.data.wishlist.openTop[0];
   assert.equal(row.id, "W901");
@@ -2710,7 +2710,7 @@ test("taskEngineModule dashboard-summary wishlist paging clamps page and slices 
     assert.equal(created.ok, true);
   }
   const p0 = await taskEngineModule.onCommand(
-    { name: "dashboard-summary", args: { wishlistPage: 0, wishlistPageSize: 10 } },
+    { name: "dashboard-summary", args: { wishlistPage: 0, wishlistPageSize: 10, includeWishlist: true } },
     ctx
   );
   assert.equal(p0.ok, true);
@@ -2720,14 +2720,14 @@ test("taskEngineModule dashboard-summary wishlist paging clamps page and slices 
   assert.equal(p0.data.wishlist.openPageSize, 10);
   assert.equal(p0.data.wishlist.openTotalPages, 2);
   const p1 = await taskEngineModule.onCommand(
-    { name: "dashboard-summary", args: { wishlistPage: 1, wishlistPageSize: 10 } },
+    { name: "dashboard-summary", args: { wishlistPage: 1, wishlistPageSize: 10, includeWishlist: true } },
     ctx
   );
   assert.equal(p1.ok, true);
   assert.equal(p1.data.wishlist.openTop.length, 1);
   assert.equal(p1.data.wishlist.openPage, 1);
   const p99 = await taskEngineModule.onCommand(
-    { name: "dashboard-summary", args: { wishlistPage: 99, wishlistPageSize: 10 } },
+    { name: "dashboard-summary", args: { wishlistPage: 99, wishlistPageSize: 10, includeWishlist: true } },
     ctx
   );
   assert.equal(p99.ok, true);

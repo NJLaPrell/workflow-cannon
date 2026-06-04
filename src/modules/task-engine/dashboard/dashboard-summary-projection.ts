@@ -47,9 +47,10 @@ export function dashboardSummaryNeedsPhaseJournalStats(projection: DashboardSumm
 const emptyListSummary = () =>
   ({ schemaVersion: 1 as const, count: 0, top: [], phaseBuckets: [] });
 
-const emptyWishlist = (pageSize: number) =>
+const emptyWishlist = (pageSize: number, enabled?: boolean) =>
   ({
     schemaVersion: 1 as const,
+    enabled,
     openCount: 0,
     totalCount: 0,
     openPage: 0,
@@ -116,7 +117,7 @@ export function finalizeDashboardSummaryProjection(
       readyQueueTop: [],
       readyQueueCount: 0,
       readyQueueBreakdown: { schemaVersion: 1, improvement: 0, other: 0 },
-      wishlist: emptyWishlist(10),
+      wishlist: emptyWishlist(10, data.wishlist?.enabled),
       ideas: emptyIdeas(),
       blockedSummary: { count: 0, top: [], phaseBuckets: [] },
       humanGatesSummary: data.humanGatesSummary,
@@ -226,7 +227,7 @@ export function finalizeDashboardSummaryProjection(
     readyQueueTop: [],
     readyQueueCount: 0,
     readyQueueBreakdown: { schemaVersion: 1, improvement: 0, other: 0 },
-    wishlist: emptyWishlist(10),
+    wishlist: emptyWishlist(10, data.wishlist?.enabled),
     ideas: emptyIdeas(),
     blockedSummary: { count: 0, top: [], phaseBuckets: [] },
     humanGatesSummary: data.humanGatesSummary,

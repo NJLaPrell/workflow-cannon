@@ -591,6 +591,7 @@ export type DashboardSummaryData = {
   executionPlanningScope: "tasks-only";
   wishlist: {
     schemaVersion: 1;
+    enabled?: boolean;
     openCount: number;
     totalCount: number;
     /** Current page of open wishlist rows (0-based). */

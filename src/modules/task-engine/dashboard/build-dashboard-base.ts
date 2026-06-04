@@ -215,6 +215,15 @@ export async function buildDashboardBase(
   if (tracer) {
     tracer.projection = projection;
   }
+  const tasksConfig = ctx.effectiveConfig?.tasks;
+  const includeWishlist =
+    commandArgs?.includeWishlist === true ||
+    commandArgs?.includeWishlist === "true" ||
+    (!!tasksConfig &&
+      typeof tasksConfig === "object" &&
+      !Array.isArray(tasksConfig) &&
+      ((tasksConfig as Record<string, unknown>).includeWishlist === true ||
+       (tasksConfig as Record<string, unknown>).includeWishlist === "true"));
   const needsQueueRollups = dashboardSummaryNeedsQueueRollups(projection);
   const needsStatusRollups = dashboardSummaryNeedsStatusRollups(projection);
   const needsAgentActivityRollups = dashboardSummaryNeedsAgentActivityRollups(projection);
@@ -298,7 +307,7 @@ export async function buildDashboardBase(
   let ideas = buildDashboardIdeasSummary(undefined, false);
 
   const buildWishlistAndIdeas = () => {
-    if (needsQueueRollups) {
+    if (needsQueueRollups && includeWishlist) {
       const allTasks = store.getAllTasks();
       const wishlistItems = listWishlistIntakeTasksAsItems(allTasks);
       const wishlistOpenItems = wishlistItems.filter((i) => i.status === "open");
@@ -863,6 +872,7 @@ export async function buildDashboardBase(
     executionPlanningScope: "tasks-only" as const,
     wishlist: {
       schemaVersion: 1 as const,
+      enabled: includeWishlist,
       openCount: wishlistOpenCount,
       totalCount: wishlistItemsLength,
       openPage: wishlistSafePage,
@@ -952,6 +962,15 @@ export async function buildDashboardOverview(
   commandArgs?: Record<string, unknown>,
   tracer?: DashboardSummaryTracer
 ): Promise<DashboardSummaryData> {
+  const tasksConfig = ctx.effectiveConfig?.tasks;
+  const includeWishlist =
+    commandArgs?.includeWishlist === true ||
+    commandArgs?.includeWishlist === "true" ||
+    (tasksConfig &&
+      typeof tasksConfig === "object" &&
+      !Array.isArray(tasksConfig) &&
+      ((tasksConfig as Record<string, unknown>).includeWishlist === true ||
+       (tasksConfig as Record<string, unknown>).includeWishlist === "true"));
   const tasks = tracer?.span("getActiveTasks", () => store.getActiveTasks()) ?? store.getActiveTasks();
   const dualForStatus = sqliteDual ?? openSqliteDualForWorkspaceStatus(ctx);
   const workspaceStatus = readWorkspaceStatusSnapshotFromDual(dualForStatus);
@@ -1109,9 +1128,10 @@ export async function buildDashboardOverview(
   const emptyListSummary = () =>
     ({ schemaVersion: 1 as const, count: 0, top: [], phaseBuckets: [] });
 
-  const emptyWishlist = (pageSize: number) =>
+  const emptyWishlist = (pageSize: number, enabled?: boolean) =>
     ({
       schemaVersion: 1 as const,
+      enabled,
       openCount: 0,
       totalCount: 0,
       openPage: 0,
@@ -1173,7 +1193,7 @@ export async function buildDashboardOverview(
     readyQueueCount: 0,
     readyQueueBreakdown: { schemaVersion: 1, improvement: 0, other: 0 },
     executionPlanningScope: "tasks-only" as const,
-    wishlist: emptyWishlist(10),
+    wishlist: emptyWishlist(10, includeWishlist),
     ideas: emptyIdeas(),
     blockedSummary: { count: 0, top: [], phaseBuckets: [] },
     humanGatesSummary,
