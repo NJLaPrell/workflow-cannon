@@ -73,6 +73,11 @@
           "type": "boolean",
           "default": true,
           "description": "When git HEAD changes (pull, merge, rebase, checkout), request background task-state sync immediately."
+        },
+        "workflowCannon.dashboard.includeWishlist": {
+          "type": "boolean",
+          "default": false,
+          "description": "Stop wishlist from adding dashboard cost by default. When enabled, dashboard loads and renders the wishlist."
         }
       }
     },

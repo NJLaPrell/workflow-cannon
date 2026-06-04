@@ -482,8 +482,39 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     private readonly isTaskStateSyncInFlight?: () => boolean,
     private readonly onFirstDashboardPaint?: () => void
   ) {
-    this.originalRun = this.client.run.bind(this.client);
-    this.originalRunForPaint = this.client.runForDashboardPaint.bind(this.client);
+    const wrapDashboardSummaryArgs = (args: Record<string, unknown> | undefined) => {
+      const includeWishlist = vscode.workspace.getConfiguration("workflowCannon").get<boolean>("dashboard.includeWishlist", false);
+      const newArgs = { ...args };
+      if (includeWishlist) {
+        newArgs.includeWishlist = true;
+        if (newArgs.wishlistPage === undefined) {
+          newArgs.wishlistPage = this.wishlistPage;
+        }
+        if (newArgs.wishlistPageSize === undefined) {
+          newArgs.wishlistPageSize = 5;
+        }
+      } else {
+        delete newArgs.wishlistPage;
+        delete newArgs.wishlistPageSize;
+      }
+      return newArgs;
+    };
+
+    const boundRun = this.client.run.bind(this.client);
+    this.originalRun = (commandName: string, args: Record<string, unknown>) => {
+      const finalArgs = commandName === "dashboard-summary" ? wrapDashboardSummaryArgs(args) : args;
+      return boundRun(commandName, finalArgs);
+    };
+
+    const boundRunForPaint = this.client.runForDashboardPaint.bind(this.client);
+    this.originalRunForPaint = (
+      commandName: string,
+      args: Record<string, unknown>,
+      options?: { bootstrap?: boolean }
+    ) => {
+      const finalArgs = commandName === "dashboard-summary" ? wrapDashboardSummaryArgs(args) : args;
+      return boundRunForPaint(commandName, finalArgs, options);
+    };
 
     const clientAsAny = this.client as any;
     clientAsAny.run = (commandName: string, args: Record<string, unknown>) => {

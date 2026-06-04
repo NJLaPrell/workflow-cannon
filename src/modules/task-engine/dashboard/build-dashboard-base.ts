@@ -98,8 +98,21 @@ export function parseDashboardWishlistPaging(args?: Record<string, unknown>): {
   return { page, pageSize };
 }
 
-export function parseDashboardIncludeWishlist(args?: Record<string, unknown>): boolean {
-  return args?.includeWishlist === true || args?.includeWishlist === "true";
+export function parseDashboardIncludeWishlist(
+  args?: Record<string, unknown>,
+  effectiveConfig?: Record<string, unknown>
+): boolean {
+  if (args?.includeWishlist === true || args?.includeWishlist === "true") {
+    return true;
+  }
+  const tasksConfig = effectiveConfig?.tasks;
+  return (
+    !!tasksConfig &&
+    typeof tasksConfig === "object" &&
+    !Array.isArray(tasksConfig) &&
+    ((tasksConfig as Record<string, unknown>).includeWishlist === true ||
+      (tasksConfig as Record<string, unknown>).includeWishlist === "true")
+  );
 }
 
 function buildDashboardPlanArtifactSummary(ctx: ModuleLifecycleContext): DashboardSummaryData["planArtifact"] {
@@ -222,7 +235,10 @@ export async function buildDashboardBase(
   const needsQueueRollups = dashboardSummaryNeedsQueueRollups(projection);
   const needsStatusRollups = dashboardSummaryNeedsStatusRollups(projection);
   const needsAgentActivityRollups = dashboardSummaryNeedsAgentActivityRollups(projection);
-  const includeWishlist = parseDashboardIncludeWishlist(commandArgs);
+  const includeWishlist = parseDashboardIncludeWishlist(
+    commandArgs,
+    ctx.effectiveConfig as Record<string, unknown> | undefined
+  );
   const skipPlanningSessionRead = projection === "overview" || projection === "agentActivity";
   const skipAgentGuidanceBuild = projection === "queue" || projection === "agentActivity";
 
@@ -958,6 +974,10 @@ export async function buildDashboardOverview(
   commandArgs?: Record<string, unknown>,
   tracer?: DashboardSummaryTracer
 ): Promise<DashboardSummaryData> {
+  const includeWishlist = parseDashboardIncludeWishlist(
+    commandArgs,
+    ctx.effectiveConfig as Record<string, unknown> | undefined
+  );
   const tasks = tracer?.span("getActiveTasks", () => store.getActiveTasks()) ?? store.getActiveTasks();
   const dualForStatus = sqliteDual ?? openSqliteDualForWorkspaceStatus(ctx);
   const workspaceStatus = readWorkspaceStatusSnapshotFromDual(dualForStatus);
@@ -1115,10 +1135,10 @@ export async function buildDashboardOverview(
   const emptyListSummary = () =>
     ({ schemaVersion: 1 as const, count: 0, top: [], phaseBuckets: [] });
 
-  const emptyWishlist = (pageSize: number) =>
+  const emptyWishlist = (pageSize: number, enabled?: boolean) =>
     ({
       schemaVersion: 1 as const,
-      enabled: false,
+      enabled: enabled === true,
       openCount: 0,
       totalCount: 0,
       openPage: 0,
@@ -1180,7 +1200,7 @@ export async function buildDashboardOverview(
     readyQueueCount: 0,
     readyQueueBreakdown: { schemaVersion: 1, improvement: 0, other: 0 },
     executionPlanningScope: "tasks-only" as const,
-    wishlist: emptyWishlist(10),
+    wishlist: emptyWishlist(10, includeWishlist),
     ideas: emptyIdeas(),
     blockedSummary: { count: 0, top: [], phaseBuckets: [] },
     humanGatesSummary,
