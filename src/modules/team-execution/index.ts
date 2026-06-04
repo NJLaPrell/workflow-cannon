@@ -39,7 +39,11 @@ import {
   validateHandoffContract,
   validateReconcileCheckpointV1
 } from "./assignment-store.js";
-import { buildAgentExecutionPacket, readAgentExecutionPacketBoundaries } from "./agent-execution-packet.js";
+import {
+  buildAgentExecutionDraftPacket,
+  buildAgentExecutionPacket,
+  readAgentExecutionPacketBoundaries
+} from "./agent-execution-packet.js";
 
 type AssignmentLifecycleAction =
   | "assignment-reconciliation-preflight"
@@ -865,6 +869,11 @@ type AssignmentPacketContext = {
   validationCommands: ReturnType<typeof normalizeAssignmentValidationCommands>;
 };
 
+type DraftPacketContext = {
+  task: TaskEntity;
+  packet: ReturnType<typeof buildAgentExecutionDraftPacket>;
+};
+
 function readValidationRecommendations(
   validationResult: ReturnType<typeof buildRecommendValidation>
 ): Array<{
@@ -925,6 +934,34 @@ async function resolveAssignmentPacketContext(args: {
       packetDigest: packet.packetDigest
     }),
     validationCommands: normalizeAssignmentValidationCommands(packet.validationCommands)
+  };
+}
+
+async function resolveDraftPacketContext(args: {
+  task: TaskEntity;
+  ctx: ModuleLifecycleContext;
+  planning: Awaited<ReturnType<typeof openPlanningStores>>;
+}): Promise<DraftPacketContext> {
+  const store = await createSingleTaskStore(args.task);
+  const taskScope = Array.isArray((args.task as { technicalScope?: unknown }).technicalScope)
+    ? ((args.task as { technicalScope?: unknown }).technicalScope as string[])
+    : [];
+  const validationResult = buildRecommendValidation(args.ctx, args.planning, store, {
+    taskId: args.task.id,
+    touchedPaths: taskScope
+  });
+  const recommendations = readValidationRecommendations(validationResult);
+  const resolvedPolicy = resolveMaintainerDeliveryPolicy({
+    effectiveConfig: args.ctx.effectiveConfig as Record<string, unknown> | undefined,
+    task: args.task
+  });
+  return {
+    task: args.task,
+    packet: buildAgentExecutionDraftPacket({
+      task: args.task,
+      policy: resolvedPolicy.resolvedPolicy,
+      validationRecommendations: recommendations
+    })
   };
 }
 
@@ -1119,6 +1156,61 @@ export const teamExecutionModule: WorkflowModule = {
     if (name === "agent-execution-packet") {
       const assignmentId = readOptionalStringArg(args, "assignmentId") ?? "";
       const workerId = readOptionalStringArg(args, "workerId");
+      const taskId = readOptionalStringArg(args, "taskId") ?? "";
+      const mode = readOptionalStringArg(args, "mode") ?? (taskId ? "draft" : "assignment");
+      const requestedPhaseKey = readOptionalStringArg(args, "phaseKey");
+      if (mode !== "assignment" && mode !== "draft") {
+        return {
+          ok: false,
+          code: "invalid-args",
+          message: "agent-execution-packet mode must be 'assignment' or 'draft'"
+        };
+      }
+      if (mode === "draft") {
+        if (!taskId || assignmentId || workerId) {
+          return {
+            ok: false,
+            code: "invalid-args",
+            message: "agent-execution-packet draft mode requires taskId and does not accept assignmentId or workerId"
+          };
+        }
+        const task = readRelationalTask(db, taskId);
+        if (!task) {
+          return {
+            ok: false,
+            code: "task-not-found",
+            message: `execution task '${taskId}' not found`
+          };
+        }
+        if (requestedPhaseKey && task.phaseKey && requestedPhaseKey !== task.phaseKey) {
+          return {
+            ok: false,
+            code: "task-phase-mismatch",
+            message: `execution task '${taskId}' belongs to phase '${task.phaseKey}', not '${requestedPhaseKey}'`
+          };
+        }
+        const packetContext = await resolveDraftPacketContext({
+          task,
+          ctx,
+          planning
+        });
+        const data: Record<string, unknown> = {
+          packet: packetContext.packet,
+          packetAudit: {
+            stale: false,
+            registryAvailable: false,
+            packetKind: "draft",
+            packetLockStatus: "draft_unlocked"
+          }
+        };
+        attachPlanningMeta(data, ctx, planning.sqliteDual.getPlanningGeneration());
+        return {
+          ok: true,
+          code: "agent-execution-packet",
+          message: `Draft execution packet for '${taskId}'`,
+          data
+        };
+      }
       if (!assignmentId) {
         return {
           ok: false,
