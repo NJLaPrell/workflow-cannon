@@ -5,7 +5,7 @@
   "schema": {
     "type": "object",
     "additionalProperties": true,
-    "description": "Permissive fallback args schema for 'release-closeout-result'. Pass concrete releaseNotes and followUpSummary evidence, or a release-evidence-manifest payload as manifest."
+    "description": "Permissive fallback args schema for 'release-closeout-result'. Pass concrete releaseNotes, followUpSummary, and optional postReleaseEvidence/finalEvidence, or a release-evidence-manifest payload as manifest."
   },
   "schemaSource": "manifest-permissive-fallback",
   "sampleArgs": {},

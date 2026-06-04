@@ -29,6 +29,7 @@ You may also pass a prior `release-evidence-manifest` `data.manifest` payload as
 | `followUpSummary.rationale` | string | required when count is 0 | Rationale supporting `none` follow-on tasks. |
 | `followUpTasks[]` | object[] | no | Bounded follow-on task refs for the optional Notes block. |
 | `risks[]` | object[] | no | Bounded risk/issue notes using `label`/`code` and `message`/`description`. |
+| `postReleaseEvidence` / `finalEvidence` | object | no | Concrete branches/PRs, tag, package, CI, and workspace evidence for final reporting. Missing fields are returned in `releaseEvidence.missingFinalEvidence[]`. |
 
 ## Response highlights (`data`)
 
@@ -37,9 +38,11 @@ You may also pass a prior `release-evidence-manifest` `data.manifest` payload as
 - `finalReport.markdown` — placeholder-free Markdown report
 - `finalReport.fields` — populated values for the former phase summary template slots
 - `releaseEvidence` — bounded feature, follow-up, and risk evidence
+- `releaseEvidence.postReleaseEvidence` and `missingFinalEvidence[]` — concrete final PR/tag/package/CI/workspace evidence, or explicit gaps
 - `refs.commandSequence[]` — packet-first prompt chain:
   - `phase-release-orchestration-state`
   - `phase-drain-delta`
+  - `phase-release-state`
   - `prepare-release-artifacts`
   - `release-closeout-result`
 - `refs.concreteRefs[]` — evidence refs for completed task count, features, and follow-up count
