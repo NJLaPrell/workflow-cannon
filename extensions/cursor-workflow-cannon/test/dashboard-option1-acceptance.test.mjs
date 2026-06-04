@@ -58,3 +58,8 @@ test("Option 1: background status hydration exists and is single-flight", () => 
   assert.match(providerSrc, /hydration coalesced/);
 });
 
+test("Option 1: DashboardViewProvider delegates to dashboard-terminal-rows for completed/cancelled tasks", () => {
+  assert.match(providerSrc, /"dashboard-terminal-rows"/);
+});
+
+

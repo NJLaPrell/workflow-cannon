@@ -2982,6 +2982,67 @@ test("taskEngineModule dashboard-summary splits ready improvements vs execution"
   assert.equal(d.proposedExecutionSummary.top[0].id, "T901");
 });
 
+test("taskEngineModule onCommand dashboard-terminal-rows returns paged completed/cancelled tasks", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(makeTask({ id: "T900", status: "completed", phaseKey: "81", updatedAt: "2026-06-04T10:00:00.000Z" }));
+    store.addTask(makeTask({ id: "T901", status: "completed", phaseKey: "81", updatedAt: "2026-06-04T10:00:01.000Z" }));
+    store.addTask(makeTask({ id: "T902", status: "completed", phaseKey: "82", updatedAt: "2026-06-04T10:00:02.000Z" }));
+    store.addTask(makeTask({ id: "T903", status: "cancelled", phaseKey: "81", updatedAt: "2026-06-04T10:00:03.000Z" }));
+  });
+
+  const ctx = sqliteTaskEngineCtx(workspace);
+
+  // Test completed without phase filter
+  {
+    const result = await taskEngineModule.onCommand(
+      { name: "dashboard-terminal-rows", args: { status: "completed", limit: 2 } },
+      ctx
+    );
+    assert.equal(result.ok, true);
+    assert.equal(result.code, "dashboard-terminal-rows");
+    assert.equal(result.data.tasks.length, 2);
+    // Ordered by updatedAt DESC, so T902 (3000) then T901 (2000)
+    assert.equal(result.data.tasks[0].id, "T902");
+    assert.equal(result.data.tasks[1].id, "T901");
+    assert.ok(result.data.nextCursor);
+  }
+
+  // Test completed with phase filter "81"
+  {
+    const result = await taskEngineModule.onCommand(
+      { name: "dashboard-terminal-rows", args: { status: "completed", phaseKey: "81", limit: 10 } },
+      ctx
+    );
+    assert.equal(result.ok, true);
+    assert.equal(result.data.tasks.length, 2);
+    assert.equal(result.data.tasks[0].id, "T901");
+    assert.equal(result.data.tasks[1].id, "T900");
+    assert.equal(result.data.nextCursor, undefined);
+  }
+
+  // Test cancelled
+  {
+    const result = await taskEngineModule.onCommand(
+      { name: "dashboard-terminal-rows", args: { status: "cancelled" } },
+      ctx
+    );
+    assert.equal(result.ok, true);
+    assert.equal(result.data.tasks.length, 1);
+    assert.equal(result.data.tasks[0].id, "T903");
+  }
+
+  // Test validation
+  {
+    const result = await taskEngineModule.onCommand(
+      { name: "dashboard-terminal-rows", args: { status: "invalid-status" } },
+      ctx
+    );
+    assert.equal(result.ok, false);
+    assert.equal(result.code, "invalid-run-args");
+  }
+});
+
 test("taskEngineModule onCommand run-transition validates required args", async () => {
   const workspace = await tmpDir();
   const ctx = sqliteTaskEngineCtx(workspace);

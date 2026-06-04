@@ -112,6 +112,7 @@ export type DashboardListSummary = {
   count: number;
   top: DashboardTaskRow[];
   phaseBuckets: DashboardPhaseBucket[];
+  lazy?: boolean;
 };
 
 export type PlanningGenerationPolicy = "off" | "warn" | "require";

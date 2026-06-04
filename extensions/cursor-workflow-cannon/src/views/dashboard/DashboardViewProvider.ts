@@ -2240,14 +2240,29 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     const phaseKeyArg = pk.length > 0 ? pk : "__no_phase__";
     const append = typeof cursor === "string" && cursor.trim().length > 0;
     try {
-      const raw = await this.client.run(
-        "list-tasks",
-        buildListTasksArgsForQueueBucket(category, phaseKeyArg, lazyTerminalBucketListLimit(), cursor)
-      );
-      const data =
-        raw && typeof raw === "object" && "data" in raw
+      let data: Record<string, unknown> | undefined;
+      if (category === "completed" || category === "cancelled") {
+        const raw = await this.client.run(
+          "dashboard-terminal-rows",
+          {
+            status: category,
+            phaseKey: phaseKeyArg,
+            limit: lazyTerminalBucketListLimit(),
+            cursor
+          }
+        );
+        data = raw && typeof raw === "object" && "data" in raw
           ? (raw as { data?: Record<string, unknown> }).data
           : undefined;
+      } else {
+        const raw = await this.client.run(
+          "list-tasks",
+          buildListTasksArgsForQueueBucket(category, phaseKeyArg, lazyTerminalBucketListLimit(), cursor)
+        );
+        data = raw && typeof raw === "object" && "data" in raw
+          ? (raw as { data?: Record<string, unknown> }).data
+          : undefined;
+      }
       const tasksRaw =
         data && Array.isArray(data.tasks) ? (data.tasks as unknown[]) : [];
       const tasks = filterTasksForQueueBucketCategory(category, tasksRaw);

@@ -73,6 +73,7 @@ import {
 import { buildDashboardAgentActivitySummary } from "./build-dashboard-agent-activity-summary.js";
 import { summarizeAgentRegistrySessions } from "../agent-registry-session-summary.js";
 import type { DashboardSummaryTracer } from "./dashboard-summary-trace.js";
+import { TASK_ENGINE_TASKS_TABLE } from "../../../core/state/kit-sqlite/planning-sqlite-kernel.js";
 
 /** Parse optional `dashboard-summary` argv for wishlist table paging (extension + CLI). */
 export function parseDashboardWishlistPaging(args?: Record<string, unknown>): {
@@ -220,7 +221,7 @@ export async function buildDashboardBase(
   const skipPlanningSessionRead = projection === "overview" || projection === "agentActivity";
   const skipAgentGuidanceBuild = projection === "queue" || projection === "agentActivity";
 
-  const tasks = tracer?.span("getActiveTasks", () => store.getActiveTasks()) ?? store.getActiveTasks();
+  const allTasks = tracer?.span("getActiveTasks", () => store.getActiveTasks()) ?? store.getActiveTasks();
   const { dualForStatus, workspaceStatus } =
     tracer?.span("readWorkspaceStatus", () => {
       const dual = sqliteDual ?? openSqliteDualForWorkspaceStatus(ctx);
@@ -235,6 +236,34 @@ export async function buildDashboardBase(
         workspaceStatus: readWorkspaceStatusSnapshotFromDual(dual)
       };
     })();
+
+  const currentPhase = workspaceStatus?.currentKitPhase != null ? String(workspaceStatus.currentKitPhase).trim() : "";
+  const activeNonTerminal = allTasks.filter(t => t.status !== "completed" && t.status !== "cancelled");
+  const neededCompletedIds = new Set<string>();
+  for (const t of activeNonTerminal) {
+    if (t.dependsOn) {
+      for (const depId of t.dependsOn) {
+        neededCompletedIds.add(depId);
+      }
+    }
+  }
+
+  const tasks = allTasks.filter(t => {
+    // 1. Active non-terminal tasks
+    if (t.status !== "completed" && t.status !== "cancelled") {
+      return true;
+    }
+    // 2. Terminal tasks in the current phase
+    const taskPhase = t.phaseKey != null ? String(t.phaseKey).trim() : "";
+    if (currentPhase !== "" && taskPhase === currentPhase) {
+      return true;
+    }
+    // 3. Completed tasks that are dependencies of active non-terminal tasks
+    if (t.status === "completed" && neededCompletedIds.has(t.id)) {
+      return true;
+    }
+    return false;
+  });
   const suggestion = tracer?.span("getNextActions", () =>
     getNextActions(tasks, {
       workspacePhaseFocus: {
@@ -441,20 +470,8 @@ export async function buildDashboardBase(
       )
     : [];
 
-  const completedTasks = needsQueueRollups
-    ? tasks.filter((t) => t.status === "completed").sort((a, b) => a.id.localeCompare(b.id))
-    : [];
-  const cancelledTasks = needsQueueRollups
-    ? tasks.filter((t) => t.status === "cancelled").sort((a, b) => a.id.localeCompare(b.id))
-    : [];
-  const completedTop = needsQueueRollups ? completedTasks.slice(0, 15).map(toProposedRow) : [];
-  const cancelledTop = needsQueueRollups ? cancelledTasks.slice(0, 15).map(toProposedRow) : [];
-  const completedPhaseBuckets = needsQueueRollups
-    ? buildDashboardPhaseBucketsForTasks(completedTasks, workspaceStatus, toProposedRow, 0)
-    : [];
-  const cancelledPhaseBuckets = needsQueueRollups
-    ? buildDashboardPhaseBucketsForTasks(cancelledTasks, workspaceStatus, toProposedRow, 0)
-    : [];
+  const completedCount = getTerminalCount("completed", allTasks, sqliteDual);
+  const cancelledCount = getTerminalCount("cancelled", allTasks, sqliteDual);
 
   const dependencyOverview = tracer?.span("dependencyOverview", () =>
     needsQueueRollups
@@ -864,15 +881,17 @@ export async function buildDashboardBase(
     phaseJournalStats,
     completedSummary: {
       schemaVersion: 1 as const,
-      count: completedTasks.length,
-      top: completedTop,
-      phaseBuckets: completedPhaseBuckets
+      count: completedCount,
+      top: [],
+      phaseBuckets: [],
+      lazy: true
     },
     cancelledSummary: {
       schemaVersion: 1 as const,
-      count: cancelledTasks.length,
-      top: cancelledTop,
-      phaseBuckets: cancelledPhaseBuckets
+      count: cancelledCount,
+      top: [],
+      phaseBuckets: [],
+      lazy: true
     },
     suggestedNext: suggestion.suggestedNext
       ? {
@@ -1050,6 +1069,36 @@ export async function buildDashboardOverview(
   );
   const phaseKeysWithActiveQueueWork = collectPhaseKeysWithActiveQueueWork(tasks);
 
+  const effCfg =
+    ctx.effectiveConfig && typeof ctx.effectiveConfig === "object" && !Array.isArray(ctx.effectiveConfig)
+      ? (ctx.effectiveConfig as Record<string, unknown>)
+      : {};
+
+  let agentGuidance: DashboardSummaryData["agentGuidance"] = null;
+  const guidanceResolved = resolveAgentGuidanceFromEffectiveConfig(effCfg);
+  const behaviorState = await loadBehaviorWorkspaceState(ctx);
+  const behaviorStore = new BehaviorProfileStore(behaviorState);
+  const { effective: behaviorEffective } = behaviorStore.resolveEffectiveWithProvenance();
+  const agentPresentation = resolveAgentPresentationPolicy({
+    effectiveConfig: effCfg,
+    guidance: guidanceResolved,
+    behaviorProfile: {
+      id: behaviorEffective.id,
+      label: behaviorEffective.label,
+      dimensions: behaviorEffective.dimensions
+    }
+  });
+  agentGuidance = {
+    schemaVersion: 1 as const,
+    profileSetId: guidanceResolved.profileSetId,
+    tier: guidanceResolved.tier,
+    displayLabel: guidanceResolved.displayLabel,
+    usingDefaultTier: guidanceResolved.usingDefaultTier,
+    temperamentProfileId: behaviorEffective.id,
+    temperamentLabel: dashboardOnboardingTemperamentLabel(behaviorEffective),
+    agentPresentation
+  };
+
   const humanGatesSummary = buildDashboardHumanGatesSummary(
     tasks,
     workspaceStatus?.currentKitPhase != null ? String(workspaceStatus.currentKitPhase) : null,
@@ -1130,8 +1179,20 @@ export async function buildDashboardOverview(
     humanGatesSummary,
     approvalQueue,
     phaseJournalStats: emptyPhaseJournalStats(),
-    completedSummary: emptyListSummary(),
-    cancelledSummary: emptyListSummary(),
+    completedSummary: {
+      schemaVersion: 1 as const,
+      count: getTerminalCount("completed", tasks, sqliteDual),
+      top: [],
+      phaseBuckets: [],
+      lazy: true
+    },
+    cancelledSummary: {
+      schemaVersion: 1 as const,
+      count: getTerminalCount("cancelled", tasks, sqliteDual),
+      top: [],
+      phaseBuckets: [],
+      lazy: true
+    },
     suggestedNext,
     dependencyOverview: {
       schemaVersion: 1,
@@ -1146,7 +1207,7 @@ export async function buildDashboardOverview(
       criticalPathReady: []
     },
     blockingAnalysis: [],
-    agentGuidance: null,
+    agentGuidance,
     teamExecution: teamExecutionEmpty,
     subagentRegistry: subagentRegistryEmpty,
     agentRegistrySessions: agentRegistrySessionsEmpty,
@@ -1185,4 +1246,25 @@ export function buildDashboardStatusProjection(base: DashboardBuildBase): Dashbo
 
 export function buildDashboardAgentActivityProjection(base: DashboardBuildBase): DashboardSummaryData {
   return base.data;
+}
+
+function getTerminalCount(
+  status: "completed" | "cancelled",
+  tasks: any[],
+  sqliteDual: SqliteDualPlanningStore | undefined
+): number {
+  if (sqliteDual && sqliteDual.relationalTasksEnabled) {
+    try {
+      const db = sqliteDual.getDatabase();
+      const row = db
+        .prepare(`SELECT COUNT(*) as count FROM ${TASK_ENGINE_TASKS_TABLE} WHERE status = ? AND archived = 0`)
+        .get(status) as { count: number } | undefined;
+      if (row && typeof row.count === "number") {
+        return row.count;
+      }
+    } catch {
+      // fallback
+    }
+  }
+  return tasks.filter((t) => t.status === status).length;
 }

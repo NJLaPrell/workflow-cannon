@@ -12,6 +12,17 @@ import {
 } from "../queue/replay-queue-snapshot.js";
 import { readQueueNamespaceArg } from "../queue-namespace-args.js";
 import type { TaskEntity } from "../types.js";
+import {
+  decodeListTasksCursor,
+  encodeListTasksCursor,
+  listTaskIsAfterCursor,
+  listTasksComparator
+} from "../list-tasks-pagination.js";
+import { projectTaskReadEntity } from "../task-read-projections.js";
+import { buildFeatureEnrichmentBySlug, loadTaskFeatureLinkMap } from "../persistence/feature-registry-queries.js";
+import { rowToTaskEntity, type TaskEngineTaskRow } from "../persistence/sqlite-task-row-mapping.js";
+import { TASK_ENGINE_TASKS_TABLE } from "../../../core/state/kit-sqlite/planning-sqlite-kernel.js";
+import { inferTaskPhaseKey } from "../phase-resolution.js";
 
 /**
  * Dashboard + queue diagnostics that do not mutate task rows.
@@ -33,6 +44,94 @@ export async function resolveQueueDashboardReadoutCommands(
       planning.sqliteDual,
       args
     );
+  }
+
+  if (command.name === "dashboard-terminal-rows") {
+    const status = typeof args.status === "string" ? args.status : "completed";
+    if (status !== "completed" && status !== "cancelled") {
+      return {
+        ok: false,
+        code: "invalid-run-args",
+        message: "dashboard-terminal-rows status must be either completed or cancelled"
+      };
+    }
+    const phaseKey = typeof args.phaseKey === "string" ? args.phaseKey.trim() : undefined;
+    const limitRaw = args.limit;
+    const limit = typeof limitRaw === "number" && Number.isFinite(limitRaw) && limitRaw > 0 ? Math.floor(limitRaw) : 50;
+    const cursor = typeof args.cursor === "string" && args.cursor.trim().length > 0 ? args.cursor.trim() : undefined;
+
+    let pageTasks: TaskEntity[] = [];
+    let hasMore = false;
+
+    if (planning.sqliteDual && planning.sqliteDual.relationalTasksEnabled) {
+      try {
+        const db = planning.sqliteDual.getDatabase();
+        let query = `SELECT * FROM ${TASK_ENGINE_TASKS_TABLE} WHERE status = ? AND archived = 0`;
+        const params: any[] = [status];
+        if (phaseKey && phaseKey !== "__no_phase__") {
+          query += ` AND phase_key = ?`;
+          params.push(phaseKey);
+        } else if (phaseKey === "__no_phase__") {
+          query += ` AND (phase_key IS NULL OR phase_key = '')`;
+        }
+        const cursorDecoded = cursor ? decodeListTasksCursor(cursor) : null;
+        if (cursorDecoded) {
+          query += ` AND (updated_at < ? OR (updated_at = ? AND CAST(SUBSTR(id, 2) AS INTEGER) > CAST(SUBSTR(?, 2) AS INTEGER)))`;
+          params.push(cursorDecoded.u, cursorDecoded.u, cursorDecoded.i);
+        }
+        query += ` ORDER BY updated_at DESC, CAST(SUBSTR(id, 2) AS INTEGER) ASC LIMIT ?`;
+        params.push(limit + 1);
+
+        const rows = db.prepare(query).all(...params) as TaskEngineTaskRow[];
+        const linkMap = loadTaskFeatureLinkMap(db);
+        const mapped = rows.map((r) => rowToTaskEntity(r, { taskFeatureLinkMap: linkMap }));
+        if (mapped.length > limit) {
+          pageTasks = mapped.slice(0, limit);
+          hasMore = true;
+        } else {
+          pageTasks = mapped;
+        }
+      } catch (err) {
+        // Fallback to memory
+        pageTasks = [];
+      }
+    }
+
+    if (pageTasks.length === 0) {
+      let filtered = store.getActiveTasks().filter((t) => t.status === status);
+      if (phaseKey && phaseKey !== "__no_phase__") {
+        filtered = filtered.filter((t) => inferTaskPhaseKey(t) === phaseKey);
+      } else if (phaseKey === "__no_phase__") {
+        filtered = filtered.filter((t) => inferTaskPhaseKey(t) === null);
+      }
+      filtered.sort(listTasksComparator);
+      const cursorDecoded = cursor ? decodeListTasksCursor(cursor) : null;
+      if (cursorDecoded) {
+        filtered = filtered.filter((t) => listTaskIsAfterCursor(t, cursorDecoded));
+      }
+      if (filtered.length > limit) {
+        pageTasks = filtered.slice(0, limit);
+        hasMore = true;
+      } else {
+        pageTasks = filtered;
+      }
+    }
+
+    const nextCursor = hasMore && pageTasks.length > 0 ? encodeListTasksCursor(pageTasks[pageTasks.length - 1]!) : undefined;
+    const enrich = buildFeatureEnrichmentBySlug(planning.sqliteDual.getDatabase());
+    const projectedPage = pageTasks.map((task) => projectTaskReadEntity(task, enrich));
+
+    return {
+      ok: true,
+      code: "dashboard-terminal-rows",
+      message: `Found ${projectedPage.length} terminal tasks`,
+      data: {
+        tasks: projectedPage,
+        count: projectedPage.length,
+        scope: "tasks-only",
+        ...(nextCursor !== undefined ? { nextCursor } : {})
+      }
+    };
   }
 
   if (command.name === "queue-health") {

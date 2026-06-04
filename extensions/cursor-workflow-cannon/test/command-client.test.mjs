@@ -657,9 +657,9 @@ test("CommandClient mutation lane runs before queued refresh", async () => {
   ]);
   assert.equal(transition.ok, true);
   assert.equal(transition.code, "run-transition");
-  assert.deepEqual(order, ["run-transition"]);
-  assert.equal(summary.ok, false);
-  assert.equal(summary.code, "extension-refresh-paused");
+  assert.deepEqual(order, ["run-transition", "dashboard-summary"]);
+  assert.equal(summary.ok, true);
+  assert.equal(summary.code, "dashboard-summary");
 });
 
 test("CommandClient refresh pause tracks owners and ignores unbalanced release", async () => {
@@ -689,8 +689,8 @@ test("CommandClient refresh pause tracks owners and ignores unbalanced release",
   const ok = await client.run("dashboard-summary", {});
   assert.equal(ok.ok, true);
   assert.deepEqual(calls, ["dashboard-summary"]);
-  assert.ok(notices.some((line) => line.includes("refresh pause true owner=drawer")));
-  assert.ok(notices.some((line) => line.includes("refresh pause release ignored owner=not-owner")));
+  assert.ok(notices.some((line) => line.includes("refresh pause acquired | owner=drawer")));
+  assert.ok(notices.some((line) => line.includes("refresh pause release ignored | owner mismatch: tried to release owner=not-owner")));
 });
 
 test("CommandClient clearRefreshPaused releases all pause owners", () => {
