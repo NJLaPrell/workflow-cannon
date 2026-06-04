@@ -155,6 +155,45 @@ function normalizeRisks(args: Record<string, unknown>, manifest: Record<string, 
     .slice(0, RELEASE_CLOSEOUT_RESULT_NOTE_LIMIT);
 }
 
+function readStringList(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter(nonEmptyString).map((entry) => entry.trim()) : [];
+}
+
+function readPostReleaseEvidence(args: Record<string, unknown>, manifest: Record<string, unknown>): {
+  branchesAndPrs: string[];
+  tag: string | null;
+  publishedPackage: string | null;
+  ci: string[];
+  workspace: Record<string, unknown> | null;
+  missingFinalEvidence: string[];
+} {
+  const source = isRecord(args.postReleaseEvidence)
+    ? args.postReleaseEvidence
+    : isRecord(args.finalEvidence)
+      ? args.finalEvidence
+      : isRecord(manifest.postReleaseEvidence)
+        ? manifest.postReleaseEvidence
+        : isRecord(manifest.finalEvidence)
+          ? manifest.finalEvidence
+          : {};
+  const branchesAndPrs = readStringList(source.branchesAndPrs ?? source.branches ?? source.prs);
+  const tag = nonEmptyString(source.tag) ? source.tag.trim() : nonEmptyString(source.gitTag) ? source.gitTag.trim() : null;
+  const publishedPackage = nonEmptyString(source.publishedPackage)
+    ? source.publishedPackage.trim()
+    : nonEmptyString(source.package)
+      ? source.package.trim()
+      : null;
+  const ci = readStringList(source.ci ?? source.checks);
+  const workspace = isRecord(source.workspace) ? source.workspace : null;
+  const missingFinalEvidence: string[] = [];
+  if (branchesAndPrs.length === 0) missingFinalEvidence.push("postReleaseEvidence.branchesAndPrs");
+  if (!tag) missingFinalEvidence.push("postReleaseEvidence.tag");
+  if (!publishedPackage) missingFinalEvidence.push("postReleaseEvidence.publishedPackage");
+  if (ci.length === 0) missingFinalEvidence.push("postReleaseEvidence.ci");
+  if (!workspace) missingFinalEvidence.push("postReleaseEvidence.workspace");
+  return { branchesAndPrs, tag, publishedPackage, ci, workspace, missingFinalEvidence };
+}
+
 function markdownList(items: string[]): string {
   return items.map((item) => `- ${item}`).join("\n");
 }
@@ -183,6 +222,7 @@ export function buildReleaseCloseoutResult(args: {
   const releaseNotes = readReleaseNotes(args.commandArgs, manifest);
   const followUpTasks = normalizeFollowUpTasks(args.commandArgs, manifest);
   const followUpSummary = readFollowUpSummary(args.commandArgs, manifest, followUpTasks);
+  const postReleaseEvidence = readPostReleaseEvidence(args.commandArgs, manifest);
 
   const missingFields: string[] = [];
   if (!phaseKey) missingFields.push("phaseKey");
@@ -237,6 +277,7 @@ export function buildReleaseCloseoutResult(args: {
   const sequence = [
     commandRef("phase-release-orchestration-state"),
     commandRef("phase-drain-delta"),
+    commandRef("phase-release-state", phaseKey ? { phaseKey } : undefined),
     commandRef("prepare-release-artifacts", releaseVersion ? { version: releaseVersion } : undefined),
     commandRef("release-closeout-result", releaseVersion && phaseKey ? { phaseKey, releaseVersion } : undefined)
   ];
@@ -269,7 +310,9 @@ export function buildReleaseCloseoutResult(args: {
         featureLimit: RELEASE_CLOSEOUT_RESULT_FEATURE_LIMIT,
         followUpSummary,
         followUpTasks,
-        risks
+        risks,
+        postReleaseEvidence,
+        missingFinalEvidence: postReleaseEvidence.missingFinalEvidence
       },
       refs: {
         commandSequence: sequence,
@@ -288,6 +331,11 @@ export function buildReleaseCloseoutResult(args: {
             field: "followOnExecutionTaskCountOrNone",
             source: "releaseEvidenceManifest.followUpSummary",
             ref: commandRef("release-evidence-manifest", { releaseVersion, phaseKey })
+          },
+          {
+            field: "postReleaseEvidence",
+            source: "release-closeout-result.args.postReleaseEvidence",
+            ref: commandRef("phase-release-state", { phaseKey })
           }
         ],
         instructions: sequence.map((ref) => ref.instructionPath)

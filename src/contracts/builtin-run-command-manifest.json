@@ -165,6 +165,14 @@
   },
   {
     "moduleId": "task-engine",
+    "name": "phase-release-state",
+    "file": "phase-release-state.md",
+    "description": "Build a compact pre-release readiness packet with explicit missing requirements and publish safety.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
     "name": "release-closeout-result",
     "file": "release-closeout-result.md",
     "description": "Build the final placeholder-free phase release result packet with concrete evidence refs and packet sequence.",

@@ -1,23 +1,21 @@
 {
   "ok": true,
   "code": "run-args-schema",
-  "command": "release-closeout-result",
+  "command": "phase-release-state",
   "schema": {
-    "type": "object",
-    "additionalProperties": true,
-    "description": "Permissive fallback args schema for 'release-closeout-result'. Pass concrete releaseNotes, followUpSummary, and optional postReleaseEvidence/finalEvidence, or a release-evidence-manifest payload as manifest."
+    "type": "object"
   },
-  "schemaSource": "manifest-permissive-fallback",
+  "schemaSource": "pilot-run-args-snapshot",
   "sampleArgs": {},
   "examples": [
     {
-      "description": "Minimal argv example",
-      "argv": "workspace-kit run release-closeout-result '{}'"
+      "description": "Phase-scoped pre-release state packet",
+      "argv": "workspace-kit run phase-release-state '{\"phaseKey\":\"131\"}'"
     }
   ],
-  "instructionPath": "src/modules/task-engine/instructions/release-closeout-result.md",
+  "instructionPath": "src/modules/task-engine/instructions/phase-release-state.md",
   "moduleId": "task-engine",
-  "description": "Build the final placeholder-free phase release result packet with concrete evidence refs and packet sequence.",
+  "description": "Build a compact pre-release readiness packet with explicit missing requirements and publish safety.",
   "policy": {
     "sensitivity": "non-sensitive",
     "operationId": null,
@@ -37,5 +35,6 @@
   "discovery": {
     "listCommands": "pnpm exec wk run --list-commands",
     "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
-  }
+  },
+  "invocationId": "phase-release-state-snippet"
 }

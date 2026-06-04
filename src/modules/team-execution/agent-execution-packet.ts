@@ -1,4 +1,8 @@
-import type { TeamAssignmentMetadataV1 } from "../../contracts/team-execution-assignment-metadata.v1.js";
+import type { AgentModelTier } from "../../contracts/agent-orchestration.js";
+import type {
+  TeamAssignmentMetadataV1,
+  WorkerPacketModelTierRecommendation
+} from "../../contracts/team-execution-assignment-metadata.v1.js";
 import { digestPayload } from "../task-engine/mutation-utils.js";
 import type { ResolvedMaintainerDeliveryPolicyV1 } from "../task-engine/maintainer-delivery-policy-resolver.js";
 import { inferTaskPhaseKey } from "../task-engine/phase-resolution.js";
@@ -8,6 +12,8 @@ import type { TeamAssignmentRow } from "./assignment-store.js";
 
 export type AgentExecutionPacket = {
   schemaVersion: 1;
+  packetKind: "assignment";
+  packetLockStatus: "assignment_locked";
   assignmentId: string;
   assignmentStatus: TeamAssignmentRow["status"];
   workerId: string;
@@ -27,6 +33,10 @@ export type AgentExecutionPacket = {
   suggestedWorkerBranch: string | null;
   validationCommands: Array<{ command: string; rationale: string }>;
   modelTier: string | null;
+  modelTierRecommendation: WorkerPacketModelTierRecommendation;
+  modelTierRationale: string;
+  modelTierEscalationTriggers: string[];
+  guidanceCards: PacketGuidanceCards;
   handoffContract: {
     contractId: string | null;
     submitCommand: string;
@@ -44,10 +54,105 @@ export type AgentExecutionPacket = {
   packetDigest: string;
 };
 
+export type AgentExecutionDraftPacket = {
+  schemaVersion: 1;
+  packetKind: "draft";
+  packetLockStatus: "draft_unlocked";
+  assignmentId: null;
+  assignmentStatus: "draft";
+  workerId: null;
+  supervisorId: null;
+  taskId: string;
+  phaseKey: string | null;
+  assignmentIntent: string;
+  title: string;
+  summary: string | null;
+  acceptanceCriteria: string[];
+  ownedPaths: string[];
+  readOnlyPaths: string[];
+  forbiddenPaths: string[];
+  sharedPaths: string[];
+  requiresApprovalPaths: string[];
+  baseBranch: string | null;
+  suggestedWorkerBranch: string | null;
+  validationCommands: Array<{ command: string; rationale: string }>;
+  modelTier: string | null;
+  modelTierRecommendation: WorkerPacketModelTierRecommendation;
+  modelTierRationale: string;
+  modelTierEscalationTriggers: string[];
+  guidanceCards: PacketGuidanceCards;
+  boundaryRecommendations: PacketBoundaryRecommendations;
+  recommendedAssignmentMetadata: TeamAssignmentMetadataV1;
+  registerAssignmentRef: {
+    command: "register-assignment";
+    args: {
+      executionTaskId: string;
+      metadata: TeamAssignmentMetadataV1;
+    };
+    commandLine: string;
+    refs: {
+      instructions: string[];
+    };
+  };
+  handoffContract: {
+    contractId: string | null;
+    submitCommand: string;
+    expectedAssignmentId: null;
+    expectedWorkerId: null;
+    refs: {
+      instructions: string[];
+    };
+  };
+  refs: {
+    commands: string[];
+    instructions: string[];
+  };
+  stopConditions: string[];
+  packetDigest: string;
+};
+
 type PacketBoundaries = Pick<
   AgentExecutionPacket,
   "ownedPaths" | "readOnlyPaths" | "forbiddenPaths" | "sharedPaths" | "requiresApprovalPaths"
 >;
+
+type PacketModelTierDecision = {
+  modelTier: AgentModelTier;
+  recommendation: WorkerPacketModelTierRecommendation;
+  rationale: string;
+  escalationTriggers: string[];
+};
+
+type PacketBoundaryRecommendation = {
+  boundary: "owned" | "read_only" | "forbidden" | "shared" | "requires_approval";
+  path: string;
+  confidence: "high" | "medium" | "low";
+  source: "task-metadata" | "technical-scope" | "packet-default" | "policy-default";
+  advisory: boolean;
+  rationale: string;
+};
+
+type PacketBoundaryRecommendations = {
+  ownedPaths: PacketBoundaryRecommendation[];
+  readOnlyPaths: PacketBoundaryRecommendation[];
+  forbiddenPaths: PacketBoundaryRecommendation[];
+  sharedPaths: PacketBoundaryRecommendation[];
+  requiresApprovalPaths: PacketBoundaryRecommendation[];
+};
+
+type PacketGuidanceCard = {
+  title: string;
+  body: string;
+};
+
+type PacketGuidanceCards = {
+  source: "static-fallback";
+  refs: string[];
+  think: PacketGuidanceCard[];
+  do: PacketGuidanceCard[];
+  review: PacketGuidanceCard[];
+  stop: PacketGuidanceCard[];
+};
 
 function readString(value: unknown): string | null {
   return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
@@ -103,6 +208,293 @@ function readAssignmentIntent(metadata: TeamAssignmentMetadataV1 | null, task: T
   );
 }
 
+function readTaskMetadata(task: TaskEntity): Record<string, unknown> | null {
+  return task.metadata && typeof task.metadata === "object" && !Array.isArray(task.metadata)
+    ? (task.metadata as Record<string, unknown>)
+    : null;
+}
+
+function readTaskScopeEntries(task: TaskEntity): Array<{ path: string; source: "task-metadata" | "technical-scope" }> {
+  const metadata = readTaskMetadata(task);
+  const entries: Array<{ path: string; source: "task-metadata" | "technical-scope" }> = [];
+  for (const path of mergePathLists(metadata?.ownedPaths, metadata?.paths)) {
+    entries.push({ path, source: "task-metadata" });
+  }
+  for (const path of mergePathLists(metadata?.technicalScope, (task as { technicalScope?: unknown }).technicalScope)) {
+    if (!entries.some((entry) => entry.path === path)) {
+      entries.push({ path, source: "technical-scope" });
+    }
+  }
+  return entries;
+}
+
+function readAcceptanceCriteria(task: TaskEntity): string[] {
+  return Array.isArray(task.acceptanceCriteria)
+    ? task.acceptanceCriteria.filter((item): item is string => typeof item === "string" && item.trim().length > 0)
+    : [];
+}
+
+function readBaseBranch(args: { policy: ResolvedMaintainerDeliveryPolicyV1; task: TaskEntity }): string | null {
+  const phaseKey = inferTaskPhaseKey(args.task);
+  return (
+    readString(args.policy.phaseIntegrationBranch) ??
+    readString(args.policy.mergeTarget.branch) ??
+    (phaseKey ? `release/phase-${phaseKey}` : null)
+  );
+}
+
+function readTaskText(task: TaskEntity): string {
+  return [
+    task.title,
+    task.summary,
+    task.approach,
+    task.description,
+    task.risk,
+    ...(Array.isArray(task.acceptanceCriteria) ? task.acceptanceCriteria : [])
+  ]
+    .filter((value): value is string => typeof value === "string")
+    .join(" ")
+    .toLowerCase();
+}
+
+function topLevelPathOwners(paths: string[]): Set<string> {
+  return new Set(
+    paths
+      .map((path) => path.trim().replace(/\\/g, "/").replace(/^\.\//, ""))
+      .filter(Boolean)
+      .map((path) => {
+        const [first, second] = path.split("/");
+        return first === "src" && second === "modules" ? `${first}/${second}/${path.split("/")[2] ?? ""}` : first;
+      })
+  );
+}
+
+function mapPacketLabelToModelTier(label: WorkerPacketModelTierRecommendation["label"]): AgentModelTier {
+  if (label === "tier_1") {
+    return "cheap_fast";
+  }
+  if (label === "tier_2") {
+    return "balanced";
+  }
+  return "high_reasoning";
+}
+
+function mapModelTierToPacketLabel(modelTier: string | null): WorkerPacketModelTierRecommendation["label"] | null {
+  if (modelTier === "cheap_fast") {
+    return "tier_1";
+  }
+  if (modelTier === "balanced") {
+    return "tier_2";
+  }
+  if (modelTier === "high_reasoning" || modelTier === "specialist" || modelTier === "human_review") {
+    return "tier_3";
+  }
+  return null;
+}
+
+function containsRiskTerm(text: string, term: string): boolean {
+  const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`(^|[^a-z0-9])${escaped}([^a-z0-9]|$)`, "i").test(text);
+}
+
+function buildModelTierDecision(args: {
+  task: TaskEntity;
+  boundaries: PacketBoundaries;
+  metadata: TeamAssignmentMetadataV1 | null;
+  packetKind: "assignment" | "draft";
+}): PacketModelTierDecision {
+  const text = readTaskText(args.task);
+  const ownedPaths = args.boundaries.ownedPaths;
+  const owners = topLevelPathOwners(ownedPaths);
+  const triggers: string[] = [];
+  const riskyTerms = [
+    "release",
+    "publish",
+    "pre-release",
+    "policy",
+    "approval",
+    "schema",
+    "migration",
+    "security",
+    "auth",
+    "rollback",
+    "unsafe",
+    "ambiguous",
+    "cross-module",
+    "orchestration"
+  ];
+  const matchedTerms = riskyTerms.filter((term) => containsRiskTerm(text, term));
+  if (matchedTerms.length > 0) {
+    triggers.push(`risk terms: ${matchedTerms.slice(0, 4).join(", ")}`);
+  }
+  if (args.boundaries.requiresApprovalPaths.length > 0) {
+    triggers.push("approval-gated paths are present");
+  }
+  if (ownedPaths.length > 5) {
+    triggers.push(`broad owned path count (${ownedPaths.length})`);
+  }
+  if (owners.size > 2) {
+    triggers.push(`cross-area path ownership (${owners.size} areas)`);
+  }
+
+  const explicitModelTier = readString(args.metadata?.modelTier);
+  const explicitLabel = mapModelTierToPacketLabel(explicitModelTier);
+  if (explicitLabel === "tier_3") {
+    triggers.push(`explicit metadata modelTier '${explicitModelTier}'`);
+  }
+
+  let label: WorkerPacketModelTierRecommendation["label"] = "tier_2";
+  if (triggers.length > 0) {
+    label = "tier_3";
+  } else if (explicitLabel) {
+    label = explicitLabel;
+  } else if (
+    ownedPaths.length > 0 &&
+    ownedPaths.length <= 2 &&
+    owners.size <= 1 &&
+    !text.match(/\b(implement|runtime|command|orchestrat|packet|contract|state)\b/)
+  ) {
+    label = "tier_1";
+  }
+
+  const modelTier = mapPacketLabelToModelTier(label);
+  const rationale =
+    label === "tier_1"
+      ? "Narrow, low-risk task scope can run on the lightest packet tier."
+      : label === "tier_2"
+        ? "Bounded implementation work without escalation triggers fits the default worker tier."
+        : `Escalated for ${args.packetKind} packet because ${triggers.join("; ")}.`;
+
+  return {
+    modelTier,
+    recommendation: { label, rationale },
+    rationale,
+    escalationTriggers: triggers
+  };
+}
+
+function isPathLike(value: string): boolean {
+  const trimmed = value.trim();
+  if (/\s/.test(trimmed)) {
+    return false;
+  }
+  return (
+    trimmed.includes("/") ||
+    trimmed.includes("*") ||
+    trimmed.startsWith(".") ||
+    /\.(ts|tsx|js|jsx|mjs|cjs|json|md|yml|yaml|css|scss|html)$/.test(trimmed)
+  );
+}
+
+function toOwnedBoundaryRecommendation(entry: {
+  path: string;
+  source: "task-metadata" | "technical-scope";
+}): PacketBoundaryRecommendation {
+  const pathLike = isPathLike(entry.path);
+  const confidence = pathLike ? (entry.source === "task-metadata" ? "high" : "medium") : "low";
+  return {
+    boundary: "owned",
+    path: entry.path,
+    confidence,
+    source: entry.source,
+    advisory: confidence === "low",
+    rationale: pathLike
+      ? `Derived from ${entry.source} as a candidate owned path.`
+      : `Kept advisory because '${entry.path}' is not a concrete repo path or glob.`
+  };
+}
+
+function defaultReadOnlyRecommendation(path: string): PacketBoundaryRecommendation {
+  return {
+    boundary: "read_only",
+    path,
+    confidence: "high",
+    source: "packet-default",
+    advisory: false,
+    rationale: "Packet instruction reference should be read, not edited, for worker execution."
+  };
+}
+
+function outsideOwnedRecommendation(): PacketBoundaryRecommendation {
+  return {
+    boundary: "forbidden",
+    path: "<outside-owned-paths>",
+    confidence: "medium",
+    source: "policy-default",
+    advisory: true,
+    rationale: "Treat paths outside explicit owned recommendations as out of scope unless the assignment is refined."
+  };
+}
+
+function buildDraftBoundaryRecommendations(task: TaskEntity): PacketBoundaryRecommendations {
+  const ownedPaths = readTaskScopeEntries(task).map(toOwnedBoundaryRecommendation);
+  const readOnlyPaths = [
+    ".ai/playbooks/task-to-phase-branch.md",
+    ".ai/AGENT-CLI-MAP.md",
+    "AGENT_ORCHESTRATION_HANDOFF.md"
+  ].map(defaultReadOnlyRecommendation);
+  return {
+    ownedPaths,
+    readOnlyPaths,
+    forbiddenPaths: [outsideOwnedRecommendation()],
+    sharedPaths: [],
+    requiresApprovalPaths: []
+  };
+}
+
+function materializeRecommendedPaths(recommendations: PacketBoundaryRecommendation[]): string[] {
+  return recommendations
+    .filter((recommendation) => recommendation.confidence !== "low")
+    .map((recommendation) => recommendation.path);
+}
+
+function buildGuidanceCards(args: {
+  packetKind: "assignment" | "draft";
+  boundaries: PacketBoundaries;
+}): PacketGuidanceCards {
+  const hasOwnedPaths = args.boundaries.ownedPaths.length > 0;
+  return {
+    source: "static-fallback",
+    refs: [
+      "src/modules/team-execution/instructions/agent-execution-packet.md",
+      "src/modules/team-execution/instructions/submit-assignment-handoff.md"
+    ],
+    think: [
+      {
+        title: "Scope",
+        body: hasOwnedPaths
+          ? "Plan changes inside owned paths and keep advisory boundaries visible."
+          : "Confirm owned paths before implementation."
+      },
+      {
+        title: "Evidence",
+        body: "Track acceptance criteria, changed files, validation commands, and unresolved risks."
+      }
+    ],
+    do: [
+      {
+        title: args.packetKind === "draft" ? "Register" : "Implement",
+        body:
+          args.packetKind === "draft"
+            ? "Use the draft metadata to register a bounded assignment before coding."
+            : "Work from the locked assignment packet and keep activity current."
+      }
+    ],
+    review: [
+      {
+        title: "Validate",
+        body: "Run the packet validation commands or record why a narrower equivalent is sufficient."
+      }
+    ],
+    stop: [
+      {
+        title: "Boundary",
+        body: "Stop when required edits leave owned paths or touch read-only, forbidden, or approval-gated paths."
+      }
+    ]
+  };
+}
+
 function buildStopConditions(args: {
   assignment: TeamAssignmentRow;
   boundaries: PacketBoundaries;
@@ -140,13 +532,18 @@ export function buildAgentExecutionPacket(args: {
   const typedMetadata = readMetadata(args.assignment.metadata);
   const boundaries = readAgentExecutionPacketBoundaries(args.assignment.metadata);
   const phaseKey = inferTaskPhaseKey(args.task);
-  const baseBranch =
-    readString(args.policy.phaseIntegrationBranch) ??
-    readString(args.policy.mergeTarget.branch) ??
-    (phaseKey ? `release/phase-${phaseKey}` : null);
+  const baseBranch = readBaseBranch({ policy: args.policy, task: args.task });
+  const modelTierDecision = buildModelTierDecision({
+    task: args.task,
+    boundaries,
+    metadata: typedMetadata,
+    packetKind: "assignment"
+  });
 
   const packetWithoutDigest = {
     schemaVersion: 1 as const,
+    packetKind: "assignment" as const,
+    packetLockStatus: "assignment_locked" as const,
     assignmentId: args.assignment.id,
     assignmentStatus: args.assignment.status,
     workerId: args.assignment.workerId,
@@ -156,9 +553,7 @@ export function buildAgentExecutionPacket(args: {
     assignmentIntent: readAssignmentIntent(typedMetadata, args.task),
     title: args.task.title,
     summary: readString(args.task.summary) ?? readString(args.task.approach),
-    acceptanceCriteria: Array.isArray(args.task.acceptanceCriteria)
-      ? args.task.acceptanceCriteria.filter((item): item is string => typeof item === "string" && item.trim().length > 0)
-      : [],
+    acceptanceCriteria: readAcceptanceCriteria(args.task),
     ownedPaths: boundaries.ownedPaths,
     readOnlyPaths: boundaries.readOnlyPaths,
     forbiddenPaths: boundaries.forbiddenPaths,
@@ -170,7 +565,11 @@ export function buildAgentExecutionPacket(args: {
       command: recommendation.command,
       rationale: recommendation.rationale
     })),
-    modelTier: readString(typedMetadata?.modelTier),
+    modelTier: readString(typedMetadata?.modelTier) ?? modelTierDecision.modelTier,
+    modelTierRecommendation: modelTierDecision.recommendation,
+    modelTierRationale: modelTierDecision.rationale,
+    modelTierEscalationTriggers: modelTierDecision.escalationTriggers,
+    guidanceCards: buildGuidanceCards({ packetKind: "assignment", boundaries }),
     handoffContract: {
       contractId: readString(typedMetadata?.handoffContractId),
       submitCommand: "submit-assignment-handoff",
@@ -202,6 +601,155 @@ export function buildAgentExecutionPacket(args: {
       boundaries,
       baseBranch
     })
+  };
+
+  return {
+    ...packetWithoutDigest,
+    packetDigest: `sha256:${digestPayload(packetWithoutDigest)}`
+  };
+}
+
+function buildDraftStopConditions(boundaries: PacketBoundaries, baseBranch: string | null): string[] {
+  const branchCondition = baseBranch
+    ? `Register the assignment against work that targets '${baseBranch}' before worker implementation begins.`
+    : "Register the assignment only after the correct phase integration branch is known.";
+  return [
+    "Do not implement from this draft packet; register an assignment and fetch the locked assignment packet first.",
+    boundaries.ownedPaths.length > 0
+      ? "Refine owned paths before registration if the draft scope is broader than the intended worker task."
+      : "Add explicit owned paths to the assignment metadata before worker implementation.",
+    "Stop if the recommended metadata would grant access beyond this task's implementation scope.",
+    branchCondition
+  ];
+}
+
+function buildRegisterAssignmentCommandLine(taskId: string, metadata: TeamAssignmentMetadataV1): string {
+  return `workspace-kit run register-assignment '${JSON.stringify({
+    executionTaskId: taskId,
+    supervisorId: "<supervisor-id>",
+    workerId: "<worker-id>",
+    metadata
+  })}'`;
+}
+
+export function buildAgentExecutionDraftPacket(args: {
+  task: TaskEntity;
+  policy: ResolvedMaintainerDeliveryPolicyV1;
+  validationRecommendations: ValidationRecommendation[];
+}): AgentExecutionDraftPacket {
+  const phaseKey = inferTaskPhaseKey(args.task);
+  const baseBranch = readBaseBranch({ policy: args.policy, task: args.task });
+  const boundaryRecommendations = buildDraftBoundaryRecommendations(args.task);
+  const ownedPaths = materializeRecommendedPaths(boundaryRecommendations.ownedPaths);
+  const readOnlyPaths = materializeRecommendedPaths(boundaryRecommendations.readOnlyPaths);
+  const validationCommands = args.validationRecommendations.slice(0, 5).map((recommendation) => ({
+    command: recommendation.command,
+    rationale: recommendation.rationale
+  }));
+  const draftBoundaries: PacketBoundaries = {
+    ownedPaths,
+    readOnlyPaths,
+    forbiddenPaths: [],
+    sharedPaths: [],
+    requiresApprovalPaths: []
+  };
+  const modelTierDecision = buildModelTierDecision({
+    task: args.task,
+    boundaries: draftBoundaries,
+    metadata: null,
+    packetKind: "draft"
+  });
+  const recommendedAssignmentMetadata: TeamAssignmentMetadataV1 = {
+    schemaVersion: 1,
+    agentDefinitionId: "task-worker",
+    contextProfileId: "task_worker_context_v1",
+    accessProfileId: "task_worker_strict_v1",
+    handoffContractId: "implementation_handoff_v2",
+    modelTier: modelTierDecision.modelTier,
+    modelTierRationale: modelTierDecision.rationale,
+    modelTierRecommendation: modelTierDecision.recommendation,
+    assignmentPromptSummary: readAssignmentIntent(null, args.task),
+    ownedPaths,
+    validationCommands,
+    resources: {
+      ownedPaths,
+      readOnlyPaths: draftBoundaries.readOnlyPaths
+    },
+    lockScope: {
+      tasks: [args.task.id]
+    }
+  };
+  const boundaries = readAgentExecutionPacketBoundaries(recommendedAssignmentMetadata);
+
+  const packetWithoutDigest = {
+    schemaVersion: 1 as const,
+    packetKind: "draft" as const,
+    packetLockStatus: "draft_unlocked" as const,
+    assignmentId: null,
+    assignmentStatus: "draft" as const,
+    workerId: null,
+    supervisorId: null,
+    taskId: args.task.id,
+    phaseKey,
+    assignmentIntent: recommendedAssignmentMetadata.assignmentPromptSummary ?? args.task.title,
+    title: args.task.title,
+    summary: readString(args.task.summary) ?? readString(args.task.approach),
+    acceptanceCriteria: readAcceptanceCriteria(args.task),
+    ownedPaths: boundaries.ownedPaths,
+    readOnlyPaths: boundaries.readOnlyPaths,
+    forbiddenPaths: boundaries.forbiddenPaths,
+    sharedPaths: boundaries.sharedPaths,
+    requiresApprovalPaths: boundaries.requiresApprovalPaths,
+    baseBranch,
+    suggestedWorkerBranch: readString(args.policy.taskBranchExample),
+    validationCommands,
+    modelTier: recommendedAssignmentMetadata.modelTier ?? null,
+    modelTierRecommendation: modelTierDecision.recommendation,
+    modelTierRationale: modelTierDecision.rationale,
+    modelTierEscalationTriggers: modelTierDecision.escalationTriggers,
+    guidanceCards: buildGuidanceCards({ packetKind: "draft", boundaries }),
+    boundaryRecommendations,
+    recommendedAssignmentMetadata,
+    registerAssignmentRef: {
+      command: "register-assignment" as const,
+      args: {
+        executionTaskId: args.task.id,
+        metadata: recommendedAssignmentMetadata
+      },
+      commandLine: buildRegisterAssignmentCommandLine(args.task.id, recommendedAssignmentMetadata),
+      refs: {
+        instructions: ["src/modules/team-execution/instructions/register-assignment.md"]
+      }
+    },
+    handoffContract: {
+      contractId: recommendedAssignmentMetadata.handoffContractId,
+      submitCommand: "submit-assignment-handoff",
+      expectedAssignmentId: null,
+      expectedWorkerId: null,
+      refs: {
+        instructions: [
+          "AGENT_ORCHESTRATION_HANDOFF.md",
+          "src/modules/team-execution/instructions/submit-assignment-handoff.md"
+        ]
+      }
+    },
+    refs: {
+      commands: [
+        "agent-execution-packet",
+        "register-assignment",
+        "submit-assignment-handoff",
+        "report-assignment-blocker"
+      ],
+      instructions: [
+        args.policy.playbookPath,
+        args.policy.playbookCursorRulePath,
+        args.policy.machinePlaybooksPath,
+        "src/modules/team-execution/instructions/agent-execution-packet.md",
+        "src/modules/team-execution/instructions/register-assignment.md",
+        "src/modules/team-execution/instructions/report-assignment-blocker.md"
+      ]
+    },
+    stopConditions: buildDraftStopConditions(boundaries, baseBranch)
   };
 
   return {

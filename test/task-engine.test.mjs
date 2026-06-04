@@ -1663,6 +1663,131 @@ test("phase-status reads canonical phase and optional task counts", async () => 
   assert.equal(result.data.exportStatus.exists, true);
 });
 
+test("phase-release-orchestration-state honors explicit phase scope and reports canonical mismatch", async () => {
+  const workspace = await tmpDir();
+  const ctx = sqliteTaskEngineCtx(workspace);
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(makeTask({ id: "T7201", title: "Phase 72 ready", phaseKey: "72", phase: "Phase 72", status: "ready" }));
+    store.addTask(makeTask({ id: "T7301", title: "Phase 73 blocked", phaseKey: "73", phase: "Phase 73", status: "blocked" }));
+  });
+  await taskEngineModule.onCommand(
+    { name: "set-current-phase", args: { currentKitPhase: "72", nextKitPhase: "73", expectedWorkspaceRevision: 0 } },
+    ctx
+  );
+
+  const fallback = await taskEngineModule.onCommand(
+    { name: "phase-release-orchestration-state", args: {} },
+    ctx
+  );
+  assert.equal(fallback.ok, true);
+  assert.equal(fallback.data.phaseKey, "72");
+  assert.equal(fallback.data.phaseSelection.source, "canonical");
+  assert.equal(fallback.data.phaseSelection.selectedPhaseKey, "72");
+  assert.equal(fallback.data.phaseSelection.operationalPhaseKey, "72");
+  assert.equal(fallback.data.phaseSelection.matchesCanonical, true);
+  assert.equal(fallback.data.phaseSelection.mismatchSeverity, "none");
+  assert.deepEqual(fallback.data.readyUnblockedTop.map((row) => row.taskId), ["T7201"]);
+
+  const explicitMatch = await taskEngineModule.onCommand(
+    { name: "phase-release-orchestration-state", args: { phaseKey: "72" } },
+    ctx
+  );
+  assert.equal(explicitMatch.ok, true);
+  assert.equal(explicitMatch.data.phaseSelection.source, "argument");
+  assert.equal(explicitMatch.data.phaseSelection.matchesCanonical, true);
+  assert.equal(explicitMatch.data.phaseSelection.mismatch, false);
+
+  const explicitMismatch = await taskEngineModule.onCommand(
+    { name: "phase-release-orchestration-state", args: { phaseKey: "73" } },
+    ctx
+  );
+  assert.equal(explicitMismatch.ok, true);
+  assert.equal(explicitMismatch.data.phaseKey, "73");
+  assert.equal(explicitMismatch.data.canonicalPhase.canonicalPhaseKey, "72");
+  assert.equal(explicitMismatch.data.phaseSelection.operationalPhaseKey, "73");
+  assert.equal(explicitMismatch.data.phaseSelection.matchesCanonical, false);
+  assert.equal(explicitMismatch.data.phaseSelection.mismatch, true);
+  assert.equal(explicitMismatch.data.phaseSelection.mismatchSeverity, "warning");
+  assert.match(explicitMismatch.data.phaseSelection.warning, /differs from canonical workspace phase 72/);
+  assert.equal(explicitMismatch.data.counts.blockedCount, 1);
+  assert.deepEqual(explicitMismatch.data.blockedTop.map((row) => row.taskId), ["T7301"]);
+});
+
+test("phase-drain-delta honors explicit phase scope and rejects cursor phase mismatch", async () => {
+  const workspace = await tmpDir();
+  const ctx = sqliteTaskEngineCtx(workspace);
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(
+      makeTask({
+        id: "T7201",
+        title: "Canonical phase task",
+        phaseKey: "72",
+        phase: "Phase 72",
+        status: "ready",
+        createdAt: "2026-06-03T20:00:10.000Z",
+        updatedAt: "2026-06-03T20:00:10.000Z"
+      })
+    );
+    store.addTask(
+      makeTask({
+        id: "T7300",
+        title: "Prior selected phase task",
+        phaseKey: "73",
+        phase: "Phase 73",
+        status: "ready",
+        createdAt: "2026-06-03T20:00:00.000Z",
+        updatedAt: "2026-06-03T20:00:00.000Z"
+      })
+    );
+    store.addTask(
+      makeTask({
+        id: "T7301",
+        title: "Changed selected phase task",
+        phaseKey: "73",
+        phase: "Phase 73",
+        status: "ready",
+        createdAt: "2026-06-03T20:00:10.000Z",
+        updatedAt: "2026-06-03T20:00:10.000Z"
+      })
+    );
+  });
+  await taskEngineModule.onCommand(
+    { name: "set-current-phase", args: { currentKitPhase: "72", nextKitPhase: "73", expectedWorkspaceRevision: 0 } },
+    ctx
+  );
+
+  const cursor = {
+    schemaVersion: 1,
+    phaseKey: "73",
+    planningGeneration: 1,
+    verdict: "tasks-remaining",
+    task: { updatedAt: "2026-06-03T20:00:00.000Z", ids: ["T7300"] },
+    assignment: { updatedAt: null, ids: [] }
+  };
+  const delta = await taskEngineModule.onCommand(
+    { name: "phase-drain-delta", args: { phaseKey: "73", cursor } },
+    ctx
+  );
+  assert.equal(delta.ok, true);
+  assert.equal(delta.data.phaseKey, "73");
+  assert.equal(delta.data.phaseSelection.mismatch, true);
+  assert.equal(delta.data.canonicalPhase.canonicalPhaseKey, "72");
+  assert.equal(delta.data.cursorAccepted, true);
+  assert.equal(delta.data.refreshRecommendation.mode, "delta");
+  assert.deepEqual(delta.data.changedTasks.map((row) => row.taskId), ["T7301"]);
+  assert.equal(delta.data.refreshRecommendation.ref.commandLine.includes('"phaseKey":"73"'), true);
+
+  const cursorMismatch = await taskEngineModule.onCommand(
+    { name: "phase-drain-delta", args: { phaseKey: "73", cursor: { ...cursor, phaseKey: "72" } } },
+    ctx
+  );
+  assert.equal(cursorMismatch.ok, true);
+  assert.equal(cursorMismatch.data.cursorAccepted, false);
+  assert.equal(cursorMismatch.data.cursorStatus, "stale");
+  assert.equal(cursorMismatch.data.refreshRecommendation.reason, "phase-mismatch");
+  assert.equal(cursorMismatch.data.refreshRecommendation.ref.commandLine.includes('"phaseKey":"73"'), true);
+});
+
 test("list-phase-catalog merges workspace phases and catalog descriptions in order", async () => {
   const workspace = await tmpDir();
   const ctx = sqliteTaskEngineCtx(workspace);

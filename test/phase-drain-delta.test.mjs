@@ -121,6 +121,7 @@ test("buildPhaseDrainDelta returns full-refresh recommendation for initial and s
 
   assert.equal(stale.refreshRecommendation.mode, "full-refresh");
   assert.equal(stale.cursorStatus, "stale");
+  assert.equal(stale.cursorStatusReason, "Cursor phase does not match the selected phase.");
 });
 
 test("buildPhaseDrainDelta returns only material task and assignment changes with bounded overflow refs", async () => {
