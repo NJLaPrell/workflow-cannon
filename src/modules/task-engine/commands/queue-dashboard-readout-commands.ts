@@ -46,13 +46,13 @@ export async function resolveQueueDashboardReadoutCommands(
     );
   }
 
-  if (command.name === "dashboard-terminal-rows") {
+  if (command.name === "dashboard-terminal-rows" || command.name === "dashboard-terminal-tasks") {
     const status = typeof args.status === "string" ? args.status : "completed";
     if (status !== "completed" && status !== "cancelled") {
       return {
         ok: false,
         code: "invalid-run-args",
-        message: "dashboard-terminal-rows status must be either completed or cancelled"
+        message: `${command.name} status must be either completed or cancelled`
       };
     }
     const phaseKey = typeof args.phaseKey === "string" ? args.phaseKey.trim() : undefined;
@@ -123,7 +123,7 @@ export async function resolveQueueDashboardReadoutCommands(
 
     return {
       ok: true,
-      code: "dashboard-terminal-rows",
+      code: command.name,
       message: `Found ${projectedPage.length} terminal tasks`,
       data: {
         tasks: projectedPage,

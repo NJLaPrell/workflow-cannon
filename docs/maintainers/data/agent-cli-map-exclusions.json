@@ -9,6 +9,8 @@
     "create-task-from-plan",
     "create-wishlist",
     "dashboard-summary",
+    "dashboard-terminal-rows",
+    "dashboard-terminal-tasks",
     "export-workspace-status",
     "get-blocked-summary",
     "get-dependency-graph",

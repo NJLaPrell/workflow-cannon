@@ -1159,6 +1159,22 @@
   },
   {
     "moduleId": "task-engine",
+    "name": "dashboard-terminal-rows",
+    "file": "dashboard-terminal-rows.md",
+    "description": "Retrieve terminal task rows (completed/cancelled) for a given phase or overall.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "dashboard-terminal-tasks",
+    "file": "dashboard-terminal-tasks.md",
+    "description": "Retrieve terminal task rows (completed/cancelled) for a given phase or overall (focused lazy-loading command).",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
     "name": "dashboard-service-start",
     "file": "dashboard-service-start.md",
     "description": "Start the warm dashboard read service (localhost HTTP/SSE); writes runtime.json.",
