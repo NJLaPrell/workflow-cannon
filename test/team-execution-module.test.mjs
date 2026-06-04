@@ -278,6 +278,9 @@ test("agent-execution-packet returns task-first draft packet before assignment r
   assert.equal(packetResult.data.packet.recommendedAssignmentMetadata.contextProfileId, "task_worker_context_v1");
   assert.equal(packetResult.data.packet.recommendedAssignmentMetadata.accessProfileId, "task_worker_strict_v1");
   assert.equal(packetResult.data.packet.recommendedAssignmentMetadata.handoffContractId, "implementation_handoff_v2");
+  assert.equal(packetResult.data.packet.boundaryRecommendations.ownedPaths.length, 2);
+  assert.equal(packetResult.data.packet.boundaryRecommendations.ownedPaths[0].confidence, "high");
+  assert.equal(packetResult.data.packet.boundaryRecommendations.readOnlyPaths[0].source, "packet-default");
   assert.equal(packetResult.data.packet.modelTier, "balanced");
   assert.equal(packetResult.data.packet.modelTierRecommendation.label, "tier_2");
   assert.equal(
@@ -395,6 +398,53 @@ test("agent-execution-packet draft tier recommendation keeps narrow mechanical w
   assert.equal(packetResult.data.packet.modelTier, "cheap_fast");
   assert.equal(packetResult.data.packet.modelTierRecommendation.label, "tier_1");
   assert.deepEqual(packetResult.data.packet.modelTierEscalationTriggers, []);
+});
+
+test("agent-execution-packet draft boundary recommendations keep low-confidence paths advisory", async () => {
+  const workspace = await tmpDir();
+  const ctx = sqliteCtx(workspace);
+  await seedExecutionTask(workspace, "T8621", "Boundary recommendations", {
+    phase: "Phase 130",
+    phaseKey: "130",
+    summary: "Recommend candidate worker boundaries.",
+    acceptanceCriteria: ["Phrase-only scope entries are advisory."],
+    metadata: {
+      ownedPaths: ["src/modules/team-execution/agent-execution-packet.ts", "packet boundary tests"]
+    },
+    technicalScope: ["src/modules/team-execution/index.ts", "module/path ownership helpers if added"]
+  });
+
+  const packetResult = await teamExecutionModule.onCommand(
+    {
+      name: "agent-execution-packet",
+      args: {
+        mode: "draft",
+        taskId: "T8621",
+        phaseKey: "130"
+      }
+    },
+    ctx
+  );
+
+  assert.equal(packetResult.ok, true);
+  assert.deepEqual(packetResult.data.packet.ownedPaths, [
+    "src/modules/team-execution/agent-execution-packet.ts",
+    "src/modules/team-execution/index.ts"
+  ]);
+  assert.deepEqual(packetResult.data.packet.recommendedAssignmentMetadata.ownedPaths, [
+    "src/modules/team-execution/agent-execution-packet.ts",
+    "src/modules/team-execution/index.ts"
+  ]);
+  const lowConfidence = packetResult.data.packet.boundaryRecommendations.ownedPaths.filter(
+    (recommendation) => recommendation.confidence === "low"
+  );
+  assert.deepEqual(
+    lowConfidence.map((recommendation) => recommendation.path),
+    ["packet boundary tests", "module/path ownership helpers if added"]
+  );
+  assert.equal(lowConfidence.every((recommendation) => recommendation.advisory), true);
+  assert.equal(packetResult.data.packet.boundaryRecommendations.forbiddenPaths[0].path, "<outside-owned-paths>");
+  assert.equal(packetResult.data.packet.boundaryRecommendations.forbiddenPaths[0].advisory, true);
 });
 
 test("agent-execution-packet keeps path boundaries explicit when assignment metadata is absent", async () => {

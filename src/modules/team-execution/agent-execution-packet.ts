@@ -79,6 +79,7 @@ export type AgentExecutionDraftPacket = {
   modelTierRecommendation: WorkerPacketModelTierRecommendation;
   modelTierRationale: string;
   modelTierEscalationTriggers: string[];
+  boundaryRecommendations: PacketBoundaryRecommendations;
   recommendedAssignmentMetadata: TeamAssignmentMetadataV1;
   registerAssignmentRef: {
     command: "register-assignment";
@@ -118,6 +119,23 @@ type PacketModelTierDecision = {
   recommendation: WorkerPacketModelTierRecommendation;
   rationale: string;
   escalationTriggers: string[];
+};
+
+type PacketBoundaryRecommendation = {
+  boundary: "owned" | "read_only" | "forbidden" | "shared" | "requires_approval";
+  path: string;
+  confidence: "high" | "medium" | "low";
+  source: "task-metadata" | "technical-scope" | "packet-default" | "policy-default";
+  advisory: boolean;
+  rationale: string;
+};
+
+type PacketBoundaryRecommendations = {
+  ownedPaths: PacketBoundaryRecommendation[];
+  readOnlyPaths: PacketBoundaryRecommendation[];
+  forbiddenPaths: PacketBoundaryRecommendation[];
+  sharedPaths: PacketBoundaryRecommendation[];
+  requiresApprovalPaths: PacketBoundaryRecommendation[];
 };
 
 function readString(value: unknown): string | null {
@@ -180,14 +198,18 @@ function readTaskMetadata(task: TaskEntity): Record<string, unknown> | null {
     : null;
 }
 
-function readTaskScope(task: TaskEntity): string[] {
+function readTaskScopeEntries(task: TaskEntity): Array<{ path: string; source: "task-metadata" | "technical-scope" }> {
   const metadata = readTaskMetadata(task);
-  return mergePathLists(
-    metadata?.ownedPaths,
-    metadata?.technicalScope,
-    metadata?.paths,
-    (task as { technicalScope?: unknown }).technicalScope
-  );
+  const entries: Array<{ path: string; source: "task-metadata" | "technical-scope" }> = [];
+  for (const path of mergePathLists(metadata?.ownedPaths, metadata?.paths)) {
+    entries.push({ path, source: "task-metadata" });
+  }
+  for (const path of mergePathLists(metadata?.technicalScope, (task as { technicalScope?: unknown }).technicalScope)) {
+    if (!entries.some((entry) => entry.path === path)) {
+      entries.push({ path, source: "technical-scope" });
+    }
+  }
+  return entries;
 }
 
 function readAcceptanceCriteria(task: TaskEntity): string[] {
@@ -335,6 +357,81 @@ function buildModelTierDecision(args: {
   };
 }
 
+function isPathLike(value: string): boolean {
+  const trimmed = value.trim();
+  if (/\s/.test(trimmed)) {
+    return false;
+  }
+  return (
+    trimmed.includes("/") ||
+    trimmed.includes("*") ||
+    trimmed.startsWith(".") ||
+    /\.(ts|tsx|js|jsx|mjs|cjs|json|md|yml|yaml|css|scss|html)$/.test(trimmed)
+  );
+}
+
+function toOwnedBoundaryRecommendation(entry: {
+  path: string;
+  source: "task-metadata" | "technical-scope";
+}): PacketBoundaryRecommendation {
+  const pathLike = isPathLike(entry.path);
+  const confidence = pathLike ? (entry.source === "task-metadata" ? "high" : "medium") : "low";
+  return {
+    boundary: "owned",
+    path: entry.path,
+    confidence,
+    source: entry.source,
+    advisory: confidence === "low",
+    rationale: pathLike
+      ? `Derived from ${entry.source} as a candidate owned path.`
+      : `Kept advisory because '${entry.path}' is not a concrete repo path or glob.`
+  };
+}
+
+function defaultReadOnlyRecommendation(path: string): PacketBoundaryRecommendation {
+  return {
+    boundary: "read_only",
+    path,
+    confidence: "high",
+    source: "packet-default",
+    advisory: false,
+    rationale: "Packet instruction reference should be read, not edited, for worker execution."
+  };
+}
+
+function outsideOwnedRecommendation(): PacketBoundaryRecommendation {
+  return {
+    boundary: "forbidden",
+    path: "<outside-owned-paths>",
+    confidence: "medium",
+    source: "policy-default",
+    advisory: true,
+    rationale: "Treat paths outside explicit owned recommendations as out of scope unless the assignment is refined."
+  };
+}
+
+function buildDraftBoundaryRecommendations(task: TaskEntity): PacketBoundaryRecommendations {
+  const ownedPaths = readTaskScopeEntries(task).map(toOwnedBoundaryRecommendation);
+  const readOnlyPaths = [
+    ".ai/playbooks/task-to-phase-branch.md",
+    ".ai/AGENT-CLI-MAP.md",
+    "AGENT_ORCHESTRATION_HANDOFF.md"
+  ].map(defaultReadOnlyRecommendation);
+  return {
+    ownedPaths,
+    readOnlyPaths,
+    forbiddenPaths: [outsideOwnedRecommendation()],
+    sharedPaths: [],
+    requiresApprovalPaths: []
+  };
+}
+
+function materializeRecommendedPaths(recommendations: PacketBoundaryRecommendation[]): string[] {
+  return recommendations
+    .filter((recommendation) => recommendation.confidence !== "low")
+    .map((recommendation) => recommendation.path);
+}
+
 function buildStopConditions(args: {
   assignment: TeamAssignmentRow;
   boundaries: PacketBoundaries;
@@ -478,18 +575,16 @@ export function buildAgentExecutionDraftPacket(args: {
 }): AgentExecutionDraftPacket {
   const phaseKey = inferTaskPhaseKey(args.task);
   const baseBranch = readBaseBranch({ policy: args.policy, task: args.task });
-  const ownedPaths = readTaskScope(args.task);
+  const boundaryRecommendations = buildDraftBoundaryRecommendations(args.task);
+  const ownedPaths = materializeRecommendedPaths(boundaryRecommendations.ownedPaths);
+  const readOnlyPaths = materializeRecommendedPaths(boundaryRecommendations.readOnlyPaths);
   const validationCommands = args.validationRecommendations.slice(0, 5).map((recommendation) => ({
     command: recommendation.command,
     rationale: recommendation.rationale
   }));
   const draftBoundaries: PacketBoundaries = {
     ownedPaths,
-    readOnlyPaths: [
-      ".ai/playbooks/task-to-phase-branch.md",
-      ".ai/AGENT-CLI-MAP.md",
-      "AGENT_ORCHESTRATION_HANDOFF.md"
-    ],
+    readOnlyPaths,
     forbiddenPaths: [],
     sharedPaths: [],
     requiresApprovalPaths: []
@@ -548,6 +643,7 @@ export function buildAgentExecutionDraftPacket(args: {
     modelTierRecommendation: modelTierDecision.recommendation,
     modelTierRationale: modelTierDecision.rationale,
     modelTierEscalationTriggers: modelTierDecision.escalationTriggers,
+    boundaryRecommendations,
     recommendedAssignmentMetadata,
     registerAssignmentRef: {
       command: "register-assignment" as const,

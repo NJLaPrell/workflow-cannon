@@ -18,7 +18,7 @@ The packet returns explicit owned, read-only, forbidden, and approval-gated path
 
 Use **assignment mode** (`assignmentId`, optional `workerId`) for worker startup. Assignment packets return `packetKind:"assignment"` and `packetLockStatus:"assignment_locked"` and are authority-bearing for the named assignment.
 
-Use **draft mode** (`mode:"draft"`, `taskId`, optional `phaseKey`) before assignment registration. Draft packets return `packetKind:"draft"` and `packetLockStatus:"draft_unlocked"` with recommended assignment metadata and a `registerAssignmentRef` command template. Do not implement from draft packets; register the assignment and fetch the locked assignment packet first.
+Use **draft mode** (`mode:"draft"`, `taskId`, optional `phaseKey`) before assignment registration. Draft packets return `packetKind:"draft"` and `packetLockStatus:"draft_unlocked"` with recommended assignment metadata, boundary recommendations with confidence/source labels, and a `registerAssignmentRef` command template. Low-confidence boundary recommendations are advisory only. Do not implement from draft packets; register the assignment and fetch the locked assignment packet first.
 
 Workers should use the packet's **`handoffContract`** to submit a Handoff v2 JSON payload through **`submit-assignment-handoff`**. Populate machine-checkable fields first (changed files, validation command results, acceptance criteria, blockers/risks) and keep prose summary secondary.
 
