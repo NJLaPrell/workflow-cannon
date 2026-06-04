@@ -297,11 +297,11 @@ function buildFullRefreshRecommendation(reason: string, phaseKey: string | null)
   };
 }
 
-function buildDeltaRecommendation(): PhaseDrainDeltaRefreshRecommendation {
+function buildDeltaRecommendation(phaseKey: string | null): PhaseDrainDeltaRefreshRecommendation {
   return {
     mode: "delta",
     reason: "cursor-valid",
-    ref: buildCommandRef("phase-release-orchestration-state", null)
+    ref: buildCommandRef("phase-release-orchestration-state", phaseKey)
   };
 }
 
@@ -462,7 +462,7 @@ function buildCommandRef(command: string, phaseKey: string | null): PhaseRelease
     default:
       return {
         command,
-        commandLine: commandLine(command),
+        commandLine: commandLine(command, phaseKey ? { phaseKey } : undefined),
         instructionPath: "src/modules/task-engine/instructions/phase-release-orchestration-state.md"
       };
   }
@@ -860,7 +860,7 @@ export function buildPhaseDrainDelta(args: {
       refreshRecommendation: buildFullRefreshRecommendation("phase-mismatch", args.phaseKey),
       cursorAccepted: false,
       cursorStatus: "stale",
-      cursorStatusReason: "Cursor phase does not match the current canonical phase.",
+      cursorStatusReason: "Cursor phase does not match the selected phase.",
       nextCursor,
       phasePath: {
         changed: true,
@@ -949,7 +949,7 @@ export function buildPhaseDrainDelta(args: {
     schemaVersion: PHASE_DRAIN_DELTA_SCHEMA_VERSION,
     phaseKey: args.phaseKey,
     planningGeneration: args.planningGeneration,
-    refreshRecommendation: buildDeltaRecommendation(),
+    refreshRecommendation: buildDeltaRecommendation(args.phaseKey),
     cursorAccepted: true,
     cursorStatus: "valid",
     cursorStatusReason: "Cursor matches the current phase and high-water marks are monotonic.",
