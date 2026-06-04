@@ -98,6 +98,7 @@
         "phase-drain-delta",
         "phase-focus-dashboard",
         "phase-release-orchestration-state",
+        "phase-release-state",
         "phase-status",
         "planning-state-migrate-baseline",
         "prepare-release-artifacts",
@@ -371,6 +372,9 @@
           "$ref": "#/$defs/contractBase"
         },
         "phase-release-orchestration-state": {
+          "$ref": "#/$defs/contractBase"
+        },
+        "phase-release-state": {
           "$ref": "#/$defs/contractBase"
         },
         "prepare-release-artifacts": {
