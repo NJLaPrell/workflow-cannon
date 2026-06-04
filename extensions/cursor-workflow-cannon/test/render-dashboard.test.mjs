@@ -2606,7 +2606,11 @@ test("buildPhaseCompleteReleaseChatPrompt starts with orchestration-state and st
     nextKitPhase: "65",
     scope: "current"
   });
-  assert.match(p, /^phase-release-orchestration-state\n/);
+  assert.match(
+    p,
+    /^pnpm exec wk run phase-release-orchestration-state '\{"phaseKey":"64","scope":"current","integrationBranch":"release\/phase-64","dashboardAuthorization":"complete-and-release"\}'\n/
+  );
+  assert.match(p, /Run this first\. Work from `data\.verdict`, `refs\.commands`, and `refs\.instructions`/);
   assert.match(p, /target phaseKey: `64`/);
   assert.match(p, /workspace current \/ next: `64` \/ `65`/);
   assert.match(p, /scope: `current`/);
@@ -2615,22 +2619,21 @@ test("buildPhaseCompleteReleaseChatPrompt starts with orchestration-state and st
   assert.match(p, /@\.ai\/playbooks\/task-to-phase-branch\.md/);
   assert.match(p, /@\.ai\/AGENT-CLI-MAP\.md/);
   assert.match(p, /agent-execution-packet/);
+  assert.match(p, /Dashboard authorization covers closeout, release, and publish when gates allow/);
   assert.match(p, /Tier A\/B `wk run` mutations still require JSON `policyApproval`/);
-  assert.match(p, /Packet-first rollout is activation-gated/);
-  assert.match(p, /equivalent operator feature flag\/rollout note explicitly enables `phase-release-orchestration-state` packets/);
-  assert.match(p, /If packet-first is not explicitly activated for the run, use the existing full-refresh\/manual discovery path/);
-  assert.match(p, /Disable packet-first for this run if `phase-release-orchestration-state` is unavailable/);
+  assert.match(p, /Disable packet-first if the first command is unavailable/);
   assert.match(p, /returns `ok: false`/);
   assert.match(p, /omits `data\.verdict`, `refs\.commands`, or `refs\.instructions`/);
-  assert.match(p, /stale planning\/task-state evidence/);
-  assert.match(p, /`phase-drain-delta` rejects, misses, or stales its cursor/);
+  assert.match(p, /stale\/mismatched phase, branch, planning, or task-state evidence/);
+  assert.match(p, /`phase-drain-delta` rejects, stales its cursor/);
   assert.match(p, /`refreshRecommendation\.mode: "full-refresh"`/);
-  assert.match(p, /pnpm exec wk run phase-release-orchestration-state '\{\}'/);
-  assert.match(p, /pnpm exec wk run phase-closeout-readiness '\{"phaseKey":"<N>"\}'/);
-  assert.match(p, /pnpm exec wk run --json/);
-  assert.match(p, /roll back the activation by reverting this prompt's packet-first activation\/fallback sections/);
-  assert.match(p, /disable or revert the packet commands that introduced it \(`phase-release-orchestration-state`, `phase-drain-delta`, or `agent-execution-packet`\)/);
+  assert.match(p, /pnpm exec wk run phase-closeout-readiness '\{"phaseKey":"64"\}'/);
   assert.match(p, /Phase 1 plan review warnings remain, refine\/review the Phase 1 plan first/);
+  assert.doesNotMatch(p, /Packet-first rollout is activation-gated/);
+  assert.doesNotMatch(p, /rollout note explicitly enables/);
+  assert.doesNotMatch(p, /pnpm exec wk run phase-release-orchestration-state '\{\}'/);
+  assert.doesNotMatch(p, /pnpm exec wk run --json/);
+  assert.doesNotMatch(p, /roll back the activation by reverting this prompt/);
   assert.doesNotMatch(p, /^## Complete & Release/);
 });
 
@@ -2648,6 +2651,7 @@ test("buildPhaseCompleteReleaseChatPrompt keeps bucket scope in context", () => 
 
 test("buildPhaseCompleteReleaseChatPrompt without phaseKey uses placeholders", () => {
   const p = buildPhaseCompleteReleaseChatPrompt("Phase 64");
+  assert.match(p, /^pnpm exec wk run phase-release-orchestration-state '\{"phaseKey":"<N>"/);
   assert.match(p, /release\/phase-<N>/);
   assert.doesNotMatch(p, /release\/phase-64/);
 });
