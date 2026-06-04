@@ -60,7 +60,7 @@ export function kitRunTimeoutMsForCommand(commandName: string): number {
     : KIT_REFRESH_RUN_TIMEOUT_MS;
 }
 
-export function kitRefreshPausedResult(): {
+export function kitRefreshPausedResult(message?: string): {
   ok: false;
   code: string;
   message: string;
@@ -68,7 +68,7 @@ export function kitRefreshPausedResult(): {
   return {
     ok: false,
     code: KIT_REFRESH_PAUSED_CODE,
-    message: "Dashboard refresh paused while a mutating drawer action runs"
+    message: message ?? "Dashboard refresh paused while a mutating drawer action runs"
   };
 }
 

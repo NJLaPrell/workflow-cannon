@@ -66,6 +66,7 @@ type CommandClientOptions = {
 export type RefreshPauseOwner = {
   owner: string;
   reason?: string;
+  source?: string;
 };
 
 export type RuntimeStampExecutionPlan =
@@ -669,7 +670,11 @@ export class CommandClient {
   private readonly onKitRunNotice?: (message: string) => void;
   /** When true, dashboard refresh reads return immediately without hitting the CLI queue. */
   private refreshPaused = false;
-  private readonly refreshPauseOwners = new Map<string, string | undefined>();
+  private readonly refreshPauseOwners = new Map<
+    string,
+    { reason?: string; source?: string; timestamp: number }
+  >();
+  private readonly refreshPauseTimers = new Map<string, ReturnType<typeof setInterval>>();
 
   /** Dual-lane queue: mutations drain before refresh batches; refresh jobs coalesce by key. */
   private mutationEntries: Array<{
@@ -701,7 +706,10 @@ export class CommandClient {
 
   /** Drop pending refresh work and abort an in-flight refresh CLI so mutations can run immediately. */
   preemptRefreshForMutation(): void {
-    const paused = kitRefreshPausedResult();
+    if (!this.refreshPaused) {
+      return;
+    }
+    const paused = kitRefreshPausedResult(this.getRefreshPausedReason());
     for (const slot of this.refreshSlots.values()) {
       for (const waiter of slot.waiters) {
         waiter.resolve(paused);
@@ -750,23 +758,50 @@ export class CommandClient {
           : { owner: "legacy-refresh-pause" };
     const ownerId = parsedOwner.owner.trim() || "legacy-refresh-pause";
     const priorPaused = this.refreshPaused;
+    const timestamp = Date.now();
     if (paused) {
-      this.refreshPauseOwners.set(ownerId, parsedOwner.reason);
+      const existingTimer = this.refreshPauseTimers.get(ownerId);
+      if (existingTimer) {
+        clearInterval(existingTimer);
+      }
+
+      this.refreshPauseOwners.set(ownerId, {
+        reason: parsedOwner.reason,
+        source: parsedOwner.source,
+        timestamp
+      });
       this.refreshPaused = true;
       this.onKitRunNotice?.(
-        `refresh pause true owner=${ownerId}${parsedOwner.reason ? ` reason=${parsedOwner.reason}` : ""} owners=${this.refreshPauseOwners.size}`
+        `refresh pause acquired | owner=${ownerId} reason=${parsedOwner.reason ?? "none"} source=${parsedOwner.source ?? "unknown"}`
       );
+
+      // watchdog timer for too-long pause (warn after 10s)
+      const timer = setInterval(() => {
+        const ageMs = Date.now() - timestamp;
+        this.onKitRunNotice?.(
+          `[warning] refresh pause active for too long | owner=${ownerId} age=${(ageMs / 1000).toFixed(2)}s reason=${parsedOwner.reason ?? "none"}`
+        );
+      }, 10000);
+      this.refreshPauseTimers.set(ownerId, timer);
+
       this.preemptRefreshForMutation();
       return;
     }
+
     if (!this.refreshPauseOwners.has(ownerId)) {
       this.onKitRunNotice?.(
-        `refresh pause release ignored owner=${ownerId}${parsedOwner.reason ? ` reason=${parsedOwner.reason}` : ""} owners=${this.refreshPauseOwners.size}`
+        `refresh pause release ignored | owner mismatch: tried to release owner=${ownerId} reason=${parsedOwner.reason ?? "none"} source=${parsedOwner.source ?? "unknown"}`
       );
     } else {
+      const existing = this.refreshPauseOwners.get(ownerId);
       this.refreshPauseOwners.delete(ownerId);
+      const existingTimer = this.refreshPauseTimers.get(ownerId);
+      if (existingTimer) {
+        clearInterval(existingTimer);
+        this.refreshPauseTimers.delete(ownerId);
+      }
       this.onKitRunNotice?.(
-        `refresh pause false owner=${ownerId}${parsedOwner.reason ? ` reason=${parsedOwner.reason}` : ""} owners=${this.refreshPauseOwners.size}`
+        `refresh pause released | owner=${ownerId} reason=${existing?.reason ?? "none"} source=${existing?.source ?? "unknown"}`
       );
     }
     this.refreshPaused = this.refreshPauseOwners.size > 0;
@@ -781,9 +816,33 @@ export class CommandClient {
     }
     const owners = [...this.refreshPauseOwners.keys()].join(",") || "none";
     this.refreshPauseOwners.clear();
+    for (const timer of this.refreshPauseTimers.values()) {
+      clearInterval(timer);
+    }
+    this.refreshPauseTimers.clear();
     this.refreshPaused = false;
-    this.onKitRunNotice?.(`refresh pause cleared reason=${reason} owners=${owners}`);
+    if (reason === "dashboard disposed") {
+      this.onKitRunNotice?.(`refresh pause forced clear on dashboard disposal | owners cleared=${owners}`);
+    } else {
+      this.onKitRunNotice?.(`refresh pause cleared | reason=${reason} owners=${owners}`);
+    }
     this.scheduleLaneDrain();
+  }
+
+  getRefreshPausedReason(): string {
+    if (this.refreshPauseOwners.size === 0) {
+      return "Dashboard refresh paused";
+    }
+    const details = [...this.refreshPauseOwners.entries()]
+      .map(([owner, info]) => {
+        const parts = [
+          info.reason ? `reason=${info.reason}` : null,
+          info.source ? `source=${info.source}` : null
+        ].filter(Boolean);
+        return `${owner}${parts.length > 0 ? ` (${parts.join(", ")})` : ""}`;
+      })
+      .join(", ");
+    return `Dashboard refresh paused: ${details}`;
   }
 
   isRefreshPaused(): boolean {
@@ -848,7 +907,7 @@ export class CommandClient {
           }
           this.refreshSlots.delete(refreshKey);
           if (this.refreshPaused) {
-            const paused = kitRefreshPausedResult();
+            const paused = kitRefreshPausedResult(this.getRefreshPausedReason());
             for (const waiter of slot.waiters) {
               waiter.resolve(paused);
             }
@@ -878,11 +937,11 @@ export class CommandClient {
   /** `workspace-kit run <name> <json>` — parses single JSON object from stdout. */
   async run(commandName: string, args: Record<string, unknown>): Promise<KitRunResult> {
     if (this.refreshPaused && isKitRefreshRunCommand(commandName)) {
-      return kitRefreshPausedResult();
+      return kitRefreshPausedResult(this.getRefreshPausedReason());
     }
     return this.enqueueLane(commandName, () => {
       if (this.refreshPaused && isKitRefreshRunCommand(commandName)) {
-        return Promise.resolve(kitRefreshPausedResult());
+        return Promise.resolve(kitRefreshPausedResult(this.getRefreshPausedReason()));
       }
       return this.runOnce(commandName, args);
     });
@@ -902,7 +961,7 @@ export class CommandClient {
       return this.run(commandName, args);
     }
     if (this.refreshPaused && options?.bootstrap !== true) {
-      return kitRefreshPausedResult();
+      return kitRefreshPausedResult(this.getRefreshPausedReason());
     }
     return this.runOnce(commandName, args);
   }
@@ -919,7 +978,7 @@ export class CommandClient {
         jsonArg
       ]);
       if (preempted && isKitRefreshRunCommand(commandName)) {
-        const paused = kitRefreshPausedResult();
+        const paused = kitRefreshPausedResult(this.getRefreshPausedReason());
         this.onKitRunEnd?.(commandName, startedAt, paused);
         return paused;
       }

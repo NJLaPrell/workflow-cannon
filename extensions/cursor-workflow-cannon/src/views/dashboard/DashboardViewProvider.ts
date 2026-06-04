@@ -1505,6 +1505,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       this.webviewMessageDisposable?.dispose();
       this.webviewMessageDisposable = undefined;
       this.refreshController.notifyMutationEnd();
+      this.client.setRefreshPaused(false, { owner: "dashboard-mutation" });
       this.client.clearRefreshPaused("dashboard disposed");
       void this.readPath.stop();
       this.storeUnsubscribe?.();

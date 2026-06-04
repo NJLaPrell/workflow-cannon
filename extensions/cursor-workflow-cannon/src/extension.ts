@@ -146,6 +146,7 @@ export function activate(context: vscode.ExtensionContext): void {
     const taskStateSyncSettings = readTaskStateSyncSettings();
     taskStateSync = new TaskStateSyncCoordinator({
       run: (command, args) => client.run(command, args),
+      setRefreshPaused: (paused, owner) => client.setRefreshPaused(paused, owner),
       policyApproval: () => TASK_STATE_SYNC_POLICY_APPROVAL,
       onSyncStart: () => kitStateEmitter.fire(),
       onSynced: (result) => {
@@ -330,9 +331,20 @@ export function activate(context: vscode.ExtensionContext): void {
             return;
           }
           lastBehaviorRuleSyncMtimeMs = mtimeMs;
-          const r = await client.run("sync-effective-behavior-cursor-rule", {});
-          if (!r.ok && process.env.WORKSPACE_KIT_DEBUG_EXTENSION === "1") {
-            logWc("extension", `sync-effective-behavior-cursor-rule FAIL ${String(r.code ?? "")} ${String(r.message ?? "")}`);
+          client.setRefreshPaused(true, {
+            owner: "behavior-sync",
+            reason: "syncing effective behavior cursor rule",
+            source: "background-behavior-sync"
+          });
+          try {
+            const r = await client.run("sync-effective-behavior-cursor-rule", {});
+            if (!r.ok && process.env.WORKSPACE_KIT_DEBUG_EXTENSION === "1") {
+              logWc("extension", `sync-effective-behavior-cursor-rule FAIL ${String(r.code ?? "")} ${String(r.message ?? "")}`);
+            }
+          } finally {
+            client.setRefreshPaused(false, {
+              owner: "behavior-sync"
+            });
           }
         })().finally(() => {
           behaviorRuleSyncInFlight = undefined;

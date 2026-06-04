@@ -1,7 +1,8 @@
-import type { KitRunResult } from "./command-client.js";
+import type { KitRunResult, RefreshPauseOwner } from "./command-client.js";
 
 export type TaskStateSyncCoordinatorDeps = {
   run: (command: string, args: Record<string, unknown>) => Promise<KitRunResult>;
+  setRefreshPaused?: (paused: boolean, owner?: string | RefreshPauseOwner) => void;
   policyApproval: () => { confirmed: true; rationale: string };
   onSynced?: (result: TaskStateSyncCycleResult) => void;
   /** Fired when a sync cycle starts (dashboard may show `syncing`). */
@@ -91,85 +92,96 @@ export class TaskStateSyncCoordinator {
   private async runCycle(reason: string): Promise<TaskStateSyncCycleResult> {
     this.deps.log?.(`task-state sync start (${reason})`);
     this.deps.onSyncStart?.();
-    const status = await this.deps.run("task-state-status", { fetch: true });
-    if (!status.ok) {
-      const result: TaskStateSyncCycleResult = {
-        ok: false,
-        action: "error",
-        code: typeof status.code === "string" ? status.code : undefined,
-        message: typeof status.message === "string" ? status.message : "task-state-status failed"
-      };
-      this.deps.onSynced?.(result);
-      return result;
-    }
+    this.deps.setRefreshPaused?.(true, {
+      owner: "task-state-sync",
+      reason: `syncing task-state projection (${reason})`,
+      source: "background-task-state-sync"
+    });
+    try {
+      const status = await this.deps.run("task-state-status", { fetch: true });
+      if (!status.ok) {
+        const result: TaskStateSyncCycleResult = {
+          ok: false,
+          action: "error",
+          code: typeof status.code === "string" ? status.code : undefined,
+          message: typeof status.message === "string" ? status.message : "task-state-status failed"
+        };
+        this.deps.onSynced?.(result);
+        return result;
+      }
 
-    const data = status.data ?? {};
-    const syncState = typeof data.syncState === "string" ? data.syncState : "unknown";
+      const data = status.data ?? {};
+      const syncState = typeof data.syncState === "string" ? data.syncState : "unknown";
 
-    if (syncState === "conflict") {
+      if (syncState === "conflict") {
+        const result: TaskStateSyncCycleResult = {
+          ok: true,
+          action: "skipped",
+          syncState,
+          message: typeof data.reason === "string" ? data.reason : "projection conflict — manual repair required"
+        };
+        this.deps.onSynced?.(result);
+        return result;
+      }
+
+      const policyApproval = this.deps.policyApproval();
+      let action: TaskStateSyncCycleResult["action"] = "none";
+      let lastCode: string | undefined;
+      let lastMessage: string | undefined;
+
+      if (syncState === "behind" || syncState === "missing") {
+        const hydrate = await this.deps.run("task-state-hydrate", {
+          fetch: true,
+          policyApproval
+        });
+        lastCode = typeof hydrate.code === "string" ? hydrate.code : undefined;
+        lastMessage = typeof hydrate.message === "string" ? hydrate.message : undefined;
+        if (!hydrate.ok) {
+          const result: TaskStateSyncCycleResult = {
+            ok: false,
+            action: "error",
+            syncState,
+            code: lastCode,
+            message: lastMessage ?? "task-state-hydrate failed"
+          };
+          this.deps.onSynced?.(result);
+          return result;
+        }
+        action = "hydrated";
+      } else {
+        const apply = await this.deps.run("apply-task-state-events", { policyApproval });
+        lastCode = typeof apply.code === "string" ? apply.code : undefined;
+        lastMessage = typeof apply.message === "string" ? apply.message : undefined;
+        if (!apply.ok) {
+          const result: TaskStateSyncCycleResult = {
+            ok: false,
+            action: "error",
+            syncState,
+            code: lastCode,
+            message: lastMessage ?? "apply-task-state-events failed"
+          };
+          this.deps.onSynced?.(result);
+          return result;
+        }
+        if (lastCode === "task-state-events-applied") {
+          action = "applied";
+        }
+      }
+
       const result: TaskStateSyncCycleResult = {
         ok: true,
-        action: "skipped",
+        action,
         syncState,
-        message: typeof data.reason === "string" ? data.reason : "projection conflict — manual repair required"
+        code: lastCode,
+        message: lastMessage
       };
       this.deps.onSynced?.(result);
+      this.deps.log?.(`task-state sync done action=${action} syncState=${syncState}`);
       return result;
-    }
-
-    const policyApproval = this.deps.policyApproval();
-    let action: TaskStateSyncCycleResult["action"] = "none";
-    let lastCode: string | undefined;
-    let lastMessage: string | undefined;
-
-    if (syncState === "behind" || syncState === "missing") {
-      const hydrate = await this.deps.run("task-state-hydrate", {
-        fetch: true,
-        policyApproval
+    } finally {
+      this.deps.setRefreshPaused?.(false, {
+        owner: "task-state-sync"
       });
-      lastCode = typeof hydrate.code === "string" ? hydrate.code : undefined;
-      lastMessage = typeof hydrate.message === "string" ? hydrate.message : undefined;
-      if (!hydrate.ok) {
-        const result: TaskStateSyncCycleResult = {
-          ok: false,
-          action: "error",
-          syncState,
-          code: lastCode,
-          message: lastMessage ?? "task-state-hydrate failed"
-        };
-        this.deps.onSynced?.(result);
-        return result;
-      }
-      action = "hydrated";
-    } else {
-      const apply = await this.deps.run("apply-task-state-events", { policyApproval });
-      lastCode = typeof apply.code === "string" ? apply.code : undefined;
-      lastMessage = typeof apply.message === "string" ? apply.message : undefined;
-      if (!apply.ok) {
-        const result: TaskStateSyncCycleResult = {
-          ok: false,
-          action: "error",
-          syncState,
-          code: lastCode,
-          message: lastMessage ?? "apply-task-state-events failed"
-        };
-        this.deps.onSynced?.(result);
-        return result;
-      }
-      if (lastCode === "task-state-events-applied") {
-        action = "applied";
-      }
     }
-
-    const result: TaskStateSyncCycleResult = {
-      ok: true,
-      action,
-      syncState,
-      code: lastCode,
-      message: lastMessage
-    };
-    this.deps.onSynced?.(result);
-    this.deps.log?.(`task-state sync done action=${action} syncState=${syncState}`);
-    return result;
   }
 }
