@@ -82,6 +82,8 @@ test("Option 1: dashboard-summary calls are source labeled and activation avoids
   assert.match(pollerSrc, /source: "read-path prefetch"/);
   assert.match(pollerSrc, /source: "poller refresh"/);
   assert.match(extensionSrc, /workspace-coordination-status/);
+  assert.match(extensionSrc, /statusBarInFlight/);
+  assert.match(extensionSrc, /lastStatusBarRefreshAt/);
   assert.doesNotMatch(extensionSrc, /client\.run\("dashboard-summary", \{\}\)/);
 });
 

@@ -445,7 +445,7 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
     });
     restorePhaseCardCollapseState(root);
     restoreConfigTabState(root, configState);
-    applyTab(activeTab);
+    applyTab(activeTab, activeTab === 'task-engine' || activeTab === 'status' || activeTab === 'config' || activeTab === 'cae');
     restoreQueueSectionUiState(root, preservedQueue);
     applyQueueFilters(root);
     reloadOpenLazyQueueBucketsAfterMetaChange(root, preservedQueue.lazyBuckets);
@@ -866,7 +866,7 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
     }
   }
 
-  function applyTab(tab) {
+  function applyTab(tab, forceNotify) {
     if (!tab) return;
     var prevTab = activeTab;
     activeTab = tab;
@@ -884,7 +884,7 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
       var needsLoad = prevTab !== 'config' || !list || !!list.querySelector('.cfg-loading');
       if (needsLoad && window.wcConfigTab.requestLoad) window.wcConfigTab.requestLoad();
     }
-    if (tab !== prevTab) {
+    if (tab !== prevTab || forceNotify === true) {
       vscode.postMessage({ type: 'dashboardTabActivated', tabId: tab });
     }
   }
@@ -1190,7 +1190,7 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
   wireContextHelpPopover();
   if (typeof window.wcReinitEmbeddedCae === 'function') window.wcReinitEmbeddedCae();
 
-  applyTab(activeTab);
+    applyTab(activeTab, activeTab === 'task-engine' || activeTab === 'status' || activeTab === 'config' || activeTab === 'cae');
   restorePhaseCardCollapseState(document.getElementById('root'));
   applyQueueFilters(document.getElementById('root'));
 

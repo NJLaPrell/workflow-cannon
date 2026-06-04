@@ -264,10 +264,21 @@ export function activate(context: vscode.ExtensionContext): void {
     const statusBar = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 10);
     statusBar.name = "Workflow Cannon";
     statusBar.command = "workflowCannon.lease.pickAction";
+    let statusBarInFlight: Promise<void> | undefined;
+    let lastStatusBarRefreshAt = 0;
     const updateStatusBar = async () => {
       if (client.isRefreshPaused()) {
         return;
       }
+      const elapsed = Date.now() - lastStatusBarRefreshAt;
+      if (elapsed < 15_000) {
+        return;
+      }
+      if (statusBarInFlight) {
+        return statusBarInFlight;
+      }
+      statusBarInFlight = (async () => {
+      lastStatusBarRefreshAt = Date.now();
       logWc("extension", "status bar refresh: workspace-coordination-status");
       const r = await client.run("workspace-coordination-status", {});
       if (!r.ok) {
@@ -283,6 +294,10 @@ export function activate(context: vscode.ExtensionContext): void {
       statusBar.text = `${leaseUi.statusBarText} · ${posture}`;
       statusBar.tooltip = `${leaseUi.tooltip}\nWorkflow Cannon coordination ${posture}.`;
       statusBar.show();
+      })().finally(() => {
+        statusBarInFlight = undefined;
+      });
+      return statusBarInFlight;
     };
     let statusBarTimer: ReturnType<typeof setTimeout> | undefined;
     const scheduleStatusBarUpdate = (): void => {

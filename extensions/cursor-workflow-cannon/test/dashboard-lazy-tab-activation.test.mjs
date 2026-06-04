@@ -27,7 +27,8 @@ test("dashboard webview posts dashboardTabActivated on tab switch", () => {
   const clientPath = path.join(srcDir, "dashboard-webview-client.ts");
   const src = fs.readFileSync(clientPath, "utf8");
   assert.match(src, /dashboardTabActivated/);
-  assert.match(src, /tab !== prevTab/);
+  assert.match(src, /tab !== prevTab \|\| forceNotify === true/);
+  assert.match(src, /applyTab\(activeTab, activeTab === 'task-engine'/);
 });
 
 test("DashboardViewProvider hydrates deferred sections on tab activation", () => {
@@ -39,4 +40,7 @@ test("DashboardViewProvider hydrates deferred sections on tab activation", () =>
   assert.match(src, /dashboardTabActivated/);
   assert.match(src, /ensureQueueRollupsHydrated/);
   assert.match(src, /tabId === "task-engine"/);
+  assert.match(src, /scheduleKitStateChangedRefresh/);
+  assert.match(src, /kitStateRefreshInFlight/);
+  assert.match(src, /lastKitStateRefreshAt/);
 });

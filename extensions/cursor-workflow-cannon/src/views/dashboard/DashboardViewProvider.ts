@@ -464,6 +464,12 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   /** Cached CAE tab HTML for light dashboard refreshes. */
   private lastEmbeddedCaePanelHtml: string | null = null;
 
+  /** Coalesce file-watcher churn so dashboard reads cannot feed back into refresh loops. */
+  private kitStateRefreshTimer: ReturnType<typeof setTimeout> | undefined;
+  private kitStateRefreshInFlight: Promise<void> | undefined;
+  private kitStateRefreshQueued = false;
+  private lastKitStateRefreshAt = 0;
+
   /** Options consumed by the next `pushUpdateOnce` (projection / light refresh). */
   private pendingPushUpdateOptions:
     | { light?: boolean; projection?: "full" | "overview"; skipHeavyFetches?: boolean; source?: string }
@@ -595,7 +601,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       void this.onDashboardSliceUpdate(update.name);
     });
     onKitStateChanged(() => {
-      void this.onKitStateChangedRefresh();
+      this.scheduleKitStateChangedRefresh();
     });
   }
 
@@ -842,6 +848,48 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
    * Kit file watcher refresh — never full `wcReplaceRoot` (that wipes lazy queue rows).
    * Patches visible sections only; queue uses content fingerprint to no-op when unchanged.
    */
+  private scheduleKitStateChangedRefresh(): void {
+    if (this.kitStateRefreshTimer) {
+      clearTimeout(this.kitStateRefreshTimer);
+    }
+    this.kitStateRefreshTimer = setTimeout(() => {
+      this.kitStateRefreshTimer = undefined;
+      void this.runKitStateChangedRefresh();
+    }, 1_500);
+  }
+
+  private async runKitStateChangedRefresh(): Promise<void> {
+    if (this.kitStateRefreshInFlight) {
+      this.kitStateRefreshQueued = true;
+      return this.kitStateRefreshInFlight;
+    }
+    const elapsed = Date.now() - this.lastKitStateRefreshAt;
+    if (elapsed < 10_000) {
+      this.kitStateRefreshQueued = true;
+      if (!this.kitStateRefreshTimer) {
+        this.kitStateRefreshTimer = setTimeout(() => {
+          this.kitStateRefreshTimer = undefined;
+          void this.runKitStateChangedRefresh();
+        }, 10_000 - elapsed);
+      }
+      return;
+    }
+    const run = (async () => {
+      this.lastKitStateRefreshAt = Date.now();
+      await this.onKitStateChangedRefresh();
+    })().finally(() => {
+      if (this.kitStateRefreshInFlight === run) {
+        this.kitStateRefreshInFlight = undefined;
+      }
+      if (this.kitStateRefreshQueued) {
+        this.kitStateRefreshQueued = false;
+        this.scheduleKitStateChangedRefresh();
+      }
+    });
+    this.kitStateRefreshInFlight = run;
+    return run;
+  }
+
   private async onKitStateChangedRefresh(): Promise<void> {
     if (!this.view?.visible || this.refreshController.isSuppressed()) {
       return;
@@ -866,7 +914,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       return;
     }
     if (this.activeDashboardTab === "overview" && this.hydratedDashboardSections.has("overview")) {
-      await this.patchDashboardSectionsFromSummary(["overview"], updateSequence, { light: true });
+      this.dashboardStore.markStale("overview", "kit-state refresh");
       return;
     }
     if (this.activeDashboardTab === "planning") {
@@ -1515,6 +1563,12 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       this.dashboardRootHydrated = false;
       this.dashboardStartupSingleFlight.clear();
       this.queueRollupHydrationInFlight = undefined;
+      this.kitStateRefreshInFlight = undefined;
+      this.kitStateRefreshQueued = false;
+      if (this.kitStateRefreshTimer) {
+        clearTimeout(this.kitStateRefreshTimer);
+        this.kitStateRefreshTimer = undefined;
+      }
       this.hydratedDashboardSections.clear();
       this.staleDashboardSections.clear();
       this.webviewMessageDisposable?.dispose();
