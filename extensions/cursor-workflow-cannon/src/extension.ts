@@ -268,21 +268,20 @@ export function activate(context: vscode.ExtensionContext): void {
       if (client.isRefreshPaused()) {
         return;
       }
-      const r = await client.run("dashboard-summary", {});
+      logWc("extension", "status bar refresh: workspace-coordination-status");
+      const r = await client.run("workspace-coordination-status", {});
       if (!r.ok) {
         statusBar.text = "$(warning) WC: unavailable";
-        statusBar.tooltip = String(r.message ?? r.code ?? "dashboard-summary failed");
+        statusBar.tooltip = String(r.message ?? r.code ?? "workspace-coordination-status failed");
         statusBar.show();
         return;
       }
-      const ready = Number((r.data as Record<string, unknown>)?.readyQueueCount ?? 0);
-      const sys = (r.data as Record<string, unknown>)?.systemStatus as Record<string, unknown> | undefined;
-      const coord = sys?.coordination as Record<string, unknown> | undefined;
+      const coord = (r.data as Record<string, unknown> | undefined) ?? {};
       const posture = typeof coord?.posture === "string" ? coord.posture : "—";
       const lease = coord?.lease && typeof coord.lease === "object" ? (coord.lease as Record<string, unknown>) : null;
       const leaseUi = buildLeaseUiState({ leaseStatus: lease, suspectFlags: coord?.suspectFlags });
-      statusBar.text = `${leaseUi.statusBarText} · ${posture} · rdy ${ready}`;
-      statusBar.tooltip = `${leaseUi.tooltip}\nWorkflow Cannon coordination ${posture}; ready queue ${ready}.`;
+      statusBar.text = `${leaseUi.statusBarText} · ${posture}`;
+      statusBar.tooltip = `${leaseUi.tooltip}\nWorkflow Cannon coordination ${posture}.`;
       statusBar.show();
     };
     let statusBarTimer: ReturnType<typeof setTimeout> | undefined;

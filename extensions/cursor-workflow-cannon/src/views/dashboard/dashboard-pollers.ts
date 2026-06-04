@@ -72,18 +72,24 @@ export class DashboardPollerCoordinator {
   }
 
   async refreshCriticalNow(): Promise<void> {
-    await this.refreshSlicesNow(dashboardSliceNamesForPollGroup("critical"));
+    await Promise.all(
+      dashboardSliceNamesForPollGroup("critical").map((name) =>
+        this.fetchSlice(name, { force: true, source: "read-path prefetch" })
+      )
+    );
   }
 
   async refreshSlicesNow(names: readonly DashboardSliceName[]): Promise<void> {
-    await Promise.all(names.map((name) => this.fetchSlice(name, { force: true })));
+    await Promise.all(
+      names.map((name) => this.fetchSlice(name, { force: true, source: "read-path refresh" }))
+    );
   }
 
   setVisibleSections(sections: readonly DashboardSectionId[]): void {
     this.visibleSectionIds = new Set(sections);
     for (const desc of DASHBOARD_SLICE_REGISTRY) {
       if (desc.visibleOnly && this.isSliceEligible(desc.name)) {
-        void this.fetchSlice(desc.name);
+        void this.fetchSlice(desc.name, { source: "read-path visible-section prefetch" });
       }
     }
   }
@@ -96,7 +102,7 @@ export class DashboardPollerCoordinator {
       }
       for (const name of dashboardSliceNamesForPollGroup(group)) {
         if (this.isSliceEligible(name)) {
-          void this.fetchSlice(name);
+          void this.fetchSlice(name, { source: "poller refresh" });
         }
       }
     };
@@ -127,7 +133,10 @@ export class DashboardPollerCoordinator {
     return this.visibleSectionIds.has(sectionId);
   }
 
-  private fetchSlice(name: DashboardSliceName, options?: { force?: boolean }): Promise<void> {
+  private fetchSlice(
+    name: DashboardSliceName,
+    options?: { force?: boolean; source?: string }
+  ): Promise<void> {
     const existing = this.inFlight.get(name);
     if (existing) {
       return existing;
@@ -136,7 +145,7 @@ export class DashboardPollerCoordinator {
       return Promise.resolve();
     }
     const generation = this.deps.refreshController.currentGeneration();
-    const work = this.runSliceFetch(name, generation);
+    const work = this.runSliceFetch(name, generation, options?.source ?? "poller refresh");
     this.inFlight.set(name, work);
     return work.finally(() => {
       if (this.inFlight.get(name) === work) {
@@ -145,7 +154,11 @@ export class DashboardPollerCoordinator {
     });
   }
 
-  private async runSliceFetch(name: DashboardSliceName, generation: number): Promise<void> {
+  private async runSliceFetch(
+    name: DashboardSliceName,
+    generation: number,
+    source: string
+  ): Promise<void> {
     if (this.paused || this.deps.refreshController.isSuppressed()) {
       return;
     }
@@ -156,9 +169,14 @@ export class DashboardPollerCoordinator {
     const desc = lookupDashboardSlice(name);
     this.deps.store.markLoading(name);
     this.deps.trace?.recordSliceFetch(name);
-    this.deps.log?.(`poll fetch slice=${name} gen=${generation}`);
+    this.deps.log?.(`poll fetch slice=${name} gen=${generation} source=${source}`);
 
     try {
+      if (desc.command === "dashboard-summary") {
+        this.deps.log?.(
+          `dashboard-summary source=${source} slice=${name} projection=${String(desc.args.projection ?? "full")}`
+        );
+      }
       const raw = (await this.deps.client.run(desc.command, {
         ...desc.args
       })) as KitRunResult;

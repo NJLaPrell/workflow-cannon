@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import type { CommandClient } from "../../runtime/command-client.js";
+import { logWc } from "../../runtime/workflow-cannon-log.js";
 import { renderStatusTabInnerHtml } from "./render-status-tab.js";
 import { WC_BASE_CSS } from "../shared/wc-base-css.js";
 
@@ -94,7 +95,10 @@ export class StatusDashboardPanel {
     }
     this.refreshInFlight = true;
     try {
-      const raw = (await this.client.run("dashboard-summary", {})) as Record<string, unknown>;
+      logWc("dashboard", "dashboard-summary source=status dashboard panel projection=status lane=refresh");
+      const raw = (await this.client.run("dashboard-summary", {
+        projection: "status"
+      })) as Record<string, unknown>;
       const folderLabel = vscode.workspace.workspaceFolders?.[0]?.name;
       const inner = renderStatusTabInnerHtml(raw, {
         editorWorkspaceFolderLabel: folderLabel

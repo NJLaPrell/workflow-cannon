@@ -9,6 +9,7 @@ const providerSrc = readFileSync(
   path.join(__dirname, "../src/views/dashboard/DashboardViewProvider.ts"),
   "utf8"
 );
+const extensionSrc = readFileSync(path.join(__dirname, "../src/extension.ts"), "utf8");
 
 test("Option 1: DashboardViewProvider wires store + pollers (no legacy 45s timer)", () => {
   assert.match(providerSrc, /DashboardDataStore/);
@@ -66,6 +67,22 @@ test("Option 1: queue rollup hydration is single-flight after overview paint", (
   assert.match(providerSrc, /queue rollup hydration deferred: refresh paused or suppressed/);
   assert.match(providerSrc, /preserveOnSummaryFailure/);
   assert.match(providerSrc, /preserved existing sections after summary failure/);
+});
+
+test("Option 1: dashboard-summary calls are source labeled and activation avoids pre-view summary", () => {
+  const pollerSrc = readFileSync(
+    path.join(__dirname, "../src/views/dashboard/dashboard-pollers.ts"),
+    "utf8"
+  );
+  assert.match(providerSrc, /dashboard-summary source=\$\{source\}/);
+  assert.match(providerSrc, /source=queue hydration/);
+  assert.match(providerSrc, /source=post-paint status hydration/);
+  assert.match(providerSrc, /source=kit-state refresh/);
+  assert.match(providerSrc, /manual refresh/);
+  assert.match(pollerSrc, /source: "read-path prefetch"/);
+  assert.match(pollerSrc, /source: "poller refresh"/);
+  assert.match(extensionSrc, /workspace-coordination-status/);
+  assert.doesNotMatch(extensionSrc, /client\.run\("dashboard-summary", \{\}\)/);
 });
 
 test("Option 1: DashboardViewProvider delegates to dashboard-terminal-rows for completed/cancelled tasks", () => {

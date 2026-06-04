@@ -467,7 +467,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
 
   /** Options consumed by the next `pushUpdateOnce` (projection / light refresh). */
   private pendingPushUpdateOptions:
-    | { light?: boolean; projection?: "full" | "overview"; skipHeavyFetches?: boolean }
+    | { light?: boolean; projection?: "full" | "overview"; skipHeavyFetches?: boolean; source?: string }
     | undefined;
 
   /** Last queue content fingerprint applied (skips kit-state DOM churn when rollups unchanged). */
@@ -678,10 +678,16 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   }
 
   private runDashboardSummary(
-    args: Record<string, unknown>
+    args: Record<string, unknown>,
+    source: string
   ): Promise<DashboardSummaryCommandSuccess | Record<string, unknown>> {
     const bootstrapPaint = !this.dashboardRootHydrated;
-    const runner = this.shouldUseDashboardPaintLane()
+    const usePaintLane = this.shouldUseDashboardPaintLane();
+    logWc(
+      "dashboard",
+      `dashboard-summary source=${source} projection=${String(args.projection ?? "full")} lane=${usePaintLane ? "paint" : "refresh"} bootstrap=${String(bootstrapPaint)}`
+    );
+    const runner = usePaintLane
       ? (name: string, a: Record<string, unknown>) =>
           this.client.runForDashboardPaint(name, a, { bootstrap: bootstrapPaint })
       : (name: string, a: Record<string, unknown>) => this.client.run(name, a);
@@ -882,6 +888,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   private async patchQueueSectionFromKitState(updateSequence?: number): Promise<void> {
     let raw: DashboardSummaryCommandSuccess | Record<string, unknown>;
     try {
+      logWc("dashboard", "dashboard-summary source=kit-state refresh projection=full lane=refresh");
       raw = (await this.client.run("dashboard-summary", {
         projection: "full"
       })) as DashboardSummaryCommandSuccess | Record<string, unknown>;
@@ -1579,7 +1586,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     try {
       const raw = (await this.runDashboardSummary({
         projection: "overview"
-      })) as DashboardSummaryCommandSuccess | Record<string, unknown>;
+      }, "startup overview")) as DashboardSummaryCommandSuccess | Record<string, unknown>;
       if (isKitRefreshRunAborted(raw as Record<string, unknown>)) {
         await webview.postMessage({
           type: "dashboardStartupError",
@@ -1717,11 +1724,13 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       return;
     }
     logWc("dashboard", "ensureQueueRollupsHydrated: upgrading overview stub to queue projection");
+    logWc("dashboard", "dashboard-summary source=queue hydration projection=queue lane=paint");
     const seq = updateSequence ?? this.refreshController.currentGeneration();
     await this.patchDashboardSectionsFromSummary(["queue", "overview", "planning-interview"], seq, {
       projection: "queue",
       forcePaintLane: true,
-      preserveOnSummaryFailure: true
+      preserveOnSummaryFailure: true,
+      source: "queue hydration"
     });
   }
 
@@ -1734,9 +1743,14 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       return this.inFlightStatusHydration;
     }
 
-    logWc("dashboard", "hydration start");
     const bootstrap = options?.bootstrap ?? !this.dashboardRootHydrated;
-    const runPromise = this.shouldUseDashboardPaintLane()
+    const usePaintLane = this.shouldUseDashboardPaintLane();
+    logWc("dashboard", "post-paint status hydration start");
+    logWc(
+      "dashboard",
+      `dashboard-summary source=post-paint status hydration projection=status lane=${usePaintLane ? "paint" : "refresh"} bootstrap=${String(bootstrap)}`
+    );
+    const runPromise = usePaintLane
       ? this.originalRunForPaint("dashboard-summary", { ...args, projection: "status" }, { bootstrap })
       : this.originalRun("dashboard-summary", { ...args, projection: "status" });
 
@@ -1815,6 +1829,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     try {
       let html = "";
       if (sectionId === "status") {
+        logWc("dashboard", "dashboard-summary source=post-paint status hydration projection=status lane=refresh");
         const raw = (await this.client.run("dashboard-summary", {
           projection: "status"
         })) as Record<string, unknown>;
@@ -2016,6 +2031,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       forcePaintLane?: boolean;
       /** Deferred/background upgrades should keep the existing dashboard on summary failure. */
       preserveOnSummaryFailure?: boolean;
+      /** Trace source for dashboard-summary reads. */
+      source?: string;
     }
   ): Promise<void> {
     const activeView = this.view;
@@ -2031,18 +2048,26 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     const needsCae = sectionsToPatch.includes("cae");
     const summaryProjection =
       options?.projection ?? dashboardSummaryProjectionForSectionPatch(sectionsToPatch);
+    const summarySource =
+      options?.source ?? (options?.light === true ? "kit-state refresh" : "manual refresh");
     let raw: DashboardSummaryCommandSuccess | Record<string, unknown>;
     try {
       const summaryArgs = {
         projection: summaryProjection
       };
+      if (options?.forcePaintLane === true) {
+        logWc(
+          "dashboard",
+          `dashboard-summary source=${summarySource} projection=${summaryProjection} lane=paint`
+        );
+      }
       raw = (options?.forcePaintLane === true
         ? ((await this.client.runForDashboardPaint(
             "dashboard-summary",
             summaryArgs,
             { bootstrap: !this.dashboardRootHydrated }
           )) as DashboardSummaryCommandSuccess | Record<string, unknown>)
-        : ((await this.runDashboardSummary(summaryArgs)) as
+        : ((await this.runDashboardSummary(summaryArgs, summarySource)) as
             | DashboardSummaryCommandSuccess
             | Record<string, unknown>));
       if (isKitRefreshRunAborted(raw as Record<string, unknown>)) {
@@ -2208,6 +2233,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     light?: boolean;
     projection?: "full" | "overview";
     skipHeavyFetches?: boolean;
+    source?: string;
   }): Promise<void> {
     this.pendingPushUpdateOptions = options;
     await this.refreshController.pushNow(options);
@@ -2263,7 +2289,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   }
 
   private async ingestPlanningGenFromDashboard(): Promise<void> {
-    const dash = await this.client.run("dashboard-summary", {});
+    logWc("dashboard", "dashboard-summary source=planning-generation refresh projection=overview lane=refresh");
+    const dash = await this.client.run("dashboard-summary", { projection: "overview" });
     if (dash.ok && dash.data && typeof dash.data === "object") {
       ingestPlanningMetaFromData(dash.data as Record<string, unknown>);
     }
@@ -4530,6 +4557,9 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     const refreshOptions = this.pendingPushUpdateOptions;
     this.pendingPushUpdateOptions = undefined;
     const summaryProjection = refreshOptions?.projection ?? (this.dashboardRootHydrated ? "full" : "overview");
+    const summarySource =
+      refreshOptions?.source ??
+      (lightRefresh ? "kit-state refresh" : this.dashboardRootHydrated ? "manual refresh" : "startup overview");
     const skipHeavyFetches = refreshOptions?.skipHeavyFetches === true || (!this.dashboardRootHydrated && summaryProjection === "overview");
     if (this.isDashboardRefreshDeferred()) {
       this.refreshController.markDeferredRefreshNeeded();
@@ -4556,7 +4586,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     try {
       raw = (await this.runDashboardSummary({
         projection: summaryProjection
-      })) as DashboardSummaryCommandSuccess | Record<string, unknown>;
+      }, summarySource)) as DashboardSummaryCommandSuccess | Record<string, unknown>;
       if (isKitRefreshRunAborted(raw as Record<string, unknown>)) {
         logWc("dashboard", "pushUpdate aborted (refresh paused or preempted)");
         if (!this.dashboardRootHydrated) {
@@ -4567,7 +4597,10 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       if (isWishlistPagingArgRejection(raw as Record<string, unknown>)) {
         logWc("dashboard", "pushUpdate: dashboard-summary rejected wishlist paging; retrying without paging");
         this.wishlistPage = 0;
-        raw = (await this.runDashboardSummary({ projection: summaryProjection })) as DashboardSummaryCommandSuccess | Record<string, unknown>;
+        raw = (await this.runDashboardSummary(
+          { projection: summaryProjection },
+          `${summarySource} retry`
+        )) as DashboardSummaryCommandSuccess | Record<string, unknown>;
         if (isKitRefreshRunAborted(raw as Record<string, unknown>)) {
           logWc("dashboard", "pushUpdate aborted (refresh paused or preempted)");
           if (!this.dashboardRootHydrated) {

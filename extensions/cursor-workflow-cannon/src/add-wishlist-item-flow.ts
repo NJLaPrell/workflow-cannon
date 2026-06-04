@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import type { CommandClient } from "./runtime/command-client.js";
 import { ingestPlanningMetaFromData, expectedPlanningGenerationArgs } from "./planning-generation-cache.js";
+import { logWc } from "./runtime/workflow-cannon-log.js";
 
 /**
  * Runs `create-wishlist` after the eight required string fields are collected (e.g. from the Dashboard drawer).
@@ -10,7 +11,8 @@ export async function executeCreateWishlistFromValidatedFields(
   client: CommandClient,
   fields: Record<string, string>
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-  const warm = await client.run("dashboard-summary", {});
+  logWc("dashboard", "dashboard-summary source=wishlist planning-generation refresh projection=overview lane=refresh");
+  const warm = await client.run("dashboard-summary", { projection: "overview" });
   if (warm.ok && warm.data && typeof warm.data === "object") {
     ingestPlanningMetaFromData(warm.data as Record<string, unknown>);
   }
@@ -19,7 +21,8 @@ export async function executeCreateWishlistFromValidatedFields(
 
   let r = await client.run("create-wishlist", payload);
   if (!r.ok && r.code === "planning-generation-mismatch") {
-    const again = await client.run("dashboard-summary", {});
+    logWc("dashboard", "dashboard-summary source=wishlist planning-generation retry projection=overview lane=refresh");
+    const again = await client.run("dashboard-summary", { projection: "overview" });
     if (again.ok && again.data && typeof again.data === "object") {
       ingestPlanningMetaFromData(again.data as Record<string, unknown>);
     }
