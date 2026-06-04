@@ -50,3 +50,11 @@ test("Option 1 plan documents Option 2 deferred", () => {
   assert.match(plan, /Option 2/);
   assert.match(plan, /deferred|Out of scope/i);
 });
+
+test("Option 1: background status hydration exists and is single-flight", () => {
+  assert.match(providerSrc, /runDashboardSummaryStatus/);
+  assert.match(providerSrc, /ensureStatusHydrated/);
+  assert.match(providerSrc, /inFlightStatusHydration/);
+  assert.match(providerSrc, /hydration coalesced/);
+});
+

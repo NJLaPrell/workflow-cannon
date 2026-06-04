@@ -470,6 +470,10 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   /** Last queue content fingerprint applied (skips kit-state DOM churn when rollups unchanged). */
   private lastQueueContentFingerprint: string | null = null;
 
+  private readonly originalRun: CommandClient["run"];
+  private readonly originalRunForPaint: CommandClient["runForDashboardPaint"];
+  private inFlightStatusHydration: Promise<KitRunResult> | null = null;
+
   constructor(
     private readonly extensionUri: vscode.Uri,
     private readonly client: CommandClient,
@@ -478,6 +482,27 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     private readonly isTaskStateSyncInFlight?: () => boolean,
     private readonly onFirstDashboardPaint?: () => void
   ) {
+    this.originalRun = this.client.run.bind(this.client);
+    this.originalRunForPaint = this.client.runForDashboardPaint.bind(this.client);
+
+    const clientAsAny = this.client as any;
+    clientAsAny.run = (commandName: string, args: Record<string, unknown>) => {
+      if (commandName === "dashboard-summary" && args?.projection === "status") {
+        return this.runDashboardSummaryStatus(args);
+      }
+      return this.originalRun(commandName, args);
+    };
+    clientAsAny.runForDashboardPaint = (
+      commandName: string,
+      args: Record<string, unknown>,
+      options?: { bootstrap?: boolean }
+    ) => {
+      if (commandName === "dashboard-summary" && args?.projection === "status") {
+        return this.runDashboardSummaryStatus(args, options);
+      }
+      return this.originalRunForPaint(commandName, args, options);
+    };
+
     this.refreshController = new DashboardRefreshController({
       executeRefresh: (mode, generation) => this.executeDashboardRefresh(mode, generation),
       isDeferred: () => this.isDashboardRefreshDeferred(),
@@ -923,8 +948,11 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         logWc("dashboard", "webview ready");
         if (!this.dashboardRootHydrated) {
           await this.renderDashboardStartupDirect(webview);
-        } else if (dashboardSummaryNeedsQueueRollupHydration(this.lastDashboardSummaryData)) {
-          await this.ensureQueueRollupsHydrated(this.refreshController.currentGeneration());
+        } else {
+          if (dashboardSummaryNeedsQueueRollupHydration(this.lastDashboardSummaryData)) {
+            await this.ensureQueueRollupsHydrated(this.refreshController.currentGeneration());
+          }
+          await this.ensureStatusHydrated(this.refreshController.currentGeneration());
         }
         return;
       }
@@ -1575,6 +1603,12 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
           `startup queue rollup hydration failed: ${error instanceof Error ? error.message : String(error)}`
         );
       });
+      void this.ensureStatusHydrated().catch((error) => {
+        logWc(
+          "dashboard",
+          `startup status hydration failed: ${error instanceof Error ? error.message : String(error)}`
+        );
+      });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       logWc("dashboard", `startup diagnostic direct render failed: ${message}`);
@@ -1633,6 +1667,88 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       projection: "queue",
       forcePaintLane: true
     });
+  }
+
+  private async runDashboardSummaryStatus(
+    args: Record<string, unknown> = {},
+    options?: { bootstrap?: boolean }
+  ): Promise<KitRunResult> {
+    if (this.inFlightStatusHydration) {
+      logWc("dashboard", "hydration coalesced");
+      return this.inFlightStatusHydration;
+    }
+
+    logWc("dashboard", "hydration start");
+    const bootstrap = options?.bootstrap ?? !this.dashboardRootHydrated;
+    const runPromise = this.shouldUseDashboardPaintLane()
+      ? this.originalRunForPaint("dashboard-summary", { ...args, projection: "status" }, { bootstrap })
+      : this.originalRun("dashboard-summary", { ...args, projection: "status" });
+
+    this.inFlightStatusHydration = (async () => {
+      try {
+        const res = await runPromise;
+        if (res.ok) {
+          logWc("dashboard", "hydration success");
+        } else {
+          logWc(
+            "dashboard",
+            `hydration timeout/failure: ${res.message ?? res.code ?? "unknown error"}`
+          );
+        }
+        return res;
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
+        logWc("dashboard", `hydration timeout/failure: ${msg}`);
+        throw error;
+      }
+    })();
+
+    try {
+      return await this.inFlightStatusHydration;
+    } finally {
+      this.inFlightStatusHydration = null;
+    }
+  }
+
+  private async ensureStatusHydrated(updateSequence?: number): Promise<void> {
+    if (!this.dashboardRootHydrated) {
+      logWc("dashboard", "hydration paused/deferred: root not hydrated");
+      return;
+    }
+    if (this.shouldSkipDashboardKitRefresh()) {
+      logWc("dashboard", "hydration paused/deferred: refresh paused or suppressed");
+      this.refreshController.markDeferredRefreshNeeded();
+      await this.postSectionPatch("status", "", "stale");
+      return;
+    }
+
+    const seq = updateSequence ?? this.refreshController.currentGeneration();
+    try {
+      const raw = await this.runDashboardSummaryStatus();
+      if (raw.ok === true && raw.data && typeof raw.data === "object") {
+        this.lastDashboardSummaryData = raw.data as Record<string, unknown>;
+        ingestPlanningMetaFromData(raw.data as Record<string, unknown>);
+        this.ingestDashboardSummaryIntoStore(raw.data as Record<string, unknown>, "status");
+
+        const statusSlice = this.dashboardStore.getSlice("status");
+        this.hydratedDashboardSections.add("status");
+        await this.patchDashboardSectionFromStore("status", statusSlice);
+      } else {
+        const msg = String(raw.message ?? raw.code ?? "timeout");
+        await this.postSectionPatch(
+          "status",
+          '<p class="muted wc-dash-section-error" role="status">' + escapeHtml(msg) + "</p>",
+          "error"
+        );
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      await this.postSectionPatch(
+        "status",
+        '<p class="muted wc-dash-section-error" role="status">' + escapeHtml(message) + "</p>",
+        "error"
+      );
+    }
   }
 
   private async hydrateDashboardSection(sectionId: DashboardSectionId): Promise<void> {
@@ -4597,6 +4713,12 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
           await this.ensureQueueRollupsHydrated(updateSequence);
         }
         this.markDashboardRootHydrated();
+        void this.ensureStatusHydrated(updateSequence).catch((error) => {
+          logWc(
+            "dashboard",
+            `startup status hydration failed: ${error instanceof Error ? error.message : String(error)}`
+          );
+        });
         return;
       }
       // Full-root refresh stays the compatibility path while section slices land (T100396+).
