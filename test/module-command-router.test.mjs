@@ -137,6 +137,7 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
     "rebuild-task-state-cache",
     "recommend-validation",
     "reject-improvement",
+    "release-closeout-result",
     "release-evidence-manifest",
     "release-status",
     "release-workspace-edit-lease",
