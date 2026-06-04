@@ -1,5 +1,7 @@
 /** Pure helpers for kit run trace lines (no vscode import — safe for unit tests). */
 
+const KIT_REFRESH_PAUSED_CODE = "extension-refresh-paused";
+
 export function summarizeKitRunArgs(args: Record<string, unknown>): string {
   const parts: string[] = [];
   const taskId = args.taskId;
@@ -36,5 +38,8 @@ export function formatKitRunEndLine(
   }
   const code = result.code ?? "unknown";
   const detail = result.message ? ` — ${String(result.message).slice(0, 160)}` : "";
+  if (code === KIT_REFRESH_PAUSED_CODE) {
+    return `← run ${commandName} ${ms}ms paused ${code}${detail}`;
+  }
   return `← run ${commandName} ${ms}ms FAIL ${code}${detail}`;
 }

@@ -14,6 +14,8 @@ export type DashboardRefreshControllerDeps = {
   isRefreshPaused?: () => boolean;
   /** Called when a mutation starts so pending refresh intents can be dropped. */
   onMutationStart?: () => void;
+  /** Called when a mutation hold fully ends so paused read paths can resume. */
+  onMutationEnd?: () => void;
   log?: (message: string) => void;
   debounceMs?: number;
 };
@@ -73,6 +75,7 @@ export class DashboardRefreshController {
 
   notifyMutationEnd(): void {
     this.setSuppressed(false);
+    this.deps.onMutationEnd?.();
     this.onDeferredCleared();
   }
 

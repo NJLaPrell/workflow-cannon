@@ -485,6 +485,10 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         this.client.setRefreshPaused(true);
         this.readPath?.pause();
       },
+      onMutationEnd: () => {
+        this.client.setRefreshPaused(false);
+        this.readPath?.resume();
+      },
       log: (message) => {
         if (isWcTraceVerbose()) {
           logWc("dashboard", message);
@@ -3053,24 +3057,18 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   /** Hold dashboard refresh while kit mutations run (drawer batch, roster start, etc.). */
   private beginDashboardMutationRefreshHold(): void {
     this.refreshController.notifyMutationStart();
-    this.client.setRefreshPaused(true);
-    this.readPath.pause();
   }
 
   private endDashboardMutationRefreshHold(): void {
     this.refreshController.notifyMutationEnd();
-    this.client.setRefreshPaused(false);
-    this.readPath.resume();
   }
 
   /** Hold dashboard refresh while a drawer mutating batch runs (accept-all, etc.). */
   private beginDrawerSubmitRefreshHold(): void {
-    this.beginDashboardMutationRefreshHold();
     this.dashboardRefreshAfterInteraction = true;
   }
 
   private endDrawerSubmitRefreshHold(): void {
-    this.endDashboardMutationRefreshHold();
     this.dashboardRefreshAfterInteraction = false;
   }
 

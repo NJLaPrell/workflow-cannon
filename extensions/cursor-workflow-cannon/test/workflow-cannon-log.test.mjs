@@ -18,3 +18,14 @@ test("summarizeKitRunArgs extracts common run fields", async () => {
   assert.match(mod.summarizeKitRunArgs({ taskId: "T1", action: "accept", phaseKey: "109" }), /taskId=T1/);
   assert.match(mod.summarizeKitRunArgs({ taskId: "T1", action: "accept", phaseKey: "109" }), /phaseKey=109/);
 });
+
+test("formatKitRunEndLine marks refresh pause as paused instead of FAIL", async () => {
+  const mod = await import("../dist/runtime/kit-run-log-format.js");
+  const line = mod.formatKitRunEndLine("dashboard-summary", Date.now(), {
+    ok: false,
+    code: "extension-refresh-paused",
+    message: "Dashboard refresh paused while a mutating drawer action runs"
+  });
+  assert.match(line, / paused extension-refresh-paused/);
+  assert.doesNotMatch(line, / FAIL /);
+});
