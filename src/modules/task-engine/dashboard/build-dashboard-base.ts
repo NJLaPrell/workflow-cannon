@@ -34,7 +34,7 @@ import {
 import type { TaskStore } from "../persistence/store.js";
 import type { SqliteDualPlanningStore } from "../persistence/sqlite-dual-planning.js";
 import { buildFeatureEnrichmentBySlug } from "../persistence/feature-registry-queries.js";
-import { buildDashboardSystemStatus } from "./build-dashboard-system-status.js";
+import { buildDashboardSystemStatus, buildDashboardSystemStatusOverview } from "./build-dashboard-system-status.js";
 import { buildDashboardAgentStatus } from "./dashboard-agent-status.js";
 import {
   agentActivityLeaseToDashboardStatus,
@@ -575,9 +575,14 @@ export async function buildDashboardBase(
     ? (summarizeCheckpointsForDashboard(sqliteDual.getDatabase()) as DashboardTaskCheckpointsSummary)
     : taskCheckpointsEmpty);
 
-  const systemStatus = await (tracer?.spanAsync("systemStatus", () =>
-    buildDashboardSystemStatus(ctx, store, dualForStatus)
-  ) ?? buildDashboardSystemStatus(ctx, store, dualForStatus));
+  const systemStatus = await (tracer?.spanAsync("systemStatus", () => {
+    if (projection === "overview") {
+      return buildDashboardSystemStatusOverview(ctx, store, dualForStatus);
+    }
+    return buildDashboardSystemStatus(ctx, store, dualForStatus);
+  }) ?? (projection === "overview"
+    ? buildDashboardSystemStatusOverview(ctx, store, dualForStatus)
+    : buildDashboardSystemStatus(ctx, store, dualForStatus)));
   const taskStateProjection = await (tracer?.spanAsync("taskStateProjection", () =>
     buildDashboardTaskStateProjectionSummary(
       ctx,

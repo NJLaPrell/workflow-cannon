@@ -17,7 +17,8 @@ import {
   enrichFuturePhaseCatalogWithTaskSummaries,
   phaseCatalogTableAvailable
 } from "../persistence/phase-catalog-store.js";
-import { readKitWorkspaceStatusRow } from "../persistence/workspace-status-store.js";
+import { readKitWorkspaceStatusRow, kitWorkspaceStatusPublicToSnapshot } from "../persistence/workspace-status-store.js";
+import { resolveCanonicalPhase } from "../phase-resolution.js";
 import {
   buildDashboardCanonicalBackendSummary,
   buildDashboardPlanningStoreSummary,
@@ -187,5 +188,77 @@ export async function buildDashboardSystemStatus(
     },
     caeLines,
     ...(coordination ? { coordination } : {})
+  };
+}
+
+export async function buildDashboardSystemStatusOverview(
+  ctx: ModuleLifecycleContext,
+  store: TaskStore,
+  sqliteDual: SqliteDualPlanningStore
+): Promise<DashboardSystemStatus> {
+  const generatedAt = new Date().toISOString();
+  const mod = moduleSlice(ctx);
+  const identity = await buildDashboardWorkspaceIdentity(ctx.workspacePath);
+  const planningStore = buildDashboardPlanningStoreSummary(ctx);
+  const canonicalBackend = buildDashboardCanonicalBackendSummary(ctx);
+
+  const db = sqliteDual.getDatabase();
+  const wsRow = readKitWorkspaceStatusRow(db);
+  const workspaceSnapshot = wsRow ? kitWorkspaceStatusPublicToSnapshot(wsRow) : null;
+  const canonicalPhase = resolveCanonicalPhase({
+    effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined,
+    workspaceStatus: workspaceSnapshot
+  });
+
+  const activeTasks = store.getActiveTasks();
+  const taskHints = collectPhaseCatalogHintsFromTasks(activeTasks);
+  const phasesRaw = buildOrderedPhaseCatalogList(db, wsRow, taskHints);
+  const currentForDerivation =
+    wsRow && typeof wsRow.currentKitPhase === "string" && wsRow.currentKitPhase.trim().length > 0
+      ? wsRow.currentKitPhase
+      : wsRow?.currentKitPhase ?? null;
+  const phases = enrichFuturePhaseCatalogWithTaskSummaries(phasesRaw, activeTasks, currentForDerivation);
+  const phaseCatalog = {
+    schemaVersion: 1 as const,
+    supported: phaseCatalogTableAvailable(db),
+    phases
+  };
+
+  const phaseBlock: DashboardSystemStatus["phase"] = {
+    schemaVersion: 1,
+    ok: true,
+    canonicalPhaseKey: canonicalPhase.canonicalPhaseKey,
+    source: canonicalPhase.source,
+    currentKitPhase: wsRow?.currentKitPhase ?? null,
+    nextKitPhase: wsRow?.nextKitPhase ?? null,
+    configPhaseKey: canonicalPhase.configPhaseKey,
+    workspaceStatusPhaseKey: canonicalPhase.workspaceStatusPhaseKey,
+    configMatchesWorkspaceStatus: canonicalPhase.configMatchesWorkspaceStatus,
+    exportStale: null,
+    exportReason: "deferred for overview startup",
+    driftMessages: [],
+    remediationSuggestions: [],
+    phaseCatalog
+  };
+
+  return {
+    schemaVersion: 2,
+    generatedAt,
+    identity,
+    planningStore,
+    canonicalBackend,
+    phase: phaseBlock,
+    doctor: {
+      schemaVersion: 1,
+      ok: true,
+      issueCount: 0,
+      issues: []
+    },
+    modules: {
+      schemaVersion: 1,
+      enabledModuleIds: mod.enabledModuleIds,
+      disabledModuleIds: mod.disabledModuleIds
+    },
+    caeLines: ["CAE: status deferred for overview startup"]
   };
 }
