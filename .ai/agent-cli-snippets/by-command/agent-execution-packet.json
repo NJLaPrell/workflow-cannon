@@ -11,8 +11,12 @@
   "sampleArgs": {},
   "examples": [
     {
-      "description": "Minimal argv example",
-      "argv": "workspace-kit run agent-execution-packet '{}'"
+      "description": "Assignment packet for worker startup",
+      "argv": "workspace-kit run agent-execution-packet '{\"assignmentId\":\"asg-123\",\"workerId\":\"worker-1\"}'"
+    },
+    {
+      "description": "Draft packet before assignment registration",
+      "argv": "workspace-kit run agent-execution-packet '{\"mode\":\"draft\",\"taskId\":\"T123\",\"phaseKey\":\"131\"}'"
     }
   ],
   "instructionPath": "src/modules/team-execution/instructions/agent-execution-packet.md",
