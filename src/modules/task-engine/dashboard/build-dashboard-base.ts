@@ -69,6 +69,7 @@ import {
 import { buildDashboardTaskStateProjectionSummary } from "./build-dashboard-task-state-projection.js";
 import { buildDashboardAgentActivitySummary } from "./build-dashboard-agent-activity-summary.js";
 import { summarizeAgentRegistrySessions } from "../agent-registry-session-summary.js";
+import type { DashboardSummaryTracer } from "./dashboard-summary-trace.js";
 
 /** Parse optional `dashboard-summary` argv for wishlist table paging (extension + CLI). */
 export function parseDashboardWishlistPaging(args?: Record<string, unknown>): {
@@ -203,19 +204,42 @@ export async function buildDashboardBase(
   store: TaskStore,
   planningGeneration: number,
   sqliteDual: SqliteDualPlanningStore | undefined,
-  commandArgs?: Record<string, unknown>
+  commandArgs?: Record<string, unknown>,
+  tracer?: DashboardSummaryTracer
 ): Promise<DashboardBuildBase> {
   const projection = parseDashboardSummaryProjection(commandArgs);
+  if (tracer) {
+    tracer.projection = projection;
+  }
   const needsQueueRollups = dashboardSummaryNeedsQueueRollups(projection);
   const needsStatusRollups = dashboardSummaryNeedsStatusRollups(projection);
   const needsAgentActivityRollups = dashboardSummaryNeedsAgentActivityRollups(projection);
   const skipPlanningSessionRead = projection === "overview" || projection === "agentActivity";
   const skipAgentGuidanceBuild = projection === "queue" || projection === "agentActivity";
 
-  const tasks = store.getActiveTasks();
-  const dualForStatus = sqliteDual ?? openSqliteDualForWorkspaceStatus(ctx);
-  const workspaceStatus = readWorkspaceStatusSnapshotFromDual(dualForStatus);
-  const suggestion = getNextActions(tasks, {
+  const tasks = tracer?.span("getActiveTasks", () => store.getActiveTasks()) ?? store.getActiveTasks();
+  const { dualForStatus, workspaceStatus } =
+    tracer?.span("readWorkspaceStatus", () => {
+      const dual = sqliteDual ?? openSqliteDualForWorkspaceStatus(ctx);
+      return {
+        dualForStatus: dual,
+        workspaceStatus: readWorkspaceStatusSnapshotFromDual(dual)
+      };
+    }) ?? (() => {
+      const dual = sqliteDual ?? openSqliteDualForWorkspaceStatus(ctx);
+      return {
+        dualForStatus: dual,
+        workspaceStatus: readWorkspaceStatusSnapshotFromDual(dual)
+      };
+    })();
+  const suggestion = tracer?.span("getNextActions", () =>
+    getNextActions(tasks, {
+      workspacePhaseFocus: {
+        currentKitPhase: workspaceStatus?.currentKitPhase ?? null,
+        nextKitPhase: workspaceStatus?.nextKitPhase ?? null
+      }
+    })
+  ) ?? getNextActions(tasks, {
     workspacePhaseFocus: {
       currentKitPhase: workspaceStatus?.currentKitPhase ?? null,
       nextKitPhase: workspaceStatus?.nextKitPhase ?? null
@@ -225,7 +249,9 @@ export async function buildDashboardBase(
   const readyImprovementCount = readyQueue.filter(isImprovementLikeTask).length;
   const readyImprovements = readyQueue.filter(isImprovementLikeTask);
   const readyExecution = readyQueue.filter((t) => !isImprovementLikeTask(t));
-  const enrich = sqliteDual ? buildFeatureEnrichmentBySlug(sqliteDual.getDatabase()) : new Map();
+  const enrich = tracer?.span("buildFeatureEnrichmentBySlug", () =>
+    sqliteDual ? buildFeatureEnrichmentBySlug(sqliteDual.getDatabase()) : new Map()
+  ) ?? (sqliteDual ? buildFeatureEnrichmentBySlug(sqliteDual.getDatabase()) : new Map());
   const toReadyRow = (t: (typeof readyQueue)[0]) => projectDashboardTaskRow(t, enrich);
   const readyTop = needsQueueRollups ? readyQueue.slice(0, 15).map(toReadyRow) : [];
   const readyImprovementsTop = needsQueueRollups ? readyImprovements.slice(0, 15).map(toReadyRow) : [];
@@ -237,29 +263,37 @@ export async function buildDashboardBase(
   let wishlistPageSize = 10;
   let wishlistTotalPages = 0;
   let wishlistOpenTop: DashboardSummaryData["wishlist"]["openTop"] = [];
+  let ideas = buildDashboardIdeasSummary(undefined, false);
 
-  if (needsQueueRollups) {
-    const wishlistItems = listWishlistIntakeTasksAsItems(store.getAllTasks());
-    const wishlistOpenItems = wishlistItems.filter((i) => i.status === "open");
-    wishlistOpenCount = wishlistOpenItems.length;
-    wishlistItemsLength = wishlistItems.length;
-    const { page: wishlistPageReq, pageSize } = parseDashboardWishlistPaging(commandArgs);
-    wishlistPageSize = pageSize;
-    wishlistTotalPages = wishlistOpenCount === 0 ? 0 : Math.ceil(wishlistOpenCount / wishlistPageSize);
-    wishlistSafePage = wishlistTotalPages === 0 ? 0 : Math.min(wishlistPageReq, wishlistTotalPages - 1);
-    const wishlistSliceStart = wishlistSafePage * wishlistPageSize;
-    wishlistOpenTop = wishlistOpenItems.slice(wishlistSliceStart, wishlistSliceStart + wishlistPageSize).map((i) => {
-      const task = findWishlistIntakeTaskByLegacyOrTaskId(store.getAllTasks(), i.id);
-      const taskId = task?.id ?? i.id;
-      return {
-        id: i.id,
-        title: i.title,
-        taskId
-      };
-    });
+  const buildWishlistAndIdeas = () => {
+    if (needsQueueRollups) {
+      const allTasks = store.getAllTasks();
+      const wishlistItems = listWishlistIntakeTasksAsItems(allTasks);
+      const wishlistOpenItems = wishlistItems.filter((i) => i.status === "open");
+      wishlistOpenCount = wishlistOpenItems.length;
+      wishlistItemsLength = wishlistItems.length;
+      const { page: wishlistPageReq, pageSize } = parseDashboardWishlistPaging(commandArgs);
+      wishlistPageSize = pageSize;
+      wishlistTotalPages = wishlistOpenCount === 0 ? 0 : Math.ceil(wishlistOpenCount / wishlistPageSize);
+      wishlistSafePage = wishlistTotalPages === 0 ? 0 : Math.min(wishlistPageReq, wishlistTotalPages - 1);
+      const wishlistSliceStart = wishlistSafePage * wishlistPageSize;
+      wishlistOpenTop = wishlistOpenItems.slice(wishlistSliceStart, wishlistSliceStart + wishlistPageSize).map((i) => {
+        const task = findWishlistIntakeTaskByLegacyOrTaskId(allTasks, i.id);
+        const taskId = task?.id ?? i.id;
+        return {
+          id: i.id,
+          title: i.title,
+          taskId
+        };
+      });
+    }
+    ideas = buildDashboardIdeasSummary(sqliteDual, needsQueueRollups);
+  };
+  if (tracer) {
+    tracer.span("wishlist/ideas", buildWishlistAndIdeas);
+  } else {
+    buildWishlistAndIdeas();
   }
-
-  const ideas = buildDashboardIdeasSummary(sqliteDual, needsQueueRollups);
 
   const slimListRow = (t: (typeof tasks)[0]) => projectDashboardTaskRow(t, enrich, { includePriority: false });
   const blockedTasks = needsQueueRollups
@@ -282,52 +316,102 @@ export async function buildDashboardBase(
     : [];
   const proposedExecutionTop = needsQueueRollups ? proposedExecution.slice(0, 15).map(slimListRow) : [];
 
-  const planningSession = skipPlanningSessionRead
-    ? null
-    : toDashboardPlanningSession(
-        await readBuildPlanSession(
-          ctx.workspacePath,
-          ctx.effectiveConfig as Record<string, unknown> | undefined
+  const planningSession = await (tracer?.spanAsync("planningSession", async () =>
+    skipPlanningSessionRead
+      ? null
+      : toDashboardPlanningSession(
+          await readBuildPlanSession(
+            ctx.workspacePath,
+            ctx.effectiveConfig as Record<string, unknown> | undefined
+          )
         )
-      );
-  const planArtifact = buildDashboardPlanArtifactSummary(ctx);
+  ) ?? (skipPlanningSessionRead
+    ? Promise.resolve(null)
+    : readBuildPlanSession(
+        ctx.workspacePath,
+        ctx.effectiveConfig as Record<string, unknown> | undefined
+      ).then(toDashboardPlanningSession)));
+  const planArtifact =
+    tracer?.span("planArtifact", () => buildDashboardPlanArtifactSummary(ctx)) ?? buildDashboardPlanArtifactSummary(ctx);
 
   const dashboardPhaseTop = 15;
   const toProposedRow = (t: (typeof tasks)[0]) => projectDashboardTaskRow(t, enrich, { includePriority: false });
-  const readyImprovementsPhaseBuckets = needsQueueRollups
-    ? buildDashboardPhaseBucketsForTasks(
-        readyImprovements,
-        workspaceStatus,
-        toReadyRow,
-        dashboardPhaseTop
-      )
-    : [];
-  const readyExecutionPhaseBuckets = needsQueueRollups
-    ? buildDashboardPhaseBucketsForTasks(
-        readyExecution,
-        workspaceStatus,
-        toReadyRow,
-        dashboardPhaseTop
-      )
-    : [];
-  const proposedImprovementsPhaseBuckets = needsQueueRollups
-    ? buildDashboardPhaseBucketsForTasks(
-        proposedImprovements,
-        workspaceStatus,
-        toProposedRow,
-        dashboardPhaseTop,
-        { includeAllTaskIds: true }
-      )
-    : [];
-  const proposedExecutionPhaseBuckets = needsQueueRollups
-    ? buildDashboardPhaseBucketsForTasks(
-        proposedExecution,
-        workspaceStatus,
-        toProposedRow,
-        dashboardPhaseTop,
-        { includeAllTaskIds: true }
-      )
-    : [];
+  const {
+    readyImprovementsPhaseBuckets,
+    readyExecutionPhaseBuckets,
+    proposedImprovementsPhaseBuckets,
+    proposedExecutionPhaseBuckets
+  } = tracer?.span("phaseBuckets", () => ({
+    readyImprovementsPhaseBuckets: needsQueueRollups
+      ? buildDashboardPhaseBucketsForTasks(
+          readyImprovements,
+          workspaceStatus,
+          toReadyRow,
+          dashboardPhaseTop
+        )
+      : [],
+    readyExecutionPhaseBuckets: needsQueueRollups
+      ? buildDashboardPhaseBucketsForTasks(
+          readyExecution,
+          workspaceStatus,
+          toReadyRow,
+          dashboardPhaseTop
+        )
+      : [],
+    proposedImprovementsPhaseBuckets: needsQueueRollups
+      ? buildDashboardPhaseBucketsForTasks(
+          proposedImprovements,
+          workspaceStatus,
+          toProposedRow,
+          dashboardPhaseTop,
+          { includeAllTaskIds: true }
+        )
+      : [],
+    proposedExecutionPhaseBuckets: needsQueueRollups
+      ? buildDashboardPhaseBucketsForTasks(
+          proposedExecution,
+          workspaceStatus,
+          toProposedRow,
+          dashboardPhaseTop,
+          { includeAllTaskIds: true }
+        )
+      : []
+  })) ?? {
+    readyImprovementsPhaseBuckets: needsQueueRollups
+      ? buildDashboardPhaseBucketsForTasks(
+          readyImprovements,
+          workspaceStatus,
+          toReadyRow,
+          dashboardPhaseTop
+        )
+      : [],
+    readyExecutionPhaseBuckets: needsQueueRollups
+      ? buildDashboardPhaseBucketsForTasks(
+          readyExecution,
+          workspaceStatus,
+          toReadyRow,
+          dashboardPhaseTop
+        )
+      : [],
+    proposedImprovementsPhaseBuckets: needsQueueRollups
+      ? buildDashboardPhaseBucketsForTasks(
+          proposedImprovements,
+          workspaceStatus,
+          toProposedRow,
+          dashboardPhaseTop,
+          { includeAllTaskIds: true }
+        )
+      : [],
+    proposedExecutionPhaseBuckets: needsQueueRollups
+      ? buildDashboardPhaseBucketsForTasks(
+          proposedExecution,
+          workspaceStatus,
+          toProposedRow,
+          dashboardPhaseTop,
+          { includeAllTaskIds: true }
+        )
+      : []
+  };
 
   const transcriptChurnResearch = needsQueueRollups
     ? tasks
@@ -369,9 +453,13 @@ export async function buildDashboardBase(
     ? buildDashboardPhaseBucketsForTasks(cancelledTasks, workspaceStatus, toProposedRow, 0)
     : [];
 
-  const dependencyOverview = needsQueueRollups
+  const dependencyOverview = tracer?.span("dependencyOverview", () =>
+    needsQueueRollups
+      ? buildDashboardDependencyOverview(tasks)
+      : emptyDependencyOverviewStub(tasks.length)
+  ) ?? (needsQueueRollups
     ? buildDashboardDependencyOverview(tasks)
-    : emptyDependencyOverviewStub(tasks.length);
+    : emptyDependencyOverviewStub(tasks.length));
 
   const effCfg =
     ctx.effectiveConfig && typeof ctx.effectiveConfig === "object" && !Array.isArray(ctx.effectiveConfig)
@@ -379,31 +467,59 @@ export async function buildDashboardBase(
       : {};
 
   let agentGuidance: DashboardSummaryData["agentGuidance"] = null;
-  if (!skipAgentGuidanceBuild) {
-    const guidanceResolved = resolveAgentGuidanceFromEffectiveConfig(effCfg);
-    const behaviorState = await loadBehaviorWorkspaceState(ctx);
-    const behaviorStore = new BehaviorProfileStore(behaviorState);
-    const { effective: behaviorEffective } = behaviorStore.resolveEffectiveWithProvenance();
-    const agentPresentation = resolveAgentPresentationPolicy({
-      effectiveConfig: effCfg,
-      guidance: guidanceResolved,
-      behaviorProfile: {
-        id: behaviorEffective.id,
-        label: behaviorEffective.label,
-        dimensions: behaviorEffective.dimensions
-      }
-    });
-    agentGuidance = {
-      schemaVersion: 1 as const,
-      profileSetId: guidanceResolved.profileSetId,
-      tier: guidanceResolved.tier,
-      displayLabel: guidanceResolved.displayLabel,
-      usingDefaultTier: guidanceResolved.usingDefaultTier,
-      temperamentProfileId: behaviorEffective.id,
-      temperamentLabel: dashboardOnboardingTemperamentLabel(behaviorEffective),
-      agentPresentation
-    };
-  }
+  await (tracer?.spanAsync("agentGuidance/behavior", async () => {
+    if (!skipAgentGuidanceBuild) {
+      const guidanceResolved = resolveAgentGuidanceFromEffectiveConfig(effCfg);
+      const behaviorState = await loadBehaviorWorkspaceState(ctx);
+      const behaviorStore = new BehaviorProfileStore(behaviorState);
+      const { effective: behaviorEffective } = behaviorStore.resolveEffectiveWithProvenance();
+      const agentPresentation = resolveAgentPresentationPolicy({
+        effectiveConfig: effCfg,
+        guidance: guidanceResolved,
+        behaviorProfile: {
+          id: behaviorEffective.id,
+          label: behaviorEffective.label,
+          dimensions: behaviorEffective.dimensions
+        }
+      });
+      agentGuidance = {
+        schemaVersion: 1 as const,
+        profileSetId: guidanceResolved.profileSetId,
+        tier: guidanceResolved.tier,
+        displayLabel: guidanceResolved.displayLabel,
+        usingDefaultTier: guidanceResolved.usingDefaultTier,
+        temperamentProfileId: behaviorEffective.id,
+        temperamentLabel: dashboardOnboardingTemperamentLabel(behaviorEffective),
+        agentPresentation
+      };
+    }
+  }) ?? (async () => {
+    if (!skipAgentGuidanceBuild) {
+      const guidanceResolved = resolveAgentGuidanceFromEffectiveConfig(effCfg);
+      const behaviorState = await loadBehaviorWorkspaceState(ctx);
+      const behaviorStore = new BehaviorProfileStore(behaviorState);
+      const { effective: behaviorEffective } = behaviorStore.resolveEffectiveWithProvenance();
+      const agentPresentation = resolveAgentPresentationPolicy({
+        effectiveConfig: effCfg,
+        guidance: guidanceResolved,
+        behaviorProfile: {
+          id: behaviorEffective.id,
+          label: behaviorEffective.label,
+          dimensions: behaviorEffective.dimensions
+        }
+      });
+      agentGuidance = {
+        schemaVersion: 1 as const,
+        profileSetId: guidanceResolved.profileSetId,
+        tier: guidanceResolved.tier,
+        displayLabel: guidanceResolved.displayLabel,
+        usingDefaultTier: guidanceResolved.usingDefaultTier,
+        temperamentProfileId: behaviorEffective.id,
+        temperamentLabel: dashboardOnboardingTemperamentLabel(behaviorEffective),
+        agentPresentation
+      };
+    }
+  })());
 
   const taskTitleById = new Map(tasks.map((t) => [t.id, t.title] as const));
   const teamExecutionEmpty: DashboardTeamExecutionSummary = {
@@ -414,9 +530,13 @@ export async function buildDashboardBase(
     byStatus: { assigned: 0, submitted: 0, blocked: 0, reconciled: 0, cancelled: 0 },
     topActive: []
   };
-  const teamExecution = sqliteDual
+  const teamExecution = tracer?.span("teamExecution", () =>
+    sqliteDual
+      ? summarizeTeamAssignmentsForDashboard(sqliteDual.getDatabase(), (id) => taskTitleById.get(id) ?? null)
+      : teamExecutionEmpty
+  ) ?? (sqliteDual
     ? summarizeTeamAssignmentsForDashboard(sqliteDual.getDatabase(), (id) => taskTitleById.get(id) ?? null)
-    : teamExecutionEmpty;
+    : teamExecutionEmpty);
 
   const subagentRegistryEmpty: DashboardSubagentRegistrySummary = {
     schemaVersion: 1,
@@ -426,12 +546,20 @@ export async function buildDashboardBase(
     openSessionsCount: 0,
     topOpenSessions: []
   };
-  const subagentRegistry: DashboardSubagentRegistrySummary = sqliteDual
+  const subagentRegistry: DashboardSubagentRegistrySummary = tracer?.span("subagentRegistry", () =>
+    sqliteDual
+      ? (summarizeSubagentsForDashboard(sqliteDual.getDatabase()) as DashboardSubagentRegistrySummary)
+      : subagentRegistryEmpty
+  ) ?? (sqliteDual
     ? (summarizeSubagentsForDashboard(sqliteDual.getDatabase()) as DashboardSubagentRegistrySummary)
-    : subagentRegistryEmpty;
-  const agentRegistrySessions = sqliteDual
+    : subagentRegistryEmpty);
+  const agentRegistrySessions = tracer?.span("agentRegistrySessions", () =>
+    sqliteDual
+      ? summarizeAgentRegistrySessions(sqliteDual.getDatabase(), sqliteDual.dbPath)
+      : summarizeAgentRegistrySessions(undefined, "")
+  ) ?? (sqliteDual
     ? summarizeAgentRegistrySessions(sqliteDual.getDatabase(), sqliteDual.dbPath)
-    : summarizeAgentRegistrySessions(undefined, "");
+    : summarizeAgentRegistrySessions(undefined, ""));
 
   const taskCheckpointsEmpty: DashboardTaskCheckpointsSummary = {
     schemaVersion: 1,
@@ -439,64 +567,139 @@ export async function buildDashboardBase(
     totalCount: 0,
     topRecent: []
   };
-  const taskCheckpoints: DashboardTaskCheckpointsSummary = sqliteDual
+  const taskCheckpoints: DashboardTaskCheckpointsSummary = tracer?.span("checkpoints", () =>
+    sqliteDual
+      ? (summarizeCheckpointsForDashboard(sqliteDual.getDatabase()) as DashboardTaskCheckpointsSummary)
+      : taskCheckpointsEmpty
+  ) ?? (sqliteDual
     ? (summarizeCheckpointsForDashboard(sqliteDual.getDatabase()) as DashboardTaskCheckpointsSummary)
-    : taskCheckpointsEmpty;
+    : taskCheckpointsEmpty);
 
-  const systemStatus = await buildDashboardSystemStatus(ctx, store, dualForStatus);
-  const taskStateProjection = await buildDashboardTaskStateProjectionSummary(
+  const systemStatus = await (tracer?.spanAsync("systemStatus", () =>
+    buildDashboardSystemStatus(ctx, store, dualForStatus)
+  ) ?? buildDashboardSystemStatus(ctx, store, dualForStatus));
+  const taskStateProjection = await (tracer?.spanAsync("taskStateProjection", () =>
+    buildDashboardTaskStateProjectionSummary(
+      ctx,
+      sqliteDual?.getDatabase() ?? dualForStatus?.getDatabase()
+    )
+  ) ?? buildDashboardTaskStateProjectionSummary(
     ctx,
     sqliteDual?.getDatabase() ?? dualForStatus?.getDatabase()
-  );
-  const derivedAgentStatus = buildDashboardAgentStatus({
-    now: systemStatus.generatedAt,
-    tasks,
-    planningSession,
-    suggestion,
-    teamExecution,
-    subagentRegistry,
-    systemStatus
-  });
-  const liveActivity = sqliteDual
-    ? readCurrentAgentActivityLease(sqliteDual.getDatabase(), systemStatus.generatedAt)
-    : null;
-  const liveActivityLeases = sqliteDual
-    ? listCurrentAgentActivityLeases(sqliteDual.getDatabase(), systemStatus.generatedAt)
-    : [];
-  const agentStatus = liveActivity
-    ? agentActivityLeaseToDashboardStatus(liveActivity, systemStatus.generatedAt)
-    : derivedAgentStatus;
-  const agentActivitySummary = needsAgentActivityRollups
-    ? buildDashboardAgentActivitySummary({
-        now: systemStatus.generatedAt,
-        tasks,
-        liveActivityLeases,
-        derivedAgentStatus,
-        teamExecution,
-        subagentRegistry
-      })
-    : null;
+  ));
+  const { agentStatus, agentActivitySummary } = tracer?.span("agentStatus", () => {
+    const derived = buildDashboardAgentStatus({
+      now: systemStatus.generatedAt,
+      tasks,
+      planningSession,
+      suggestion,
+      teamExecution,
+      subagentRegistry,
+      systemStatus
+    });
+    const liveActivity = sqliteDual
+      ? readCurrentAgentActivityLease(sqliteDual.getDatabase(), systemStatus.generatedAt)
+      : null;
+    const liveLeases = sqliteDual
+      ? listCurrentAgentActivityLeases(sqliteDual.getDatabase(), systemStatus.generatedAt)
+      : [];
+    const status = liveActivity
+      ? agentActivityLeaseToDashboardStatus(liveActivity, systemStatus.generatedAt)
+      : derived;
+    const activitySummary = needsAgentActivityRollups
+      ? buildDashboardAgentActivitySummary({
+          now: systemStatus.generatedAt,
+          tasks,
+          liveActivityLeases: liveLeases,
+          derivedAgentStatus: derived,
+          teamExecution,
+          subagentRegistry
+        })
+      : null;
+    return {
+      derivedAgentStatus: derived,
+      liveActivityLeases: liveLeases,
+      agentStatus: status,
+      agentActivitySummary: activitySummary
+    };
+  }) ?? (() => {
+    const derived = buildDashboardAgentStatus({
+      now: systemStatus.generatedAt,
+      tasks,
+      planningSession,
+      suggestion,
+      teamExecution,
+      subagentRegistry,
+      systemStatus
+    });
+    const liveActivity = sqliteDual
+      ? readCurrentAgentActivityLease(sqliteDual.getDatabase(), systemStatus.generatedAt)
+      : null;
+    const liveLeases = sqliteDual
+      ? listCurrentAgentActivityLeases(sqliteDual.getDatabase(), systemStatus.generatedAt)
+      : [];
+    const status = liveActivity
+      ? agentActivityLeaseToDashboardStatus(liveActivity, systemStatus.generatedAt)
+      : derived;
+    const activitySummary = needsAgentActivityRollups
+      ? buildDashboardAgentActivitySummary({
+          now: systemStatus.generatedAt,
+          tasks,
+          liveActivityLeases: liveLeases,
+          derivedAgentStatus: derived,
+          teamExecution,
+          subagentRegistry
+        })
+      : null;
+    return {
+      derivedAgentStatus: derived,
+      liveActivityLeases: liveLeases,
+      agentStatus: status,
+      agentActivitySummary: activitySummary
+    };
+  })();
 
   const wsForDelivery =
     workspaceStatus && typeof workspaceStatus === "object"
       ? (workspaceStatus as { currentKitPhase?: string | null; nextKitPhase?: string | null })
       : null;
-  const currentPhaseDelivery = buildDashboardCurrentPhaseDelivery({
+  const currentPhaseDelivery = tracer?.span("currentPhaseDelivery", () =>
+    buildDashboardCurrentPhaseDelivery({
+      tasks,
+      workspaceStatus: wsForDelivery,
+      db: dualForStatus?.getDatabase() ?? null,
+      effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined
+    })
+  ) ?? buildDashboardCurrentPhaseDelivery({
     tasks,
     workspaceStatus: wsForDelivery,
     db: dualForStatus?.getDatabase() ?? null,
     effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined
   });
-  const deliveredPhaseKeys =
-    dualForStatus != null
-      ? collectDeliveredPhaseKeys(dualForStatus.getDatabase(), tasks)
-      : [];
-  const rolledOutPhaseKeys =
-    dualForStatus != null ? collectRolledOutPhaseKeys(dualForStatus.getDatabase()) : [];
-  const phaseReleaseDates =
-    dualForStatus != null ? collectPhaseReleaseDatesByKey(dualForStatus.getDatabase()) : {};
-  const phaseDeliveryHistory =
-    dualForStatus != null ? collectPhaseDeliveryHistoryRows(dualForStatus.getDatabase()) : [];
+  const { deliveredPhaseKeys, rolledOutPhaseKeys, phaseReleaseDates, phaseDeliveryHistory } =
+    tracer?.span("phaseDeliveryHistory", () => ({
+      deliveredPhaseKeys:
+        dualForStatus != null
+          ? collectDeliveredPhaseKeys(dualForStatus.getDatabase(), tasks)
+          : [],
+      rolledOutPhaseKeys:
+        dualForStatus != null ? collectRolledOutPhaseKeys(dualForStatus.getDatabase()) : [],
+      phaseReleaseDates:
+        dualForStatus != null ? collectPhaseReleaseDatesByKey(dualForStatus.getDatabase()) : {},
+      phaseDeliveryHistory:
+        dualForStatus != null ? collectPhaseDeliveryHistoryRows(dualForStatus.getDatabase()) : []
+    })) ?? {
+      deliveredPhaseKeys:
+        dualForStatus != null
+          ? collectDeliveredPhaseKeys(dualForStatus.getDatabase(), tasks)
+          : [],
+      rolledOutPhaseKeys:
+        dualForStatus != null ? collectRolledOutPhaseKeys(dualForStatus.getDatabase()) : [],
+      phaseReleaseDates:
+        dualForStatus != null ? collectPhaseReleaseDatesByKey(dualForStatus.getDatabase()) : {},
+      phaseDeliveryHistory:
+        dualForStatus != null ? collectPhaseDeliveryHistoryRows(dualForStatus.getDatabase()) : []
+    };
   const lastDeliveredPhase = phaseDeliveryHistory.find((row) => row.status === "delivered") ?? null;
   const legacyDeliveredMaxOrdinal = resolveLegacyDeliveredMaxOrdinal(
     ctx.effectiveConfig as Record<string, unknown> | undefined
@@ -515,14 +718,40 @@ export async function buildDashboardBase(
 
   const currentKitPhase =
     systemStatus.phase?.currentKitPhase ?? workspaceStatus?.currentKitPhase ?? null;
-  const humanGatesSummary = buildDashboardHumanGatesSummary(
+  const humanGatesSummary = tracer?.span("humanGates", () =>
+    buildDashboardHumanGatesSummary(
+      tasks,
+      typeof currentKitPhase === "string" ? currentKitPhase : null,
+      enrich
+    )
+  ) ?? buildDashboardHumanGatesSummary(
     tasks,
     typeof currentKitPhase === "string" ? currentKitPhase : null,
     enrich
   );
-  const approvalQueue = buildDashboardApprovalQueueSummary(tasks);
+  const approvalQueue =
+    tracer?.span("approvalQueue", () => buildDashboardApprovalQueueSummary(tasks))
+    ?? buildDashboardApprovalQueueSummary(tasks);
 
-  const phaseJournalStats = dashboardSummaryNeedsPhaseJournalStats(projection)
+  const phaseJournalStats = tracer?.span("phaseJournalStats", () =>
+    dashboardSummaryNeedsPhaseJournalStats(projection)
+      ? buildDashboardPhaseJournalStats({
+          db: dualForStatus?.getDatabase() ?? null,
+          currentKitPhase: typeof currentKitPhase === "string" ? currentKitPhase : null,
+          completedDeliveryTaskCount: currentPhaseDelivery.segments.completed
+        })
+      : {
+          schemaVersion: 1 as const,
+          available: false,
+          phases: [],
+          currentPhase: {
+            phaseKey: null,
+            activeNoteCount: 0,
+            completedDeliveryTaskCount: currentPhaseDelivery.segments.completed,
+            silenceWarning: false
+          }
+        }
+  ) ?? (dashboardSummaryNeedsPhaseJournalStats(projection)
     ? buildDashboardPhaseJournalStats({
         db: dualForStatus?.getDatabase() ?? null,
         currentKitPhase: typeof currentKitPhase === "string" ? currentKitPhase : null,
@@ -538,7 +767,7 @@ export async function buildDashboardBase(
           completedDeliveryTaskCount: currentPhaseDelivery.segments.completed,
           silenceWarning: false
         }
-      };
+      });
 
   const includePhaseFocus =
     commandArgs?.includePhaseFocus === true || commandArgs?.includePhaseFocus === "true";

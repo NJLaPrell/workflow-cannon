@@ -74,6 +74,35 @@ test("DashboardViewProvider paints shell before pushUpdate (T100395)", () => {
   assert.ok(shellIdx >= 0 && paintIdx >= 0 && shellIdx < paintIdx, "shell must render before startup direct paint");
 });
 
+test("DashboardViewProvider startup first paint uses overview and upgrades queue after hydration", () => {
+  const providerPath = path.join(srcDir, "DashboardViewProvider.ts");
+  const src = fs.readFileSync(providerPath, "utf8");
+  const startupBlock = src.slice(
+    src.indexOf("private async renderDashboardStartupDirectOnce"),
+    src.indexOf("private async postSectionPatch")
+  );
+  assert.match(startupBlock, /projection:\s*"overview"/);
+  assert.doesNotMatch(startupBlock, /projection:\s*"full"/);
+  assert.ok(
+    startupBlock.indexOf("this.markDashboardRootHydrated()") <
+      startupBlock.indexOf("this.ensureQueueRollupsHydrated()"),
+    "overview root must be marked hydrated before queue rollup hydration"
+  );
+  assert.match(startupBlock, /void this\.ensureQueueRollupsHydrated\(\)\.catch/);
+});
+
+test("DashboardViewProvider preserves last good root when a later pushUpdate fails", () => {
+  const providerPath = path.join(srcDir, "DashboardViewProvider.ts");
+  const src = fs.readFileSync(providerPath, "utf8");
+  const refreshBlock = src.slice(
+    src.indexOf("private async executeDashboardRefresh"),
+    src.indexOf("scheduleConfigTabRefresh")
+  );
+  assert.match(refreshBlock, /summaryProjection = refreshOptions\?\.projection \?\? \(this\.dashboardRootHydrated \? "full" : "overview"\)/);
+  assert.match(refreshBlock, /pushUpdate preserving last good dashboard after failure/);
+  assert.match(refreshBlock, /Dashboard refresh failed; keeping the last loaded dashboard/);
+});
+
 test("dashboard webview bootstrap handles wcSectionPatch with interaction-lock queue", () => {
   const clientPath = path.join(srcDir, "dashboard-webview-client.ts");
   const src = fs.readFileSync(clientPath, "utf8");

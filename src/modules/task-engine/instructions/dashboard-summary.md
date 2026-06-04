@@ -25,6 +25,7 @@ Optional JSON object:
 | `includePhaseFocus` | boolean | `false` | When `true`, adds **`phaseFocus`** (`AgentPhaseFocusDashboard` v1) — same bounded slice as **`phase-focus-dashboard`**. |
 | `phaseKey` | string | workspace current | Phase scope for **`phaseFocus`** when `includePhaseFocus` is set. |
 | `projection` | string (`full`, `overview`, `queue`, `status`, `agentActivity`) | `full` | Section slice for lazy dashboard hydration. **`overview`** omits queue rollups and phase-journal SQLite reads; skips `build-plan` session read and wishlist paging work at build time (T100590). **`agentActivity`** is a lean activity-only slice for independent live-lease refresh and omits queue/status rollups. Extension uses **`overview`** for first paint after the shell (T100396). CLI default **`full`** preserves aggregate compatibility. |
+| `dashboardTrace` | boolean | `false` | Opt-in performance trace for dashboard-summary build spans. Trace lines are written to stderr, which the Cursor extension forwards to **Workflow Cannon** output; JSON stdout remains clean. Also enabled by `WORKFLOW_CANNON_DASHBOARD_TRACE=1` or `WORKSPACE_KIT_DASHBOARD_TRACE=1`. |
 
 Also accepts standard invocation `config` / `actor` overlays where applicable.
 

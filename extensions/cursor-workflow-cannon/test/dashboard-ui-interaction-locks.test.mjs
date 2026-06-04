@@ -65,7 +65,8 @@ test("dashboard drawer submit suppresses dashboard-summary refresh during batch 
   assert.match(providerSrc, /beginDrawerSubmitRefreshHold/);
   assert.match(providerSrc, /endDrawerSubmitRefreshHold/);
   assert.match(providerSrc, /beginDashboardMutationRefreshHold/);
-  assert.match(providerSrc, /setRefreshPaused\(true\)/);
+  assert.match(providerSrc, /setRefreshPaused\(true,\s*\{[\s\S]*owner: "dashboard-mutation"/);
+  assert.match(providerSrc, /setRefreshPaused\(false,\s*\{[\s\S]*owner: "dashboard-mutation"/);
   assert.match(refreshControllerSrc, /setSuppressed/);
   assert.match(refreshControllerSrc, /notifyMutationStart/);
   assert.match(providerSrc, /isKitRefreshRunAborted/);

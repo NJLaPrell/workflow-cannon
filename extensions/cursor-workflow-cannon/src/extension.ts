@@ -1,5 +1,7 @@
 import * as vscode from "vscode";
 import { randomUUID } from "node:crypto";
+import fs from "node:fs/promises";
+import path from "node:path";
 import { findWorkflowCannonRoot } from "./workspace-detect.js";
 import { CommandClient } from "./runtime/command-client.js";
 import { StateWatcher } from "./runtime/state-watcher.js";
@@ -296,6 +298,17 @@ export function activate(context: vscode.ExtensionContext): void {
       }, 500);
     };
     let behaviorRuleSyncTimer: ReturnType<typeof setTimeout> | undefined;
+    let behaviorRuleSyncInFlight: Promise<void> | undefined;
+    let lastBehaviorRuleSyncMtimeMs = 0;
+    const behaviorRuleWorkspaceRoot = client.getWorkspaceRoot();
+    const readBehaviorConfigMtime = async (): Promise<number> => {
+      try {
+        const stat = await fs.stat(path.join(behaviorRuleWorkspaceRoot, ".workspace-kit", "modules", "agent-behavior", "config.json"));
+        return stat.mtimeMs;
+      } catch {
+        return 0;
+      }
+    };
     const scheduleEffectiveBehaviorRuleSync = (): void => {
       if (client.isRefreshPaused()) {
         return;
@@ -308,10 +321,21 @@ export function activate(context: vscode.ExtensionContext): void {
         if (client.isRefreshPaused()) {
           return;
         }
-        void client.run("sync-effective-behavior-cursor-rule", {}).then((r) => {
+        if (behaviorRuleSyncInFlight) {
+          return;
+        }
+        behaviorRuleSyncInFlight = (async () => {
+          const mtimeMs = await readBehaviorConfigMtime();
+          if (mtimeMs <= 0 || mtimeMs === lastBehaviorRuleSyncMtimeMs) {
+            return;
+          }
+          lastBehaviorRuleSyncMtimeMs = mtimeMs;
+          const r = await client.run("sync-effective-behavior-cursor-rule", {});
           if (!r.ok && process.env.WORKSPACE_KIT_DEBUG_EXTENSION === "1") {
             logWc("extension", `sync-effective-behavior-cursor-rule FAIL ${String(r.code ?? "")} ${String(r.message ?? "")}`);
           }
+        })().finally(() => {
+          behaviorRuleSyncInFlight = undefined;
         });
       }, 1500);
     };

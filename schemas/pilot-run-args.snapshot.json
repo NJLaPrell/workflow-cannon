@@ -746,6 +746,10 @@
             "status",
             "agentActivity"
           ]
+        },
+        "dashboardTrace": {
+          "type": "boolean",
+          "description": "Opt-in dashboard-summary performance trace. Timing lines are emitted to stderr / Workflow Cannon output, never JSON stdout."
         }
       },
       "additionalProperties": false

@@ -62,6 +62,16 @@ test("dashboard-summary accepts projection arg", () => {
   assert.equal(err, null);
 });
 
+test("dashboard-summary accepts opt-in performance trace arg", () => {
+  resetPilotRunArgsValidationCache();
+  const err = validatePilotRunCommandArgs(
+    "dashboard-summary",
+    { projection: "overview", dashboardTrace: true },
+    {}
+  );
+  assert.equal(err, null);
+});
+
 test("dashboard-summary accepts agentActivity projection used by dashboard live refresh", () => {
   resetPilotRunArgsValidationCache();
   const err = validatePilotRunCommandArgs(

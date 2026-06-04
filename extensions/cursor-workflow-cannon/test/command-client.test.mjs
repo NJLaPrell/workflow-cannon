@@ -662,6 +662,48 @@ test("CommandClient mutation lane runs before queued refresh", async () => {
   assert.equal(summary.code, "extension-refresh-paused");
 });
 
+test("CommandClient refresh pause tracks owners and ignores unbalanced release", async () => {
+  const notices = [];
+  const calls = [];
+  const client = new CommandClient("/tmp/noop", {
+    onKitRunNotice: (message) => notices.push(message),
+    execFn: async (_root, args) => {
+      calls.push(args[1]);
+      return { exitCode: 0, stdout: JSON.stringify({ ok: true, code: args[1] }), stderr: "" };
+    }
+  });
+
+  client.setRefreshPaused(true, { owner: "drawer", reason: "submit" });
+  client.setRefreshPaused(true, { owner: "task-state-sync", reason: "apply" });
+  client.setRefreshPaused(false, { owner: "drawer", reason: "done" });
+  assert.equal(client.isRefreshPaused(), true);
+  client.setRefreshPaused(false, { owner: "not-owner", reason: "stray" });
+  assert.equal(client.isRefreshPaused(), true);
+
+  const paused = await client.run("dashboard-summary", {});
+  assert.equal(paused.ok, false);
+  assert.equal(paused.code, "extension-refresh-paused");
+
+  client.setRefreshPaused(false, { owner: "task-state-sync", reason: "done" });
+  assert.equal(client.isRefreshPaused(), false);
+  const ok = await client.run("dashboard-summary", {});
+  assert.equal(ok.ok, true);
+  assert.deepEqual(calls, ["dashboard-summary"]);
+  assert.ok(notices.some((line) => line.includes("refresh pause true owner=drawer")));
+  assert.ok(notices.some((line) => line.includes("refresh pause release ignored owner=not-owner")));
+});
+
+test("CommandClient clearRefreshPaused releases all pause owners", () => {
+  const client = new CommandClient("/tmp/noop", {
+    execFn: async () => ({ exitCode: 0, stdout: '{"ok":true}', stderr: "" })
+  });
+  client.setRefreshPaused(true, { owner: "drawer" });
+  client.setRefreshPaused(true, { owner: "sync" });
+  assert.equal(client.isRefreshPaused(), true);
+  client.clearRefreshPaused("dispose");
+  assert.equal(client.isRefreshPaused(), false);
+});
+
 test("CommandClient coalesces pending refresh jobs with the same key", async () => {
   const calls = [];
   const client = new CommandClient("/tmp/noop", {

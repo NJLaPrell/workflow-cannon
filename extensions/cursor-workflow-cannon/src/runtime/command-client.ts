@@ -63,6 +63,11 @@ type CommandClientOptions = {
   onKitRunNotice?: (message: string) => void;
 };
 
+export type RefreshPauseOwner = {
+  owner: string;
+  reason?: string;
+};
+
 export type RuntimeStampExecutionPlan =
   | { kind: "missing"; stampPath: string }
   | { kind: "invalid"; stampPath: string; message: string }
@@ -664,6 +669,7 @@ export class CommandClient {
   private readonly onKitRunNotice?: (message: string) => void;
   /** When true, dashboard refresh reads return immediately without hitting the CLI queue. */
   private refreshPaused = false;
+  private readonly refreshPauseOwners = new Map<string, string | undefined>();
 
   /** Dual-lane queue: mutations drain before refresh batches; refresh jobs coalesce by key. */
   private mutationEntries: Array<{
@@ -735,11 +741,49 @@ export class CommandClient {
   }
 
   /** Pause dashboard refresh kit reads so drawer / phase mutations are not queued behind them. */
-  setRefreshPaused(paused: boolean): void {
-    this.refreshPaused = paused;
+  setRefreshPaused(paused: boolean, owner?: string | RefreshPauseOwner): void {
+    const parsedOwner =
+      typeof owner === "string"
+        ? { owner }
+        : owner && typeof owner === "object"
+          ? owner
+          : { owner: "legacy-refresh-pause" };
+    const ownerId = parsedOwner.owner.trim() || "legacy-refresh-pause";
+    const priorPaused = this.refreshPaused;
     if (paused) {
+      this.refreshPauseOwners.set(ownerId, parsedOwner.reason);
+      this.refreshPaused = true;
+      this.onKitRunNotice?.(
+        `refresh pause true owner=${ownerId}${parsedOwner.reason ? ` reason=${parsedOwner.reason}` : ""} owners=${this.refreshPauseOwners.size}`
+      );
       this.preemptRefreshForMutation();
+      return;
     }
+    if (!this.refreshPauseOwners.has(ownerId)) {
+      this.onKitRunNotice?.(
+        `refresh pause release ignored owner=${ownerId}${parsedOwner.reason ? ` reason=${parsedOwner.reason}` : ""} owners=${this.refreshPauseOwners.size}`
+      );
+    } else {
+      this.refreshPauseOwners.delete(ownerId);
+      this.onKitRunNotice?.(
+        `refresh pause false owner=${ownerId}${parsedOwner.reason ? ` reason=${parsedOwner.reason}` : ""} owners=${this.refreshPauseOwners.size}`
+      );
+    }
+    this.refreshPaused = this.refreshPauseOwners.size > 0;
+    if (priorPaused && !this.refreshPaused) {
+      this.scheduleLaneDrain();
+    }
+  }
+
+  clearRefreshPaused(reason = "clear-all"): void {
+    if (this.refreshPauseOwners.size === 0 && !this.refreshPaused) {
+      return;
+    }
+    const owners = [...this.refreshPauseOwners.keys()].join(",") || "none";
+    this.refreshPauseOwners.clear();
+    this.refreshPaused = false;
+    this.onKitRunNotice?.(`refresh pause cleared reason=${reason} owners=${owners}`);
+    this.scheduleLaneDrain();
   }
 
   isRefreshPaused(): boolean {

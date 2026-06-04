@@ -14,6 +14,7 @@ import {
   finalizeDashboardSummaryProjection,
   parseDashboardSummaryProjection
 } from "../dashboard/dashboard-summary-projection.js";
+import { createDashboardSummaryTracer } from "../dashboard/dashboard-summary-trace.js";
 
 export { parseDashboardWishlistPaging };
 
@@ -24,27 +25,37 @@ export async function runDashboardSummaryCommand(
   sqliteDual?: SqliteDualPlanningStore,
   commandArgs?: Record<string, unknown>
 ): Promise<ModuleCommandResult> {
-  const projection = parseDashboardSummaryProjection(commandArgs);
-  const base = await buildDashboardBase(ctx, store, planningGeneration, sqliteDual, commandArgs);
-  const data =
-    projection === "overview"
-      ? buildDashboardOverviewProjection(base)
-      : projection === "agentActivity"
-        ? buildDashboardAgentActivityProjection(base)
-      : projection === "queue"
-        ? buildDashboardQueueProjection(base)
-        : projection === "status"
-          ? buildDashboardStatusProjection(base)
-          : buildDashboardFullProjection(base);
-  const sliced = finalizeDashboardSummaryProjection(data, projection);
+  const tracer = createDashboardSummaryTracer(commandArgs);
+  try {
+    const projection = tracer?.span("parse projection", () => parseDashboardSummaryProjection(commandArgs))
+      ?? parseDashboardSummaryProjection(commandArgs);
+    if (tracer) {
+      tracer.projection = projection;
+    }
+    const base = await buildDashboardBase(ctx, store, planningGeneration, sqliteDual, commandArgs, tracer);
+    const data =
+      projection === "overview"
+        ? buildDashboardOverviewProjection(base)
+        : projection === "agentActivity"
+          ? buildDashboardAgentActivityProjection(base)
+        : projection === "queue"
+          ? buildDashboardQueueProjection(base)
+          : projection === "status"
+            ? buildDashboardStatusProjection(base)
+            : buildDashboardFullProjection(base);
+    const sliced = tracer?.span("finalizeProjection", () => finalizeDashboardSummaryProjection(data, projection))
+      ?? finalizeDashboardSummaryProjection(data, projection);
 
-  return {
-    ok: true,
-    code: "dashboard-summary",
-    message:
-      projection === "full"
-        ? "Dashboard summary built from task store and maintainer status snapshot"
-        : `Dashboard summary built (${projection} projection)`,
-    data: sliced as Record<string, unknown>
-  };
+    return {
+      ok: true,
+      code: "dashboard-summary",
+      message:
+        projection === "full"
+          ? "Dashboard summary built from task store and maintainer status snapshot"
+          : `Dashboard summary built (${projection} projection)`,
+      data: sliced as Record<string, unknown>
+    };
+  } finally {
+    tracer?.flush();
+  }
 }
