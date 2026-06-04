@@ -8,6 +8,10 @@ This root file is intentionally pointer-only to avoid split release history.
 
 - See `docs/maintainers/CHANGELOG.md` for all release notes, migration notes, and historical entries.
 
+## [0.99.27] - 2026-06-03
+
+- See `docs/maintainers/CHANGELOG.md` for release notes, migration notes, and historical entries.
+
 ## [0.99.26] - 2026-06-03
 
 - **Phase 129 — Agent Activity Board:** Multi-agent live activity projection, dashboard renderer, polling, freshness/stale handling, expandable details, activity hooks, event compatibility, and render fixtures. See `docs/maintainers/CHANGELOG.md`.
