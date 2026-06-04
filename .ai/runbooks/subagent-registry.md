@@ -17,6 +17,19 @@ Record **subagent definitions** and **session/message** provenance in kit SQLite
 4. **Close** — `workspace-kit run close-subagent-session` when the delegated work ends.
 5. **Inspect** — `list-subagents`, `get-subagent`, `list-subagent-sessions`, `get-subagent-session`.
 
+## Dashboard hygiene
+
+The dashboard treats `status: "open"` subagent sessions as visible coordination rows in the agent activity / Active Agents card. Because the CLI only records provenance and does not launch or stop the external host, the operator or supervising agent must close the registry row whenever the real delegated agent ends, is abandoned, or is known not to be running.
+
+Repair stale rows with the command path, not manual SQLite edits:
+
+```bash
+workspace-kit run list-subagent-sessions '{}'
+workspace-kit run close-subagent-session '{"sessionId":"<uuid>","expectedPlanningGeneration":<n>,"policyApproval":{"confirmed":true,"rationale":"close stale subagent session; external agent is not active"}}'
+```
+
+When multiple stale rows exist, close them one at a time using the latest `planningGeneration` returned by the prior mutation or read.
+
 ## Canon
 
 - ADR: `docs/maintainers/adrs/ADR-subagent-registry-v1.md`

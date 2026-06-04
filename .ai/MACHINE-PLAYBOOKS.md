@@ -22,6 +22,10 @@ pnpm exec wk run run-transition '{"taskId":"T123","action":"pause","expectedPlan
 
 Handoff note must include: task kept active, tasks paused, and the planning generation used for repair transitions.
 
+### Repair: stale subagent sessions
+
+Open subagent sessions are dashboard-visible coordination state. If the Overview **Active Agents** card shows agents that are not actually running, run `list-subagent-sessions`, verify the rows are stale, and close each stale `status: "open"` session with `close-subagent-session` using the latest `expectedPlanningGeneration` and JSON `policyApproval`. Do not patch SQLite directly; the close command records the lifecycle update and lets the dashboard stop treating those rows as active/awaiting agents.
+
 Optional Cursor rule: `.cursor/rules/playbook-task-to-phase-branch.mdc`. Full checklist: **`.ai/playbooks/task-to-phase-branch.md`**.
 
 ## Phase closeout → `main` + release
