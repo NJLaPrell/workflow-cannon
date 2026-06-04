@@ -12,6 +12,7 @@ export const ALL_PLANNING_SYNC_DOMAINS = [
   "phase_notes",
   "phase_note_suggestions",
   "ideas",
+  "phase_delivery_history",
   "module_state"
 ] as const;
 
@@ -112,6 +113,9 @@ export function planningEventKindToSyncDomain(kind: PlanningStateEventKindV1): P
   }
   if (kind.startsWith("planning.idea.")) {
     return "ideas";
+  }
+  if (kind.startsWith("planning.phase_delivery_history.")) {
+    return "phase_delivery_history";
   }
   if (kind === "planning.module_state.updated") {
     return "module_state";

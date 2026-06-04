@@ -4,7 +4,7 @@ agentCapsule|v=1|command=release-closeout-result|module=task-engine|schema_only=
 
 # release-closeout-result
 
-Build the final, bounded release closeout result packet for an orchestrator or agent prompt. The command returns a ready-to-paste Markdown report with no placeholder tokens, plus concrete refs for the evidence used to fill each field.
+Build the final, bounded release closeout result packet for an orchestrator or agent prompt. The command returns a ready-to-paste Markdown report with no placeholder tokens, plus concrete refs for the evidence used to fill each field. When `postReleaseEvidence` / `finalEvidence` is complete, it also records a first-class `kit_phase_delivery_history` row for dashboard roster history.
 
 ## Usage
 
@@ -30,6 +30,7 @@ You may also pass a prior `release-evidence-manifest` `data.manifest` payload as
 | `followUpTasks[]` | object[] | no | Bounded follow-on task refs for the optional Notes block. |
 | `risks[]` | object[] | no | Bounded risk/issue notes using `label`/`code` and `message`/`description`. |
 | `postReleaseEvidence` / `finalEvidence` | object | no | Concrete branches/PRs, tag, package, CI, and workspace evidence for final reporting. Missing fields are returned in `releaseEvidence.missingFinalEvidence[]`. |
+| `postReleaseEvidence.deliveredAt` | string | no | Preferred release/delivery timestamp for the stored history row. If omitted, the command falls back to publish/release timestamps in evidence, then packet creation time. |
 
 ## Response highlights (`data`)
 
@@ -39,6 +40,7 @@ You may also pass a prior `release-evidence-manifest` `data.manifest` payload as
 - `finalReport.fields` — populated values for the former phase summary template slots
 - `releaseEvidence` — bounded feature, follow-up, and risk evidence
 - `releaseEvidence.postReleaseEvidence` and `missingFinalEvidence[]` — concrete final PR/tag/package/CI/workspace evidence, or explicit gaps
+- `deliveryHistory` — stored phase delivery history row when final evidence is complete and the workspace SQLite supports `kit_phase_delivery_history`; otherwise `null`
 - `refs.commandSequence[]` — packet-first prompt chain:
   - `phase-release-orchestration-state`
   - `phase-drain-delta`

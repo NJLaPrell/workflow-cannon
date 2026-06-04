@@ -16,7 +16,7 @@
     },
     {
       "file": "src/modules/task-engine/commands/phase-delivery-readout-commands.ts",
-      "line": "30",
+      "line": "36",
       "importLine": "import { listAssignments } from \"../../team-execution/assignment-store.js\";",
       "rationale": "Phase drain delta needs direct phase-scoped assignment refresh rows until a task-engine read facade exists."
     },

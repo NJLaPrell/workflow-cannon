@@ -4,11 +4,15 @@ import Database from "better-sqlite3";
 import {
   buildDashboardCurrentPhaseDelivery,
   collectDeliveredPhaseKeys,
+  collectPhaseDeliveryHistoryRows,
   collectPhaseReleaseDatesByKey,
   collectRolledOutPhaseKeys,
   countPhaseQueueMetrics,
   wasWorkspacePhaseRolledOut
 } from "../dist/modules/task-engine/dashboard/phase-delivery-status.js";
+import {
+  upsertPhaseDeliveryHistory
+} from "../dist/modules/task-engine/persistence/phase-delivery-history-store.js";
 
 function openStatusDb() {
   const db = new Database(":memory:");
@@ -43,6 +47,31 @@ function openStatusDb() {
     );
   `);
   return db;
+}
+
+function addDeliveryHistoryTable(db) {
+  db.pragma("user_version = 35");
+  db.exec(`
+    CREATE TABLE kit_phase_delivery_history (
+      phase_key TEXT PRIMARY KEY NOT NULL,
+      status TEXT NOT NULL DEFAULT 'delivered',
+      delivered_at TEXT NOT NULL,
+      release_version TEXT,
+      git_tag TEXT,
+      github_release_url TEXT,
+      npm_package TEXT,
+      npm_dist_tag TEXT,
+      release_workflow_url TEXT,
+      main_commit_sha TEXT,
+      release_branch TEXT,
+      release_pr_url TEXT,
+      evidence_json TEXT NOT NULL DEFAULT '{}',
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+    CREATE INDEX idx_kit_phase_delivery_history_delivered_at
+      ON kit_phase_delivery_history(delivered_at DESC);
+  `);
 }
 
 test("wasWorkspacePhaseRolledOut detects previousCurrentKitPhase on set_current_phase events", () => {
@@ -104,6 +133,41 @@ test("collectPhaseReleaseDatesByKey maps previousCurrentKitPhase to event create
     "98": "2026-01-01T00:00:00.000Z",
     "99": "2026-05-01T12:00:00.000Z"
   });
+  db.close();
+});
+
+test("phase delivery history is first-class and overrides rollover release dates", () => {
+  const db = openStatusDb();
+  addDeliveryHistoryTable(db);
+  db.prepare(
+    `INSERT INTO kit_workspace_status_events (
+      created_at, event_kind, command, revision_before, revision_after, details_json
+    ) VALUES (?, 'set_current_phase', 'set-current-phase', 0, 1, ?)`
+  ).run(
+    "2026-01-01T00:00:00.000Z",
+    JSON.stringify({ previousCurrentKitPhase: "131" })
+  );
+  const row = upsertPhaseDeliveryHistory(db, {
+    phaseKey: "131",
+    deliveredAt: "2026-06-04T14:00:47.000Z",
+    releaseVersion: "0.99.27",
+    gitTag: "v0.99.27",
+    githubReleaseUrl: "https://github.com/example/repo/releases/tag/v0.99.27",
+    npmPackage: "@workflow-cannon/workspace-kit@0.99.27",
+    npmDistTag: "latest",
+    releaseWorkflowUrl: "https://github.com/example/repo/actions/runs/1",
+    mainCommitSha: "abc123",
+    releaseBranch: "release/phase-131",
+    releasePrUrl: "https://github.com/example/repo/pull/657",
+    nowIso: "2026-06-04T14:01:00.000Z"
+  });
+  assert.equal(row.phaseKey, "131");
+  assert.deepEqual(collectPhaseReleaseDatesByKey(db), {
+    "131": "2026-06-04T14:00:47.000Z"
+  });
+  assert.deepEqual(collectDeliveredPhaseKeys(db, []), ["131"]);
+  assert.equal(wasWorkspacePhaseRolledOut(db, "131"), true);
+  assert.equal(collectPhaseDeliveryHistoryRows(db)[0].releaseVersion, "0.99.27");
   db.close();
 });
 

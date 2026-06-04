@@ -59,11 +59,12 @@ export function validateValueForMetadata(meta: ConfigKeyMetadata, value: unknown
           "phase_journal",
           "phaseJournal",
           "ideas",
+          "phase_delivery_history",
           "module_state"
         ]);
         if (!allowed.has(trimmed)) {
           throw new Error(
-            `config-type-error(${meta.key}): unknown domain id '${trimmed}' (allowed: phase_catalog, workspace_status, phase_notes, phase_note_suggestions, phase_journal, ideas, module_state)`
+            `config-type-error(${meta.key}): unknown domain id '${trimmed}' (allowed: phase_catalog, workspace_status, phase_notes, phase_note_suggestions, phase_journal, ideas, phase_delivery_history, module_state)`
           );
         }
       }

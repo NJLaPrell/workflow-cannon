@@ -542,6 +542,24 @@ export type DashboardCurrentPhaseDelivery = {
   deliveryEvidenceViolationCount: number;
 };
 
+export type DashboardPhaseDeliveryHistoryRow = {
+  phaseKey: string;
+  status: string;
+  deliveredAt: string;
+  releaseVersion: string | null;
+  gitTag: string | null;
+  githubReleaseUrl: string | null;
+  npmPackage: string | null;
+  npmDistTag: string | null;
+  releaseWorkflowUrl: string | null;
+  mainCommitSha: string | null;
+  releaseBranch: string | null;
+  releasePrUrl: string | null;
+  evidence: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type DashboardSummaryData = {
   schemaVersion: 7;
   /** When set, indicates which section slice this payload targets (`full` when omitted for legacy callers). */
@@ -649,6 +667,10 @@ export type DashboardSummaryData = {
    * Drives Queue phase-filter ordering (newest release first).
    */
   phaseReleaseDates?: Record<string, string>;
+  /** First-class release/delivery history, newest deliveredAt first. Preferred over rollover-derived dates. */
+  phaseDeliveryHistory?: DashboardPhaseDeliveryHistoryRow[];
+  /** Newest delivered phase from {@link phaseDeliveryHistory}, or null when no first-class history exists. */
+  lastDeliveredPhase?: DashboardPhaseDeliveryHistoryRow | null;
   /**
    * When set, numeric phase keys with leading ordinal in `[0, N]` are treated as delivered
    * (pre–delivery-evidence history). From `kit.phaseDelivery.legacyDeliveredMaxOrdinal`.

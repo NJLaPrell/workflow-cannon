@@ -64,6 +64,7 @@ test("workspace status replay requires matching expectedWorkspaceRevision", () =
     phaseNotesById: {},
     phaseNoteSuggestionsById: {},
     ideasById: {},
+    phaseDeliveryHistoryByKey: {},
     moduleStateById: {},
     workspaceStatus: {
       workspaceRevision: 69,
@@ -81,6 +82,7 @@ test("workspace status replay requires matching expectedWorkspaceRevision", () =
     appliedNoteIdempotencyKeys: new Set(),
     appliedSuggestionMutationIds: new Set(),
     appliedIdeaMutationIds: new Set(),
+    appliedPhaseDeliveryHistoryMutationIds: new Set(),
     appliedModuleStateMutationIds: new Set(),
     lastEventSequence: 0,
     lastUpdated: "1970-01-01T00:00:00.000Z"
@@ -229,6 +231,78 @@ test("idea create idempotency key skips duplicate rows on replay", () => {
   const replayed = replayPlanningStateEvents([created, created]);
   assert.equal(replayed.ok, true);
   assert.equal(Object.keys(replayed.projection.ideasById).length, 1);
+});
+
+test("phase delivery history event validates, replays, and persists to sqlite", () => {
+  const event = {
+    schemaVersion: 1,
+    eventId: "evt-phase-delivery-history-fixture-001",
+    sequence: 1,
+    parentEventId: null,
+    recordedAt: "2026-06-04T14:01:00.000Z",
+    actor: { id: "workspace-kit", source: "system" },
+    clientMutationId: "release-closeout-result:131:0.99.27",
+    command: {
+      name: "release-closeout-result",
+      moduleId: "task-engine"
+    },
+    workspace: { phaseKey: "131" },
+    kind: "planning.phase_delivery_history.upserted",
+    payload: {
+      row: {
+        phaseKey: "131",
+        status: "delivered",
+        deliveredAt: "2026-06-04T14:00:47.000Z",
+        releaseVersion: "0.99.27",
+        gitTag: "v0.99.27",
+        githubReleaseUrl: "https://github.com/example/repo/releases/tag/v0.99.27",
+        npmPackage: "@workflow-cannon/workspace-kit@0.99.27",
+        npmDistTag: "latest",
+        releaseWorkflowUrl: "https://github.com/example/repo/actions/runs/1",
+        mainCommitSha: "7a966a42dbdb5a1013f4ddfb138a83c4616c8a75",
+        releaseBranch: "release/phase-131",
+        releasePrUrl: "https://github.com/example/repo/pull/657",
+        evidence: { source: "release-closeout-result" },
+        createdAt: "2026-06-04T14:01:00.000Z",
+        updatedAt: "2026-06-04T14:01:00.000Z"
+      }
+    }
+  };
+  assert.equal(validatePlanningStateEvent(event).ok, true);
+
+  const replayed = replayPlanningStateEvents([event]);
+  assert.equal(replayed.ok, true);
+  assert.equal(replayed.projection.phaseDeliveryHistoryByKey["131"].releaseVersion, "0.99.27");
+
+  const db = new Database(":memory:");
+  db.pragma("user_version = 35");
+  db.exec(`
+CREATE TABLE kit_phase_delivery_history (
+  phase_key TEXT PRIMARY KEY NOT NULL,
+  status TEXT NOT NULL DEFAULT 'delivered',
+  delivered_at TEXT NOT NULL,
+  release_version TEXT,
+  git_tag TEXT,
+  github_release_url TEXT,
+  npm_package TEXT,
+  npm_dist_tag TEXT,
+  release_workflow_url TEXT,
+  main_commit_sha TEXT,
+  release_branch TEXT,
+  release_pr_url TEXT,
+  evidence_json TEXT NOT NULL DEFAULT '{}',
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+`);
+  persistPlanningProjectionToSqlite(db, replayed.projection, { replaceCatalog: false });
+  const row = db
+    .prepare("SELECT phase_key, delivered_at, release_version FROM kit_phase_delivery_history WHERE phase_key = ?")
+    .get("131");
+  assert.equal(row.phase_key, "131");
+  assert.equal(row.delivered_at, "2026-06-04T14:00:47.000Z");
+  assert.equal(row.release_version, "0.99.27");
+  db.close();
 });
 
 test("persistPlanningProjectionToSqlite writes workflow_ideas rows", () => {

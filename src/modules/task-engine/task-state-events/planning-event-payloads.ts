@@ -1,6 +1,10 @@
 import type { TaskStateEventEnvelopeV1 } from "./types.js";
 import type { WorkspaceStatusUpdatePatch } from "../persistence/workspace-status-store.js";
 import type { PhaseNotePriority, PhaseNoteStatus } from "../phase-journal/phase-journal-types.js";
+import type {
+  PhaseDeliveryHistoryRow,
+  PhaseDeliveryHistoryStatus
+} from "../persistence/phase-delivery-history-store.js";
 
 /** Discriminated planning event kinds (Phase 119 + Phase 120 S1 phase journal). */
 export type PlanningStateEventKindV1 =
@@ -15,6 +19,7 @@ export type PlanningStateEventKindV1 =
   | "planning.phase_note_suggestion.removed"
   | "planning.idea.created"
   | "planning.idea.updated"
+  | "planning.phase_delivery_history.upserted"
   | "planning.module_state.updated";
 
 export type PlanningIdeaStatusV1 = "open" | "planning" | "planned";
@@ -52,6 +57,17 @@ export type PlanningModuleStateUpdatedPayloadV1 = {
   expectedStateSchemaVersion?: number;
   /** When true, applier deletes the module state row. */
   removed?: boolean;
+};
+
+export type PlanningPhaseDeliveryHistorySnapshotV1 = Omit<
+  PhaseDeliveryHistoryRow,
+  "status"
+> & {
+  status: PhaseDeliveryHistoryStatus | string;
+};
+
+export type PlanningPhaseDeliveryHistoryUpsertedPayloadV1 = {
+  row: PlanningPhaseDeliveryHistorySnapshotV1;
 };
 
 export type PlanningPhaseCatalogUpsertedPayloadV1 = {
@@ -166,6 +182,7 @@ export type PlanningStateEventPayloadV1 =
   | PlanningPhaseNoteSuggestionRemovedPayloadV1
   | PlanningIdeaCreatedPayloadV1
   | PlanningIdeaUpdatedPayloadV1
+  | PlanningPhaseDeliveryHistoryUpsertedPayloadV1
   | PlanningModuleStateUpdatedPayloadV1;
 
 export type PlanningStateEventV1 = TaskStateEventEnvelopeV1 & {
@@ -186,6 +203,7 @@ export const PLANNING_STATE_EVENT_KINDS: readonly PlanningStateEventKindV1[] = [
   "planning.phase_note_suggestion.removed",
   "planning.idea.created",
   "planning.idea.updated",
+  "planning.phase_delivery_history.upserted",
   "planning.module_state.updated"
 ] as const;
 

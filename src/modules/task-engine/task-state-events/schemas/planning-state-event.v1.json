@@ -26,6 +26,7 @@
                 "planning.phase_note_suggestion.removed",
                 "planning.idea.created",
                 "planning.idea.updated",
+                "planning.phase_delivery_history.upserted",
                 "planning.module_state.updated"
               ]
             },
@@ -42,6 +43,7 @@
                 { "$ref": "#/$defs/phaseNoteSuggestionSnapshotPayload" },
                 { "$ref": "#/$defs/phaseNoteSuggestionRemovedPayload" },
                 { "$ref": "#/$defs/ideaMutationPayload" },
+                { "$ref": "#/$defs/phaseDeliveryHistoryUpsertedPayload" },
                 { "$ref": "#/$defs/moduleStateUpdatedPayload" }
               ]
             }
@@ -247,6 +249,55 @@
         "updatedAt": { "type": "string", "minLength": 20, "maxLength": 64 },
         "expectedStateSchemaVersion": { "type": "integer", "minimum": 0 },
         "removed": { "type": "boolean" }
+      }
+    },
+    "phaseDeliveryHistoryRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "phaseKey",
+        "status",
+        "deliveredAt",
+        "releaseVersion",
+        "gitTag",
+        "githubReleaseUrl",
+        "npmPackage",
+        "npmDistTag",
+        "releaseWorkflowUrl",
+        "mainCommitSha",
+        "releaseBranch",
+        "releasePrUrl",
+        "evidence",
+        "createdAt",
+        "updatedAt"
+      ],
+      "properties": {
+        "phaseKey": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "status": {
+          "type": "string",
+          "enum": ["delivered", "skipped", "superseded"]
+        },
+        "deliveredAt": { "type": "string", "minLength": 20, "maxLength": 64 },
+        "releaseVersion": { "type": ["string", "null"], "maxLength": 64 },
+        "gitTag": { "type": ["string", "null"], "maxLength": 120 },
+        "githubReleaseUrl": { "type": ["string", "null"], "maxLength": 512 },
+        "npmPackage": { "type": ["string", "null"], "maxLength": 240 },
+        "npmDistTag": { "type": ["string", "null"], "maxLength": 120 },
+        "releaseWorkflowUrl": { "type": ["string", "null"], "maxLength": 512 },
+        "mainCommitSha": { "type": ["string", "null"], "maxLength": 80 },
+        "releaseBranch": { "type": ["string", "null"], "maxLength": 240 },
+        "releasePrUrl": { "type": ["string", "null"], "maxLength": 512 },
+        "evidence": { "type": "object", "additionalProperties": true },
+        "createdAt": { "type": "string", "minLength": 20, "maxLength": 64 },
+        "updatedAt": { "type": "string", "minLength": 20, "maxLength": 64 }
+      }
+    },
+    "phaseDeliveryHistoryUpsertedPayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["row"],
+      "properties": {
+        "row": { "$ref": "#/$defs/phaseDeliveryHistoryRow" }
       }
     },
     "phaseCatalogUpsertedPayload": {

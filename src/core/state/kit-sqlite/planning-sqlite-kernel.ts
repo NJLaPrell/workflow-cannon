@@ -10,7 +10,7 @@ type SqliteDatabase = InstanceType<typeof Database>;
  */
 
 /** Bump and add a migration step in `migrateKitSqliteSchema` when DDL changes. Exposed for doctor / list-module-states. */
-export const KIT_SQLITE_USER_VERSION = 34;
+export const KIT_SQLITE_USER_VERSION = 35;
 
 export const TASK_ENGINE_TASKS_TABLE = "task_engine_tasks";
 export const TASK_ENGINE_DEPENDENCIES_TABLE = "task_engine_dependencies";
@@ -1262,6 +1262,36 @@ CREATE INDEX idx_kit_assignment_packets_task ON kit_assignment_packets(execution
 `);
 }
 
+/** Phase delivery history (Phase roster release/delivery dates). */
+function migrateV34ToV35(db: SqliteDatabase): void {
+  if (tableExists(db, "kit_phase_delivery_history")) {
+    return;
+  }
+  db.exec(`
+CREATE TABLE kit_phase_delivery_history (
+  phase_key TEXT PRIMARY KEY NOT NULL,
+  status TEXT NOT NULL DEFAULT 'delivered',
+  delivered_at TEXT NOT NULL,
+  release_version TEXT,
+  git_tag TEXT,
+  github_release_url TEXT,
+  npm_package TEXT,
+  npm_dist_tag TEXT,
+  release_workflow_url TEXT,
+  main_commit_sha TEXT,
+  release_branch TEXT,
+  release_pr_url TEXT,
+  evidence_json TEXT NOT NULL DEFAULT '{}',
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE INDEX idx_kit_phase_delivery_history_delivered_at
+  ON kit_phase_delivery_history(delivered_at DESC);
+CREATE INDEX idx_kit_phase_delivery_history_status
+  ON kit_phase_delivery_history(status, delivered_at DESC);
+`);
+}
+
 /**
  * Shared SQLite setup for workspace-kit.db: pragmas, centralized user_version migrations.
  * Call after `new Database(path)` for every open (read/write).
@@ -1448,6 +1478,11 @@ function migrateKitSqliteSchema(db: SqliteDatabase): void {
     migrateV33ToV34(db);
     db.pragma("user_version = 34");
     current = 34;
+  }
+  if (current < 35) {
+    migrateV34ToV35(db);
+    db.pragma("user_version = 35");
+    current = 35;
   }
 }
 

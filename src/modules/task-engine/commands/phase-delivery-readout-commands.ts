@@ -7,6 +7,12 @@ import {
 } from "../maintainer-delivery-policy-resolver.js";
 import type { OpenedPlanningStores } from "../persistence/planning-open.js";
 import { readWorkspaceStatusSnapshotFromDual } from "../persistence/workspace-status-store.js";
+import {
+  upsertPhaseDeliveryHistory,
+  type PhaseDeliveryHistoryRow
+} from "../persistence/phase-delivery-history-store.js";
+import { draftPlanningPhaseDeliveryHistoryUpsertedEvent } from "../persistence/planning-event-draft.js";
+import { commitCanonicalPlanningEvents } from "../persistence/planning-canonical-mutation-hook.js";
 import { resolveCanonicalPhase } from "../phase-resolution.js";
 import { derivePublishArtifactsFragment } from "../derive-publish-artifacts-runtime.js";
 import {
@@ -31,6 +37,133 @@ import { listAssignments } from "../../team-execution/assignment-store.js";
 import { runPrepareReleaseArtifactsCommand } from "../prepare-release-artifacts-runtime.js";
 import { buildReleaseCloseoutResult } from "../release-closeout-result-runtime.js";
 import { buildPhaseReleaseState } from "../phase-release-state-runtime.js";
+
+function cleanString(v: unknown): string | null {
+  if (typeof v !== "string") {
+    return null;
+  }
+  const t = v.trim();
+  return t.length > 0 ? t : null;
+}
+
+function firstUrl(values: unknown): string | null {
+  const candidates = Array.isArray(values) ? values : typeof values === "string" ? [values] : [];
+  for (const raw of candidates) {
+    const text = cleanString(raw);
+    if (!text) {
+      continue;
+    }
+    const match = text.match(/https?:\/\/\S+/);
+    if (match?.[0]) {
+      return match[0].replace(/[),.;]+$/, "");
+    }
+  }
+  return null;
+}
+
+function firstString(values: unknown): string | null {
+  if (Array.isArray(values)) {
+    for (const raw of values) {
+      const text = cleanString(raw);
+      if (text) {
+        return text;
+      }
+    }
+    return null;
+  }
+  return cleanString(values);
+}
+
+function readRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
+function pickDeliveryTimestamp(
+  postReleaseEvidence: Record<string, unknown>,
+  argObj: Record<string, unknown>,
+  fallback: string
+): string {
+  const workspace = readRecord(postReleaseEvidence.workspace);
+  return (
+    cleanString(postReleaseEvidence.deliveredAt) ??
+    cleanString(postReleaseEvidence.publishedAt) ??
+    cleanString(postReleaseEvidence.releasePublishedAt) ??
+    cleanString(postReleaseEvidence.workflowCompletedAt) ??
+    cleanString(workspace?.deliveredAt) ??
+    cleanString(workspace?.publishedAt) ??
+    cleanString(argObj.deliveredAt) ??
+    fallback
+  );
+}
+
+function persistReleaseCloseoutDeliveryHistory(args: {
+  db: ReturnType<OpenedPlanningStores["sqliteDual"]["getDatabase"]>;
+  packet: Record<string, unknown>;
+  commandArgs: Record<string, unknown>;
+  phaseKey: string | null;
+}): PhaseDeliveryHistoryRow | null {
+  const phaseKey = cleanString(args.phaseKey);
+  const releaseVersion = cleanString(args.packet.releaseVersion);
+  const createdAt = cleanString(args.packet.createdAt) ?? new Date().toISOString();
+  const releaseEvidence = readRecord(args.packet.releaseEvidence);
+  const postReleaseEvidence = readRecord(releaseEvidence?.postReleaseEvidence);
+  const rawPostReleaseEvidence =
+    readRecord(args.commandArgs.postReleaseEvidence) ?? readRecord(args.commandArgs.finalEvidence) ?? {};
+  const missing = Array.isArray(releaseEvidence?.missingFinalEvidence)
+    ? releaseEvidence.missingFinalEvidence
+    : [];
+  if (!phaseKey || !releaseVersion || !postReleaseEvidence || missing.length > 0) {
+    return null;
+  }
+  const workspace = readRecord(postReleaseEvidence.workspace);
+  const rawWorkspace = readRecord(rawPostReleaseEvidence.workspace);
+  const historyEvidence = { ...postReleaseEvidence, ...rawPostReleaseEvidence };
+  const row = upsertPhaseDeliveryHistory(args.db, {
+    phaseKey,
+    status: "delivered",
+    deliveredAt: pickDeliveryTimestamp(historyEvidence, args.commandArgs, createdAt),
+    releaseVersion,
+    gitTag: cleanString(historyEvidence.tag),
+    githubReleaseUrl:
+      cleanString(historyEvidence.githubReleaseUrl) ??
+      cleanString(historyEvidence.githubRelease) ??
+      cleanString(rawWorkspace?.githubReleaseUrl) ??
+      cleanString(workspace?.githubReleaseUrl),
+    npmPackage: cleanString(historyEvidence.publishedPackage),
+    npmDistTag:
+      cleanString(historyEvidence.npmDistTag) ??
+      cleanString(rawWorkspace?.npmDistTag) ??
+      cleanString(workspace?.npmDistTag) ??
+      "latest",
+    releaseWorkflowUrl:
+      cleanString(historyEvidence.releaseWorkflowUrl) ??
+      cleanString(historyEvidence.publishWorkflow) ??
+      firstUrl(historyEvidence.ci),
+    mainCommitSha:
+      cleanString(historyEvidence.mainCommitSha) ??
+      cleanString(historyEvidence.mainHead) ??
+      cleanString(rawWorkspace?.mainCommitSha) ??
+      cleanString(workspace?.mainCommitSha) ??
+      cleanString(rawWorkspace?.postReleaseCommit) ??
+      cleanString(workspace?.postReleaseCommit),
+    releaseBranch:
+      cleanString(historyEvidence.releaseBranch) ??
+      firstString(historyEvidence.branchesAndPrs),
+    releasePrUrl:
+      cleanString(historyEvidence.releasePrUrl) ??
+      firstUrl(historyEvidence.branchesAndPrs),
+    evidence: {
+      source: "release-closeout-result",
+      branchesAndPrs: historyEvidence.branchesAndPrs ?? [],
+      ci: historyEvidence.ci ?? [],
+      workspace: historyEvidence.workspace ?? null
+    },
+    nowIso: createdAt
+  });
+  return row;
+}
 
 function readRequestedPhaseKey(args: Record<string, unknown>): string | null {
   return typeof args.phaseKey === "string" && args.phaseKey.trim().length > 0 ? args.phaseKey.trim() : null;
@@ -504,9 +637,49 @@ export async function resolvePhaseDeliveryReadoutCommands(
         remediation: { instructionPath: "src/modules/task-engine/instructions/release-closeout-result.md" }
       };
     }
+    const deliveryHistory = persistReleaseCloseoutDeliveryHistory({
+      db: planning.sqliteDual.getDatabase(),
+      packet: result.packet as unknown as Record<string, unknown>,
+      commandArgs: argObj,
+      phaseKey
+    });
+    let deliveryHistoryCanonical: ModuleCommandResult | null = null;
+    if (deliveryHistory) {
+      const event = draftPlanningPhaseDeliveryHistoryUpsertedEvent({
+        row: deliveryHistory,
+        ctx: {
+          commandName: "release-closeout-result",
+          moduleId: "task-engine",
+          phaseKey: deliveryHistory.phaseKey,
+          clientMutationId:
+            cleanString(argObj.clientMutationId) ??
+            `release-closeout-result:${deliveryHistory.phaseKey}:${deliveryHistory.releaseVersion ?? "unknown"}`
+        }
+      });
+      deliveryHistoryCanonical = await commitCanonicalPlanningEvents({
+        ctx,
+        store,
+        planning,
+        events: [event],
+        policyApproval: argObj.policyApproval as { confirmed: boolean; rationale: string } | undefined
+      });
+      if (deliveryHistoryCanonical && !deliveryHistoryCanonical.ok) {
+        return {
+          ...deliveryHistoryCanonical,
+          data: {
+            ...((deliveryHistoryCanonical.data as Record<string, unknown> | undefined) ?? {}),
+            releaseCloseout: result.packet,
+            canonicalPhase: phaseRes,
+            deliveryHistory
+          }
+        };
+      }
+    }
     const data: Record<string, unknown> = {
       ...result.packet,
-      canonicalPhase: phaseRes
+      canonicalPhase: phaseRes,
+      deliveryHistory,
+      deliveryHistoryCanonical
     };
     attachPolicyMeta(data, ctx, planning.sqliteDual.getPlanningGeneration());
     return {

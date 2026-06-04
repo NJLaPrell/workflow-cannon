@@ -175,7 +175,7 @@
     "moduleId": "task-engine",
     "name": "release-closeout-result",
     "file": "release-closeout-result.md",
-    "description": "Build the final placeholder-free phase release result packet with concrete evidence refs and packet sequence.",
+    "description": "Build the final placeholder-free phase release result packet, and record first-class phase delivery history when final evidence is complete.",
     "defaultResponseTemplateId": "default",
     "policySensitivity": "non-sensitive"
   },

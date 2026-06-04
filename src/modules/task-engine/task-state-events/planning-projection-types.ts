@@ -1,5 +1,6 @@
 import type { KitWorkspaceStatusPublic } from "../persistence/workspace-status-store.js";
 import type { PhaseCatalogRow } from "../persistence/phase-catalog-store.js";
+import type { PhaseDeliveryHistoryRow } from "../persistence/phase-delivery-history-store.js";
 import type { PhaseNoteRow, PhaseNoteTaskSuggestionRow } from "../phase-journal/phase-journal-types.js";
 
 export type PlanningWorkspaceStatusAuditV1 = {
@@ -38,6 +39,7 @@ export type PlanningStateProjectionV1 = {
   phaseNotesById: Record<string, PhaseNoteRow>;
   phaseNoteSuggestionsById: Record<string, PhaseNoteTaskSuggestionRow>;
   ideasById: Record<string, WorkflowIdeaProjectionRow>;
+  phaseDeliveryHistoryByKey: Record<string, PhaseDeliveryHistoryRow>;
   moduleStateById: Record<string, ModuleStateProjectionRow>;
   workspaceStatus: KitWorkspaceStatusPublic | null;
   workspaceStatusAudits: PlanningWorkspaceStatusAuditV1[];
@@ -49,6 +51,8 @@ export type PlanningStateProjectionV1 = {
   appliedSuggestionMutationIds: Set<string>;
   /** clientMutationId keys applied for idea mutations in this replay. */
   appliedIdeaMutationIds: Set<string>;
+  /** clientMutationId keys applied for phase delivery history mutations in this replay. */
+  appliedPhaseDeliveryHistoryMutationIds: Set<string>;
   /** clientMutationId keys applied for module state mutations in this replay. */
   appliedModuleStateMutationIds: Set<string>;
   lastEventSequence: number;

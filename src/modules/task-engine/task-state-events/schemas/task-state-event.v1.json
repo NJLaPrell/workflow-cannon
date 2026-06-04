@@ -30,6 +30,7 @@
                 "planning.phase_note_suggestion.removed",
                 "planning.idea.created",
                 "planning.idea.updated",
+                "planning.phase_delivery_history.upserted",
                 "planning.module_state.updated"
               ]
             },
@@ -46,6 +47,7 @@
                 { "$ref": "#/$defs/planningPhaseNoteSuggestionPayload" },
                 { "$ref": "#/$defs/planningPhaseNoteSuggestionRemovedPayload" },
                 { "$ref": "#/$defs/planningIdeaPayload" },
+                { "$ref": "#/$defs/planningPhaseDeliveryHistoryPayload" },
                 { "$ref": "#/$defs/planningModuleStateUpdatedPayload" }
               ]
             }
@@ -234,6 +236,14 @@
       "properties": {
         "idea": { "type": "object", "additionalProperties": true },
         "removed": { "type": "boolean" }
+      }
+    },
+    "planningPhaseDeliveryHistoryPayload": {
+      "type": "object",
+      "required": ["row"],
+      "additionalProperties": false,
+      "properties": {
+        "row": { "type": "object", "additionalProperties": true }
       }
     },
     "planningModuleStateUpdatedPayload": {

@@ -617,13 +617,14 @@
   "planning.canonicalSync.domains": {
     "key": "planning.canonicalSync.domains",
     "type": "array",
-    "description": "When tasks.canonicalAuthority is git-event-log, which planning domains publish mutations and apply on hydrate/rebuild. Omit for all Phase 119+120 domains enabled. Use phase_journal as alias for phase_notes + phase_note_suggestions.",
+    "description": "When tasks.canonicalAuthority is git-event-log, which planning domains publish mutations and apply on hydrate/rebuild. Omit for all planning sync domains enabled. Use phase_journal as alias for phase_notes + phase_note_suggestions.",
     "default": [
       "phase_catalog",
       "workspace_status",
       "phase_notes",
       "phase_note_suggestions",
       "ideas",
+      "phase_delivery_history",
       "module_state"
     ],
     "domainScope": "project",

@@ -13,6 +13,12 @@ import {
   isPhaseLegacyDeliveredByOrdinal,
   resolveLegacyDeliveredMaxOrdinal
 } from "../phase-resolution.js";
+import {
+  listPhaseDeliveryHistory,
+  readDeliveredPhaseKeysFromHistory,
+  readPhaseDeliveryDatesByKey,
+  type PhaseDeliveryHistoryRow
+} from "../persistence/phase-delivery-history-store.js";
 import type { TaskEntity, TaskStatus } from "../types.js";
 
 type SqliteDb = InstanceType<typeof DatabaseCtor>;
@@ -77,15 +83,26 @@ export function collectDeliveredPhaseKeys(
   tasks: TaskEntity[],
   limit = 300
 ): string[] {
+  const historyDelivered = readDeliveredPhaseKeysFromHistory(db, limit);
   const candidates = collectRolledOutPhaseKeys(db, limit);
-  const delivered: string[] = [];
+  const delivered = new Set(historyDelivered);
   for (const phaseKey of candidates) {
+    if (delivered.has(phaseKey)) {
+      continue;
+    }
     const closeout = buildPhaseCloseoutReadiness({ tasks, phaseKey });
     if (closeout.passed) {
-      delivered.push(phaseKey);
+      delivered.add(phaseKey);
     }
   }
-  return delivered;
+  return [...delivered].sort((a, b) => {
+    const ao = parseLeadingPhaseOrdinal(a);
+    const bo = parseLeadingPhaseOrdinal(b);
+    if (ao !== null && bo !== null && ao !== bo) {
+      return ao - bo;
+    }
+    return a.localeCompare(b);
+  });
 }
 
 /**
@@ -93,7 +110,7 @@ export function collectDeliveredPhaseKeys(
  * on `set_current_phase` events). Later rollovers overwrite earlier entries for the same key.
  */
 export function collectPhaseReleaseDatesByKey(db: SqliteDb, limit = 500): Record<string, string> {
-  const out: Record<string, string> = {};
+  const out: Record<string, string> = readPhaseDeliveryDatesByKey(db, limit);
   if (!workspaceStatusEventsReadable(db)) {
     return out;
   }
@@ -113,7 +130,12 @@ export function collectPhaseReleaseDatesByKey(db: SqliteDb, limit = 500): Record
         typeof details.previousCurrentKitPhase === "string"
           ? details.previousCurrentKitPhase.trim()
           : "";
-      if (prior.length > 0 && typeof row.created_at === "string" && row.created_at.trim().length > 0) {
+      if (
+        prior.length > 0 &&
+        out[prior] === undefined &&
+        typeof row.created_at === "string" &&
+        row.created_at.trim().length > 0
+      ) {
         out[prior] = row.created_at.trim();
       }
     } catch {
@@ -121,6 +143,10 @@ export function collectPhaseReleaseDatesByKey(db: SqliteDb, limit = 500): Record
     }
   }
   return out;
+}
+
+export function collectPhaseDeliveryHistoryRows(db: SqliteDb, limit = 500): PhaseDeliveryHistoryRow[] {
+  return listPhaseDeliveryHistory(db, limit);
 }
 
 /** Unique phase keys rolled off via `set_current_phase` events (newest events first, capped). */
@@ -196,7 +222,10 @@ export function collectPhaseKeysWithActiveQueueWork(tasks: TaskEntity[]): string
 export function wasWorkspacePhaseRolledOut(db: SqliteDb, phaseKey: string): boolean {
   const key = phaseKey.trim();
   if (!key || !workspaceStatusEventsReadable(db)) {
-    return false;
+    return readDeliveredPhaseKeysFromHistory(db).includes(key);
+  }
+  if (readDeliveredPhaseKeysFromHistory(db).includes(key)) {
+    return true;
   }
   const rows = db
     .prepare(

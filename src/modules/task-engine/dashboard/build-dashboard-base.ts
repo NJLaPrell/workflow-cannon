@@ -45,6 +45,7 @@ import { projectDashboardTaskRow } from "../task-read-projections.js";
 import {
   buildDashboardCurrentPhaseDelivery,
   collectDeliveredPhaseKeys,
+  collectPhaseDeliveryHistoryRows,
   collectPhaseKeysWithActiveQueueWork,
   collectRolledOutPhaseKeys,
   collectPhaseReleaseDatesByKey
@@ -494,6 +495,9 @@ export async function buildDashboardBase(
     dualForStatus != null ? collectRolledOutPhaseKeys(dualForStatus.getDatabase()) : [];
   const phaseReleaseDates =
     dualForStatus != null ? collectPhaseReleaseDatesByKey(dualForStatus.getDatabase()) : {};
+  const phaseDeliveryHistory =
+    dualForStatus != null ? collectPhaseDeliveryHistoryRows(dualForStatus.getDatabase()) : [];
+  const lastDeliveredPhase = phaseDeliveryHistory.find((row) => row.status === "delivered") ?? null;
   const legacyDeliveredMaxOrdinal = resolveLegacyDeliveredMaxOrdinal(
     ctx.effectiveConfig as Record<string, unknown> | undefined
   );
@@ -646,6 +650,8 @@ export async function buildDashboardBase(
     deliveredPhaseKeys,
     rolledOutPhaseKeys,
     phaseReleaseDates,
+    phaseDeliveryHistory,
+    lastDeliveredPhase,
     legacyDeliveredMaxOrdinal,
     phaseKeysWithActiveQueueWork,
     pastPhaseNotes,

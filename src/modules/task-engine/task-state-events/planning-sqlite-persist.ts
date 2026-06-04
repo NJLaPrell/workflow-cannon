@@ -10,6 +10,12 @@ import {
   readKitWorkspaceStatusRow,
   workspaceStatusTableAvailable
 } from "../persistence/workspace-status-store.js";
+import {
+  KIT_PHASE_DELIVERY_HISTORY_TABLE,
+  listPhaseDeliveryHistory,
+  phaseDeliveryHistoryTableAvailable,
+  upsertPhaseDeliveryHistory
+} from "../persistence/phase-delivery-history-store.js";
 import { phaseNoteTaskSuggestionsTableExists } from "../phase-journal/phase-journal-store.js";
 import type { PlanningStateProjectionV1 } from "./planning-projection-types.js";
 import { MODULE_STATE_PLANNING_SYNC_ALLOWLIST } from "./module-state-planning-sync-allowlist.js";
@@ -319,6 +325,31 @@ export function persistPlanningProjectionToSqlite(
     })();
   }
 
+  if (domainEnabled("phase_delivery_history") && phaseDeliveryHistoryTableAvailable(db)) {
+    db.transaction(() => {
+      db.prepare(`DELETE FROM ${KIT_PHASE_DELIVERY_HISTORY_TABLE}`).run();
+      for (const row of Object.values(projection.phaseDeliveryHistoryByKey)) {
+        upsertPhaseDeliveryHistory(db, {
+          phaseKey: row.phaseKey,
+          status: row.status,
+          deliveredAt: row.deliveredAt,
+          releaseVersion: row.releaseVersion,
+          gitTag: row.gitTag,
+          githubReleaseUrl: row.githubReleaseUrl,
+          npmPackage: row.npmPackage,
+          npmDistTag: row.npmDistTag,
+          releaseWorkflowUrl: row.releaseWorkflowUrl,
+          mainCommitSha: row.mainCommitSha,
+          releaseBranch: row.releaseBranch,
+          releasePrUrl: row.releasePrUrl,
+          evidence: row.evidence,
+          createdAt: row.createdAt,
+          updatedAt: row.updatedAt
+        });
+      }
+    })();
+  }
+
   if (domainEnabled("workspace_status") && workspaceStatusTableAvailable(db) && projection.workspaceStatus) {
     const preservedRollovers = readStoredRolloverWorkspaceStatusEvents(db);
     rewriteWorkspaceStatusFromProjection(db, projection, preservedRollovers);
@@ -348,6 +379,7 @@ export function planningProjectionFromSqlite(db: SqliteDb): PlanningStateProject
     phaseNotesById: {},
     phaseNoteSuggestionsById: {},
     ideasById: {},
+    phaseDeliveryHistoryByKey: {},
     moduleStateById: {},
     workspaceStatus: readKitWorkspaceStatusRow(db),
     workspaceStatusAudits: [],
@@ -355,6 +387,7 @@ export function planningProjectionFromSqlite(db: SqliteDb): PlanningStateProject
     appliedNoteIdempotencyKeys: new Set<string>(),
     appliedSuggestionMutationIds: new Set<string>(),
     appliedIdeaMutationIds: new Set<string>(),
+    appliedPhaseDeliveryHistoryMutationIds: new Set<string>(),
     appliedModuleStateMutationIds: new Set<string>(),
     lastEventSequence: 0,
     lastUpdated: new Date().toISOString()
@@ -492,6 +525,11 @@ export function planningProjectionFromSqlite(db: SqliteDb): PlanningStateProject
         state,
         updatedAt: row.updated_at
       };
+    }
+  }
+  if (phaseDeliveryHistoryTableAvailable(db)) {
+    for (const row of listPhaseDeliveryHistory(db, 10000)) {
+      projection.phaseDeliveryHistoryByKey[row.phaseKey] = row;
     }
   }
   return projection;

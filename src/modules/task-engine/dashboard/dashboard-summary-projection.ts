@@ -150,6 +150,8 @@ export function finalizeDashboardSummaryProjection(
       deliveredPhaseKeys: data.deliveredPhaseKeys,
       rolledOutPhaseKeys: data.rolledOutPhaseKeys,
       phaseReleaseDates: data.phaseReleaseDates,
+      phaseDeliveryHistory: data.phaseDeliveryHistory,
+      lastDeliveredPhase: data.lastDeliveredPhase,
       legacyDeliveredMaxOrdinal: data.legacyDeliveredMaxOrdinal,
       phaseKeysWithActiveQueueWork: data.phaseKeysWithActiveQueueWork,
       pastPhaseNotes: []
@@ -203,6 +205,8 @@ export function finalizeDashboardSummaryProjection(
       deliveredPhaseKeys: data.deliveredPhaseKeys,
       rolledOutPhaseKeys: data.rolledOutPhaseKeys,
       phaseReleaseDates: data.phaseReleaseDates,
+      phaseDeliveryHistory: data.phaseDeliveryHistory,
+      lastDeliveredPhase: data.lastDeliveredPhase,
       legacyDeliveredMaxOrdinal: data.legacyDeliveredMaxOrdinal,
       phaseKeysWithActiveQueueWork: data.phaseKeysWithActiveQueueWork,
       pastPhaseNotes: data.pastPhaseNotes
@@ -245,6 +249,8 @@ export function finalizeDashboardSummaryProjection(
     deliveredPhaseKeys: data.deliveredPhaseKeys,
     rolledOutPhaseKeys: data.rolledOutPhaseKeys,
     phaseReleaseDates: data.phaseReleaseDates,
+    phaseDeliveryHistory: data.phaseDeliveryHistory,
+    lastDeliveredPhase: data.lastDeliveredPhase,
     legacyDeliveredMaxOrdinal: data.legacyDeliveredMaxOrdinal,
     phaseKeysWithActiveQueueWork: data.phaseKeysWithActiveQueueWork,
     pastPhaseNotes: []

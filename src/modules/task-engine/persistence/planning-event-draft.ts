@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import type { KitWorkspaceStatusPublic, WorkspaceStatusUpdatePatch } from "../persistence/workspace-status-store.js";
 import type {
   PlanningIdeaSnapshotV1,
+  PlanningPhaseDeliveryHistorySnapshotV1,
   PlanningPhaseNoteSnapshotV1,
   PlanningPhaseNoteSuggestionSnapshotV1,
   PlanningStateEventKindV1,
@@ -181,6 +182,17 @@ export function draftPlanningIdeaUpdatedEvent(args: {
   return draftPlanningEnvelope(
     "planning.idea.updated",
     { idea: args.idea, ...(args.removed ? { removed: true } : {}) },
+    args.ctx
+  );
+}
+
+export function draftPlanningPhaseDeliveryHistoryUpsertedEvent(args: {
+  row: PlanningPhaseDeliveryHistorySnapshotV1;
+  ctx: DraftEventContext;
+}): PlanningStateEventV1 {
+  return draftPlanningEnvelope(
+    "planning.phase_delivery_history.upserted",
+    { row: args.row },
     args.ctx
   );
 }

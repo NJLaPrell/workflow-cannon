@@ -13,6 +13,7 @@ import type {
   PlanningPhaseNoteUpdatedPayloadV1,
   PlanningIdeaCreatedPayloadV1,
   PlanningIdeaUpdatedPayloadV1,
+  PlanningPhaseDeliveryHistoryUpsertedPayloadV1,
   PlanningModuleStateUpdatedPayloadV1,
   PlanningWorkspaceStatusUpdatedPayloadV1
 } from "./planning-event-payloads.js";
@@ -40,6 +41,7 @@ export function createEmptyPlanningStateProjection(
     phaseNotesById: {},
     phaseNoteSuggestionsById: {},
     ideasById: {},
+    phaseDeliveryHistoryByKey: {},
     moduleStateById: {},
     workspaceStatus: null,
     workspaceStatusAudits: [],
@@ -47,6 +49,7 @@ export function createEmptyPlanningStateProjection(
     appliedNoteIdempotencyKeys: new Set<string>(),
     appliedSuggestionMutationIds: new Set<string>(),
     appliedIdeaMutationIds: new Set<string>(),
+    appliedPhaseDeliveryHistoryMutationIds: new Set<string>(),
     appliedModuleStateMutationIds: new Set<string>(),
     lastEventSequence: 0,
     lastUpdated
@@ -323,6 +326,36 @@ function applyModuleStateUpdated(
   return null;
 }
 
+function applyPhaseDeliveryHistoryUpserted(
+  projection: PlanningStateProjectionV1,
+  event: PlanningStateEventV1,
+  payload: PlanningPhaseDeliveryHistoryUpsertedPayloadV1
+): PlanningStateApplierError | null {
+  const mutationKey = event.clientMutationId?.trim();
+  if (mutationKey && projection.appliedPhaseDeliveryHistoryMutationIds.has(mutationKey)) {
+    bumpSequence(projection, event);
+    return null;
+  }
+  const key = payload.row.phaseKey.trim();
+  if (!key) {
+    return {
+      code: "replay-conflict",
+      message: "phase delivery history row has empty phaseKey",
+      eventId: event.eventId
+    };
+  }
+  projection.phaseDeliveryHistoryByKey[key] = {
+    ...payload.row,
+    phaseKey: key,
+    evidence: { ...payload.row.evidence }
+  };
+  if (mutationKey) {
+    projection.appliedPhaseDeliveryHistoryMutationIds.add(mutationKey);
+  }
+  bumpSequence(projection, event);
+  return null;
+}
+
 function applyWorkspaceStatusUpdated(
   projection: PlanningStateProjectionV1,
   event: PlanningStateEventV1,
@@ -423,6 +456,12 @@ export function applyPlanningStateEvent(
     ),
     phaseNoteSuggestionsById: { ...projection.phaseNoteSuggestionsById },
     ideasById: { ...projection.ideasById },
+    phaseDeliveryHistoryByKey: Object.fromEntries(
+      Object.entries(projection.phaseDeliveryHistoryByKey).map(([id, row]) => [
+        id,
+        { ...row, evidence: { ...row.evidence } }
+      ])
+    ),
     moduleStateById: Object.fromEntries(
       Object.entries(projection.moduleStateById).map(([id, row]) => [id, { ...row, state: { ...row.state } }])
     ),
@@ -432,6 +471,7 @@ export function applyPlanningStateEvent(
     appliedNoteIdempotencyKeys: new Set(projection.appliedNoteIdempotencyKeys),
     appliedSuggestionMutationIds: new Set(projection.appliedSuggestionMutationIds),
     appliedIdeaMutationIds: new Set(projection.appliedIdeaMutationIds),
+    appliedPhaseDeliveryHistoryMutationIds: new Set(projection.appliedPhaseDeliveryHistoryMutationIds),
     appliedModuleStateMutationIds: new Set(projection.appliedModuleStateMutationIds)
   };
 
@@ -469,6 +509,13 @@ export function applyPlanningStateEvent(
       break;
     case "planning.idea.updated":
       err = applyIdeaUpdated(next, event, event.payload as PlanningIdeaUpdatedPayloadV1);
+      break;
+    case "planning.phase_delivery_history.upserted":
+      err = applyPhaseDeliveryHistoryUpserted(
+        next,
+        event,
+        event.payload as PlanningPhaseDeliveryHistoryUpsertedPayloadV1
+      );
       break;
     case "planning.module_state.updated":
       err = applyModuleStateUpdated(next, event, event.payload as PlanningModuleStateUpdatedPayloadV1);
