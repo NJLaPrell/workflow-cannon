@@ -31,6 +31,58 @@ import { listAssignments } from "../../team-execution/assignment-store.js";
 import { runPrepareReleaseArtifactsCommand } from "../prepare-release-artifacts-runtime.js";
 import { buildReleaseCloseoutResult } from "../release-closeout-result-runtime.js";
 
+function readRequestedPhaseKey(args: Record<string, unknown>): string | null {
+  return typeof args.phaseKey === "string" && args.phaseKey.trim().length > 0 ? args.phaseKey.trim() : null;
+}
+
+function buildPhaseSelection(
+  requestedPhaseKey: string | null,
+  canonicalPhaseKey: string | null
+): {
+  requestedPhaseKey: string | null;
+  selectedPhaseKey: string | null;
+  operationalPhaseKey: string | null;
+  source: "argument" | "canonical";
+  canonicalPhaseKey: string | null;
+  matchesCanonical: boolean | null;
+  mismatch: boolean;
+  mismatchSeverity: "none" | "warning" | "unknown";
+  warning: string | null;
+} {
+  const selectedPhaseKey = requestedPhaseKey ?? canonicalPhaseKey;
+  const matchesCanonical =
+    selectedPhaseKey !== null && canonicalPhaseKey !== null ? selectedPhaseKey === canonicalPhaseKey : null;
+  const mismatch = matchesCanonical === false;
+  const mismatchSeverity = mismatch ? "warning" : matchesCanonical === null ? "unknown" : "none";
+  return {
+    requestedPhaseKey,
+    selectedPhaseKey,
+    operationalPhaseKey: selectedPhaseKey,
+    source: requestedPhaseKey ? "argument" : "canonical",
+    canonicalPhaseKey,
+    matchesCanonical,
+    mismatch,
+    mismatchSeverity,
+    warning: mismatch
+      ? `Requested phase ${selectedPhaseKey} differs from canonical workspace phase ${canonicalPhaseKey}; output is scoped to the requested phase.`
+      : null
+  };
+}
+
+function phaseReleaseOrchestrationStateRef(phaseKey: string | null): {
+  command: string;
+  commandLine: string;
+  instructionPath: string;
+} {
+  return {
+    command: "phase-release-orchestration-state",
+    commandLine: phaseKey
+      ? `pnpm exec wk run phase-release-orchestration-state '${JSON.stringify({ phaseKey })}'`
+      : "pnpm exec wk run phase-release-orchestration-state '{}'",
+    instructionPath: "src/modules/task-engine/instructions/phase-release-orchestration-state.md"
+  };
+}
+
 /**
  * Phase / release readout commands that need an open task store + SQLite dual reader.
  * Returns **`null`** when the command name is not handled here.
@@ -80,7 +132,9 @@ export async function resolvePhaseDeliveryReadoutCommands(
       effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined,
       workspaceStatus
     });
-    const phaseKey = phaseRes.canonicalPhaseKey;
+    const requestedPhaseKey = readRequestedPhaseKey(args);
+    const phaseSelection = buildPhaseSelection(requestedPhaseKey, phaseRes.canonicalPhaseKey);
+    const phaseKey = phaseSelection.selectedPhaseKey;
     const phaseState = buildPhaseReleaseOrchestrationState({
       workspacePath: ctx.workspacePath,
       effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined,
@@ -91,6 +145,7 @@ export async function resolvePhaseDeliveryReadoutCommands(
     });
     const data: Record<string, unknown> = {
       ...phaseState,
+      phaseSelection,
       canonicalPhase: phaseRes
     };
     attachPolicyMeta(data, ctx, planning.sqliteDual.getPlanningGeneration());
@@ -108,7 +163,9 @@ export async function resolvePhaseDeliveryReadoutCommands(
       effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined,
       workspaceStatus
     });
-    const phaseKey = phaseRes.canonicalPhaseKey;
+    const requestedPhaseKey = readRequestedPhaseKey(args);
+    const phaseSelection = buildPhaseSelection(requestedPhaseKey, phaseRes.canonicalPhaseKey);
+    const phaseKey = phaseSelection.selectedPhaseKey;
     const parsedCursor = Object.hasOwn(args, "cursor") ? parsePhaseDrainDeltaCursor(args.cursor) : null;
     const delta = buildPhaseDrainDelta({
       workspacePath: ctx.workspacePath,
@@ -125,6 +182,7 @@ export async function resolvePhaseDeliveryReadoutCommands(
     });
     const data: Record<string, unknown> = {
       ...delta,
+      phaseSelection,
       canonicalPhase: phaseRes
     };
     if (Object.hasOwn(args, "cursor") && parsedCursor === null) {
@@ -134,11 +192,7 @@ export async function resolvePhaseDeliveryReadoutCommands(
       data.refreshRecommendation = {
         mode: "full-refresh",
         reason: "invalid-cursor",
-        ref: {
-          command: "phase-release-orchestration-state",
-          commandLine: "pnpm exec wk run phase-release-orchestration-state '{}'",
-          instructionPath: "src/modules/task-engine/instructions/phase-release-orchestration-state.md"
-        }
+        ref: phaseReleaseOrchestrationStateRef(phaseKey)
       };
     }
     attachPolicyMeta(data, ctx, planning.sqliteDual.getPlanningGeneration());
