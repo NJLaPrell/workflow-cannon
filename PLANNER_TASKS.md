@@ -521,7 +521,7 @@ The planner objective is **complete** when all of the following hold:
 | --- | --- |
 | [`PLANNER.md`](./PLANNER.md) | Product direction and success standard (canonical) |
 | [`WORKFLOW_PLAN.md`](./WORKFLOW_PLAN.md) | Prior WBS detail for finalize/review (reuse where aligned) |
-| [`DASHBOARD_TASKS.md`](./DASHBOARD_TASKS.md) | WBS format reference |
+| `tasks/planner-phase110-batch.json` | WBS format reference |
 | `src/modules/planning/` | Current planning module |
 | `src/modules/task-engine/instructions/persist-planning-execution-drafts.md` | Task batch persistence |
 | `src/modules/task-engine/instructions/review-planning-execution-drafts.md` | Task draft review profile |

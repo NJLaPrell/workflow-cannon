@@ -62,6 +62,16 @@ test("dashboard-summary accepts projection arg", () => {
   assert.equal(err, null);
 });
 
+test("dashboard-summary accepts agentActivity projection used by dashboard live refresh", () => {
+  resetPilotRunArgsValidationCache();
+  const err = validatePilotRunCommandArgs(
+    "dashboard-summary",
+    { projection: "agentActivity" },
+    {}
+  );
+  assert.equal(err, null);
+});
+
 test("planning-generation-required when policy require and token omitted", () => {
   resetPilotRunArgsValidationCache();
   const args = {

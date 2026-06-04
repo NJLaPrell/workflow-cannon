@@ -743,7 +743,8 @@
             "full",
             "overview",
             "queue",
-            "status"
+            "status",
+            "agentActivity"
           ]
         }
       },

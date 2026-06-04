@@ -49,7 +49,7 @@ const TASKS = [
     dependsOn: [],
     technicalScope: [
       ".ai/runbooks/dashboard-data-map.md",
-      "workflow-cannon-dashboard-data-loading-options.md",
+      ".ai/plans/dashboard-option-1-state-store-and-pollers.md",
       "extensions/cursor-workflow-cannon/src/views/dashboard/dashboard-section-registry.ts",
     ],
     acceptanceCriteria: [
