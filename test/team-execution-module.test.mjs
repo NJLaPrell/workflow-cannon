@@ -199,6 +199,11 @@ test("agent-execution-packet returns bounded worker context without queue reads"
   assert.equal(packetResult.data.packet.baseBranch, "release/phase-130");
   assert.match(packetResult.data.packet.suggestedWorkerBranch, /^feature\/T8613-/);
   assert.ok(packetResult.data.packet.validationCommands.length > 0);
+  assert.equal(packetResult.data.packet.modelTier, "balanced");
+  assert.equal(packetResult.data.packet.modelTierRecommendation.label, "tier_3");
+  assert.ok(
+    packetResult.data.packet.modelTierEscalationTriggers.some((item) => item.includes("approval-gated paths"))
+  );
   assert.equal(packetResult.data.packet.handoffContract.contractId, "implementation_handoff_v2");
   assert.equal(packetResult.data.packet.handoffContract.expectedAssignmentId, "asg-8613");
   assert.equal(packetResult.data.packet.handoffContract.expectedWorkerId, "wrk-13");
@@ -223,7 +228,7 @@ test("agent-execution-packet returns task-first draft packet before assignment r
     phase: "Phase 130",
     phaseKey: "130",
     summary: "Generate assignment metadata before worker registration.",
-    approach: "Use the task and policy to produce a bounded draft packet.",
+    approach: "Use the task details to produce a bounded draft packet.",
     acceptanceCriteria: [
       "Draft includes register-assignment metadata.",
       "Draft does not create assignment authority."
@@ -273,6 +278,13 @@ test("agent-execution-packet returns task-first draft packet before assignment r
   assert.equal(packetResult.data.packet.recommendedAssignmentMetadata.contextProfileId, "task_worker_context_v1");
   assert.equal(packetResult.data.packet.recommendedAssignmentMetadata.accessProfileId, "task_worker_strict_v1");
   assert.equal(packetResult.data.packet.recommendedAssignmentMetadata.handoffContractId, "implementation_handoff_v2");
+  assert.equal(packetResult.data.packet.modelTier, "balanced");
+  assert.equal(packetResult.data.packet.modelTierRecommendation.label, "tier_2");
+  assert.equal(
+    packetResult.data.packet.recommendedAssignmentMetadata.modelTierRecommendation.label,
+    packetResult.data.packet.modelTierRecommendation.label
+  );
+  assert.deepEqual(packetResult.data.packet.modelTierEscalationTriggers, []);
   assert.equal(packetResult.data.packet.recommendedAssignmentMetadata.lockScope.tasks[0], "T8616");
   assert.equal(packetResult.data.packet.registerAssignmentRef.command, "register-assignment");
   assert.equal(packetResult.data.packet.registerAssignmentRef.args.executionTaskId, "T8616");
@@ -311,6 +323,78 @@ test("agent-execution-packet rejects mixed draft and assignment args", async () 
 
   assert.equal(packetResult.ok, false);
   assert.equal(packetResult.code, "invalid-args");
+});
+
+test("agent-execution-packet draft tier recommendation escalates risky work deterministically", async () => {
+  const workspace = await tmpDir();
+  const ctx = sqliteCtx(workspace);
+  await seedExecutionTask(workspace, "T8619", "Release policy schema migration", {
+    phase: "Phase 130",
+    phaseKey: "130",
+    summary: "Publish release orchestration policy changes with rollback handling.",
+    acceptanceCriteria: ["Escalate ambiguous release and schema work."],
+    metadata: {
+      ownedPaths: [
+        "src/modules/task-engine/**",
+        "src/modules/team-execution/**",
+        "schemas/agent-orchestration/**",
+        ".ai/AGENT-CLI-MAP.md",
+        "test/team-execution-module.test.mjs",
+        "test/task-engine.test.mjs"
+      ]
+    }
+  });
+
+  const packetResult = await teamExecutionModule.onCommand(
+    {
+      name: "agent-execution-packet",
+      args: {
+        mode: "draft",
+        taskId: "T8619",
+        phaseKey: "130"
+      }
+    },
+    ctx
+  );
+
+  assert.equal(packetResult.ok, true);
+  assert.equal(packetResult.data.packet.modelTier, "high_reasoning");
+  assert.equal(packetResult.data.packet.modelTierRecommendation.label, "tier_3");
+  assert.ok(packetResult.data.packet.modelTierRationale.includes("Escalated for draft packet"));
+  assert.ok(packetResult.data.packet.modelTierEscalationTriggers.some((item) => item.includes("risk terms")));
+  assert.equal(packetResult.data.packet.recommendedAssignmentMetadata.modelTier, "high_reasoning");
+  assert.equal(packetResult.data.packet.recommendedAssignmentMetadata.modelTierRecommendation.label, "tier_3");
+});
+
+test("agent-execution-packet draft tier recommendation keeps narrow mechanical work light", async () => {
+  const workspace = await tmpDir();
+  const ctx = sqliteCtx(workspace);
+  await seedExecutionTask(workspace, "T8620", "Fix typo", {
+    phase: "Phase 130",
+    phaseKey: "130",
+    summary: "Correct a typo.",
+    acceptanceCriteria: ["Typo corrected."],
+    metadata: {
+      ownedPaths: ["README.md"]
+    }
+  });
+
+  const packetResult = await teamExecutionModule.onCommand(
+    {
+      name: "agent-execution-packet",
+      args: {
+        mode: "draft",
+        taskId: "T8620",
+        phaseKey: "130"
+      }
+    },
+    ctx
+  );
+
+  assert.equal(packetResult.ok, true);
+  assert.equal(packetResult.data.packet.modelTier, "cheap_fast");
+  assert.equal(packetResult.data.packet.modelTierRecommendation.label, "tier_1");
+  assert.deepEqual(packetResult.data.packet.modelTierEscalationTriggers, []);
 });
 
 test("agent-execution-packet keeps path boundaries explicit when assignment metadata is absent", async () => {
@@ -352,6 +436,7 @@ test("agent-execution-packet keeps path boundaries explicit when assignment meta
   assert.deepEqual(packetResult.data.packet.readOnlyPaths, []);
   assert.deepEqual(packetResult.data.packet.forbiddenPaths, []);
   assert.deepEqual(packetResult.data.packet.requiresApprovalPaths, []);
+  assert.equal(packetResult.data.packet.modelTierRecommendation.label, "tier_2");
   assert.ok(packetResult.data.packet.stopConditions.some((item) => item.includes("explicit owned paths")));
 });
 
