@@ -12,4 +12,6 @@ Before marking a task complete:
 3. Update docs affected by behavior or process changes.
 4. Record evidence references for risky/release-impacting changes.
 5. Capture follow-up work instead of hiding residual risk.
+6. Close any open subagent sessions linked to this task using `close-subagent-session` before transitioning.
+
 

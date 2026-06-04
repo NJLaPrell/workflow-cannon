@@ -2,20 +2,36 @@ import type Sqlite from "better-sqlite3";
 import type { DashboardTeamExecutionSummary } from "../../contracts/dashboard-summary-run.js";
 import {
   TEAM_ASSIGNMENT_METADATA_SCHEMA_VERSION,
-  type TeamAssignmentOrchestrationMetadataSummary
+  type TeamAssignmentMetadataV1,
+  type TeamAssignmentOrchestrationMetadataSummary,
+  type TeamAssignmentValidationCommand,
+  type WorkerPacketModelTierLabel,
+  type WorkerPacketModelTierRecommendation
 } from "../../contracts/team-execution-assignment-metadata.v1.js";
+import type { AgentModelTier } from "../../contracts/agent-orchestration.js";
 import { readKitSqliteUserVersion } from "../../core/state/workspace-kit-sqlite.js";
 import {
   validateAssignmentMetadataV1,
   validateHandoffV2
 } from "../../core/validation/agent-orchestration/validate-orchestration-contract.js";
 import type { OrchestrationValidationIssue } from "../../core/validation/agent-orchestration/types.js";
+import { digestPayload } from "../task-engine/mutation-utils.js";
 
 export const TEAM_EXECUTION_KIT_MIN_USER_VERSION = 7;
 
 const ASSIGNMENT_STATUSES = new Set(["assigned", "submitted", "blocked", "reconciled", "cancelled"]);
 
 export type TeamAssignmentStatus = "assigned" | "submitted" | "blocked" | "reconciled" | "cancelled";
+
+export type AssignmentPacketRegistryRow = {
+  packetId: string;
+  packetDigest: string;
+  assignmentId: string;
+  executionTaskId: string;
+  body: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+};
 
 export type TeamAssignmentRow = {
   id: string;
@@ -61,8 +77,152 @@ function countStringArray(value: unknown): number {
   return value.filter((entry) => typeof entry === "string").length;
 }
 
+function countValidationCommands(value: unknown): number {
+  if (!Array.isArray(value)) {
+    return 0;
+  }
+  return value.filter((entry) => {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+      return false;
+    }
+    const command = (entry as Record<string, unknown>).command;
+    return typeof command === "string" && command.trim().length > 0;
+  }).length;
+}
+
 function readOptionalString(value: unknown): string | undefined {
   return typeof value === "string" && value.trim() ? value : undefined;
+}
+
+function readModelTierRecommendation(value: unknown): WorkerPacketModelTierRecommendation | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return undefined;
+  }
+  const record = value as Record<string, unknown>;
+  const label = readOptionalString(record.label);
+  const rationale = readOptionalString(record.rationale);
+  if (!rationale) {
+    return undefined;
+  }
+  if (label !== "tier_1" && label !== "tier_2" && label !== "tier_3") {
+    return undefined;
+  }
+  return { label, rationale };
+}
+
+function isAssignmentMetadataV1(metadata: Record<string, unknown> | null): metadata is TeamAssignmentMetadataV1 {
+  return metadata?.schemaVersion === TEAM_ASSIGNMENT_METADATA_SCHEMA_VERSION;
+}
+
+function mapAgentModelTierToPacketLabel(modelTier: AgentModelTier | undefined): WorkerPacketModelTierLabel {
+  switch (modelTier) {
+    case "cheap_fast":
+      return "tier_1";
+    case "balanced":
+      return "tier_2";
+    case "high_reasoning":
+    case "specialist":
+    case "human_review":
+    default:
+      return "tier_3";
+  }
+}
+
+function buildDefaultPacketTierRationale(metadata: TeamAssignmentMetadataV1, label: WorkerPacketModelTierLabel): string {
+  if (metadata.modelTier === "cheap_fast") {
+    return "Mechanical or low-risk worker execution can stay on the lightest packet tier.";
+  }
+  if (metadata.modelTier === "balanced") {
+    return "Bounded implementation work inside owned paths fits the default worker tier without escalation.";
+  }
+  if (metadata.modelTier === "high_reasoning") {
+    return "Cross-module or higher-risk worker execution needs the highest packet tier for deeper reasoning.";
+  }
+  if (metadata.modelTier === "specialist") {
+    return "Specialist worker execution is routed to the highest packet tier to preserve domain depth.";
+  }
+  if (metadata.modelTier === "human_review") {
+    return "Human-reviewed execution remains at the highest packet tier because it represents a release gate.";
+  }
+  if (metadata.agentDefinitionId === "task-worker" && label === "tier_2") {
+    return "Task-worker assignments default to the middle packet tier unless risk or complexity forces escalation.";
+  }
+  return "Assignment context requires the highest packet tier until a narrower worker tier is set explicitly.";
+}
+
+export function buildAssignmentPacketModelTierRecommendation(
+  metadata: Record<string, unknown> | null
+): WorkerPacketModelTierRecommendation | null {
+  if (!isAssignmentMetadataV1(metadata)) {
+    return null;
+  }
+
+  const explicit = readModelTierRecommendation(metadata.modelTierRecommendation);
+  const modelTier = readOptionalString(metadata.modelTier) as AgentModelTier | undefined;
+  const label = mapAgentModelTierToPacketLabel(modelTier);
+  const rationale =
+    readOptionalString(metadata.modelTierRationale) ??
+    explicit?.rationale ??
+    buildDefaultPacketTierRationale(metadata, label);
+
+  return { label, rationale };
+}
+
+function normalizedAssignmentPacketMetadataFields(metadata: TeamAssignmentMetadataV1): Record<string, unknown> {
+  const recommendation = buildAssignmentPacketModelTierRecommendation(metadata);
+  const normalized: Record<string, unknown> = { ...metadata };
+  delete normalized.packetDigest;
+  if (recommendation) {
+    normalized.modelTierRationale = recommendation.rationale;
+    normalized.modelTierRecommendation = recommendation;
+  }
+  const validationCommands = normalizeAssignmentValidationCommands(metadata.validationCommands);
+  if (validationCommands) {
+    normalized.validationCommands = validationCommands;
+  } else {
+    delete normalized.validationCommands;
+  }
+  return normalized;
+}
+
+export function buildAssignmentPacketDigest(input: {
+  assignmentId: string;
+  executionTaskId: string;
+  supervisorId: string;
+  workerId: string;
+  metadata: Record<string, unknown> | null;
+}): string | null {
+  if (!isAssignmentMetadataV1(input.metadata)) {
+    return null;
+  }
+
+  return digestPayload({
+    schemaVersion: 1,
+    assignmentId: input.assignmentId,
+    executionTaskId: input.executionTaskId,
+    supervisorId: input.supervisorId,
+    workerId: input.workerId,
+    metadata: normalizedAssignmentPacketMetadataFields(input.metadata)
+  });
+}
+
+export function normalizeAssignmentPacketMetadata(input: {
+  assignmentId: string;
+  executionTaskId: string;
+  supervisorId: string;
+  workerId: string;
+  metadata: Record<string, unknown> | null;
+}): Record<string, unknown> | null {
+  if (!isAssignmentMetadataV1(input.metadata)) {
+    return input.metadata;
+  }
+
+  const normalized = normalizedAssignmentPacketMetadataFields(input.metadata);
+  const packetDigest = readOptionalString(input.metadata.packetDigest) ?? buildAssignmentPacketDigest(input);
+  if (packetDigest) {
+    normalized.packetDigest = packetDigest;
+  }
+  return normalized;
 }
 
 export function summarizeAssignmentOrchestrationMetadata(
@@ -87,11 +247,16 @@ export function summarizeAssignmentOrchestrationMetadata(
     agentDefinitionId: readOptionalString(metadata.agentDefinitionId),
     agentSessionId: readOptionalString(metadata.agentSessionId),
     modelTier: readOptionalString(metadata.modelTier) as TeamAssignmentOrchestrationMetadataSummary["modelTier"],
+    modelTierRationale: readOptionalString(metadata.modelTierRationale),
+    modelTierRecommendation: buildAssignmentPacketModelTierRecommendation(metadata) ?? undefined,
+    packetId: readOptionalString(metadata.packetId),
+    packetDigest: readOptionalString(metadata.packetDigest),
     contextProfileId: readOptionalString(metadata.contextProfileId),
     accessProfileId: readOptionalString(metadata.accessProfileId),
     handoffContractId: readOptionalString(metadata.handoffContractId),
     assignmentPromptSummary: readOptionalString(metadata.assignmentPromptSummary),
     blockingPolicy: readOptionalString(metadata.blockingPolicy),
+    validationCommandCount: countValidationCommands(metadata.validationCommands),
     pathCounts: {
       ownedPaths: countStringArray(metadata.ownedPaths) + countStringArray(resources?.ownedPaths),
       readOnlyPaths: countStringArray(resources?.readOnlyPaths),
@@ -406,7 +571,14 @@ export function insertAssignment(
     now: string;
   }
 ): void {
-  const metaStr = input.metadata ? JSON.stringify(input.metadata) : null;
+  const normalizedMetadata = normalizeAssignmentPacketMetadata({
+    assignmentId: input.id,
+    executionTaskId: input.executionTaskId,
+    supervisorId: input.supervisorId,
+    workerId: input.workerId,
+    metadata: input.metadata
+  });
+  const metaStr = normalizedMetadata ? JSON.stringify(normalizedMetadata) : null;
   db.prepare(
     `INSERT INTO kit_team_assignments (
       id, execution_task_id, supervisor_id, worker_id, status,
@@ -462,6 +634,129 @@ export function listAssignments(db: Sqlite.Database, filter: ListAssignmentsFilt
     ...params
   ) as Record<string, unknown>[];
   return rows.map(mapRow);
+}
+
+export function buildAssignmentPacketRegistryId(input: {
+  assignmentId: string;
+  packetDigest: string;
+}): string {
+  return `packet:${input.assignmentId}:${input.packetDigest}`;
+}
+
+function parseJsonRecord(value: unknown): Record<string, unknown> | null {
+  if (typeof value !== "string" || !value.trim()) {
+    return null;
+  }
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? (parsed as Record<string, unknown>)
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function mapAssignmentPacketRegistryRow(r: Record<string, unknown>): AssignmentPacketRegistryRow | null {
+  const body = parseJsonRecord(r.body_json);
+  if (!body) {
+    return null;
+  }
+  return {
+    packetId: String(r.packet_id),
+    packetDigest: String(r.packet_digest),
+    assignmentId: String(r.assignment_id),
+    executionTaskId: String(r.execution_task_id),
+    body,
+    createdAt: String(r.created_at),
+    updatedAt: String(r.updated_at)
+  };
+}
+
+export function upsertAssignmentPacketRegistryRow(
+  db: Sqlite.Database,
+  input: {
+    packetId: string;
+    packetDigest: string;
+    assignmentId: string;
+    executionTaskId: string;
+    body: Record<string, unknown>;
+    now: string;
+  }
+): void {
+  db.prepare(
+    `INSERT INTO kit_assignment_packets (
+      packet_id, packet_digest, assignment_id, execution_task_id, body_json, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(packet_id) DO UPDATE SET
+      packet_digest = excluded.packet_digest,
+      assignment_id = excluded.assignment_id,
+      execution_task_id = excluded.execution_task_id,
+      body_json = excluded.body_json,
+      updated_at = excluded.updated_at`
+  ).run(
+    input.packetId,
+    input.packetDigest,
+    input.assignmentId,
+    input.executionTaskId,
+    JSON.stringify(input.body),
+    input.now,
+    input.now
+  );
+}
+
+export function getAssignmentPacketRegistryRowById(
+  db: Sqlite.Database,
+  packetId: string
+): AssignmentPacketRegistryRow | null {
+  const row = db.prepare("SELECT * FROM kit_assignment_packets WHERE packet_id = ?").get(packetId) as Record<
+    string,
+    unknown
+  > | undefined;
+  return row ? mapAssignmentPacketRegistryRow(row) : null;
+}
+
+export function getAssignmentPacketRegistryRowByDigest(
+  db: Sqlite.Database,
+  packetDigest: string
+): AssignmentPacketRegistryRow | null {
+  const row = db.prepare("SELECT * FROM kit_assignment_packets WHERE packet_digest = ?").get(packetDigest) as Record<
+    string,
+    unknown
+  > | undefined;
+  return row ? mapAssignmentPacketRegistryRow(row) : null;
+}
+
+export function normalizeAssignmentValidationCommands(
+  value: unknown
+): TeamAssignmentValidationCommand[] | undefined {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+  const normalized = value.flatMap((entry): TeamAssignmentValidationCommand[] => {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+      return [];
+    }
+    const record = entry as Record<string, unknown>;
+    const command = readOptionalString(record.command);
+    if (!command) {
+      return [];
+    }
+    const normalizedEntry: TeamAssignmentValidationCommand = { command };
+    const rationale = readOptionalString(record.rationale);
+    if (rationale) {
+      normalizedEntry.rationale = rationale;
+    }
+    const result = readOptionalString(record.result);
+    if (result) {
+      normalizedEntry.result = result;
+    }
+    if (typeof record.exitCode === "number" && Number.isInteger(record.exitCode)) {
+      normalizedEntry.exitCode = record.exitCode;
+    }
+    return [normalizedEntry];
+  });
+  return normalized.length > 0 ? normalized : undefined;
 }
 
 function emptyTeamDashboardSummary(): DashboardTeamExecutionSummary {

@@ -22,6 +22,7 @@
     "install-plugin",
     "ingest-transcripts",
     "message-subagent",
+    "prepare-release-artifacts",
     "prune-memory",
     "reconcile-assignment",
     "register-assignment",

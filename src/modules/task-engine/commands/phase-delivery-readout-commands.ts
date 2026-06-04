@@ -21,6 +21,15 @@ import { buildPhaseFocusDashboard } from "../dashboard/build-phase-focus-dashboa
 import { proposeReleaseVersion } from "../propose-release-version-runtime.js";
 import { buildPhaseServiceSyncPreflight } from "../phase-service-sync-preflight.js";
 import { buildPhaseProjectionCountGuardAsync } from "../sync-backends/git-event-log-phase-projection-guard.js";
+import { wasWorkspacePhaseRolledOut } from "../dashboard/phase-delivery-status.js";
+import {
+  buildPhaseDrainDelta,
+  buildPhaseReleaseOrchestrationState,
+  parsePhaseDrainDeltaCursor
+} from "../phase-release-orchestration-state-runtime.js";
+import { listAssignments } from "../../team-execution/assignment-store.js";
+import { runPrepareReleaseArtifactsCommand } from "../prepare-release-artifacts-runtime.js";
+import { buildReleaseCloseoutResult } from "../release-closeout-result-runtime.js";
 
 /**
  * Phase / release readout commands that need an open task store + SQLite dual reader.
@@ -63,6 +72,85 @@ export async function resolvePhaseDeliveryReadoutCommands(
       db: planning.sqliteDual.getDatabase(),
       dbPath: planning.sqliteDual.dbPath
     });
+  }
+
+  if (command.name === "phase-release-orchestration-state") {
+    const workspaceStatus = readWorkspaceStatusSnapshotFromDual(planning.sqliteDual);
+    const phaseRes = resolveCanonicalPhase({
+      effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined,
+      workspaceStatus
+    });
+    const phaseKey = phaseRes.canonicalPhaseKey;
+    const phaseState = buildPhaseReleaseOrchestrationState({
+      workspacePath: ctx.workspacePath,
+      effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined,
+      tasks: store.getActiveTasks(),
+      phaseKey,
+      currentKitPhase: workspaceStatus?.currentKitPhase ?? null,
+      rolledOut: phaseKey ? wasWorkspacePhaseRolledOut(planning.sqliteDual.getDatabase(), phaseKey) : false
+    });
+    const data: Record<string, unknown> = {
+      ...phaseState,
+      canonicalPhase: phaseRes
+    };
+    attachPolicyMeta(data, ctx, planning.sqliteDual.getPlanningGeneration());
+    return {
+      ok: true,
+      code: "phase-release-orchestration-state",
+      message: `Phase release orchestration verdict: ${phaseState.verdict}`,
+      data
+    };
+  }
+
+  if (command.name === "phase-drain-delta") {
+    const workspaceStatus = readWorkspaceStatusSnapshotFromDual(planning.sqliteDual);
+    const phaseRes = resolveCanonicalPhase({
+      effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined,
+      workspaceStatus
+    });
+    const phaseKey = phaseRes.canonicalPhaseKey;
+    const parsedCursor = Object.hasOwn(args, "cursor") ? parsePhaseDrainDeltaCursor(args.cursor) : null;
+    const delta = buildPhaseDrainDelta({
+      workspacePath: ctx.workspacePath,
+      effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined,
+      tasks: store.getActiveTasks(),
+      assignments: listAssignments(planning.sqliteDual.getDatabase(), {}),
+      phaseKey,
+      currentKitPhase: workspaceStatus?.currentKitPhase ?? null,
+      rolledOut: phaseKey ? wasWorkspacePhaseRolledOut(planning.sqliteDual.getDatabase(), phaseKey) : false,
+      planningGeneration: planning.sqliteDual.getPlanningGeneration(),
+      cursor: parsedCursor,
+      taskLimit: typeof args.taskLimit === "number" ? args.taskLimit : undefined,
+      assignmentLimit: typeof args.assignmentLimit === "number" ? args.assignmentLimit : undefined
+    });
+    const data: Record<string, unknown> = {
+      ...delta,
+      canonicalPhase: phaseRes
+    };
+    if (Object.hasOwn(args, "cursor") && parsedCursor === null) {
+      data.cursorAccepted = false;
+      data.cursorStatus = "invalid";
+      data.cursorStatusReason = "Cursor must match the phase-drain-delta schema and carry valid high-water marks.";
+      data.refreshRecommendation = {
+        mode: "full-refresh",
+        reason: "invalid-cursor",
+        ref: {
+          command: "phase-release-orchestration-state",
+          commandLine: "pnpm exec wk run phase-release-orchestration-state '{}'",
+          instructionPath: "src/modules/task-engine/instructions/phase-release-orchestration-state.md"
+        }
+      };
+    }
+    attachPolicyMeta(data, ctx, planning.sqliteDual.getPlanningGeneration());
+    return {
+      ok: true,
+      code: "phase-drain-delta",
+      message:
+        data.refreshRecommendation && (data.refreshRecommendation as { mode: string }).mode === "full-refresh"
+          ? "Phase drain delta requires a safe full refresh"
+          : `Phase drain delta returned ${delta.changedTasks.length} task change(s) and ${delta.changedAssignments.length} assignment change(s)`,
+      data
+    };
   }
 
   if (command.name === "propose-release-version") {
@@ -296,6 +384,55 @@ export async function resolvePhaseDeliveryReadoutCommands(
       code: "release-evidence-manifest",
       message: "Built release evidence manifest",
       data
+    };
+  }
+
+  if (command.name === "prepare-release-artifacts") {
+    const result = await runPrepareReleaseArtifactsCommand(ctx, args as Record<string, unknown>);
+    if (result.ok && result.data) {
+      attachPolicyMeta(result.data, ctx, planning.sqliteDual.getPlanningGeneration());
+    }
+    return result;
+  }
+
+  if (command.name === "release-closeout-result") {
+    const argObj = args as Record<string, unknown>;
+    const workspaceStatus = readWorkspaceStatusSnapshotFromDual(planning.sqliteDual);
+    const phaseRes = resolveCanonicalPhase({
+      effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined,
+      workspaceStatus
+    });
+    const phaseKey =
+      typeof argObj.phaseKey === "string" && argObj.phaseKey.trim().length > 0
+        ? argObj.phaseKey.trim()
+        : phaseRes.canonicalPhaseKey;
+    const result = buildReleaseCloseoutResult({
+      workspacePath: ctx.workspacePath,
+      tasks: store.getActiveTasks(),
+      commandArgs: argObj,
+      phaseKey,
+      planningGeneration: planning.sqliteDual.getPlanningGeneration()
+    });
+    if (!result.ok) {
+      return {
+        ok: false,
+        code: result.code,
+        message: result.message,
+        data: result.details ? { details: result.details, canonicalPhase: phaseRes } : { canonicalPhase: phaseRes },
+        remediation: { instructionPath: "src/modules/task-engine/instructions/release-closeout-result.md" }
+      };
+    }
+    const data: Record<string, unknown> = {
+      ...result.packet,
+      canonicalPhase: phaseRes
+    };
+    attachPolicyMeta(data, ctx, planning.sqliteDual.getPlanningGeneration());
+    return {
+      ok: true,
+      code: "release-closeout-result",
+      message: `Built final release closeout result for phase ${phaseKey ?? "unknown"}`,
+      data,
+      remediation: { instructionPath: "src/modules/task-engine/instructions/release-closeout-result.md" }
     };
   }
 

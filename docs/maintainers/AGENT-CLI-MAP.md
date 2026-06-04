@@ -374,6 +374,7 @@ Non-sensitive commands (no `policyApproval` unless you added `extraSensitiveModu
 workspace-kit run list-tasks '{}'
 workspace-kit run get-next-actions '{}'
 workspace-kit run agent-bootstrap '{}'
+workspace-kit run phase-release-orchestration-state '{}'
 workspace-kit run queue-health '{}'
 workspace-kit run get-task '{"taskId":"T285"}'
 workspace-kit run list-tasks '{"type":"improvement","phase":"Phase 16 - Maintenance and stability"}'
@@ -416,6 +417,8 @@ workspace-kit run sync-effective-behavior-cursor-rule '{}'
 workspace-kit run sync-effective-behavior-cursor-rule '{"dryRun":true}'
 workspace-kit run list-subagents '{}'
 workspace-kit run list-assignments '{}'
+workspace-kit run agent-execution-packet '{"assignmentId":"asg-123"}'
+workspace-kit run assignment-reconciliation-preflight '{"assignmentId":"asg-123","supervisorId":"alice"}'
 workspace-kit run get-subagent '{"subagentId":"researcher"}'
 workspace-kit run list-subagent-sessions '{}'
 workspace-kit run get-subagent-session '{"sessionId":"sess-20260404-1"}'
@@ -424,7 +427,7 @@ workspace-kit doctor
 
 **Subagents (read path)** (`list-subagents`, `get-subagent`, `list-subagent-sessions`, `get-subagent-session`) are **Tier C** when the manifest marks them non-sensitive; mutating subagent commands are **Tier B** (`subagents.persist`). See runbook `docs/maintainers/runbooks/subagent-registry.md`.
 
-**Team execution (read path)** (`list-assignments`) is **Tier C**; mutating assignment commands are **Tier B** (`team-execution.persist`). See runbook `docs/maintainers/runbooks/team-execution-supervisor.md`.
+**Team execution (read path)** (`list-assignments`, `agent-execution-packet`, `assignment-reconciliation-preflight`) is **Tier C**; mutating assignment commands are **Tier B** (`team-execution.persist`). Use `agent-execution-packet` when a worker needs bounded task context from one assignment without reading the full queue, and `assignment-reconciliation-preflight` when a supervisor needs a bounded handoff verdict before reconciling. See runbook `docs/maintainers/runbooks/team-execution-supervisor.md`.
 
 **Agent behavior** (`list-behavior-profiles`, `get-behavior-profile`, `resolve-behavior-profile`, `set-active-behavior-profile`, `create-behavior-profile`, `update-behavior-profile`, `delete-behavior-profile`, `diff-behavior-profiles`, `explain-behavior-profiles`, `interview-behavior-profile`, `sync-effective-behavior-cursor-rule`) are **Tier C**: advisory interaction posture only; **subordinate** to PRINCIPLES and policy. They persist under `.workspace-kit/agent-behavior/` (JSON) or unified SQLite (`module_id` `agent-behavior`) when `tasks.persistenceBackend` is `sqlite`. **`sync-effective-behavior-cursor-rule`** writes a generated **`.cursor/rules/*.mdc`** summary (also auto-scheduled after common profile / guidance mutators; fail-open).
 

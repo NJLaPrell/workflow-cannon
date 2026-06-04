@@ -149,6 +149,30 @@
   },
   {
     "moduleId": "task-engine",
+    "name": "phase-drain-delta",
+    "file": "phase-drain-delta.md",
+    "description": "Generation-aware delta for phase drain refreshes with bounded changed task and assignment slices.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "phase-release-orchestration-state",
+    "file": "phase-release-orchestration-state.md",
+    "description": "Classify current phase release path into one of six bounded verdicts with reference-first next actions.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "release-closeout-result",
+    "file": "release-closeout-result.md",
+    "description": "Build the final placeholder-free phase release result packet with concrete evidence refs and packet sequence.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
     "name": "phase-delivery-preflight",
     "file": "phase-delivery-preflight.md",
     "description": "Read-only audit for phase task PR/merge/check evidence or explicit delivery waivers.",
@@ -291,7 +315,7 @@
     "moduleId": "task-engine",
     "name": "derive-publish-artifacts",
     "file": "derive-publish-artifacts.md",
-    "description": "Derive publishArtifacts fragment for release-evidence-manifest from gh/npm signals.",
+    "description": "Derive publishArtifacts plus bounded release readiness checks for release-evidence-manifest from changelog/schema/gh/npm signals.",
     "defaultResponseTemplateId": "default",
     "policySensitivity": "non-sensitive"
   },
@@ -310,6 +334,15 @@
     "description": "Build a machine-readable release evidence manifest for phase closeout.",
     "defaultResponseTemplateId": "default",
     "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "prepare-release-artifacts",
+    "file": "prepare-release-artifacts.md",
+    "description": "Preview or apply the deterministic release artifact update script and emit release-evidence refs.",
+    "policyOperationId": "task-engine.prepare-release-artifacts",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive-with-dryrun"
   },
   {
     "moduleId": "task-engine",
@@ -1424,7 +1457,23 @@
     "moduleId": "team-execution",
     "name": "list-assignments",
     "file": "list-assignments.md",
-    "description": "List team assignments in kit SQLite (user_version 7+) with optional filters.",
+    "description": "List team assignments in kit SQLite with packet audit and stale-context metadata when present.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "team-execution",
+    "name": "agent-execution-packet",
+    "file": "agent-execution-packet.md",
+    "description": "Build a bounded worker execution packet for one assignment without reading the full queue.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "team-execution",
+    "name": "assignment-reconciliation-preflight",
+    "file": "assignment-reconciliation-preflight.md",
+    "description": "Classify a worker handoff into a bounded reconciliation verdict packet without expanding raw diffs.",
     "defaultResponseTemplateId": "default",
     "policySensitivity": "non-sensitive"
   },
@@ -1432,7 +1481,7 @@
     "moduleId": "team-execution",
     "name": "register-assignment",
     "file": "register-assignment.md",
-    "description": "Create a supervisor/worker assignment row linked to an execution task id.",
+    "description": "Create a supervisor/worker assignment row and persist bounded packet metadata when available.",
     "policyOperationId": "team-execution.persist",
     "defaultResponseTemplateId": "default",
     "policySensitivity": "sensitive"

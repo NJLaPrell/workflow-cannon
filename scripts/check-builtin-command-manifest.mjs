@@ -35,6 +35,7 @@ const KNOWN_POLICY_OPERATION_IDS = new Set([
   "approvals.review-item",
   "improvement.generate-recommendations",
   "improvement.ingest-transcripts",
+  "task-engine.prepare-release-artifacts",
   "task-engine.backfill-task-feature-links",
   "task-engine.export-feature-taxonomy-json",
   "task-engine.agent-sessions.persist",
@@ -116,10 +117,11 @@ for (const row of manifest) {
       id !== "skills.apply-skill" &&
       id !== "planning.draft-plan-artifact" &&
       id !== "planning.review-plan-artifact" &&
-      id !== "planning.finalize-plan-to-phase"
+      id !== "planning.finalize-plan-to-phase" &&
+      id !== "task-engine.prepare-release-artifacts"
     ) {
       fail(
-        `Command '${row.name}': sensitive-with-dryrun is only valid for doc commands, skills.apply-skill, planning.draft-plan-artifact, planning.review-plan-artifact, and planning.finalize-plan-to-phase (matches policy.ts dry-run / Tier C exceptions).`
+        `Command '${row.name}': sensitive-with-dryrun is only valid for doc commands, skills.apply-skill, planning.draft-plan-artifact, planning.review-plan-artifact, planning.finalize-plan-to-phase, and task-engine.prepare-release-artifacts (matches policy.ts dry-run / Tier C exceptions).`
       );
     }
   }

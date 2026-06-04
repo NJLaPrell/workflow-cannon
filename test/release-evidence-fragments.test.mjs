@@ -120,18 +120,103 @@ test("deriveValidationsFragment uses gates output file when present", () => {
   assert.equal(fragment.validations[0].source, "saved");
 });
 
-test("derivePublishArtifactsFragment shape with mocked collectors", () => {
-  const fragment = derivePublishArtifactsFragment({
-    workspacePath: process.cwd(),
-    version: "0.97.0",
-    packageName: "@workflow-cannon/workspace-kit",
-    collectors: {
-      readGhRelease: () => ({ url: "https://github.com/example/releases/tag/v0.97.0", tagName: "v0.97.0" }),
-      readNpmVersion: () => "0.97.0"
-    }
-  });
-  assert.equal(fragment.publishArtifacts.length, 3);
-  assert.equal(fragment.degraded.length, 0);
+test("derivePublishArtifactsFragment shape with mocked collectors", async () => {
+  const workspace = await mkdtemp(path.join(os.tmpdir(), "wk-dpa-ok-"));
+  try {
+    await mkdir(path.join(workspace, "docs", "maintainers"), { recursive: true });
+    await mkdir(path.join(workspace, "schemas"), { recursive: true });
+    await writeFile(
+      path.join(workspace, "CHANGELOG.md"),
+      "# Changelog\n\n## [0.97.0] - 2026-04-28\n\n- Test release entry.\n",
+      "utf8"
+    );
+    await writeFile(
+      path.join(workspace, "docs", "maintainers", "CHANGELOG.md"),
+      "# Changelog\n\n## [0.97.0] - 2026-04-28\n\n- Canonical test release entry.\n",
+      "utf8"
+    );
+    await writeFile(
+      path.join(workspace, "schemas", "task-engine-run-contracts.schema.json"),
+      JSON.stringify({ properties: { packageVersion: { const: "0.97.0" } } }),
+      "utf8"
+    );
+    await writeFile(
+      path.join(workspace, "schemas", "pilot-run-args.snapshot.json"),
+      JSON.stringify({ sourceSchemaPackageVersion: "0.97.0" }),
+      "utf8"
+    );
+
+    const fragment = derivePublishArtifactsFragment({
+      workspacePath: workspace,
+      version: "0.97.0",
+      packageName: "@workflow-cannon/workspace-kit",
+      collectors: {
+        readGhRelease: () => ({ url: "https://github.com/example/releases/tag/v0.97.0", tagName: "v0.97.0" }),
+        readGitTag: () => "abc123",
+        readNpmVersion: () => "0.97.0"
+      }
+    });
+    assert.equal(fragment.publishArtifacts.length, 3);
+    assert.equal(fragment.degraded.length, 0);
+    assert.ok(fragment.readinessChecks.some((check) => check.code === "maintainer-changelog-entry-present"));
+    assert.ok(fragment.readinessChecks.some((check) => check.code === "task-engine-run-contracts-schema-aligned"));
+    assert.ok(fragment.readinessChecks.some((check) => check.code === "npm-version-already-published" && check.blocking === false));
+  } finally {
+    await rm(workspace, { recursive: true, force: true });
+  }
+});
+
+test("derivePublishArtifactsFragment lists changelog and schema mirror problems explicitly", async () => {
+  const workspace = await mkdtemp(path.join(os.tmpdir(), "wk-dpa-"));
+  try {
+    await mkdir(path.join(workspace, "schemas"), { recursive: true });
+    await writeFile(
+      path.join(workspace, "CHANGELOG.md"),
+      "# Changelog\n\n## [Unreleased]\n",
+      "utf8"
+    );
+    await writeFile(
+      path.join(workspace, "schemas", "task-engine-run-contracts.schema.json"),
+      JSON.stringify({ properties: { packageVersion: { const: "0.96.0" } } }),
+      "utf8"
+    );
+    await writeFile(
+      path.join(workspace, "schemas", "pilot-run-args.snapshot.json"),
+      JSON.stringify({ sourceSchemaPackageVersion: "0.95.0" }),
+      "utf8"
+    );
+
+    const fragment = derivePublishArtifactsFragment({
+      workspacePath: workspace,
+      version: "0.97.0",
+      packageName: "@workflow-cannon/workspace-kit",
+      collectors: {
+        readGhRelease: () => null,
+        readGitTag: () => null,
+        readNpmVersion: () => null
+      }
+    });
+
+    const failingCodes = fragment.readinessChecks.filter((check) => check.blocking).map((check) => check.code);
+    assert.deepEqual(
+      failingCodes.sort(),
+      [
+        "maintainer-changelog-entry-missing",
+        "pilot-run-args-snapshot-mismatch",
+        "root-changelog-entry-missing",
+        "task-engine-run-contracts-schema-mismatch"
+      ]
+    );
+    assert.ok(
+      fragment.readinessChecks.some(
+        (check) =>
+          check.code === "pilot-run-args-snapshot-mismatch" &&
+          check.refs.some((ref) => ref.value === "node scripts/refresh-pilot-run-args-snapshot.mjs")
+      )
+    );
+  } finally {
+    await rm(workspace, { recursive: true, force: true });
+  }
 });
 
 test("buildReleaseEvidenceManifest succeeds from merged partial args", () => {
@@ -149,11 +234,13 @@ test("buildReleaseEvidenceManifest succeeds from merged partial args", () => {
       releaseNotes: { source: "json", entries: ["note"] },
       followUpScan: { scannedAt: "2026-04-28T07:00:00.000Z", rationale: "none" },
       followUpTasks: [],
-      validations: [{ command: "pnpm run check", conclusion: "success" }]
+      validations: [{ command: "pnpm run check", conclusion: "success" }],
+      readinessChecks: [{ code: "root-changelog-entry-present", state: "pass", blocking: false }]
     }
   });
   assert.equal(result.ok, true);
   assert.equal(result.manifest.validations.length, 1);
+  assert.equal(result.manifest.readinessChecks.length, 1);
 });
 
 test("taskEngineModule release-evidence-manifest merge mode end-to-end", async () => {

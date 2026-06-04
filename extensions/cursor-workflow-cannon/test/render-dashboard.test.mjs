@@ -215,9 +215,9 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.ok(html.indexOf("dash-agent-status-banner") < html.indexOf("wc-cae-readiness"));
   assert.ok(html.indexOf("wc-rec-next") < html.indexOf("wc-cae-readiness"));
   assert.ok(html.indexOf("wc-tab-bar") < html.indexOf("wc-cae-readiness"));
-  assert.match(html, /<b>WC Agent is:<\/b> <span class="dash-agent-status-label">Awaiting Instruction<\/span>/);
-  assert.match(html, /dash-agent-row-list/);
-  assert.match(html, /aria-label="Awaiting Instruction, Current agent"/);
+  assert.match(html, /dash-agent-activity-board/);
+  assert.match(html, /Unknown · updated now/);
+  assert.match(html, /No agent activity summary is available/);
   const overviewPanelIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="overview"');
   const planningPanelIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="planning"');
   const taskEnginePanelIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="task-engine"');
@@ -269,8 +269,6 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.doesNotMatch(html, /Planning generation/i);
   assert.doesNotMatch(html, /expectedPlanningGeneration/);
   assert.match(html, /dash-quick-actions/);
-  assert.match(html, /data-wc-action="add-wishlist-item"/);
-  assert.match(html, />Add Wishlist Item<\/button>/);
   assert.doesNotMatch(html, /data-wc-action="collaboration-hub"/);
   assert.doesNotMatch(html, />Collaboration profiles<\/button>/);
   assert.doesNotMatch(html, /data-wc-action="transcript-churn-research-chat"[\s\S]*>Research churn<\/button>/);
@@ -1113,6 +1111,32 @@ test("renderDashboardRootInnerHtml renders escaped WC Agent status banner from a
         updatedAt: "2026-05-06T00:00:00.000Z",
         taskId: "T123"
       },
+      agentActivitySummary: {
+        schemaVersion: 1,
+        generatedAt: "2026-05-06T00:00:00.000Z",
+        source: "derived_only",
+        activeCount: 1,
+        staleCount: 0,
+        needsAttentionCount: 0,
+        main: null,
+        active: [],
+        needsAttention: [],
+        inferredFallback: {
+          schemaVersion: 1,
+          source: "derived",
+          kind: "working_task",
+          label: "Working on Task T123 <script>",
+          confidence: "medium",
+          updatedAt: "2026-05-06T00:00:00.000Z",
+          taskId: "T123"
+        },
+        sourceMap: {
+          liveActivityCount: 0,
+          teamExecutionCount: 0,
+          subagentSessionCount: 0,
+          derivedFallbackUsed: true
+        }
+      },
       stateSummary: { proposed: 0, ready: 0, in_progress: 1, blocked: 0, completed: 0 },
       proposedImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
       proposedExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
@@ -1130,13 +1154,12 @@ test("renderDashboardRootInnerHtml renders escaped WC Agent status banner from a
       dependencyOverview: deliverTestDepOverview
     }
   });
-  assert.match(html, /data-agent-status-kind="working_task"/);
+  assert.match(html, /dash-agent-activity-row--fallback/);
   assert.match(html, /Working on Task T123 &lt;script&gt;/);
   assert.match(html, /dash-agent-row/);
-  assert.match(html, /aria-label="Working on Task T123 &lt;script&gt;, Current agent"/);
-  assert.match(html, /T123/);
+  assert.match(html, /aria-label="Inferred agent activity"/);
+  assert.match(html, /Task T123/);
   assert.doesNotMatch(html, /<script>/);
-  assert.ok(html.indexOf("WC Agent is:") < html.indexOf("Current Phase"));
 });
 
 test("renderDashboardRootInnerHtml renders many agent and subagent rows", () => {
@@ -1152,6 +1175,144 @@ test("renderDashboardRootInnerHtml renders many agent and subagent rows", () => 
         updatedAt: "2026-05-06T00:00:00.000Z",
         taskId: "T700",
         phaseKey: "95"
+      },
+      agentActivitySummary: {
+        schemaVersion: 1,
+        generatedAt: "2026-05-06T00:00:00.000Z",
+        source: "mixed",
+        activeCount: 3,
+        staleCount: 0,
+        needsAttentionCount: 0,
+        main: {
+          schemaVersion: 1,
+          rowId: "main-agent",
+          displayName: "Main Agent",
+          role: "orchestrator",
+          source: "live_activity",
+          sourceConfidence: "high",
+          status: "working_task",
+          statusLabel: "Working on Task T700",
+          work: {
+            taskId: "T700",
+            title: "Working on Task T700",
+            command: null,
+            phaseKey: "95",
+            taskStatus: "in_progress",
+            assignmentId: null,
+            sessionId: null,
+            currentStep: null
+          },
+          refs: {
+            activityId: "act-1",
+            agentId: "main-agent",
+            sessionId: null,
+            assignmentId: null,
+            agentDefinitionId: null,
+            subagentDefinitionId: null,
+            taskId: "T700",
+            prNumber: null
+          },
+          freshness: {
+            updatedAt: "2026-05-06T00:00:00.000Z",
+            startedAt: null,
+            expiresAt: null,
+            state: "fresh"
+          },
+          attention: {
+            state: "none",
+            message: null
+          }
+        },
+        active: [
+          {
+            schemaVersion: 1,
+            rowId: "subagent-S1",
+            displayName: "test-subagent",
+            role: "subagent",
+            source: "subagent_registry",
+            sourceConfidence: "high",
+            status: "working_task",
+            statusLabel: "Working on subagent task",
+            work: {
+              taskId: "T702",
+              title: "Subagent Task Title",
+              command: null,
+              phaseKey: null,
+              taskStatus: "in_progress",
+              assignmentId: null,
+              sessionId: "S1",
+              currentStep: null
+            },
+            refs: {
+              activityId: null,
+              agentId: null,
+              sessionId: "S1",
+              assignmentId: null,
+              agentDefinitionId: null,
+              subagentDefinitionId: "test-subagent",
+              taskId: "T702",
+              prNumber: null
+            },
+            freshness: {
+              updatedAt: "2026-05-06T00:02:00.000Z",
+              startedAt: null,
+              expiresAt: null,
+              state: "fresh"
+            },
+            attention: {
+              state: "none",
+              message: null
+            }
+          },
+          {
+            schemaVersion: 1,
+            rowId: "team-T701",
+            displayName: "tab-2",
+            role: "task_worker",
+            source: "team_execution",
+            sourceConfidence: "high",
+            status: "working_task",
+            statusLabel: "Assigned team task",
+            work: {
+              taskId: "T701",
+              title: "Review dashboard rows",
+              command: null,
+              phaseKey: null,
+              taskStatus: "in_progress",
+              assignmentId: "T701",
+              sessionId: null,
+              currentStep: null
+            },
+            refs: {
+              activityId: null,
+              agentId: null,
+              sessionId: null,
+              assignmentId: "T701",
+              agentDefinitionId: null,
+              subagentDefinitionId: null,
+              taskId: "T701",
+              prNumber: null
+            },
+            freshness: {
+              updatedAt: "2026-05-06T00:01:00.000Z",
+              startedAt: null,
+              expiresAt: null,
+              state: "fresh"
+            },
+            attention: {
+              state: "none",
+              message: null
+            }
+          }
+        ],
+        needsAttention: [],
+        inferredFallback: null,
+        sourceMap: {
+          liveActivityCount: 1,
+          teamExecutionCount: 1,
+          subagentSessionCount: 1,
+          derivedFallbackUsed: false
+        }
       },
       teamExecution: {
         schemaVersion: 1,
@@ -1207,8 +1368,8 @@ test("renderDashboardRootInnerHtml renders many agent and subagent rows", () => 
   assert.match(html, /tab-2/);
   assert.match(html, /Review dashboard rows/);
   assert.match(html, /test-subagent/);
-  assert.match(html, /dash-agent-row--subagent/);
-  assert.match(html, /aria-label="test-subagent, Subagent"/);
+  assert.match(html, /dash-agent-activity-row--active/);
+  assert.match(html, /aria-label="test-subagent, Working, Active Agent"/);
 });
 
 test("renderDashboardRootInnerHtml team execution empty state offers create assignment", () => {
@@ -2142,8 +2303,8 @@ test("renderDashboardRootInnerHtml proposed execution rows expose accept action"
   assert.equal((rowHtml.match(/class="dash-row-actions/g) ?? []).length, 1);
   assert.match(rowHtml, /dash-row-actions-grid/);
   const actionOrder = [
-    "assign-phase",
     "task-detail",
+    "assign-phase",
     "task-comments-view",
     "task-comment-add",
     "proposed-exe-accept",
@@ -2235,6 +2396,32 @@ test("renderDashboardRootInnerHtml renders human gates section with resume actio
         updatedAt: "2026-01-01T00:00:00.000Z",
         taskId: "T900"
       },
+      agentActivitySummary: {
+        schemaVersion: 1,
+        generatedAt: "2026-01-01T00:00:00.000Z",
+        source: "derived_only",
+        activeCount: 1,
+        staleCount: 0,
+        needsAttentionCount: 0,
+        main: null,
+        active: [],
+        needsAttention: [],
+        inferredFallback: {
+          schemaVersion: 1,
+          source: "derived",
+          kind: "awaiting_human_gate",
+          label: "Awaiting review · T900",
+          confidence: "high",
+          updatedAt: "2026-01-01T00:00:00.000Z",
+          taskId: "T900"
+        },
+        sourceMap: {
+          liveActivityCount: 0,
+          teamExecutionCount: 0,
+          subagentSessionCount: 0,
+          derivedFallbackUsed: true
+        }
+      },
       blockingAnalysis: [],
       dependencyOverview: deliverTestDepOverview
     }
@@ -2245,7 +2432,7 @@ test("renderDashboardRootInnerHtml renders human gates section with resume actio
   assert.match(html, /Awaiting review/);
   assert.match(html, /data-wc-action="human-gate-resume-ready"/);
   assert.match(html, /data-wc-action="human-gate-resume-work"/);
-  assert.match(html, /data-agent-status-kind="awaiting_human_gate"/);
+  assert.match(html, /dash-agent-activity-row--fallback/);
   assert.match(html, /Awaiting review · T900/);
 });
 
@@ -2412,55 +2599,51 @@ test("renderDashboardRootInnerHtml merges ready improvement and execution rollup
   assert.match(html, /T2/);
 });
 
-test("buildPhaseCompleteReleaseChatPrompt is compact agent-oriented closeout seed", () => {
+test("buildPhaseCompleteReleaseChatPrompt starts with orchestration-state and stays packet-first", () => {
   const p = buildPhaseCompleteReleaseChatPrompt("Phase 64", {
     phaseKey: "64",
-    workspaceCurrentPhase: "64",
-    workspaceNextPhase: "65",
-    seededTaskIds: ["T900", "T901"],
+    currentKitPhase: "64",
+    nextKitPhase: "65",
     scope: "current"
   });
-  assert.match(p, /^## Complete & Release/);
-  assert.match(p, /target phaseKey: 64/);
-  assert.match(p, /workspace current \/ next: 64 \/ 65/);
-  assert.match(p, /scope: current/);
+  assert.match(p, /^phase-release-orchestration-state\n/);
+  assert.match(p, /target phaseKey: `64`/);
+  assert.match(p, /workspace current \/ next: `64` \/ `65`/);
+  assert.match(p, /scope: `current`/);
   assert.match(p, /integration branch: `release\/phase-64`/);
-  assert.match(p, /seeded ready ids \(preview\): T900, T901/);
-  assert.doesNotMatch(p, /mismatch:/);
   assert.match(p, /@\.ai\/playbooks\/phase-closeout-and-release\.md/);
   assert.match(p, /@\.ai\/playbooks\/task-to-phase-branch\.md/);
   assert.match(p, /@\.ai\/AGENT-CLI-MAP\.md/);
-  assert.match(p, /improvement-triage-top-three/);
-  assert.match(p, /wishlist-intake-to-execution/);
-  assert.match(p, /phase-closeout-readiness/);
-  assert.match(p, /phase-closeout-ordering-recovery/);
-  assert.match(p, /wishlist_intake/);
-  assert.match(p, /task-engine-run-contracts\.schema\.json/);
-  assert.match(p, /publish:npm/);
-  assert.match(p, /Handoff if blocked/);
+  assert.match(p, /agent-execution-packet/);
+  assert.match(p, /Tier A\/B `wk run` mutations still require JSON `policyApproval`/);
+  assert.match(p, /Packet-first rollout is activation-gated/);
+  assert.match(p, /equivalent operator feature flag\/rollout note explicitly enables `phase-release-orchestration-state` packets/);
+  assert.match(p, /If packet-first is not explicitly activated for the run, use the existing full-refresh\/manual discovery path/);
+  assert.match(p, /Disable packet-first for this run if `phase-release-orchestration-state` is unavailable/);
+  assert.match(p, /returns `ok: false`/);
+  assert.match(p, /omits `data\.verdict`, `refs\.commands`, or `refs\.instructions`/);
+  assert.match(p, /stale planning\/task-state evidence/);
+  assert.match(p, /`phase-drain-delta` rejects, misses, or stales its cursor/);
+  assert.match(p, /`refreshRecommendation\.mode: "full-refresh"`/);
+  assert.match(p, /pnpm exec wk run phase-release-orchestration-state '\{\}'/);
+  assert.match(p, /pnpm exec wk run phase-closeout-readiness '\{"phaseKey":"<N>"\}'/);
+  assert.match(p, /pnpm exec wk run --json/);
+  assert.match(p, /roll back the activation by reverting this prompt's packet-first activation\/fallback sections/);
+  assert.match(p, /disable or revert the packet commands that introduced it \(`phase-release-orchestration-state`, `phase-drain-delta`, or `agent-execution-packet`\)/);
+  assert.match(p, /Phase 1 plan review warnings remain, refine\/review the Phase 1 plan first/);
+  assert.doesNotMatch(p, /^## Complete & Release/);
 });
 
-test("buildPhaseCompleteReleaseChatPrompt includes ordering risk when later phases delivered", () => {
-  const p = buildPhaseCompleteReleaseChatPrompt("Phase 118", {
-    phaseKey: "118",
-    workspaceCurrentPhase: "118",
-    laterDeliveredPhases: "119,120"
-  });
-  assert.match(p, /ordering risk/);
-  assert.match(p, /119,120/);
-  assert.match(p, /phase-closeout-ordering-recovery/);
-});
-
-test("buildPhaseCompleteReleaseChatPrompt warns when target differs from workspace current", () => {
+test("buildPhaseCompleteReleaseChatPrompt keeps bucket scope in context", () => {
   const p = buildPhaseCompleteReleaseChatPrompt("Phase 100", {
     phaseKey: "100",
-    workspaceCurrentPhase: "98",
-    workspaceNextPhase: "99",
+    currentKitPhase: "98",
+    nextKitPhase: "99",
     scope: "bucket"
   });
-  assert.match(p, /\*\*mismatch:\*\*/);
-  assert.match(p, /target phaseKey 100 ≠ workspace current 98/);
-  assert.match(p, /scope: bucket/);
+  assert.match(p, /scope: `bucket`/);
+  assert.match(p, /workspace current \/ next: `98` \/ `99`/);
+  assert.match(p, /No safe release path or no phase work: stop and report instead of improvising/);
 });
 
 test("buildPhaseCompleteReleaseChatPrompt without phaseKey uses placeholders", () => {
@@ -2796,7 +2979,7 @@ function readinessDashboardPayload(dataOverrides = {}) {
 
 test("Phase Readiness shows phase-scoped ready counts not workspace ready total", () => {
   const html = renderDashboardRootInnerHtml(readinessDashboardPayload());
-  assert.match(html, /Tasks ready to pick up/);
+  assert.match(html, /Tasks assigned to this phase/);
   assert.match(html, /5 ready · 2 in progress/);
   assert.doesNotMatch(html, /71 ready/);
 });
@@ -2826,7 +3009,7 @@ test("Phase Readiness score is 100% when phase delivery has started", () => {
   assert.match(readiness, /wc-cae-score-badge[\s\S]*>100<span>%<\/span>/);
   assert.match(readiness, /Work in this phase has already started\. Readiness stays at 100%\./);
   assert.match(readiness, /3 done · work in progress/);
-  assert.match(readiness, /wc-cae-check-ok[\s\S]*Tasks ready to pick up/);
+  assert.match(readiness, /wc-cae-check-ok[\s\S]*Tasks assigned to this phase/);
 });
 
 test("Phase Readiness score equals passed checks as equal shares before delivery starts", () => {
@@ -2859,8 +3042,8 @@ test("Phase Readiness score equals passed checks as equal shares before delivery
   );
   const readiness =
     html.match(/<section class="dash-card wc-cae-readiness[\s\S]*?<\/section>/)?.[0] ?? "";
-  assert.match(readiness, /wc-cae-score-badge[\s\S]*>60<span>%<\/span>/);
-  assert.match(readiness, /wc-cae-check-warn[\s\S]*Tasks ready to pick up[\s\S]*wc-context-help/);
+  assert.match(readiness, /wc-cae-score-badge[\s\S]*>80<span>%<\/span>/);
+  assert.match(readiness, /wc-cae-check-ok[\s\S]*Tasks assigned to this phase/);
   assert.match(readiness, /wc-cae-check-warn[\s\S]*No open decisions[\s\S]*wc-context-help/);
   assert.match(readiness, /wc-cae-check-ok[\s\S]*No workspace blockers/);
   assert.doesNotMatch(readiness, /Delivery work started/);
@@ -3093,7 +3276,7 @@ test("Phase Readiness Complete & Release disabled before readiness reaches 100%"
         releaseReadyPercent: 40,
         progressPercent: 40,
         remainingCount: 6,
-        terminalCount: 4,
+        terminalCount: 0,
         checkedTaskCount: 10,
         queue: { ready: 0, proposed: 2, blocked: 0, inProgress: 0, research: 0 },
         segments: {

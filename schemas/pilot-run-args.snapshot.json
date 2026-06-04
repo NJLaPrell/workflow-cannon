@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "sourceSchemaPackageVersion": "0.99.26",
+  "sourceSchemaPackageVersion": "0.99.27",
   "pilotCommands": [
     "accept-improvement",
     "add-dependency",
@@ -22,7 +22,6 @@
     "classify-kit-state",
     "clear-agent-activity",
     "clear-task-phase",
-    "close-agent-session",
     "complete-task",
     "completion-preflight",
     "convert-phase-note-to-task",
@@ -42,8 +41,6 @@
     "explain-task-engine-model",
     "export-feature-taxonomy-json",
     "export-workspace-status",
-    "get-agent-definition",
-    "get-agent-session",
     "get-blocked-summary",
     "get-dependency-graph",
     "get-kit-persistence-map",
@@ -63,8 +60,6 @@
     "improvement-dedupe-explain",
     "improvement-workflow-summary",
     "install-git-hooks",
-    "list-agent-definitions",
-    "list-agent-sessions",
     "list-components",
     "list-features",
     "list-module-states",
@@ -73,12 +68,12 @@
     "list-tasks",
     "list-wishlist",
     "migrate-task-persistence",
-    "open-agent-session",
     "pause-task",
     "persist-planning-execution-drafts",
     "phase-closeout-readiness",
     "phase-delivery-preflight",
     "phase-focus-dashboard",
+    "phase-release-orchestration-state",
     "phase-status",
     "planning-state-migrate-baseline",
     "propose-release-version",
@@ -87,7 +82,6 @@
     "queue-health",
     "rebuild-task-state-cache",
     "recommend-validation",
-    "register-agent-definition",
     "reject-improvement",
     "release-evidence-manifest",
     "release-status",
@@ -98,7 +92,6 @@
     "report-defect",
     "resolve-maintainer-delivery-policy",
     "resolve-task-intake-policy",
-    "retire-agent-definition",
     "review-planning-execution-drafts",
     "run-transition",
     "set-agent-activity",
@@ -125,8 +118,6 @@
     "task-sync-verify",
     "unblock-task",
     "uninstall-git-hooks",
-    "update-agent-definition",
-    "update-agent-session",
     "update-phase-note",
     "update-task",
     "update-wishlist",
@@ -557,28 +548,6 @@
       },
       "additionalProperties": true
     },
-    "close-agent-session": {
-      "type": "object",
-      "required": [
-        "sessionId"
-      ],
-      "properties": {
-        "sessionId": {
-          "type": "string",
-          "minLength": 1
-        },
-        "expectedPlanningGeneration": {
-          "type": [
-            "integer",
-            "string"
-          ]
-        },
-        "policyApproval": {
-          "type": "object"
-        }
-      },
-      "additionalProperties": true
-    },
     "complete-task": {
       "type": "object",
       "required": [
@@ -860,22 +829,6 @@
       },
       "additionalProperties": true
     },
-    "get-agent-definition": {
-      "type": "object"
-    },
-    "get-agent-session": {
-      "type": "object",
-      "required": [
-        "sessionId"
-      ],
-      "properties": {
-        "sessionId": {
-          "type": "string",
-          "minLength": 1
-        }
-      },
-      "additionalProperties": false
-    },
     "get-blocked-summary": {
       "type": "object"
     },
@@ -1048,26 +1001,6 @@
     "install-git-hooks": {
       "type": "object"
     },
-    "list-agent-definitions": {
-      "type": "object"
-    },
-    "list-agent-sessions": {
-      "type": "object",
-      "properties": {
-        "agentId": {
-          "type": "string",
-          "minLength": 1
-        },
-        "status": {
-          "type": "string",
-          "enum": [
-            "open",
-            "closed"
-          ]
-        }
-      },
-      "additionalProperties": false
-    },
     "list-components": {
       "type": "object"
     },
@@ -1234,72 +1167,6 @@
       "type": "object",
       "additionalProperties": true
     },
-    "open-agent-session": {
-      "type": "object",
-      "properties": {
-        "sessionId": {
-          "type": "string",
-          "minLength": 1
-        },
-        "agentId": {
-          "type": "string",
-          "minLength": 1
-        },
-        "subagentSessionId": {
-          "type": "string",
-          "minLength": 1
-        },
-        "hostHint": {
-          "type": "string",
-          "enum": [
-            "cursor",
-            "vscode",
-            "cli",
-            "manual"
-          ]
-        },
-        "modelTier": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "currentAssignmentId": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "currentActivityId": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "currentTaskId": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "metadata": {
-          "type": [
-            "object",
-            "null"
-          ]
-        },
-        "expectedPlanningGeneration": {
-          "type": [
-            "integer",
-            "string"
-          ]
-        },
-        "policyApproval": {
-          "type": "object"
-        }
-      },
-      "additionalProperties": true
-    },
     "pause-task": {
       "type": "object",
       "required": [
@@ -1419,6 +1286,9 @@
     "phase-focus-dashboard": {
       "type": "object"
     },
+    "phase-release-orchestration-state": {
+      "type": "object"
+    },
     "phase-status": {
       "type": "object",
       "properties": {
@@ -1501,9 +1371,6 @@
         }
       },
       "additionalProperties": false
-    },
-    "register-agent-definition": {
-      "type": "object"
     },
     "reject-improvement": {
       "type": "object",
@@ -1685,9 +1552,6 @@
       "type": "object"
     },
     "resolve-task-intake-policy": {
-      "type": "object"
-    },
-    "retire-agent-definition": {
       "type": "object"
     },
     "review-planning-execution-drafts": {
@@ -2268,70 +2132,6 @@
     },
     "uninstall-git-hooks": {
       "type": "object"
-    },
-    "update-agent-definition": {
-      "type": "object"
-    },
-    "update-agent-session": {
-      "type": "object",
-      "required": [
-        "sessionId"
-      ],
-      "properties": {
-        "sessionId": {
-          "type": "string",
-          "minLength": 1
-        },
-        "hostHint": {
-          "type": "string",
-          "enum": [
-            "cursor",
-            "vscode",
-            "cli",
-            "manual"
-          ]
-        },
-        "modelTier": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "currentAssignmentId": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "currentActivityId": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "currentTaskId": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "metadata": {
-          "type": [
-            "object",
-            "null"
-          ]
-        },
-        "expectedPlanningGeneration": {
-          "type": [
-            "integer",
-            "string"
-          ]
-        },
-        "policyApproval": {
-          "type": "object"
-        }
-      },
-      "additionalProperties": true
     },
     "update-phase-note": {
       "type": "object"

@@ -347,6 +347,7 @@ The Orchestration Agent **should** set assignment `modelTier` using weighted inp
 3. Else if two or more high-weight inputs fire → high_reasoning.
 4. Else if implementation-only and ownedPaths narrow → balanced or cheap_fast for workers.
 5. Record rationale in assignment metadata: metadata.modelTierRationale (string, one paragraph max).
+6. Persist packet-layer guidance as metadata.modelTierRecommendation = { label: "tier_1" | "tier_2" | "tier_3", rationale }.
 ```
 
 **Example metadata:**
@@ -354,7 +355,11 @@ The Orchestration Agent **should** set assignment `modelTier` using weighted inp
 ```json
 {
   "modelTier": "high_reasoning",
-  "modelTierRationale": "Cross-module contract pack + schema enums; architecture impact."
+  "modelTierRationale": "Cross-module contract pack + schema enums; architecture impact.",
+  "modelTierRecommendation": {
+    "label": "tier_3",
+    "rationale": "Cross-module contract pack + schema enums; architecture impact."
+  }
 }
 ```
 
@@ -567,6 +572,7 @@ Orchestrator **may** set per assignment:
 | Field | Override allowed |
 | --- | --- |
 | `modelTier` | yes (with `modelTierRationale`) |
+| `modelTierRecommendation` | derived packet field using `tier_1` / `tier_2` / `tier_3` |
 | `contextProfileId` | yes (must stay role-compatible) |
 | `accessProfileId` | **no widening** — only `task_worker_strict_v1` or `orchestrator_access_v1` |
 | `resources` | yes (narrower paths encouraged) |

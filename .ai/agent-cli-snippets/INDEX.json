@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-06-02T18:28:31.582Z",
+  "generatedAt": "2026-06-03T20:32:18.409Z",
   "commands": [
     {
       "name": "accept-improvement",
@@ -26,6 +26,11 @@
       "name": "agent-bootstrap",
       "path": ".ai/agent-cli-snippets/by-command/agent-bootstrap.json",
       "moduleId": "task-engine"
+    },
+    {
+      "name": "agent-execution-packet",
+      "path": ".ai/agent-cli-snippets/by-command/agent-execution-packet.json",
+      "moduleId": "team-execution"
     },
     {
       "name": "agent-mutation-plan",
@@ -66,6 +71,11 @@
       "name": "assign-task-phase",
       "path": ".ai/agent-cli-snippets/by-command/assign-task-phase.json",
       "moduleId": "task-engine"
+    },
+    {
+      "name": "assignment-reconciliation-preflight",
+      "path": ".ai/agent-cli-snippets/by-command/assignment-reconciliation-preflight.json",
+      "moduleId": "team-execution"
     },
     {
       "name": "backfill-task-feature-links",
@@ -388,11 +398,6 @@
       "moduleId": "task-engine"
     },
     {
-      "name": "close-agent-session",
-      "path": ".ai/agent-cli-snippets/by-command/close-agent-session.json",
-      "moduleId": "task-engine"
-    },
-    {
       "name": "close-subagent-session",
       "path": ".ai/agent-cli-snippets/by-command/close-subagent-session.json",
       "moduleId": "subagents"
@@ -583,16 +588,6 @@
       "moduleId": "improvement"
     },
     {
-      "name": "get-agent-definition",
-      "path": ".ai/agent-cli-snippets/by-command/get-agent-definition.json",
-      "moduleId": "task-engine"
-    },
-    {
-      "name": "get-agent-session",
-      "path": ".ai/agent-cli-snippets/by-command/get-agent-session.json",
-      "moduleId": "task-engine"
-    },
-    {
       "name": "get-behavior-profile",
       "path": ".ai/agent-cli-snippets/by-command/get-behavior-profile.json",
       "moduleId": "agent-behavior"
@@ -733,16 +728,6 @@
       "moduleId": "agent-behavior"
     },
     {
-      "name": "list-agent-definitions",
-      "path": ".ai/agent-cli-snippets/by-command/list-agent-definitions.json",
-      "moduleId": "task-engine"
-    },
-    {
-      "name": "list-agent-sessions",
-      "path": ".ai/agent-cli-snippets/by-command/list-agent-sessions.json",
-      "moduleId": "task-engine"
-    },
-    {
       "name": "list-approval-queue",
       "path": ".ai/agent-cli-snippets/by-command/list-approval-queue.json",
       "moduleId": "approvals"
@@ -848,11 +833,6 @@
       "moduleId": "task-engine"
     },
     {
-      "name": "open-agent-session",
-      "path": ".ai/agent-cli-snippets/by-command/open-agent-session.json",
-      "moduleId": "task-engine"
-    },
-    {
       "name": "pause-task",
       "path": ".ai/agent-cli-snippets/by-command/pause-task.json",
       "moduleId": "task-engine"
@@ -873,8 +853,23 @@
       "moduleId": "task-engine"
     },
     {
+      "name": "phase-drain-delta",
+      "path": ".ai/agent-cli-snippets/by-command/phase-drain-delta.json",
+      "moduleId": "task-engine"
+    },
+    {
       "name": "phase-focus-dashboard",
       "path": ".ai/agent-cli-snippets/by-command/phase-focus-dashboard.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "phase-release-orchestration-state",
+      "path": ".ai/agent-cli-snippets/by-command/phase-release-orchestration-state.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "release-closeout-result",
+      "path": ".ai/agent-cli-snippets/by-command/release-closeout-result.json",
       "moduleId": "task-engine"
     },
     {
@@ -885,6 +880,11 @@
     {
       "name": "planning-state-migrate-baseline",
       "path": ".ai/agent-cli-snippets/by-command/planning-state-migrate-baseline.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "prepare-release-artifacts",
+      "path": ".ai/agent-cli-snippets/by-command/prepare-release-artifacts.json",
       "moduleId": "task-engine"
     },
     {
@@ -938,11 +938,6 @@
       "moduleId": "team-execution"
     },
     {
-      "name": "register-agent-definition",
-      "path": ".ai/agent-cli-snippets/by-command/register-agent-definition.json",
-      "moduleId": "task-engine"
-    },
-    {
       "name": "register-assignment",
       "path": ".ai/agent-cli-snippets/by-command/register-assignment.json",
       "moduleId": "team-execution"
@@ -993,11 +988,6 @@
       "moduleId": "task-engine"
     },
     {
-      "name": "report-assignment-blocker",
-      "path": ".ai/agent-cli-snippets/by-command/report-assignment-blocker.json",
-      "moduleId": "team-execution"
-    },
-    {
       "name": "report-defect",
       "path": ".ai/agent-cli-snippets/by-command/report-defect.json",
       "moduleId": "task-engine"
@@ -1025,11 +1015,6 @@
     {
       "name": "resolve-task-intake-policy",
       "path": ".ai/agent-cli-snippets/by-command/resolve-task-intake-policy.json",
-      "moduleId": "task-engine"
-    },
-    {
-      "name": "retire-agent-definition",
-      "path": ".ai/agent-cli-snippets/by-command/retire-agent-definition.json",
       "moduleId": "task-engine"
     },
     {
@@ -1220,16 +1205,6 @@
     {
       "name": "uninstall-git-hooks",
       "path": ".ai/agent-cli-snippets/by-command/uninstall-git-hooks.json",
-      "moduleId": "task-engine"
-    },
-    {
-      "name": "update-agent-definition",
-      "path": ".ai/agent-cli-snippets/by-command/update-agent-definition.json",
-      "moduleId": "task-engine"
-    },
-    {
-      "name": "update-agent-session",
-      "path": ".ai/agent-cli-snippets/by-command/update-agent-session.json",
       "moduleId": "task-engine"
     },
     {

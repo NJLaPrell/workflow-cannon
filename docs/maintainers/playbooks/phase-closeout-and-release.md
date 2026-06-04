@@ -55,7 +55,14 @@ workspace-kit run convert-phase-note-to-task '{"noteId":"<uuid>","expectedPlanni
 
 (Skip conversion when the note is informational only.)
 
+0b. **Subagent session hygiene** — Check for any open subagent sessions in the workspace using `list-subagent-sessions`. If any are still open, close them:
+
+```bash
+pnpm exec wk run close-subagent-session '{"sessionId":"<uuid>","policyApproval":{"confirmed":true,"rationale":"close lingering subagent session during closeout"}}'
+```
+
 1. `git fetch origin` and `git checkout release/phase-<N>`, then `git pull origin release/phase-<N>`.
+
 2. Run `workspace-kit run phase-closeout-readiness '{"phaseKey":"<N>"}'` and stop unless it reports `passed: true` with `remainingCount: 0`, or there is an explicit maintainer waiver covering the remaining closeout finding(s).
 3. Run `workspace-kit run phase-delivery-preflight '{"phaseKey":"<N>","includeInProgress":false,"baseRef":"origin/release/phase-<N>"}'` and resolve every evidence, readiness, stranded-work, and **service sync** finding with evidence matching each task’s **resolved** delivery profile (from **`resolve-maintainer-delivery-policy`** / preflight policy context) or an explicit maintainer waiver before closeout.
 

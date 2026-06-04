@@ -179,7 +179,14 @@ Waivers are for maintainer-approved exceptions only and require `schemaVersion`,
 workspace-kit run phase-delivery-preflight '{"phaseKey":"<N>","includeInProgress":true}'
 ```
 
-5. **Update task-engine state** after the work is merged (or in sync with merge): transition the task to **`completed`** when acceptance criteria are met — **not** a substitute for Git, but required kit-owned evidence.
+5. **Close open subagent sessions:** Before transitioning the task, run `list-subagent-sessions` to check if any open sessions exist for this execution task. If any are open, close them using `close-subagent-session`:
+
+```bash
+workspace-kit run close-subagent-session '{"sessionId":"<uuid>","expectedPlanningGeneration":<n>,"policyApproval":{"confirmed":true,"rationale":"close subagent session after task completion"}}'
+```
+
+6. **Update task-engine state** after the work is merged (or in sync with merge): transition the task to **`completed`** when acceptance criteria are met — **not** a substitute for Git, but required kit-owned evidence.
+
 
 When you observed a **finding**, **gotcha**, or **follow-up** during the task, attach **`phaseNotes`** on the same **`complete`** call (same SQLite transaction as the transition):
 

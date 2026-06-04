@@ -16,7 +16,7 @@
       "const": 1
     },
     "packageVersion": {
-      "const": "0.99.26",
+      "const": "0.99.27",
       "description": "Must match package.json version."
     },
     "moduleId": {
@@ -31,11 +31,6 @@
         "agent-bootstrap",
         "agent-mutation-plan",
         "agent-session-snapshot",
-        "open-agent-session",
-        "update-agent-session",
-        "close-agent-session",
-        "get-agent-session",
-        "list-agent-sessions",
         "apply-task-batch",
         "apply-task-state-events",
         "archive-task",
@@ -69,7 +64,6 @@
         "explain-task-engine-model",
         "export-feature-taxonomy-json",
         "export-workspace-status",
-        "get-agent-definition",
         "get-blocked-summary",
         "get-dependency-graph",
         "get-kit-persistence-map",
@@ -89,7 +83,6 @@
         "improvement-dedupe-explain",
         "improvement-workflow-summary",
         "install-git-hooks",
-        "list-agent-definitions",
         "list-components",
         "list-features",
         "list-module-states",
@@ -102,17 +95,20 @@
         "persist-planning-execution-drafts",
         "phase-closeout-readiness",
         "phase-delivery-preflight",
+        "phase-drain-delta",
         "phase-focus-dashboard",
+        "phase-release-orchestration-state",
         "phase-status",
         "planning-state-migrate-baseline",
+        "prepare-release-artifacts",
         "propose-release-version",
         "propose-tasks-from-phase-notes",
         "queue-git-alignment",
         "queue-health",
         "rebuild-task-state-cache",
         "recommend-validation",
-        "register-agent-definition",
         "reject-improvement",
+        "release-closeout-result",
         "release-evidence-manifest",
         "release-status",
         "release-workspace-edit-lease",
@@ -122,7 +118,6 @@
         "report-defect",
         "resolve-maintainer-delivery-policy",
         "resolve-task-intake-policy",
-        "retire-agent-definition",
         "review-planning-execution-drafts",
         "run-transition",
         "set-agent-activity",
@@ -149,7 +144,6 @@
         "task-sync-verify",
         "unblock-task",
         "uninstall-git-hooks",
-        "update-agent-definition",
         "update-phase-note",
         "update-task",
         "update-wishlist",
@@ -207,21 +201,6 @@
         },
         "agent-session-snapshot": {
           "$ref": "#/$defs/contractAgentSessionSnapshot"
-        },
-        "open-agent-session": {
-          "$ref": "#/$defs/contractOpenAgentSession"
-        },
-        "update-agent-session": {
-          "$ref": "#/$defs/contractUpdateAgentSession"
-        },
-        "close-agent-session": {
-          "$ref": "#/$defs/contractCloseAgentSession"
-        },
-        "get-agent-session": {
-          "$ref": "#/$defs/contractGetAgentSession"
-        },
-        "list-agent-sessions": {
-          "$ref": "#/$defs/contractListAgentSessions"
         },
         "clear-agent-activity": {
           "$ref": "#/$defs/contractBase"
@@ -385,7 +364,16 @@
         "phase-delivery-preflight": {
           "$ref": "#/$defs/contractBase"
         },
+        "phase-drain-delta": {
+          "$ref": "#/$defs/contractBase"
+        },
         "phase-focus-dashboard": {
+          "$ref": "#/$defs/contractBase"
+        },
+        "phase-release-orchestration-state": {
+          "$ref": "#/$defs/contractBase"
+        },
+        "prepare-release-artifacts": {
           "$ref": "#/$defs/contractBase"
         },
         "derive-publish-artifacts": {
@@ -395,6 +383,9 @@
           "$ref": "#/$defs/contractBase"
         },
         "release-evidence-manifest": {
+          "$ref": "#/$defs/contractBase"
+        },
+        "release-closeout-result": {
           "$ref": "#/$defs/contractBase"
         },
         "release-status": {
@@ -552,21 +543,6 @@
         },
         "list-module-states": {
           "$ref": "#/$defs/contractListModuleStates"
-        },
-        "get-agent-definition": {
-          "$ref": "#/$defs/contractBase"
-        },
-        "list-agent-definitions": {
-          "$ref": "#/$defs/contractBase"
-        },
-        "register-agent-definition": {
-          "$ref": "#/$defs/contractBase"
-        },
-        "retire-agent-definition": {
-          "$ref": "#/$defs/contractBase"
-        },
-        "update-agent-definition": {
-          "$ref": "#/$defs/contractBase"
         }
       }
     }

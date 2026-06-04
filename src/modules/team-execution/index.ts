@@ -1,24 +1,32 @@
 import { randomUUID } from "node:crypto";
 import type Sqlite from "better-sqlite3";
-import type { WorkflowModule } from "../../contracts/module-contract.js";
+import type { ModuleLifecycleContext, WorkflowModule } from "../../contracts/module-contract.js";
 import { builtinInstructionEntriesForModule } from "../../contracts/builtin-run-command-manifest.js";
 import { openPlanningStores } from "../task-engine/persistence/planning-open.js";
 import { TaskStore } from "../task-engine/persistence/store.js";
 import { runReportDefectCommand } from "../task-engine/commands/report-defect-on-command.js";
+import { buildRecommendValidation } from "../task-engine/commands/recommend-validation-commands.js";
+import { resolveMaintainerDeliveryPolicy } from "../task-engine/maintainer-delivery-policy-resolver.js";
 import { TaskEngineError } from "../task-engine/transitions.js";
 import { readOptionalExpectedPlanningGeneration } from "../task-engine/mutation-utils.js";
 import { getPlanningGenerationPolicy, mergePlanningGenerationPolicyWarnings } from "../task-engine/planning-config.js";
+import type { TaskEntity } from "../task-engine/types.js";
 import {
   assertTeamExecutionKitSchema,
+  type AssignmentPacketRegistryRow,
   type TeamAssignmentRow,
   blockAssignment,
   blockAssignmentByAdmin,
   blockAssignmentFromWorker,
+  buildAssignmentPacketRegistryId,
   cancelAssignment,
   cancelAssignmentByAdmin,
   getAssignment,
+  getAssignmentPacketRegistryRowByDigest,
+  getAssignmentPacketRegistryRowById,
   insertAssignment,
   listAssignments,
+  normalizeAssignmentValidationCommands,
   parseMetadata,
   reconcileAssignment,
   reconcileAssignmentByAdmin,
@@ -26,12 +34,15 @@ import {
   submitHandoff,
   summarizeHandoffForReconcile,
   taskExistsInRelationalStore,
+  upsertAssignmentPacketRegistryRow,
   validateAssignmentMetadataWhenPresent,
   validateHandoffContract,
   validateReconcileCheckpointV1
 } from "./assignment-store.js";
+import { buildAgentExecutionPacket, readAgentExecutionPacketBoundaries } from "./agent-execution-packet.js";
 
 type AssignmentLifecycleAction =
+  | "assignment-reconciliation-preflight"
   | "submit-assignment-handoff"
   | "report-assignment-blocker"
   | "block-assignment"
@@ -50,6 +61,431 @@ type AssignmentValidationInput = {
   allowedStatuses: TeamAssignmentRow["status"][];
   adminIds: Set<string>;
 };
+
+const ASSIGNMENT_RECONCILIATION_PRELIGHT_VERDICTS = [
+  "ready_to_reconcile",
+  "needs_worker_followup",
+  "needs_orchestrator_review",
+  "needs_user_decision",
+  "unsafe"
+] as const;
+
+type AssignmentReconciliationPreflightVerdict = (typeof ASSIGNMENT_RECONCILIATION_PRELIGHT_VERDICTS)[number];
+
+type AssignmentReconciliationReasonCategory =
+  | "worker_followup"
+  | "orchestrator_review"
+  | "user_decision"
+  | "unsafe";
+
+type AssignmentReconciliationReason = {
+  category: AssignmentReconciliationReasonCategory;
+  code: string;
+  message: string;
+  paths?: string[];
+  commands?: string[];
+  criteria?: string[];
+};
+
+type AssignmentReconciliationPathSummary = {
+  total: number;
+  sample: string[];
+  owned: string[];
+  shared: string[];
+  requiresApproval: string[];
+  forbidden: string[];
+  outsideOwned: string[];
+};
+
+type AssignmentReconciliationAcceptanceSummary = {
+  taskCriteria: string[];
+  reportedCriteria: Array<{ criterion: string; status: string }>;
+  missingCriteria: string[];
+  unresolvedCriteria: Array<{ criterion: string; status: string }>;
+};
+
+type AssignmentReconciliationValidationSummary = {
+  requiredCommands: string[];
+  reportedCommands: string[];
+  missingCommands: string[];
+  failedCommands: string[];
+};
+
+function normalizeMatchablePath(value: string): string {
+  return value.trim().replace(/\\/g, "/").replace(/^\.\//, "");
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[|\\{}()[\]^$+?.]/g, "\\$&");
+}
+
+function pathPatternToRegExp(pattern: string): RegExp {
+  const normalized = normalizeMatchablePath(pattern);
+  let source = "^";
+  for (let index = 0; index < normalized.length; index += 1) {
+    const char = normalized[index];
+    if (char === "*") {
+      if (normalized[index + 1] === "*") {
+        source += ".*";
+        index += 1;
+      } else {
+        source += "[^/]*";
+      }
+      continue;
+    }
+    source += escapeRegExp(char);
+  }
+  source += "$";
+  return new RegExp(source);
+}
+
+function matchesAnyPathPattern(pathValue: string, patterns: string[]): boolean {
+  const normalizedPath = normalizeMatchablePath(pathValue);
+  return patterns.some((pattern) => pathPatternToRegExp(pattern).test(normalizedPath));
+}
+
+function readHandoffChangedPaths(handoff: Record<string, unknown> | null): string[] {
+  if (!handoff || handoff.schemaVersion !== 2 || !Array.isArray(handoff.filesChanged)) {
+    return [];
+  }
+  const paths = handoff.filesChanged
+    .filter((entry): entry is Record<string, unknown> => Boolean(entry) && typeof entry === "object" && !Array.isArray(entry))
+    .map((entry) => readOptionalStringValue(entry.path))
+    .filter((entry): entry is string => Boolean(entry));
+  return Array.from(new Set(paths.map((entry) => normalizeMatchablePath(entry))));
+}
+
+function readHandoffCommandRuns(
+  handoff: Record<string, unknown> | null
+): Array<{ command: string; status: string }> {
+  if (!handoff || handoff.schemaVersion !== 2 || !Array.isArray(handoff.commandsRun)) {
+    return [];
+  }
+  return handoff.commandsRun
+    .filter((entry): entry is Record<string, unknown> => Boolean(entry) && typeof entry === "object" && !Array.isArray(entry))
+    .map((entry) => ({
+      command: readOptionalStringValue(entry.command) ?? "",
+      status: readOptionalStringValue(entry.status) ?? "unknown"
+    }))
+    .filter((entry) => entry.command.length > 0);
+}
+
+function readHandoffAcceptanceCriteria(
+  handoff: Record<string, unknown> | null
+): Array<{ criterion: string; status: string }> {
+  if (!handoff || handoff.schemaVersion !== 2 || !Array.isArray(handoff.acceptanceCriteria)) {
+    return [];
+  }
+  return handoff.acceptanceCriteria
+    .filter((entry): entry is Record<string, unknown> => Boolean(entry) && typeof entry === "object" && !Array.isArray(entry))
+    .map((entry) => ({
+      criterion: readOptionalStringValue(entry.criterion) ?? "",
+      status: readOptionalStringValue(entry.status) ?? "unknown"
+    }))
+    .filter((entry) => entry.criterion.length > 0);
+}
+
+function readExpectedValidationCommands(packetContext: AssignmentPacketContext): string[] {
+  return Array.from(
+    new Set(
+      (packetContext.validationCommands ?? [])
+        .map((entry) => readOptionalStringValue(entry.command))
+        .filter((entry): entry is string => Boolean(entry))
+    )
+  );
+}
+
+function summarizeReconciliationPathSafety(args: {
+  changedPaths: string[];
+  boundaries: ReturnType<typeof readAgentExecutionPacketBoundaries>;
+}): AssignmentReconciliationPathSummary {
+  const owned: string[] = [];
+  const shared: string[] = [];
+  const requiresApproval: string[] = [];
+  const forbidden: string[] = [];
+  const outsideOwned: string[] = [];
+
+  for (const changedPath of args.changedPaths) {
+    const isForbidden =
+      matchesAnyPathPattern(changedPath, args.boundaries.forbiddenPaths) ||
+      matchesAnyPathPattern(changedPath, args.boundaries.readOnlyPaths);
+    const isRequiresApproval = matchesAnyPathPattern(changedPath, args.boundaries.requiresApprovalPaths);
+    const isShared = matchesAnyPathPattern(changedPath, args.boundaries.sharedPaths);
+    const isOwned = matchesAnyPathPattern(changedPath, args.boundaries.ownedPaths);
+
+    if (isForbidden) {
+      forbidden.push(changedPath);
+      continue;
+    }
+    if (isRequiresApproval) {
+      requiresApproval.push(changedPath);
+      continue;
+    }
+    if (isOwned) {
+      owned.push(changedPath);
+      continue;
+    }
+    if (isShared) {
+      shared.push(changedPath);
+      continue;
+    }
+    outsideOwned.push(changedPath);
+  }
+
+  return {
+    total: args.changedPaths.length,
+    sample: args.changedPaths.slice(0, 5),
+    owned,
+    shared,
+    requiresApproval,
+    forbidden,
+    outsideOwned
+  };
+}
+
+function summarizeReconciliationAcceptance(args: {
+  task: TaskEntity;
+  handoff: Record<string, unknown> | null;
+}): AssignmentReconciliationAcceptanceSummary {
+  const taskCriteria = Array.isArray(args.task.acceptanceCriteria) ? args.task.acceptanceCriteria : [];
+  const reportedCriteria = readHandoffAcceptanceCriteria(args.handoff);
+  const reportedByCriterion = new Map(reportedCriteria.map((entry) => [entry.criterion, entry.status]));
+  const missingCriteria = taskCriteria.filter((criterion) => !reportedByCriterion.has(criterion));
+  const unresolvedCriteria = reportedCriteria.filter(
+    (entry) => entry.status !== "passed" && entry.status !== "not_applicable"
+  );
+  return {
+    taskCriteria,
+    reportedCriteria,
+    missingCriteria,
+    unresolvedCriteria
+  };
+}
+
+function summarizeReconciliationValidation(args: {
+  packetContext: AssignmentPacketContext;
+  handoff: Record<string, unknown> | null;
+}): AssignmentReconciliationValidationSummary {
+  const requiredCommands = readExpectedValidationCommands(args.packetContext);
+  const reportedRuns = readHandoffCommandRuns(args.handoff);
+  const reportedCommands = reportedRuns.map((entry) => entry.command);
+  const reportedByCommand = new Map(reportedRuns.map((entry) => [entry.command, entry.status]));
+  const missingCommands = requiredCommands.filter((command) => !reportedByCommand.has(command));
+  const failedCommands = requiredCommands.filter((command) => reportedByCommand.get(command) === "failed");
+  return {
+    requiredCommands,
+    reportedCommands,
+    missingCommands,
+    failedCommands
+  };
+}
+
+function selectAssignmentReconciliationVerdict(
+  reasons: AssignmentReconciliationReason[]
+): AssignmentReconciliationPreflightVerdict {
+  if (reasons.some((reason) => reason.category === "unsafe")) {
+    return "unsafe";
+  }
+  if (reasons.some((reason) => reason.category === "user_decision")) {
+    return "needs_user_decision";
+  }
+  if (reasons.some((reason) => reason.category === "worker_followup")) {
+    return "needs_worker_followup";
+  }
+  if (reasons.some((reason) => reason.category === "orchestrator_review")) {
+    return "needs_orchestrator_review";
+  }
+  return "ready_to_reconcile";
+}
+
+function buildAssignmentReconciliationPreflight(args: {
+  assignment: TeamAssignmentRow;
+  task: TaskEntity;
+  packetContext: AssignmentPacketContext;
+  registryRow: AssignmentPacketRegistryRow | null;
+}) {
+  const assignmentWithAudit = attachPacketAudit({
+    assignment: args.assignment,
+    packetContext: args.packetContext,
+    registryRow: args.registryRow
+  });
+  const boundaries = readAgentExecutionPacketBoundaries(args.assignment.metadata);
+  const handoffContext = summarizeHandoffForReconcile(args.assignment.handoff);
+  const changedPaths = readHandoffChangedPaths(args.assignment.handoff);
+  const pathSummary = summarizeReconciliationPathSafety({ changedPaths, boundaries });
+  const validationSummary = summarizeReconciliationValidation({
+    packetContext: args.packetContext,
+    handoff: args.assignment.handoff
+  });
+  const acceptanceSummary = summarizeReconciliationAcceptance({
+    task: args.task,
+    handoff: args.assignment.handoff
+  });
+  const evidenceRefs = handoffContext?.evidenceRefs ?? listHandoffEvidenceRefs(args.assignment);
+
+  const reasons: AssignmentReconciliationReason[] = [];
+
+  if (!args.assignment.handoff || !handoffContext) {
+    reasons.push({
+      category: "worker_followup",
+      code: "handoff-missing",
+      message: "Submitted handoff is missing or invalid for reconciliation preflight."
+    });
+  }
+
+  if (args.assignment.status === "assigned") {
+    reasons.push({
+      category: "worker_followup",
+      code: "assignment-not-submitted",
+      message: "Assignment has not reached submitted status yet."
+    });
+  } else if (args.assignment.status !== "submitted") {
+    reasons.push({
+      category: "orchestrator_review",
+      code: "assignment-status-changed",
+      message: `Assignment is in '${args.assignment.status}' status, not 'submitted'.`
+    });
+  }
+
+  if (evidenceRefs.length === 0) {
+    reasons.push({
+      category: "worker_followup",
+      code: "evidence-missing",
+      message: "Worker handoff must include at least one compact evidence ref."
+    });
+  }
+
+  if (validationSummary.missingCommands.length > 0) {
+    reasons.push({
+      category: "worker_followup",
+      code: "validation-missing",
+      message: "Required validation commands are missing from the handoff.",
+      commands: validationSummary.missingCommands
+    });
+  }
+
+  if (validationSummary.failedCommands.length > 0) {
+    reasons.push({
+      category: "worker_followup",
+      code: "validation-failed",
+      message: "Required validation commands failed in the handoff.",
+      commands: validationSummary.failedCommands
+    });
+  }
+
+  if (acceptanceSummary.missingCriteria.length > 0) {
+    reasons.push({
+      category: "worker_followup",
+      code: "acceptance-missing",
+      message: "Task acceptance criteria were not all addressed in the handoff.",
+      criteria: acceptanceSummary.missingCriteria
+    });
+  }
+
+  if (acceptanceSummary.unresolvedCriteria.length > 0) {
+    reasons.push({
+      category: "worker_followup",
+      code: "acceptance-unresolved",
+      message: "Some acceptance criteria remain partial or failed in the handoff.",
+      criteria: acceptanceSummary.unresolvedCriteria.map((entry) => `${entry.criterion}:${entry.status}`)
+    });
+  }
+
+  if (handoffContext?.handoffStatus === "partial" || handoffContext?.handoffStatus === "failed") {
+    reasons.push({
+      category: "worker_followup",
+      code: "handoff-status-followup",
+      message: `Handoff status '${handoffContext.handoffStatus}' requires worker follow-up before reconcile.`
+    });
+  }
+
+  if (pathSummary.forbidden.length > 0) {
+    reasons.push({
+      category: "unsafe",
+      code: "forbidden-path-change",
+      message: "Handoff reports changes in forbidden or read-only paths.",
+      paths: pathSummary.forbidden
+    });
+  }
+
+  if (pathSummary.outsideOwned.length > 0) {
+    reasons.push({
+      category: "unsafe",
+      code: "outside-owned-path-change",
+      message: "Handoff reports changes outside owned, shared, and approval-scoped paths.",
+      paths: pathSummary.outsideOwned
+    });
+  }
+
+  if (pathSummary.requiresApproval.length > 0) {
+    reasons.push({
+      category: "user_decision",
+      code: "approval-path-change",
+      message: "Handoff touched approval-gated paths that need explicit maintainer decision.",
+      paths: pathSummary.requiresApproval
+    });
+  }
+
+  if (handoffContext?.handoffStatus === "blocked" || (handoffContext?.blockersCount ?? 0) > 0) {
+    reasons.push({
+      category: "user_decision",
+      code: "handoff-blocked",
+      message: "Worker reported blockers that require supervisor or maintainer decision."
+    });
+  }
+
+  if (handoffContext?.handoffStatus === "needs_review" || (handoffContext?.risksCount ?? 0) > 0) {
+    reasons.push({
+      category: "orchestrator_review",
+      code: "review-needed",
+      message: "Handoff includes review-needed status or explicit risks that need orchestrator inspection."
+    });
+  }
+
+  const verdict = selectAssignmentReconciliationVerdict(reasons);
+  const checkpointDraft = handoffContext
+    ? {
+        schemaVersion: 1,
+        mergedSummary: handoffContext.handoffSummary
+      }
+    : null;
+
+  const nextAction =
+    verdict === "ready_to_reconcile"
+      ? "Run reconcile-assignment with the checkpoint draft and compact evidence refs."
+      : verdict === "needs_worker_followup"
+        ? "Ask the worker to refresh the handoff, validation evidence, or acceptance coverage before reconciling."
+        : verdict === "needs_orchestrator_review"
+          ? "Inspect the bounded review reasons before deciding whether to reconcile or request follow-up."
+          : verdict === "needs_user_decision"
+            ? "Escalate for supervisor or maintainer decision before reconciling this assignment."
+            : "Stop and repair the unsafe path violation before any reconcile action.";
+
+  return {
+    assignment: assignmentWithAudit,
+    verdict,
+    supportedVerdicts: [...ASSIGNMENT_RECONCILIATION_PRELIGHT_VERDICTS],
+    reasons,
+    nextAction,
+    compactEvidence: {
+      refs: evidenceRefs.slice(0, 5),
+      handoffSummary: handoffContext?.handoffSummary ?? null,
+      handoffStatus: handoffContext?.handoffStatus ?? null,
+      fileChangeSummary: pathSummary,
+      validationSummary,
+      acceptanceSummary: {
+        taskCriteria: acceptanceSummary.taskCriteria,
+        missingCriteria: acceptanceSummary.missingCriteria,
+        unresolvedCriteria: acceptanceSummary.unresolvedCriteria
+      }
+    },
+    reconciliation: {
+      checkpointDraft,
+      suggestedDecision: handoffContext?.suggestedDecision ?? null,
+      suggestedDecisions: handoffContext?.suggestedDecisions ?? []
+    }
+  };
+}
 
 function readResolvedActorId(ctx: { resolvedActor?: string }): string | undefined {
   if (typeof ctx.resolvedActor !== "string") {
@@ -261,6 +697,10 @@ function readStringArrayArg(args: Record<string, unknown>, key: string): string[
     .filter((item) => item.length > 0);
 }
 
+function readOptionalStringValue(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim().length > 0 ? value.trim() : undefined;
+}
+
 function listHandoffEvidenceRefs(assignment: ReturnType<typeof getAssignment>): string[] {
   if (!assignment?.handoff) {
     return [];
@@ -277,6 +717,294 @@ function readAnyTaskId(db: Sqlite.Database): string | undefined {
     | { id: string }
     | undefined;
   return row?.id;
+}
+
+function parseOptionalJsonArray(raw: unknown): string[] | undefined {
+  if (typeof raw !== "string" || raw.trim().length === 0) {
+    return undefined;
+  }
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) {
+      return undefined;
+    }
+    const values = parsed
+      .filter((entry): entry is string => typeof entry === "string")
+      .map((entry) => entry.trim())
+      .filter((entry) => entry.length > 0);
+    return values.length > 0 ? values : [];
+  } catch {
+    return undefined;
+  }
+}
+
+function parseOptionalJsonObject(raw: unknown): Record<string, unknown> | undefined {
+  if (typeof raw !== "string" || raw.trim().length === 0) {
+    return undefined;
+  }
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? (parsed as Record<string, unknown>)
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function readRelationalTask(db: Sqlite.Database, taskId: string): TaskEntity | null {
+  const row = db.prepare(
+    `SELECT
+      id, status, type, title, created_at, updated_at, archived, archived_at,
+      priority, phase, phase_key, ownership, approach,
+      depends_on_json, unblocks_json, technical_scope_json, acceptance_criteria_json,
+      summary, description, risk, metadata_json, features_json
+     FROM task_engine_tasks
+     WHERE id = ?
+     LIMIT 1`
+  ).get(taskId) as Record<string, unknown> | undefined;
+
+  if (!row) {
+    return null;
+  }
+
+  const task: TaskEntity = {
+    id: String(row.id),
+    status: String(row.status) as TaskEntity["status"],
+    type: String(row.type),
+    title: String(row.title),
+    createdAt: String(row.created_at),
+    updatedAt: String(row.updated_at),
+    archived: row.archived === 1 || row.archived === true
+  };
+
+  const archivedAt = readOptionalStringValue(row.archived_at);
+  if (archivedAt) {
+    task.archivedAt = archivedAt;
+  }
+  const priority = readOptionalStringValue(row.priority);
+  if (priority) {
+    task.priority = priority as TaskEntity["priority"];
+  }
+  const phase = readOptionalStringValue(row.phase);
+  if (phase) {
+    task.phase = phase;
+  }
+  const phaseKey = readOptionalStringValue(row.phase_key);
+  if (phaseKey) {
+    task.phaseKey = phaseKey;
+  }
+  const ownership = readOptionalStringValue(row.ownership);
+  if (ownership) {
+    task.ownership = ownership;
+  }
+  const approach = readOptionalStringValue(row.approach);
+  if (approach) {
+    task.approach = approach;
+  }
+  const dependsOn = parseOptionalJsonArray(row.depends_on_json);
+  if (dependsOn) {
+    task.dependsOn = dependsOn;
+  }
+  const unblocks = parseOptionalJsonArray(row.unblocks_json);
+  if (unblocks) {
+    task.unblocks = unblocks;
+  }
+  const technicalScope = parseOptionalJsonArray(row.technical_scope_json);
+  if (technicalScope) {
+    task.technicalScope = technicalScope;
+  }
+  const acceptanceCriteria = parseOptionalJsonArray(row.acceptance_criteria_json);
+  if (acceptanceCriteria) {
+    task.acceptanceCriteria = acceptanceCriteria;
+  }
+  const summary = readOptionalStringValue(row.summary);
+  if (summary) {
+    task.summary = summary;
+  }
+  const description = readOptionalStringValue(row.description);
+  if (description) {
+    task.description = description;
+  }
+  const risk = readOptionalStringValue(row.risk);
+  if (risk) {
+    task.risk = risk;
+  }
+  const metadata = parseOptionalJsonObject(row.metadata_json);
+  if (metadata) {
+    task.metadata = metadata;
+  }
+  const features = parseOptionalJsonArray(row.features_json);
+  if (features) {
+    task.features = features;
+  }
+  return task;
+}
+
+async function createSingleTaskStore(task: TaskEntity): Promise<TaskStore> {
+  const doc = {
+    schemaVersion: 1 as const,
+    tasks: [task],
+    transitionLog: [],
+    mutationLog: [],
+    lastUpdated: nowIso()
+  };
+  const store = new TaskStore({
+    pathLabel: `agent-execution-packet:${task.id}`,
+    loadDocument: async () => doc,
+    saveDocument: async () => undefined
+  });
+  await store.load();
+  return store;
+}
+
+type AssignmentPacketContext = {
+  task: TaskEntity;
+  packet: ReturnType<typeof buildAgentExecutionPacket>;
+  packetId: string;
+  validationCommands: ReturnType<typeof normalizeAssignmentValidationCommands>;
+};
+
+function readValidationRecommendations(
+  validationResult: ReturnType<typeof buildRecommendValidation>
+): Array<{
+  command: string;
+  rationale: string;
+  priority: number;
+  expectedEvidenceFields: {
+    validationCommands: Array<{ command: string; result: string }>;
+    checks: Array<{ name: string; conclusion: string }>;
+  };
+}> {
+  return validationResult.ok && validationResult.data && typeof validationResult.data === "object"
+    ? (((validationResult.data as Record<string, unknown>).recommendations ?? []) as Array<{
+        command: string;
+        rationale: string;
+        priority: number;
+        expectedEvidenceFields: {
+          validationCommands: Array<{ command: string; result: string }>;
+          checks: Array<{ name: string; conclusion: string }>;
+        };
+      }>)
+    : [];
+}
+
+async function resolveAssignmentPacketContext(args: {
+  assignment: TeamAssignmentRow;
+  db: Sqlite.Database;
+  ctx: ModuleLifecycleContext;
+  planning: Awaited<ReturnType<typeof openPlanningStores>>;
+}): Promise<AssignmentPacketContext | null> {
+  const task = readRelationalTask(args.db, args.assignment.executionTaskId);
+  if (!task) {
+    return null;
+  }
+
+  const boundaries = readAgentExecutionPacketBoundaries(args.assignment.metadata);
+  const store = await createSingleTaskStore(task);
+  const validationResult = buildRecommendValidation(args.ctx, args.planning, store, {
+    taskId: task.id,
+    touchedPaths: boundaries.ownedPaths
+  });
+  const recommendations = readValidationRecommendations(validationResult);
+  const resolvedPolicy = resolveMaintainerDeliveryPolicy({
+    effectiveConfig: args.ctx.effectiveConfig as Record<string, unknown> | undefined,
+    task
+  });
+  const packet = buildAgentExecutionPacket({
+    assignment: args.assignment,
+    task,
+    policy: resolvedPolicy.resolvedPolicy,
+    validationRecommendations: recommendations
+  });
+  return {
+    task,
+    packet,
+    packetId: buildAssignmentPacketRegistryId({
+      assignmentId: args.assignment.id,
+      packetDigest: packet.packetDigest
+    }),
+    validationCommands: normalizeAssignmentValidationCommands(packet.validationCommands)
+  };
+}
+
+function materializeAssignmentMetadataFromPacket(
+  metadata: Record<string, unknown> | null,
+  packetContext: AssignmentPacketContext | null
+): Record<string, unknown> | null {
+  if (!metadata || metadata.schemaVersion !== 1 || !packetContext) {
+    return metadata;
+  }
+  const next: Record<string, unknown> = { ...metadata };
+  next.packetId = packetContext.packetId;
+  next.packetDigest = packetContext.packet.packetDigest;
+  if (packetContext.validationCommands && packetContext.validationCommands.length > 0) {
+    next.validationCommands = packetContext.validationCommands;
+  } else {
+    delete next.validationCommands;
+  }
+  return next;
+}
+
+function readStoredPacketRegistryRow(
+  db: Sqlite.Database,
+  assignment: TeamAssignmentRow
+): AssignmentPacketRegistryRow | null {
+  const packetId = readOptionalStringValue(assignment.metadata?.packetId);
+  if (packetId) {
+    return getAssignmentPacketRegistryRowById(db, packetId);
+  }
+  const packetDigest = readOptionalStringValue(assignment.metadata?.packetDigest);
+  return packetDigest ? getAssignmentPacketRegistryRowByDigest(db, packetDigest) : null;
+}
+
+function attachPacketAudit(args: {
+  assignment: TeamAssignmentRow;
+  packetContext: AssignmentPacketContext | null;
+  registryRow: AssignmentPacketRegistryRow | null;
+}): TeamAssignmentRow & {
+  packetAudit?: {
+    packetId: string | null;
+    storedPacketDigest: string | null;
+    currentPacketDigest: string | null;
+    stale: boolean;
+    registryAvailable: boolean;
+  };
+} {
+  const { assignment, packetContext, registryRow } = args;
+  const packetId = readOptionalStringValue(assignment.metadata?.packetId) ?? registryRow?.packetId ?? null;
+  const storedPacketDigest =
+    readOptionalStringValue(assignment.metadata?.packetDigest) ?? registryRow?.packetDigest ?? null;
+  const currentPacketDigest = packetContext?.packet.packetDigest ?? null;
+  const packetContextStatus =
+    storedPacketDigest && currentPacketDigest
+      ? storedPacketDigest === currentPacketDigest
+        ? "current"
+        : "stale"
+      : "missing";
+
+  return {
+    ...assignment,
+    orchestrationMetadataSummary: assignment.orchestrationMetadataSummary
+      ? {
+          ...assignment.orchestrationMetadataSummary,
+          packetId: packetId ?? assignment.orchestrationMetadataSummary.packetId,
+          packetDigest: storedPacketDigest ?? assignment.orchestrationMetadataSummary.packetDigest,
+          packetContextStatus,
+          packetRegistryStatus: registryRow ? "stored" : "missing"
+        }
+      : assignment.orchestrationMetadataSummary,
+    packetAudit:
+      packetId || storedPacketDigest || currentPacketDigest || registryRow
+        ? {
+            packetId,
+            storedPacketDigest,
+            currentPacketDigest,
+            stale: packetContextStatus === "stale",
+            registryAvailable: Boolean(registryRow)
+          }
+        : undefined
+  };
 }
 
 export const teamExecutionModule: WorkflowModule = {
@@ -363,12 +1091,153 @@ export const teamExecutionModule: WorkflowModule = {
         supervisorId,
         workerId
       });
-      const data: Record<string, unknown> = { assignments, count: assignments.length };
+      const auditedAssignments = await Promise.all(
+        assignments.map(async (assignment) => {
+          const packetContext = await resolveAssignmentPacketContext({
+            assignment,
+            db,
+            ctx,
+            planning
+          });
+          return attachPacketAudit({
+            assignment,
+            packetContext,
+            registryRow: readStoredPacketRegistryRow(db, assignment)
+          });
+        })
+      );
+      const data: Record<string, unknown> = { assignments: auditedAssignments, count: auditedAssignments.length };
       attachPlanningMeta(data, ctx, gen);
       return {
         ok: true,
         code: "assignments-listed",
-        message: `${assignments.length} assignment(s)`,
+        message: `${auditedAssignments.length} assignment(s)`,
+        data
+      };
+    }
+
+    if (name === "agent-execution-packet") {
+      const assignmentId = readOptionalStringArg(args, "assignmentId") ?? "";
+      const workerId = readOptionalStringArg(args, "workerId");
+      if (!assignmentId) {
+        return {
+          ok: false,
+          code: "invalid-args",
+          message: "agent-execution-packet requires assignmentId"
+        };
+      }
+
+      const assignment = getAssignment(db, assignmentId);
+      if (!assignment) {
+        return {
+          ok: false,
+          code: "assignment-not-found",
+          message: `assignment '${assignmentId}' not found`
+        };
+      }
+
+      if (workerId && assignment.workerId !== workerId) {
+        return {
+          ok: false,
+          code: "assignment-authority-denied",
+          message: `assignment '${assignmentId}' is assigned to worker '${assignment.workerId}', not '${workerId}'`
+        };
+      }
+
+      const packetContext = await resolveAssignmentPacketContext({
+        assignment,
+        db,
+        ctx,
+        planning
+      });
+      if (!packetContext) {
+        return {
+          ok: false,
+          code: "task-not-found",
+          message: `execution task '${assignment.executionTaskId}' not found`
+        };
+      }
+
+      const registryRow = readStoredPacketRegistryRow(db, assignment);
+      const data: Record<string, unknown> = {
+        packet: packetContext.packet,
+        packetAudit: attachPacketAudit({
+          assignment,
+          packetContext,
+          registryRow
+        }).packetAudit
+      };
+      if (registryRow) {
+        data.storedPacket = registryRow.body;
+      }
+      attachPlanningMeta(data, ctx, planning.sqliteDual.getPlanningGeneration());
+      return {
+        ok: true,
+        code: "agent-execution-packet",
+        message: `Execution packet for '${assignmentId}'`,
+        data
+      };
+    }
+
+    if (name === "assignment-reconciliation-preflight") {
+      const assignmentId = readOptionalStringArg(args, "assignmentId") ?? "";
+      const supervisorId = readOptionalStringArg(args, "supervisorId") ?? "";
+      if (!assignmentId || !supervisorId) {
+        return {
+          ok: false,
+          code: "invalid-args",
+          message: "assignment-reconciliation-preflight requires assignmentId and supervisorId"
+        };
+      }
+
+      const assignment = getAssignment(db, assignmentId);
+      if (!assignment) {
+        return {
+          ok: false,
+          code: "assignment-not-found",
+          message: `assignment '${assignmentId}' not found`
+        };
+      }
+      const validation = validateAssignmentLifecycleAuthority({
+        action: "assignment-reconciliation-preflight",
+        assignmentId,
+        assignment,
+        callerId,
+        expectedRole: "supervisor",
+        claimedRoleId: supervisorId,
+        allowedStatuses: ["assigned", "submitted", "blocked", "reconciled"],
+        adminIds
+      });
+      if (!validation.ok) {
+        return validation.error;
+      }
+
+      const packetContext = await resolveAssignmentPacketContext({
+        assignment,
+        db,
+        ctx,
+        planning
+      });
+      if (!packetContext) {
+        return {
+          ok: false,
+          code: "task-not-found",
+          message: `execution task '${assignment.executionTaskId}' not found`
+        };
+      }
+
+      const registryRow = readStoredPacketRegistryRow(db, assignment);
+      const data = buildAssignmentReconciliationPreflight({
+        assignment,
+        task: packetContext.task,
+        packetContext,
+        registryRow
+      });
+      attachPlanningMeta(data, ctx, planning.sqliteDual.getPlanningGeneration());
+      return {
+        ok: true,
+        code: "assignment-reconciliation-preflight",
+        message: `Reconciliation preflight for '${assignmentId}'`,
         data
       };
     }
@@ -416,6 +1285,27 @@ export const teamExecutionModule: WorkflowModule = {
       }
       const ts = nowIso();
       const persistTaskId = executionTaskId || readAnyTaskId(db);
+      const assignmentForPacket: TeamAssignmentRow = {
+        id: assignmentId,
+        executionTaskId,
+        supervisorId,
+        workerId,
+        status: "assigned",
+        handoff: null,
+        reconcileCheckpoint: null,
+        blockReason: null,
+        metadata,
+        orchestrationMetadataSummary: null,
+        createdAt: ts,
+        updatedAt: ts
+      };
+      const packetContext = await resolveAssignmentPacketContext({
+        assignment: assignmentForPacket,
+        db,
+        ctx,
+        planning
+      });
+      const persistedMetadata = materializeAssignmentMetadataFromPacket(metadata, packetContext);
       try {
         planning.sqliteDual.withTransaction(
           () => {
@@ -433,9 +1323,19 @@ export const teamExecutionModule: WorkflowModule = {
               executionTaskId,
               supervisorId,
               workerId,
-              metadata,
+              metadata: persistedMetadata,
               now: ts
             });
+            if (packetContext) {
+              upsertAssignmentPacketRegistryRow(db, {
+                packetId: packetContext.packetId,
+                packetDigest: packetContext.packet.packetDigest,
+                assignmentId,
+                executionTaskId,
+                body: packetContext.packet,
+                now: ts
+              });
+            }
           },
           {
             expectedPlanningGeneration: exp,
@@ -450,7 +1350,13 @@ export const teamExecutionModule: WorkflowModule = {
         throw err;
       }
       const row = getAssignment(db, assignmentId)!;
-      const data: Record<string, unknown> = { assignment: row };
+      const data: Record<string, unknown> = {
+        assignment: attachPacketAudit({
+          assignment: row,
+          packetContext,
+          registryRow: readStoredPacketRegistryRow(db, row)
+        })
+      };
       attachPlanningMeta(data, ctx, planning.sqliteDual.getPlanningGeneration());
       return { ok: true, code: "assignment-registered", message: `Assignment '${assignmentId}'`, data };
     }

@@ -10,7 +10,7 @@ type SqliteDatabase = InstanceType<typeof Database>;
  */
 
 /** Bump and add a migration step in `migrateKitSqliteSchema` when DDL changes. Exposed for doctor / list-module-states. */
-export const KIT_SQLITE_USER_VERSION = 33;
+export const KIT_SQLITE_USER_VERSION = 34;
 
 export const TASK_ENGINE_TASKS_TABLE = "task_engine_tasks";
 export const TASK_ENGINE_DEPENDENCIES_TABLE = "task_engine_dependencies";
@@ -1241,6 +1241,27 @@ CREATE INDEX idx_kit_agent_sessions_status_updated ON kit_agent_sessions(status,
 `);
 }
 
+/** Assignment packet registry (Phase 130 / T100678): lookup packet bodies by id or digest. */
+function migrateV33ToV34(db: SqliteDatabase): void {
+  if (tableExists(db, "kit_assignment_packets")) {
+    return;
+  }
+  db.exec(`
+CREATE TABLE kit_assignment_packets (
+  packet_id TEXT PRIMARY KEY NOT NULL,
+  packet_digest TEXT NOT NULL UNIQUE,
+  assignment_id TEXT NOT NULL,
+  execution_task_id TEXT NOT NULL,
+  body_json TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  FOREIGN KEY (assignment_id) REFERENCES kit_team_assignments(id) ON DELETE CASCADE
+);
+CREATE INDEX idx_kit_assignment_packets_assignment ON kit_assignment_packets(assignment_id, updated_at DESC);
+CREATE INDEX idx_kit_assignment_packets_task ON kit_assignment_packets(execution_task_id, updated_at DESC);
+`);
+}
+
 /**
  * Shared SQLite setup for workspace-kit.db: pragmas, centralized user_version migrations.
  * Call after `new Database(path)` for every open (read/write).
@@ -1422,6 +1443,11 @@ function migrateKitSqliteSchema(db: SqliteDatabase): void {
     migrateV32ToV33(db);
     db.pragma("user_version = 33");
     current = 33;
+  }
+  if (current < 34) {
+    migrateV33ToV34(db);
+    db.pragma("user_version = 34");
+    current = 34;
   }
 }
 

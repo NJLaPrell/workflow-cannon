@@ -1,0 +1,40 @@
+{
+  "ok": true,
+  "code": "run-args-schema",
+  "command": "phase-release-orchestration-state",
+  "schema": {
+    "type": "object"
+  },
+  "schemaSource": "pilot-run-args-snapshot",
+  "sampleArgs": {},
+  "examples": [
+    {
+      "description": "Minimal argv example",
+      "argv": "workspace-kit run phase-release-orchestration-state '{}'"
+    }
+  ],
+  "instructionPath": "src/modules/task-engine/instructions/phase-release-orchestration-state.md",
+  "moduleId": "task-engine",
+  "description": "Classify current phase release path into one of six bounded verdicts with reference-first next actions.",
+  "policy": {
+    "sensitivity": "non-sensitive",
+    "operationId": null,
+    "jsonApprovalRequired": false
+  },
+  "planningGeneration": {
+    "cliPrelude": false,
+    "expectedPlanningGeneration": "not required by CLI prelude"
+  },
+  "idempotency": {
+    "clientMutationId": false
+  },
+  "responseTemplate": {
+    "defaultResponseTemplateId": "default"
+  },
+  "remediationContract": ".ai/runbooks/agent-task-engine-ergonomics.md",
+  "discovery": {
+    "listCommands": "pnpm exec wk run --list-commands",
+    "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
+  },
+  "invocationId": "c716cc29-4f17-476c-af95-b573deb80dbd"
+}
