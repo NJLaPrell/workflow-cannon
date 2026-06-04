@@ -373,6 +373,48 @@ test("parseRunCommandOutput returns timeout error when child was SIGTERM'd by ex
   assert.equal(out.code, "extension-cli-timeout");
   assert.match(out.message, /timeout/i);
   assert.match(out.message, /create-idea/i);
+  assert.doesNotMatch(out.message, /dashboard-summary/);
+});
+
+test("parseRunCommandOutput formats dashboard-summary timeout remediation by projection", () => {
+  for (const projection of ["overview", "queue", "status"]) {
+    const out = parseRunCommandOutput("", 1, "", {
+      timedOut: true,
+      commandName: "dashboard-summary",
+      commandArgs: { projection }
+    });
+    const cleanInvocations = out.remediation.cleanInvocations.join("\n");
+    assert.equal(out.ok, false);
+    assert.equal(out.code, "extension-cli-timeout");
+    assert.match(out.message, new RegExp(`dashboard-summary projection=${projection}`));
+    assert.match(
+      cleanInvocations,
+      new RegExp(`pnpm exec wk run dashboard-summary '\\{"projection":"${projection}"\\}'`)
+    );
+    assert.doesNotMatch(out.message, /create-idea/);
+    assert.doesNotMatch(cleanInvocations, /create-idea/);
+  }
+});
+
+test("CommandClient.run passes command context to timeout remediation", async () => {
+  const client = new CommandClient("/tmp/noop", {
+    execFn: async () => ({
+      exitCode: 1,
+      stdout: "",
+      stderr: "",
+      timedOut: true
+    })
+  });
+  const out = await client.runForDashboardPaint(
+    "dashboard-summary",
+    { projection: "overview" },
+    { bootstrap: true }
+  );
+  assert.equal(out.ok, false);
+  assert.equal(out.code, "extension-cli-timeout");
+  assert.match(out.message, /dashboard-summary projection=overview/);
+  assert.doesNotMatch(out.message, /create-idea/);
+  assert.deepEqual(out.details.commandArgs, { projection: "overview" });
 });
 
 test("kitRunTimeoutMsForCommand gives mutations more time than refresh reads", async () => {

@@ -594,24 +594,24 @@ export function parseRunCommandOutput(
   stdout: string,
   exitCode: number,
   stderr = "",
-  options?: { timedOut?: boolean }
+  options?: { timedOut?: boolean; commandName?: string; commandArgs?: Record<string, unknown> }
 ): KitRunResult {
   const text = stdout.trim();
   const stderrText = stderr.trim();
   if (options?.timedOut) {
+    const timeoutRemediation = formatTimeoutRemediation(
+      options.commandName,
+      options.commandArgs
+    );
     return {
       ok: false,
       code: "extension-cli-timeout",
-      message:
-        "workspace-kit run was killed by the extension timeout before JSON was returned (git canonical publish and hydrate can be slow). Retry Add idea, or run create-idea from a terminal to see full progress.",
-      remediation: {
-        cleanInvocations: [
-          "pnpm exec wk run create-idea '{\"title\":\"…\",\"policyApproval\":{\"confirmed\":true,\"rationale\":\"…\"}}'",
-          "node dist/cli.js run create-idea '{\"title\":\"…\",\"policyApproval\":{\"confirmed\":true,\"rationale\":\"…\"}}'"
-        ]
-      },
+      message: timeoutRemediation.message,
+      remediation: timeoutRemediation.remediation,
       details: {
         timedOut: true,
+        commandName: options.commandName,
+        commandArgs: options.commandArgs,
         exitCode,
         stderr: stderrText.slice(0, 2000)
       }
@@ -637,6 +637,55 @@ export function parseRunCommandOutput(
       }
     };
   }
+}
+
+function formatTimeoutRemediation(
+  commandName?: string,
+  commandArgs?: Record<string, unknown>
+): {
+  message: string;
+  remediation: { cleanInvocations: string[] };
+} {
+  if (commandName === "dashboard-summary") {
+    const projection =
+      typeof commandArgs?.projection === "string" && commandArgs.projection.trim().length > 0
+        ? commandArgs.projection.trim()
+        : "full";
+    const json = JSON.stringify({ projection });
+    return {
+      message:
+        `workspace-kit run dashboard-summary projection=${projection} was killed by the extension timeout before JSON was returned. Run dashboard-summary from a terminal to see full progress.`,
+      remediation: {
+        cleanInvocations: [
+          `pnpm exec wk run dashboard-summary '${json}'`,
+          `node dist/cli.js run dashboard-summary '${json}'`
+        ]
+      }
+    };
+  }
+  if (commandName === "create-idea" || !commandName) {
+    return {
+      message:
+        "workspace-kit run create-idea was killed by the extension timeout before JSON was returned (git canonical publish and hydrate can be slow). Retry Add idea, or run create-idea from a terminal to see full progress.",
+      remediation: {
+        cleanInvocations: [
+          "pnpm exec wk run create-idea '{\"title\":\"…\",\"policyApproval\":{\"confirmed\":true,\"rationale\":\"…\"}}'",
+          "node dist/cli.js run create-idea '{\"title\":\"…\",\"policyApproval\":{\"confirmed\":true,\"rationale\":\"…\"}}'"
+        ]
+      }
+    };
+  }
+  const json = JSON.stringify(commandArgs ?? {});
+  return {
+    message:
+      `workspace-kit run ${commandName} was killed by the extension timeout before JSON was returned. Run ${commandName} from a terminal to see full progress.`,
+    remediation: {
+      cleanInvocations: [
+        `pnpm exec wk run ${commandName} '${json}'`,
+        `node dist/cli.js run ${commandName} '${json}'`
+      ]
+    }
+  };
 }
 
 function looksLikePackageManagerBanner(stdout: string): boolean {
@@ -985,7 +1034,11 @@ export class CommandClient {
       if (stderr.trim()) {
         this.onKitRunNotice?.(`stderr ${commandName}: ${stderr.trim().slice(0, 400)}`);
       }
-      const parsed = parseRunCommandOutput(stdout, exitCode, stderr, { timedOut });
+      const parsed = parseRunCommandOutput(stdout, exitCode, stderr, {
+        timedOut,
+        commandName,
+        commandArgs: args
+      });
       if (!parsed.ok && exitCode !== 0 && looksLikeNativeSqliteError(`${stderr}\n${stdout}`)) {
         let nativeProbeRoots: string[] | undefined;
         let runtimeRoots: string[] | undefined;
