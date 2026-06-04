@@ -2917,6 +2917,8 @@ test("taskEngineModule dashboard-summary overview projection keeps startup-only 
   );
   assert.equal(queue.ok, true);
   assert.equal(queue.data.dashboardProjection, "queue");
+  assert.match(queue.data.systemStatus.phase.exportReason, /deferred for overview startup/);
+  assert.equal(queue.data.taskStateProjection.remediation, "Full task-state sync details deferred during overview startup.");
   assert.equal(queue.data.wishlist.openCount, 1);
   assert.equal(queue.data.wishlist.openTop[0].title, "Startup wish");
   assert.equal(queue.data.completedSummary.lazy, true);

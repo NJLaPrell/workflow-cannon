@@ -22,7 +22,7 @@ test("kit-state-changed uses queue content fingerprint refresh (not wcReplaceRoo
   assert.match(src, /onKitStateChangedRefresh/);
   assert.match(src, /patchQueueSectionFromKitState/);
   assert.match(src, /computeQueueContentFingerprint/);
-  assert.match(src, /queue content unchanged/);
+  assert.match(src, /skipped queue \(content unchanged\)/);
 });
 
 test("light refresh mode always uses executeLightSectionRefresh", () => {

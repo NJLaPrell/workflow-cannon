@@ -193,7 +193,8 @@ test("queue hydration and pre-view reads are guarded against startup competition
   assert.match(providerSrc, /queueRollupHydrationInFlight/);
   assert.match(providerSrc, /queue rollup hydration coalesced with in-flight dashboard-summary/);
   assert.match(providerSrc, /queue rollup hydration deferred: root not hydrated/);
-  assert.match(providerSrc, /source=queue hydration/);
+  assert.match(providerSrc, /queue rollup hydration deferred: task-engine tab not visible/);
+  assert.match(providerSrc, /tab:task-engine queue hydration/);
   assert.match(extensionSrc, /workspace-coordination-status/);
   assert.doesNotMatch(extensionSrc, /client\.run\("dashboard-summary", \{\}\)/);
 });

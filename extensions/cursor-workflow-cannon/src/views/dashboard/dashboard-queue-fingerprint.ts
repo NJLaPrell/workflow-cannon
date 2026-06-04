@@ -141,9 +141,18 @@ export function dashboardSummaryNeedsQueueRollupHydration(
   return data.dashboardProjection === "overview";
 }
 
-/** Prefer the lighter queue slice when patching only the queue section. */
+/** Prefer focused projections for automatic section patches; full is explicit/manual only. */
 export function dashboardSummaryProjectionForSectionPatch(
   sectionIds: readonly DashboardSectionId[]
-): "full" | "queue" {
-  return sectionIds.length === 1 && sectionIds[0] === "queue" ? "queue" : "full";
+): "overview" | "queue" | "status" {
+  if (sectionIds.length === 0) {
+    return "overview";
+  }
+  if (sectionIds.every((id) => id === "status")) {
+    return "status";
+  }
+  if (sectionIds.every((id) => id === "queue" || id === "planning-interview" || id === "ideas" || id === "phase-journal")) {
+    return "queue";
+  }
+  return "overview";
 }

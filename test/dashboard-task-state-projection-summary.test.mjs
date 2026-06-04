@@ -111,11 +111,10 @@ test("dashboard-summary overview projection uses lightweight taskStateProjection
 
   assert.equal(result.data.planningSession, null);
   assert.equal(result.data.planArtifact, null);
-  assert.equal(result.data.agentGuidance, null);
+  assert.equal(result.data.agentGuidance?.schemaVersion, 1);
   assert.equal(result.data.teamExecution.available, false);
   assert.equal(result.data.subagentRegistry.available, false);
   assert.equal(result.data.taskCheckpoints.available, false);
   assert.deepEqual(result.data.deliveredPhaseKeys, []);
   assert.deepEqual(result.data.rolledOutPhaseKeys, []);
 });
-

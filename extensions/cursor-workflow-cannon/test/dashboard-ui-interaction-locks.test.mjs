@@ -87,7 +87,7 @@ test("dashboard roster start forces full workspace-wide refresh after set-curren
   );
   assert.match(
     providerSrc,
-    /onStartPhaseFromRoster[\s\S]*pushUpdate\(\{ projection: "full", skipHeavyFetches: false, light: false \}\)/
+    /onStartPhaseFromRoster[\s\S]*projection: "full"[\s\S]*source: "user:phase-roster start"/
   );
   assert.match(refreshControllerSrc, /notifyMutationEnd\(\): void \{[\s\S]*onDeferredCleared/);
 });

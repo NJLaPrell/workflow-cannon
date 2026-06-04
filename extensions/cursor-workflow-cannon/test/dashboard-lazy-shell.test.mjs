@@ -74,7 +74,7 @@ test("DashboardViewProvider paints shell before pushUpdate (T100395)", () => {
   assert.ok(shellIdx >= 0 && paintIdx >= 0 && shellIdx < paintIdx, "shell must render before startup direct paint");
 });
 
-test("DashboardViewProvider startup first paint uses overview and upgrades queue after hydration", () => {
+test("DashboardViewProvider startup first paint uses overview and defers queue/status hydration", () => {
   const providerPath = path.join(srcDir, "DashboardViewProvider.ts");
   const src = fs.readFileSync(providerPath, "utf8");
   const startupBlock = src.slice(
@@ -83,12 +83,9 @@ test("DashboardViewProvider startup first paint uses overview and upgrades queue
   );
   assert.match(startupBlock, /projection:\s*"overview"/);
   assert.doesNotMatch(startupBlock, /projection:\s*"full"/);
-  assert.ok(
-    startupBlock.indexOf("this.markDashboardRootHydrated()") <
-      startupBlock.indexOf("this.ensureQueueRollupsHydrated()"),
-    "overview root must be marked hydrated before queue rollup hydration"
-  );
-  assert.match(startupBlock, /void this\.ensureQueueRollupsHydrated\(\)\.catch/);
+  assert.match(startupBlock, /startup deferred secondary hydration: queue\/status\/full not launched/);
+  assert.doesNotMatch(startupBlock, /ensureQueueRollupsHydrated\(/);
+  assert.doesNotMatch(startupBlock, /ensureStatusHydrated\(/);
 });
 
 test("DashboardViewProvider preserves last good root when a later pushUpdate fails", () => {
@@ -98,7 +95,7 @@ test("DashboardViewProvider preserves last good root when a later pushUpdate fai
     src.indexOf("private async executeDashboardRefresh"),
     src.indexOf("scheduleConfigTabRefresh")
   );
-  assert.match(refreshBlock, /summaryProjection = refreshOptions\?\.projection \?\? \(this\.dashboardRootHydrated \? "full" : "overview"\)/);
+  assert.match(refreshBlock, /summaryProjection = refreshOptions\?\.projection \?\? "overview"/);
   assert.match(refreshBlock, /pushUpdate preserving last good dashboard after failure/);
   assert.match(refreshBlock, /Dashboard refresh failed; keeping the last loaded dashboard/);
 });

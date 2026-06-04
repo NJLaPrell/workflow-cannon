@@ -15,7 +15,7 @@ test("Option 1: DashboardViewProvider wires store + pollers (no legacy 45s timer
   assert.match(providerSrc, /DashboardDataStore/);
   assert.match(providerSrc, /DashboardPollerCoordinator/);
   assert.match(providerSrc, /readPath\.start\(\)/);
-  assert.match(providerSrc, /refreshCriticalNow/);
+  assert.doesNotMatch(providerSrc, /refreshCriticalNow\(\)/);
   assert.doesNotMatch(providerSrc, /dashboardPollTimer/);
 });
 
@@ -75,9 +75,9 @@ test("Option 1: dashboard-summary calls are source labeled and activation avoids
     "utf8"
   );
   assert.match(providerSrc, /dashboard-summary source=\$\{source\}/);
-  assert.match(providerSrc, /source=queue hydration/);
-  assert.match(providerSrc, /source=post-paint status hydration/);
-  assert.match(providerSrc, /source=kit-state refresh/);
+  assert.match(providerSrc, /tab:task-engine queue hydration/);
+  assert.match(providerSrc, /tab:status status hydration/);
+  assert.match(providerSrc, /"kit-state refresh"/);
   assert.match(providerSrc, /manual refresh/);
   assert.match(pollerSrc, /source: "read-path prefetch"/);
   assert.match(pollerSrc, /source: "poller refresh"/);

@@ -88,7 +88,6 @@ import {
   renderDashboardCaeSectionInnerHtml,
   renderDashboardPhaseJournalSectionInnerHtml,
   renderDashboardRootInnerHtml,
-  renderDashboardStatusSectionInnerHtml,
   type RenderDashboardRootOptions,
   type DashboardPhaseJournalBundle,
   type PhaseJournalKitPayload,
@@ -671,10 +670,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     if (this.shouldSkipDashboardKitRefresh()) {
       return false;
     }
-    return (
-      !this.dashboardRootHydrated ||
-      dashboardSummaryNeedsQueueRollupHydration(this.lastDashboardSummaryData)
-    );
+    return !this.dashboardRootHydrated;
   }
 
   private runDashboardSummary(
@@ -685,7 +681,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     const usePaintLane = this.shouldUseDashboardPaintLane();
     logWc(
       "dashboard",
-      `dashboard-summary source=${source} projection=${String(args.projection ?? "full")} lane=${usePaintLane ? "paint" : "refresh"} bootstrap=${String(bootstrapPaint)}`
+      `dashboard-summary source=${source} projection=${String(args.projection ?? "full")} lane=${usePaintLane ? "paint" : "refresh"} bootstrap=${String(bootstrapPaint)} rootHydrated=${String(this.dashboardRootHydrated)}`
     );
     const runner = usePaintLane
       ? (name: string, a: Record<string, unknown>) =>
@@ -730,7 +726,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       return false;
     }
     const tabId = DASHBOARD_SECTION_REGISTRY.find((s) => s.id === sectionId)?.tabId ?? "";
-    return tabId === this.activeDashboardTab || isEagerDashboardSection(sectionId);
+    return tabId === this.activeDashboardTab;
   }
 
   private syncVisibleSectionsToPollers(): void {
@@ -886,35 +882,15 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
 
   /** Queue-only kit refresh with content fingerprint short-circuit. */
   private async patchQueueSectionFromKitState(updateSequence?: number): Promise<void> {
-    let raw: DashboardSummaryCommandSuccess | Record<string, unknown>;
-    try {
-      logWc("dashboard", "dashboard-summary source=kit-state refresh projection=full lane=refresh");
-      raw = (await this.client.run("dashboard-summary", {
-        projection: "full"
-      })) as DashboardSummaryCommandSuccess | Record<string, unknown>;
-      if (isKitRefreshRunAborted(raw as Record<string, unknown>)) {
-        return;
-      }
-    } catch (e) {
-      logWc(
-        "dashboard",
-        `patchQueueSectionFromKitState failed: ${e instanceof Error ? e.message : String(e)}`
-      );
+    if (this.activeDashboardTab !== "task-engine") {
+      this.staleDashboardSections.add("queue");
       return;
     }
-    if (raw.ok !== true || !raw.data || typeof raw.data !== "object") {
-      return;
-    }
-    const summaryData = raw.data as Record<string, unknown>;
-    const contentFp = computeQueueContentFingerprint(summaryData);
-    if (
-      this.lastQueueContentFingerprint !== null &&
-      contentFp === this.lastQueueContentFingerprint
-    ) {
-      logWc("dashboard", "patchQueueSectionFromKitState: skipped (queue content unchanged)");
-      return;
-    }
-    await this.patchDashboardSectionsFromSummary(["queue"], updateSequence, { light: true });
+    await this.patchDashboardSectionsFromSummary(["queue"], updateSequence, {
+      light: true,
+      projection: "queue",
+      source: "kit-state refresh"
+    });
   }
 
   resolveWebviewView(
@@ -959,7 +935,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         this.dashboardInteractionLocks.clear();
         this.dashboardRefreshAfterInteraction = false;
         await webview.postMessage({ type: "wcReleaseRefreshBlock" });
-        await this.pushUpdate({ projection: "full", skipHeavyFetches: false });
+        await this.pushUpdate({ projection: "full", skipHeavyFetches: false, source: "manual refresh" });
       }
       if (msg?.type === "dashboardWebviewBoot") {
         logWc("dashboard", "webview boot");
@@ -988,10 +964,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         if (!this.dashboardRootHydrated) {
           await this.renderDashboardStartupDirect(webview);
         } else {
-          if (dashboardSummaryNeedsQueueRollupHydration(this.lastDashboardSummaryData)) {
-            await this.ensureQueueRollupsHydrated(this.refreshController.currentGeneration());
-          }
-          await this.ensureStatusHydrated(this.refreshController.currentGeneration());
+          logWc("dashboard", "webview ready: secondary hydration deferred until tab activation");
         }
         return;
       }
@@ -1529,7 +1502,6 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         return;
       }
       this.syncVisibleSectionsToPollers();
-      void this.readPath.refreshCriticalNow();
     });
     this.dashboardStore.start();
     void this.readPath.start().then(() => {
@@ -1564,7 +1536,6 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     void this.renderDashboardStartupDirect(webview).then(() => {
       if (this.dashboardRootHydrated) {
         this.syncVisibleSectionsToPollers();
-        void this.readPath.refreshCriticalNow();
       }
     });
   }
@@ -1627,27 +1598,18 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       );
       this.hydratedDashboardSections.clear();
       this.hydratedDashboardSections.add("overview");
-      this.hydratedDashboardSections.add("queue");
       for (const section of DASHBOARD_SECTION_REGISTRY) {
         if (section.tabId === "planning" && section.refreshPolicy === "eager") {
           this.hydratedDashboardSections.add(section.id);
         }
       }
+      for (const sectionId of ["queue", "status", "config", "cae", "phase-journal"] as const) {
+        this.staleDashboardSections.add(sectionId);
+      }
       webview.html = this.buildHtml(webview, rootInner);
       logWc("dashboard", "startup diagnostic direct render applied");
       this.markDashboardRootHydrated();
-      void this.ensureQueueRollupsHydrated().catch((error) => {
-        logWc(
-          "dashboard",
-          `startup queue rollup hydration failed: ${error instanceof Error ? error.message : String(error)}`
-        );
-      });
-      void this.ensureStatusHydrated().catch((error) => {
-        logWc(
-          "dashboard",
-          `startup status hydration failed: ${error instanceof Error ? error.message : String(error)}`
-        );
-      });
+      logWc("dashboard", "startup deferred secondary hydration: queue/status/full not launched");
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       logWc("dashboard", `startup diagnostic direct render failed: ${message}`);
@@ -1682,12 +1644,20 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     if (tabId === "task-engine") {
       await this.ensureQueueRollupsHydrated(this.refreshController.currentGeneration());
+    } else if (tabId === "status" && this.staleDashboardSections.has("status")) {
+      await this.ensureStatusHydrated(this.refreshController.currentGeneration());
     }
     const staleOnTab = DASHBOARD_SECTION_REGISTRY.filter(
-      (section) => section.tabId === tabId && this.staleDashboardSections.has(section.id)
+      (section) =>
+        section.tabId === tabId &&
+        this.staleDashboardSections.has(section.id) &&
+        section.id !== "queue" &&
+        section.id !== "status"
     ).map((section) => section.id);
     if (staleOnTab.length > 0) {
-      await this.patchDashboardSectionsFromSummary(staleOnTab);
+      await this.patchDashboardSectionsFromSummary(staleOnTab, this.refreshController.currentGeneration(), {
+        source: `tab:${tabId} stale sections`
+      });
     }
     this.syncVisibleSectionsToPollers();
   }
@@ -1718,37 +1688,41 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     if (!dashboardSummaryNeedsQueueRollupHydration(this.lastDashboardSummaryData)) {
       return;
     }
+    if (this.activeDashboardTab !== "task-engine") {
+      logWc("dashboard", "queue rollup hydration deferred: task-engine tab not visible");
+      this.staleDashboardSections.add("queue");
+      return;
+    }
     if (this.shouldSkipDashboardKitRefresh()) {
       logWc("dashboard", "queue rollup hydration deferred: refresh paused or suppressed");
       this.refreshController.markDeferredRefreshNeeded();
       return;
     }
     logWc("dashboard", "ensureQueueRollupsHydrated: upgrading overview stub to queue projection");
-    logWc("dashboard", "dashboard-summary source=queue hydration projection=queue lane=paint");
     const seq = updateSequence ?? this.refreshController.currentGeneration();
     await this.patchDashboardSectionsFromSummary(["queue", "overview", "planning-interview"], seq, {
       projection: "queue",
-      forcePaintLane: true,
       preserveOnSummaryFailure: true,
-      source: "queue hydration"
+      source: "tab:task-engine queue hydration"
     });
   }
 
   private async runDashboardSummaryStatus(
     args: Record<string, unknown> = {},
-    options?: { bootstrap?: boolean }
+    options?: { bootstrap?: boolean; source?: string }
   ): Promise<KitRunResult> {
     if (this.inFlightStatusHydration) {
-      logWc("dashboard", "hydration coalesced");
+      logWc("dashboard", "status hydration coalesced with in-flight dashboard-summary");
       return this.inFlightStatusHydration;
     }
 
     const bootstrap = options?.bootstrap ?? !this.dashboardRootHydrated;
     const usePaintLane = this.shouldUseDashboardPaintLane();
-    logWc("dashboard", "post-paint status hydration start");
+    const source = options?.source ?? "tab:status status hydration";
+    logWc("dashboard", "status hydration start");
     logWc(
       "dashboard",
-      `dashboard-summary source=post-paint status hydration projection=status lane=${usePaintLane ? "paint" : "refresh"} bootstrap=${String(bootstrap)}`
+      `dashboard-summary source=${source} projection=status lane=${usePaintLane ? "paint" : "refresh"} bootstrap=${String(bootstrap)} rootHydrated=${String(this.dashboardRootHydrated)}`
     );
     const runPromise = usePaintLane
       ? this.originalRunForPaint("dashboard-summary", { ...args, projection: "status" }, { bootstrap })
@@ -1785,6 +1759,11 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       logWc("dashboard", "hydration paused/deferred: root not hydrated");
       return;
     }
+    if (this.activeDashboardTab !== "status") {
+      logWc("dashboard", "status hydration deferred: status tab not visible");
+      this.staleDashboardSections.add("status");
+      return;
+    }
     if (this.shouldSkipDashboardKitRefresh()) {
       logWc("dashboard", "hydration paused/deferred: refresh paused or suppressed");
       this.refreshController.markDeferredRefreshNeeded();
@@ -1794,7 +1773,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
 
     const seq = updateSequence ?? this.refreshController.currentGeneration();
     try {
-      const raw = await this.runDashboardSummaryStatus();
+      const raw = await this.runDashboardSummaryStatus({}, { source: "tab:status status hydration" });
       if (raw.ok === true && raw.data && typeof raw.data === "object") {
         this.lastDashboardSummaryData = raw.data as Record<string, unknown>;
         ingestPlanningMetaFromData(raw.data as Record<string, unknown>);
@@ -1829,15 +1808,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     try {
       let html = "";
       if (sectionId === "status") {
-        logWc("dashboard", "dashboard-summary source=post-paint status hydration projection=status lane=refresh");
-        const raw = (await this.client.run("dashboard-summary", {
-          projection: "status"
-        })) as Record<string, unknown>;
-        const editorIntegration = await resolveEditorIntegrationState();
-        html = renderDashboardStatusSectionInnerHtml(
-          this.wrapDashboardPayloadForRender(raw),
-          editorIntegration
-        );
+        await this.ensureStatusHydrated(this.refreshController.currentGeneration());
+        return;
       } else if (sectionId === "cae") {
         const caeSummary = await this.client.run("cae-authoring-summary", { schemaVersion: 1 });
         if (isKitRefreshRunAborted(caeSummary as Record<string, unknown>)) {
@@ -2058,7 +2030,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       if (options?.forcePaintLane === true) {
         logWc(
           "dashboard",
-          `dashboard-summary source=${summarySource} projection=${summaryProjection} lane=paint`
+          `dashboard-summary source=${summarySource} projection=${summaryProjection} lane=paint bootstrap=${String(!this.dashboardRootHydrated)} rootHydrated=${String(this.dashboardRootHydrated)}`
         );
       }
       raw = (options?.forcePaintLane === true
@@ -2758,7 +2730,12 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     await this.view?.webview.postMessage({ type: "wcReleaseRefreshBlock" });
     await this.applyDashboardMutationInvalidation("workspace-wide");
-    await this.pushUpdate({ projection: "full", skipHeavyFetches: false, light: false });
+    await this.pushUpdate({
+      projection: "full",
+      skipHeavyFetches: false,
+      light: false,
+      source: "user:phase-roster start"
+    });
     await vscode.window.showInformationMessage(`Workspace phase set to ${targetKey}.`);
   }
 
@@ -3435,7 +3412,11 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
     await vscode.window.showInformationMessage(`Accepted plan ${planId}.`);
-    await this.pushUpdate({ projection: "full", skipHeavyFetches: false });
+    await this.pushUpdate({
+      projection: "full",
+      skipHeavyFetches: false,
+      source: "user:plan-artifact accept"
+    });
   }
 
   private async onReviewPlanArtifact(planId: string, version: number): Promise<void> {
@@ -3462,7 +3443,11 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     await vscode.window.showInformationMessage(
       passed ? `Reviewed plan ${planId}.` : `Reviewed plan ${planId}; findings need attention.`
     );
-    await this.pushUpdate({ projection: "full", skipHeavyFetches: false });
+    await this.pushUpdate({
+      projection: "full",
+      skipHeavyFetches: false,
+      source: "user:plan-artifact review"
+    });
   }
 
   private async onFinalizePlanArtifact(planId: string, version: number): Promise<void> {
@@ -3509,7 +3494,11 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     await vscode.window.showInformationMessage(
       `Finalized plan ${planId}${Number.isFinite(count) && count > 0 ? ` into ${count} task(s)` : ""}.`
     );
-    await this.pushUpdate({ projection: "full", skipHeavyFetches: false });
+    await this.pushUpdate({
+      projection: "full",
+      skipHeavyFetches: false,
+      source: "user:plan-artifact finalize"
+    });
     if (phaseKey.length > 0) {
       await this.view?.webview.postMessage({ type: "wcOpenQueueForPhase", phaseKey });
     }
@@ -4556,10 +4545,10 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     const lightRefresh = mode === "light";
     const refreshOptions = this.pendingPushUpdateOptions;
     this.pendingPushUpdateOptions = undefined;
-    const summaryProjection = refreshOptions?.projection ?? (this.dashboardRootHydrated ? "full" : "overview");
+    const summaryProjection = refreshOptions?.projection ?? "overview";
     const summarySource =
       refreshOptions?.source ??
-      (lightRefresh ? "kit-state refresh" : this.dashboardRootHydrated ? "manual refresh" : "startup overview");
+      (lightRefresh ? "kit-state refresh" : this.dashboardRootHydrated ? "overview refresh" : "startup overview");
     const skipHeavyFetches = refreshOptions?.skipHeavyFetches === true || (!this.dashboardRootHydrated && summaryProjection === "overview");
     if (this.isDashboardRefreshDeferred()) {
       this.refreshController.markDeferredRefreshNeeded();
@@ -4825,20 +4814,14 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         logWc("dashboard", "pushUpdate applied first full document render");
         this.markDashboardRootHydrated();
         if (useDeferredSecondary) {
-          await this.ensureQueueRollupsHydrated(updateSequence);
+          logWc("dashboard", "pushUpdate deferred secondary hydration: queue/status/full not launched");
         }
-        void this.ensureStatusHydrated(updateSequence).catch((error) => {
-          logWc(
-            "dashboard",
-            `startup status hydration failed: ${error instanceof Error ? error.message : String(error)}`
-          );
-        });
         return;
       }
       // Full-root refresh stays the compatibility path while section slices land (T100396+).
       await webview.postMessage({ type: "wcReplaceRoot", html: rootInner });
       if (useDeferredSecondary) {
-        await this.ensureQueueRollupsHydrated(updateSequence);
+        logWc("dashboard", "pushUpdate deferred secondary hydration: queue/status/full not launched");
       }
     } catch (e) {
       logWc("dashboard", `pushUpdate render failed: ${e instanceof Error ? e.message : String(e)}`);

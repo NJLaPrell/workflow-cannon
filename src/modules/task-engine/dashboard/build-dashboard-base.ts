@@ -616,16 +616,17 @@ export async function buildDashboardBase(
     ? (summarizeCheckpointsForDashboard(sqliteDual.getDatabase()) as DashboardTaskCheckpointsSummary)
     : taskCheckpointsEmpty);
 
+  const useLightweightStatus = projection === "overview" || projection === "queue";
   const systemStatus = await (tracer?.spanAsync("systemStatus", () => {
-    if (projection === "overview") {
+    if (useLightweightStatus) {
       return buildDashboardSystemStatusOverview(ctx, store, dualForStatus);
     }
     return buildDashboardSystemStatus(ctx, store, dualForStatus);
-  }) ?? (projection === "overview"
+  }) ?? (useLightweightStatus
     ? buildDashboardSystemStatusOverview(ctx, store, dualForStatus)
     : buildDashboardSystemStatus(ctx, store, dualForStatus)));
   const taskStateProjection = await (tracer?.spanAsync("taskStateProjection", () => {
-    if (projection === "overview") {
+    if (useLightweightStatus) {
       return buildDashboardTaskStateProjectionOverview(
         ctx,
         sqliteDual?.getDatabase() ?? dualForStatus?.getDatabase()
@@ -635,7 +636,7 @@ export async function buildDashboardBase(
       ctx,
       sqliteDual?.getDatabase() ?? dualForStatus?.getDatabase()
     );
-  }) ?? (projection === "overview"
+  }) ?? (useLightweightStatus
     ? buildDashboardTaskStateProjectionOverview(
         ctx,
         sqliteDual?.getDatabase() ?? dualForStatus?.getDatabase()
