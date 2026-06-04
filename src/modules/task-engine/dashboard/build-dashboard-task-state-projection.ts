@@ -257,3 +257,73 @@ export async function buildDashboardTaskStateProjectionSummary(
     recommendedAction
   };
 }
+
+/** Lightweight/fast task-state projection for overview startup (no git status / event sync checks). */
+export async function buildDashboardTaskStateProjectionOverview(
+  ctx: ModuleLifecycleContext,
+  db: Database.Database | undefined
+): Promise<DashboardTaskStateProjectionSummary> {
+  if (!db || !taskStateProjectionMetaTableAvailable(db)) {
+    return { ...EMPTY };
+  }
+
+  const meta = readTaskStateProjectionMeta(db);
+  const projectionSyncStatus = meta?.syncStatus ?? "empty";
+  const localProjection: DashboardTaskStateLocalProjection =
+    projectionSyncStatus === "rebuilding"
+      ? "rebuilding"
+      : projectionSyncStatus === "corrupt"
+        ? "conflict"
+        : projectionSyncStatus === "stale"
+          ? "behind"
+          : "fresh";
+
+  const { displayState, remediation } = resolveTaskStateDisplayState({
+    gitSyncState: null,
+    projectionSyncStatus,
+    localProjection,
+    outbox: DEFAULT_OUTBOX,
+    recommendedAction: "none"
+  });
+
+  const finalRemediation = remediation
+    ? `${remediation} (Full sync status deferred during overview startup.)`
+    : "Full task-state sync details deferred during overview startup.";
+
+  if (!meta) {
+    return {
+      schemaVersion: 1,
+      available: true,
+      backend: "git-event-log",
+      appliedSequence: 0,
+      sourceCommit: null,
+      syncStatus: "empty",
+      updatedAt: null,
+      displayState,
+      remediation: finalRemediation,
+      gitSyncState: null,
+      localProjection,
+      outbox: { ...DEFAULT_OUTBOX },
+      remote: { ...DEFAULT_REMOTE },
+      recommendedAction: "none"
+    };
+  }
+
+  return {
+    schemaVersion: 1,
+    available: true,
+    backend: meta.backend,
+    appliedSequence: meta.appliedSequence,
+    sourceCommit: meta.sourceCommit,
+    syncStatus: meta.syncStatus,
+    updatedAt: meta.updatedAt,
+    displayState,
+    remediation: finalRemediation,
+    gitSyncState: null,
+    localProjection,
+    outbox: { ...DEFAULT_OUTBOX },
+    remote: { ...DEFAULT_REMOTE },
+    recommendedAction: "none"
+  };
+}
+

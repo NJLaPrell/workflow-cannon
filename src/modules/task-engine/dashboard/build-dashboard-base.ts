@@ -66,7 +66,10 @@ import {
   parseDashboardSummaryProjection,
   type DashboardSummaryProjection
 } from "./dashboard-summary-projection.js";
-import { buildDashboardTaskStateProjectionSummary } from "./build-dashboard-task-state-projection.js";
+import {
+  buildDashboardTaskStateProjectionSummary,
+  buildDashboardTaskStateProjectionOverview
+} from "./build-dashboard-task-state-projection.js";
 import { buildDashboardAgentActivitySummary } from "./build-dashboard-agent-activity-summary.js";
 import { summarizeAgentRegistrySessions } from "../agent-registry-session-summary.js";
 import type { DashboardSummaryTracer } from "./dashboard-summary-trace.js";
@@ -583,15 +586,26 @@ export async function buildDashboardBase(
   }) ?? (projection === "overview"
     ? buildDashboardSystemStatusOverview(ctx, store, dualForStatus)
     : buildDashboardSystemStatus(ctx, store, dualForStatus)));
-  const taskStateProjection = await (tracer?.spanAsync("taskStateProjection", () =>
-    buildDashboardTaskStateProjectionSummary(
+  const taskStateProjection = await (tracer?.spanAsync("taskStateProjection", () => {
+    if (projection === "overview") {
+      return buildDashboardTaskStateProjectionOverview(
+        ctx,
+        sqliteDual?.getDatabase() ?? dualForStatus?.getDatabase()
+      );
+    }
+    return buildDashboardTaskStateProjectionSummary(
       ctx,
       sqliteDual?.getDatabase() ?? dualForStatus?.getDatabase()
-    )
-  ) ?? buildDashboardTaskStateProjectionSummary(
-    ctx,
-    sqliteDual?.getDatabase() ?? dualForStatus?.getDatabase()
-  ));
+    );
+  }) ?? (projection === "overview"
+    ? buildDashboardTaskStateProjectionOverview(
+        ctx,
+        sqliteDual?.getDatabase() ?? dualForStatus?.getDatabase()
+      )
+    : buildDashboardTaskStateProjectionSummary(
+        ctx,
+        sqliteDual?.getDatabase() ?? dualForStatus?.getDatabase()
+      )));
   const { agentStatus, agentActivitySummary } = tracer?.span("agentStatus", () => {
     const derived = buildDashboardAgentStatus({
       now: systemStatus.generatedAt,
