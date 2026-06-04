@@ -8,7 +8,7 @@ This root file is intentionally pointer-only to avoid split release history.
 
 - See `docs/maintainers/CHANGELOG.md` for all release notes, migration notes, and historical entries.
 
-## [0.99.27] - 2026-06-03
+## [0.99.27] - 2026-06-04
 
 - See `docs/maintainers/CHANGELOG.md` for release notes, migration notes, and historical entries.
 

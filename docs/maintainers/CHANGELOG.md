@@ -8,20 +8,23 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
-## [0.99.27] - 2026-06-03
+## [0.99.27] - 2026-06-04
 
-Patch — **Phase 130 Packet-first release chain** (bounded phase orchestration packets, JSON-first worker handoffs, final closeout result packet, and dashboard Complete & Release guardrails).
+Patch — **Phase 131 Packet-first release orchestration** (bounded phase orchestration packets, JSON-first worker starts and handoffs, release-state/closeout packets, dashboard Complete & Release guardrails, and packet-flow regression evidence).
 
 ### Added
 
 - `phase-release-orchestration-state` / `phase-drain-delta` packet-first closeout flow with generation-aware refresh guidance and bounded evidence refs.
+- `phase-release-state` read-only packet for release readiness, publish safety, completed phase task evidence, and next release commands.
 - `release-closeout-result` read-only command for placeholder-free final release summaries backed by concrete release notes, follow-up scan, and command refs.
+- Phase 131 packet-flow simulation artifact proving dashboard-launched closeout stays on packet-first refs and falls back safely on stale or mismatched evidence.
 - JSON-first worker handoff guidance for `agent-execution-packet`, `submit-assignment-handoff`, and `assignment-reconciliation-preflight`.
 
 ### Changed
 
-- Cursor Complete & Release prompt now starts from `phase-release-orchestration-state`, uses packet-first worker starts, and includes activation, fallback, and rollback guardrails.
+- Cursor Complete & Release prompt now starts from an explicit scoped `phase-release-orchestration-state` command, uses packet-first worker starts, and keeps concrete fallback and rollback guardrails.
 - Task-engine run-command contract and agent CLI snippets include the final closeout result packet.
+- Agent execution packets now surface deterministic model tier, ownership boundaries, validation commands, handoff refs, stop conditions, and compact guidance cards.
 
 ## [0.99.26] - 2026-06-03
 
