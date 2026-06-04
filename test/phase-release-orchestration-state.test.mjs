@@ -89,6 +89,8 @@ test("buildPhaseReleaseOrchestrationState is bounded and reference-first", () =>
 
   assert.equal(typeof packet.verdict, "string");
   assert.equal(packet.readyUnblockedTop.length <= PHASE_RELEASE_ORCHESTRATION_TOP_LIMIT, true);
+  assert.equal(packet.readyWorkPacketRefs.length <= PHASE_RELEASE_ORCHESTRATION_TOP_LIMIT, true);
+  assert.equal(packet.readyWorkPacketRefs.length, packet.readyUnblockedTop.length);
   assert.equal(packet.blockedTop.length <= PHASE_RELEASE_ORCHESTRATION_TOP_LIMIT, true);
   assert.equal(Array.isArray(packet.refs.commands), true);
   assert.equal(Array.isArray(packet.refs.instructions), true);
@@ -100,6 +102,36 @@ test("buildPhaseReleaseOrchestrationState is bounded and reference-first", () =>
   assert.equal(Array.isArray(packet.readiness.missingArtifactsTop), true);
   assert.equal(typeof packet.publishSafety.safeToPublish, "boolean");
   assert.equal(Array.isArray(packet.publishSafety.reasons), true);
+});
+
+test("buildPhaseReleaseOrchestrationState includes ready work draft packet refs", () => {
+  const packet = buildPhaseReleaseOrchestrationState({
+    workspacePath: process.cwd(),
+    effectiveConfig: undefined,
+    tasks: [
+      task("T9100", "completed", { title: "Dependency" }),
+      task("T9101", "ready", { title: "Ready worker", dependsOn: ["T9100"] }),
+      task("T9102", "ready", { title: "Blocked ready worker", dependsOn: ["T-missing"] })
+    ],
+    phaseKey: "130",
+    currentKitPhase: "130",
+    rolledOut: false
+  });
+
+  assert.deepEqual(packet.readyUnblockedTop.map((row) => row.taskId), ["T9101"]);
+  assert.equal(packet.readyWorkPacketRefs.length, 1);
+  assert.equal(packet.readyWorkPacketRefs[0].taskId, "T9101");
+  assert.equal(packet.readyWorkPacketRefs[0].draftPacketRef.command, "agent-execution-packet");
+  assert.match(
+    packet.readyWorkPacketRefs[0].draftPacketRef.commandLine,
+    /agent-execution-packet '\{"mode":"draft","taskId":"T9101","phaseKey":"130"\}'/
+  );
+  assert.equal(packet.readyWorkPacketRefs[0].assignmentRegistrationRef.command, "register-assignment");
+  assert.match(packet.readyWorkPacketRefs[0].assignmentRegistrationRef.commandLine, /"executionTaskId":"T9101"/);
+  assert.equal(
+    packet.readyWorkPacketRefs[0].draftPacketRef.instructionPath,
+    "src/modules/team-execution/instructions/agent-execution-packet.md"
+  );
 });
 
 test("buildPhaseReleaseOrchestrationState projects remaining readiness findings without broad reads", () => {

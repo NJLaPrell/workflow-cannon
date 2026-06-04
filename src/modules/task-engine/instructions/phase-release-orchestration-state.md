@@ -38,6 +38,7 @@ No required args. The command reads phase/task state from the configured task st
 - `readiness` with bounded `remainingTop[]` and `missingArtifactsTop[]` evidence refs
 - `publishSafety` with `safeToPublish`, branch context, and blocking `reasons[]`
 - bounded `readyUnblockedTop[]` and `blockedTop[]`
+- bounded `readyWorkPacketRefs[]` with task-first `agent-execution-packet` draft commands and `register-assignment` templates for ready unblocked work
 - `refs.commands[]` and `refs.instructions[]` for follow-on steps
 
 When `phaseKey` is supplied, the packet is scoped to that phase even if the workspace canonical phase differs. The mismatch remains visible in `phaseSelection` and `canonicalPhase`; follow-on command refs preserve the selected phase so callers do not silently refresh the wrong phase.

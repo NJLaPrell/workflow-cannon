@@ -51,6 +51,13 @@ export type PhaseReleasePublishSafetyReason = {
   ref: PhaseReleaseCommandRef;
 };
 
+export type PhaseReleaseReadyWorkPacketRef = {
+  taskId: string;
+  title: string;
+  draftPacketRef: PhaseReleaseCommandRef;
+  assignmentRegistrationRef: PhaseReleaseCommandRef;
+};
+
 export type PhaseReleasePathInputs = {
   phaseKey: string | null;
   currentKitPhase: string | null;
@@ -433,6 +440,42 @@ function commandLine(command: string, args?: Record<string, unknown>): string {
     : `pnpm exec wk run ${command} '{}'`;
 }
 
+function agentExecutionDraftPacketRef(taskId: string, phaseKey: string | null): PhaseReleaseCommandRef {
+  return {
+    command: "agent-execution-packet",
+    commandLine: commandLine("agent-execution-packet", {
+      mode: "draft",
+      taskId,
+      ...(phaseKey ? { phaseKey } : {})
+    }),
+    instructionPath: "src/modules/team-execution/instructions/agent-execution-packet.md"
+  };
+}
+
+function assignmentRegistrationTemplateRef(taskId: string): PhaseReleaseCommandRef {
+  return {
+    command: "register-assignment",
+    commandLine: commandLine("register-assignment", {
+      executionTaskId: taskId,
+      supervisorId: "<supervisor-id>",
+      workerId: "<worker-id>"
+    }),
+    instructionPath: "src/modules/team-execution/instructions/register-assignment.md"
+  };
+}
+
+function buildReadyWorkPacketRefs(
+  readyUnblockedTop: Array<{ taskId: string; title: string }>,
+  phaseKey: string | null
+): PhaseReleaseReadyWorkPacketRef[] {
+  return readyUnblockedTop.map((task) => ({
+    taskId: task.taskId,
+    title: task.title,
+    draftPacketRef: agentExecutionDraftPacketRef(task.taskId, phaseKey),
+    assignmentRegistrationRef: assignmentRegistrationTemplateRef(task.taskId)
+  }));
+}
+
 function buildCommandRef(command: string, phaseKey: string | null): PhaseReleaseCommandRef {
   switch (command) {
     case "phase-closeout-readiness":
@@ -651,6 +694,7 @@ export function buildPhaseReleaseOrchestrationState(args: {
     reasons: PhaseReleasePublishSafetyReason[];
   };
   readyUnblockedTop: Array<{ taskId: string; title: string }>;
+  readyWorkPacketRefs: PhaseReleaseReadyWorkPacketRef[];
   blockedTop: Array<{ taskId: string; title: string; blockedBy: string[] }>;
   refs: {
     commands: string[];
@@ -733,6 +777,7 @@ export function buildPhaseReleaseOrchestrationState(args: {
     },
     publishSafety,
     readyUnblockedTop: taskSummary.readyUnblockedTop,
+    readyWorkPacketRefs: buildReadyWorkPacketRefs(taskSummary.readyUnblockedTop, args.phaseKey),
     blockedTop: taskSummary.blockedTop,
     refs: {
       commands: [
