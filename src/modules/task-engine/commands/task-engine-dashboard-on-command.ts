@@ -3,6 +3,7 @@ import type { SqliteDualPlanningStore } from "../persistence/sqlite-dual-plannin
 import type { TaskStore } from "../persistence/store.js";
 import {
   buildDashboardBase,
+  buildDashboardOverview,
   buildDashboardAgentActivityProjection,
   buildDashboardFullProjection,
   buildDashboardOverviewProjection,
@@ -32,17 +33,20 @@ export async function runDashboardSummaryCommand(
     if (tracer) {
       tracer.projection = projection;
     }
-    const base = await buildDashboardBase(ctx, store, planningGeneration, sqliteDual, commandArgs, tracer);
-    const data =
-      projection === "overview"
-        ? buildDashboardOverviewProjection(base)
-        : projection === "agentActivity"
+    let data;
+    if (projection === "overview") {
+      data = await buildDashboardOverview(ctx, store, planningGeneration, sqliteDual, commandArgs, tracer);
+    } else {
+      const base = await buildDashboardBase(ctx, store, planningGeneration, sqliteDual, commandArgs, tracer);
+      data =
+        projection === "agentActivity"
           ? buildDashboardAgentActivityProjection(base)
-        : projection === "queue"
-          ? buildDashboardQueueProjection(base)
-          : projection === "status"
-            ? buildDashboardStatusProjection(base)
-            : buildDashboardFullProjection(base);
+          : projection === "queue"
+            ? buildDashboardQueueProjection(base)
+            : projection === "status"
+              ? buildDashboardStatusProjection(base)
+              : buildDashboardFullProjection(base);
+    }
     const sliced = tracer?.span("finalizeProjection", () => finalizeDashboardSummaryProjection(data, projection))
       ?? finalizeDashboardSummaryProjection(data, projection);
 

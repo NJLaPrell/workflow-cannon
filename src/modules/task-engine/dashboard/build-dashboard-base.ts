@@ -924,6 +924,249 @@ export async function buildDashboardBase(
   };
 }
 
+/** Dedicated lightweight builder for the overview dashboard startup projection. */
+export async function buildDashboardOverview(
+  ctx: ModuleLifecycleContext,
+  store: TaskStore,
+  planningGeneration: number,
+  sqliteDual: SqliteDualPlanningStore | undefined,
+  commandArgs?: Record<string, unknown>,
+  tracer?: DashboardSummaryTracer
+): Promise<DashboardSummaryData> {
+  const tasks = tracer?.span("getActiveTasks", () => store.getActiveTasks()) ?? store.getActiveTasks();
+  const dualForStatus = sqliteDual ?? openSqliteDualForWorkspaceStatus(ctx);
+  const workspaceStatus = readWorkspaceStatusSnapshotFromDual(dualForStatus);
+
+  const suggestion = tracer?.span("getNextActions", () =>
+    getNextActions(tasks, {
+      workspacePhaseFocus: {
+        currentKitPhase: workspaceStatus?.currentKitPhase ?? null,
+        nextKitPhase: workspaceStatus?.nextKitPhase ?? null
+      }
+    })
+  ) ?? getNextActions(tasks, {
+    workspacePhaseFocus: {
+      currentKitPhase: workspaceStatus?.currentKitPhase ?? null,
+      nextKitPhase: workspaceStatus?.nextKitPhase ?? null
+    }
+  });
+
+  const systemStatus = await (tracer?.spanAsync("systemStatus", () =>
+    buildDashboardSystemStatusOverview(ctx, store, dualForStatus)
+  ) ?? buildDashboardSystemStatusOverview(ctx, store, dualForStatus));
+
+  const taskStateProjection = await (tracer?.spanAsync("taskStateProjection", () =>
+    buildDashboardTaskStateProjectionOverview(
+      ctx,
+      sqliteDual?.getDatabase() ?? dualForStatus?.getDatabase()
+    )
+  ) ?? buildDashboardTaskStateProjectionOverview(
+    ctx,
+    sqliteDual?.getDatabase() ?? dualForStatus?.getDatabase()
+  ));
+
+  const liveActivity = sqliteDual
+    ? readCurrentAgentActivityLease(sqliteDual.getDatabase(), systemStatus.generatedAt)
+    : null;
+  const liveLeases = sqliteDual
+    ? listCurrentAgentActivityLeases(sqliteDual.getDatabase(), systemStatus.generatedAt)
+    : [];
+
+  const teamExecutionEmpty: DashboardTeamExecutionSummary = {
+    schemaVersion: 1,
+    available: false,
+    totalCount: 0,
+    activeCount: 0,
+    byStatus: { assigned: 0, submitted: 0, blocked: 0, reconciled: 0, cancelled: 0 },
+    topActive: []
+  };
+
+  const subagentRegistryEmpty: DashboardSubagentRegistrySummary = {
+    schemaVersion: 1,
+    available: false,
+    definitionsCount: 0,
+    retiredDefinitionsCount: 0,
+    openSessionsCount: 0,
+    topOpenSessions: []
+  };
+
+  const agentRegistrySessionsEmpty: DashboardSummaryData["agentRegistrySessions"] = {
+    schemaVersion: 1,
+    available: false,
+    definitionsCount: 0,
+    orchestrationReadyDefinitionsCount: 0,
+    retiredDefinitionsCount: 0,
+    openSessionsCount: 0,
+    activeAssignmentsCount: 0,
+    linkedOpenSessionsCount: 0,
+    hostAvailability: { cursor: 0, vscode: 0, cli: 0, manual: 0, unknown: 0 },
+    capabilityAvailability: { required: [], optional: [] },
+    currentPointers: { assignment: 0, task: 0, activity: 0 },
+    topOpenSessions: []
+  };
+
+  const taskCheckpointsEmpty: DashboardTaskCheckpointsSummary = {
+    schemaVersion: 1,
+    available: false,
+    totalCount: 0,
+    topRecent: []
+  };
+
+  const derivedAgentStatus = buildDashboardAgentStatus({
+    now: systemStatus.generatedAt,
+    tasks,
+    planningSession: null,
+    suggestion,
+    teamExecution: teamExecutionEmpty,
+    subagentRegistry: subagentRegistryEmpty,
+    systemStatus
+  });
+
+  const agentStatus = liveActivity
+    ? agentActivityLeaseToDashboardStatus(liveActivity, systemStatus.generatedAt)
+    : derivedAgentStatus;
+
+  const agentActivitySummary = buildDashboardAgentActivitySummary({
+    now: systemStatus.generatedAt,
+    tasks,
+    liveActivityLeases: liveLeases,
+    derivedAgentStatus,
+    teamExecution: teamExecutionEmpty,
+    subagentRegistry: subagentRegistryEmpty
+  });
+
+  const currentPhaseDelivery = buildDashboardCurrentPhaseDelivery({
+    tasks,
+    workspaceStatus: {
+      currentKitPhase: workspaceStatus?.currentKitPhase ?? null,
+      nextKitPhase: workspaceStatus?.nextKitPhase ?? null
+    },
+    db: dualForStatus?.getDatabase() ?? null,
+    effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined
+  });
+
+  const legacyDeliveredMaxOrdinal = resolveLegacyDeliveredMaxOrdinal(
+    ctx.effectiveConfig as Record<string, unknown> | undefined
+  );
+  const phaseKeysWithActiveQueueWork = collectPhaseKeysWithActiveQueueWork(tasks);
+
+  const humanGatesSummary = buildDashboardHumanGatesSummary(
+    tasks,
+    workspaceStatus?.currentKitPhase != null ? String(workspaceStatus.currentKitPhase) : null,
+    new Map()
+  );
+  const approvalQueue = buildDashboardApprovalQueueSummary(tasks);
+
+  const emptyListSummary = () =>
+    ({ schemaVersion: 1 as const, count: 0, top: [], phaseBuckets: [] });
+
+  const emptyWishlist = (pageSize: number) =>
+    ({
+      schemaVersion: 1 as const,
+      openCount: 0,
+      totalCount: 0,
+      openPage: 0,
+      openPageSize: pageSize,
+      openTotalPages: 0,
+      openTop: []
+    });
+
+  const emptyIdeas = (): DashboardSummaryData["ideas"] => ({
+    schemaVersion: 1,
+    available: false,
+    totalCount: 0,
+    openCount: 0,
+    planningCount: 0,
+    plannedCount: 0,
+    top: []
+  });
+
+  const emptyPhaseJournalStats = (): DashboardSummaryData["phaseJournalStats"] => ({
+    schemaVersion: 1,
+    available: false,
+    phases: [],
+    currentPhase: {
+      phaseKey: null,
+      activeNoteCount: 0,
+      completedDeliveryTaskCount: 0,
+      silenceWarning: false
+    }
+  });
+
+  const suggestedNext = suggestion.suggestedNext
+    ? {
+        ...projectDashboardTaskRow(suggestion.suggestedNext, new Map()),
+        id: suggestion.suggestedNext.id,
+        status: suggestion.suggestedNext.status,
+        title: suggestion.suggestedNext.title,
+        type: suggestion.suggestedNext.type
+      }
+    : null;
+
+  return {
+    schemaVersion: 7 as const,
+    dashboardProjection: "overview",
+    planningGeneration,
+    planningGenerationPolicy: getPlanningGenerationPolicy({
+      effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined
+    }),
+    taskStoreLastUpdated: store.getLastUpdated(),
+    workspaceStatus,
+    planningSession: null,
+    planArtifact: null,
+    stateSummary: suggestion.stateSummary,
+    transcriptChurnResearchSummary: emptyListSummary(),
+    proposedImprovementsSummary: emptyListSummary(),
+    proposedExecutionSummary: emptyListSummary(),
+    readyImprovementsSummary: emptyListSummary(),
+    readyExecutionSummary: emptyListSummary(),
+    readyQueueTop: [],
+    readyQueueCount: 0,
+    readyQueueBreakdown: { schemaVersion: 1, improvement: 0, other: 0 },
+    executionPlanningScope: "tasks-only" as const,
+    wishlist: emptyWishlist(10),
+    ideas: emptyIdeas(),
+    blockedSummary: { count: 0, top: [], phaseBuckets: [] },
+    humanGatesSummary,
+    approvalQueue,
+    phaseJournalStats: emptyPhaseJournalStats(),
+    completedSummary: emptyListSummary(),
+    cancelledSummary: emptyListSummary(),
+    suggestedNext,
+    dependencyOverview: {
+      schemaVersion: 1,
+      activeTaskCount: 0,
+      includedTaskCount: 0,
+      edgeCount: 0,
+      truncated: false,
+      perfNote: "overview projection",
+      nodes: [],
+      edges: [],
+      mermaidFlowchart: "",
+      criticalPathReady: []
+    },
+    blockingAnalysis: [],
+    agentGuidance: null,
+    teamExecution: teamExecutionEmpty,
+    subagentRegistry: subagentRegistryEmpty,
+    agentRegistrySessions: agentRegistrySessionsEmpty,
+    taskCheckpoints: taskCheckpointsEmpty,
+    systemStatus,
+    taskStateProjection,
+    agentStatus,
+    agentActivitySummary,
+    currentPhaseDelivery,
+    deliveredPhaseKeys: [],
+    rolledOutPhaseKeys: [],
+    phaseReleaseDates: {},
+    phaseDeliveryHistory: [],
+    lastDeliveredPhase: null,
+    legacyDeliveredMaxOrdinal,
+    phaseKeysWithActiveQueueWork,
+    pastPhaseNotes: []
+  } satisfies DashboardSummaryData;
+}
+
 export function buildDashboardFullProjection(base: DashboardBuildBase): DashboardSummaryData {
   return base.data;
 }
