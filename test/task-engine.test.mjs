@@ -2863,6 +2863,69 @@ test("taskEngineModule dashboard-summary overview projection omits queue rollups
   assert.ok(JSON.stringify(overview.data).length < JSON.stringify(full.data).length);
 });
 
+test("taskEngineModule dashboard-summary overview projection keeps startup-only slices lightweight", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(makeTask({ id: "T910", status: "ready", priority: "P1", title: "Ready visible" }));
+    store.addTask(makeTask({ id: "T911", status: "completed", phaseKey: "80", title: "Completed archived" }));
+    store.addTask(makeTask({ id: "T912", status: "cancelled", phaseKey: "80", title: "Cancelled archived" }));
+  });
+  const ctx = sqliteTaskEngineCtx(workspace);
+  const wish = await taskEngineModule.onCommand(
+    {
+      name: "create-wishlist",
+      args: {
+        id: "W910",
+        title: "Startup wish",
+        problemStatement: "Need fast startup",
+        expectedOutcome: "No eager wishlist load",
+        impact: "Performance",
+        constraints: "None",
+        successSignals: "Overview stays small",
+        requestor: "maintainer",
+        evidenceRef: "T9"
+      }
+    },
+    ctx
+  );
+  assert.equal(wish.ok, true);
+
+  const overview = await taskEngineModule.onCommand(
+    { name: "dashboard-summary", args: { projection: "overview", includeWishlist: true } },
+    ctx
+  );
+  assert.equal(overview.ok, true);
+  assert.equal(overview.data.dashboardProjection, "overview");
+  assert.equal(overview.data.readyQueueCount, 0);
+  assert.deepEqual(overview.data.readyQueueTop, []);
+  assert.equal(overview.data.wishlist.enabled, true);
+  assert.equal(overview.data.wishlist.openCount, 0);
+  assert.equal(overview.data.wishlist.totalCount, 0);
+  assert.deepEqual(overview.data.wishlist.openTop, []);
+  assert.equal(overview.data.ideas.available, false);
+  assert.equal(overview.data.dependencyOverview.perfNote, "overview projection");
+  assert.deepEqual(overview.data.dependencyOverview.nodes, []);
+  assert.match(overview.data.systemStatus.phase.exportReason, /deferred for overview startup/);
+  assert.equal(overview.data.completedSummary.lazy, true);
+  assert.equal(overview.data.cancelledSummary.lazy, true);
+  assert.deepEqual(overview.data.completedSummary.top, []);
+  assert.deepEqual(overview.data.cancelledSummary.top, []);
+
+  const queue = await taskEngineModule.onCommand(
+    { name: "dashboard-summary", args: { projection: "queue", includeWishlist: true } },
+    ctx
+  );
+  assert.equal(queue.ok, true);
+  assert.equal(queue.data.dashboardProjection, "queue");
+  assert.equal(queue.data.wishlist.openCount, 1);
+  assert.equal(queue.data.wishlist.openTop[0].title, "Startup wish");
+  assert.equal(queue.data.completedSummary.lazy, true);
+  assert.equal(queue.data.cancelledSummary.lazy, true);
+  assert.deepEqual(queue.data.completedSummary.top, []);
+  assert.deepEqual(queue.data.cancelledSummary.top, []);
+  assert.doesNotMatch(JSON.stringify(queue.data), /Completed archived|Cancelled archived/);
+});
+
 test("taskEngineModule dashboard-summary agentActivity projection refreshes live activity without queue or status rollups", async () => {
   const workspace = await tmpDir();
   await seedSqliteStore(workspace, (store) => {
@@ -3009,6 +3072,18 @@ test("taskEngineModule onCommand dashboard-terminal-rows returns paged completed
   });
 
   const ctx = sqliteTaskEngineCtx(workspace);
+  const queue = await taskEngineModule.onCommand(
+    { name: "dashboard-summary", args: { projection: "queue" } },
+    ctx
+  );
+  assert.equal(queue.ok, true);
+  assert.equal(queue.data.completedSummary.count, 3);
+  assert.equal(queue.data.cancelledSummary.count, 1);
+  assert.equal(queue.data.completedSummary.lazy, true);
+  assert.equal(queue.data.cancelledSummary.lazy, true);
+  assert.deepEqual(queue.data.completedSummary.top, []);
+  assert.deepEqual(queue.data.cancelledSummary.top, []);
+  assert.doesNotMatch(JSON.stringify(queue.data), /T900|T901|T902|T903/);
 
   // Test completed without phase filter
   {
