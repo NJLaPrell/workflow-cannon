@@ -408,6 +408,9 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   /** Coalesces parallel boot/ready/timeout startup renders. */
   private readonly dashboardStartupSingleFlight = new DashboardStartupSingleFlight();
 
+  /** Coalesces queue rollup upgrades so heavier queue projections stay single-flight. */
+  private queueRollupHydrationInFlight?: Promise<void>;
+
   /** Sections hydrated via tab activation or eager first paint (T100398). */
   private hydratedDashboardSections = new Set<DashboardSectionId>();
 
@@ -1529,6 +1532,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       this.dashboardRootShellReady = false;
       this.dashboardRootHydrated = false;
       this.dashboardStartupSingleFlight.clear();
+      this.queueRollupHydrationInFlight = undefined;
       this.hydratedDashboardSections.clear();
       this.staleDashboardSections.clear();
       this.webviewMessageDisposable?.dispose();
@@ -1683,17 +1687,41 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
 
   /** Upgrade queue (+ overview stat pills) from overview stub to queue rollups. */
   private async ensureQueueRollupsHydrated(updateSequence?: number): Promise<void> {
-    if (!this.view || !dashboardSummaryNeedsQueueRollupHydration(this.lastDashboardSummaryData)) {
+    if (this.queueRollupHydrationInFlight) {
+      logWc("dashboard", "queue rollup hydration coalesced with in-flight dashboard-summary");
+      return this.queueRollupHydrationInFlight;
+    }
+    const run = this.ensureQueueRollupsHydratedOnce(updateSequence).finally(() => {
+      if (this.queueRollupHydrationInFlight === run) {
+        this.queueRollupHydrationInFlight = undefined;
+      }
+    });
+    this.queueRollupHydrationInFlight = run;
+    return run;
+  }
+
+  private async ensureQueueRollupsHydratedOnce(updateSequence?: number): Promise<void> {
+    if (!this.view) {
+      return;
+    }
+    if (!this.dashboardRootHydrated) {
+      logWc("dashboard", "queue rollup hydration deferred: root not hydrated");
+      return;
+    }
+    if (!dashboardSummaryNeedsQueueRollupHydration(this.lastDashboardSummaryData)) {
       return;
     }
     if (this.shouldSkipDashboardKitRefresh()) {
+      logWc("dashboard", "queue rollup hydration deferred: refresh paused or suppressed");
       this.refreshController.markDeferredRefreshNeeded();
       return;
     }
     logWc("dashboard", "ensureQueueRollupsHydrated: upgrading overview stub to queue projection");
-    await this.patchDashboardSectionsFromSummary(["queue", "overview", "planning-interview"], updateSequence, {
+    const seq = updateSequence ?? this.refreshController.currentGeneration();
+    await this.patchDashboardSectionsFromSummary(["queue", "overview", "planning-interview"], seq, {
       projection: "queue",
-      forcePaintLane: true
+      forcePaintLane: true,
+      preserveOnSummaryFailure: true
     });
   }
 
@@ -1986,6 +2014,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       projection?: "full" | "queue" | "overview" | "status";
       /** Queue upgrade during startup — bypass refresh lane even after root hydrated. */
       forcePaintLane?: boolean;
+      /** Deferred/background upgrades should keep the existing dashboard on summary failure. */
+      preserveOnSummaryFailure?: boolean;
     }
   ): Promise<void> {
     const activeView = this.view;
@@ -2026,10 +2056,22 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       );
       return;
     }
+    if (this.shouldSkipDashboardKitRefresh()) {
+      logWc("dashboard", "patchDashboardSectionsFromSummary aborted (refresh paused after summary)");
+      this.refreshController.markDeferredRefreshNeeded();
+      return;
+    }
     if (
       typeof updateSequence === "number" &&
       this.isPushUpdateStale(updateSequence, activeView)
     ) {
+      return;
+    }
+    if (raw.ok !== true && options?.preserveOnSummaryFailure === true) {
+      logWc(
+        "dashboard",
+        `patchDashboardSectionsFromSummary preserved existing sections after summary failure code=${String(raw.code ?? "")}`
+      );
       return;
     }
     let phaseJournal: DashboardPhaseJournalBundle | undefined;
@@ -4748,10 +4790,10 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       if (!this.dashboardRootHydrated) {
         webview.html = this.buildHtml(webview, rootInner);
         logWc("dashboard", "pushUpdate applied first full document render");
+        this.markDashboardRootHydrated();
         if (useDeferredSecondary) {
           await this.ensureQueueRollupsHydrated(updateSequence);
         }
-        this.markDashboardRootHydrated();
         void this.ensureStatusHydrated(updateSequence).catch((error) => {
           logWc(
             "dashboard",

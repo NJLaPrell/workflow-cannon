@@ -58,8 +58,16 @@ test("Option 1: background status hydration exists and is single-flight", () => 
   assert.match(providerSrc, /hydration coalesced/);
 });
 
+test("Option 1: queue rollup hydration is single-flight after overview paint", () => {
+  assert.match(providerSrc, /queueRollupHydrationInFlight/);
+  assert.match(providerSrc, /ensureQueueRollupsHydratedOnce/);
+  assert.match(providerSrc, /queue rollup hydration coalesced/);
+  assert.match(providerSrc, /queue rollup hydration deferred: root not hydrated/);
+  assert.match(providerSrc, /queue rollup hydration deferred: refresh paused or suppressed/);
+  assert.match(providerSrc, /preserveOnSummaryFailure/);
+  assert.match(providerSrc, /preserved existing sections after summary failure/);
+});
+
 test("Option 1: DashboardViewProvider delegates to dashboard-terminal-rows for completed/cancelled tasks", () => {
   assert.match(providerSrc, /"dashboard-terminal-rows"/);
 });
-
-
