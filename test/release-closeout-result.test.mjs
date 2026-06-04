@@ -44,6 +44,13 @@ test("buildReleaseCloseoutResult emits placeholder-free final report and concret
         scannedAt: "2026-06-03T21:00:00.000Z",
         rationale: "No follow-up execution tasks recorded."
       },
+      postReleaseEvidence: {
+        branchesAndPrs: ["release/phase-130", "PR #600"],
+        tag: "v0.99.27",
+        publishedPackage: "@workflow-cannon/workspace-kit@0.99.27",
+        ci: ["test: success"],
+        workspace: { currentKitPhase: "131", releasedPhase: "130" }
+      },
       risks: [{ label: "Residual", message: "Dashboard prompt integration lands separately." }]
     }
   });
@@ -60,16 +67,46 @@ test("buildReleaseCloseoutResult emits placeholder-free final report and concret
     [
       "phase-release-orchestration-state",
       "phase-drain-delta",
+      "phase-release-state",
       "prepare-release-artifacts",
       "release-closeout-result"
     ]
   );
+  assert.deepEqual(result.packet.releaseEvidence.missingFinalEvidence, []);
+  assert.equal(result.packet.releaseEvidence.postReleaseEvidence.tag, "v0.99.27");
   assert.ok(
     result.packet.refs.concreteRefs.some((ref) => ref.field === "completedExecutionTaskCount")
   );
   assert.ok(
     result.packet.refs.concreteRefs.every((ref) => typeof ref.ref.commandLine === "string" && ref.ref.commandLine.length > 0)
   );
+});
+
+test("buildReleaseCloseoutResult keeps missing final evidence explicit", () => {
+  const result = buildReleaseCloseoutResult({
+    workspacePath: process.cwd(),
+    tasks: [task("T100688")],
+    phaseKey: "130",
+    planningGeneration: 42,
+    commandArgs: {
+      releaseVersion: "0.99.27",
+      packageName: "@workflow-cannon/workspace-kit",
+      releaseNotes: {
+        source: "test",
+        entries: ["Added concrete final evidence fields."]
+      },
+      followUpSummary: {
+        count: 0,
+        scannedAt: "2026-06-03T21:00:00.000Z",
+        rationale: "No follow-up execution tasks recorded."
+      }
+    }
+  });
+
+  assert.equal(result.ok, true);
+  assert.ok(result.packet.releaseEvidence.missingFinalEvidence.includes("postReleaseEvidence.tag"));
+  assert.ok(result.packet.releaseEvidence.missingFinalEvidence.includes("postReleaseEvidence.workspace"));
+  assert.ok(result.packet.refs.concreteRefs.some((ref) => ref.field === "postReleaseEvidence"));
 });
 
 test("buildReleaseCloseoutResult refuses to emit template-like report without evidence", () => {
