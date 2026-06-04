@@ -19,6 +19,16 @@ function branchRef(phaseKey: string | undefined): string {
   return pk ? `release/phase-${pk}` : "release/phase-<N>";
 }
 
+function orchestrationStateCommand(phaseKey: string | undefined, scope: PhaseCompleteReleaseScope, branch: string): string {
+  const pk = phaseKey?.trim() || "<N>";
+  return `pnpm exec wk run phase-release-orchestration-state '${JSON.stringify({
+    phaseKey: pk,
+    scope,
+    integrationBranch: branch,
+    dashboardAuthorization: "complete-and-release"
+  })}'`;
+}
+
 export function buildPhaseCompleteReleaseChatPrompt(
   phaseLabelOrPhrase: string,
   options?: PhaseCompleteReleasePromptOptions
@@ -29,11 +39,12 @@ export function buildPhaseCompleteReleaseChatPrompt(
   const next = options?.nextKitPhase?.trim() ?? "";
   const scope = options?.scope ?? (pk && cur && pk === cur ? "current" : "bucket");
   const branch = branchRef(pk);
+  const command = orchestrationStateCommand(pk, scope, branch);
 
   return [
-    "phase-release-orchestration-state",
+    command,
     "",
-    "Run this first. Work from its verdict, refs.commands, and refs.instructions instead of broad re-discovery.",
+    "Run this first. Work from `data.verdict`, `refs.commands`, and `refs.instructions`; refresh only after material changes.",
     "",
     "## Context",
     `* target phaseKey: \`${pk ?? "{{phaseKey}}"}\``,
@@ -44,25 +55,17 @@ export function buildPhaseCompleteReleaseChatPrompt(
     "* dashboard authorization: complete-and-release",
     "",
     "## Authority",
-    "Follow the attached machine guidance. Do not restate routine mechanics.",
+    "Dashboard authorization covers closeout, release, and publish when gates allow. Tier A/B `wk run` mutations still require JSON `policyApproval`.",
     "",
     "* `@.ai/playbooks/phase-closeout-and-release.md`",
     "* `@.ai/playbooks/task-to-phase-branch.md`",
     "* `@.ai/runbooks/phase-closeout-ordering-recovery.md`",
     "* `@.ai/AGENT-CLI-MAP.md`",
-    "",
-    "## Authorization and policy",
-    "",
-    "Treat this dashboard launch as operator authorization to orchestrate closeout, release, and publish for the target phase when the attached gates allow it.",
-    "Tier A/B `wk run` mutations still require JSON `policyApproval`; the dashboard launch does not bypass policy.",
-    "Packet-first rollout is activation-gated: use it only for this dashboard-launched Complete & Release flow, or when an equivalent operator feature flag/rollout note explicitly enables `phase-release-orchestration-state` packets.",
-    "If packet-first is not explicitly activated for the run, use the existing full-refresh/manual discovery path from the attached playbooks and command refs.",
-    "Do not ask for routine confirmation. Ask only for a real decision, a failed gate, unsafe publish, missing access, or an unresolved git/task-state conflict.",
+    "Ask only for a real decision, failed gate, unsafe publish, missing access, or unresolved git/task-state conflict.",
     "",
     "## Operate from the verdict",
     "",
     "You are the orchestrator, not the default implementer.",
-    "Use Workflow Cannon state as the source of truth. Refresh only after material changes.",
     "* `tasks-remaining` or `blocked`: drain the phase first. Register assignments, keep assignment/activity current, require structured handoff, reconcile, then continue.",
     "* `closeout-pending`: fix preflight or evidence findings before release work.",
     "* `ready-to-ship`, `release-running`, or `post-release`: follow the returned closeout/release refs directly.",
@@ -72,20 +75,14 @@ export function buildPhaseCompleteReleaseChatPrompt(
     "",
     "## Packet fallback",
     "",
-    "Disable packet-first for this run if `phase-release-orchestration-state` is unavailable, returns `ok: false`, omits `data.verdict`, `refs.commands`, or `refs.instructions`, reports a phase/branch mismatch you cannot reconcile, or carries stale planning/task-state evidence.",
-    "Also disable packet-first if `phase-drain-delta` rejects, misses, or stales its cursor, overflows beyond safe bounded evidence, or returns `refreshRecommendation.mode: \"full-refresh\"`.",
-    "Fallback means run full-refresh commands before acting: `pnpm exec wk run phase-release-orchestration-state '{}'`, `pnpm exec wk run phase-closeout-readiness '{\"phaseKey\":\"<N>\"}'`, and the closeout/preflight commands named by `.ai/playbooks/phase-closeout-and-release.md`.",
-    "If command refs are missing or suspect, use `pnpm exec wk run --json` plus the attached instruction paths for manual discovery, then proceed only from fresh full-refresh evidence.",
+    "Disable packet-first if the first command is unavailable, returns `ok: false`, omits `data.verdict`, `refs.commands`, or `refs.instructions`, or reports stale/mismatched phase, branch, planning, or task-state evidence.",
+    "Also fall back if `phase-drain-delta` rejects, stales its cursor, overflows safe bounded evidence, or returns `refreshRecommendation.mode: \"full-refresh\"`.",
+    `Fallback full refresh before acting: \`${command}\`, \`pnpm exec wk run phase-closeout-readiness '{"phaseKey":"${pk || "<N>"}"}'\`, then the closeout/preflight commands named by refs or the attached playbooks.`,
     "",
     "## Worker starts",
     "",
     "Start every worker from `agent-execution-packet`, not from a broad task list. Use the assignment packet for owned/read-only/forbidden paths, approval boundaries, validation commands, handoff refs, and stop conditions.",
     "Do not batch unrelated work into one vague assignment.",
-    "",
-    "## Rollback",
-    "",
-    "If packet-first orchestration creates release risk, stop release work and roll back the activation by reverting this prompt's packet-first activation/fallback sections to the previous full-refresh/manual closeout seed.",
-    "If command behavior caused the risk, disable or revert the packet commands that introduced it (`phase-release-orchestration-state`, `phase-drain-delta`, or `agent-execution-packet`) and rerun the closeout from the attached playbooks with full-refresh evidence.",
     "",
     "## Final response",
     "",
