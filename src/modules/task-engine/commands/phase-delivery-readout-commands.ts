@@ -30,6 +30,7 @@ import {
 import { listAssignments } from "../../team-execution/assignment-store.js";
 import { runPrepareReleaseArtifactsCommand } from "../prepare-release-artifacts-runtime.js";
 import { buildReleaseCloseoutResult } from "../release-closeout-result-runtime.js";
+import { buildPhaseReleaseState } from "../phase-release-state-runtime.js";
 
 function readRequestedPhaseKey(args: Record<string, unknown>): string | null {
   return typeof args.phaseKey === "string" && args.phaseKey.trim().length > 0 ? args.phaseKey.trim() : null;
@@ -203,6 +204,33 @@ export async function resolvePhaseDeliveryReadoutCommands(
         data.refreshRecommendation && (data.refreshRecommendation as { mode: string }).mode === "full-refresh"
           ? "Phase drain delta requires a safe full refresh"
           : `Phase drain delta returned ${delta.changedTasks.length} task change(s) and ${delta.changedAssignments.length} assignment change(s)`,
+      data
+    };
+  }
+
+  if (command.name === "phase-release-state") {
+    const workspaceStatus = readWorkspaceStatusSnapshotFromDual(planning.sqliteDual);
+    const phaseRes = resolveCanonicalPhase({
+      effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined,
+      workspaceStatus
+    });
+    const phaseKey = readRequestedPhaseKey(args) ?? phaseRes.canonicalPhaseKey;
+    const packet = buildPhaseReleaseState({
+      workspacePath: ctx.workspacePath,
+      effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined,
+      tasks: store.getActiveTasks(),
+      phaseKey,
+      currentKitPhase: workspaceStatus?.currentKitPhase ?? null,
+      planningGeneration: planning.sqliteDual.getPlanningGeneration()
+    });
+    const data: Record<string, unknown> = { packet };
+    attachPolicyMeta(data, ctx, planning.sqliteDual.getPlanningGeneration());
+    return {
+      ok: true,
+      code: "phase-release-state",
+      message: packet.canProceedToRelease
+        ? `Phase ${phaseKey ?? "(none)"} can proceed to release`
+        : `Phase ${phaseKey ?? "(none)"} has ${packet.missingRequirements.length} release requirement(s)`,
       data
     };
   }

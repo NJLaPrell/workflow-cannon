@@ -1,0 +1,40 @@
+{
+  "ok": true,
+  "code": "run-args-schema",
+  "command": "phase-release-state",
+  "schema": {
+    "type": "object"
+  },
+  "schemaSource": "pilot-run-args-snapshot",
+  "sampleArgs": {},
+  "examples": [
+    {
+      "description": "Phase-scoped pre-release state packet",
+      "argv": "workspace-kit run phase-release-state '{\"phaseKey\":\"131\"}'"
+    }
+  ],
+  "instructionPath": "src/modules/task-engine/instructions/phase-release-state.md",
+  "moduleId": "task-engine",
+  "description": "Build a compact pre-release readiness packet with explicit missing requirements and publish safety.",
+  "policy": {
+    "sensitivity": "non-sensitive",
+    "operationId": null,
+    "jsonApprovalRequired": false
+  },
+  "planningGeneration": {
+    "cliPrelude": false,
+    "expectedPlanningGeneration": "not required by CLI prelude"
+  },
+  "idempotency": {
+    "clientMutationId": false
+  },
+  "responseTemplate": {
+    "defaultResponseTemplateId": "default"
+  },
+  "remediationContract": ".ai/runbooks/agent-task-engine-ergonomics.md",
+  "discovery": {
+    "listCommands": "pnpm exec wk run --list-commands",
+    "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
+  },
+  "invocationId": "phase-release-state-snippet"
+}
