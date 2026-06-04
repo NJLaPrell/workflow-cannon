@@ -26,6 +26,9 @@ function defaultSensitiveProbeArgs(commandName) {
   if (commandName === "finalize-plan-to-phase") {
     return { dryRun: false };
   }
+  if (commandName === "prepare-release-artifacts") {
+    return { dryRun: false };
+  }
   return {};
 }
 
@@ -38,6 +41,9 @@ function waivedSensitiveProbeArgs(commandName) {
     return { recordReview: false };
   }
   if (commandName === "finalize-plan-to-phase") {
+    return { dryRun: true };
+  }
+  if (commandName === "prepare-release-artifacts") {
     return { dryRun: true };
   }
   return { options: { dryRun: true } };
