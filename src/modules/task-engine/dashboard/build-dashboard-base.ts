@@ -616,7 +616,8 @@ export async function buildDashboardBase(
     ? (summarizeCheckpointsForDashboard(sqliteDual.getDatabase()) as DashboardTaskCheckpointsSummary)
     : taskCheckpointsEmpty);
 
-  const useLightweightStatus = projection === "overview" || projection === "queue";
+  const useLightweightStatus =
+    projection === "overview" || projection === "queue" || projection === "agentActivity";
   const systemStatus = await (tracer?.spanAsync("systemStatus", () => {
     if (useLightweightStatus) {
       return buildDashboardSystemStatusOverview(ctx, store, dualForStatus);

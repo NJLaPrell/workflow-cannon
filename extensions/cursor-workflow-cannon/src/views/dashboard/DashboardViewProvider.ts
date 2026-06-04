@@ -564,11 +564,14 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       client: this.client,
       store: this.dashboardStore,
       refreshController: this.refreshController,
-      isDeferred: () => this.isDashboardRefreshDeferred(),
+      isDeferred: () =>
+        !this.dashboardRootHydrated ||
+        this.dashboardStartupSingleFlight.isInFlight() ||
+        this.isDashboardRefreshDeferred(),
       isSliceVisible: (name) => this.isDashboardSliceVisible(name),
       isRefreshPaused: () => this.client.isRefreshPaused(),
       log: (message) => {
-        if (isWcTraceVerbose()) {
+        if (message.startsWith("dashboard-summary source=") || isWcTraceVerbose()) {
           logWc("dashboard", message);
         }
       },
