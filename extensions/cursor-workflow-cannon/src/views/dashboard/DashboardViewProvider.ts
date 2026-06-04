@@ -436,7 +436,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   /** Intent/snapshot coordinator scaffold (T100492); drawer flows migrate in T100493+. */
   private dashboardCoordinator?: DashboardCoordinator;
 
-  /** 0-based page for wishlist rows in `dashboard-summary` (5 per page). */
+  /** 0-based page for explicitly enabled wishlist rows in `dashboard-summary` (5 per page). */
   private wishlistPage = 0;
 
   /** Last deleted Idea row, retained for the webview undo action. */
@@ -849,8 +849,6 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     let raw: DashboardSummaryCommandSuccess | Record<string, unknown>;
     try {
       raw = (await this.client.run("dashboard-summary", {
-        wishlistPage: this.wishlistPage,
-        wishlistPageSize: 5,
         projection: "full"
       })) as DashboardSummaryCommandSuccess | Record<string, unknown>;
       if (isKitRefreshRunAborted(raw as Record<string, unknown>)) {
@@ -1545,8 +1543,6 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     try {
       const raw = (await this.runDashboardSummary({
-        wishlistPage: this.wishlistPage,
-        wishlistPageSize: 5,
         projection: "overview"
       })) as DashboardSummaryCommandSuccess | Record<string, unknown>;
       if (isKitRefreshRunAborted(raw as Record<string, unknown>)) {
@@ -1562,7 +1558,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       }
       if (raw.ok !== true && raw.code === "extension-cli-timeout") {
         raw.message =
-          "Dashboard overview timed out before JSON was returned. From a terminal, run: pnpm exec wk run dashboard-summary '{\"wishlistPage\":0,\"wishlistPageSize\":5,\"projection\":\"overview\"}'";
+          "Dashboard overview timed out before JSON was returned. From a terminal, run: pnpm exec wk run dashboard-summary '{\"projection\":\"overview\"}'";
       }
       if (raw.ok === true && raw.data && typeof raw.data === "object") {
         this.lastDashboardSummaryData = raw.data as Record<string, unknown>;
@@ -1977,8 +1973,6 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     let raw: DashboardSummaryCommandSuccess | Record<string, unknown>;
     try {
       const summaryArgs = {
-        wishlistPage: this.wishlistPage,
-        wishlistPageSize: 5,
         projection: summaryProjection
       };
       raw = (options?.forcePaintLane === true
@@ -4488,8 +4482,6 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     let raw: DashboardSummaryCommandSuccess | Record<string, unknown>;
     try {
       raw = (await this.runDashboardSummary({
-        wishlistPage: requestedWishlistPage,
-        wishlistPageSize: 5,
         projection: summaryProjection
       })) as DashboardSummaryCommandSuccess | Record<string, unknown>;
       if (isKitRefreshRunAborted(raw as Record<string, unknown>)) {

@@ -98,6 +98,10 @@ export function parseDashboardWishlistPaging(args?: Record<string, unknown>): {
   return { page, pageSize };
 }
 
+export function parseDashboardIncludeWishlist(args?: Record<string, unknown>): boolean {
+  return args?.includeWishlist === true || args?.includeWishlist === "true";
+}
+
 function buildDashboardPlanArtifactSummary(ctx: ModuleLifecycleContext): DashboardSummaryData["planArtifact"] {
   const summaries = listPlanArtifactSummaries(
     ctx.workspacePath,
@@ -218,6 +222,7 @@ export async function buildDashboardBase(
   const needsQueueRollups = dashboardSummaryNeedsQueueRollups(projection);
   const needsStatusRollups = dashboardSummaryNeedsStatusRollups(projection);
   const needsAgentActivityRollups = dashboardSummaryNeedsAgentActivityRollups(projection);
+  const includeWishlist = parseDashboardIncludeWishlist(commandArgs);
   const skipPlanningSessionRead = projection === "overview" || projection === "agentActivity";
   const skipAgentGuidanceBuild = projection === "queue" || projection === "agentActivity";
 
@@ -298,7 +303,7 @@ export async function buildDashboardBase(
   let ideas = buildDashboardIdeasSummary(undefined, false);
 
   const buildWishlistAndIdeas = () => {
-    if (needsQueueRollups) {
+    if (needsQueueRollups && includeWishlist) {
       const allTasks = store.getAllTasks();
       const wishlistItems = listWishlistIntakeTasksAsItems(allTasks);
       const wishlistOpenItems = wishlistItems.filter((i) => i.status === "open");
@@ -863,6 +868,7 @@ export async function buildDashboardBase(
     executionPlanningScope: "tasks-only" as const,
     wishlist: {
       schemaVersion: 1 as const,
+      enabled: includeWishlist,
       openCount: wishlistOpenCount,
       totalCount: wishlistItemsLength,
       openPage: wishlistSafePage,
@@ -1112,6 +1118,7 @@ export async function buildDashboardOverview(
   const emptyWishlist = (pageSize: number) =>
     ({
       schemaVersion: 1 as const,
+      enabled: false,
       openCount: 0,
       totalCount: 0,
       openPage: 0,

@@ -20,8 +20,9 @@ Optional JSON object:
 
 | Field | Type | Default | Description |
 | --- | --- | --- | --- |
-| `wishlistPage` | integer (≥ 0) | `0` | 0-based page index for the **Wishlist · open** preview table in UIs. Out-of-range pages clamp to the last page. |
-| `wishlistPageSize` | integer (1–100) | `10` | Rows per wishlist page (`openTop` length). |
+| `includeWishlist` | boolean | `false` | Opt in to sunset wishlist hydration. When false, `wishlist` is an empty disabled stub and dashboard-summary does not scan or map wishlist intake tasks. |
+| `wishlistPage` | integer (≥ 0) | `0` | 0-based page index for the **Wishlist · open** preview table when `includeWishlist:true`. Out-of-range pages clamp to the last page. |
+| `wishlistPageSize` | integer (1–100) | `10` | Rows per wishlist page (`openTop` length) when `includeWishlist:true`. |
 | `includePhaseFocus` | boolean | `false` | When `true`, adds **`phaseFocus`** (`AgentPhaseFocusDashboard` v1) — same bounded slice as **`phase-focus-dashboard`**. |
 | `phaseKey` | string | workspace current | Phase scope for **`phaseFocus`** when `includePhaseFocus` is set. |
 | `projection` | string (`full`, `overview`, `queue`, `status`, `agentActivity`) | `full` | Section slice for lazy dashboard hydration. **`overview`** omits queue rollups and phase-journal SQLite reads; skips `build-plan` session read and wishlist paging work at build time (T100590). **`agentActivity`** is a lean activity-only slice for independent live-lease refresh and omits queue/status rollups. Extension uses **`overview`** for first paint after the shell (T100396). CLI default **`full`** preserves aggregate compatibility. |
@@ -60,7 +61,8 @@ Also accepts standard invocation `config` / `actor` overlays where applicable.
 | `planningSession` | Shallow `build-plan` session snapshot for the dashboard, or `null` when no session file |
 | `blockingAnalysis` | Full blocking analysis list |
 | `dependencyOverview` | `{ schemaVersion: 1, activeTaskCount, includedTaskCount, edgeCount, truncated, perfNote, nodes, edges, mermaidFlowchart, criticalPathReady }` — active-task dependency subgraph aligned with `get-dependency-graph` edge direction (`from` depends on `to`); degrades when there are many active tasks (see `perfNote`) |
-| `wishlist.openTop` | Up to **`wishlistPageSize`** **open** wishlist items for the requested page (`{ id, title, taskId }`); W### namespace, separate from tasks until `convert-wishlist` |
+| `wishlist.enabled` | `true` only when invoked with `includeWishlist:true`; default dashboard calls leave wishlist disabled and empty. |
+| `wishlist.openTop` | Up to **`wishlistPageSize`** **open** wishlist items for the requested page (`{ id, title, taskId }`) when wishlist is enabled; W### namespace, separate from tasks until `convert-wishlist` |
 | `wishlist.openPage` | 0-based page index actually used (after clamping) |
 | `wishlist.openPageSize` | Page size used for this response |
 | `wishlist.openTotalPages` | `Math.ceil(openCount / openPageSize)` when `openCount > 0`, else **0** |

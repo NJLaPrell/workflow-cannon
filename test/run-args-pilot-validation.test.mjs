@@ -50,7 +50,7 @@ test("dashboard-summary accepts wishlist paging args", () => {
   resetPilotRunArgsValidationCache();
   const err = validatePilotRunCommandArgs(
     "dashboard-summary",
-    { wishlistPage: 2, wishlistPageSize: 10 },
+    { includeWishlist: true, wishlistPage: 2, wishlistPageSize: 10 },
     {}
   );
   assert.equal(err, null);

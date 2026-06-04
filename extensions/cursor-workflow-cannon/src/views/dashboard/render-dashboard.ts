@@ -5356,6 +5356,7 @@ export function renderDashboardRootInnerHtml(
         }
       : undefined;
   const wishlist = (d.wishlist as Record<string, unknown>) || {};
+  const wishlistEnabled = wishlist.enabled === true;
   const wishlistOpenTop = Array.isArray(wishlist.openTop) ? wishlist.openTop : [];
   const wishOpen = Number(wishlist.openCount ?? 0);
   const wishTotal = Number(wishlist.totalCount ?? 0);
@@ -5556,26 +5557,27 @@ export function renderDashboardRootInnerHtml(
     terminalSection +
     "</section>";
 
-  const wishlistSection =
-    '<section class="dash-card" aria-label="Wishlist">' +
-    '<details class="status-section"' +
-    wcTrackAttr("wishlist") +
-    ">" +
-    "<summary><b>Wishlist</b> · Open " +
-    String(wishOpen) +
-    " / Total " +
-    String(wishTotal) +
-    wishPageSummary +
-    "</summary>" +
-    '<div class="status-section-body">' +
-    (wishOpen === 0
-      ? '<p class="muted">No Items</p>'
-      : renderWishlistOpenList(wishlistOpenTop) + renderWishlistPager(wishOpenPage, wishOpenTotalPages)) +
-    "</div></details></section>";
+  const wishlistSection = wishlistEnabled
+    ? '<section class="dash-card" aria-label="Wishlist">' +
+      '<details class="status-section"' +
+      wcTrackAttr("wishlist") +
+      ">" +
+      "<summary><b>Wishlist</b> · Open " +
+      String(wishOpen) +
+      " / Total " +
+      String(wishTotal) +
+      wishPageSummary +
+      "</summary>" +
+      '<div class="status-section-body">' +
+      (wishOpen === 0
+        ? '<p class="muted">No Items</p>'
+        : renderWishlistOpenList(wishlistOpenTop) + renderWishlistPager(wishOpenPage, wishOpenTotalPages)) +
+      "</div></details></section>"
+    : "";
 
   // ── Assemble tab content ───────────────────────────────────────────────────
 
-  const firstWishlistOpen = wishlistOpenTop[0];
+  const firstWishlistOpen = wishlistEnabled ? wishlistOpenTop[0] : undefined;
   const suggestedNext = d.suggestedNext;
   const phaseSnapshot = normalizePhaseSnapshot(d.currentPhaseDelivery, ws as Record<string, unknown> | null);
   const phaseWorkCandidates = [

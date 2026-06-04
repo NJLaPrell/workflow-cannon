@@ -731,6 +731,10 @@
           "minimum": 1,
           "maximum": 100
         },
+        "includeWishlist": {
+          "type": "boolean",
+          "description": "Opt in to dashboard wishlist hydration. Defaults false so queue/startup projections return an empty sunset wishlist stub."
+        },
         "includePhaseFocus": {
           "type": "boolean"
         },

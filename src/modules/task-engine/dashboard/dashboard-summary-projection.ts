@@ -50,6 +50,7 @@ const emptyListSummary = () =>
 const emptyWishlist = (pageSize: number) =>
   ({
     schemaVersion: 1 as const,
+    enabled: false,
     openCount: 0,
     totalCount: 0,
     openPage: 0,

@@ -591,6 +591,8 @@ export type DashboardSummaryData = {
   executionPlanningScope: "tasks-only";
   wishlist: {
     schemaVersion: 1;
+    /** False unless dashboard-summary was invoked with `includeWishlist: true`; disabled stubs do not hydrate wishlist rows. */
+    enabled: boolean;
     openCount: number;
     totalCount: number;
     /** Current page of open wishlist rows (0-based). */
