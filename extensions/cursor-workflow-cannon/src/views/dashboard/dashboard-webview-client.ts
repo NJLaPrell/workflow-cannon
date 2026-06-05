@@ -468,6 +468,9 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
   }
 
   function isCustomExpanded(el) {
+    if (el.classList && el.classList.contains('wc-agent-card')) {
+      return el.classList.contains('wc-agent-card--expanded');
+    }
     var kind = el.getAttribute('data-wc-preserve-expanded') || '';
     if (kind === 'phase-readiness') {
       return !el.classList.contains('wc-cae-readiness-collapsed');
@@ -478,7 +481,23 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
     return el.getAttribute('aria-expanded') === 'true';
   }
 
+  function setAgentCardExpanded(card, expanded) {
+    if (!card) return;
+    card.classList.toggle('wc-agent-card--expanded', !!expanded);
+    var tree = card.querySelector('.wc-agent-tree');
+    if (tree) {
+      tree.hidden = !expanded;
+      tree.style.display = expanded ? '' : 'none';
+    }
+    var toggle = card.querySelector('[data-wc-action="toggle-agent-card"]');
+    if (toggle) toggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+  }
+
   function applyCustomExpandedState(el, expanded) {
+    if (el.classList && el.classList.contains('wc-agent-card')) {
+      setAgentCardExpanded(el, expanded);
+      return;
+    }
     var kind = el.getAttribute('data-wc-preserve-expanded') || '';
     if (kind === 'phase-readiness') {
       el.classList.toggle('wc-cae-readiness-collapsed', !expanded);
@@ -503,7 +522,11 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
       var k = uiStateKeyFor(d);
       if (k) details[k] = { open: !!d.open };
     });
-    root.querySelectorAll('[data-wc-preserve-expanded][data-wc-ui-state-key]').forEach(function(el) {
+    root.querySelectorAll('[data-wc-preserve-expanded][data-wc-ui-state-key], [data-wc-preserve-expanded][data-wc-track]').forEach(function(el) {
+      var k = uiStateKeyFor(el);
+      if (k) custom[k] = { expanded: isCustomExpanded(el) };
+    });
+    root.querySelectorAll('.wc-agent-card[data-wc-ui-state-key], .wc-agent-card[data-wc-track]').forEach(function(el) {
       var k = uiStateKeyFor(el);
       if (k) custom[k] = { expanded: isCustomExpanded(el) };
     });
@@ -517,7 +540,8 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
       if (el && state.details[k]) el.open = state.details[k].open === true;
     });
     Object.keys(state.custom || {}).forEach(function(k) {
-      var el = root.querySelector('[data-wc-ui-state-key="' + String(k).replace(/"/g, '\\\\"') + '"]');
+      var key = String(k).replace(/"/g, '\\\\"');
+      var el = root.querySelector('[data-wc-ui-state-key="' + key + '"], [data-wc-track="' + key + '"]');
       if (el && state.custom[k]) applyCustomExpandedState(el, state.custom[k].expanded === true);
     });
   }
@@ -1299,6 +1323,17 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
       applyTab(tabBtn.getAttribute('data-wc-tab'));
       return;
     }
+    var agentCardToggle = el && typeof el.closest === 'function' ? el.closest('[data-wc-action="toggle-agent-card"]') : null;
+    if (agentCardToggle && rootEl.contains(agentCardToggle)) {
+      if (agentCardToggle.closest && agentCardToggle.closest('.wc-dash-cae-host')) return;
+      var agentCard = agentCardToggle.closest('.wc-agent-card');
+      if (!agentCard || agentCardToggle.classList.contains('wc-agent-card-header--no-expand')) return;
+      ev.preventDefault();
+      ev.stopPropagation();
+      agentCard.classList.toggle('wc-agent-card--expanded');
+      setAgentCardExpanded(agentCard, agentCard.classList.contains('wc-agent-card--expanded'));
+      return;
+    }
     var t = el && typeof el.closest === 'function' ? el.closest('button') : null;
     if (!t || t.tagName !== 'BUTTON' || !rootEl.contains(t) || t.disabled) return;
     if (t.closest && t.closest('.wc-dash-cae-host')) return;
@@ -1576,6 +1611,10 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
   if (rootEl) rootEl.addEventListener('toggle', function(ev) {
     var el = ev.target;
     if (!el || el.tagName !== 'DETAILS' || !rootEl.contains(el)) return;
+    if (el.classList && el.classList.contains('wc-agent-card')) {
+      setAgentCardExpanded(el, !!el.open);
+      return;
+    }
     if (!el.classList.contains('wc-lazy-queue-bucket') || !el.open) return;
     requestLazyQueueBucketLoad(el);
   }, true);

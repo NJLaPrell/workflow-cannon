@@ -24,6 +24,27 @@ test("renderDashboardShellInnerHtml paints tab chrome without dashboard-summary 
   assert.doesNotMatch(html, /stateSummary/);
 });
 
+test("renderDashboardShellInnerHtml includes branded idle banner and segmented tabs", () => {
+  const html = renderDashboardShellInnerHtml();
+  const bannerIdx = html.indexOf("wc-banner");
+  const tabBarIdx = html.indexOf("wc-tab-bar");
+  assert.ok(bannerIdx >= 0, "startup shell should render branded idle banner");
+  assert.ok(tabBarIdx > bannerIdx, "startup banner should appear before tabs");
+  assert.match(html, /class="[^"]*\bwc-banner\b[^"]*"/);
+  assert.match(html, /data-agent-status-kind="idle"/);
+  assert.match(html, /wc-status-dot wc-status-dot--idle/);
+  assert.match(html, /wc-banner-status-label wc-banner-status-label--idle[\s\S]*Idle/);
+  assert.match(html, /wc-banner-name">Workflow Cannon<\/span>/);
+  assert.match(html, /wc-banner-tagline">workspace-kit<\/span>/);
+  assert.match(html, /wc-dash-section-skeleton/);
+  assert.match(html, /data-wc-tab="overview"[\s\S]*<span class="wc-tab-icon">[\s\S]*Overview/);
+  assert.match(html, /data-wc-tab="planning"[\s\S]*<span class="wc-tab-icon">[\s\S]*Planning/);
+  assert.match(html, /data-wc-tab="task-engine"[\s\S]*<span class="wc-tab-icon">[\s\S]*Queue/);
+  assert.match(html, /data-wc-tab="status"[\s\S]*<span class="wc-tab-icon">[\s\S]*Status/);
+  assert.match(html, /data-wc-tab="config"[\s\S]*<span class="wc-tab-icon">[\s\S]*Config/);
+  assert.match(html, /data-wc-tab="cae"[\s\S]*<span class="wc-tab-icon">[\s\S]*CAE/);
+});
+
 test("renderDashboardShellInnerHtml includes loading placeholders for every registry section", () => {
   const html = renderDashboardShellInnerHtml();
   for (const section of DASHBOARD_SECTION_REGISTRY) {

@@ -40,6 +40,76 @@ export type RenderDashboardRootOptions = {
   readModeBadge?: DashboardReadModeBadge | null;
 };
 
+export type WcDashboardStatusKind = "active" | "waiting" | "blocked" | "idle" | "done";
+export type DashboardTabId = "overview" | "planning" | "task-engine" | "status" | "config" | "cae";
+
+const WC_DASHBOARD_STATUS_LABELS: Record<WcDashboardStatusKind, string> = {
+  active: "Running",
+  waiting: "Awaiting input",
+  blocked: "Blocked",
+  idle: "Idle",
+  done: "Done"
+};
+
+export function mapDashboardStatusToWcStatus(raw: unknown): WcDashboardStatusKind {
+  const value = String(raw ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/[-\s]+/g, "_");
+  switch (value) {
+    case "active":
+    case "running":
+    case "in_progress":
+    case "working":
+    case "working_task":
+    case "delegating_task":
+    case "planning":
+    case "reviewing_item":
+    case "reviewing_pr":
+    case "validating":
+    case "releasing":
+      return "active";
+    case "awaiting_input":
+    case "waiting":
+    case "ready":
+    case "ready_task":
+    case "proposed":
+    case "submitted":
+    case "awaiting_policy_approval":
+    case "awaiting_human_gate":
+    case "needs_policy":
+    case "needs_human":
+    case "human_gate":
+      return "waiting";
+    case "blocked":
+    case "failed":
+      return "blocked";
+    case "done":
+    case "complete":
+    case "completed":
+    case "reconciled":
+    case "released":
+    case "cancelled":
+    case "canceled":
+      return "done";
+    case "awaiting_instruction":
+    case "idle":
+    case "unavailable":
+    case "unknown":
+    default:
+      return "idle";
+  }
+}
+
+export function wcDashboardStatusLabel(status: WcDashboardStatusKind): string {
+  return WC_DASHBOARD_STATUS_LABELS[status] ?? WC_DASHBOARD_STATUS_LABELS.idle;
+}
+
+export function resolveWcDashboardStatus(raw: unknown): { kind: WcDashboardStatusKind; label: string } {
+  const kind = mapDashboardStatusToWcStatus(raw);
+  return { kind, label: wcDashboardStatusLabel(kind) };
+}
+
 /** Inputs for {@link detectPhaseCloseoutOrderingRisk} on dashboard phase cards. */
 export type PhaseOrderingInputs = {
   phases: ReadonlyArray<PhaseCatalogListRow>;
@@ -263,6 +333,210 @@ export function escapeHtmlAttr(s: string): string {
     .replace(/"/g, "&quot;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
+}
+
+function renderWcLogoMarkSvg(): string {
+  return (
+    '<svg class="wc-banner-mark" viewBox="0 0 96 96" fill="none" aria-hidden="true">' +
+    '<circle cx="44" cy="73" r="15" stroke="#FF5F1F" stroke-width="6"/>' +
+    '<circle cx="44" cy="73" r="4" fill="#FF5F1F"/>' +
+    '<line x1="44" y1="58" x2="44" y2="88" stroke="#FF5F1F" stroke-width="2.5"/>' +
+    '<line x1="29" y1="73" x2="59" y2="73" stroke="#FF5F1F" stroke-width="2.5"/>' +
+    '<g transform="rotate(-14, 32, 52)">' +
+    '<rect x="14" y="36" width="22" height="30" rx="5" fill="#FF5F1F"/>' +
+    '<rect x="32" y="42" width="46" height="17" rx="4" fill="#FF5F1F"/>' +
+    '<rect x="72" y="40" width="8" height="21" rx="4" fill="#CC3D00"/>' +
+    "</g></svg>"
+  );
+}
+
+function cleanDashboardText(value: unknown): string {
+  return value === null || value === undefined ? "" : String(value).trim();
+}
+
+function buildDashboardBannerTaskTextFromActivityRow(row: DashboardAgentActivityRow): string {
+  const taskId = cleanDashboardText(row.work.taskId);
+  const title = cleanDashboardText(row.work.title);
+  const detail = cleanDashboardText(row.work.currentStep) || cleanDashboardText(row.work.command);
+  const phaseKey = cleanDashboardText(row.work.phaseKey);
+  const parts: string[] = [];
+  if (taskId.length > 0 && title.length > 0) {
+    parts.push(taskId + " · " + title);
+  } else if (taskId.length > 0 || title.length > 0) {
+    parts.push(taskId || title);
+  }
+  if (detail.length > 0) {
+    parts.push(detail);
+  }
+  if (phaseKey.length > 0) {
+    parts.push("Phase " + phaseKey);
+  }
+  return parts.join(" · ");
+}
+
+function buildDashboardBannerTaskTextFromStatus(status: {
+  label?: unknown;
+  detail?: unknown;
+  taskId?: unknown;
+  phaseKey?: unknown;
+  command?: unknown;
+}): string {
+  const taskId = cleanDashboardText(status.taskId);
+  const label = cleanDashboardText(status.label);
+  const detail = cleanDashboardText(status.detail);
+  const command = cleanDashboardText(status.command);
+  const phaseKey = cleanDashboardText(status.phaseKey);
+  const parts: string[] = [];
+  if (taskId.length > 0 && label.length > 0) {
+    parts.push(taskId + " · " + label);
+  } else if (taskId.length > 0 || label.length > 0) {
+    parts.push(taskId || label);
+  }
+  if (detail.length > 0 && detail !== label) {
+    parts.push(detail);
+  } else if (command.length > 0) {
+    parts.push(command);
+  }
+  if (phaseKey.length > 0) {
+    parts.push("Phase " + phaseKey);
+  }
+  return parts.join(" · ");
+}
+
+function resolveDashboardBannerState(d: Record<string, unknown> | null | undefined): {
+  statusKind: WcDashboardStatusKind;
+  statusLabel: string;
+  taskText: string;
+} {
+  const summary = (d?.agentActivitySummary as DashboardAgentActivitySummary | null | undefined) ?? null;
+  const main = summary?.main && summary.main.freshness.state !== "expired" ? summary.main : null;
+  if (main) {
+    const status = resolveWcDashboardStatus(main.status);
+    return {
+      statusKind: status.kind,
+      statusLabel: status.label,
+      taskText: buildDashboardBannerTaskTextFromActivityRow(main) || cleanDashboardText(main.statusLabel) || "Agent activity is live"
+    };
+  }
+  const fallback = summary?.inferredFallback ?? null;
+  if (fallback) {
+    const status = resolveWcDashboardStatus(fallback.kind);
+    return {
+      statusKind: status.kind,
+      statusLabel: status.label,
+      taskText: buildDashboardBannerTaskTextFromStatus(fallback) || "Inferred from workspace state"
+    };
+  }
+  const agentStatus =
+    d?.agentStatus && typeof d.agentStatus === "object"
+      ? (d.agentStatus as {
+          kind?: unknown;
+          label?: unknown;
+          detail?: unknown;
+          taskId?: unknown;
+          phaseKey?: unknown;
+          command?: unknown;
+        })
+      : null;
+  if (agentStatus) {
+    const status = resolveWcDashboardStatus(agentStatus.kind);
+    return {
+      statusKind: status.kind,
+      statusLabel: status.label,
+      taskText: buildDashboardBannerTaskTextFromStatus(agentStatus) || "Workspace agent status"
+    };
+  }
+  const workspaceStatus =
+    d?.workspaceStatus && typeof d.workspaceStatus === "object"
+      ? (d.workspaceStatus as Record<string, unknown>)
+      : null;
+  const activeFocus = cleanDashboardText(workspaceStatus?.activeFocus);
+  return {
+    statusKind: "idle",
+    statusLabel: wcDashboardStatusLabel("idle"),
+    taskText: activeFocus || "No current task"
+  };
+}
+
+export function renderWcDashboardBannerHtml(data?: Record<string, unknown> | null): string {
+  const state = resolveDashboardBannerState(data);
+  return (
+    '<header class="wc-banner" data-agent-status-kind="' +
+    escapeHtmlAttr(state.statusKind) +
+    '">' +
+    renderWcLogoMarkSvg() +
+    '<div class="wc-banner-identity">' +
+    '<span class="wc-banner-name">Workflow Cannon</span>' +
+    '<span class="wc-banner-tagline">workspace-kit</span>' +
+    "</div>" +
+    '<div class="wc-banner-divider" aria-hidden="true"></div>' +
+    '<div class="wc-banner-status">' +
+    '<div class="wc-banner-status-row">' +
+    '<span class="wc-status-dot wc-status-dot--' +
+    escapeHtmlAttr(state.statusKind) +
+    '" aria-hidden="true"></span>' +
+    '<span class="wc-banner-status-label wc-banner-status-label--' +
+    escapeHtmlAttr(state.statusKind) +
+    '">' +
+    escapeHtml(state.statusLabel) +
+    "</span>" +
+    "</div>" +
+    '<span class="wc-banner-task" title="' +
+    escapeHtmlAttr(state.taskText) +
+    '">' +
+    escapeHtml(state.taskText) +
+    "</span>" +
+    "</div>" +
+    "</header>"
+  );
+}
+
+export function renderDashboardTabBarHtml(args?: {
+  activeTab?: DashboardTabId;
+  readyCount?: number;
+  blockedCount?: number;
+  readModeBadge?: DashboardReadModeBadge | null;
+}): string {
+  const activeTab = args?.activeTab ?? "overview";
+  const readyCount = Math.max(0, Math.floor(args?.readyCount ?? 0));
+  const blockedCount = Math.max(0, Math.floor(args?.blockedCount ?? 0));
+  const queueBadge =
+    readyCount > 0
+      ? '<span class="wc-tab-badge wc-tab-badge-ready">' + escapeHtml(String(readyCount)) + "</span>"
+      : blockedCount > 0
+        ? '<span class="wc-tab-badge wc-tab-badge-blocked">' + escapeHtml(String(blockedCount)) + "</span>"
+        : "";
+  const tabs: Array<{ id: DashboardTabId; icon: string; label: string; badge?: string }> = [
+    { id: "overview", icon: "◎", label: "Overview" },
+    { id: "planning", icon: "⬡", label: "Planning" },
+    { id: "task-engine", icon: "▤", label: "Queue", badge: queueBadge },
+    { id: "status", icon: "◈", label: "Status" },
+    { id: "config", icon: "⚙", label: "Config" },
+    { id: "cae", icon: "⚑", label: "CAE" }
+  ];
+  return (
+    '<div class="wc-tab-bar" role="tablist">' +
+    tabs
+      .map((tab) => {
+        const active = tab.id === activeTab;
+        return (
+          '<button type="button" class="wc-tab-btn' +
+          (active ? " wc-tab-active" : "") +
+          '" role="tab" data-wc-tab="' +
+          escapeHtmlAttr(tab.id) +
+          '">' +
+          '<span class="wc-tab-icon">' +
+          escapeHtml(tab.icon) +
+          "</span>" +
+          escapeHtml(tab.label) +
+          (tab.badge ?? "") +
+          "</button>"
+        );
+      })
+      .join("") +
+    renderDashboardReadModeBadgeHtml(args?.readModeBadge) +
+    "</div>"
+  );
 }
 
 /** Ready / proposed / blocked row control — posts `assignTaskPhase` (assign-task-phase). */
@@ -4034,10 +4308,6 @@ function truncateOverviewLine(s: string, max: number): string {
   return one.slice(0, Math.max(1, max - 1)) + "…";
 }
 
-function cleanDashboardText(value: unknown): string {
-  return typeof value === "string" ? value.trim() : "";
-}
-
 function humanizeDashboardToken(value: string): string {
   const token = value.trim();
   if (token.length === 0) {
@@ -4332,13 +4602,51 @@ function renderDashboardAgentActivityChip(label: string, kind: string): string {
   );
 }
 
+function renderWcAgentDot(status: WcDashboardStatusKind): string {
+  return (
+    '<span class="wc-dot wc-dot--' +
+    escapeHtmlAttr(status) +
+    ' wc-status-dot wc-status-dot--' +
+    escapeHtmlAttr(status) +
+    '" aria-hidden="true"></span>'
+  );
+}
+
+function renderDashboardAgentTaskLine(row: DashboardAgentActivityRow): string {
+  const taskId = cleanDashboardText(row.work.taskId);
+  const title = cleanDashboardText(row.work.title);
+  const phaseKey = cleanDashboardText(row.work.phaseKey);
+  if (!taskId && !title && !phaseKey) {
+    return "";
+  }
+  return (
+    '<div class="wc-agent-card-task">' +
+    (taskId.length > 0
+      ? '<code class="wc-agent-card-task-chip wc-agent-card-task-id">' + escapeHtml(taskId) + "</code>"
+      : "") +
+    (title.length > 0
+      ? '<span class="wc-agent-card-task-title" title="' +
+        escapeHtmlAttr(title) +
+        '">' +
+        escapeHtml(title) +
+        "</span>"
+      : "") +
+    (phaseKey.length > 0
+      ? '<span class="wc-agent-card-phase muted">Phase ' + escapeHtml(phaseKey) + "</span>"
+      : "") +
+    "</div>"
+  );
+}
+
 function renderDashboardAgentActivityRow(
   row: DashboardAgentActivityRow,
-  rowKind: "main" | "active" | "attention"
+  rowKind: "main" | "active" | "attention",
+  subagentRows: DashboardAgentActivityRow[] = []
 ): string {
   const labelText = cleanDashboardText(row.displayName) || "Unnamed agent";
   const statusText = dashboardAgentStatusLabel(row.status);
   const statusChipText = dashboardAgentStatusChipLabel(row.status);
+  const wcStatus = resolveWcDashboardStatus(row.status);
   const roleText = DASHBOARD_AGENT_ROLE_LABELS[row.role] ?? "Agent";
   const freshnessText = formatDashboardAgentFreshness(row.freshness);
   const sourceText = dashboardAgentSourceLabel(row.source);
@@ -4357,10 +4665,84 @@ function renderDashboardAgentActivityRow(
     .filter(Boolean)
     .join("");
   const aria = `${labelText}, ${statusText}, ${rowKind === "main" ? "Main Agent" : rowKind === "attention" ? "Needs Attention" : "Active Agent"}`;
+  const hasSubagents = subagentRows.length > 0;
+  const stateKey = "agent-card-" + row.rowId.replace(/[^a-zA-Z0-9_-]/g, "_");
   return (
-    '<details class="dash-agent-row dash-agent-activity-row dash-agent-activity-row--' +
+    '<details class="wc-agent-card' +
+    (hasSubagents ? " wc-agent-card--expanded" : "") +
+    ' dash-agent-row dash-agent-activity-row dash-agent-activity-row--' +
     rowKind +
-    '" role="listitem" data-agent-row-kind="' +
+    '"' +
+    (hasSubagents ? " open" : "") +
+    ' role="listitem" data-status="' +
+    escapeHtmlAttr(wcStatus.kind) +
+    '" data-agent-row-kind="' +
+    escapeHtmlAttr(rowKind) +
+    '" data-agent-row-source="' +
+    escapeHtmlAttr(row.source) +
+    '" data-agent-row-id="' +
+    escapeHtmlAttr(row.rowId) +
+    '" data-wc-ui-state-key="' +
+    escapeHtmlAttr(stateKey) +
+    '" aria-label="' +
+    escapeHtmlAttr(aria) +
+    '">' +
+    '<div class="wc-agent-card-bar" aria-hidden="true"></div>' +
+    '<summary class="wc-agent-card-header dash-agent-row-summary' +
+    (hasSubagents ? "" : " wc-agent-card-header--no-expand") +
+    '">' +
+    '<span class="wc-agent-card-row1">' +
+    renderWcAgentDot(wcStatus.kind) +
+    '<span class="wc-agent-card-name dash-agent-row-main"><b>' +
+    escapeHtml(labelText) +
+    '</b><span class="muted">' +
+    escapeHtml(statusText) +
+    "</span></span>" +
+    '<span class="wc-agent-card-status-chip">' +
+    escapeHtml(wcStatus.label) +
+    "</span>" +
+    '<span class="wc-agent-card-role">' +
+    escapeHtml(roleText) +
+    "</span>" +
+    (hasSubagents ? '<span class="wc-agent-card-chevron" aria-hidden="true">›</span>' : "") +
+    "</span>" +
+    '<div class="wc-agent-card-now dash-agent-row-detail">' +
+    '<div class="wc-agent-card-now-label">Now</div>' +
+    '<span class="wc-agent-card-now-text">' +
+    escapeHtml(dashboardAgentActivityDetail(row)) +
+    "</span></div>" +
+    renderDashboardAgentTaskLine(row) +
+    '<span class="dash-agent-row-meta">' +
+    chips +
+    "</span>" +
+    "</summary>" +
+    (hasSubagents
+      ? '<div class="wc-agent-tree" role="list" aria-label="Subagents">' +
+        subagentRows.map((subagent) => renderDashboardAgentSubagentTreeRow(subagent, rowKind)).join("") +
+        "</div>"
+      : "") +
+    '<div class="dash-agent-row-details" aria-label="Expanded agent activity context">' +
+    renderDashboardAgentActivityExpandedDetails(row) +
+    "</div>" +
+    "</details>"
+  );
+}
+
+function renderDashboardAgentSubagentTreeRow(
+  row: DashboardAgentActivityRow,
+  rowKind: "main" | "active" | "attention"
+): string {
+  const labelText = cleanDashboardText(row.displayName) || "Unnamed agent";
+  const statusText = dashboardAgentStatusLabel(row.status);
+  const wcStatus = resolveWcDashboardStatus(row.status);
+  const roleText = DASHBOARD_AGENT_ROLE_LABELS[row.role] ?? "Subagent";
+  const aria = `${labelText}, ${statusText}, ${rowKind === "main" ? "Main Agent" : rowKind === "attention" ? "Needs Attention" : "Active Agent"}`;
+  return (
+    '<div class="wc-agent-tree-row dash-agent-row dash-agent-activity-row dash-agent-activity-row--' +
+    rowKind +
+    '" role="listitem" data-status="' +
+    escapeHtmlAttr(wcStatus.kind) +
+    '" data-agent-row-kind="' +
     escapeHtmlAttr(rowKind) +
     '" data-agent-row-source="' +
     escapeHtmlAttr(row.source) +
@@ -4369,24 +4751,30 @@ function renderDashboardAgentActivityRow(
     '" aria-label="' +
     escapeHtmlAttr(aria) +
     '">' +
-    '<summary class="dash-agent-row-summary">' +
-    '<span class="dash-agent-row-icon" aria-hidden="true">●</span>' +
-    '<span class="dash-agent-row-main"><b>' +
+    '<div class="wc-agent-card-row1">' +
+    renderWcAgentDot(wcStatus.kind) +
+    '<span class="wc-agent-card-name dash-agent-row-main"><b>' +
     escapeHtml(labelText) +
     '</b><span class="muted">' +
     escapeHtml(statusText) +
     "</span></span>" +
-    '<span class="dash-agent-row-detail">' +
+    '<span class="wc-agent-card-status-chip">' +
+    escapeHtml(wcStatus.label) +
+    "</span>" +
+    '<span class="wc-agent-card-role">' +
+    escapeHtml(roleText) +
+    "</span>" +
+    "</div>" +
+    '<div class="wc-agent-card-now dash-agent-row-detail">' +
+    '<div class="wc-agent-card-now-label">Now</div>' +
+    '<span class="wc-agent-card-now-text">' +
     escapeHtml(dashboardAgentActivityDetail(row)) +
-    "</span>" +
-    '<span class="dash-agent-row-meta">' +
-    chips +
-    "</span>" +
-    "</summary>" +
+    "</span></div>" +
+    renderDashboardAgentTaskLine(row) +
     '<div class="dash-agent-row-details" aria-label="Expanded agent activity context">' +
     renderDashboardAgentActivityExpandedDetails(row) +
     "</div>" +
-    "</details>"
+    "</div>"
   );
 }
 
@@ -4395,6 +4783,7 @@ function renderDashboardAgentActivityFallback(summary: DashboardAgentActivitySum
   if (!fallback) {
     return '<p class="muted">No live activity yet.</p>';
   }
+  const wcStatus = resolveWcDashboardStatus(fallback.kind);
   const label = cleanDashboardText(fallback.label) || dashboardAgentStatusLabel(fallback.kind);
   const detail = [
     fallback.detail ? cleanDashboardText(fallback.detail) : "",
@@ -4405,18 +4794,30 @@ function renderDashboardAgentActivityFallback(summary: DashboardAgentActivitySum
     .filter(Boolean)
     .join(" · ");
   return (
-    '<div class="dash-agent-row dash-agent-activity-row dash-agent-activity-row--fallback" role="listitem" aria-label="Inferred agent activity">' +
-    '<span class="dash-agent-row-icon" aria-hidden="true">●</span>' +
-    '<span class="dash-agent-row-main"><b>' +
+    '<div class="wc-agent-card dash-agent-row dash-agent-activity-row dash-agent-activity-row--fallback" role="listitem" data-status="' +
+    escapeHtmlAttr(wcStatus.kind) +
+    '" aria-label="Inferred agent activity">' +
+    '<div class="wc-agent-card-bar" aria-hidden="true"></div>' +
+    '<div class="wc-agent-card-header wc-agent-card-header--no-expand">' +
+    '<span class="wc-agent-card-row1">' +
+    renderWcAgentDot(wcStatus.kind) +
+    '<span class="wc-agent-card-name dash-agent-row-main"><b>' +
     escapeHtml(label) +
     '</b><span class="muted">Inferred</span></span>' +
-    '<span class="dash-agent-row-detail">' +
-    escapeHtml(detail || "No live activity lease is active.") +
+    '<span class="wc-agent-card-status-chip">' +
+    escapeHtml(wcStatus.label) +
     "</span>" +
+    "</span>" +
+    '<div class="wc-agent-card-now dash-agent-row-detail">' +
+    '<div class="wc-agent-card-now-label">Now</div>' +
+    '<span class="wc-agent-card-now-text">' +
+    escapeHtml(detail || "No live activity lease is active.") +
+    "</span></div>" +
     '<span class="dash-agent-row-meta">' +
     renderDashboardAgentActivityChip("Inferred", "source-derived") +
     renderDashboardAgentActivityChip(formatDashboardRelativeAge(fallback.updatedAt), "freshness-derived") +
     "</span>" +
+    "</div>" +
     "</div>"
   );
 }
@@ -4431,7 +4832,19 @@ function renderDashboardAgentActivityRows(
       ? '<p class="muted">No additional active agents.</p>'
       : '<p class="muted">No agents need attention.</p>';
   }
-  return '<div class="dash-agent-row-list" role="list">' + sortedRows.map((row) => renderDashboardAgentActivityRow(row, rowKind)).join("") + "</div>";
+  const groups: Array<{ parent: DashboardAgentActivityRow; subagents: DashboardAgentActivityRow[] }> = [];
+  for (const row of sortedRows) {
+    if (row.role === "subagent" && groups.length > 0) {
+      groups[groups.length - 1]!.subagents.push(row);
+      continue;
+    }
+    groups.push({ parent: row, subagents: [] });
+  }
+  return (
+    '<div class="dash-agent-row-list wc-agent-card-list" role="list">' +
+    groups.map((group) => renderDashboardAgentActivityRow(group.parent, rowKind, group.subagents)).join("") +
+    "</div>"
+  );
 }
 
 function renderDashboardAgentActivityFooter(summary: DashboardAgentActivitySummary): string {
@@ -4455,7 +4868,7 @@ function renderDashboardAgentActivityFooter(summary: DashboardAgentActivitySumma
 function renderDashboardAgentActivityBoard(summary: DashboardAgentActivitySummary | null | undefined): string {
   if (!summary || typeof summary !== "object") {
     return (
-      '<section class="dash-agent-status-banner dash-agent-activity-board" aria-label="Agent Activity">' +
+      '<section class="wc-agent-board dash-agent-status-banner dash-agent-activity-board" aria-label="Agent Activity">' +
       '<p><b>Agent Activity</b> <span class="dash-agent-status-label">Unknown</span></p>' +
       '<p class="muted">No agent activity summary is available.</p>' +
       "</section>"
@@ -4476,7 +4889,7 @@ function renderDashboardAgentActivityBoard(summary: DashboardAgentActivitySummar
   const sourceLabel = summary.source === "derived_only" ? "Inferred" : headerSource;
   const boardState = summary.sourceMap.liveActivityCount > 0 ? "live" : summary.source === "derived_only" ? "inferred" : "mixed";
   return (
-    '<section class="dash-agent-status-banner dash-agent-activity-board" aria-label="Agent Activity" data-agent-activity-source="' +
+    '<section class="wc-agent-board dash-agent-status-banner dash-agent-activity-board" aria-label="Agent Activity" data-agent-activity-source="' +
     escapeHtmlAttr(summary.source) +
     '" data-agent-activity-state="' +
     escapeHtmlAttr(boardState) +
@@ -4488,17 +4901,17 @@ function renderDashboardAgentActivityBoard(summary: DashboardAgentActivitySummar
     escapeHtml(sourceLabel) +
     "</p>" +
     '<div class="dash-agent-activity-section dash-agent-activity-section--main" aria-label="Main Agent">' +
-    "<p><b>Main Agent</b></p>" +
+    '<p class="wc-agent-section-label"><b>Main Agent</b></p>' +
     mainRowHtml +
     "</div>" +
     '<div class="dash-agent-activity-section dash-agent-activity-section--attention" aria-label="Needs Attention">' +
-    "<p><b>Needs Attention</b> <span class=\"muted\">(" +
+    '<p class="wc-agent-section-label"><b>Needs Attention</b> <span class="muted">(' +
     escapeHtml(String(attentionRows.length)) +
     ")</span></p>" +
     renderDashboardAgentActivityRows(attentionRows, "attention") +
     "</div>" +
     '<div class="dash-agent-activity-section dash-agent-activity-section--active" aria-label="Active Agents">' +
-    "<p><b>Active Agents</b> <span class=\"muted\">(" +
+    '<p class="wc-agent-section-label"><b>Active Agents</b> <span class="muted">(' +
     escapeHtml(String(activeRows.length)) +
     ")</span></p>" +
     renderDashboardAgentActivityRows(activeRows, "active") +
@@ -5701,21 +6114,13 @@ export function renderDashboardRootInnerHtml(
 
   return (
     '<div class="wc-dashboard-tab-shell">' +
-    '<div class="wc-tab-bar" role="tablist">' +
-    '<button type="button" class="wc-tab-btn wc-tab-active" role="tab" data-wc-tab="overview">Overview</button>' +
-    '<button type="button" class="wc-tab-btn" role="tab" data-wc-tab="planning">Planning</button>' +
-    '<button type="button" class="wc-tab-btn" role="tab" data-wc-tab="task-engine">Queue' +
-    (totalReadyCount > 0
-      ? '<span class="wc-tab-badge wc-tab-badge-ready">' + escapeHtml(String(totalReadyCount)) + "</span>"
-      : totalBlockedCount > 0
-        ? '<span class="wc-tab-badge wc-tab-badge-blocked">' + escapeHtml(String(totalBlockedCount)) + "</span>"
-        : "") +
-    "</button>" +
-    '<button type="button" class="wc-tab-btn" role="tab" data-wc-tab="status">Status</button>' +
-    '<button type="button" class="wc-tab-btn" role="tab" data-wc-tab="config">Config</button>' +
-    '<button type="button" class="wc-tab-btn" role="tab" data-wc-tab="cae">CAE</button>' +
-    renderDashboardReadModeBadgeHtml(options?.readModeBadge) +
-    "</div>" +
+    renderWcDashboardBannerHtml(d) +
+    renderDashboardTabBarHtml({
+      activeTab: "overview",
+      readyCount: totalReadyCount,
+      blockedCount: totalBlockedCount,
+      readModeBadge: options?.readModeBadge
+    }) +
     '<div class="wc-tab-panel" data-wc-tab="overview" role="tabpanel">' + overviewWrapped + "</div>" +
     '<div class="wc-tab-panel" data-wc-tab="planning" role="tabpanel" style="display:none">' +
     planningContent +

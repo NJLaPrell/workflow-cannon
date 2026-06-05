@@ -2265,6 +2265,191 @@ const deliverTestDepOverview = {
   criticalPathReady: []
 };
 
+function renderBrandDashboardHtml(overrides = {}) {
+  const readyCount = overrides.readyCount ?? 2;
+  const blockedCount = overrides.blockedCount ?? 0;
+  return renderDashboardRootInnerHtml({
+    ok: true,
+    data: {
+      agentStatus: {
+        schemaVersion: 1,
+        source: "live_activity",
+        kind: overrides.agentKind ?? "active",
+        label: overrides.agentLabel ?? "Running <operator> & checking",
+        confidence: "high",
+        updatedAt: "2026-06-05T12:00:00.000Z",
+        taskId: "T100708",
+        title: "Brand <dashboard> UX"
+      },
+      agentActivitySummary: {
+        schemaVersion: 1,
+        generatedAt: "2026-06-05T12:00:00.000Z",
+        source: "mixed",
+        activeCount: 2,
+        staleCount: 0,
+        needsAttentionCount: 1,
+        main: {
+          schemaVersion: 1,
+          rowId: "main-agent",
+          displayName: "Main <Agent> & Co",
+          role: "orchestrator",
+          source: "live_activity",
+          sourceConfidence: "high",
+          status: "working_task",
+          statusLabel: "Working on Task T100708",
+          work: {
+            taskId: "T100708",
+            title: "Brand <dashboard> UX",
+            command: null,
+            phaseKey: "100",
+            taskStatus: "in_progress",
+            assignmentId: null,
+            sessionId: null,
+            currentStep: "Asserting wc-agent-card <script>"
+          },
+          refs: {
+            activityId: "act-1",
+            agentId: "main-agent",
+            sessionId: null,
+            assignmentId: null,
+            agentDefinitionId: null,
+            subagentDefinitionId: null,
+            taskId: "T100708",
+            prNumber: null
+          },
+          freshness: {
+            updatedAt: "2026-06-05T12:00:00.000Z",
+            startedAt: null,
+            expiresAt: null,
+            state: "fresh"
+          },
+          attention: { state: "none", message: null }
+        },
+        active: [],
+        needsAttention: [
+          {
+            schemaVersion: 1,
+            rowId: "review-agent",
+            displayName: "Review Agent",
+            role: "task_worker",
+            source: "team_execution",
+            sourceConfidence: "high",
+            status: "awaiting_input",
+            statusLabel: "Awaiting input",
+            work: {
+              taskId: "T100709",
+              title: "Review test expectations",
+              command: null,
+              phaseKey: "100",
+              taskStatus: "blocked",
+              assignmentId: "T100709",
+              sessionId: null,
+              currentStep: "Waiting for renderer worker"
+            },
+            refs: {
+              activityId: null,
+              agentId: null,
+              sessionId: null,
+              assignmentId: "T100709",
+              agentDefinitionId: null,
+              subagentDefinitionId: null,
+              taskId: "T100709",
+              prNumber: null
+            },
+            freshness: {
+              updatedAt: "2026-06-05T12:01:00.000Z",
+              startedAt: null,
+              expiresAt: null,
+              state: "fresh"
+            },
+            attention: { state: "awaiting_input", message: "Needs renderer markup" }
+          }
+        ],
+        inferredFallback: null,
+        sourceMap: {
+          liveActivityCount: 1,
+          teamExecutionCount: 1,
+          subagentSessionCount: 0,
+          derivedFallbackUsed: false
+        }
+      },
+      stateSummary: {
+        proposed: 0,
+        ready: readyCount,
+        in_progress: 1,
+        blocked: blockedCount,
+        completed: 0
+      },
+      proposedImprovementsSummary: { schemaVersion: 1, count: 0, top: [], phaseBuckets: [] },
+      proposedExecutionSummary: { schemaVersion: 1, count: 0, top: [], phaseBuckets: [] },
+      readyImprovementsSummary: { schemaVersion: 1, count: Math.max(0, readyCount - 1), top: [], phaseBuckets: [] },
+      readyExecutionSummary: { schemaVersion: 1, count: readyCount > 0 ? 1 : 0, top: [], phaseBuckets: [] },
+      blockedSummary: { count: blockedCount, top: [], phaseBuckets: [] },
+      transcriptChurnResearchSummary: { schemaVersion: 1, count: 0, top: [], phaseBuckets: [] },
+      completedSummary: { schemaVersion: 1, count: 0, top: [], phaseBuckets: [] },
+      cancelledSummary: { schemaVersion: 1, count: 0, top: [], phaseBuckets: [] },
+      wishlist: { schemaVersion: 1, openCount: 0, totalCount: 0, openTop: [] },
+      readyQueueTop: [],
+      readyQueueCount: readyCount,
+      suggestedNext: null,
+      planningSession: null,
+      taskStoreLastUpdated: "2026-06-05T12:00:00.000Z",
+      workspaceStatus: { currentKitPhase: "100", nextKitPhase: "101", activeFocus: "Brand dashboard UX" },
+      blockingAnalysis: [],
+      dependencyOverview: deliverTestDepOverview
+    }
+  });
+}
+
+test("renderDashboardRootInnerHtml renders brand banner before segmented tab bar", () => {
+  const html = renderBrandDashboardHtml();
+  const bannerIdx = html.indexOf("wc-banner");
+  const tabBarIdx = html.indexOf("wc-tab-bar");
+  assert.ok(bannerIdx >= 0, "expected branded dashboard banner");
+  assert.ok(tabBarIdx > bannerIdx, "banner should be above segmented tabs");
+  assert.match(html, /class="[^"]*\bwc-banner\b[^"]*"/);
+  assert.match(html, /<span class="wc-banner-name">Workflow Cannon<\/span>/);
+  assert.match(html, /<span class="wc-banner-tagline">workspace-kit<\/span>/);
+  assert.match(html, /data-agent-status-kind="active"/);
+  assert.match(html, /wc-status-dot wc-status-dot--active/);
+  assert.match(html, /wc-banner-status-label wc-banner-status-label--active/);
+  assert.match(html, /Running &lt;operator&gt; &amp; checking|Brand &lt;dashboard&gt; UX/);
+  assert.doesNotMatch(html, /<operator>|<dashboard>|<script>/);
+});
+
+test("renderDashboardRootInnerHtml renders segmented tabs with icons and Queue badge priority", () => {
+  const html = renderBrandDashboardHtml({ readyCount: 2, blockedCount: 3 });
+  const tabBar = html.slice(html.indexOf('class="wc-tab-bar"'), html.indexOf('class="wc-tab-panel"'));
+  assert.match(tabBar, /<button[^>]+wc-tab-active[^>]+data-wc-tab="overview"[\s\S]*<span class="wc-tab-icon">[\s\S]*Overview/);
+  assert.match(tabBar, /data-wc-tab="planning"[\s\S]*<span class="wc-tab-icon">[\s\S]*Planning/);
+  assert.match(tabBar, /data-wc-tab="task-engine"[\s\S]*<span class="wc-tab-icon">[\s\S]*Queue[\s\S]*wc-tab-badge wc-tab-badge-ready[\s\S]*>2<\/span>/);
+  assert.doesNotMatch(tabBar, /wc-tab-badge-blocked[\s\S]*>3<\/span>/);
+  assert.match(tabBar, /data-wc-tab="status"[\s\S]*<span class="wc-tab-icon">[\s\S]*Status/);
+  assert.match(tabBar, /data-wc-tab="config"[\s\S]*<span class="wc-tab-icon">[\s\S]*Config/);
+  assert.match(tabBar, /data-wc-tab="cae"[\s\S]*<span class="wc-tab-icon">[\s\S]*CAE/);
+});
+
+test("renderDashboardRootInnerHtml renders blocked Queue badge when no ready work exists", () => {
+  const html = renderBrandDashboardHtml({ readyCount: 0, blockedCount: 4 });
+  const tabBar = html.slice(html.indexOf('class="wc-tab-bar"'), html.indexOf('class="wc-tab-panel"'));
+  assert.match(tabBar, /data-wc-tab="task-engine"[\s\S]*wc-tab-badge wc-tab-badge-blocked[\s\S]*>4<\/span>/);
+  assert.doesNotMatch(tabBar, /wc-tab-badge-ready/);
+});
+
+test("renderDashboardRootInnerHtml renders agent cards with status dots and escaped text", () => {
+  const html = renderBrandDashboardHtml();
+  assert.match(html, /wc-agent-card/);
+  assert.match(html, /data-status="active"/);
+  assert.match(html, /data-status="waiting"/);
+  assert.match(html, /wc-dot wc-dot--active/);
+  assert.match(html, /wc-dot wc-dot--waiting/);
+  assert.match(html, /wc-agent-card-now-label">Now<\/div>/);
+  assert.match(html, /wc-agent-card-task-chip[\s\S]*T100708/);
+  assert.match(html, /Main &lt;Agent&gt; &amp; Co/);
+  assert.match(html, /Brand &lt;dashboard&gt; UX/);
+  assert.doesNotMatch(html, /Main <Agent>|Brand <dashboard>|<script>/);
+});
+
 test("renderDashboardRootInnerHtml proposed execution rows expose accept action", () => {
   const html = renderDashboardRootInnerHtml({
     ok: true,

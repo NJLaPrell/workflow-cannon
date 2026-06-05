@@ -8,7 +8,7 @@ import {
   formatDashboardReadModeBadgeLabel,
   type DashboardReadModeBadge
 } from "./dashboard-read-mode-badge.js";
-import { escapeHtml } from "./render-dashboard.js";
+import { escapeHtml, renderDashboardTabBarHtml, renderWcDashboardBannerHtml } from "./render-dashboard.js";
 
 function sectionStatusCopy(state: DashboardSectionLoadState): string {
   switch (state) {
@@ -88,15 +88,8 @@ export function renderDashboardShellInnerHtml(readModeBadge?: DashboardReadModeB
 
   return (
     '<div class="wc-dashboard-tab-shell wc-dashboard-shell-initial">' +
-    '<div class="wc-tab-bar" role="tablist">' +
-    '<button type="button" class="wc-tab-btn wc-tab-active" role="tab" data-wc-tab="overview">Overview</button>' +
-    '<button type="button" class="wc-tab-btn" role="tab" data-wc-tab="planning">Planning</button>' +
-    '<button type="button" class="wc-tab-btn" role="tab" data-wc-tab="task-engine">Queue</button>' +
-    '<button type="button" class="wc-tab-btn" role="tab" data-wc-tab="status">Status</button>' +
-    '<button type="button" class="wc-tab-btn" role="tab" data-wc-tab="config">Config</button>' +
-    '<button type="button" class="wc-tab-btn" role="tab" data-wc-tab="cae">CAE</button>' +
-    renderDashboardReadModeBadgeHtml(readModeBadge) +
-    "</div>" +
+    renderWcDashboardBannerHtml(null) +
+    renderDashboardTabBarHtml({ activeTab: "overview", readModeBadge }) +
     '<div class="wc-tab-panel" data-wc-tab="overview" role="tabpanel">' +
     overview +
     "</div>" +

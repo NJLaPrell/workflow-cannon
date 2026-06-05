@@ -32,6 +32,16 @@ test("buildDashboardWebviewBootstrapScript returns drawer + refresh client", () 
   assert.doesNotMatch(readFileSync(path.join(__dirname, "../src/views/dashboard/DashboardViewProvider.ts"), "utf8"), /function setDrawerBusy\(busy, label\)/);
 });
 
+test("buildDashboardWebviewBootstrapScript includes agent card expand/collapse handling", () => {
+  const script = buildDashboardWebviewBootstrapScript(JSON.stringify("(function(){})();"));
+  assert.match(script, /toggle-agent-card/);
+  assert.match(script, /closest\(['"]\.wc-agent-card['"]\)/);
+  assert.match(script, /classList\.toggle\(['"]wc-agent-card--expanded['"]\)/);
+  assert.match(script, /querySelector\(['"]\.wc-agent-tree['"]\)/);
+  assert.match(script, /classList\.contains\(['"]wc-agent-card--expanded['"]\)/);
+  assert.match(script, /style\.display/);
+});
+
 test("DashboardViewProvider buildHtml delegates to dashboard webview client", () => {
   const providerSrc = readFileSync(
     path.join(__dirname, "../src/views/dashboard/DashboardViewProvider.ts"),
