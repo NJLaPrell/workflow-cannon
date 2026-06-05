@@ -88,8 +88,10 @@ export function renderDashboardShellInnerHtml(readModeBadge?: DashboardReadModeB
 
   return (
     '<div class="wc-dashboard-tab-shell wc-dashboard-shell-initial">' +
+    '<div class="wc-header-sticky">' +
     renderWcDashboardBannerHtml(null) +
     renderDashboardTabBarHtml({ activeTab: "overview", readModeBadge }) +
+    '</div>' +
     '<div class="wc-tab-panel" data-wc-tab="overview" role="tabpanel">' +
     overview +
     "</div>" +

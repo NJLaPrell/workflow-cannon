@@ -534,7 +534,6 @@ export function renderDashboardTabBarHtml(args?: {
         );
       })
       .join("") +
-    renderDashboardReadModeBadgeHtml(args?.readModeBadge) +
     "</div>"
   );
 }
@@ -6114,6 +6113,7 @@ export function renderDashboardRootInnerHtml(
 
   return (
     '<div class="wc-dashboard-tab-shell">' +
+    '<div class="wc-header-sticky">' +
     renderWcDashboardBannerHtml(d) +
     renderDashboardTabBarHtml({
       activeTab: "overview",
@@ -6121,6 +6121,7 @@ export function renderDashboardRootInnerHtml(
       blockedCount: totalBlockedCount,
       readModeBadge: options?.readModeBadge
     }) +
+    '</div>' +
     '<div class="wc-tab-panel" data-wc-tab="overview" role="tabpanel">' + overviewWrapped + "</div>" +
     '<div class="wc-tab-panel" data-wc-tab="planning" role="tabpanel" style="display:none">' +
     planningContent +

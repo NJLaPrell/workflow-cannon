@@ -9,7 +9,16 @@ export function mergeSlicePayloadIntoSummary(
   slicePayload: Record<string, unknown>
 ): Record<string, unknown> {
   const desc = lookupDashboardSlice(sliceName);
-  const extracted = desc.extractPayload(slicePayload);
+  let extracted = desc.extractPayload(slicePayload);
+
+  if (sliceName === "ideas") {
+    const priorIdeas = summary.ideas as Record<string, unknown> | undefined;
+    const newIdeas = extracted.ideas as Record<string, unknown> | undefined;
+    if (priorIdeas && priorIdeas.available === true && (!newIdeas || newIdeas.available !== true)) {
+      extracted = { ...extracted, ideas: priorIdeas };
+    }
+  }
+
   return { ...summary, ...extracted };
 }
 
