@@ -1,0 +1,67 @@
+{
+  "ok": true,
+  "code": "run-args-schema",
+  "command": "dashboard-terminal-tasks",
+  "schema": {
+    "type": "object",
+    "required": [
+      "status"
+    ],
+    "properties": {
+      "status": {
+        "type": "string",
+        "enum": [
+          "completed",
+          "cancelled"
+        ]
+      },
+      "phaseKey": {
+        "type": "string",
+        "minLength": 1
+      },
+      "limit": {
+        "type": "number",
+        "exclusiveMinimum": 0
+      },
+      "cursor": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "additionalProperties": false
+  },
+  "schemaSource": "pilot-run-args-snapshot",
+  "sampleArgs": {
+    "status": "completed"
+  },
+  "examples": [
+    {
+      "description": "Minimal argv example",
+      "argv": "workspace-kit run dashboard-terminal-tasks '{\"status\":\"completed\"}'"
+    }
+  ],
+  "instructionPath": "src/modules/task-engine/instructions/dashboard-terminal-tasks.md",
+  "moduleId": "task-engine",
+  "description": "Retrieve terminal task rows (completed/cancelled) for a given phase or overall (focused lazy-loading command).",
+  "policy": {
+    "sensitivity": "non-sensitive",
+    "operationId": null,
+    "jsonApprovalRequired": false
+  },
+  "planningGeneration": {
+    "cliPrelude": false,
+    "expectedPlanningGeneration": "not required by CLI prelude"
+  },
+  "idempotency": {
+    "clientMutationId": false
+  },
+  "responseTemplate": {
+    "defaultResponseTemplateId": "default"
+  },
+  "remediationContract": ".ai/runbooks/agent-task-engine-ergonomics.md",
+  "discovery": {
+    "listCommands": "pnpm exec wk run --list-commands",
+    "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
+  },
+  "invocationId": "1905b201-9abe-4d70-bba2-3ddd5eca08ca"
+}
