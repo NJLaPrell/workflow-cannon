@@ -91,6 +91,14 @@ export const DASHBOARD_SERVICE_SLICE_DEFINITIONS: readonly DashboardServiceSlice
       pick(data, [...SHARED_META_KEYS, "agentStatus", "agentGuidance", "suggestedNext"])
   },
   {
+    name: "planArtifact",
+    pollGroup: "critical",
+    command: "dashboard-summary",
+    args: { projection: "status" },
+    source: "dashboard-summary:status",
+    extractPayload: (data) => pick(data, [...SHARED_META_KEYS, "planArtifact", "workspaceStatus"])
+  },
+  {
     name: "agentActivity",
     pollGroup: "live",
     command: "dashboard-summary",
@@ -136,24 +144,24 @@ export const DASHBOARD_SERVICE_SLICE_DEFINITIONS: readonly DashboardServiceSlice
     name: "team",
     pollGroup: "ops",
     command: "dashboard-summary",
-    args: { projection: "overview" },
-    source: "dashboard-summary:overview",
+    args: { projection: "status" },
+    source: "dashboard-summary:status",
     extractPayload: (data) => pick(data, [...SHARED_META_KEYS, "teamExecution"])
   },
   {
     name: "subagents",
     pollGroup: "ops",
     command: "dashboard-summary",
-    args: { projection: "overview" },
-    source: "dashboard-summary:overview",
+    args: { projection: "status" },
+    source: "dashboard-summary:status",
     extractPayload: (data) => pick(data, [...SHARED_META_KEYS, "subagentRegistry"])
   },
   {
     name: "checkpoints",
     pollGroup: "ops",
     command: "dashboard-summary",
-    args: { projection: "overview" },
-    source: "dashboard-summary:overview",
+    args: { projection: "status" },
+    source: "dashboard-summary:status",
     extractPayload: (data) => pick(data, [...SHARED_META_KEYS, "taskCheckpoints"])
   },
   {

@@ -824,13 +824,15 @@ export class CommandClient {
         `refresh pause acquired | owner=${ownerId} reason=${parsedOwner.reason ?? "none"} source=${parsedOwner.source ?? "unknown"}`
       );
 
-      // watchdog timer for too-long pause (warn after 10s)
       const timer = setInterval(() => {
         const ageMs = Date.now() - timestamp;
         this.onKitRunNotice?.(
           `[warning] refresh pause active for too long | owner=${ownerId} age=${(ageMs / 1000).toFixed(2)}s reason=${parsedOwner.reason ?? "none"}`
         );
       }, 10000);
+      if (timer && typeof timer === "object" && typeof timer.unref === "function") {
+        timer.unref();
+      }
       this.refreshPauseTimers.set(ownerId, timer);
 
       this.preemptRefreshForMutation();
@@ -898,7 +900,11 @@ export class CommandClient {
     return this.refreshPaused;
   }
 
-  private enqueueLane(commandName: string, work: () => Promise<KitRunResult>): Promise<KitRunResult> {
+  private enqueueLane(
+    commandName: string,
+    args: Record<string, unknown> | undefined,
+    work: () => Promise<KitRunResult>
+  ): Promise<KitRunResult> {
     const lane = kitRunLaneForCommand(commandName);
     if (lane === "mutation") {
       this.preemptRefreshForMutation();
@@ -907,7 +913,7 @@ export class CommandClient {
         this.scheduleLaneDrain();
       });
     }
-    const refreshKey = kitRefreshCoalesceKey(commandName);
+    const refreshKey = kitRefreshCoalesceKey(commandName, args);
     return new Promise<KitRunResult>((resolve, reject) => {
       let slot = this.refreshSlots.get(refreshKey);
       if (!slot) {
@@ -988,7 +994,7 @@ export class CommandClient {
     if (this.refreshPaused && isKitRefreshRunCommand(commandName)) {
       return kitRefreshPausedResult(this.getRefreshPausedReason());
     }
-    return this.enqueueLane(commandName, () => {
+    return this.enqueueLane(commandName, args, () => {
       if (this.refreshPaused && isKitRefreshRunCommand(commandName)) {
         return Promise.resolve(kitRefreshPausedResult(this.getRefreshPausedReason()));
       }

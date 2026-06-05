@@ -48,8 +48,15 @@ export function kitRunLaneForCommand(commandName: string): KitRunLane {
   return isKitRefreshRunCommand(commandName) ? "refresh" : "mutation";
 }
 
-/** Coalesce key for pending refresh jobs (same command → keep newest only). */
-export function kitRefreshCoalesceKey(commandName: string): string {
+/** Coalesce key for pending refresh jobs (same command + args for dashboard-summary → keep newest only). */
+export function kitRefreshCoalesceKey(
+  commandName: string,
+  args?: Record<string, unknown>
+): string {
+  if (commandName === "dashboard-summary") {
+    const projection = typeof args?.projection === "string" ? args.projection.trim() : "full";
+    return `dashboard-summary:${projection}`;
+  }
   return commandName;
 }
 

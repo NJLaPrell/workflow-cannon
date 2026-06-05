@@ -9,6 +9,7 @@ export type DashboardServiceSliceName =
   | "queue"
   | "ideas"
   | "phase"
+  | "planArtifact"
   | "phaseJournal"
   | "status"
   | "agent"
