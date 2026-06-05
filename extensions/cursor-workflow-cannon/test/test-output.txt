@@ -1,0 +1,594 @@
+TAP version 13
+# Subtest: mergeReadyQueueRollupSummaries merges counts, tops, and phase buckets
+ok 1 - mergeReadyQueueRollupSummaries merges counts, tops, and phase buckets
+  ---
+  duration_ms: 1.770416
+  type: 'test'
+  ...
+# Subtest: escapeHtml escapes angle brackets and ampersands
+ok 2 - escapeHtml escapes angle brackets and ampersands
+  ---
+  duration_ms: 0.226833
+  type: 'test'
+  ...
+# Subtest: renderMarkdownBoldAfterEscape wraps paired asterisks in b tags
+ok 3 - renderMarkdownBoldAfterEscape wraps paired asterisks in b tags
+  ---
+  duration_ms: 0.152625
+  type: 'test'
+  ...
+# Subtest: renderActiveFocusHtml escapes HTML then applies bold
+ok 4 - renderActiveFocusHtml escapes HTML then applies bold
+  ---
+  duration_ms: 0.111208
+  type: 'test'
+  ...
+# Subtest: renderDashboardRootInnerHtml config tab embeds config panel shell not activity-bar stub
+ok 5 - renderDashboardRootInnerHtml config tab embeds config panel shell not activity-bar stub
+  ---
+  duration_ms: 6.8025
+  type: 'test'
+  ...
+# Subtest: renderDashboardRootInnerHtml shows error JSON when ok is false
+ok 6 - renderDashboardRootInnerHtml shows error JSON when ok is false
+  ---
+  duration_ms: 0.141166
+  type: 'test'
+  ...
+# Subtest: renderDashboardRootInnerHtml places planning cards on the Planning tab
+ok 7 - renderDashboardRootInnerHtml places planning cards on the Planning tab
+  ---
+  duration_ms: 0.8135
+  type: 'test'
+  ...
+# Subtest: renderDashboardRootInnerHtml truncates long idea notes
+ok 8 - renderDashboardRootInnerHtml truncates long idea notes
+  ---
+  duration_ms: 0.370167
+  type: 'test'
+  ...
+# Subtest: renderDashboardRootInnerHtml renders fixture-shaped success payload
+not ok 9 - renderDashboardRootInnerHtml renders fixture-shaped success payload
+  ---
+  duration_ms: 2.9425
+  type: 'test'
+  location: '/Users/nicklaprell/Workspace/workflow-cannon-gemini/extensions/cursor-workflow-cannon/test/render-dashboard.test.mjs:209:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    The input did not match the regular expression /data-wc-track="wishlist"/. Input:
+    
+    '<div class="wc-dashboard-tab-shell"><div class="wc-tab-bar" role="tablist"><button type="button" class="wc-tab-btn wc-tab-active" role="tab" data-wc-tab="overview">Overview</button><button type="button" class="wc-tab-btn" role="tab" data-wc-tab="planning">Planning</button><button type="button" class="wc-tab-btn" role="tab" data-wc-tab="task-engine">Queue<span class="wc-tab-badge wc-tab-badge-ready">2</span></button><button type="button" class="wc-tab-btn" role="tab" data-wc-tab="status">Status</button><button type="button" class="wc-tab-btn" role="tab" data-wc-tab="config">Config</button><button type="button" class="wc-tab-btn" role="tab" data-wc-tab="cae">CAE</button><span class="wc-dash-read-mode-badge muted" data-wc-read-mode-badge role="status">Resolving read path…</span></div><div class="wc-tab-panel" data-wc-tab="overview" role="tabpanel"><div data-wc-section="overview" class="wc-dash-section wc-dash-section--ready" aria-busy="false"><div class="wc-stat-pills"><button type="button" class="wc-stat-pill wc-pill-ready" data-wc-pill-nav="task-engine" data-wc-pill-filter="ready" title="Open Queue tab — Ready"><span class="wc-stat-num">2</span><span class="wc-stat-lbl">Ready</span></button><button type="button" class="wc-stat-pill wc-pill-proposed" data-wc-pill-nav="task-engine" data-wc-pill-filter="proposed" title="Open Queue tab — Proposed"><span class="wc-stat-num">1</span><span class="wc-stat-lbl">Proposed</span></button><button type="button" class="wc-stat-pill wc-pill-blocked" data-wc-pill-nav="task-engine" data-wc-pill-filter="blocked" title="Open Queue tab — Blocked"><span class="wc-stat-num">0</span><span class="wc-stat-lbl">Blocked</span></button><button type="button" class="wc-stat-pill wc-pill-done" data-wc-pill-nav="task-engine" data-wc-pill-filter="all" title="Open Queue tab — Done"><span class="wc-stat-num">1</span><span class="wc-stat-lbl">Done</span></button><button type="button" class="wc-stat-pill wc-pill-human" data-wc-pill-nav="task-engine" data-wc-pill-filter="human-gates" title="Open Queue tab — Human"><span class="wc-stat-num wc-stat-num-human">0</span><span class="wc-stat-lbl">Human</span></button></div><section class="dash-agent-status-banner dash-agent-activity-board" aria-label="Agent Activity"><p><b>Agent Activity</b> <span class="dash-agent-status-label">Unknown · updated now</span></p><p class="muted">No agent activity summary is available.</p></section><div class="wc-rec-next"><div class="wc-rec-header"><span class="wc-rec-label">&#9733; Up Next</span></div><div class="wc-rec-title-row"><p class="wc-rec-title">[task-engine] Define Wishlist item schema and validation contract</p><span class="wc-rec-title-actions"><button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="task-detail" data-task-id="T319" title="Open task detail">View &rarr;</button></span></div></div><section class="dash-card wc-cae-readiness wc-cae-readiness-collapsed" aria-label="Phase readiness · Phase 14"><div class="wc-cae-readiness-head"><button type="button" class="wc-cae-readiness-toggle" data-wc-action="phase-readiness-toggle" aria-expanded="false" aria-controls="wc-cae-readiness-body"><span class="wc-cae-readiness-title"><b>Phase Readiness · Phase 14</b><span class="wc-context-help" tabindex="0" role="button" data-wc-help-text="Shows whether you are ready to start work in this phase. Every check below must pass to reach 100%. Once delivery has started, this score stays at 100%. To track how much of the phase is finished, see Phase Progress." aria-label="About this section"><span class="wc-context-help-icon" aria-hidden="true">i</span></span></span><span class="wc-cae-score-badge wc-cae-score-warn" title="Readiness to start this phase. Reach 100% before work begins.">80<span>%</span></span></button><button type="button" class="wc-btn wc-btn-sm wc-btn-primary dash-phase-release-btn wc-btn-disabled" data-wc-action="phase-complete-release" disabled aria-disabled="true" data-wc-phase-key="14" data-wc-phase-phrase="Phase 14" data-wc-phase-task-ids="" data-wc-workspace-current-phase="14" data-wc-workspace-next-phase="15" data-wc-later-delivered-phases="" data-wc-release-scope="current" title="Complete &amp; Release unlocks when phase readiness reaches 100%.">Complete &amp; Release</button></div><div class="wc-cae-readiness-body" id="wc-cae-readiness-body"><p class="muted wc-phase-card-hint">Every check below must pass before you begin. Complete &amp; Release unlocks at 100% readiness.</p><p><b>Current Phase</b> 14 &rarr; <span class="muted">15</span></p><div class="wc-cae-checks"><div class="wc-cae-check"><span class="wc-cae-check-icon wc-cae-check-ok">&#10003;</span><span class="wc-cae-check-label">Current phase is set</span><span class="muted wc-cae-check-meta"> · Phase 14</span></div><div class="wc-cae-check"><span class="wc-cae-check-icon wc-cae-check-warn">!</span><span class="wc-cae-check-label">Tasks assigned to this phase <span class="wc-context-help" tabindex="0" role="button" data-wc-help-text="Assign at least one task to this phase on the Queue tab before starting delivery." aria-label="What to do"><span class="wc-context-help-icon" aria-hidden="true">i</span></span></span><span class="muted wc-cae-check-meta"> · no tasks assigned</span></div><div class="wc-cae-check"><span class="wc-cae-check-icon wc-cae-check-ok">&#10003;</span><span class="wc-cae-check-label">No blocked tasks</span><span class="muted wc-cae-check-meta"> · none</span></div><div class="wc-cae-check"><span class="wc-cae-check-icon wc-cae-check-ok">&#10003;</span><span class="wc-cae-check-label">No open decisions</span><span class="muted wc-cae-check-meta"> · none</span></div><div class="wc-cae-check"><span class="wc-cae-check-icon wc-cae-check-ok">&#10003;</span><span class="wc-cae-check-label">No workspace blockers</span><span class="muted wc-cae-check-meta"> · none</span></div></div></div></section><section class="dash-card wc-phase-progress wc-phase-progress-collapsed" aria-label="Phase progress · Phase 14"><div class="wc-phase-progress-head"><button type="button" class="wc-cae-readiness-toggle" data-wc-action="phase-progress-toggle" aria-expanded="false" aria-controls="wc-phase-progress-body"><span class="wc-cae-readiness-title"><b>Phase Progress · Phase 14</b></span><span class="wc-cae-score-badge wc-cae-score-bad" title="Progress toward release for this phase (100% requires every check below)">43<span>%</span></span></button></div><div class="wc-phase-progress-body" id="wc-phase-progress-body"><p class="wc-phase-progress-summary">No delivery tasks in this phase</p><div class="wc-phase-progress-track wc-phase-progress-track-empty" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span class="muted">No phase delivery tasks</span></div><div class="wc-cae-checks wc-phase-progress-checks"><div class="wc-cae-check"><span class="wc-cae-check-icon wc-cae-check-ok">&#10003;</span><span class="wc-cae-check-label">Phase ordering vs roster</span><span class="muted wc-cae-check-meta"> · aligned</span></div><div class="wc-cae-check"><span class="wc-cae-check-icon wc-cae-check-warn">!</span><span class="wc-cae-check-label">Delivery work started <span class="wc-context-help" tabindex="0" role="button" data-wc-help-text="Pick up ready tasks on the Queue tab to begin delivery for this phase." aria-label="What to do"><span class="wc-context-help-icon" aria-hidden="true">i</span></span></span><span class="muted wc-cae-check-meta"> · not started</span></div><div class="wc-cae-check"><span class="wc-cae-check-icon wc-cae-check-warn">!</span><span class="wc-cae-check-label">All delivery tasks finished <span class="wc-context-help" tabindex="0" role="button" data-wc-help-text="Finish or handle every delivery task in this phase. Check the Queue tab for remaining work." aria-label="What to do"><span class="wc-context-help-icon" aria-hidden="true">i</span></span></span><span class="muted wc-cae-check-meta"> · no delivery tasks</span></div><div class="wc-cae-check"><span class="wc-cae-check-icon wc-cae-check-ok">&#10003;</span><span class="wc-cae-check-label">Delivery evidence recorded</span><span class="muted wc-cae-check-meta"> · n/a</span></div><div class="wc-cae-check"><span class="wc-cae-check-icon wc-cae-check-ok">&#10003;</span><span class="wc-cae-check-label">Human review clear</span><span class="muted wc-cae-check-meta"> · none</span></div><div class="wc-cae-check"><span class="wc-cae-check-icon wc-cae-check-warn">!</span><span class="wc-cae-check-label">Phase released <span class="wc-context-help" tabindex="0" role="button" data-wc-help-text="Use Complete &amp; Release when every check above passes." aria-label="What to do"><span class="wc-context-help-icon" aria-hidden="true">i</span></span></span><span class="muted wc-cae-check-meta"> · still current</span></div><div class="wc-cae-check"><span class="wc-cae-check-icon wc-cae-check-warn">!</span><span class="wc-cae-check-label">Ready to release <span class="wc-context-help" tabindex="0" role="button" data-wc-help-text="Finish remaining delivery tasks and evidence before you release this phase." aria-label="What to do"><span class="wc-context-help-icon" aria-hidden="true">i</span></span></span><span class="muted wc-cae-check-meta"> · 0%</span></div></div><div class="wc-phase-progress-footer"><button type="button" class="wc-btn wc-btn-sm wc-btn-primary dash-phase-mark-complete-btn wc-btn-disabled" data-wc-action="phase-mark-complete" disabled aria-disabled="true" data-wc-phase-key="14" title="Finish delivery tasks, clear human review items, and record evidence before marking this phase complete.">Mark Phase Complete</button></div></div></section><section class="dash-card dash-team-execution" aria-label="Team execution"><p><b>Team Assignments</b></p><p class="muted">Total 0 · Active 0 · Assigned 0 · Submitted 0 · Blocked 0</p><p class="muted">Delegate an execution task to a worker agent, then reconcile their handoff when they submit.</p><div class="d'... 15095 more characters
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual: '<div class="wc-dashboard-tab-shell"><div class="wc-tab-bar" role="tablist"><button type="button" class="wc-tab-btn wc-tab-active" role="tab" data-wc-tab="overview">Overview</button><button type="button" class="wc-tab-btn" role="tab" data-wc-tab="planning">Planning</button><button type="button" class="wc-tab-btn" role="tab" data-wc-tab="task-engine">Queue<span class="wc-tab-badge wc-tab-badge-ready">2</span></button><button type="button" class="wc-tab-btn" role="tab" data-wc-tab="status">Status</button><button type="button" class="wc-tab-btn" role="tab" data-wc-tab="config">Config</button><button type="button" class="wc-tab-btn" role="tab" data-wc-tab="cae">CAE</button><span class="wc-dash-read-mode-badge muted" data-wc-read-mode-badge role="status">Resolving read path…</span></div><div class="wc-tab-panel" data-wc-tab="overview" role="tabpanel"><div data-wc-section="overview" class="wc-dash-section wc-dash-section--ready" aria-busy="false"><div class="wc-stat-pills"><button type="button" class="wc-stat-pill wc-pill-ready" data-wc-pill-nav="task-engine" data-wc-pill-filter="ready" title="Open Queue tab — Ready"><span class="wc-stat-num">2</span><span class="wc-stat-lbl">Ready</span></button><button type="button" class="wc-stat-pill wc-pill-proposed" data-wc-pill-nav="task-engine" data-wc-pill-filter="proposed" title="Open Queue tab — Proposed"><span class="wc-stat-num">1</span><span class="wc-stat-lbl">Proposed</span></button><button type="button" class="wc-stat-pill wc-pill-blocked" data-wc-pill-nav="task-engine" data-wc-pill-filter="blocked" title="Open Queue tab — Blocked"><span class="wc-stat-num">0</span><span class="wc-stat-lbl">Blocked</span></button><button type="button" class="wc-stat-pill wc-pill-done" data-wc-pill-nav="task-engine" data-wc-pill-filter="all" title="Open Queue tab — Done"><span class="wc-stat-num">1</span><span class="wc-stat-lbl">Done</span></button><button type="button" class="wc-stat-pill wc-pill-human" data-wc-pill-nav="task-engine" data-wc-pill-filter="human-gates" title="Open Queue tab — Human"><span class="wc-stat-num wc-stat-num-human">0</span><span class="wc-stat-lbl">Human</span></button></div><section class="dash-agent-status-banner dash-agent-activity-board" aria-label="Agent Activity"><p><b>Agent Activity</b> <span class="dash-agent-status-label">Unknown · updated now</span></p><p class="muted">No agent activity summary is available.</p></section><div class="wc-rec-next"><div class="wc-rec-header"><span class="wc-rec-label">&#9733; Up Next</span></div><div class="wc-rec-title-row"><p class="wc-rec-title">[task-engine] Define Wishlist item schema and validation contract</p><span class="wc-rec-title-actions"><button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="task-detail" data-task-id="T319" title="Open task detail">View &rarr;</button></span></div></div><section class="dash-card wc-cae-readiness wc-cae-readiness-collapsed" aria-label="Phase readiness · Phase 14"><div class="wc-cae-readiness-head"><button type="button" class="wc-cae-readiness-toggle" data-wc-action="phase-readiness-toggle" aria-expanded="false" aria-controls="wc-cae-readiness-body"><span class="wc-cae-readiness-title"><b>Phase Readiness · Phase 14</b><span class="wc-context-help" tabindex="0" role="button" data-wc-help-text="Shows whether you are ready to start work in this phase. Every check below must pass to reach 100%. Once delivery has started, this score stays at 100%. To track how much of the phase is finished, see Phase Progress." aria-label="About this section"><span class="wc-context-help-icon" aria-hidden="true">i</span></span></span><span class="wc-cae-score-badge wc-cae-score-warn" title="Readiness to start this phase. Reach 100% before work begins.">80<span>%</span></span></button><button type="button" class="wc-btn wc-btn-sm wc-btn-primary dash-phase-release-btn wc-btn-disabled" data-wc-action="phase-complete-release" disabled aria-disabled="true" data-wc-phase-key="14" data-wc-phase-phrase="Phase 14" data-wc-phase-task-ids="" data-wc-workspace-current-phase="14" data-wc-workspace-next-phase="15" data-wc-later-delivered-phases="" data-wc-release-scope="current" title="Complete &amp; Release unlocks when phase readiness reaches 100%.">Complete &amp; Release</button></div><div class="wc-cae-readiness-body" id="wc-cae-readiness-body"><p class="muted wc-phase-card-hint">Every check below must pass before you begin. Complete &amp; Release unlocks at 100% readiness.</p><p><b>Current Phase</b> 14 &rarr; <span class="muted">15</span></p><div class="wc-cae-checks"><div class="wc-cae-check"><span class="wc-cae-check-icon wc-cae-check-ok">&#10003;</span><span class="wc-cae-check-label">Current phase is set</span><span class="muted wc-cae-check-meta"> · Phase 14</span></div><div class="wc-cae-check"><span class="wc-cae-check-icon wc-cae-check-warn">!</span><span class="wc-cae-check-label">Tasks assigned to this phase <span class="wc-context-help" tabindex="0" role="button" data-wc-help-text="Assign at least one task to this phase on the Queue tab before starting delivery." aria-label="What to do"><span class="wc-context-help-icon" aria-hidden="true">i</span></span></span><span class="muted wc-cae-check-meta"> · no tasks assigned</span></div><div class="wc-cae-check"><span class="wc-cae-check-icon wc-cae-check-ok">&#10003;</span><span class="wc-cae-check-label">No blocked tasks</span><span class="muted wc-cae-check-meta"> · none</span></div><div class="wc-cae-check"><span class="wc-cae-check-icon wc-cae-check-ok">&#10003;</span><span class="wc-cae-check-label">No open decisions</span><span class="muted wc-cae-check-meta"> · none</span></div><div class="wc-cae-check"><span class="wc-cae-check-icon wc-cae-check-ok">&#10003;</span><span class="wc-cae-check-label">No workspace blockers</span><span class="muted wc-cae-check-meta"> · none</span></div></div></div></section><section class="dash-card wc-phase-progress wc-phase-progress-collapsed" aria-label="Phase progress · Phase 14"><div class="wc-phase-progress-head"><button type="button" class="wc-cae-readiness-toggle" data-wc-action="phase-progress-toggle" aria-expanded="false" aria-controls="wc-phase-progress-body"><span class="wc-cae-readiness-title"><b>Phase Progress · Phase 14</b></span><span class="wc-cae-score-badge wc-cae-score-bad" title="Progress toward release for this phase (100% requires every check below)">43<span>%</span></span></button></div><div class="wc-phase-progress-body" id="wc-phase-progress-body"><p class="wc-phase-progress-summary">No delivery tasks in this phase</p><div class="wc-phase-progress-track wc-phase-progress-track-empty" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span class="muted">No phase delivery tasks</span></div><div class="wc-cae-checks wc-phase-progress-checks"><div class="wc-cae-check"><span class="wc-cae-check-icon wc-cae-check-ok">&#10003;</span><span class="wc-cae-check-label">Phase ordering vs roster</span><span class="muted wc-cae-check-meta"> · aligned</span></div><div class="wc-cae-check"><span class="wc-cae-check-icon wc-cae-check-warn">!</span><span class="wc-cae-check-label">Delivery work started <span class="wc-context-help" tabindex="0" role="button" data-wc-help-text="Pick up ready tasks on the Queue tab to begin delivery for this phase." aria-label="What to do"><span class="wc-context-help-icon" aria-hidden="true">i</span></span></span><span class="muted wc-cae-check-meta"> · not started</span></div><div class="wc-cae-check"><span class="wc-cae-check-icon wc-cae-check-warn">!</span><span class="wc-cae-check-label">All delivery tasks finished <span class="wc-context-help" tabindex="0" role="button" data-wc-help-text="Finish or handle every delivery task in this phase. Check the Queue tab for remaining work." aria-label="What to do"><span class="wc-context-help-icon" aria-hidden="true">i</span></span></span><span class="muted wc-cae-check-meta"> · no delivery tasks</span></div><div class="wc-cae-check"><span class="wc-cae-check-icon wc-cae-check-ok">&#10003;</span><span class="wc-cae-check-label">Delivery evidence recorded</span><span class="muted wc-cae-check-meta"> · n/a</span></div><div class="wc-cae-check"><span class="wc-cae-check-icon wc-cae-check-ok">&#10003;</span><span class="wc-cae-check-label">Human review clear</span><span class="muted wc-cae-check-meta"> · none</span></div><div class="wc-cae-check"><span class="wc-cae-check-icon wc-cae-check-warn">!</span><span class="wc-cae-check-label">Phase released <span class="wc-context-help" tabindex="0" role="button" data-wc-help-text="Use Complete &amp; Release when every check above passes." aria-label="What to do"><span class="wc-context-help-icon" aria-hidden="true">i</span></span></span><span class="muted wc-cae-check-meta"> · still current</span></div><div class="wc-cae-check"><span class="wc-cae-check-icon wc-cae-check-warn">!</span><span class="wc-cae-check-label">Ready to release <span class="wc-context-help" tabindex="0" role="button" data-wc-help-text="Finish remaining delivery tasks and evidence before you release this phase." aria-label="What to do"><span class="wc-context-help-icon" aria-hidden="true">i</span></span></span><span class="muted wc-cae-check-meta"> · 0%</span></div></div><div class="wc-phase-progress-footer"><button type="button" class="wc-btn wc-btn-sm wc-btn-primary dash-phase-mark-complete-btn wc-btn-disabled" data-wc-action="phase-mark-complete" disabled aria-disabled="true" data-wc-phase-key="14" title="Finish delivery tasks, clear human review items, and record evidence before marking this phase complete.">Mark Phase Complete</button></div></div></section><section class="dash-card dash-team-execution" aria-label="Team execution"><p><b>Team Assignments</b></p><p class="muted">Total 0 · Active 0 · Assigned 0 · Submitted 0 · Blocked 0</p><p class="muted">Delegate an execution task to a worker agent, then reconcile their handoff when they submit.</p><div class="d'... 15095 more characters
+  operator: 'match'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/nicklaprell/Workspace/workflow-cannon-gemini/extensions/cursor-workflow-cannon/test/render-dashboard.test.mjs:291:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: renderDashboardRootInnerHtml renders PlanArtifact draft panel
+ok 10 - renderDashboardRootInnerHtml renders PlanArtifact draft panel
+  ---
+  duration_ms: 23.033125
+  type: 'test'
+  ...
+# Subtest: renderDashboardRootInnerHtml enables PlanArtifact accept after review pass
+ok 11 - renderDashboardRootInnerHtml enables PlanArtifact accept after review pass
+  ---
+  duration_ms: 0.803292
+  type: 'test'
+  ...
+# Subtest: renderDashboardRootInnerHtml shows PlanArtifact finalize after accept
+ok 12 - renderDashboardRootInnerHtml shows PlanArtifact finalize after accept
+  ---
+  duration_ms: 0.380292
+  type: 'test'
+  ...
+# Subtest: renderDashboardRootInnerHtml blocks PlanArtifact accept with blockers or open questions
+ok 13 - renderDashboardRootInnerHtml blocks PlanArtifact accept with blockers or open questions
+  ---
+  duration_ms: 1.932833
+  type: 'test'
+  ...
+# Subtest: renderDashboardRootInnerHtml hides PlanArtifact lifecycle actions after finalize
+ok 14 - renderDashboardRootInnerHtml hides PlanArtifact lifecycle actions after finalize
+  ---
+  duration_ms: 0.326041
+  type: 'test'
+  ...
+# Subtest: renderDashboardRootInnerHtml renders phase roster deliverables inline edit affordances
+ok 15 - renderDashboardRootInnerHtml renders phase roster deliverables inline edit affordances
+  ---
+  duration_ms: 0.944167
+  type: 'test'
+  ...
+# Subtest: renderDashboardRootInnerHtml queue phase buckets show read-only roster deliverables
+ok 16 - renderDashboardRootInnerHtml queue phase buckets show read-only roster deliverables
+  ---
+  duration_ms: 0.882541
+  type: 'test'
+  ...
+# Subtest: renderDashboardRootInnerHtml renders redesigned queue task rows with chips and summary
+ok 17 - renderDashboardRootInnerHtml renders redesigned queue task rows with chips and summary
+  ---
+  duration_ms: 0.91875
+  type: 'test'
+  ...
+# Subtest: renderDashboardRootInnerHtml places Phase Readiness under WC Agent shell, not in Queue or CAE tab
+ok 18 - renderDashboardRootInnerHtml places Phase Readiness under WC Agent shell, not in Queue or CAE tab
+  ---
+  duration_ms: 0.616291
+  type: 'test'
+  ...
+# Subtest: renderDashboardRootInnerHtml renders embedded CAE panel markup when provided
+ok 19 - renderDashboardRootInnerHtml renders embedded CAE panel markup when provided
+  ---
+  duration_ms: 0.454333
+  type: 'test'
+  ...
+# Subtest: embedded and standalone CAE surfaces avoid duplicate DOM ids
+ok 20 - embedded and standalone CAE surfaces avoid duplicate DOM ids
+  ---
+  duration_ms: 4.437458
+  type: 'test'
+  ...
+# Subtest: renderDashboardRootInnerHtml includes phase journal controls when bundle provided
+ok 21 - renderDashboardRootInnerHtml includes phase journal controls when bundle provided
+  ---
+  duration_ms: 1.864334
+  type: 'test'
+  ...
+# Subtest: renderDashboardRootInnerHtml renders editor integration state when provided
+ok 22 - renderDashboardRootInnerHtml renders editor integration state when provided
+  ---
+  duration_ms: 0.789167
+  type: 'test'
+  ...
+# Subtest: renderDashboardRootInnerHtml renders escaped WC Agent status banner from agentStatus
+ok 23 - renderDashboardRootInnerHtml renders escaped WC Agent status banner from agentStatus
+  ---
+  duration_ms: 0.980084
+  type: 'test'
+  ...
+# Subtest: renderDashboardRootInnerHtml renders many agent and subagent rows
+ok 24 - renderDashboardRootInnerHtml renders many agent and subagent rows
+  ---
+  duration_ms: 1.588667
+  type: 'test'
+  ...
+# Subtest: renderDashboardRootInnerHtml team execution empty state offers create assignment
+ok 25 - renderDashboardRootInnerHtml team execution empty state offers create assignment
+  ---
+  duration_ms: 0.36575
+  type: 'test'
+  ...
+# Subtest: renderDashboardRootInnerHtml team execution row exposes handoff and reconcile actions
+ok 26 - renderDashboardRootInnerHtml team execution row exposes handoff and reconcile actions
+  ---
+  duration_ms: 0.407666
+  type: 'test'
+  ...
+# Subtest: renderDashboardRootInnerHtml subagent registry empty state offers register and spawn
+ok 27 - renderDashboardRootInnerHtml subagent registry empty state offers register and spawn
+  ---
+  duration_ms: 0.274375
+  type: 'test'
+  ...
+# Subtest: renderDashboardRootInnerHtml subagent registry row exposes close session
+ok 28 - renderDashboardRootInnerHtml subagent registry row exposes close session
+  ---
+  duration_ms: 0.37775
+  type: 'test'
+  ...
+# Subtest: renderDashboardRootInnerHtml task checkpoints empty state offers snapshot actions
+ok 29 - renderDashboardRootInnerHtml task checkpoints empty state offers snapshot actions
+  ---
+  duration_ms: 0.248875
+  type: 'test'
+  ...
+# Subtest: renderDashboardRootInnerHtml task checkpoint row exposes compare and rewind
+ok 30 - renderDashboardRootInnerHtml task checkpoint row exposes compare and rewind
+  ---
+  duration_ms: 0.445041
+  type: 'test'
+  ...
+# Subtest: renderDashboardRootInnerHtml approval inbox empty state shows guide and artifacts
+ok 31 - renderDashboardRootInnerHtml approval inbox empty state shows guide and artifacts
+  ---
+  duration_ms: 0.271042
+  type: 'test'
+  ...
+# Subtest: renderDashboardRootInnerHtml approval inbox row exposes review actions
+ok 32 - renderDashboardRootInnerHtml approval inbox row exposes review actions
+  ---
+  duration_ms: 0.573375
+  type: 'test'
+  ...
+# Subtest: renderDashboardRootInnerHtml planning card shows resume CLI when session present
+ok 33 - renderDashboardRootInnerHtml planning card shows resume CLI when session present
+  ---
+  duration_ms: 0.665334
+  type: 'test'
+  ...
+# Subtest: renderDashboardRootInnerHtml omits global suggested-next when no workspace current phase
+ok 34 - renderDashboardRootInnerHtml omits global suggested-next when no workspace current phase
+  ---
+  duration_ms: 0.401625
+  type: 'test'
+  ...
+# Subtest: renderDashboardRootInnerHtml keeps dashboard copy compact
+ok 35 - renderDashboardRootInnerHtml keeps dashboard copy compact
+  ---
+  duration_ms: 1.66875
+  type: 'test'
+  ...
+# Subtest: renderUpNextCardHtml recommends wishlist when in phase without delivery snapshot
+ok 36 - renderUpNextCardHtml recommends wishlist when in phase without delivery snapshot
+  ---
+  duration_ms: 0.141042
+  type: 'test'
+  ...
+# Subtest: renderDashboardRootInnerHtml recommends wishlist when execution ready queue is empty
+ok 37 - renderDashboardRootInnerHtml recommends wishlist when execution ready queue is empty
+  ---
+  duration_ms: 0.466375
+  type: 'test'
+  ...
+# Subtest: renderDashboardRootInnerHtml prefers first ready task over wishlist when both exist
+not ok 38 - renderDashboardRootInnerHtml prefers first ready task over wishlist when both exist
+  ---
+  duration_ms: 0.608833
+  type: 'test'
+  location: '/Users/nicklaprell/Workspace/workflow-cannon-gemini/extensions/cursor-workflow-cannon/test/render-dashboard.test.mjs:1926:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    The input did not match the regular expression /Process wishlist first/. Input:
+    
+    '<div class="wc-dashboard-tab-shell"><div class="wc-tab-bar" role="tablist"><button type="button" class="wc-tab-btn wc-tab-active" role="tab" data-wc-tab="overview">Overview</button><button type="button" class="wc-tab-btn" role="tab" data-wc-tab="planning">Planning</button><button type="button" class="wc-tab-btn" role="tab" data-wc-tab="task-engine">Queue<span class="wc-tab-badge wc-tab-badge-ready">1</span></button><button type="button" class="wc-tab-btn" role="tab" data-wc-tab="status">Status</button><button type="button" class="wc-tab-btn" role="tab" data-wc-tab="config">Config</button><button type="button" class="wc-tab-btn" role="tab" data-wc-tab="cae">CAE</button><span class="wc-dash-read-mode-badge muted" data-wc-read-mode-badge role="status">Resolving read path…</span></div><div class="wc-tab-panel" data-wc-tab="overview" role="tabpanel"><div data-wc-section="overview" class="wc-dash-section wc-dash-section--ready" aria-busy="false"><div class="wc-stat-pills"><button type="button" class="wc-stat-pill wc-pill-ready" data-wc-pill-nav="task-engine" data-wc-pill-filter="ready" title="Open Queue tab — Ready"><span class="wc-stat-num">1</span><span class="wc-stat-lbl">Ready</span></button><button type="button" class="wc-stat-pill wc-pill-proposed" data-wc-pill-nav="task-engine" data-wc-pill-filter="proposed" title="Open Queue tab — Proposed"><span class="wc-stat-num">0</span><span class="wc-stat-lbl">Proposed</span></button><button type="button" class="wc-stat-pill wc-pill-blocked" data-wc-pill-nav="task-engine" data-wc-pill-filter="blocked" title="Open Queue tab — Blocked"><span class="wc-stat-num">0</span><span class="wc-stat-lbl">Blocked</span></button><button type="button" class="wc-stat-pill wc-pill-done" data-wc-pill-nav="task-engine" data-wc-pill-filter="all" title="Open Queue tab — Done"><span class="wc-stat-num">0</span><span class="wc-stat-lbl">Done</span></button><button type="button" class="wc-stat-pill wc-pill-human" data-wc-pill-nav="task-engine" data-wc-pill-filter="human-gates" title="Open Queue tab — Human"><span class="wc-stat-num wc-stat-num-human">0</span><span class="wc-stat-lbl">Human</span></button></div><section class="dash-agent-status-banner dash-agent-activity-board" aria-label="Agent Activity"><p><b>Agent Activity</b> <span class="dash-agent-status-label">Unknown · updated now</span></p><p class="muted">No agent activity summary is available.</p></section><div class="wc-rec-next"><div class="wc-rec-header"><span class="wc-rec-label">&#9733; Up Next</span></div><div class="wc-rec-title-row"><p class="wc-rec-title">Ready improvement task</p><span class="wc-rec-title-actions"><button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="task-detail" data-task-id="imp-1" title="Open task detail">View &rarr;</button></span></div></div><section class="dash-card wc-cae-readiness wc-cae-readiness-collapsed" aria-label="Phase readiness · Phase 9"><div class="wc-cae-readiness-head"><button type="button" class="wc-cae-readiness-toggle" data-wc-action="phase-readiness-toggle" aria-expanded="false" aria-controls="wc-cae-readiness-body"><span class="wc-cae-readiness-title"><b>Phase Readiness · Phase 9</b><span class="wc-context-help" tabindex="0" role="button" data-wc-help-text="Shows whether you are ready to start work in this phase. Every check below must pass to reach 100%. Once delivery has started, this score stays at 100%. To track how much of the phase is finished, see Phase Progress." aria-label="About this section"><span class="wc-context-help-icon" aria-hidden="true">i</span></span></span><span class="wc-cae-score-badge wc-cae-score-ok" title="Readiness to start this phase. Reach 100% before work begins.">100<span>%</span></span></button><button type="button" class="wc-btn wc-btn-sm wc-btn-primary dash-phase-release-btn dash-phase-release-btn--preflight" data-wc-action="phase-complete-release" data-wc-phase-key="9" data-wc-phase-phrase="Phase 9" data-wc-phase-task-ids="" data-wc-workspace-current-phase="9" data-wc-workspace-next-phase="10" data-wc-later-delivered-phases="" data-wc-release-scope="current" title="Finish the progress checks, then release this phase.">Complete &amp; Release</button></div><div class="wc-cae-readiness-body" id="wc-cae-readiness-body"><p class="muted wc-phase-card-hint">Every check below must pass before you begin. Complete &amp; Release unlocks at 100% readiness.</p><p><b>Current Phase</b> 9 &rarr; <span class="muted">10</span></p><div class="wc-cae-checks"><div class="wc-cae-check"><span class="wc-cae-check-icon wc-cae-check-ok">&#10003;</span><span class="wc-cae-check-label">Current phase is set</span><span class="muted wc-cae-check-meta"> · Phase 9</span></div><div class="wc-cae-check"><span class="wc-cae-check-icon wc-cae-check-ok">&#10003;</span><span class="wc-cae-check-label">Tasks assigned to this phase</span><span class="muted wc-cae-check-meta"> · 1 ready · 0 in progress</span></div><div class="wc-cae-check"><span class="wc-cae-check-icon wc-cae-check-ok">&#10003;</span><span class="wc-cae-check-label">No blocked tasks</span><span class="muted wc-cae-check-meta"> · none</span></div><div class="wc-cae-check"><span class="wc-cae-check-icon wc-cae-check-ok">&#10003;</span><span class="wc-cae-check-label">No open decisions</span><span class="muted wc-cae-check-meta"> · none</span></div><div class="wc-cae-check"><span class="wc-cae-check-icon wc-cae-check-ok">&#10003;</span><span class="wc-cae-check-label">No workspace blockers</span><span class="muted wc-cae-check-meta"> · none</span></div></div></div></section><section class="dash-card wc-phase-progress wc-phase-progress-collapsed" aria-label="Phase progress · Phase 9"><div class="wc-phase-progress-head"><button type="button" class="wc-cae-readiness-toggle" data-wc-action="phase-progress-toggle" aria-expanded="false" aria-controls="wc-phase-progress-body"><span class="wc-cae-readiness-title"><b>Phase Progress · Phase 9</b></span><span class="wc-cae-score-badge wc-cae-score-bad" title="Progress toward release for this phase (100% requires every check below)">43<span>%</span></span></button></div><div class="wc-phase-progress-body" id="wc-phase-progress-body"><p class="wc-phase-progress-summary">0 of 1 delivery tasks terminal · 1 remaining</p><div class="wc-phase-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span class="wc-phase-progress-seg wc-phase-seg-ready" style="width:100.00%" title="1"></span></div><div class="wc-phase-progress-legend"><span class="wc-phase-progress-legend-item"><span class="wc-phase-progress-legend-swatch wc-phase-seg-ready" aria-hidden="true"></span>Ready 1</span></div><div class="wc-cae-checks wc-phase-progress-checks"><div class="wc-cae-check"><span class="wc-cae-check-icon wc-cae-check-ok">&#10003;</span><span class="wc-cae-check-label">Phase ordering vs roster</span><span class="muted wc-cae-check-meta"> · aligned</span></div><div class="wc-cae-check"><span class="wc-cae-check-icon wc-cae-check-warn">!</span><span class="wc-cae-check-label">Delivery work started <span class="wc-context-help" tabindex="0" role="button" data-wc-help-text="Pick up ready tasks on the Queue tab to begin delivery for this phase." aria-label="What to do"><span class="wc-context-help-icon" aria-hidden="true">i</span></span></span><span class="muted wc-cae-check-meta"> · not started</span></div><div class="wc-cae-check"><span class="wc-cae-check-icon wc-cae-check-warn">!</span><span class="wc-cae-check-label">All delivery tasks finished <span class="wc-context-help" tabindex="0" role="button" data-wc-help-text="Finish or handle every delivery task in this phase. Check the Queue tab for remaining work." aria-label="What to do"><span class="wc-context-help-icon" aria-hidden="true">i</span></span></span><span class="muted wc-cae-check-meta"> · 1 remaining</span></div><div class="wc-cae-check"><span class="wc-cae-check-icon wc-cae-check-ok">&#10003;</span><span class="wc-cae-check-label">Delivery evidence recorded</span><span class="muted wc-cae-check-meta"> · clear</span></div><div class="wc-cae-check"><span class="wc-cae-check-icon wc-cae-check-ok">&#10003;</span><span class="wc-cae-check-label">Human review clear</span><span class="muted wc-cae-check-meta"> · none</span></div><div class="wc-cae-check"><span class="wc-cae-check-icon wc-cae-check-warn">!</span><span class="wc-cae-check-label">Phase released <span class="wc-context-help" tabindex="0" role="button" data-wc-help-text="Use Complete &amp; Release when every check above passes." aria-label="What to do"><span class="wc-context-help-icon" aria-hidden="true">i</span></span></span><span class="muted wc-cae-check-meta"> · still current</span></div><div class="wc-cae-check"><span class="wc-cae-check-icon wc-cae-check-warn">!</span><span class="wc-cae-check-label">Ready to release <span class="wc-context-help" tabindex="0" role="button" data-wc-help-text="Finish remaining delivery tasks and evidence before you release this phase." aria-label="What to do"><span class="wc-context-help-icon" aria-hidden="true">i</span></span></span><span class="muted wc-cae-check-meta"> · 0%</span></div></div><p class="muted">Finish remaining delivery tasks in this phase before you release it.</p><div class="wc-phase-progress-footer"><button type="button" class="wc-btn wc-btn-sm wc-btn-primary dash-phase-mark-complete-btn wc-btn-disabled" data-wc-action="phase-mark-complete" disabled aria-disabled="true" data-wc-phase-key="9" title="Finish delivery tasks, clear human review items, and record evidence before marking this phase complete.">Mark Phase Complete</button></div></div></section></div></div><div class="wc-tab-panel" data-wc-tab="planning" role="tabpanel" style="display:none"><div data-wc-section="phase-roster" class="wc-dash-section wc-dash-section--ready" aria-busy="false"></div><div data-wc-section="ideas" class="wc-dash-section wc-dash-section--ready" aria-busy="false"><section class="dash-card'... 10925 more characters
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual: '<div class="wc-dashboard-tab-shell"><div class="wc-tab-bar" role="tablist"><button type="button" class="wc-tab-btn wc-tab-active" role="tab" data-wc-tab="overview">Overview</button><button type="button" class="wc-tab-btn" role="tab" data-wc-tab="planning">Planning</button><button type="button" class="wc-tab-btn" role="tab" data-wc-tab="task-engine">Queue<span class="wc-tab-badge wc-tab-badge-ready">1</span></button><button type="button" class="wc-tab-btn" role="tab" data-wc-tab="status">Status</button><button type="button" class="wc-tab-btn" role="tab" data-wc-tab="config">Config</button><button type="button" class="wc-tab-btn" role="tab" data-wc-tab="cae">CAE</button><span class="wc-dash-read-mode-badge muted" data-wc-read-mode-badge role="status">Resolving read path…</span></div><div class="wc-tab-panel" data-wc-tab="overview" role="tabpanel"><div data-wc-section="overview" class="wc-dash-section wc-dash-section--ready" aria-busy="false"><div class="wc-stat-pills"><button type="button" class="wc-stat-pill wc-pill-ready" data-wc-pill-nav="task-engine" data-wc-pill-filter="ready" title="Open Queue tab — Ready"><span class="wc-stat-num">1</span><span class="wc-stat-lbl">Ready</span></button><button type="button" class="wc-stat-pill wc-pill-proposed" data-wc-pill-nav="task-engine" data-wc-pill-filter="proposed" title="Open Queue tab — Proposed"><span class="wc-stat-num">0</span><span class="wc-stat-lbl">Proposed</span></button><button type="button" class="wc-stat-pill wc-pill-blocked" data-wc-pill-nav="task-engine" data-wc-pill-filter="blocked" title="Open Queue tab — Blocked"><span class="wc-stat-num">0</span><span class="wc-stat-lbl">Blocked</span></button><button type="button" class="wc-stat-pill wc-pill-done" data-wc-pill-nav="task-engine" data-wc-pill-filter="all" title="Open Queue tab — Done"><span class="wc-stat-num">0</span><span class="wc-stat-lbl">Done</span></button><button type="button" class="wc-stat-pill wc-pill-human" data-wc-pill-nav="task-engine" data-wc-pill-filter="human-gates" title="Open Queue tab — Human"><span class="wc-stat-num wc-stat-num-human">0</span><span class="wc-stat-lbl">Human</span></button></div><section class="dash-agent-status-banner dash-agent-activity-board" aria-label="Agent Activity"><p><b>Agent Activity</b> <span class="dash-agent-status-label">Unknown · updated now</span></p><p class="muted">No agent activity summary is available.</p></section><div class="wc-rec-next"><div class="wc-rec-header"><span class="wc-rec-label">&#9733; Up Next</span></div><div class="wc-rec-title-row"><p class="wc-rec-title">Ready improvement task</p><span class="wc-rec-title-actions"><button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="task-detail" data-task-id="imp-1" title="Open task detail">View &rarr;</button></span></div></div><section class="dash-card wc-cae-readiness wc-cae-readiness-collapsed" aria-label="Phase readiness · Phase 9"><div class="wc-cae-readiness-head"><button type="button" class="wc-cae-readiness-toggle" data-wc-action="phase-readiness-toggle" aria-expanded="false" aria-controls="wc-cae-readiness-body"><span class="wc-cae-readiness-title"><b>Phase Readiness · Phase 9</b><span class="wc-context-help" tabindex="0" role="button" data-wc-help-text="Shows whether you are ready to start work in this phase. Every check below must pass to reach 100%. Once delivery has started, this score stays at 100%. To track how much of the phase is finished, see Phase Progress." aria-label="About this section"><span class="wc-context-help-icon" aria-hidden="true">i</span></span></span><span class="wc-cae-score-badge wc-cae-score-ok" title="Readiness to start this phase. Reach 100% before work begins.">100<span>%</span></span></button><button type="button" class="wc-btn wc-btn-sm wc-btn-primary dash-phase-release-btn dash-phase-release-btn--preflight" data-wc-action="phase-complete-release" data-wc-phase-key="9" data-wc-phase-phrase="Phase 9" data-wc-phase-task-ids="" data-wc-workspace-current-phase="9" data-wc-workspace-next-phase="10" data-wc-later-delivered-phases="" data-wc-release-scope="current" title="Finish the progress checks, then release this phase.">Complete &amp; Release</button></div><div class="wc-cae-readiness-body" id="wc-cae-readiness-body"><p class="muted wc-phase-card-hint">Every check below must pass before you begin. Complete &amp; Release unlocks at 100% readiness.</p><p><b>Current Phase</b> 9 &rarr; <span class="muted">10</span></p><div class="wc-cae-checks"><div class="wc-cae-check"><span class="wc-cae-check-icon wc-cae-check-ok">&#10003;</span><span class="wc-cae-check-label">Current phase is set</span><span class="muted wc-cae-check-meta"> · Phase 9</span></div><div class="wc-cae-check"><span class="wc-cae-check-icon wc-cae-check-ok">&#10003;</span><span class="wc-cae-check-label">Tasks assigned to this phase</span><span class="muted wc-cae-check-meta"> · 1 ready · 0 in progress</span></div><div class="wc-cae-check"><span class="wc-cae-check-icon wc-cae-check-ok">&#10003;</span><span class="wc-cae-check-label">No blocked tasks</span><span class="muted wc-cae-check-meta"> · none</span></div><div class="wc-cae-check"><span class="wc-cae-check-icon wc-cae-check-ok">&#10003;</span><span class="wc-cae-check-label">No open decisions</span><span class="muted wc-cae-check-meta"> · none</span></div><div class="wc-cae-check"><span class="wc-cae-check-icon wc-cae-check-ok">&#10003;</span><span class="wc-cae-check-label">No workspace blockers</span><span class="muted wc-cae-check-meta"> · none</span></div></div></div></section><section class="dash-card wc-phase-progress wc-phase-progress-collapsed" aria-label="Phase progress · Phase 9"><div class="wc-phase-progress-head"><button type="button" class="wc-cae-readiness-toggle" data-wc-action="phase-progress-toggle" aria-expanded="false" aria-controls="wc-phase-progress-body"><span class="wc-cae-readiness-title"><b>Phase Progress · Phase 9</b></span><span class="wc-cae-score-badge wc-cae-score-bad" title="Progress toward release for this phase (100% requires every check below)">43<span>%</span></span></button></div><div class="wc-phase-progress-body" id="wc-phase-progress-body"><p class="wc-phase-progress-summary">0 of 1 delivery tasks terminal · 1 remaining</p><div class="wc-phase-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span class="wc-phase-progress-seg wc-phase-seg-ready" style="width:100.00%" title="1"></span></div><div class="wc-phase-progress-legend"><span class="wc-phase-progress-legend-item"><span class="wc-phase-progress-legend-swatch wc-phase-seg-ready" aria-hidden="true"></span>Ready 1</span></div><div class="wc-cae-checks wc-phase-progress-checks"><div class="wc-cae-check"><span class="wc-cae-check-icon wc-cae-check-ok">&#10003;</span><span class="wc-cae-check-label">Phase ordering vs roster</span><span class="muted wc-cae-check-meta"> · aligned</span></div><div class="wc-cae-check"><span class="wc-cae-check-icon wc-cae-check-warn">!</span><span class="wc-cae-check-label">Delivery work started <span class="wc-context-help" tabindex="0" role="button" data-wc-help-text="Pick up ready tasks on the Queue tab to begin delivery for this phase." aria-label="What to do"><span class="wc-context-help-icon" aria-hidden="true">i</span></span></span><span class="muted wc-cae-check-meta"> · not started</span></div><div class="wc-cae-check"><span class="wc-cae-check-icon wc-cae-check-warn">!</span><span class="wc-cae-check-label">All delivery tasks finished <span class="wc-context-help" tabindex="0" role="button" data-wc-help-text="Finish or handle every delivery task in this phase. Check the Queue tab for remaining work." aria-label="What to do"><span class="wc-context-help-icon" aria-hidden="true">i</span></span></span><span class="muted wc-cae-check-meta"> · 1 remaining</span></div><div class="wc-cae-check"><span class="wc-cae-check-icon wc-cae-check-ok">&#10003;</span><span class="wc-cae-check-label">Delivery evidence recorded</span><span class="muted wc-cae-check-meta"> · clear</span></div><div class="wc-cae-check"><span class="wc-cae-check-icon wc-cae-check-ok">&#10003;</span><span class="wc-cae-check-label">Human review clear</span><span class="muted wc-cae-check-meta"> · none</span></div><div class="wc-cae-check"><span class="wc-cae-check-icon wc-cae-check-warn">!</span><span class="wc-cae-check-label">Phase released <span class="wc-context-help" tabindex="0" role="button" data-wc-help-text="Use Complete &amp; Release when every check above passes." aria-label="What to do"><span class="wc-context-help-icon" aria-hidden="true">i</span></span></span><span class="muted wc-cae-check-meta"> · still current</span></div><div class="wc-cae-check"><span class="wc-cae-check-icon wc-cae-check-warn">!</span><span class="wc-cae-check-label">Ready to release <span class="wc-context-help" tabindex="0" role="button" data-wc-help-text="Finish remaining delivery tasks and evidence before you release this phase." aria-label="What to do"><span class="wc-context-help-icon" aria-hidden="true">i</span></span></span><span class="muted wc-cae-check-meta"> · 0%</span></div></div><p class="muted">Finish remaining delivery tasks in this phase before you release it.</p><div class="wc-phase-progress-footer"><button type="button" class="wc-btn wc-btn-sm wc-btn-primary dash-phase-mark-complete-btn wc-btn-disabled" data-wc-action="phase-mark-complete" disabled aria-disabled="true" data-wc-phase-key="9" title="Finish delivery tasks, clear human review items, and record evidence before marking this phase complete.">Mark Phase Complete</button></div></div></section></div></div><div class="wc-tab-panel" data-wc-tab="planning" role="tabpanel" style="display:none"><div data-wc-section="phase-roster" class="wc-dash-section wc-dash-section--ready" aria-busy="false"></div><div data-wc-section="ideas" class="wc-dash-section wc-dash-section--ready" aria-busy="false"><section class="dash-card'... 10925 more characters
+  operator: 'match'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/nicklaprell/Workspace/workflow-cannon-gemini/extensions/cursor-workflow-cannon/test/render-dashboard.test.mjs:2007:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: dashboardRowPhaseKey and pickNextTaskInCurrentPhase prefer current phase rows
+ok 39 - dashboardRowPhaseKey and pickNextTaskInCurrentPhase prefer current phase rows
+  ---
+  duration_ms: 0.164083
+  type: 'test'
+  ...
+# Subtest: lookupDashboardTaskPhaseKey resolves ready and proposed rollups
+ok 40 - lookupDashboardTaskPhaseKey resolves ready and proposed rollups
+  ---
+  duration_ms: 0.221958
+  type: 'test'
+  ...
+# Subtest: lookupProposedTaskPhaseKey resolves from phase buckets and top rows
+ok 41 - lookupProposedTaskPhaseKey resolves from phase buckets and top rows
+  ---
+  duration_ms: 0.091167
+  type: 'test'
+  ...
+# Subtest: renderUpNextCardHtml puts View action inline without footer tags
+ok 42 - renderUpNextCardHtml puts View action inline without footer tags
+  ---
+  duration_ms: 0.122959
+  type: 'test'
+  ...
+# Subtest: renderUpNextCardHtml surfaces phase closeout when delivery queue is drained
+ok 43 - renderUpNextCardHtml surfaces phase closeout when delivery queue is drained
+  ---
+  duration_ms: 0.094958
+  type: 'test'
+  ...
+# Subtest: renderPhaseCatalogOverviewSection omits action buttons on delivered roster row
+ok 44 - renderPhaseCatalogOverviewSection omits action buttons on delivered roster row
+  ---
+  duration_ms: 0.197958
+  type: 'test'
+  ...
+# Subtest: renderPhaseCatalogOverviewSection merges rolledOutPhaseKeys for roster narrowing
+ok 45 - renderPhaseCatalogOverviewSection merges rolledOutPhaseKeys for roster narrowing
+  ---
+  duration_ms: 0.826084
+  type: 'test'
+  ...
+# Subtest: renderUpNextCardHtml shows Phase Released only when phase is released
+ok 46 - renderUpNextCardHtml shows Phase Released only when phase is released
+  ---
+  duration_ms: 0.083666
+  type: 'test'
+  ...
+# Subtest: renderUpNextCardHtml prompts to pick a phase when none is current
+ok 47 - renderUpNextCardHtml prompts to pick a phase when none is current
+  ---
+  duration_ms: 0.085667
+  type: 'test'
+  ...
+# Subtest: renderDashboardRootInnerHtml proposed execution rows expose accept action
+ok 48 - renderDashboardRootInnerHtml proposed execution rows expose accept action
+  ---
+  duration_ms: 0.473708
+  type: 'test'
+  ...
+# Subtest: renderDashboardRootInnerHtml proposed improvement rows use single 3x2 action grid
+ok 49 - renderDashboardRootInnerHtml proposed improvement rows use single 3x2 action grid
+  ---
+  duration_ms: 0.330916
+  type: 'test'
+  ...
+# Subtest: renderDashboardRootInnerHtml renders human gates section with resume actions
+ok 50 - renderDashboardRootInnerHtml renders human gates section with resume actions
+  ---
+  duration_ms: 0.488833
+  type: 'test'
+  ...
+# Subtest: renderDashboardRootInnerHtml phase journal silence hint lives in Phase Notes card only
+ok 51 - renderDashboardRootInnerHtml phase journal silence hint lives in Phase Notes card only
+  ---
+  duration_ms: 0.340834
+  type: 'test'
+  ...
+# Subtest: renderDashboardRootInnerHtml ready rows keep flex task actions without grid modifier
+ok 52 - renderDashboardRootInnerHtml ready rows keep flex task actions without grid modifier
+  ---
+  duration_ms: 0.780125
+  type: 'test'
+  ...
+# Subtest: renderDashboardRootInnerHtml proposed phase buckets show Accept All with taskIds
+ok 53 - renderDashboardRootInnerHtml proposed phase buckets show Accept All with taskIds
+  ---
+  duration_ms: 0.31775
+  type: 'test'
+  ...
+# Subtest: renderDashboardRootInnerHtml merges ready improvement and execution rollups
+ok 54 - renderDashboardRootInnerHtml merges ready improvement and execution rollups
+  ---
+  duration_ms: 0.319709
+  type: 'test'
+  ...
+# Subtest: buildPhaseCompleteReleaseChatPrompt starts with orchestration-state and stays packet-first
+ok 55 - buildPhaseCompleteReleaseChatPrompt starts with orchestration-state and stays packet-first
+  ---
+  duration_ms: 0.440625
+  type: 'test'
+  ...
+# Subtest: buildPhaseCompleteReleaseChatPrompt keeps bucket scope in context
+ok 56 - buildPhaseCompleteReleaseChatPrompt keeps bucket scope in context
+  ---
+  duration_ms: 0.080042
+  type: 'test'
+  ...
+# Subtest: buildPhaseCompleteReleaseChatPrompt without phaseKey uses placeholders
+ok 57 - buildPhaseCompleteReleaseChatPrompt without phaseKey uses placeholders
+  ---
+  duration_ms: 0.099166
+  type: 'test'
+  ...
+# Subtest: collectPhaseBucketTaskIds merges taskIds and top preview
+ok 58 - collectPhaseBucketTaskIds merges taskIds and top preview
+  ---
+  duration_ms: 0.14625
+  type: 'test'
+  ...
+# Subtest: resolvePhasePhraseForCompleteRelease prefers phaseKey then task.phase
+ok 59 - resolvePhasePhraseForCompleteRelease prefers phaseKey then task.phase
+  ---
+  duration_ms: 0.15625
+  type: 'test'
+  ...
+# Subtest: renderDashboardRootInnerHtml ready phase buckets include Complete & Release button
+ok 60 - renderDashboardRootInnerHtml ready phase buckets include Complete & Release button
+  ---
+  duration_ms: 0.34975
+  type: 'test'
+  ...
+# Subtest: renderPlanningInterviewWizardPanel picker wires start control and planning type select
+ok 61 - renderPlanningInterviewWizardPanel picker wires start control and planning type select
+  ---
+  duration_ms: 0.191833
+  type: 'test'
+  ...
+# Subtest: renderPlanningInterviewWizardPanel question mode escapes prompt and includes submit/cancel
+ok 62 - renderPlanningInterviewWizardPanel question mode escapes prompt and includes submit/cancel
+  ---
+  duration_ms: 0.075625
+  type: 'test'
+  ...
+# Subtest: renderPlanningInterviewWizardPanel success shows response-only persistence hint
+ok 63 - renderPlanningInterviewWizardPanel success shows response-only persistence hint
+  ---
+  duration_ms: 0.062291
+  type: 'test'
+  ...
+# Subtest: renderDashboardRootInnerHtml embeds planning wizard panel when provided
+ok 64 - renderDashboardRootInnerHtml embeds planning wizard panel when provided
+  ---
+  duration_ms: 0.180875
+  type: 'test'
+  ...
+# Subtest: renderTaskStateSyncStatusHtml shows display state and remediation
+ok 65 - renderTaskStateSyncStatusHtml shows display state and remediation
+  ---
+  duration_ms: 0.108417
+  type: 'test'
+  ...
+# Subtest: renderDashboardRootInnerHtml wishlist section shows pager when openTotalPages > 1
+not ok 66 - renderDashboardRootInnerHtml wishlist section shows pager when openTotalPages > 1
+  ---
+  duration_ms: 0.411667
+  type: 'test'
+  location: '/Users/nicklaprell/Workspace/workflow-cannon-gemini/extensions/cursor-workflow-cannon/test/render-dashboard.test.mjs:2840:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    The input did not match the regular expression /Open 15/. Input:
+    
+    '<div class="wc-dashboard-tab-shell"><div class="wc-tab-bar" role="tablist"><button type="button" class="wc-tab-btn wc-tab-active" role="tab" data-wc-tab="overview">Overview</button><button type="button" class="wc-tab-btn" role="tab" data-wc-tab="planning">Planning</button><button type="button" class="wc-tab-btn" role="tab" data-wc-tab="task-engine">Queue</button><button type="button" class="wc-tab-btn" role="tab" data-wc-tab="status">Status</button><button type="button" class="wc-tab-btn" role="tab" data-wc-tab="config">Config</button><button type="button" class="wc-tab-btn" role="tab" data-wc-tab="cae">CAE</button><span class="wc-dash-read-mode-badge muted" data-wc-read-mode-badge role="status">Resolving read path…</span></div><div class="wc-tab-panel" data-wc-tab="overview" role="tabpanel"><div data-wc-section="overview" class="wc-dash-section wc-dash-section--ready" aria-busy="false"><div class="wc-stat-pills"><button type="button" class="wc-stat-pill wc-pill-ready" data-wc-pill-nav="task-engine" data-wc-pill-filter="ready" title="Open Queue tab — Ready"><span class="wc-stat-num">0</span><span class="wc-stat-lbl">Ready</span></button><button type="button" class="wc-stat-pill wc-pill-proposed" data-wc-pill-nav="task-engine" data-wc-pill-filter="proposed" title="Open Queue tab — Proposed"><span class="wc-stat-num">0</span><span class="wc-stat-lbl">Proposed</span></button><button type="button" class="wc-stat-pill wc-pill-blocked" data-wc-pill-nav="task-engine" data-wc-pill-filter="blocked" title="Open Queue tab — Blocked"><span class="wc-stat-num">0</span><span class="wc-stat-lbl">Blocked</span></button><button type="button" class="wc-stat-pill wc-pill-done" data-wc-pill-nav="task-engine" data-wc-pill-filter="all" title="Open Queue tab — Done"><span class="wc-stat-num">0</span><span class="wc-stat-lbl">Done</span></button><button type="button" class="wc-stat-pill wc-pill-human" data-wc-pill-nav="task-engine" data-wc-pill-filter="human-gates" title="Open Queue tab — Human"><span class="wc-stat-num wc-stat-num-human">0</span><span class="wc-stat-lbl">Human</span></button></div><section class="dash-agent-status-banner dash-agent-activity-board" aria-label="Agent Activity"><p><b>Agent Activity</b> <span class="dash-agent-status-label">Unknown · updated now</span></p><p class="muted">No agent activity summary is available.</p></section><div class="wc-rec-next wc-rec-next-pick-phase"><div class="wc-rec-header"><span class="wc-rec-label">&#9733; Up Next</span></div><p class="wc-rec-title">Choose a phase and start delivery</p><p class="muted wc-rec-subtitle">Use Start on a phase in the roster below when you are ready to deliver.</p></div><section class="dash-card dashboard-overview" aria-label="Workspace status"><p class="muted">Workspace status is unavailable.</p><p class="muted">Refresh the dashboard or check Workflow Cannon setup in Config.</p></section></div></div><div class="wc-tab-panel" data-wc-tab="planning" role="tabpanel" style="display:none"><div data-wc-section="phase-roster" class="wc-dash-section wc-dash-section--ready" aria-busy="false"></div><div data-wc-section="ideas" class="wc-dash-section wc-dash-section--ready" aria-busy="false"><section class="dash-card wc-ideas-section" aria-label="Ideas"><p><b>Ideas</b> · Open 0 · Planning 0 · Planned 0 · Total 0</p><div class="wc-ideas-toast" data-wc-ideas-toast="1" role="status" aria-live="polite" hidden></div><p class="muted">Ideas unavailable.</p></section></div><div data-wc-section="plan-artifact" class="wc-dash-section wc-dash-section--ready" aria-busy="false"></div><div data-wc-section="planning-interview" class="wc-dash-section wc-dash-section--ready" aria-busy="false"><section class="dash-card" aria-label="Planning session"><div class="dash-planning-head"><div class="dash-planning-head-main"><p class="dash-planning-title"><b>Planning Interview</b></p></div></div></section></div></div><div class="wc-tab-panel" data-wc-tab="task-engine" role="tabpanel" style="display:none"><div data-wc-section="phase-journal" class="wc-dash-section wc-dash-section--ready" aria-busy="false"></div><div data-wc-section="queue" class="wc-dash-section wc-dash-section--ready" aria-busy="false"><section class="dash-card dashboard-tasks-block" aria-label="Task queue rollups"><div class="dash-quick-actions" role="toolbar" aria-label="Chat playbook shortcuts"><button type="button" class="wc-btn wc-btn-md wc-btn-primary" data-wc-action="generate-features-chat" title="New chat with /generate-features as text (same as slash command)">Generate Features</button></div><div class="wc-filter-chips" role="toolbar" aria-label="Filter task sections"><button type="button" class="wc-filter-chip wc-filter-active" data-wc-filter-btn="all">All</button><button type="button" class="wc-filter-chip wc-filter-chip-ready" data-wc-filter-btn="ready">Ready</button><button type="button" class="wc-filter-chip wc-filter-chip-proposed" data-wc-filter-btn="proposed">Proposed</button><button type="button" class="wc-filter-chip wc-filter-chip-human-gates" data-wc-filter-btn="human-gates">Human review</button><button type="button" class="wc-filter-chip wc-filter-chip-blocked" data-wc-filter-btn="blocked">Blocked</button></div><details class="status-section" data-wc-track="status-ready" data-wc-filter="ready"><summary><b>Ready</b> (0)</summary><div class="status-section-body"><p class="muted">No ready tasks.</p></div></details><details class="status-section wc-section-empty" data-wc-track="status-prop-imp" data-wc-filter="proposed"><summary><b>Proposed · Improvements</b> (0)</summary><div class="status-section-body"><p class="muted">No Items</p></div></details><details class="status-section wc-section-empty" data-wc-track="status-prop-exe" data-wc-filter="proposed"><summary><b>Proposed · Execution</b> (0)</summary><div class="status-section-body"><p class="muted">No Items</p></div></details><details class="status-section" data-wc-track="status-tc-research" data-wc-filter="research"><summary><b>Research · Transcript churn</b> (0)</summary><div class="status-section-body"><p class="muted">No transcript churn rows.</p></div></details><details class="status-section wc-section-empty" data-wc-track="status-blocked" data-wc-filter="blocked"><summary><b>Blocked</b> (0)</summary><div class="status-section-body"><p class="muted">No Items</p></div></details><details class="status-section wc-section-empty" data-wc-track="status-human-gates" data-wc-filter="human-gates"><summary><b>Human Review</b> (0)</summary><div class="status-section-body"><p class="muted">No Items</p></div></details></section></div></div><div class="wc-tab-panel" data-wc-tab="status" role="tabpanel" style="display:none"><div data-wc-section="status" class="wc-dash-section wc-dash-section--ready" aria-busy="false"><section class="dash-card" aria-label="Agent profile"><p><b>Agent Profile</b></p><div class="wc-status-kv-block"></div><p class="muted wc-status-guidance-manage">Manage guidance policies in the Dashboard <b>CAE</b> tab (Workflow Cannon → Dashboard).</p></section><section class="dash-card" aria-label="Workspace identity"><p><b>Workspace</b></p><div class="wc-status-kv-block"><div class="wc-status-kv"><span class="wc-status-kv-label">Project</span><span class="wc-status-kv-val">—</span></div><div class="wc-status-kv"><span class="wc-status-kv-label">Workflow Cannon version</span><span class="wc-status-kv-val">—</span></div><div class="wc-status-kv"><span class="wc-status-kv-label">Install root</span><span class="wc-status-kv-val"><code>—</code></span></div><div class="wc-status-kv"><span class="wc-status-kv-label">Store updated</span><span class="wc-status-kv-val">2026-01-01T00:00:00.000Z</span></div></div></section><section class="dash-card" aria-label="Task counts"><p><b>Task Counts</b></p><div class="dash-count-grid" role="list"><div class="dash-count-cell" role="listitem"><span class="dash-count-label">Proposed</span> <span class="dash-count-num ok">0</span></div><div class="dash-count-cell" role="listitem"><span class="dash-count-label">Ready</span> <span class="dash-count-num ok">0</span></div><div class="dash-count-cell" role="listitem"><span class="dash-count-label">In Progress</span> <span class="dash-count-num ok">0</span></div><div class="dash-count-cell" role="listitem"><span class="dash-count-label">Blocked</span> <span class="dash-count-num ok">0</span></div><div class="dash-count-cell" role="listitem"><span class="dash-count-label">Completed</span> <span class="dash-count-num ok">0</span></div></div></section><div class="wc-status-tab-embedded"><header class="wc-status-head"><h1 class="wc-title">Workflow Cannon</h1><p class="wc-sub"></p></header><section class="wc-card"><h2 class="wc-card-title">System posture</h2><div class="wc-card-body"><p class="wc-muted">No <code>systemStatus</code> — upgrade workspace-kit (<code>dashboard-summary</code> v5+) for phase, doctor, modules, CAE.</p></div></section></div></div></div><div class="wc-tab-panel" data-wc-tab="config" role="tabpanel" style="display:none"><div data-wc-section="config" class="wc-dash-section wc-dash-section--ready" aria-busy="false"><section class="dash-card wc-config-panel" aria-label="Configuration"><p><b>Workspace configuration</b></p><p class="muted">Canonical editor: <b>Dashboard → Config</b> tab. Edit kit and module keys below; approval-gated keys need <code>WORKSPACE_KIT_POLICY_APPROVAL</code> or dashboard policy flows.</p><div class="cfg-quick-settings" aria-label="Quick settings"><p class="muted"><b>Quick settings</b> — jump to a common key</p><div class="cfg-quick-settings-btns"><button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="config-jump-key" data-key="kit.agentRole">kit.agentRole</button><button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="config-jump-key" data-key="kit.currentPhase">kit.currentPhase</button><button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="config-jump-key" '... 2000 more characters
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual: '<div class="wc-dashboard-tab-shell"><div class="wc-tab-bar" role="tablist"><button type="button" class="wc-tab-btn wc-tab-active" role="tab" data-wc-tab="overview">Overview</button><button type="button" class="wc-tab-btn" role="tab" data-wc-tab="planning">Planning</button><button type="button" class="wc-tab-btn" role="tab" data-wc-tab="task-engine">Queue</button><button type="button" class="wc-tab-btn" role="tab" data-wc-tab="status">Status</button><button type="button" class="wc-tab-btn" role="tab" data-wc-tab="config">Config</button><button type="button" class="wc-tab-btn" role="tab" data-wc-tab="cae">CAE</button><span class="wc-dash-read-mode-badge muted" data-wc-read-mode-badge role="status">Resolving read path…</span></div><div class="wc-tab-panel" data-wc-tab="overview" role="tabpanel"><div data-wc-section="overview" class="wc-dash-section wc-dash-section--ready" aria-busy="false"><div class="wc-stat-pills"><button type="button" class="wc-stat-pill wc-pill-ready" data-wc-pill-nav="task-engine" data-wc-pill-filter="ready" title="Open Queue tab — Ready"><span class="wc-stat-num">0</span><span class="wc-stat-lbl">Ready</span></button><button type="button" class="wc-stat-pill wc-pill-proposed" data-wc-pill-nav="task-engine" data-wc-pill-filter="proposed" title="Open Queue tab — Proposed"><span class="wc-stat-num">0</span><span class="wc-stat-lbl">Proposed</span></button><button type="button" class="wc-stat-pill wc-pill-blocked" data-wc-pill-nav="task-engine" data-wc-pill-filter="blocked" title="Open Queue tab — Blocked"><span class="wc-stat-num">0</span><span class="wc-stat-lbl">Blocked</span></button><button type="button" class="wc-stat-pill wc-pill-done" data-wc-pill-nav="task-engine" data-wc-pill-filter="all" title="Open Queue tab — Done"><span class="wc-stat-num">0</span><span class="wc-stat-lbl">Done</span></button><button type="button" class="wc-stat-pill wc-pill-human" data-wc-pill-nav="task-engine" data-wc-pill-filter="human-gates" title="Open Queue tab — Human"><span class="wc-stat-num wc-stat-num-human">0</span><span class="wc-stat-lbl">Human</span></button></div><section class="dash-agent-status-banner dash-agent-activity-board" aria-label="Agent Activity"><p><b>Agent Activity</b> <span class="dash-agent-status-label">Unknown · updated now</span></p><p class="muted">No agent activity summary is available.</p></section><div class="wc-rec-next wc-rec-next-pick-phase"><div class="wc-rec-header"><span class="wc-rec-label">&#9733; Up Next</span></div><p class="wc-rec-title">Choose a phase and start delivery</p><p class="muted wc-rec-subtitle">Use Start on a phase in the roster below when you are ready to deliver.</p></div><section class="dash-card dashboard-overview" aria-label="Workspace status"><p class="muted">Workspace status is unavailable.</p><p class="muted">Refresh the dashboard or check Workflow Cannon setup in Config.</p></section></div></div><div class="wc-tab-panel" data-wc-tab="planning" role="tabpanel" style="display:none"><div data-wc-section="phase-roster" class="wc-dash-section wc-dash-section--ready" aria-busy="false"></div><div data-wc-section="ideas" class="wc-dash-section wc-dash-section--ready" aria-busy="false"><section class="dash-card wc-ideas-section" aria-label="Ideas"><p><b>Ideas</b> · Open 0 · Planning 0 · Planned 0 · Total 0</p><div class="wc-ideas-toast" data-wc-ideas-toast="1" role="status" aria-live="polite" hidden></div><p class="muted">Ideas unavailable.</p></section></div><div data-wc-section="plan-artifact" class="wc-dash-section wc-dash-section--ready" aria-busy="false"></div><div data-wc-section="planning-interview" class="wc-dash-section wc-dash-section--ready" aria-busy="false"><section class="dash-card" aria-label="Planning session"><div class="dash-planning-head"><div class="dash-planning-head-main"><p class="dash-planning-title"><b>Planning Interview</b></p></div></div></section></div></div><div class="wc-tab-panel" data-wc-tab="task-engine" role="tabpanel" style="display:none"><div data-wc-section="phase-journal" class="wc-dash-section wc-dash-section--ready" aria-busy="false"></div><div data-wc-section="queue" class="wc-dash-section wc-dash-section--ready" aria-busy="false"><section class="dash-card dashboard-tasks-block" aria-label="Task queue rollups"><div class="dash-quick-actions" role="toolbar" aria-label="Chat playbook shortcuts"><button type="button" class="wc-btn wc-btn-md wc-btn-primary" data-wc-action="generate-features-chat" title="New chat with /generate-features as text (same as slash command)">Generate Features</button></div><div class="wc-filter-chips" role="toolbar" aria-label="Filter task sections"><button type="button" class="wc-filter-chip wc-filter-active" data-wc-filter-btn="all">All</button><button type="button" class="wc-filter-chip wc-filter-chip-ready" data-wc-filter-btn="ready">Ready</button><button type="button" class="wc-filter-chip wc-filter-chip-proposed" data-wc-filter-btn="proposed">Proposed</button><button type="button" class="wc-filter-chip wc-filter-chip-human-gates" data-wc-filter-btn="human-gates">Human review</button><button type="button" class="wc-filter-chip wc-filter-chip-blocked" data-wc-filter-btn="blocked">Blocked</button></div><details class="status-section" data-wc-track="status-ready" data-wc-filter="ready"><summary><b>Ready</b> (0)</summary><div class="status-section-body"><p class="muted">No ready tasks.</p></div></details><details class="status-section wc-section-empty" data-wc-track="status-prop-imp" data-wc-filter="proposed"><summary><b>Proposed · Improvements</b> (0)</summary><div class="status-section-body"><p class="muted">No Items</p></div></details><details class="status-section wc-section-empty" data-wc-track="status-prop-exe" data-wc-filter="proposed"><summary><b>Proposed · Execution</b> (0)</summary><div class="status-section-body"><p class="muted">No Items</p></div></details><details class="status-section" data-wc-track="status-tc-research" data-wc-filter="research"><summary><b>Research · Transcript churn</b> (0)</summary><div class="status-section-body"><p class="muted">No transcript churn rows.</p></div></details><details class="status-section wc-section-empty" data-wc-track="status-blocked" data-wc-filter="blocked"><summary><b>Blocked</b> (0)</summary><div class="status-section-body"><p class="muted">No Items</p></div></details><details class="status-section wc-section-empty" data-wc-track="status-human-gates" data-wc-filter="human-gates"><summary><b>Human Review</b> (0)</summary><div class="status-section-body"><p class="muted">No Items</p></div></details></section></div></div><div class="wc-tab-panel" data-wc-tab="status" role="tabpanel" style="display:none"><div data-wc-section="status" class="wc-dash-section wc-dash-section--ready" aria-busy="false"><section class="dash-card" aria-label="Agent profile"><p><b>Agent Profile</b></p><div class="wc-status-kv-block"></div><p class="muted wc-status-guidance-manage">Manage guidance policies in the Dashboard <b>CAE</b> tab (Workflow Cannon → Dashboard).</p></section><section class="dash-card" aria-label="Workspace identity"><p><b>Workspace</b></p><div class="wc-status-kv-block"><div class="wc-status-kv"><span class="wc-status-kv-label">Project</span><span class="wc-status-kv-val">—</span></div><div class="wc-status-kv"><span class="wc-status-kv-label">Workflow Cannon version</span><span class="wc-status-kv-val">—</span></div><div class="wc-status-kv"><span class="wc-status-kv-label">Install root</span><span class="wc-status-kv-val"><code>—</code></span></div><div class="wc-status-kv"><span class="wc-status-kv-label">Store updated</span><span class="wc-status-kv-val">2026-01-01T00:00:00.000Z</span></div></div></section><section class="dash-card" aria-label="Task counts"><p><b>Task Counts</b></p><div class="dash-count-grid" role="list"><div class="dash-count-cell" role="listitem"><span class="dash-count-label">Proposed</span> <span class="dash-count-num ok">0</span></div><div class="dash-count-cell" role="listitem"><span class="dash-count-label">Ready</span> <span class="dash-count-num ok">0</span></div><div class="dash-count-cell" role="listitem"><span class="dash-count-label">In Progress</span> <span class="dash-count-num ok">0</span></div><div class="dash-count-cell" role="listitem"><span class="dash-count-label">Blocked</span> <span class="dash-count-num ok">0</span></div><div class="dash-count-cell" role="listitem"><span class="dash-count-label">Completed</span> <span class="dash-count-num ok">0</span></div></div></section><div class="wc-status-tab-embedded"><header class="wc-status-head"><h1 class="wc-title">Workflow Cannon</h1><p class="wc-sub"></p></header><section class="wc-card"><h2 class="wc-card-title">System posture</h2><div class="wc-card-body"><p class="wc-muted">No <code>systemStatus</code> — upgrade workspace-kit (<code>dashboard-summary</code> v5+) for phase, doctor, modules, CAE.</p></div></section></div></div></div><div class="wc-tab-panel" data-wc-tab="config" role="tabpanel" style="display:none"><div data-wc-section="config" class="wc-dash-section wc-dash-section--ready" aria-busy="false"><section class="dash-card wc-config-panel" aria-label="Configuration"><p><b>Workspace configuration</b></p><p class="muted">Canonical editor: <b>Dashboard → Config</b> tab. Edit kit and module keys below; approval-gated keys need <code>WORKSPACE_KIT_POLICY_APPROVAL</code> or dashboard policy flows.</p><div class="cfg-quick-settings" aria-label="Quick settings"><p class="muted"><b>Quick settings</b> — jump to a common key</p><div class="cfg-quick-settings-btns"><button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="config-jump-key" data-key="kit.agentRole">kit.agentRole</button><button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="config-jump-key" data-key="kit.currentPhase">kit.currentPhase</button><button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="config-jump-key" '... 2000 more characters
+  operator: 'match'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/nicklaprell/Workspace/workflow-cannon-gemini/extensions/cursor-workflow-cannon/test/render-dashboard.test.mjs:2871:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: renderDashboardRootInnerHtml wishlist pager points prev and next at adjacent pages
+not ok 67 - renderDashboardRootInnerHtml wishlist pager points prev and next at adjacent pages
+  ---
+  duration_ms: 0.3385
+  type: 'test'
+  location: '/Users/nicklaprell/Workspace/workflow-cannon-gemini/extensions/cursor-workflow-cannon/test/render-dashboard.test.mjs:2878:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    The input did not match the regular expression /Page 2 \/ 3/. Input:
+    
+    '<div class="wc-dashboard-tab-shell"><div class="wc-tab-bar" role="tablist"><button type="button" class="wc-tab-btn wc-tab-active" role="tab" data-wc-tab="overview">Overview</button><button type="button" class="wc-tab-btn" role="tab" data-wc-tab="planning">Planning</button><button type="button" class="wc-tab-btn" role="tab" data-wc-tab="task-engine">Queue</button><button type="button" class="wc-tab-btn" role="tab" data-wc-tab="status">Status</button><button type="button" class="wc-tab-btn" role="tab" data-wc-tab="config">Config</button><button type="button" class="wc-tab-btn" role="tab" data-wc-tab="cae">CAE</button><span class="wc-dash-read-mode-badge muted" data-wc-read-mode-badge role="status">Resolving read path…</span></div><div class="wc-tab-panel" data-wc-tab="overview" role="tabpanel"><div data-wc-section="overview" class="wc-dash-section wc-dash-section--ready" aria-busy="false"><div class="wc-stat-pills"><button type="button" class="wc-stat-pill wc-pill-ready" data-wc-pill-nav="task-engine" data-wc-pill-filter="ready" title="Open Queue tab — Ready"><span class="wc-stat-num">0</span><span class="wc-stat-lbl">Ready</span></button><button type="button" class="wc-stat-pill wc-pill-proposed" data-wc-pill-nav="task-engine" data-wc-pill-filter="proposed" title="Open Queue tab — Proposed"><span class="wc-stat-num">0</span><span class="wc-stat-lbl">Proposed</span></button><button type="button" class="wc-stat-pill wc-pill-blocked" data-wc-pill-nav="task-engine" data-wc-pill-filter="blocked" title="Open Queue tab — Blocked"><span class="wc-stat-num">0</span><span class="wc-stat-lbl">Blocked</span></button><button type="button" class="wc-stat-pill wc-pill-done" data-wc-pill-nav="task-engine" data-wc-pill-filter="all" title="Open Queue tab — Done"><span class="wc-stat-num">0</span><span class="wc-stat-lbl">Done</span></button><button type="button" class="wc-stat-pill wc-pill-human" data-wc-pill-nav="task-engine" data-wc-pill-filter="human-gates" title="Open Queue tab — Human"><span class="wc-stat-num wc-stat-num-human">0</span><span class="wc-stat-lbl">Human</span></button></div><section class="dash-agent-status-banner dash-agent-activity-board" aria-label="Agent Activity"><p><b>Agent Activity</b> <span class="dash-agent-status-label">Unknown · updated now</span></p><p class="muted">No agent activity summary is available.</p></section><div class="wc-rec-next wc-rec-next-pick-phase"><div class="wc-rec-header"><span class="wc-rec-label">&#9733; Up Next</span></div><p class="wc-rec-title">Choose a phase and start delivery</p><p class="muted wc-rec-subtitle">Use Start on a phase in the roster below when you are ready to deliver.</p></div><section class="dash-card dashboard-overview" aria-label="Workspace status"><p class="muted">Workspace status is unavailable.</p><p class="muted">Refresh the dashboard or check Workflow Cannon setup in Config.</p></section></div></div><div class="wc-tab-panel" data-wc-tab="planning" role="tabpanel" style="display:none"><div data-wc-section="phase-roster" class="wc-dash-section wc-dash-section--ready" aria-busy="false"></div><div data-wc-section="ideas" class="wc-dash-section wc-dash-section--ready" aria-busy="false"><section class="dash-card wc-ideas-section" aria-label="Ideas"><p><b>Ideas</b> · Open 0 · Planning 0 · Planned 0 · Total 0</p><div class="wc-ideas-toast" data-wc-ideas-toast="1" role="status" aria-live="polite" hidden></div><p class="muted">Ideas unavailable.</p></section></div><div data-wc-section="plan-artifact" class="wc-dash-section wc-dash-section--ready" aria-busy="false"></div><div data-wc-section="planning-interview" class="wc-dash-section wc-dash-section--ready" aria-busy="false"><section class="dash-card" aria-label="Planning session"><div class="dash-planning-head"><div class="dash-planning-head-main"><p class="dash-planning-title"><b>Planning Interview</b></p></div></div></section></div></div><div class="wc-tab-panel" data-wc-tab="task-engine" role="tabpanel" style="display:none"><div data-wc-section="phase-journal" class="wc-dash-section wc-dash-section--ready" aria-busy="false"></div><div data-wc-section="queue" class="wc-dash-section wc-dash-section--ready" aria-busy="false"><section class="dash-card dashboard-tasks-block" aria-label="Task queue rollups"><div class="dash-quick-actions" role="toolbar" aria-label="Chat playbook shortcuts"><button type="button" class="wc-btn wc-btn-md wc-btn-primary" data-wc-action="generate-features-chat" title="New chat with /generate-features as text (same as slash command)">Generate Features</button></div><div class="wc-filter-chips" role="toolbar" aria-label="Filter task sections"><button type="button" class="wc-filter-chip wc-filter-active" data-wc-filter-btn="all">All</button><button type="button" class="wc-filter-chip wc-filter-chip-ready" data-wc-filter-btn="ready">Ready</button><button type="button" class="wc-filter-chip wc-filter-chip-proposed" data-wc-filter-btn="proposed">Proposed</button><button type="button" class="wc-filter-chip wc-filter-chip-human-gates" data-wc-filter-btn="human-gates">Human review</button><button type="button" class="wc-filter-chip wc-filter-chip-blocked" data-wc-filter-btn="blocked">Blocked</button></div><details class="status-section" data-wc-track="status-ready" data-wc-filter="ready"><summary><b>Ready</b> (0)</summary><div class="status-section-body"><p class="muted">No ready tasks.</p></div></details><details class="status-section wc-section-empty" data-wc-track="status-prop-imp" data-wc-filter="proposed"><summary><b>Proposed · Improvements</b> (0)</summary><div class="status-section-body"><p class="muted">No Items</p></div></details><details class="status-section wc-section-empty" data-wc-track="status-prop-exe" data-wc-filter="proposed"><summary><b>Proposed · Execution</b> (0)</summary><div class="status-section-body"><p class="muted">No Items</p></div></details><details class="status-section" data-wc-track="status-tc-research" data-wc-filter="research"><summary><b>Research · Transcript churn</b> (0)</summary><div class="status-section-body"><p class="muted">No transcript churn rows.</p></div></details><details class="status-section wc-section-empty" data-wc-track="status-blocked" data-wc-filter="blocked"><summary><b>Blocked</b> (0)</summary><div class="status-section-body"><p class="muted">No Items</p></div></details><details class="status-section wc-section-empty" data-wc-track="status-human-gates" data-wc-filter="human-gates"><summary><b>Human Review</b> (0)</summary><div class="status-section-body"><p class="muted">No Items</p></div></details></section></div></div><div class="wc-tab-panel" data-wc-tab="status" role="tabpanel" style="display:none"><div data-wc-section="status" class="wc-dash-section wc-dash-section--ready" aria-busy="false"><section class="dash-card" aria-label="Agent profile"><p><b>Agent Profile</b></p><div class="wc-status-kv-block"></div><p class="muted wc-status-guidance-manage">Manage guidance policies in the Dashboard <b>CAE</b> tab (Workflow Cannon → Dashboard).</p></section><section class="dash-card" aria-label="Workspace identity"><p><b>Workspace</b></p><div class="wc-status-kv-block"><div class="wc-status-kv"><span class="wc-status-kv-label">Project</span><span class="wc-status-kv-val">—</span></div><div class="wc-status-kv"><span class="wc-status-kv-label">Workflow Cannon version</span><span class="wc-status-kv-val">—</span></div><div class="wc-status-kv"><span class="wc-status-kv-label">Install root</span><span class="wc-status-kv-val"><code>—</code></span></div><div class="wc-status-kv"><span class="wc-status-kv-label">Store updated</span><span class="wc-status-kv-val">2026-01-01T00:00:00.000Z</span></div></div></section><section class="dash-card" aria-label="Task counts"><p><b>Task Counts</b></p><div class="dash-count-grid" role="list"><div class="dash-count-cell" role="listitem"><span class="dash-count-label">Proposed</span> <span class="dash-count-num ok">0</span></div><div class="dash-count-cell" role="listitem"><span class="dash-count-label">Ready</span> <span class="dash-count-num ok">0</span></div><div class="dash-count-cell" role="listitem"><span class="dash-count-label">In Progress</span> <span class="dash-count-num ok">0</span></div><div class="dash-count-cell" role="listitem"><span class="dash-count-label">Blocked</span> <span class="dash-count-num ok">0</span></div><div class="dash-count-cell" role="listitem"><span class="dash-count-label">Completed</span> <span class="dash-count-num ok">0</span></div></div></section><div class="wc-status-tab-embedded"><header class="wc-status-head"><h1 class="wc-title">Workflow Cannon</h1><p class="wc-sub"></p></header><section class="wc-card"><h2 class="wc-card-title">System posture</h2><div class="wc-card-body"><p class="wc-muted">No <code>systemStatus</code> — upgrade workspace-kit (<code>dashboard-summary</code> v5+) for phase, doctor, modules, CAE.</p></div></section></div></div></div><div class="wc-tab-panel" data-wc-tab="config" role="tabpanel" style="display:none"><div data-wc-section="config" class="wc-dash-section wc-dash-section--ready" aria-busy="false"><section class="dash-card wc-config-panel" aria-label="Configuration"><p><b>Workspace configuration</b></p><p class="muted">Canonical editor: <b>Dashboard → Config</b> tab. Edit kit and module keys below; approval-gated keys need <code>WORKSPACE_KIT_POLICY_APPROVAL</code> or dashboard policy flows.</p><div class="cfg-quick-settings" aria-label="Quick settings"><p class="muted"><b>Quick settings</b> — jump to a common key</p><div class="cfg-quick-settings-btns"><button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="config-jump-key" data-key="kit.agentRole">kit.agentRole</button><button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="config-jump-key" data-key="kit.currentPhase">kit.currentPhase</button><button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="config-jump-key" '... 2000 more characters
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual: '<div class="wc-dashboard-tab-shell"><div class="wc-tab-bar" role="tablist"><button type="button" class="wc-tab-btn wc-tab-active" role="tab" data-wc-tab="overview">Overview</button><button type="button" class="wc-tab-btn" role="tab" data-wc-tab="planning">Planning</button><button type="button" class="wc-tab-btn" role="tab" data-wc-tab="task-engine">Queue</button><button type="button" class="wc-tab-btn" role="tab" data-wc-tab="status">Status</button><button type="button" class="wc-tab-btn" role="tab" data-wc-tab="config">Config</button><button type="button" class="wc-tab-btn" role="tab" data-wc-tab="cae">CAE</button><span class="wc-dash-read-mode-badge muted" data-wc-read-mode-badge role="status">Resolving read path…</span></div><div class="wc-tab-panel" data-wc-tab="overview" role="tabpanel"><div data-wc-section="overview" class="wc-dash-section wc-dash-section--ready" aria-busy="false"><div class="wc-stat-pills"><button type="button" class="wc-stat-pill wc-pill-ready" data-wc-pill-nav="task-engine" data-wc-pill-filter="ready" title="Open Queue tab — Ready"><span class="wc-stat-num">0</span><span class="wc-stat-lbl">Ready</span></button><button type="button" class="wc-stat-pill wc-pill-proposed" data-wc-pill-nav="task-engine" data-wc-pill-filter="proposed" title="Open Queue tab — Proposed"><span class="wc-stat-num">0</span><span class="wc-stat-lbl">Proposed</span></button><button type="button" class="wc-stat-pill wc-pill-blocked" data-wc-pill-nav="task-engine" data-wc-pill-filter="blocked" title="Open Queue tab — Blocked"><span class="wc-stat-num">0</span><span class="wc-stat-lbl">Blocked</span></button><button type="button" class="wc-stat-pill wc-pill-done" data-wc-pill-nav="task-engine" data-wc-pill-filter="all" title="Open Queue tab — Done"><span class="wc-stat-num">0</span><span class="wc-stat-lbl">Done</span></button><button type="button" class="wc-stat-pill wc-pill-human" data-wc-pill-nav="task-engine" data-wc-pill-filter="human-gates" title="Open Queue tab — Human"><span class="wc-stat-num wc-stat-num-human">0</span><span class="wc-stat-lbl">Human</span></button></div><section class="dash-agent-status-banner dash-agent-activity-board" aria-label="Agent Activity"><p><b>Agent Activity</b> <span class="dash-agent-status-label">Unknown · updated now</span></p><p class="muted">No agent activity summary is available.</p></section><div class="wc-rec-next wc-rec-next-pick-phase"><div class="wc-rec-header"><span class="wc-rec-label">&#9733; Up Next</span></div><p class="wc-rec-title">Choose a phase and start delivery</p><p class="muted wc-rec-subtitle">Use Start on a phase in the roster below when you are ready to deliver.</p></div><section class="dash-card dashboard-overview" aria-label="Workspace status"><p class="muted">Workspace status is unavailable.</p><p class="muted">Refresh the dashboard or check Workflow Cannon setup in Config.</p></section></div></div><div class="wc-tab-panel" data-wc-tab="planning" role="tabpanel" style="display:none"><div data-wc-section="phase-roster" class="wc-dash-section wc-dash-section--ready" aria-busy="false"></div><div data-wc-section="ideas" class="wc-dash-section wc-dash-section--ready" aria-busy="false"><section class="dash-card wc-ideas-section" aria-label="Ideas"><p><b>Ideas</b> · Open 0 · Planning 0 · Planned 0 · Total 0</p><div class="wc-ideas-toast" data-wc-ideas-toast="1" role="status" aria-live="polite" hidden></div><p class="muted">Ideas unavailable.</p></section></div><div data-wc-section="plan-artifact" class="wc-dash-section wc-dash-section--ready" aria-busy="false"></div><div data-wc-section="planning-interview" class="wc-dash-section wc-dash-section--ready" aria-busy="false"><section class="dash-card" aria-label="Planning session"><div class="dash-planning-head"><div class="dash-planning-head-main"><p class="dash-planning-title"><b>Planning Interview</b></p></div></div></section></div></div><div class="wc-tab-panel" data-wc-tab="task-engine" role="tabpanel" style="display:none"><div data-wc-section="phase-journal" class="wc-dash-section wc-dash-section--ready" aria-busy="false"></div><div data-wc-section="queue" class="wc-dash-section wc-dash-section--ready" aria-busy="false"><section class="dash-card dashboard-tasks-block" aria-label="Task queue rollups"><div class="dash-quick-actions" role="toolbar" aria-label="Chat playbook shortcuts"><button type="button" class="wc-btn wc-btn-md wc-btn-primary" data-wc-action="generate-features-chat" title="New chat with /generate-features as text (same as slash command)">Generate Features</button></div><div class="wc-filter-chips" role="toolbar" aria-label="Filter task sections"><button type="button" class="wc-filter-chip wc-filter-active" data-wc-filter-btn="all">All</button><button type="button" class="wc-filter-chip wc-filter-chip-ready" data-wc-filter-btn="ready">Ready</button><button type="button" class="wc-filter-chip wc-filter-chip-proposed" data-wc-filter-btn="proposed">Proposed</button><button type="button" class="wc-filter-chip wc-filter-chip-human-gates" data-wc-filter-btn="human-gates">Human review</button><button type="button" class="wc-filter-chip wc-filter-chip-blocked" data-wc-filter-btn="blocked">Blocked</button></div><details class="status-section" data-wc-track="status-ready" data-wc-filter="ready"><summary><b>Ready</b> (0)</summary><div class="status-section-body"><p class="muted">No ready tasks.</p></div></details><details class="status-section wc-section-empty" data-wc-track="status-prop-imp" data-wc-filter="proposed"><summary><b>Proposed · Improvements</b> (0)</summary><div class="status-section-body"><p class="muted">No Items</p></div></details><details class="status-section wc-section-empty" data-wc-track="status-prop-exe" data-wc-filter="proposed"><summary><b>Proposed · Execution</b> (0)</summary><div class="status-section-body"><p class="muted">No Items</p></div></details><details class="status-section" data-wc-track="status-tc-research" data-wc-filter="research"><summary><b>Research · Transcript churn</b> (0)</summary><div class="status-section-body"><p class="muted">No transcript churn rows.</p></div></details><details class="status-section wc-section-empty" data-wc-track="status-blocked" data-wc-filter="blocked"><summary><b>Blocked</b> (0)</summary><div class="status-section-body"><p class="muted">No Items</p></div></details><details class="status-section wc-section-empty" data-wc-track="status-human-gates" data-wc-filter="human-gates"><summary><b>Human Review</b> (0)</summary><div class="status-section-body"><p class="muted">No Items</p></div></details></section></div></div><div class="wc-tab-panel" data-wc-tab="status" role="tabpanel" style="display:none"><div data-wc-section="status" class="wc-dash-section wc-dash-section--ready" aria-busy="false"><section class="dash-card" aria-label="Agent profile"><p><b>Agent Profile</b></p><div class="wc-status-kv-block"></div><p class="muted wc-status-guidance-manage">Manage guidance policies in the Dashboard <b>CAE</b> tab (Workflow Cannon → Dashboard).</p></section><section class="dash-card" aria-label="Workspace identity"><p><b>Workspace</b></p><div class="wc-status-kv-block"><div class="wc-status-kv"><span class="wc-status-kv-label">Project</span><span class="wc-status-kv-val">—</span></div><div class="wc-status-kv"><span class="wc-status-kv-label">Workflow Cannon version</span><span class="wc-status-kv-val">—</span></div><div class="wc-status-kv"><span class="wc-status-kv-label">Install root</span><span class="wc-status-kv-val"><code>—</code></span></div><div class="wc-status-kv"><span class="wc-status-kv-label">Store updated</span><span class="wc-status-kv-val">2026-01-01T00:00:00.000Z</span></div></div></section><section class="dash-card" aria-label="Task counts"><p><b>Task Counts</b></p><div class="dash-count-grid" role="list"><div class="dash-count-cell" role="listitem"><span class="dash-count-label">Proposed</span> <span class="dash-count-num ok">0</span></div><div class="dash-count-cell" role="listitem"><span class="dash-count-label">Ready</span> <span class="dash-count-num ok">0</span></div><div class="dash-count-cell" role="listitem"><span class="dash-count-label">In Progress</span> <span class="dash-count-num ok">0</span></div><div class="dash-count-cell" role="listitem"><span class="dash-count-label">Blocked</span> <span class="dash-count-num ok">0</span></div><div class="dash-count-cell" role="listitem"><span class="dash-count-label">Completed</span> <span class="dash-count-num ok">0</span></div></div></section><div class="wc-status-tab-embedded"><header class="wc-status-head"><h1 class="wc-title">Workflow Cannon</h1><p class="wc-sub"></p></header><section class="wc-card"><h2 class="wc-card-title">System posture</h2><div class="wc-card-body"><p class="wc-muted">No <code>systemStatus</code> — upgrade workspace-kit (<code>dashboard-summary</code> v5+) for phase, doctor, modules, CAE.</p></div></section></div></div></div><div class="wc-tab-panel" data-wc-tab="config" role="tabpanel" style="display:none"><div data-wc-section="config" class="wc-dash-section wc-dash-section--ready" aria-busy="false"><section class="dash-card wc-config-panel" aria-label="Configuration"><p><b>Workspace configuration</b></p><p class="muted">Canonical editor: <b>Dashboard → Config</b> tab. Edit kit and module keys below; approval-gated keys need <code>WORKSPACE_KIT_POLICY_APPROVAL</code> or dashboard policy flows.</p><div class="cfg-quick-settings" aria-label="Quick settings"><p class="muted"><b>Quick settings</b> — jump to a common key</p><div class="cfg-quick-settings-btns"><button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="config-jump-key" data-key="kit.agentRole">kit.agentRole</button><button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="config-jump-key" data-key="kit.currentPhase">kit.currentPhase</button><button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="config-jump-key" '... 2000 more characters
+  operator: 'match'
+  stack: |-
+    TestContext.<anonymous> (file:///Users/nicklaprell/Workspace/workflow-cannon-gemini/extensions/cursor-workflow-cannon/test/render-dashboard.test.mjs:2909:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: Phase Readiness shows phase-scoped ready counts not workspace ready total
+ok 68 - Phase Readiness shows phase-scoped ready counts not workspace ready total
+  ---
+  duration_ms: 0.542
+  type: 'test'
+  ...
+# Subtest: Phase Readiness score is 100% when phase delivery has started
+ok 69 - Phase Readiness score is 100% when phase delivery has started
+  ---
+  duration_ms: 0.703875
+  type: 'test'
+  ...
+# Subtest: Phase Readiness score equals passed checks as equal shares before delivery starts
+ok 70 - Phase Readiness score equals passed checks as equal shares before delivery starts
+  ---
+  duration_ms: 0.578583
+  type: 'test'
+  ...
+# Subtest: Overview stat pills include Human gate count with yellow number class
+ok 71 - Overview stat pills include Human gate count with yellow number class
+  ---
+  duration_ms: 0.391917
+  type: 'test'
+  ...
+# Subtest: Phase Progress badge reflects closeout checklist not delivery bar alone
+ok 72 - Phase Progress badge reflects closeout checklist not delivery bar alone
+  ---
+  duration_ms: 0.377542
+  type: 'test'
+  ...
+# Subtest: Phase Progress blocks closeout when later phases are delivered on roster
+ok 73 - Phase Progress blocks closeout when later phases are delivered on roster
+  ---
+  duration_ms: 1.207541
+  type: 'test'
+  ...
+# Subtest: Phase Progress badge stays below 100% until phase is released
+ok 74 - Phase Progress badge stays below 100% until phase is released
+  ---
+  duration_ms: 0.301084
+  type: 'test'
+  ...
+# Subtest: Phase Progress renders Mark Phase Complete centered in card footer
+ok 75 - Phase Progress renders Mark Phase Complete centered in card footer
+  ---
+  duration_ms: 0.312834
+  type: 'test'
+  ...
+# Subtest: Phase Progress disables Mark Phase Complete until closeout passes
+ok 76 - Phase Progress disables Mark Phase Complete until closeout passes
+  ---
+  duration_ms: 0.244792
+  type: 'test'
+  ...
+# Subtest: Phase Progress renders closeout gate checkmarks
+ok 77 - Phase Progress renders closeout gate checkmarks
+  ---
+  duration_ms: 0.231042
+  type: 'test'
+  ...
+# Subtest: Phase Readiness and Progress hidden when workspace has no current phase
+ok 78 - Phase Readiness and Progress hidden when workspace has no current phase
+  ---
+  duration_ms: 0.34
+  type: 'test'
+  ...
+# Subtest: Phase Progress renders segmented bar without release control
+ok 79 - Phase Progress renders segmented bar without release control
+  ---
+  duration_ms: 0.287667
+  type: 'test'
+  ...
+# Subtest: Phase Readiness Complete & Release disabled before readiness reaches 100%
+ok 80 - Phase Readiness Complete & Release disabled before readiness reaches 100%
+  ---
+  duration_ms: 0.375791
+  type: 'test'
+  ...
+# Subtest: Phase Readiness enables Complete & Release at 100% readiness before closeout passes
+ok 81 - Phase Readiness enables Complete & Release at 100% readiness before closeout passes
+  ---
+  duration_ms: 0.23875
+  type: 'test'
+  ...
+# Subtest: Phase Readiness enables Complete & Release when closeout passed
+ok 82 - Phase Readiness enables Complete & Release when closeout passed
+  ---
+  duration_ms: 0.20025
+  type: 'test'
+  ...
+# Subtest: Phase Readiness shows Delivered tag when phase completed and released
+ok 83 - Phase Readiness shows Delivered tag when phase completed and released
+  ---
+  duration_ms: 0.285083
+  type: 'test'
+  ...
+# Subtest: renderDashboardQueueTaskRowsHtml renders queue rows for host lazy terminal inject
+ok 84 - renderDashboardQueueTaskRowsHtml renders queue rows for host lazy terminal inject
+  ---
+  duration_ms: 0.107333
+  type: 'test'
+  ...
+1..84
+# tests 84
+# suites 0
+# pass 80
+# fail 4
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 199.106709

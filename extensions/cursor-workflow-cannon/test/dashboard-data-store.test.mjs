@@ -66,17 +66,17 @@ test("DashboardDataStore staleSlices respects registry freshness SLA", () => {
   );
 });
 
-test("formatSliceFreshnessLabel covers operator copy", () => {
+test("formatSliceFreshnessLabel covers operator copy (disabled)", () => {
   const now = Date.now();
-  assert.equal(formatSliceFreshnessLabel({ status: "loading" }), "Refreshing…");
-  assert.equal(formatSliceFreshnessLabel({ status: "stale" }), "Stale");
+  assert.equal(formatSliceFreshnessLabel({ status: "loading" }), "");
+  assert.equal(formatSliceFreshnessLabel({ status: "stale" }), "");
   assert.equal(
     formatSliceFreshnessLabel({ status: "error" }),
-    "Failed (showing last good)"
+    ""
   );
-  assert.match(
+  assert.equal(
     formatSliceFreshnessLabel({ status: "fresh", updatedAt: now - 3_000 }, now),
-    /^Updated 3s ago$/
+    ""
   );
 });
 

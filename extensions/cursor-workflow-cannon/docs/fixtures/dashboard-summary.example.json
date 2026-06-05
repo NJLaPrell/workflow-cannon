@@ -153,6 +153,7 @@
     },
     "executionPlanningScope": "tasks-only",
     "wishlist": {
+      "enabled": true,
       "schemaVersion": 1,
       "openCount": 1,
       "totalCount": 3,

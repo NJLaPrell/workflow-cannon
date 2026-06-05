@@ -70,6 +70,8 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
     "dashboard-service-status",
     "dashboard-service-stop",
     "dashboard-summary",
+    "dashboard-terminal-rows",
+    "dashboard-terminal-tasks",
     "delete-behavior-profile",
     "delete-idea",
     "demote-task",

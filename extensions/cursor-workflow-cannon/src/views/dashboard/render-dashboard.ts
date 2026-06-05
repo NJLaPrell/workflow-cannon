@@ -4208,37 +4208,17 @@ function dashboardAgentSourceLabel(
   }
 }
 
-function formatDashboardRelativeAge(updatedAt: string | null): string {
-  if (!updatedAt) {
-    return "updated now";
-  }
-  const updatedMs = Date.parse(updatedAt);
-  if (!Number.isFinite(updatedMs)) {
-    return "updated now";
-  }
-  const deltaMs = Math.max(0, Date.now() - updatedMs);
-  const sec = Math.floor(deltaMs / 1000);
-  if (sec < 60) {
-    return `updated ${sec}s ago`;
-  }
-  const min = Math.floor(sec / 60);
-  if (min < 60) {
-    return `updated ${min}m ago`;
-  }
-  const hrs = Math.floor(min / 60);
-  if (hrs < 24) {
-    return `updated ${hrs}h ago`;
-  }
-  return `updated ${Math.floor(hrs / 24)}d ago`;
+function formatDashboardRelativeAge(_updatedAt: string | null): string {
+  return "";
 }
 
 function formatDashboardAgentFreshness(freshness: DashboardAgentActivityRow["freshness"]): string {
   const base = formatDashboardRelativeAge(freshness.updatedAt);
   switch (freshness.state) {
     case "stale":
-      return `stale · ${base}`;
+      return base ? `stale · ${base}` : "stale";
     case "expired":
-      return `expired · ${base}`;
+      return base ? `expired · ${base}` : "expired";
     default:
       return base;
   }
@@ -4462,7 +4442,7 @@ function renderDashboardAgentActivityBoard(summary: DashboardAgentActivitySummar
   if (!summary || typeof summary !== "object") {
     return (
       '<section class="dash-agent-status-banner dash-agent-activity-board" aria-label="Agent Activity">' +
-      '<p><b>Agent Activity</b> <span class="dash-agent-status-label">Unknown · updated now</span></p>' +
+      '<p><b>Agent Activity</b> <span class="dash-agent-status-label">Unknown</span></p>' +
       '<p class="muted">No agent activity summary is available.</p>' +
       "</section>"
     );
@@ -4488,7 +4468,7 @@ function renderDashboardAgentActivityBoard(summary: DashboardAgentActivitySummar
     escapeHtmlAttr(boardState) +
     '">' +
     '<p><b>Agent Activity</b> <span class="dash-agent-status-label">' +
-    escapeHtml(`${headerSource} · ${headerFreshness}`) +
+    escapeHtml(headerFreshness ? `${headerSource} · ${headerFreshness}` : headerSource) +
     "</span></p>" +
     '<p class="muted">Source: ' +
     escapeHtml(sourceLabel) +

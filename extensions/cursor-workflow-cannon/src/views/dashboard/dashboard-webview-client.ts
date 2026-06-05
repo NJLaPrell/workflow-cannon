@@ -29,6 +29,7 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
 
   var localUiLocks = {};
   var pendingReplaceRootHtml = null;
+  var lastAppliedRawHtml = null;
   var hostSnapshot = null;
 
   function applyDashboardReadModeBadge(badge) {
@@ -429,6 +430,13 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
   function applyReplaceRootHtml(html) {
     var root = document.getElementById('root');
     if (!root) return;
+    if (lastAppliedRawHtml === html) {
+      var refreshBtn = document.getElementById('btn');
+      setButtonBusy(refreshBtn, false);
+      setUiInteraction('refresh', false);
+      return;
+    }
+    lastAppliedRawHtml = html;
     var open = {};
     var editState = capturePhaseDeliverablesEditState(root);
     var configState = captureConfigTabState(root);
@@ -515,16 +523,15 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
       Object.keys(preserved).forEach(function(key) {
         var entry = preserved[key];
         if (!entry) return;
-        // Ready tasks change status often; replaying cached row HTML leaves completed work visible as open.
-        if (entry.category === 'ready') return;
         var bucket = root.querySelector(lazyQueueBucketSelector(entry.category, entry.phaseKey));
-        if (!bucket || !bucketMetaMatches(bucket, entry)) return;
+        if (!bucket) return;
         var body = bucket.querySelector('.wc-lazy-bucket-body');
         if (!body) return;
         body.innerHTML = entry.bodyHtml;
         body.setAttribute('data-wc-lazy-loaded', '1');
         bucket.setAttribute('data-wc-lazy-loaded', '1');
         bucket.removeAttribute('data-wc-lazy-loading');
+        bucket.removeAttribute('data-wc-lazy-refreshing');
         bucket.removeAttribute('data-wc-lazy-more-loading');
         if (entry.open) bucket.open = true;
       });
@@ -538,16 +545,20 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
     root.querySelectorAll('details.wc-lazy-queue-bucket[open]').forEach(function(d) {
       var category = d.getAttribute('data-wc-queue-category') || '';
       var phaseKey = d.getAttribute('data-wc-phase-key') || '';
-      // Always refetch open Ready buckets after a queue patch (status transitions).
-      if (category === 'ready') {
-        requestLazyQueueBucketLoad(d);
-        return;
-      }
-      var body = d.querySelector('.wc-lazy-bucket-body');
-      if (body && body.getAttribute('data-wc-lazy-loaded') === '1') return;
       var entry = preserved && preserved[lazyBucketPreserveKey(category, phaseKey)];
-      if (entry && bucketMetaMatches(d, entry) && entry.bodyHtml) return;
-      requestLazyQueueBucketLoad(d);
+      var force = false;
+      if (category === 'ready') {
+        force = true;
+      } else if (!entry || !bucketMetaMatches(d, entry)) {
+        force = true;
+      }
+      if (force) {
+        requestLazyQueueBucketLoad(d, undefined, true);
+      } else {
+        var body = d.querySelector('.wc-lazy-bucket-body');
+        if (body && body.getAttribute('data-wc-lazy-loaded') === '1') return;
+        requestLazyQueueBucketLoad(d);
+      }
     });
   }
 
@@ -557,14 +568,39 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
     var el = root.querySelector('[data-wc-section="' + sectionId + '"]');
     if (!el) return;
     var st = state || 'ready';
+    if (st === 'loading' && (el.classList.contains('wc-dash-section--ready') || el.classList.contains('wc-dash-section--stale') || el.classList.contains('wc-dash-section--error'))) {
+      el.setAttribute('data-wc-section-refreshing', 'true');
+      el.setAttribute('aria-busy', 'true');
+      return;
+    }
+    el.removeAttribute('data-wc-section-refreshing');
     if (sectionId === 'queue' && typeof html === 'string' && html.length > 0) {
       var preservedQueue = captureQueueSectionUiState(root);
-      el.innerHTML = html;
-      restoreQueueSectionUiState(root, preservedQueue);
-      applyQueueFilters(root);
-      reloadOpenLazyQueueBucketsAfterMetaChange(root, preservedQueue.lazyBuckets);
+      var temp = document.createElement('div');
+      temp.innerHTML = html;
+      restoreLazyQueueBucketBodies(temp, preservedQueue.lazyBuckets);
+      Object.keys(preservedQueue.openTracks || {}).forEach(function(k) {
+        var elTemp = temp.querySelector('details.status-section[data-wc-track="' + k.replace(/"/g, '\\\\"') + '"]');
+        if (elTemp) elTemp.open = true;
+      });
+      Object.keys(preservedQueue.lazyBuckets).forEach(function(key) {
+        var entry = preservedQueue.lazyBuckets[key];
+        if (entry && entry.open) {
+          var bucketTemp = temp.querySelector(lazyQueueBucketSelector(entry.category, entry.phaseKey));
+          if (bucketTemp) bucketTemp.open = true;
+        }
+      });
+      if (el.innerHTML !== temp.innerHTML) {
+        el.innerHTML = temp.innerHTML;
+        applyQueueFilters(root);
+        reloadOpenLazyQueueBucketsAfterMetaChange(root, preservedQueue.lazyBuckets);
+      } else {
+        reloadOpenLazyQueueBucketsAfterMetaChange(root, preservedQueue.lazyBuckets);
+      }
     } else if (typeof html === 'string' && html.length > 0) {
-      el.innerHTML = html;
+      if (el.innerHTML !== html) {
+        el.innerHTML = html;
+      }
     }
     var staleBadge = el.querySelector('.wc-dash-section-stale-badge');
     if (st === 'stale') {
@@ -668,28 +704,34 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
     return lazyQueueBucketSelector(terminalStatus, phaseKey);
   }
 
-  function requestLazyQueueBucketLoad(detailsEl, cursor) {
+  function requestLazyQueueBucketLoad(detailsEl, cursor, force) {
     if (!detailsEl) return;
     if (window.__wcRestoringLazyBuckets) return;
     var category = (detailsEl.getAttribute('data-wc-queue-category') || '').trim();
     if (!category) return;
     var bodyEarly = detailsEl.querySelector('.wc-lazy-bucket-body');
-    if (bodyEarly && bodyEarly.getAttribute('data-wc-lazy-loaded') === '1' && !(typeof cursor === 'string' && cursor.trim().length > 0)) {
-      return;
-    }
     var append = typeof cursor === 'string' && cursor.trim().length > 0;
-    if (!append) {
-      if (detailsEl.getAttribute('data-wc-lazy-loaded') === '1') return;
+    if (!force && !append) {
+      if (bodyEarly && bodyEarly.getAttribute('data-wc-lazy-loaded') === '1') {
+        return;
+      }
       if (detailsEl.getAttribute('data-wc-lazy-loading') === '1') return;
+    }
+    if (!append) {
+      var isLoaded = bodyEarly && bodyEarly.getAttribute('data-wc-lazy-loaded') === '1';
+      if (!isLoaded) {
+        detailsEl.setAttribute('data-wc-lazy-loading', '1');
+        var body = detailsEl.querySelector('.wc-lazy-bucket-body');
+        if (body) {
+          var hint = body.querySelector('.wc-lazy-bucket-hint');
+          if (hint) hint.textContent = 'Loading…';
+        }
+      } else {
+        detailsEl.setAttribute('data-wc-lazy-refreshing', '1');
+      }
     } else {
       if (detailsEl.getAttribute('data-wc-lazy-more-loading') === '1') return;
       detailsEl.setAttribute('data-wc-lazy-more-loading', '1');
-    }
-    detailsEl.setAttribute('data-wc-lazy-loading', '1');
-    var body = detailsEl.querySelector('.wc-lazy-bucket-body');
-    if (body) {
-      var hint = body.querySelector('.wc-lazy-bucket-hint');
-      if (hint && !append) hint.textContent = 'Loading…';
     }
     vscode.postMessage({
       type: 'loadQueueBucketRows',
@@ -709,6 +751,7 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
     var bucket = root.querySelector(lazyQueueBucketSelector(category, phaseKey));
     if (!bucket) return;
     bucket.removeAttribute('data-wc-lazy-loading');
+    bucket.removeAttribute('data-wc-lazy-refreshing');
     bucket.removeAttribute('data-wc-lazy-more-loading');
     var body = bucket.querySelector('.wc-lazy-bucket-body');
     if (!body) return;
@@ -717,9 +760,12 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
       if (moreWrap) moreWrap.remove();
       body.insertAdjacentHTML('beforeend', typeof html === 'string' ? html : '');
     } else {
-      bucket.setAttribute('data-wc-lazy-loaded', '1');
-      body.innerHTML = typeof html === 'string' ? html : '';
+      var newHtml = typeof html === 'string' ? html : '';
+      if (body.innerHTML !== newHtml) {
+        body.innerHTML = newHtml;
+      }
       body.setAttribute('data-wc-lazy-loaded', '1');
+      bucket.setAttribute('data-wc-lazy-loaded', '1');
     }
   }
 

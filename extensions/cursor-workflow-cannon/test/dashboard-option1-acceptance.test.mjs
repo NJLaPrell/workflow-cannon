@@ -19,13 +19,14 @@ test("Option 1: DashboardViewProvider wires store + pollers (no legacy 45s timer
   assert.doesNotMatch(providerSrc, /dashboardPollTimer/);
 });
 
-test("Option 1: slice freshness labels render in section patches", () => {
+test("Option 1: slice freshness labels render in section patches (disabled)", () => {
   assert.match(providerSrc, /wrapSectionHtmlWithFreshness/);
   const bridgeSrc = readFileSync(
     path.join(__dirname, "../src/views/dashboard/dashboard-store-bridge.ts"),
     "utf8"
   );
-  assert.match(bridgeSrc, /wc-dash-slice-freshness/);
+  // Freshness indicators disabled per user feedback
+  assert.doesNotMatch(bridgeSrc, /wc-dash-slice-freshness/);
 });
 
 test("Option 1: mutation path marks store slices stale and refreshes pollers", () => {
