@@ -3,7 +3,7 @@
  * Phase 43 doc guard: forbid stale task-store primary narrative and broken pnpm wk invocation.
  * @see docs/maintainers/runbooks/task-persistence-operator.md
  */
-import { readFileSync, readdirSync, statSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -45,6 +45,7 @@ function walkFiles(dir, acc = []) {
     const p = join(dir, ent.name);
     if (ent.isDirectory()) {
       if (SKIP_DIR.has(ent.name)) continue;
+      if (p !== ROOT && existsSync(join(p, ".git"))) continue;
       walkFiles(p, acc);
     } else if (ent.isFile()) {
       const low = ent.name.toLowerCase();

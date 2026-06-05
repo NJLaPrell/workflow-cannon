@@ -9,8 +9,8 @@
   "sampleArgs": {},
   "examples": [
     {
-      "description": "Phase-scoped pre-release state packet",
-      "argv": "workspace-kit run phase-release-state '{\"phaseKey\":\"131\"}'"
+      "description": "Minimal argv example",
+      "argv": "workspace-kit run phase-release-state '{}'"
     }
   ],
   "instructionPath": "src/modules/task-engine/instructions/phase-release-state.md",
@@ -36,5 +36,5 @@
     "listCommands": "pnpm exec wk run --list-commands",
     "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
   },
-  "invocationId": "phase-release-state-snippet"
+  "invocationId": "10c9ec71-c7ca-4283-987a-07096983f386"
 }

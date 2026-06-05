@@ -8,6 +8,28 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [0.99.28] - 2026-06-05
+
+Patch — **Phase 130 Dashboard performance and delivery history** (lighter dashboard projections, coalesced refresh/hydration, terminal-task lazy loading, wishlist opt-in controls, delivery-history projection, and dashboard UX polish).
+
+### Added
+
+- Lightweight dashboard overview and task-state projection builders for faster startup and targeted refresh work.
+- `dashboard-terminal-tasks` alongside the existing terminal-row readout so the dashboard can lazy-load completed and cancelled task history without broad queue reads.
+- Phase delivery history projection and persistence updates wired into dashboard/task-engine read surfaces.
+- Dashboard summary controls for optional wishlist hydration plus performance tracing hooks for targeted diagnostics.
+
+### Changed
+
+- Cursor dashboard refresh now uses coalesced background hydration, granular slice invalidation, improved pause/watchdog tracking, and more stable sticky/flex layout behavior.
+- Dashboard queue and system-status rendering now prefer narrower projections, idempotent DOM reconciliation, and explicit source tracking/logging for summary calls.
+- `build-vsix.sh` release packaging flow now resolves the repo root more defensively and ensures the install step runs from the correct directory context.
+
+### Fixed
+
+- Dashboard expand/collapse state now survives refreshes instead of resetting during live updates.
+- Dashboard terminal task loading uses explicit SQL count/query paths to avoid heavy history reads during normal startup.
+
 ## [0.99.27] - 2026-06-04
 
 Patch — **Phase 131 Packet-first release orchestration** (bounded phase orchestration packets, JSON-first worker starts and handoffs, release-state/closeout packets, dashboard Complete & Release guardrails, and packet-flow regression evidence).

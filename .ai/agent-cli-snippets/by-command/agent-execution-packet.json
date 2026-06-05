@@ -11,12 +11,8 @@
   "sampleArgs": {},
   "examples": [
     {
-      "description": "Assignment packet for worker startup",
-      "argv": "workspace-kit run agent-execution-packet '{\"assignmentId\":\"asg-123\",\"workerId\":\"worker-1\"}'"
-    },
-    {
-      "description": "Draft packet before assignment registration",
-      "argv": "workspace-kit run agent-execution-packet '{\"mode\":\"draft\",\"taskId\":\"T123\",\"phaseKey\":\"131\"}'"
+      "description": "Minimal argv example",
+      "argv": "workspace-kit run agent-execution-packet '{}'"
     }
   ],
   "instructionPath": "src/modules/team-execution/instructions/agent-execution-packet.md",
@@ -42,5 +38,5 @@
     "listCommands": "pnpm exec wk run --list-commands",
     "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
   },
-  "invocationId": "f5dd7733-9596-4be1-8bd2-b7fa21ceb033"
+  "invocationId": "6b284f02-d8d1-48b2-a8dd-ce0f2f17fc55"
 }

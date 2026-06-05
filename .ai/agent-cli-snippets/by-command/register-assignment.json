@@ -17,7 +17,7 @@
   ],
   "instructionPath": "src/modules/team-execution/instructions/register-assignment.md",
   "moduleId": "team-execution",
-  "description": "Create a supervisor/worker assignment row linked to an execution task id.",
+  "description": "Create a supervisor/worker assignment row and persist bounded packet metadata when available.",
   "policy": {
     "sensitivity": "sensitive",
     "operationId": "team-execution.persist",
@@ -38,5 +38,5 @@
     "listCommands": "pnpm exec wk run --list-commands",
     "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
   },
-  "invocationId": "9f371707-0f64-4d32-a558-ac3ef5bcea58"
+  "invocationId": "3f379623-9665-4694-9714-1474d3da5cd4"
 }

@@ -3,11 +3,9 @@
   "code": "run-args-schema",
   "command": "phase-drain-delta",
   "schema": {
-    "type": "object",
-    "additionalProperties": true,
-    "description": "Permissive fallback args schema for 'phase-drain-delta'. Use instructionPath for command-specific field guidance until a stricter schema is added."
+    "type": "object"
   },
-  "schemaSource": "manifest-permissive-fallback",
+  "schemaSource": "pilot-run-args-snapshot",
   "sampleArgs": {},
   "examples": [
     {
@@ -38,5 +36,5 @@
     "listCommands": "pnpm exec wk run --list-commands",
     "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
   },
-  "invocationId": "d170b973-d171-4221-83a0-e7acd8e279fd"
+  "invocationId": "0b614330-441a-4583-976c-6b359ef5c0cb"
 }

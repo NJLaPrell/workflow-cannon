@@ -3,11 +3,9 @@
   "code": "run-args-schema",
   "command": "prepare-release-artifacts",
   "schema": {
-    "type": "object",
-    "additionalProperties": true,
-    "description": "Permissive fallback args schema for 'prepare-release-artifacts'. Use instructionPath for command-specific field guidance until a stricter schema is added."
+    "type": "object"
   },
-  "schemaSource": "manifest-permissive-fallback",
+  "schemaSource": "pilot-run-args-snapshot",
   "sampleArgs": {},
   "examples": [
     {
@@ -38,5 +36,5 @@
     "listCommands": "pnpm exec wk run --list-commands",
     "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
   },
-  "invocationId": "8650799a-fae4-4fd1-8a2f-1bd868a3170e"
+  "invocationId": "7f11af19-b304-416c-8bf3-612f5e2d88d9"
 }

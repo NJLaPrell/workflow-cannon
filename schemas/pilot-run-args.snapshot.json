@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "sourceSchemaPackageVersion": "0.99.27",
+  "sourceSchemaPackageVersion": "0.99.28",
   "pilotCommands": [
     "accept-improvement",
     "add-dependency",
@@ -34,6 +34,8 @@
     "dashboard-service-status",
     "dashboard-service-stop",
     "dashboard-summary",
+    "dashboard-terminal-rows",
+    "dashboard-terminal-tasks",
     "demote-task",
     "derive-publish-artifacts",
     "derive-validations",
@@ -72,10 +74,13 @@
     "persist-planning-execution-drafts",
     "phase-closeout-readiness",
     "phase-delivery-preflight",
+    "phase-drain-delta",
     "phase-focus-dashboard",
     "phase-release-orchestration-state",
+    "phase-release-state",
     "phase-status",
     "planning-state-migrate-baseline",
+    "prepare-release-artifacts",
     "propose-release-version",
     "propose-tasks-from-phase-notes",
     "queue-git-alignment",
@@ -83,6 +88,7 @@
     "rebuild-task-state-cache",
     "recommend-validation",
     "reject-improvement",
+    "release-closeout-result",
     "release-evidence-manifest",
     "release-status",
     "release-workspace-edit-lease",
@@ -732,8 +738,7 @@
           "maximum": 100
         },
         "includeWishlist": {
-          "type": "boolean",
-          "description": "Opt in to dashboard wishlist hydration. Defaults false so queue/startup projections return an empty sunset wishlist stub."
+          "type": "boolean"
         },
         "includePhaseFocus": {
           "type": "boolean"
@@ -754,6 +759,62 @@
         "dashboardTrace": {
           "type": "boolean",
           "description": "Opt-in dashboard-summary performance trace. Timing lines are emitted to stderr / Workflow Cannon output, never JSON stdout."
+        }
+      },
+      "additionalProperties": false
+    },
+    "dashboard-terminal-rows": {
+      "type": "object",
+      "required": [
+        "status"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "completed",
+            "cancelled"
+          ]
+        },
+        "phaseKey": {
+          "type": "string",
+          "minLength": 1
+        },
+        "limit": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "cursor": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "dashboard-terminal-tasks": {
+      "type": "object",
+      "required": [
+        "status"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "completed",
+            "cancelled"
+          ]
+        },
+        "phaseKey": {
+          "type": "string",
+          "minLength": 1
+        },
+        "limit": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "cursor": {
+          "type": "string",
+          "minLength": 1
         }
       },
       "additionalProperties": false
@@ -1292,10 +1353,16 @@
     "phase-delivery-preflight": {
       "type": "object"
     },
+    "phase-drain-delta": {
+      "type": "object"
+    },
     "phase-focus-dashboard": {
       "type": "object"
     },
     "phase-release-orchestration-state": {
+      "type": "object"
+    },
+    "phase-release-state": {
       "type": "object"
     },
     "phase-status": {
@@ -1314,6 +1381,9 @@
       "additionalProperties": true
     },
     "planning-state-migrate-baseline": {
+      "type": "object"
+    },
+    "prepare-release-artifacts": {
       "type": "object"
     },
     "propose-release-version": {
@@ -1435,6 +1505,9 @@
         }
       },
       "additionalProperties": true
+    },
+    "release-closeout-result": {
+      "type": "object"
     },
     "release-evidence-manifest": {
       "type": "object"

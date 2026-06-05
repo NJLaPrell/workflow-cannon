@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-06-03T20:32:18.409Z",
+  "generatedAt": "2026-06-05T19:45:35.641Z",
   "commands": [
     {
       "name": "accept-improvement",
@@ -483,6 +483,16 @@
       "moduleId": "task-engine"
     },
     {
+      "name": "dashboard-terminal-rows",
+      "path": ".ai/agent-cli-snippets/by-command/dashboard-terminal-rows.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "dashboard-terminal-tasks",
+      "path": ".ai/agent-cli-snippets/by-command/dashboard-terminal-tasks.json",
+      "moduleId": "task-engine"
+    },
+    {
       "name": "delete-behavior-profile",
       "path": ".ai/agent-cli-snippets/by-command/delete-behavior-profile.json",
       "moduleId": "agent-behavior"
@@ -873,11 +883,6 @@
       "moduleId": "task-engine"
     },
     {
-      "name": "release-closeout-result",
-      "path": ".ai/agent-cli-snippets/by-command/release-closeout-result.json",
-      "moduleId": "task-engine"
-    },
-    {
       "name": "phase-status",
       "path": ".ai/agent-cli-snippets/by-command/phase-status.json",
       "moduleId": "task-engine"
@@ -955,6 +960,11 @@
     {
       "name": "reject-improvement",
       "path": ".ai/agent-cli-snippets/by-command/reject-improvement.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "release-closeout-result",
+      "path": ".ai/agent-cli-snippets/by-command/release-closeout-result.json",
       "moduleId": "task-engine"
     },
     {

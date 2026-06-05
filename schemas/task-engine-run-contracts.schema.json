@@ -16,7 +16,7 @@
       "const": 1
     },
     "packageVersion": {
-      "const": "0.99.27",
+      "const": "0.99.28",
       "description": "Must match package.json version."
     },
     "moduleId": {
@@ -57,6 +57,8 @@
         "dashboard-service-status",
         "dashboard-service-stop",
         "dashboard-summary",
+        "dashboard-terminal-rows",
+        "dashboard-terminal-tasks",
         "demote-task",
         "derive-publish-artifacts",
         "derive-validations",
@@ -502,6 +504,12 @@
         },
         "dashboard-summary": {
           "$ref": "#/$defs/contractDashboardSummary"
+        },
+        "dashboard-terminal-rows": {
+          "$ref": "#/$defs/contractDashboardTerminalTasks"
+        },
+        "dashboard-terminal-tasks": {
+          "$ref": "#/$defs/contractDashboardTerminalTasks"
         },
         "dashboard-service-start": {
           "$ref": "#/$defs/contractBase"
@@ -1278,6 +1286,69 @@
                 "dependencyEdges"
               ],
               "additionalProperties": true
+            }
+          }
+        }
+      ]
+    },
+    "contractDashboardTerminalTasks": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/contractBase"
+        },
+        {
+          "properties": {
+            "args": {
+              "type": "object",
+              "required": [
+                "status"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "completed",
+                    "cancelled"
+                  ]
+                },
+                "phaseKey": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "limit": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                },
+                "cursor": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            },
+            "responseData": {
+              "type": "object",
+              "required": [
+                "tasks",
+                "count",
+                "scope"
+              ],
+              "additionalProperties": true,
+              "properties": {
+                "tasks": {
+                  "type": "array"
+                },
+                "count": {
+                  "type": "number"
+                },
+                "scope": {
+                  "const": "tasks-only"
+                },
+                "nextCursor": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
             }
           }
         }

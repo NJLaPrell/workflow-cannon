@@ -3,11 +3,9 @@
   "code": "run-args-schema",
   "command": "release-closeout-result",
   "schema": {
-    "type": "object",
-    "additionalProperties": true,
-    "description": "Permissive fallback args schema for 'release-closeout-result'. Pass concrete releaseNotes, followUpSummary, and optional postReleaseEvidence/finalEvidence, or a release-evidence-manifest payload as manifest."
+    "type": "object"
   },
-  "schemaSource": "manifest-permissive-fallback",
+  "schemaSource": "pilot-run-args-snapshot",
   "sampleArgs": {},
   "examples": [
     {
@@ -17,7 +15,7 @@
   ],
   "instructionPath": "src/modules/task-engine/instructions/release-closeout-result.md",
   "moduleId": "task-engine",
-  "description": "Build the final placeholder-free phase release result packet with concrete evidence refs and packet sequence.",
+  "description": "Build the final placeholder-free phase release result packet, and record first-class phase delivery history when final evidence is complete.",
   "policy": {
     "sensitivity": "non-sensitive",
     "operationId": null,
@@ -37,5 +35,6 @@
   "discovery": {
     "listCommands": "pnpm exec wk run --list-commands",
     "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
-  }
+  },
+  "invocationId": "3cb29dd6-500e-4735-bb43-cf466101a1ec"
 }
