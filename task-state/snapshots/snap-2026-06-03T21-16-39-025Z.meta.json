@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "snapshotId": "snap-2026-06-03T21-16-39-025Z",
+  "throughSequence": 1367,
+  "throughEventId": "evt-712fd707-ef5c-4b53-a1a8-95509f3ee827",
+  "recordedAt": "2026-06-03T21:16:40.154Z",
+  "contentPath": "task-state/snapshots/snap-2026-06-03T21-16-39-025Z.json",
+  "contentDigest": "6e3267728804518cf919424fcdc7a1b6d4a35ca14801ce47b47ff42e759f8f5b",
+  "taskCount": 1573
+}
