@@ -216,7 +216,7 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.ok(html.indexOf("wc-rec-next") < html.indexOf("wc-cae-readiness"));
   assert.ok(html.indexOf("wc-tab-bar") < html.indexOf("wc-cae-readiness"));
   assert.match(html, /dash-agent-activity-board/);
-  assert.match(html, /Unknown · updated now/);
+  assert.match(html, /<span class="dash-agent-status-label">Unknown<\/span>/);
   assert.match(html, /No agent activity summary is available/);
   const overviewPanelIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="overview"');
   const planningPanelIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="planning"');
@@ -262,6 +262,10 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.match(html, /aria-label="Phase readiness · Phase 14"/);
   assert.match(html, /wc-cae-readiness-collapsed/);
   assert.match(html, /data-wc-action="phase-readiness-toggle"/);
+  assert.match(html, /data-wc-preserve-expanded="phase-readiness"/);
+  assert.match(html, /data-wc-ui-state-key="phase-readiness-14"/);
+  assert.match(html, /data-wc-preserve-expanded="phase-progress"/);
+  assert.match(html, /data-wc-ui-state-key="phase-progress-14"/);
   assert.match(html, /aria-expanded="false"/);
   assert.match(html, /wc-cae-readiness-body/);
   assert.match(html, /Current Phase/);
@@ -307,6 +311,7 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.ok(blockedIdx !== -1 && completedIdx !== -1 && blockedIdx < completedIdx);
   assert.ok(completedIdx !== -1 && cancelledIdx !== -1 && completedIdx < cancelledIdx);
   assert.match(html, /data-wc-track="status-ready"/);
+  assert.match(html, /data-wc-track="status-ready" data-wc-ui-state-key="status-ready"/);
   assert.doesNotMatch(html, /data-wc-track="status-ready-imp"/);
   assert.doesNotMatch(html, /data-wc-track="status-ready-exe"/);
   assert.match(html, /data-wc-filter="ready"/);
@@ -363,6 +368,10 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.match(html, /data-wc-queue-category="completed"/);
   assert.match(html, /data-wc-queue-category="ready"/);
   assert.match(html, /data-wc-queue-category="proposed-improvement"/);
+  assert.match(html, /data-wc-track="rdy-phase-14"/);
+  assert.match(html, /data-wc-track="rdy-phase-no-phase"/);
+  assert.doesNotMatch(html, /data-wc-track="rdy-p\d+"/);
+  assert.doesNotMatch(html, /data-wc-track="prop-imp-p\d+"/);
   assert.doesNotMatch(html, /data-wc-queue-category="blocked"/);
   assert.match(html, /Not Phased/);
   assert.doesNotMatch(html, /Dependency Overview/);
@@ -1953,6 +1962,7 @@ test("renderDashboardRootInnerHtml prefers first ready task over wishlist when b
         type: "improvement"
       },
       wishlist: {
+        enabled: true,
         openCount: 1,
         totalCount: 1,
         openTop: [{ id: "W-priority", title: "Process wishlist first", taskId: "T-wl-2" }]
@@ -2852,6 +2862,7 @@ test("renderDashboardRootInnerHtml wishlist section shows pager when openTotalPa
       readyImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
       readyExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
       wishlist: {
+        enabled: true,
         openCount: 15,
         totalCount: 15,
         openPage: 0,
@@ -2890,6 +2901,7 @@ test("renderDashboardRootInnerHtml wishlist pager points prev and next at adjace
       readyImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
       readyExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
       wishlist: {
+        enabled: true,
         openCount: 15,
         totalCount: 15,
         openPage: 1,

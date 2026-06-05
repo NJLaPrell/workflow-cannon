@@ -24,8 +24,6 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
   var activeTab = 'overview';
   var activeFilter = 'all';
   var activePhaseFilter = 'all';
-  var PHASE_READINESS_EXPAND_KEY = 'wc-phase-readiness-expanded';
-  var PHASE_PROGRESS_EXPAND_KEY = 'wc-phase-progress-expanded';
 
   var localUiLocks = {};
   var pendingReplaceRootHtml = null;
@@ -437,21 +435,12 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
       return;
     }
     lastAppliedRawHtml = html;
-    var open = {};
+    var preservedUi = captureDashboardExpandableUiState(root);
     var editState = capturePhaseDeliverablesEditState(root);
     var configState = captureConfigTabState(root);
     var preservedQueue = captureQueueSectionUiState(root);
-    root.querySelectorAll('details[data-wc-track]').forEach(function(d) {
-      var k = d.getAttribute('data-wc-track');
-      if (k && d.open) open[k] = true;
-    });
-    capturePhaseCardCollapseState(root);
     root.innerHTML = html;
-    Object.keys(open).forEach(function(k) {
-      var el = root.querySelector('details[data-wc-track="' + k + '"]');
-      if (el) el.open = true;
-    });
-    restorePhaseCardCollapseState(root);
+    restoreDashboardExpandableUiState(root, preservedUi);
     restoreConfigTabState(root, configState);
     applyTab(activeTab, activeTab === 'task-engine' || activeTab === 'status' || activeTab === 'config' || activeTab === 'cae');
     restoreQueueSectionUiState(root, preservedQueue);
@@ -468,16 +457,81 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
     return String(category) + '|' + String(phaseKey);
   }
 
+  function uiStateKeyFor(el) {
+    if (!el || !el.getAttribute) return '';
+    return el.getAttribute('data-wc-ui-state-key') || el.getAttribute('data-wc-track') || '';
+  }
+
+  function uiStateSelector(tagName, key) {
+    return String(tagName) + '[data-wc-ui-state-key="' + String(key).replace(/"/g, '\\\\"') + '"], ' +
+      String(tagName) + '[data-wc-track="' + String(key).replace(/"/g, '\\\\"') + '"]';
+  }
+
+  function isCustomExpanded(el) {
+    var kind = el.getAttribute('data-wc-preserve-expanded') || '';
+    if (kind === 'phase-readiness') {
+      return !el.classList.contains('wc-cae-readiness-collapsed');
+    }
+    if (kind === 'phase-progress') {
+      return !el.classList.contains('wc-phase-progress-collapsed');
+    }
+    return el.getAttribute('aria-expanded') === 'true';
+  }
+
+  function applyCustomExpandedState(el, expanded) {
+    var kind = el.getAttribute('data-wc-preserve-expanded') || '';
+    if (kind === 'phase-readiness') {
+      el.classList.toggle('wc-cae-readiness-collapsed', !expanded);
+      var readinessToggle = el.querySelector('[data-wc-action="phase-readiness-toggle"]');
+      if (readinessToggle) readinessToggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+      return;
+    }
+    if (kind === 'phase-progress') {
+      el.classList.toggle('wc-phase-progress-collapsed', !expanded);
+      var progressToggle = el.querySelector('[data-wc-action="phase-progress-toggle"]');
+      if (progressToggle) progressToggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+      return;
+    }
+    el.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+  }
+
+  function captureDashboardExpandableUiState(root) {
+    var details = {};
+    var custom = {};
+    if (!root) return { details: details, custom: custom };
+    root.querySelectorAll('details[data-wc-ui-state-key], details[data-wc-track]').forEach(function(d) {
+      var k = uiStateKeyFor(d);
+      if (k) details[k] = { open: !!d.open };
+    });
+    root.querySelectorAll('[data-wc-preserve-expanded][data-wc-ui-state-key]').forEach(function(el) {
+      var k = uiStateKeyFor(el);
+      if (k) custom[k] = { expanded: isCustomExpanded(el) };
+    });
+    return { details: details, custom: custom };
+  }
+
+  function restoreDashboardExpandableUiState(root, state) {
+    if (!root || !state) return;
+    Object.keys(state.details || {}).forEach(function(k) {
+      var el = root.querySelector(uiStateSelector('details', k));
+      if (el && state.details[k]) el.open = state.details[k].open === true;
+    });
+    Object.keys(state.custom || {}).forEach(function(k) {
+      var el = root.querySelector('[data-wc-ui-state-key="' + String(k).replace(/"/g, '\\\\"') + '"]');
+      if (el && state.custom[k]) applyCustomExpandedState(el, state.custom[k].expanded === true);
+    });
+  }
+
   function captureQueueSectionUiState(root) {
-    var openTracks = {};
+    var detailsState = {};
     if (root) {
-      root.querySelectorAll('details.status-section[open][data-wc-track]').forEach(function(d) {
-        var k = d.getAttribute('data-wc-track');
-        if (k) openTracks[k] = true;
+      root.querySelectorAll('details.status-section[data-wc-ui-state-key], details.status-section[data-wc-track]').forEach(function(d) {
+        var k = uiStateKeyFor(d);
+        if (k) detailsState[k] = { open: !!d.open };
       });
     }
     return {
-      openTracks: openTracks,
+      openTracks: detailsState,
       lazyBuckets: captureLazyQueueBucketBodies(root)
     };
   }
@@ -489,7 +543,8 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
     try {
       Object.keys(state.openTracks || {}).forEach(function(k) {
         var el = root.querySelector('details.status-section[data-wc-track="' + k.replace(/"/g, '\\\\"') + '"]');
-        if (el) el.open = true;
+        if (!el) el = root.querySelector('details.status-section[data-wc-ui-state-key="' + k.replace(/"/g, '\\\\"') + '"]');
+        if (el) el.open = state.openTracks[k] && state.openTracks[k].open === true;
       });
     } finally {
       window.__wcRestoringLazyBuckets = false;
@@ -575,13 +630,16 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
     }
     el.removeAttribute('data-wc-section-refreshing');
     if (sectionId === 'queue' && typeof html === 'string' && html.length > 0) {
+      var preservedUi = captureDashboardExpandableUiState(el);
       var preservedQueue = captureQueueSectionUiState(root);
       var temp = document.createElement('div');
       temp.innerHTML = html;
+      restoreDashboardExpandableUiState(temp, preservedUi);
       restoreLazyQueueBucketBodies(temp, preservedQueue.lazyBuckets);
       Object.keys(preservedQueue.openTracks || {}).forEach(function(k) {
         var elTemp = temp.querySelector('details.status-section[data-wc-track="' + k.replace(/"/g, '\\\\"') + '"]');
-        if (elTemp) elTemp.open = true;
+        if (!elTemp) elTemp = temp.querySelector('details.status-section[data-wc-ui-state-key="' + k.replace(/"/g, '\\\\"') + '"]');
+        if (elTemp) elTemp.open = preservedQueue.openTracks[k] && preservedQueue.openTracks[k].open === true;
       });
       Object.keys(preservedQueue.lazyBuckets).forEach(function(key) {
         var entry = preservedQueue.lazyBuckets[key];
@@ -598,8 +656,12 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
         reloadOpenLazyQueueBucketsAfterMetaChange(root, preservedQueue.lazyBuckets);
       }
     } else if (typeof html === 'string' && html.length > 0) {
-      if (el.innerHTML !== html) {
-        el.innerHTML = html;
+      var preservedGenericUi = captureDashboardExpandableUiState(el);
+      var tempGeneric = document.createElement('div');
+      tempGeneric.innerHTML = html;
+      restoreDashboardExpandableUiState(tempGeneric, preservedGenericUi);
+      if (el.innerHTML !== tempGeneric.innerHTML) {
+        el.innerHTML = tempGeneric.innerHTML;
       }
     }
     var staleBadge = el.querySelector('.wc-dash-section-stale-badge');
@@ -664,31 +726,6 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
     if (saving) saving.hidden = true;
     togglePhaseDeliverablesEdit(row, false);
     setUiInteraction('phase-deliverables', false);
-  }
-
-  function persistPhaseCardExpanded(storageKey, expanded) {
-    try {
-      if (expanded) sessionStorage.setItem(storageKey, '1');
-      else sessionStorage.removeItem(storageKey);
-    } catch (e) {}
-  }
-
-  function capturePhaseCardCollapseState(root) {
-    if (!root) return;
-    var readiness = root.querySelector('.wc-cae-readiness');
-    if (readiness) {
-      persistPhaseCardExpanded(
-        PHASE_READINESS_EXPAND_KEY,
-        !readiness.classList.contains('wc-cae-readiness-collapsed')
-      );
-    }
-    var progress = root.querySelector('.wc-phase-progress');
-    if (progress) {
-      persistPhaseCardExpanded(
-        PHASE_PROGRESS_EXPAND_KEY,
-        !progress.classList.contains('wc-phase-progress-collapsed')
-      );
-    }
   }
 
   function lazyQueueBucketSelector(category, phaseKey) {
@@ -782,30 +819,6 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
 
   function reloadOpenLazyTerminalBuckets(root) {
     reloadOpenLazyQueueBuckets(root);
-  }
-
-  function restorePhaseCardCollapseState(root) {
-    if (!root) return;
-    var readiness = root.querySelector('.wc-cae-readiness');
-    if (readiness) {
-      var readinessExpanded = false;
-      try { readinessExpanded = sessionStorage.getItem(PHASE_READINESS_EXPAND_KEY) === '1'; } catch (e) {}
-      readiness.classList.toggle('wc-cae-readiness-collapsed', !readinessExpanded);
-      var readinessToggle = readiness.querySelector('[data-wc-action="phase-readiness-toggle"]');
-      if (readinessToggle) {
-        readinessToggle.setAttribute('aria-expanded', readinessExpanded ? 'true' : 'false');
-      }
-    }
-    var progress = root.querySelector('.wc-phase-progress');
-    if (progress) {
-      var progressExpanded = false;
-      try { progressExpanded = sessionStorage.getItem(PHASE_PROGRESS_EXPAND_KEY) === '1'; } catch (e) {}
-      progress.classList.toggle('wc-phase-progress-collapsed', !progressExpanded);
-      var progressToggle = progress.querySelector('[data-wc-action="phase-progress-toggle"]');
-      if (progressToggle) {
-        progressToggle.setAttribute('aria-expanded', progressExpanded ? 'true' : 'false');
-      }
-    }
   }
 
   function togglePhaseDeliverablesEdit(row, editing) {
@@ -1237,7 +1250,6 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
   if (typeof window.wcReinitEmbeddedCae === 'function') window.wcReinitEmbeddedCae();
 
     applyTab(activeTab, activeTab === 'task-engine' || activeTab === 'status' || activeTab === 'config' || activeTab === 'cae');
-  restorePhaseCardCollapseState(document.getElementById('root'));
   applyQueueFilters(document.getElementById('root'));
 
   document.addEventListener('click', function(ev) {
@@ -1363,7 +1375,6 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
       if (!readinessCard) return;
       readinessCard.classList.toggle('wc-cae-readiness-collapsed');
       var readinessExpanded = !readinessCard.classList.contains('wc-cae-readiness-collapsed');
-      persistPhaseCardExpanded(PHASE_READINESS_EXPAND_KEY, readinessExpanded);
       var readinessToggle = readinessCard.querySelector('[data-wc-action="phase-readiness-toggle"]');
       if (readinessToggle) {
         readinessToggle.setAttribute('aria-expanded', readinessExpanded ? 'true' : 'false');
@@ -1375,7 +1386,6 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
       if (!progressCard) return;
       progressCard.classList.toggle('wc-phase-progress-collapsed');
       var progressExpanded = !progressCard.classList.contains('wc-phase-progress-collapsed');
-      persistPhaseCardExpanded(PHASE_PROGRESS_EXPAND_KEY, progressExpanded);
       var progressToggle = progressCard.querySelector('[data-wc-action="phase-progress-toggle"]');
       if (progressToggle) {
         progressToggle.setAttribute('aria-expanded', progressExpanded ? 'true' : 'false');

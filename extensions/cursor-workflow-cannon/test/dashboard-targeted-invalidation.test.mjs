@@ -68,6 +68,11 @@ test("mutation hold skips dashboard kit refresh after root is hydrated", () => {
 
 test("queue section patch preserves lazy bucket bodies when meta matches", () => {
   const src = fs.readFileSync(path.join(srcDir, "dashboard-webview-client.ts"), "utf8");
+  assert.match(src, /captureDashboardExpandableUiState/);
+  assert.match(src, /restoreDashboardExpandableUiState/);
+  assert.match(src, /data-wc-ui-state-key/);
+  assert.match(src, /details\[k\] = \{ open: !!d\.open \}/);
+  assert.match(src, /el\.open = state\.details\[k\]\.open === true/);
   assert.match(src, /captureLazyQueueBucketBodies/);
   assert.match(src, /restoreLazyQueueBucketBodies/);
   assert.match(src, /sectionId === 'queue'/);
@@ -82,4 +87,9 @@ test("queue section patch preserves lazy bucket bodies when meta matches", () =>
 test("lazy queue bucket details expose task id meta for preservation", () => {
   const src = fs.readFileSync(path.join(srcDir, "render-dashboard.ts"), "utf8");
   assert.match(src, /data-wc-bucket-task-ids/);
+  assert.match(src, /queuePhaseBucketTrackId/);
+  assert.match(src, /wcUiStateAttr/);
+  assert.match(src, /data-wc-preserve-expanded="phase-readiness"/);
+  assert.match(src, /wcTrackAttr\(queuePhaseBucketTrackId\(phaseTrackPrefix, phaseKey\)\)/);
+  assert.doesNotMatch(src, /wcTrackAttr\(phaseTrackPrefix \+ "-p"/);
 });

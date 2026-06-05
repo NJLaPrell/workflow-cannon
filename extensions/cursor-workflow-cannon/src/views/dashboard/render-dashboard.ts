@@ -357,7 +357,17 @@ function renderProposedQueueTaskActionButtons(
 /** Stable id for preserving `<details open>` when the host replaces `#root` innerHTML (`DashboardViewProvider` wcReplaceRoot). */
 function wcTrackAttr(trackId: string): string {
   const safe = trackId.replace(/[^a-zA-Z0-9_-]/g, "_").replace(/_+/g, "_").slice(0, 120);
-  return ' data-wc-track="' + escapeHtml(safe) + '"';
+  return ' data-wc-track="' + escapeHtml(safe) + '" data-wc-ui-state-key="' + escapeHtml(safe) + '"';
+}
+
+function wcUiStateAttr(stateKey: string): string {
+  const safe = stateKey.replace(/[^a-zA-Z0-9_-]/g, "_").replace(/_+/g, "_").slice(0, 120);
+  return ' data-wc-ui-state-key="' + escapeHtml(safe) + '"';
+}
+
+function queuePhaseBucketTrackId(prefix: string, phaseKey: string): string {
+  const key = phaseKey.trim().length > 0 ? phaseKey.trim() : "no-phase";
+  return prefix + "-phase-" + key;
 }
 
 /** Prefix embedded CAE panel ids so embedding and standalone renders can coexist without duplicate ids. */
@@ -1716,7 +1726,9 @@ function renderPhaseReadinessCard(
   return (
     '<section class="dash-card wc-cae-readiness wc-cae-readiness-collapsed" aria-label="' +
     escapeHtmlAttr(sectionAriaLabel) +
-    '">' +
+    '" data-wc-preserve-expanded="phase-readiness"' +
+    wcUiStateAttr("phase-readiness-" + curPhase) +
+    ">" +
     '<div class="wc-cae-readiness-head">' +
     '<button type="button" class="wc-cae-readiness-toggle" data-wc-action="phase-readiness-toggle" aria-expanded="false" aria-controls="wc-cae-readiness-body">' +
     '<span class="wc-cae-readiness-title">' +
@@ -1801,7 +1813,9 @@ function renderPhaseProgressCard(
   return (
     '<section class="dash-card wc-phase-progress wc-phase-progress-collapsed" aria-label="Phase progress · Phase ' +
     escapeHtmlAttr(curPhase) +
-    '">' +
+    '" data-wc-preserve-expanded="phase-progress"' +
+    wcUiStateAttr("phase-progress-" + curPhase) +
+    ">" +
     '<div class="wc-phase-progress-head">' +
     '<button type="button" class="wc-cae-readiness-toggle" data-wc-action="phase-progress-toggle" aria-expanded="false" aria-controls="wc-phase-progress-body">' +
     '<span class="wc-cae-readiness-title"><b>Phase Progress · Phase ' +
@@ -2662,7 +2676,7 @@ function renderReadyPhaseBuckets(
   return (
     '<div class="phase-stack">' +
     buckets
-      .map((raw, i) => {
+      .map((raw) => {
         const b = raw as { label?: unknown; top?: unknown; phaseKey?: unknown; count?: unknown; taskIds?: unknown };
         const summaryLabel = phaseBucketSummaryHtml(b, phaseFocus, catalog);
         const phaseKey = b.phaseKey != null ? String(b.phaseKey).trim() : "";
@@ -2688,7 +2702,7 @@ function renderReadyPhaseBuckets(
           '<details' +
           lazyQueueBucketDetailsAttrs("ready", phaseKey, c, "", collectPhaseBucketTaskIds(b)) +
           phaseBucketFilterAttr(b.phaseKey) +
-          wcTrackAttr(phaseTrackPrefix + "-p" + String(i)) +
+          wcTrackAttr(queuePhaseBucketTrackId(phaseTrackPrefix, phaseKey)) +
           '><summary class="phase-bucket-summary">' +
           summaryLabel +
           releaseBtn +
@@ -2727,7 +2741,7 @@ function renderProposedPhaseBuckets(
     '<p class="muted"><b>Row actions</b> · Accept/Decline per row; Accept All processes the phase.</p>' +
     '<div class="phase-stack">' +
     buckets
-      .map((raw, i) => {
+      .map((raw) => {
         const b = raw as { label?: unknown; top?: unknown; count?: unknown; taskIds?: unknown; phaseKey?: unknown };
         const summaryLabel = phaseBucketSummaryHtml(b, phaseFocus, catalog);
         const taskIds = Array.isArray(b.taskIds)
@@ -2751,7 +2765,7 @@ function renderProposedPhaseBuckets(
           '<details' +
           lazyQueueBucketDetailsAttrs("proposed-improvement", phaseKey, c, "", taskIds) +
           phaseBucketFilterAttr(b.phaseKey) +
-          wcTrackAttr(phaseTrackPrefix + "-p" + String(i)) +
+          wcTrackAttr(queuePhaseBucketTrackId(phaseTrackPrefix, phaseKey)) +
           '><summary class="phase-bucket-summary">' +
           summaryLabel +
           acceptAllBtn +
@@ -2789,7 +2803,7 @@ function renderTranscriptChurnResearchPhaseBuckets(
     more +
     '<div class="phase-stack">' +
     buckets
-      .map((raw, i) => {
+      .map((raw) => {
         const b = raw as { label?: unknown; top?: unknown; count?: unknown; phaseKey?: unknown };
         const summary = phaseBucketSummaryHtml(b, phaseFocus, catalog);
         const c = typeof b.count === "number" ? b.count : 0;
@@ -2808,7 +2822,7 @@ function renderTranscriptChurnResearchPhaseBuckets(
             collectPhaseBucketTaskIds(b)
           ) +
           phaseBucketFilterAttr(b.phaseKey) +
-          wcTrackAttr(phaseTrackPrefix + "-p" + String(i)) +
+          wcTrackAttr(queuePhaseBucketTrackId(phaseTrackPrefix, phaseKey)) +
           '><summary class="phase-bucket-summary">' +
           summary +
           "</summary>" +
@@ -2847,7 +2861,7 @@ function renderProposedExecutionPhaseBuckets(
     '<p class="muted"><b>Accept All</b> accepts every proposed execution task in that phase.</p>' +
     '<div class="phase-stack">' +
     bucketsPe
-      .map((raw, i) => {
+      .map((raw) => {
         const b = raw as { label?: unknown; top?: unknown; count?: unknown; taskIds?: unknown; phaseKey?: unknown };
         const summaryLabel = phaseBucketSummaryHtml(b, phaseFocus, catalog);
         const taskIds = Array.isArray(b.taskIds)
@@ -2877,7 +2891,7 @@ function renderProposedExecutionPhaseBuckets(
             collectPhaseBucketTaskIds(b)
           ) +
           phaseBucketFilterAttr(b.phaseKey) +
-          wcTrackAttr(phaseTrackPrefix + "-p" + String(i)) +
+          wcTrackAttr(queuePhaseBucketTrackId(phaseTrackPrefix, phaseKey)) +
           '><summary class="phase-bucket-summary">' +
           summaryLabel +
           acceptAllBtn +
@@ -2915,7 +2929,7 @@ function renderBlockedPhaseBuckets(
     more +
     '<div class="phase-stack">' +
     bucketsBl
-      .map((raw, i) => {
+      .map((raw) => {
         const b = raw as { label?: unknown; top?: unknown; count?: unknown; phaseKey?: unknown };
         const summary = phaseBucketSummaryHtml(b, phaseFocus, catalog);
         const c = typeof b.count === "number" ? b.count : 0;
@@ -2928,7 +2942,7 @@ function renderBlockedPhaseBuckets(
           '<details' +
           lazyQueueBucketDetailsAttrs("blocked", phaseKey, c, "", collectPhaseBucketTaskIds(b)) +
           phaseBucketFilterAttr(b.phaseKey) +
-          wcTrackAttr(phaseTrackPrefix + "-p" + String(i)) +
+          wcTrackAttr(queuePhaseBucketTrackId(phaseTrackPrefix, phaseKey)) +
           '><summary class="phase-bucket-summary">' +
           summary +
           "</summary>" +
@@ -3012,7 +3026,7 @@ function renderTerminalTaskPhaseBuckets(
   return (
     '<div class="phase-stack">' +
     bucketsTm
-      .map((raw, i) => {
+      .map((raw) => {
         const b = raw as { label?: unknown; top?: unknown; count?: unknown; phaseKey?: unknown };
         const summary = phaseBucketSummaryHtml(b, phaseFocus, catalog);
         const c = typeof b.count === "number" ? b.count : 0;
@@ -3031,7 +3045,7 @@ function renderTerminalTaskPhaseBuckets(
             collectPhaseBucketTaskIds(b)
           ) +
           phaseBucketFilterAttr(b.phaseKey) +
-          wcTrackAttr(phaseTrackPrefix + "-p" + String(i)) +
+          wcTrackAttr(queuePhaseBucketTrackId(phaseTrackPrefix, phaseKey)) +
           '><summary class="phase-bucket-summary">' +
           summary +
           "</summary>" +
