@@ -9,6 +9,9 @@ import { defaultRegistryModules } from "../modules/index.js";
 const JSON_RPC_VERSION = "2.0";
 const MCP_PROTOCOL_VERSION = "2024-11-05";
 const DEFAULT_TOOL_RESPONSE_BYTE_BUDGET = 24_000;
+const MAX_AUDIT_METADATA_STRING_LENGTH = 160;
+const MAX_AUDIT_METADATA_ARRAY_LENGTH = 8;
+const MAX_AUDIT_METADATA_OBJECT_KEYS = 12;
 
 export type JsonRpcId = string | number | null;
 
@@ -53,6 +56,18 @@ export interface McpServerOptions {
   workspacePath?: string;
   runtime?: ModuleCommandRuntime;
   maxToolResponseBytes?: number;
+  auditLog?: McpAuditEvent[];
+  auditSink?: (event: McpAuditEvent) => void;
+}
+
+export type McpAuditResultClassification = "success" | "command_error" | "protocol_error" | "rejected";
+
+export interface McpAuditEvent {
+  schemaVersion: 1;
+  timestamp: string;
+  toolName: string;
+  resultClassification: McpAuditResultClassification;
+  metadata: Record<string, unknown>;
 }
 
 interface ReadOnlyMcpToolDefinition {
@@ -393,10 +408,17 @@ async function handleToolCall(
   options: McpServerOptions
 ): Promise<JsonRpcResponse> {
   if (!isToolCallParams(params)) {
+    recordAuditEvent(options, "<invalid-tool-call>", "protocol_error", {
+      reason: "invalid-params"
+    });
     return errorResponse(id, -32602, "Invalid params");
   }
 
   if (params.name === "workflow-cannon.capabilities") {
+    recordAuditEvent(options, params.name, "success", {
+      command: "capabilities",
+      mutationToolsEnabled: false
+    });
     return successResponse(id, {
       content: [
         {
@@ -405,6 +427,10 @@ async function handleToolCall(
             {
               mode: "read-only",
               mutationToolsEnabled: false,
+              auditLogging: {
+                bounded: true,
+                redacted: true
+              },
               tools: listReadOnlyMcpTools().map((tool) => tool.name),
               byteBudget: resolveToolResponseByteBudget(options)
             },
@@ -419,12 +445,21 @@ async function handleToolCall(
 
   const definition = toolDefinitionsByName.get(params.name);
   if (!definition) {
+    recordAuditEvent(options, params.name, "rejected", {
+      reason: "unknown-tool",
+      mutationToolsEnabled: false
+    });
     return errorResponse(id, -32602, `Unknown tool: ${params.name}`);
   }
 
   const args = toRecord(params.arguments);
   const validationError = definition.validateArgs?.(args);
   if (validationError) {
+    recordAuditEvent(options, params.name, "rejected", {
+      reason: "invalid-arguments",
+      message: validationError,
+      args
+    });
     return errorResponse(id, -32602, validationError);
   }
 
@@ -434,7 +469,15 @@ async function handleToolCall(
     name: definition.commandName,
     args: commandArgs
   });
-  return successResponse(id, formatToolResult(definition, commandArgs, commandResult, options));
+  const toolResult = formatToolResult(definition, commandArgs, commandResult, options);
+  recordAuditEvent(options, params.name, commandResult.ok ? "success" : "command_error", {
+    command: definition.commandName,
+    args: commandArgs,
+    resultCode: commandResult.code,
+    oversized: isOversizedToolResult(toolResult),
+    byteBudget: resolveToolResponseByteBudget(options)
+  });
+  return successResponse(id, toolResult);
 }
 
 function createDefaultMcpRuntime(options: McpServerOptions): ModuleCommandRuntime {
@@ -496,6 +539,18 @@ function formatToolResult(
     content: [{ type: "text", text: JSON.stringify(compactEnvelope, null, 2) }],
     isError: !result.ok
   };
+}
+
+function isOversizedToolResult(result: { content: Array<{ type: "text"; text: string }> }): boolean {
+  const text = result.content.at(0)?.text;
+  if (!text) {
+    return false;
+  }
+  try {
+    return JSON.parse(text).oversized === true;
+  } catch {
+    return false;
+  }
 }
 
 function summarizeCommandResult(result: ModuleCommandResult): Record<string, unknown> {
@@ -587,6 +642,69 @@ function isToolCallParams(value: unknown): value is { name: string; arguments?: 
     value !== null &&
     "name" in value &&
     typeof (value as { name?: unknown }).name === "string"
+  );
+}
+
+function recordAuditEvent(
+  options: McpServerOptions,
+  toolName: string,
+  resultClassification: McpAuditResultClassification,
+  metadata: Record<string, unknown>
+): void {
+  const event: McpAuditEvent = {
+    schemaVersion: 1,
+    timestamp: new Date().toISOString(),
+    toolName,
+    resultClassification,
+    metadata: redactAuditValue(metadata) as Record<string, unknown>
+  };
+  options.auditLog?.push(event);
+  options.auditSink?.(event);
+}
+
+function redactAuditValue(value: unknown, depth = 0): unknown {
+  if (depth > 4) {
+    return "[redacted:depth-limit]";
+  }
+  if (Array.isArray(value)) {
+    const entries = value.slice(0, MAX_AUDIT_METADATA_ARRAY_LENGTH).map((entry) => redactAuditValue(entry, depth + 1));
+    if (value.length > MAX_AUDIT_METADATA_ARRAY_LENGTH) {
+      entries.push(`[redacted:${value.length - MAX_AUDIT_METADATA_ARRAY_LENGTH}:additional-items]`);
+    }
+    return entries;
+  }
+  if (typeof value === "object" && value !== null) {
+    const out: Record<string, unknown> = {};
+    const entries = Object.entries(value as Record<string, unknown>).slice(0, MAX_AUDIT_METADATA_OBJECT_KEYS);
+    for (const [key, entry] of entries) {
+      out[key] = isSensitiveAuditKey(key) ? "[redacted]" : redactAuditValue(entry, depth + 1);
+    }
+    const totalKeys = Object.keys(value as Record<string, unknown>).length;
+    if (totalKeys > MAX_AUDIT_METADATA_OBJECT_KEYS) {
+      out.__truncatedKeys = totalKeys - MAX_AUDIT_METADATA_OBJECT_KEYS;
+    }
+    return out;
+  }
+  if (typeof value === "string") {
+    if (isSecretShapedAuditString(value)) {
+      return "[redacted]";
+    }
+    if (value.length > MAX_AUDIT_METADATA_STRING_LENGTH) {
+      return `${value.slice(0, MAX_AUDIT_METADATA_STRING_LENGTH)}...[redacted:${value.length - MAX_AUDIT_METADATA_STRING_LENGTH}:additional-chars]`;
+    }
+  }
+  return value;
+}
+
+function isSensitiveAuditKey(key: string): boolean {
+  return /token|secret|password|credential|authorization|api[-_]?key|policyApproval/i.test(key);
+}
+
+function isSecretShapedAuditString(value: string): boolean {
+  return (
+    /(?:bearer|token|secret|password)\s+[a-z0-9._-]{12,}/i.test(value) ||
+    /sk-[a-z0-9]{16,}/i.test(value) ||
+    /gh[pousr]_[a-z0-9_]{20,}/i.test(value)
   );
 }
 

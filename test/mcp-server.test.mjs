@@ -39,6 +39,7 @@ test("MCP tools/list exposes only the safe read-only tool", async () => {
 });
 
 test("MCP tools/call reports mutation tools disabled", async () => {
+  const auditLog = [];
   const response = await handleMcpRequest({
     jsonrpc: "2.0",
     id: 2,
@@ -47,15 +48,21 @@ test("MCP tools/call reports mutation tools disabled", async () => {
       name: "workflow-cannon.capabilities",
       arguments: {}
     }
-  });
+  }, { auditLog });
 
   assert.equal(response?.result.isError, false);
   const text = response?.result.content.at(0).text;
-  assert.equal(JSON.parse(text).mutationToolsEnabled, false);
+  const capabilities = JSON.parse(text);
+  assert.equal(capabilities.mutationToolsEnabled, false);
+  assert.deepEqual(capabilities.auditLogging, { bounded: true, redacted: true });
+  assert.equal(auditLog.length, 1);
+  assert.equal(auditLog.at(0).toolName, "workflow-cannon.capabilities");
+  assert.equal(auditLog.at(0).resultClassification, "success");
 });
 
 test("MCP read tools invoke equivalent command runtime with required phaseKey", async () => {
   const invocations = [];
+  const auditLog = [];
   const runtime = {
     listCommands() {
       return [];
@@ -91,7 +98,7 @@ test("MCP read tools invoke equivalent command runtime with required phaseKey", 
         }
       }
     },
-    { runtime }
+    { runtime, auditLog }
   );
 
   assert.deepEqual(invocations, [
@@ -109,9 +116,18 @@ test("MCP read tools invoke equivalent command runtime with required phaseKey", 
   assert.equal(envelope.mutationToolsEnabled, false);
   assert.equal(envelope.command, "agent-execution-packet");
   assert.equal(envelope.result.data.phaseKey, "134");
+  assert.equal(auditLog.length, 1);
+  assert.equal(auditLog.at(0).toolName, "workflow-cannon.agent-execution-packet");
+  assert.equal(auditLog.at(0).resultClassification, "success");
+  assert.deepEqual(auditLog.at(0).metadata.args, {
+    mode: "draft",
+    taskId: "T100711",
+    phaseKey: "134"
+  });
 });
 
 test("MCP read tools reject missing required phaseKey before runtime invocation", async () => {
+  const auditLog = [];
   const runtime = {
     listCommands() {
       return [];
@@ -134,14 +150,48 @@ test("MCP read tools reject missing required phaseKey before runtime invocation"
         arguments: {}
       }
     },
-    { runtime }
+    { runtime, auditLog }
   );
 
   assert.equal(response?.error.code, -32602);
   assert.equal(response?.error.message, "phaseKey is required");
+  assert.equal(auditLog.length, 1);
+  assert.equal(auditLog.at(0).toolName, "workflow-cannon.phase-release-orchestration-state");
+  assert.equal(auditLog.at(0).resultClassification, "rejected");
+  assert.equal(auditLog.at(0).metadata.reason, "invalid-arguments");
+});
+
+test("MCP read tools reject unknown tools and audit the rejection", async () => {
+  const auditLog = [];
+  const response = await handleMcpRequest(
+    {
+      jsonrpc: "2.0",
+      id: "unknown",
+      method: "tools/call",
+      params: {
+        name: "workflow-cannon.run-transition",
+        arguments: {
+          taskId: "T100713",
+          policyApproval: {
+            confirmed: true,
+            rationale: "must not be logged"
+          }
+        }
+      }
+    },
+    { auditLog }
+  );
+
+  assert.equal(response?.error.code, -32602);
+  assert.match(response?.error.message, /Unknown tool/);
+  assert.equal(auditLog.length, 1);
+  assert.equal(auditLog.at(0).toolName, "workflow-cannon.run-transition");
+  assert.equal(auditLog.at(0).resultClassification, "rejected");
+  assert.equal(auditLog.at(0).metadata.reason, "unknown-tool");
 });
 
 test("MCP read tools enforce byte budget with expansion refs", async () => {
+  const auditLog = [];
   const runtime = {
     listCommands() {
       return [];
@@ -173,7 +223,7 @@ test("MCP read tools enforce byte budget with expansion refs", async () => {
         }
       }
     },
-    { runtime, maxToolResponseBytes: 1000 }
+    { runtime, maxToolResponseBytes: 1000, auditLog }
   );
 
   const envelope = JSON.parse(response?.result.content.at(0).text);
@@ -184,6 +234,56 @@ test("MCP read tools enforce byte budget with expansion refs", async () => {
     envelope.expansionRefs.at(0).command,
     `pnpm exec wk run phase-release-orchestration-state '${JSON.stringify({ phaseKey: "134" })}'`
   );
+  assert.equal(auditLog.at(0).metadata.oversized, true);
+  assert.equal(auditLog.at(0).metadata.byteBudget, 1000);
+});
+
+test("MCP audit metadata is bounded and redacts secret-shaped values", async () => {
+  const auditLog = [];
+  const runtime = {
+    listCommands() {
+      return [];
+    },
+    describeCommand() {
+      return undefined;
+    },
+    async invoke() {
+      return {
+        ok: false,
+        code: "simulated-error",
+        message: "not ok"
+      };
+    }
+  };
+
+  await handleMcpRequest(
+    {
+      jsonrpc: "2.0",
+      id: "audit-redaction",
+      method: "tools/call",
+      params: {
+        name: "workflow-cannon.cae-guidance-preview",
+        arguments: {
+          taskId: "T100713",
+          token: "ghp_abcdefghijklmnopqrstuvwxyz123456",
+          nested: {
+            Authorization: "Bearer abcdefghijklmnopqrstuvwxyz123456",
+            note: "x".repeat(220)
+          },
+          many: Array.from({ length: 12 }, (_, index) => index)
+        }
+      }
+    },
+    { runtime, auditLog }
+  );
+
+  assert.equal(auditLog.length, 1);
+  assert.equal(auditLog.at(0).resultClassification, "command_error");
+  assert.equal(auditLog.at(0).metadata.args.token, "[redacted]");
+  assert.equal(auditLog.at(0).metadata.args.nested.Authorization, "[redacted]");
+  assert.match(auditLog.at(0).metadata.args.nested.note, /redacted:60:additional-chars/);
+  assert.equal(auditLog.at(0).metadata.args.many.length, 9);
+  assert.match(auditLog.at(0).metadata.args.many.at(8), /redacted:4:additional-items/);
 });
 
 test("MCP CAE guidance tools carry bounded governance metadata", async () => {
