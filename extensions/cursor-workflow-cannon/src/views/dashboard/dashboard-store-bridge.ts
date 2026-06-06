@@ -11,11 +11,13 @@ export function mergeSlicePayloadIntoSummary(
   const desc = lookupDashboardSlice(sliceName);
   let extracted = desc.extractPayload(slicePayload);
 
-  if (sliceName === "ideas") {
-    const priorIdeas = summary.ideas as Record<string, unknown> | undefined;
-    const newIdeas = extracted.ideas as Record<string, unknown> | undefined;
-    if (priorIdeas && priorIdeas.available === true && (!newIdeas || newIdeas.available !== true)) {
-      extracted = { ...extracted, ideas: priorIdeas };
+  for (const key of Object.keys(extracted)) {
+    const newVal = extracted[key] as Record<string, unknown> | undefined;
+    if (newVal && typeof newVal === "object" && "available" in newVal) {
+      const priorVal = summary[key] as Record<string, unknown> | undefined;
+      if (priorVal && typeof priorVal === "object" && priorVal.available === true && newVal.available !== true) {
+        extracted = { ...extracted, [key]: priorVal };
+      }
     }
   }
 
