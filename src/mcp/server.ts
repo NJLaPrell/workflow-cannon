@@ -1,8 +1,14 @@
 import { createInterface } from "node:readline";
 import { Writable } from "node:stream";
 
+import { createCommandRegistryRuntime } from "../core/module-command-router.js";
+import { ModuleRegistry } from "../core/module-registry.js";
+import type { ModuleCommandResult, ModuleCommandRuntime } from "../contracts/module-contract.js";
+import { defaultRegistryModules } from "../modules/index.js";
+
 const JSON_RPC_VERSION = "2.0";
 const MCP_PROTOCOL_VERSION = "2024-11-05";
+const DEFAULT_TOOL_RESPONSE_BYTE_BUDGET = 24_000;
 
 export type JsonRpcId = string | number | null;
 
@@ -36,6 +42,7 @@ export interface McpToolDescriptor {
   inputSchema: {
     type: "object";
     properties: Record<string, unknown>;
+    required?: string[];
     additionalProperties: boolean;
   };
 }
@@ -43,12 +50,127 @@ export interface McpToolDescriptor {
 export interface McpServerOptions {
   name?: string;
   version?: string;
+  workspacePath?: string;
+  runtime?: ModuleCommandRuntime;
+  maxToolResponseBytes?: number;
+}
+
+interface ReadOnlyMcpToolDefinition {
+  toolName: string;
+  commandName: string;
+  description: string;
+  inputSchema: McpToolDescriptor["inputSchema"];
+  expansionArgs: (args: Record<string, unknown>) => Record<string, unknown>;
+  validateArgs?: (args: Record<string, unknown>) => string | null;
 }
 
 const serverDefaults = {
   name: "workflow-cannon",
   version: "0.99.28"
 };
+
+const packetReadTools: ReadOnlyMcpToolDefinition[] = [
+  {
+    toolName: "workflow-cannon.phase-release-orchestration-state",
+    commandName: "phase-release-orchestration-state",
+    description: "Read the Phase release orchestration verdict packet.",
+    inputSchema: objectSchema({
+      phaseKey: stringSchema("Target phase key."),
+      scope: enumSchema(["bucket", "phase"], "Release orchestration scope."),
+      integrationBranch: stringSchema("Expected integration branch."),
+      dashboardAuthorization: stringSchema("Dashboard authorization mode.")
+    }, ["phaseKey"]),
+    expansionArgs: (args) => ({
+      phaseKey: args.phaseKey,
+      ...(typeof args.scope === "string" ? { scope: args.scope } : {}),
+      ...(typeof args.integrationBranch === "string" ? { integrationBranch: args.integrationBranch } : {}),
+      ...(typeof args.dashboardAuthorization === "string"
+        ? { dashboardAuthorization: args.dashboardAuthorization }
+        : {})
+    }),
+    validateArgs: requireStringArgs("phaseKey")
+  },
+  {
+    toolName: "workflow-cannon.agent-execution-packet",
+    commandName: "agent-execution-packet",
+    description: "Read a draft or locked agent execution packet.",
+    inputSchema: objectSchema({
+      mode: enumSchema(["draft", "assignment"], "Packet mode."),
+      taskId: stringSchema("Task id for draft packets."),
+      phaseKey: stringSchema("Phase key for draft packets."),
+      assignmentId: stringSchema("Assignment id for locked packets.")
+    }, ["mode"]),
+    expansionArgs: (args) => ({
+      mode: args.mode,
+      ...(typeof args.taskId === "string" ? { taskId: args.taskId } : {}),
+      ...(typeof args.phaseKey === "string" ? { phaseKey: args.phaseKey } : {}),
+      ...(typeof args.assignmentId === "string" ? { assignmentId: args.assignmentId } : {})
+    }),
+    validateArgs: (args) => {
+      if (args.mode === "draft") {
+        return requireStringArgs("taskId", "phaseKey")(args);
+      }
+      if (args.mode === "assignment") {
+        return requireStringArgs("assignmentId")(args);
+      }
+      return "mode must be 'draft' or 'assignment'";
+    }
+  },
+  {
+    toolName: "workflow-cannon.assignment-reconciliation-preflight",
+    commandName: "assignment-reconciliation-preflight",
+    description: "Read reconciliation readiness for a submitted assignment handoff.",
+    inputSchema: objectSchema({
+      assignmentId: stringSchema("Assignment id."),
+      supervisorId: stringSchema("Supervisor id.")
+    }, ["assignmentId", "supervisorId"]),
+    expansionArgs: (args) => ({
+      assignmentId: args.assignmentId,
+      supervisorId: args.supervisorId
+    }),
+    validateArgs: requireStringArgs("assignmentId", "supervisorId")
+  },
+  {
+    toolName: "workflow-cannon.phase-drain-delta",
+    commandName: "phase-drain-delta",
+    description: "Read bounded phase drain delta evidence.",
+    inputSchema: objectSchema({
+      phaseKey: stringSchema("Target phase key."),
+      cursor: stringSchema("Optional drain cursor.")
+    }, ["phaseKey"]),
+    expansionArgs: (args) => ({
+      phaseKey: args.phaseKey,
+      ...(typeof args.cursor === "string" ? { cursor: args.cursor } : {})
+    }),
+    validateArgs: requireStringArgs("phaseKey")
+  },
+  {
+    toolName: "workflow-cannon.phase-release-state",
+    commandName: "phase-release-state",
+    description: "Read release state for a phase.",
+    inputSchema: objectSchema({
+      phaseKey: stringSchema("Target phase key.")
+    }, ["phaseKey"]),
+    expansionArgs: (args) => ({
+      phaseKey: args.phaseKey
+    }),
+    validateArgs: requireStringArgs("phaseKey")
+  },
+  {
+    toolName: "workflow-cannon.release-closeout-result",
+    commandName: "release-closeout-result",
+    description: "Read release closeout result evidence for a phase.",
+    inputSchema: objectSchema({
+      phaseKey: stringSchema("Target phase key.")
+    }, ["phaseKey"]),
+    expansionArgs: (args) => ({
+      phaseKey: args.phaseKey
+    }),
+    validateArgs: requireStringArgs("phaseKey")
+  }
+];
+
+const toolDefinitionsByName = new Map(packetReadTools.map((tool) => [tool.toolName, tool]));
 
 export function listReadOnlyMcpTools(): McpToolDescriptor[] {
   return [
@@ -60,7 +182,12 @@ export function listReadOnlyMcpTools(): McpToolDescriptor[] {
         properties: {},
         additionalProperties: false
       }
-    }
+    },
+    ...packetReadTools.map((tool) => ({
+      name: tool.toolName,
+      description: tool.description,
+      inputSchema: tool.inputSchema
+    }))
   ];
 }
 
@@ -97,7 +224,7 @@ export async function handleMcpRequest(
       });
 
     case "tools/call":
-      return handleToolCall(id, request.params);
+      return handleToolCall(id, request.params, options);
 
     default:
       return errorResponse(id, -32601, `Method not found: ${request.method}`);
@@ -135,32 +262,170 @@ async function handleJsonLine(
   }
 }
 
-function handleToolCall(id: JsonRpcId, params: unknown): JsonRpcResponse {
+async function handleToolCall(
+  id: JsonRpcId,
+  params: unknown,
+  options: McpServerOptions
+): Promise<JsonRpcResponse> {
   if (!isToolCallParams(params)) {
     return errorResponse(id, -32602, "Invalid params");
   }
 
-  if (params.name !== "workflow-cannon.capabilities") {
+  if (params.name === "workflow-cannon.capabilities") {
+    return successResponse(id, {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify(
+            {
+              mode: "read-only",
+              mutationToolsEnabled: false,
+              tools: listReadOnlyMcpTools().map((tool) => tool.name),
+              byteBudget: resolveToolResponseByteBudget(options)
+            },
+            null,
+            2
+          )
+        }
+      ],
+      isError: false
+    });
+  }
+
+  const definition = toolDefinitionsByName.get(params.name);
+  if (!definition) {
     return errorResponse(id, -32602, `Unknown tool: ${params.name}`);
   }
 
-  return successResponse(id, {
-    content: [
-      {
-        type: "text",
-        text: JSON.stringify(
-          {
-            mode: "read-only",
-            mutationToolsEnabled: false,
-            tools: listReadOnlyMcpTools().map((tool) => tool.name)
-          },
-          null,
-          2
-        )
-      }
-    ],
-    isError: false
+  const args = toRecord(params.arguments);
+  const validationError = definition.validateArgs?.(args);
+  if (validationError) {
+    return errorResponse(id, -32602, validationError);
+  }
+
+  const commandArgs = definition.expansionArgs(args);
+  const runtime = options.runtime ?? createDefaultMcpRuntime(options);
+  const commandResult = await runtime.invoke({
+    name: definition.commandName,
+    args: commandArgs
   });
+  return successResponse(id, formatToolResult(definition, commandArgs, commandResult, options));
+}
+
+function createDefaultMcpRuntime(options: McpServerOptions): ModuleCommandRuntime {
+  const registry = new ModuleRegistry(defaultRegistryModules);
+  return createCommandRegistryRuntime(registry, {
+    ctx: {
+      runtimeVersion: "0.1",
+      workspacePath: options.workspacePath ?? process.cwd(),
+      moduleRegistry: registry
+    }
+  });
+}
+
+function formatToolResult(
+  definition: ReadOnlyMcpToolDefinition,
+  args: Record<string, unknown>,
+  result: ModuleCommandResult,
+  options: McpServerOptions
+): { content: Array<{ type: "text"; text: string }>; isError: boolean } {
+  const fullEnvelope = {
+    schemaVersion: 1,
+    mode: "read-only",
+    mutationToolsEnabled: false,
+    tool: definition.toolName,
+    command: definition.commandName,
+    args,
+    result
+  };
+  const fullText = JSON.stringify(fullEnvelope, null, 2);
+  const byteBudget = resolveToolResponseByteBudget(options);
+  if (Buffer.byteLength(fullText, "utf8") <= byteBudget) {
+    return {
+      content: [{ type: "text", text: fullText }],
+      isError: !result.ok
+    };
+  }
+
+  const compactEnvelope = {
+    schemaVersion: 1,
+    mode: "read-only",
+    mutationToolsEnabled: false,
+    tool: definition.toolName,
+    command: definition.commandName,
+    args,
+    oversized: true,
+    byteBudget,
+    actualBytes: Buffer.byteLength(fullText, "utf8"),
+    resultSummary: summarizeCommandResult(result),
+    expansionRefs: [
+      {
+        kind: "cli",
+        command: `pnpm exec wk run ${definition.commandName} '${JSON.stringify(args)}'`
+      }
+    ]
+  };
+  return {
+    content: [{ type: "text", text: JSON.stringify(compactEnvelope, null, 2) }],
+    isError: !result.ok
+  };
+}
+
+function summarizeCommandResult(result: ModuleCommandResult): Record<string, unknown> {
+  return {
+    ok: result.ok,
+    code: result.code,
+    message: result.message
+  };
+}
+
+function resolveToolResponseByteBudget(options: McpServerOptions): number {
+  return Math.max(1_000, options.maxToolResponseBytes ?? DEFAULT_TOOL_RESPONSE_BYTE_BUDGET);
+}
+
+function toRecord(value: unknown): Record<string, unknown> {
+  if (typeof value === "object" && value !== null && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+  return {};
+}
+
+function requireStringArgs(...names: string[]): (args: Record<string, unknown>) => string | null {
+  return (args) => {
+    for (const name of names) {
+      if (typeof args[name] !== "string" || args[name].trim().length === 0) {
+        return `${name} is required`;
+      }
+    }
+    return null;
+  };
+}
+
+function objectSchema(
+  properties: Record<string, unknown>,
+  required: string[]
+): McpToolDescriptor["inputSchema"] {
+  return {
+    type: "object",
+    properties,
+    required,
+    additionalProperties: false
+  } as McpToolDescriptor["inputSchema"];
+}
+
+function stringSchema(description: string): Record<string, unknown> {
+  return {
+    type: "string",
+    description
+  };
+}
+
+function enumSchema(values: string[], description: string): Record<string, unknown> {
+  return {
+    type: "string",
+    enum: values,
+    description
+  };
 }
 
 function isToolCallParams(value: unknown): value is { name: string; arguments?: unknown } {
