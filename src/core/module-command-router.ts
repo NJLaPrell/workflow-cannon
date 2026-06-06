@@ -10,6 +10,8 @@ import {
   isInstructionExecutableForRegistry
 } from "./agent-instruction-surface.js";
 import { ModuleRegistry } from "./module-registry.js";
+import { cliPerfTracer } from "./cli-perf-trace.js";
+
 
 export type ModuleCommandDescriptor = {
   name: string;
@@ -76,36 +78,40 @@ export class ModuleCommandRouter {
     const commandName = this.resolveCommandName(name);
     return this.commands.get(commandName)?.descriptor;
   }
-
   async execute(
     name: string,
     args: Record<string, unknown> | undefined,
     ctx: ModuleLifecycleContext
   ): Promise<ModuleCommandResult> {
+    const indexed = cliPerfTracer.span("module resolveCommand", () => {
+      const commandName = this.resolveCommandName(name);
+      const ind = this.commands.get(commandName);
+      if (!ind) {
+        const names = this.listCommands().map((command) => command.name);
+        throw new ModuleCommandRouterError(
+          "unknown-command",
+          formatUnknownCommandMessage(name, names)
+        );
+      }
+
+      if (!this.registry.isModuleEnabled(ind.descriptor.moduleId)) {
+        throw new ModuleCommandRouterError(
+          "disabled-module",
+          `Module '${ind.descriptor.moduleId}' is disabled for command '${commandName}'`
+        );
+      }
+
+      if (!ind.module.onCommand) {
+        throw new ModuleCommandRouterError(
+          "command-not-implemented",
+          `Module '${ind.descriptor.moduleId}' does not implement onCommand for '${commandName}'`
+        );
+      }
+
+      return ind;
+    });
+
     const commandName = this.resolveCommandName(name);
-    const indexed = this.commands.get(commandName);
-    if (!indexed) {
-      const names = this.listCommands().map((command) => command.name);
-      throw new ModuleCommandRouterError(
-        "unknown-command",
-        formatUnknownCommandMessage(name, names)
-      );
-    }
-
-    if (!this.registry.isModuleEnabled(indexed.descriptor.moduleId)) {
-      throw new ModuleCommandRouterError(
-        "disabled-module",
-        `Module '${indexed.descriptor.moduleId}' is disabled for command '${commandName}'`
-      );
-    }
-
-    if (!indexed.module.onCommand) {
-      throw new ModuleCommandRouterError(
-        "command-not-implemented",
-        `Module '${indexed.descriptor.moduleId}' does not implement onCommand for '${commandName}'`
-      );
-    }
-
     if (!isInstructionExecutableForRegistry(indexed.module, indexed.entry, this.registry)) {
       const deg = classifyInstructionExecution(indexed.module, indexed.entry, this.registry);
       const detail =
@@ -128,7 +134,9 @@ export class ModuleCommandRouter {
       name: commandName,
       args
     };
-    return indexed.module.onCommand(command, ctx);
+    return cliPerfTracer.spanAsync("command body", () => {
+      return indexed.module.onCommand!(command, ctx);
+    });
   }
 
   private indexEnabledModuleCommands(): void {

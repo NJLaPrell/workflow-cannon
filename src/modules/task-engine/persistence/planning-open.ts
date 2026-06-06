@@ -30,16 +30,21 @@ function assertNativeBindingArchitecture(workspacePath: string): void {
   );
 }
 
+import { cliPerfTracer } from "../../../core/cli-perf-trace.js";
+
 export async function openPlanningStores(ctx: ModuleLifecycleContext): Promise<OpenedPlanningStores> {
-  assertNativeBindingArchitecture(ctx.workspacePath);
-  const dual = new SqliteDualPlanningStore(
-    ctx.workspacePath,
-    planningSqliteDatabaseRelativePath(ctx)
-  );
-  dual.loadFromDisk();
-  const taskStore = TaskStore.forSqliteDual(dual);
-  await taskStore.load();
-  collapseLegacyWishlistSqliteIfNeeded(dual, taskStore);
-  await taskStore.load();
-  return { sqliteDual: dual, taskStore };
+  return cliPerfTracer.spanAsync("openPlanningStores", async () => {
+    assertNativeBindingArchitecture(ctx.workspacePath);
+    const dual = new SqliteDualPlanningStore(
+      ctx.workspacePath,
+      planningSqliteDatabaseRelativePath(ctx)
+    );
+    dual.loadFromDisk();
+    const taskStore = TaskStore.forSqliteDual(dual);
+    await taskStore.load();
+    collapseLegacyWishlistSqliteIfNeeded(dual, taskStore);
+    await taskStore.load();
+    return { sqliteDual: dual, taskStore };
+  });
 }
+
