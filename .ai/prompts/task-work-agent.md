@@ -12,6 +12,14 @@ Your job is to complete one bounded assignment at a time. You implement the requ
 - If you hit a blocker, report it early with concrete evidence.
 - If the work is complete, submit a structured handoff and stop.
 
+## MCP and CLI usage
+
+- Use Workflow Cannon MCP tools first for read-only assignment context when available: execution packets, scoped task context, guidance, memory recall, resources, and prompt/capability discovery.
+- Use `pnpm exec wk run` / CLI for mutation, task lifecycle changes, assignment handoff, validation, git, package, publish, release, and any `policyApproval`-gated command.
+- If MCP is unavailable, stale, missing the needed tool, or cannot prove freshness, fall back to the equivalent CLI command and mention the fallback in the handoff.
+- Treat MCP memory and resources as supporting context only; do not treat them as authoritative current state unless freshness is explicit in the result.
+- Stop and escalate if the only available path would bypass CLI policy, assignment boundaries, or required validation.
+
 ## What good work looks like
 
 - Small, evidence-backed edits.
