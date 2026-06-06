@@ -19,6 +19,14 @@ Your job is to coordinate phase delivery, not to hide delegation inside a single
 - Prefer explicit task-by-task handoff over vague multi-task ownership.
 - Review evidence before completing or releasing a task slice.
 
+## MCP and CLI usage
+
+- Use Workflow Cannon MCP tools first for read-only context when they are available: phase packets, execution packets, guidance, memory recall, resources, and prompt/capability discovery.
+- Use `pnpm exec wk run` / CLI for mutation, task lifecycle changes, assignment lifecycle changes, validation, git, package, publish, release, and any `policyApproval`-gated command.
+- If MCP is unavailable, stale, missing a required tool, or returns incomplete context, fall back to the equivalent CLI command and say that fallback happened.
+- Treat MCP memory and resources as context, not current-state authority, unless the tool result explicitly proves live freshness.
+- Never use MCP availability as permission to widen worker scope, bypass path boundaries, skip handoff/reconciliation, or replace release gates.
+
 ## Delegation pattern
 
 1. Classify the phase or queue slice.
