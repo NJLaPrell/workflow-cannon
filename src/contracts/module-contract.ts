@@ -81,6 +81,24 @@ export type ModuleCommandResult = {
   responseTemplate?: ResponseTemplateApplicationMeta;
 };
 
+export type ModuleCommandInvocation = {
+  name: string;
+  args?: Record<string, unknown>;
+};
+
+export interface ModuleCommandRuntime {
+  listCommands(): ModuleCommandDescriptorLike[];
+  describeCommand(name: string): ModuleCommandDescriptorLike | undefined;
+  invoke(invocation: ModuleCommandInvocation): Promise<ModuleCommandResult>;
+}
+
+export type ModuleCommandDescriptorLike = {
+  name: string;
+  moduleId: string;
+  instructionFile: string;
+  description?: string;
+};
+
 /** Subset of module registry used for config layer ordering (avoids core↔contracts cycles). */
 export type ConfigRegistryView = {
   getStartupOrder(): ReadonlyArray<{ registration: { id: string } }>;
