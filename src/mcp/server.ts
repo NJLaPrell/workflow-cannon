@@ -62,6 +62,11 @@ interface ReadOnlyMcpToolDefinition {
   inputSchema: McpToolDescriptor["inputSchema"];
   expansionArgs: (args: Record<string, unknown>) => Record<string, unknown>;
   validateArgs?: (args: Record<string, unknown>) => string | null;
+  governance?: {
+    bounded?: boolean;
+    note: string;
+    sourceRefs: string[];
+  };
 }
 
 const serverDefaults = {
@@ -167,6 +172,126 @@ const packetReadTools: ReadOnlyMcpToolDefinition[] = [
       phaseKey: args.phaseKey
     }),
     validateArgs: requireStringArgs("phaseKey")
+  },
+  {
+    toolName: "workflow-cannon.cae-guidance-preview",
+    commandName: "cae-guidance-preview",
+    description: "Read bounded CAE guidance cards for task or workflow context.",
+    inputSchema: passthroughObjectSchema({
+      taskId: stringSchema("Optional task id to scope guidance."),
+      workflowName: stringSchema("Optional workflow name to scope guidance."),
+      commandName: stringSchema("Optional command name to scope guidance.")
+    }),
+    expansionArgs: identityArgs,
+    governance: {
+      bounded: true,
+      note: "CAE guidance is returned through the read-only command runtime and remains bounded by the CAE preview/evaluation contract.",
+      sourceRefs: [
+        "src/modules/context-activation/instructions/cae-guidance-preview.md",
+        "src/modules/context-activation/instructions/cae-evaluate.md"
+      ]
+    }
+  },
+  {
+    toolName: "workflow-cannon.cae-evaluate",
+    commandName: "cae-evaluate",
+    description: "Read a CAE effective activation bundle and trace for an evaluation context.",
+    inputSchema: passthroughObjectSchema({
+      evaluationContext: objectPropertySchema("CAE evaluation context.")
+    }),
+    expansionArgs: identityArgs,
+    governance: {
+      bounded: true,
+      note: "CAE evaluation is exposed as a read-only trace/bundle lookup and does not mutate CAE registry state.",
+      sourceRefs: [
+        "src/modules/context-activation/instructions/cae-evaluate.md",
+        "src/modules/context-activation/instructions/cae-get-trace.md"
+      ]
+    }
+  },
+  {
+    toolName: "workflow-cannon.cae-explain",
+    commandName: "cae-explain",
+    description: "Read an explanation for a CAE trace or evaluation.",
+    inputSchema: passthroughObjectSchema({
+      traceId: stringSchema("Optional CAE trace id."),
+      activationId: stringSchema("Optional CAE activation id.")
+    }),
+    expansionArgs: identityArgs,
+    governance: {
+      bounded: true,
+      note: "CAE explain is read-only and bounded to trace/evaluation explanation data.",
+      sourceRefs: [
+        "src/modules/context-activation/instructions/cae-explain.md",
+        "src/modules/context-activation/instructions/cae-get-trace.md"
+      ]
+    }
+  },
+  {
+    toolName: "workflow-cannon.cae-get-trace",
+    commandName: "cae-get-trace",
+    description: "Read one CAE trace by id.",
+    inputSchema: objectSchema({
+      traceId: stringSchema("CAE trace id.")
+    }, ["traceId"]),
+    expansionArgs: (args) => ({ traceId: args.traceId }),
+    validateArgs: requireStringArgs("traceId"),
+    governance: {
+      bounded: true,
+      note: "CAE trace lookup is read-only and returns persisted or ephemeral trace evidence without registry mutation.",
+      sourceRefs: ["src/modules/context-activation/instructions/cae-get-trace.md"]
+    }
+  },
+  {
+    toolName: "workflow-cannon.cae-recent-traces",
+    commandName: "cae-recent-traces",
+    description: "Read recent durable CAE trace summaries.",
+    inputSchema: passthroughObjectSchema({
+      limit: numberSchema("Optional max trace count.")
+    }),
+    expansionArgs: identityArgs,
+    governance: {
+      bounded: true,
+      note: "Recent CAE trace summaries are read-only operational evidence.",
+      sourceRefs: ["src/modules/context-activation/instructions/cae-recent-traces.md"]
+    }
+  },
+  {
+    toolName: "workflow-cannon.memory-list",
+    commandName: "list-memory",
+    description: "Read governed project-memory records with source and status metadata.",
+    inputSchema: objectSchema({
+      status: enumSchema(["draft", "approved", "pruned"], "Optional governed memory status filter."),
+      category: stringSchema("Optional memory category filter.")
+    }, []),
+    expansionArgs: (args) => ({
+      ...(typeof args.status === "string" ? { status: args.status } : {}),
+      ...(typeof args.category === "string" ? { category: args.category } : {})
+    }),
+    governance: {
+      bounded: true,
+      note: "Memory recall is limited to governed list-memory reads; write, approve, and prune memory commands are not exposed through MCP.",
+      sourceRefs: [
+        "src/modules/project-memory/instructions/list-memory.md",
+        "src/modules/project-memory/instructions/explain-memory-precedence.md",
+        "src/modules/project-memory/index.ts"
+      ]
+    }
+  },
+  {
+    toolName: "workflow-cannon.memory-precedence",
+    commandName: "explain-memory-precedence",
+    description: "Read the governance precedence model for project memory.",
+    inputSchema: objectSchema({}, []),
+    expansionArgs: () => ({}),
+    governance: {
+      bounded: true,
+      note: "Memory precedence is source-cited so agents can distinguish governed memory from policy, canon, and docs.",
+      sourceRefs: [
+        "src/modules/project-memory/instructions/explain-memory-precedence.md",
+        "src/modules/project-memory/index.ts"
+      ]
+    }
   }
 ];
 
@@ -336,6 +461,7 @@ function formatToolResult(
     tool: definition.toolName,
     command: definition.commandName,
     args,
+    ...(definition.governance ? { governance: definition.governance } : {}),
     result
   };
   const fullText = JSON.stringify(fullEnvelope, null, 2);
@@ -354,6 +480,7 @@ function formatToolResult(
     tool: definition.toolName,
     command: definition.commandName,
     args,
+    ...(definition.governance ? { governance: definition.governance } : {}),
     oversized: true,
     byteBudget,
     actualBytes: Buffer.byteLength(fullText, "utf8"),
@@ -390,6 +517,10 @@ function toRecord(value: unknown): Record<string, unknown> {
   return {};
 }
 
+function identityArgs(args: Record<string, unknown>): Record<string, unknown> {
+  return { ...args };
+}
+
 function requireStringArgs(...names: string[]): (args: Record<string, unknown>) => string | null {
   return (args) => {
     for (const name of names) {
@@ -413,6 +544,14 @@ function objectSchema(
   } as McpToolDescriptor["inputSchema"];
 }
 
+function passthroughObjectSchema(properties: Record<string, unknown>): McpToolDescriptor["inputSchema"] {
+  return {
+    type: "object",
+    properties,
+    additionalProperties: true
+  };
+}
+
 function stringSchema(description: string): Record<string, unknown> {
   return {
     type: "string",
@@ -424,6 +563,20 @@ function enumSchema(values: string[], description: string): Record<string, unkno
   return {
     type: "string",
     enum: values,
+    description
+  };
+}
+
+function numberSchema(description: string): Record<string, unknown> {
+  return {
+    type: "number",
+    description
+  };
+}
+
+function objectPropertySchema(description: string): Record<string, unknown> {
+  return {
+    type: "object",
     description
   };
 }

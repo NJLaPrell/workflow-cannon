@@ -31,8 +31,11 @@ test("MCP tools/list exposes only the safe read-only tool", async () => {
   assert.ok(toolNames.includes("workflow-cannon.capabilities"));
   assert.ok(toolNames.includes("workflow-cannon.agent-execution-packet"));
   assert.ok(toolNames.includes("workflow-cannon.phase-release-orchestration-state"));
+  assert.ok(toolNames.includes("workflow-cannon.cae-guidance-preview"));
+  assert.ok(toolNames.includes("workflow-cannon.memory-list"));
   assert.deepEqual(tools, listReadOnlyMcpTools());
   assert.ok(!tools.some((tool) => /run-transition|update-task|complete-task/.test(tool.name)));
+  assert.ok(!tools.some((tool) => /write-memory|approve-memory|prune-memory/.test(tool.name)));
 });
 
 test("MCP tools/call reports mutation tools disabled", async () => {
@@ -181,6 +184,122 @@ test("MCP read tools enforce byte budget with expansion refs", async () => {
     envelope.expansionRefs.at(0).command,
     `pnpm exec wk run phase-release-orchestration-state '${JSON.stringify({ phaseKey: "134" })}'`
   );
+});
+
+test("MCP CAE guidance tools carry bounded governance metadata", async () => {
+  const invocations = [];
+  const runtime = {
+    listCommands() {
+      return [];
+    },
+    describeCommand() {
+      return undefined;
+    },
+    async invoke(invocation) {
+      invocations.push(invocation);
+      return {
+        ok: true,
+        code: "cae-guidance-preview-ok",
+        data: {
+          guidanceCards: {
+            do: [{ title: "Use bounded context" }]
+          }
+        }
+      };
+    }
+  };
+
+  const response = await handleMcpRequest(
+    {
+      jsonrpc: "2.0",
+      id: "cae",
+      method: "tools/call",
+      params: {
+        name: "workflow-cannon.cae-guidance-preview",
+        arguments: {
+          taskId: "T100712",
+          workflowName: "phase-release"
+        }
+      }
+    },
+    { runtime }
+  );
+
+  assert.deepEqual(invocations, [
+    {
+      name: "cae-guidance-preview",
+      args: {
+        taskId: "T100712",
+        workflowName: "phase-release"
+      }
+    }
+  ]);
+  const envelope = JSON.parse(response?.result.content.at(0).text);
+  assert.equal(envelope.command, "cae-guidance-preview");
+  assert.equal(envelope.governance.bounded, true);
+  assert.match(envelope.governance.note, /bounded by the CAE/i);
+  assert.ok(envelope.governance.sourceRefs.includes("src/modules/context-activation/instructions/cae-guidance-preview.md"));
+});
+
+test("MCP memory recall is governed, source-cited, and read-only", async () => {
+  const invocations = [];
+  const runtime = {
+    listCommands() {
+      return [];
+    },
+    describeCommand() {
+      return undefined;
+    },
+    async invoke(invocation) {
+      invocations.push(invocation);
+      return {
+        ok: true,
+        code: "memory-listed",
+        data: {
+          records: [
+            {
+              id: "mem-1",
+              status: "approved",
+              category: "release",
+              body: "Use release evidence before completion."
+            }
+          ],
+          count: 1
+        }
+      };
+    }
+  };
+
+  const response = await handleMcpRequest(
+    {
+      jsonrpc: "2.0",
+      id: "memory",
+      method: "tools/call",
+      params: {
+        name: "workflow-cannon.memory-list",
+        arguments: {
+          status: "approved",
+          category: "release"
+        }
+      }
+    },
+    { runtime }
+  );
+
+  assert.deepEqual(invocations, [
+    {
+      name: "list-memory",
+      args: {
+        status: "approved",
+        category: "release"
+      }
+    }
+  ]);
+  const envelope = JSON.parse(response?.result.content.at(0).text);
+  assert.equal(envelope.command, "list-memory");
+  assert.match(envelope.governance.note, /write, approve, and prune memory commands are not exposed/i);
+  assert.ok(envelope.governance.sourceRefs.includes("src/modules/project-memory/instructions/list-memory.md"));
+  assert.equal(envelope.result.data.records.at(0).status, "approved");
 });
 
 test("MCP stdio CLI starts and answers initialize", async () => {
