@@ -6202,6 +6202,34 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     .dash-team-assignment-row { align-items: flex-start; }
     .dash-team-assignment-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
     .dash-team-assignment-meta { font-size: 11px; line-height: 1.3; }
+    .dash-subagent-table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: auto;
+      margin-top: 10px;
+      font-size: 11px;
+    }
+    .dash-subagent-table th,
+    .dash-subagent-table td {
+      border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.35));
+      padding: 5px 7px;
+      text-align: left;
+      vertical-align: top;
+    }
+    .dash-subagent-table th {
+      font-weight: 600;
+      background: var(--vscode-textCodeBlock-background);
+    }
+    .dash-subagent-cmd-pill {
+      display: inline-block;
+      background: var(--vscode-badge-background, rgba(127, 127, 127, 0.2));
+      color: var(--vscode-badge-foreground, var(--vscode-foreground));
+      padding: 1px 4px;
+      border-radius: 3px;
+      margin: 1px 2px;
+      font-size: 10px;
+      font-family: var(--vscode-editor-font-family, monospace);
+    }
     .wc-card,
     .dash-card {
       background: var(--wc-surface);

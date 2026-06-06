@@ -4175,28 +4175,7 @@ function subagentSessionStatusPhrase(status: string): string {
 }
 
 function renderSubagentSessionRowActions(r: Record<string, unknown>): string {
-  const sessionId = escapeHtml(String(r.sessionId ?? ""));
-  const definitionId = escapeHtml(String(r.definitionId ?? ""));
-  const st = String(r.status ?? "");
-  const parts: string[] = [];
-  if (st === "open") {
-    parts.push(
-      '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="subagent-session-close" data-session-id="' +
-        sessionId +
-        '" data-definition-id="' +
-        definitionId +
-        '" title="close-subagent-session">Close session</button>'
-    );
-    parts.push(
-      '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="subagent-spawn" data-subagent-id="' +
-        definitionId +
-        '" title="spawn-subagent">New session</button>'
-    );
-  }
-  if (parts.length === 0) {
-    return "";
-  }
-  return '<div class="dash-row-actions">' + parts.join("") + "</div>";
+  return "";
 }
 
 function renderSubagentRegistrySection(sub: unknown): string {
@@ -4211,7 +4190,10 @@ function renderSubagentRegistrySection(sub: unknown): string {
   const defs = typeof o.definitionsCount === "number" ? o.definitionsCount : 0;
   const retired = typeof o.retiredDefinitionsCount === "number" ? o.retiredDefinitionsCount : 0;
   const openSess = typeof o.openSessionsCount === "number" ? o.openSessionsCount : 0;
-  const top = Array.isArray(o.topOpenSessions) ? (o.topOpenSessions as unknown[]) : [];
+  const top = Array.isArray(o.topOpenSessions) ? (o.topOpenSessions as Record<string, unknown>[]) : [];
+  const definitions = Array.isArray(o.definitions) ? (o.definitions as Record<string, unknown>[]) : [];
+  const activeDefs = definitions.filter((x) => x && !x.retired);
+
   if (!avail) {
     return (
       '<section class="dash-card" aria-label="Subagent registry">' +
@@ -4228,73 +4210,97 @@ function renderSubagentRegistrySection(sub: unknown): string {
     " · Open sessions " +
     String(openSess) +
     "</p>";
-  const toolbar =
-    '<div class="dash-team-exec-toolbar" role="toolbar" aria-label="Subagent registry actions">' +
-    '<button type="button" class="wc-btn wc-btn-md wc-btn-primary" data-wc-action="subagent-register" title="register-subagent">Register role</button>' +
-    '<button type="button" class="wc-btn wc-btn-md wc-btn-secondary" data-wc-action="subagent-spawn" title="spawn-subagent">Start session</button>' +
-    '<button type="button" class="wc-btn wc-btn-md wc-btn-secondary" data-wc-action="subagent-retire" title="retire-subagent">Retire role</button>' +
-    '<button type="button" class="wc-btn wc-btn-md wc-btn-secondary" data-wc-action="subagent-registry-chat" title="Registry playbook in chat">Registry guide</button>' +
-    "</div>";
+
+  let sessionsHtml = "";
   if (top.length === 0) {
-    const emptyHint =
-      defs > 0
-        ? "No open sessions — use <b>Start session</b> to link a subagent to a task."
-        : "Register a subagent role first, then start a task-linked session.";
-    return (
-      '<section class="dash-card dash-subagent-registry" aria-label="Subagent registry">' +
-      "<p><b>Subagent Registry</b></p>" +
-      statusLine +
-      '<p class="muted">Named agent roles with task-linked sessions and an audit trail.</p>' +
-      toolbar +
-      '<p class="muted">' +
-      emptyHint +
-      "</p>" +
-      "</section>"
-    );
+    sessionsHtml = '<p class="muted">No active subagent sessions.</p>';
+  } else {
+    const rows = top
+      .map((r) => {
+        const sessionId = escapeHtml(String(r.sessionId ?? ""));
+        const def = escapeHtml(String(r.definitionId ?? ""));
+        const tid = r.executionTaskId != null ? escapeHtml(String(r.executionTaskId)) : "—";
+        const st = String(r.status ?? "");
+        const stLabel = escapeHtml(subagentSessionStatusPhrase(st));
+        const updated =
+          typeof r.updatedAt === "string" && r.updatedAt.length > 0
+            ? escapeHtml(formatPlanningUpdatedAt(r.updatedAt))
+            : "—";
+        const sidShort = sessionId.length > 10 ? sessionId.slice(0, 8) + "…" : sessionId;
+        return (
+          '<div class="dash-row dash-team-assignment-row" role="listitem">' +
+          '<div class="dash-team-assignment-main">' +
+          '<span class="dash-row-label"><b>' +
+          def +
+          "</b> · session " +
+          sidShort +
+          "</span>" +
+          '<span class="dash-team-assignment-meta muted">' +
+          stLabel +
+          " · task " +
+          tid +
+          " · updated " +
+          updated +
+          "</span>" +
+          "</div>" +
+          "</div>"
+        );
+      })
+      .join("");
+    sessionsHtml = '<div class="dash-row-list" role="list">' + rows + "</div>";
   }
-  const rows = top
-    .map((x) => {
-      const r = x as Record<string, unknown>;
-      const sessionId = escapeHtml(String(r.sessionId ?? ""));
-      const def = escapeHtml(String(r.definitionId ?? ""));
-      const tid = r.executionTaskId != null ? escapeHtml(String(r.executionTaskId)) : "—";
-      const st = String(r.status ?? "");
-      const stLabel = escapeHtml(subagentSessionStatusPhrase(st));
-      const updated =
-        typeof r.updatedAt === "string" && r.updatedAt.length > 0
-          ? escapeHtml(formatPlanningUpdatedAt(r.updatedAt))
-          : "—";
-      const actions = renderSubagentSessionRowActions(r);
-      const sidShort = sessionId.length > 10 ? sessionId.slice(0, 8) + "…" : sessionId;
-      return (
-        '<div class="dash-row dash-team-assignment-row" role="listitem">' +
-        '<div class="dash-team-assignment-main">' +
-        '<span class="dash-row-label"><b>' +
-        def +
-        "</b> · session " +
-        sidShort +
-        "</span>" +
-        '<span class="dash-team-assignment-meta muted">' +
-        stLabel +
-        " · task " +
-        tid +
-        " · updated " +
-        updated +
-        "</span>" +
-        "</div>" +
-        actions +
-        "</div>"
-      );
-    })
-    .join("");
+
+  let definitionsTableHtml = "";
+  if (activeDefs.length > 0) {
+    const tableHeader =
+      '<thead><tr>' +
+      '<th>Role / ID</th>' +
+      '<th>Description</th>' +
+      '<th>Allowed Commands</th>' +
+      '</tr></thead>';
+
+    const tableRows = activeDefs
+      .map((d) => {
+        const id = escapeHtml(String(d.id ?? ""));
+        const name = escapeHtml(String(d.displayName ?? ""));
+        const desc = escapeHtml(String(d.description ?? ""));
+        const cmds = Array.isArray(d.allowedCommands) ? d.allowedCommands : [];
+        const cmdPills = cmds
+          .map((c) => '<span class="dash-subagent-cmd-pill">' + escapeHtml(String(c)) + '</span>')
+          .join("");
+
+        return (
+          '<tr>' +
+          '<td><b>' + name + '</b><br><span class="muted" style="font-size: 10px;">' + id + '</span></td>' +
+          '<td>' + desc + '</td>' +
+          '<td>' + (cmdPills || '<span class="muted">—</span>') + '</td>' +
+          '</tr>'
+        );
+      })
+      .join("");
+
+    definitionsTableHtml =
+      '<div style="margin-top: 12px;">' +
+      '<p><b>Subagent Capabilities</b></p>' +
+      '<table class="dash-subagent-table">' +
+      tableHeader +
+      '<tbody>' +
+      tableRows +
+      '</tbody>' +
+      '</table>' +
+      '</div>';
+  }
+
   return (
     '<section class="dash-card dash-subagent-registry" aria-label="Subagent registry">' +
     "<p><b>Subagent Registry</b></p>" +
     statusLine +
-    toolbar +
-    '<div class="dash-row-list" role="list">' +
-    rows +
-    "</div></section>"
+    '<div style="margin-top: 8px;">' +
+    '<p><b>Active Sessions</b></p>' +
+    sessionsHtml +
+    '</div>' +
+    definitionsTableHtml +
+    "</section>"
   );
 }
 

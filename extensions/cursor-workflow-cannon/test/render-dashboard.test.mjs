@@ -1468,16 +1468,25 @@ test("renderDashboardRootInnerHtml team execution row exposes handoff and reconc
   assert.match(html, /data-assignment-id="a2"/);
 });
 
-test("renderDashboardRootInnerHtml subagent registry empty state offers register and spawn", () => {
+test("renderDashboardRootInnerHtml subagent registry empty state shows guide and definitions", () => {
   const html = renderDashboardRootInnerHtml({
     ok: true,
     data: {
       subagentRegistry: {
         schemaVersion: 1,
         available: true,
-        definitionsCount: 0,
+        definitionsCount: 1,
         retiredDefinitionsCount: 0,
         openSessionsCount: 0,
+        definitions: [
+          {
+            id: "reviewer",
+            displayName: "Code Reviewer",
+            description: "Reviews code changes and gives feedback.",
+            allowedCommands: ["git", "node"],
+            retired: false
+          }
+        ],
         topOpenSessions: []
       },
       stateSummary: { proposed: 0, ready: 0, in_progress: 0, blocked: 0, completed: 0 },
@@ -1496,13 +1505,19 @@ test("renderDashboardRootInnerHtml subagent registry empty state offers register
       dependencyOverview: deliverTestDepOverview
     }
   });
-  assert.match(html, /subagent-register/);
-  assert.match(html, /subagent-registry-chat/);
-  assert.match(html, /Register role/);
-  assert.match(html, /Register a subagent role first/);
+  assert.doesNotMatch(html, /subagent-registry-chat/);
+  assert.doesNotMatch(html, /Registry Guide/);
+  assert.match(html, /No active subagent sessions/);
+  assert.match(html, /Code Reviewer/);
+  assert.match(html, /Reviews code changes/);
+  assert.match(html, /dash-subagent-cmd-pill/);
+  assert.match(html, /git/);
+  assert.match(html, /node/);
+  assert.doesNotMatch(html, /subagent-register/);
+  assert.doesNotMatch(html, /Register role/);
 });
 
-test("renderDashboardRootInnerHtml subagent registry row exposes close session", () => {
+test("renderDashboardRootInnerHtml subagent registry row is read-only", () => {
   const html = renderDashboardRootInnerHtml({
     ok: true,
     data: {
@@ -1538,8 +1553,9 @@ test("renderDashboardRootInnerHtml subagent registry row exposes close session",
       dependencyOverview: deliverTestDepOverview
     }
   });
-  assert.match(html, /subagent-session-close/);
-  assert.match(html, /data-session-id="sess-1111-2222-3333-4444"/);
+  assert.doesNotMatch(html, /subagent-session-close/);
+  assert.doesNotMatch(html, /Close session/);
+  assert.match(html, /sess-111/);
   assert.match(html, /reviewer/);
   assert.match(html, /T801/);
 });

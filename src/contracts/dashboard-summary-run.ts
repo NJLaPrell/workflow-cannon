@@ -194,6 +194,14 @@ export type DashboardSubagentRegistrySummary = {
   definitionsCount: number;
   retiredDefinitionsCount: number;
   openSessionsCount: number;
+  definitions?: Array<{
+    id: string;
+    displayName: string;
+    description: string;
+    allowedCommands: string[];
+    retired: boolean;
+  }>;
+  /** Non-terminal sessions, newest first. */
   topOpenSessions: Array<{
     sessionId: string;
     definitionId: string;
