@@ -108,6 +108,8 @@ If freshness cannot be proven, the result must say so. Stale or cached resources
 
 MCP mutation tools remain disabled by default for Phase 134.
 
+The default server capabilities response must continue to advertise mutation mode as disabled unless an explicit future configuration turns on a narrow mutation profile. A host must not infer mutation capability from the presence of read tools, command names, memory tools, resources, or prompts.
+
 Mutation stays CLI/default until all of the following are proven:
 
 - CLI and MCP call the same shared command/runtime handlers
@@ -119,6 +121,18 @@ Mutation stays CLI/default until all of the following are proven:
 - failure and recovery behavior is predictable through a shared error taxonomy
 
 When MCP mutations are later considered, they must be selected narrowly, opt-in, and policy-gated. MCP must not bypass task lifecycle, assignment lifecycle, release gates, package safety, git safety, publish safeguards, workspace trust, or path boundaries.
+
+Future MCP mutation tools must follow these guardrails before any tool can be enabled:
+
+- expose only an allowlisted command subset, never a generic `wk run` passthrough
+- require the same JSON `policyApproval` shape as the CLI for Tier A/B operations
+- validate `expectedPlanningGeneration`, idempotency keys, and stale-state conflicts exactly as the shared runtime does
+- record bounded audit metadata with actor, tool name, command name, result classification, payload digest, and redacted arguments
+- reject unknown mutation tools and disabled mutation profiles with explicit errors
+- return remediation and CLI fallback commands for denied, stale, blocked, or unsafe requests
+- keep release, publish, git, task lifecycle, assignment lifecycle, memory mutation, and registry mutation tools disabled until each area has adapter parity tests
+
+Mutation rollout must be profile-based rather than global. A future opt-in profile may enable one well-defined mutation family only after it has CLI/MCP parity coverage, security review, audit evidence, and rollback instructions. If any required guard cannot be evaluated, the MCP adapter must fail closed and direct the operator back to the CLI.
 
 ## Agent Adoption Layer
 
