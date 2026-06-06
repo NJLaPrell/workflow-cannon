@@ -1797,7 +1797,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     logWc("dashboard", "ensureQueueRollupsHydrated: upgrading overview stub to queue projection");
     const seq = updateSequence ?? this.refreshController.currentGeneration();
-    await this.patchDashboardSectionsFromSummary(["queue", "overview", "planning-interview"], seq, {
+    await this.patchDashboardSectionsFromSummary(["queue", "overview"], seq, {
       projection: "queue",
       preserveOnSummaryFailure: true,
       source: this.activeDashboardTab === "task-engine" ? "tab:task-engine queue hydration" : "tab:overview queue hydration"
@@ -6873,9 +6873,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     .wc-cae-readiness-title {
       min-width: 0;
       flex: 1;
-      display: inline-flex;
+      display: flex;
       align-items: center;
-      flex-wrap: wrap;
       gap: 4px;
     }
     .wc-cae-readiness-title b {

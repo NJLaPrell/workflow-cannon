@@ -375,7 +375,7 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.doesNotMatch(html, /data-wc-queue-category="blocked"/);
   assert.match(html, /Not Phased/);
   assert.doesNotMatch(html, /Dependency Overview/);
-  assert.match(planningPanel, /Planning Interview/);
+  assert.doesNotMatch(planningPanel, /Planning Interview/);
   assert.doesNotMatch(taskEnginePanel, /Planning Interview/);
   assert.doesNotMatch(html, /data-wc-action="planning-new-plan"/);
   assert.doesNotMatch(html, /data-wc-action="planning-resume-chat"/);
@@ -1693,82 +1693,6 @@ test("renderDashboardRootInnerHtml approval inbox row exposes review actions", (
   assert.match(html, /data-task-id="T100050"/);
 });
 
-test("renderDashboardRootInnerHtml planning card shows resume CLI when session present", () => {
-  const html = renderDashboardRootInnerHtml({
-    ok: true,
-    data: {
-      agentGuidance: {
-        schemaVersion: 1,
-        profileSetId: "rpg_party_v1",
-        tier: 2,
-        displayLabel: "Adventurer",
-        usingDefaultTier: true,
-        temperamentProfileId: "builtin:balanced",
-        temperamentLabel: "The Steady Adventurer",
-        agentPresentation: {
-          schemaVersion: 1,
-          mode: "derived",
-          workLog: "normal",
-          rationale: "simple",
-          technicality: "balanced",
-          finalAnswerDetail: "normal",
-          privateReasoning: "never_disclose"
-        }
-      },
-      stateSummary: { proposed: 0, ready: 0, in_progress: 0, blocked: 0, completed: 0 },
-      proposedImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
-      proposedExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
-      readyImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
-      readyExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
-      wishlist: { openCount: 0, totalCount: 0, openTop: [] },
-      blockedSummary: { count: 0, top: [] },
-      readyQueueTop: [],
-      readyQueueCount: 0,
-      suggestedNext: null,
-      planningSession: {
-        schemaVersion: 1,
-        updatedAt: "2026-04-01T12:00:00.000Z",
-        planningType: "wishlist",
-        outputMode: "wishlist",
-        status: "in_progress",
-        completionPct: 40,
-        answeredCritical: 2,
-        totalCritical: 5,
-        resumeCli: "pnpm run wk run build-plan '{\"action\":\"resume\"}'"
-      },
-      taskStoreLastUpdated: "2026-01-01T00:00:00.000Z",
-      workspaceStatus: { currentKitPhase: "1", nextKitPhase: "2", activeFocus: "Test" },
-      blockingAnalysis: [],
-      dependencyOverview: {
-        schemaVersion: 1,
-        activeTaskCount: 0,
-        includedTaskCount: 0,
-        edgeCount: 0,
-        truncated: false,
-        perfNote: null,
-        nodes: [],
-        edges: [],
-        mermaidFlowchart: "",
-        criticalPathReady: []
-      }
-    }
-  });
-  assert.match(html, /Planning Interview/);
-  assert.match(html, /<span class="wc-status-kv-label">Presentation<\/span>/);
-  assert.match(html, /Work-log normal/);
-  assert.doesNotMatch(html, /data-wc-action="planning-new-plan"/);
-  assert.doesNotMatch(html, />New Plan<\/button>/);
-  assert.match(html, /Wishlist/);
-  assert.match(html, /data-wc-action="planning-resume-chat"/);
-  assert.match(html, />Resume<\/button>/);
-  assert.match(html, /data-wc-action="planning-discard"/);
-  assert.match(html, />Discard<\/button>/);
-  assert.match(html, /build-plan/);
-  assert.doesNotMatch(html, /copy into a terminal/);
-  assert.doesNotMatch(html, /wc-planning-type/);
-  assert.match(html, /40%/);
-  assert.match(html, /through required questions/);
-});
 
 test("renderDashboardRootInnerHtml omits global suggested-next when no workspace current phase", () => {
   const html = renderDashboardRootInnerHtml({
@@ -2979,42 +2903,6 @@ test("renderPlanningInterviewWizardPanel success shows response-only persistence
   assert.match(html, /data-wc-action="planning-wizard-dismiss"/);
 });
 
-test("renderDashboardRootInnerHtml embeds planning wizard panel when provided", () => {
-  const html = renderDashboardRootInnerHtml(
-    {
-      ok: true,
-      data: {
-        stateSummary: { proposed: 0, ready: 0, in_progress: 0, blocked: 0, completed: 0 },
-        proposedImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
-        proposedExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
-        readyImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
-        readyExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
-        wishlist: { openCount: 0, totalCount: 0, openTop: [] },
-        blockedSummary: { count: 0, top: [] },
-        suggestedNext: null,
-        planningSession: null,
-        taskStoreLastUpdated: "2026-01-01T00:00:00.000Z",
-        workspaceStatus: null,
-        blockingAnalysis: [],
-        dependencyOverview: {
-          schemaVersion: 1,
-          activeTaskCount: 0,
-          includedTaskCount: 0,
-          edgeCount: 0,
-          truncated: false,
-          perfNote: null,
-          nodes: [],
-          edges: [],
-          mermaidFlowchart: "",
-          criticalPathReady: []
-        }
-      }
-    },
-    { kind: "picker" }
-  );
-  assert.match(html, /dash-planning-wizard/);
-  assert.match(html, /wc-planning-type/);
-});
 
 test("renderTaskStateSyncStatusHtml shows display state and remediation", () => {
   const html = renderTaskStateSyncStatusHtml({

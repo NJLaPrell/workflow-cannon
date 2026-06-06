@@ -1872,7 +1872,7 @@ function renderPhaseRosterPhaseLink(phaseKey: string): string {
 function renderPhaseRosterStartSlot(phaseKey: string, isCurrent: boolean): string {
   if (isCurrent) {
     return (
-      '<span class="wc-btn wc-btn-sm wc-btn-primary dash-phase-roster-start-spacer" aria-hidden="true"></span>'
+      '<span class="wc-btn wc-btn-sm wc-btn-primary dash-phase-roster-start-spacer" aria-hidden="true">Start</span>'
     );
   }
   const pk = escapeHtmlAttr(phaseKey.trim());
@@ -3974,12 +3974,12 @@ function renderApprovalInboxSection(queue: unknown): string {
     .join("");
   const statusLine = '<p class="muted">Awaiting review ' + String(count) + "</p>";
   const toolbar =
-    '<div class="dash-team-exec-toolbar" role="toolbar" aria-label="Policy approval inbox">' +
-    '<button type="button" class="wc-btn wc-btn-md wc-btn-secondary" data-wc-action="approval-inbox-chat" title="Approval inbox playbook in chat">Inbox guide</button>' +
+    '<div class="dash-team-exec-toolbar" role="toolbar" aria-label="Policy Approval Inbox">' +
+    '<button type="button" class="wc-btn wc-btn-md wc-btn-secondary" data-wc-action="approval-inbox-chat" title="Approval inbox playbook in chat">Inbox Guide</button>' +
     "</div>";
   if (top.length === 0) {
     return (
-      '<section class="dash-card dashboard-approvals" aria-label="Policy approval inbox">' +
+      '<section class="dash-card dashboard-approvals" aria-label="Policy Approval Inbox">' +
       "<p><b>Policy Approval Inbox</b></p>" +
       statusLine +
       '<p class="muted">Improvement tasks in <b>ready</b> or <b>in_progress</b> need a <code>review-item</code> decision. Proposed improvements are triaged from the queue above.</p>' +
@@ -4025,13 +4025,13 @@ function renderApprovalInboxSection(queue: unknown): string {
         id +
         '" data-task-title="' +
         title +
-        '" title="review-item accept_edited">Accept Edited.</button>' +
+        '" title="review-item accept_edited">Accept Edited</button>' +
         "</div></div>"
       );
     })
     .join("");
   return (
-    '<section class="dash-card dashboard-approvals" aria-label="Policy approval inbox">' +
+    '<section class="dash-card dashboard-approvals" aria-label="Policy Approval Inbox">' +
     "<p><b>Policy Approval Inbox</b></p>" +
     statusLine +
     toolbar +
@@ -5777,7 +5777,6 @@ export function renderDashboardRootInnerHtml(
     wishOpen > 0 && wishOpenTotalPages > 1
       ? " · Page " + String(wishOpenPage + 1) + " / " + String(wishOpenTotalPages)
       : "";
-  const planningSession = d.planningSession;
   const blockedSummary = (d.blockedSummary as Record<string, unknown>) || {};
   const blockedTop = Array.isArray(blockedSummary.top) ? (blockedSummary.top as unknown[]).slice(0, 8) : [];
   const humanGatesSummary = (d.humanGatesSummary as Record<string, unknown> | undefined) ?? {};
@@ -6041,7 +6040,6 @@ export function renderDashboardRootInnerHtml(
     phaseReleaseDates
   );
   const planArtifactInner = renderPlanArtifactDraftPanel(d.planArtifact);
-  const planningInterviewInner = renderPlanningSession(planningSession, planningWizardPanel);
 
   const caePanelContent =
     typeof embeddedCaePanelHtml === "string" && embeddedCaePanelHtml.trim().length > 0
@@ -6074,13 +6072,8 @@ export function renderDashboardRootInnerHtml(
     planArtifactInner,
     deferred.has("plan-artifact")
   );
-  const planningInterviewWrapped = wrapDashboardSection(
-    "planning-interview",
-    planningInterviewInner,
-    deferred.has("planning-interview")
-  );
   const planningContent =
-    phaseRosterWrapped + ideasWrapped + planArtifactWrapped + planningInterviewWrapped;
+    phaseRosterWrapped + ideasWrapped + planArtifactWrapped;
   const queueWrapped = wrapDashboardSection("queue", queueInner, deferred.has("queue"));
   const phaseJournalWrapped = wrapDashboardSection(
     "phase-journal",
