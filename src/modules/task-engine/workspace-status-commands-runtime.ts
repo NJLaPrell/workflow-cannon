@@ -10,7 +10,11 @@ import { TaskEngineError } from "./transitions.js";
 import { buildPhaseJournalStatusSummary } from "./phase-journal/phase-journal-summary.js";
 import { digestPayload, readIdempotencyValue } from "./mutation-utils.js";
 import { commitCanonicalPlanningEvents } from "./persistence/planning-canonical-mutation-hook.js";
-import { draftPlanningWorkspaceStatusUpdatedEvent } from "./persistence/planning-event-draft.js";
+import {
+  draftPlanningWorkspaceStatusUpdatedEvent,
+  draftPlanningPhaseDeliveryHistoryUpsertedEvent
+} from "./persistence/planning-event-draft.js";
+import { upsertPhaseDeliveryHistory } from "./persistence/phase-delivery-history-store.js";
 import { openPlanningStores } from "./persistence/planning-open.js";
 import { isPlanningGitSyncPublishActive } from "./persistence/planning-canonical-sync-domains.js";
 import type { TaskEntity, TaskStatus } from "./types.js";
@@ -525,11 +529,44 @@ export async function runUpdateWorkspaceStatus(
           clientMutationId
         }
       });
+      const events = [event];
+      if (clearedCurrent && before.currentKitPhase) {
+        const pk = parseKitPhaseNumberFromYaml(before.currentKitPhase);
+        if (pk) {
+          const nowIso = new Date().toISOString();
+          const deliveryEvent = draftPlanningPhaseDeliveryHistoryUpsertedEvent({
+            row: {
+              phaseKey: pk,
+              status: "delivered",
+              deliveredAt: nowIso,
+              releaseVersion: null,
+              gitTag: null,
+              githubReleaseUrl: null,
+              npmPackage: null,
+              npmDistTag: null,
+              releaseWorkflowUrl: null,
+              mainCommitSha: null,
+              releaseBranch: null,
+              releasePrUrl: null,
+              evidence: {},
+              createdAt: nowIso,
+              updatedAt: nowIso
+            },
+            ctx: {
+              commandName: command,
+              moduleId: "task-engine",
+              actorId: actor ?? undefined,
+              clientMutationId
+            }
+          });
+          events.push(deliveryEvent);
+        }
+      }
       const canonical = await commitCanonicalPlanningEvents({
         ctx,
         store,
         planning,
-        events: [event],
+        events,
         policyApproval: args.policyApproval as { confirmed: boolean; rationale: string } | undefined
       });
       if (canonical && !canonical.ok) {
@@ -547,6 +584,19 @@ export async function runUpdateWorkspaceStatus(
       afterRevision = reread.workspaceRevision;
       after = reread;
     } else {
+      if (clearedCurrent && before.currentKitPhase) {
+        const pk = parseKitPhaseNumberFromYaml(before.currentKitPhase);
+        if (pk) {
+          const nowIso = new Date().toISOString();
+          upsertPhaseDeliveryHistory(db, {
+            phaseKey: pk,
+            status: "delivered",
+            deliveredAt: nowIso,
+            createdAt: nowIso,
+            updatedAt: nowIso
+          });
+        }
+      }
       const patched = patchWorkspaceStatus(db, {
         expectedWorkspaceRevision: revRaw,
         patch,

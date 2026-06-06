@@ -4965,7 +4965,8 @@ export function renderPhaseCatalogOverviewSection(
   workspaceStatus?: Record<string, unknown> | null,
   releasedPhaseKeys?: readonly string[],
   legacyDeliveredMaxOrdinal?: number | null,
-  activeQueuePhaseKeys?: readonly string[]
+  activeQueuePhaseKeys?: readonly string[],
+  phaseReleaseDates?: Readonly<Record<string, string>>
 ): string {
   if (!phaseSlice || typeof phaseSlice !== "object") {
     return "";
@@ -5037,8 +5038,14 @@ export function renderPhaseCatalogOverviewSection(
         const desc = sd.length > 0 ? escapeHtml(sd) : '<span class="muted">—</span>';
         const inputValue = escapeHtmlAttr(sd);
         const scheduleTag = resolvePhaseScheduleTag(r.phaseKey, rosterFocus);
-        const statusTag =
+        let statusTag =
           scheduleTag !== null ? renderPhaseScheduleTagHtml(scheduleTag) : '<span class="muted">—</span>';
+        if (isDelivered && phaseReleaseDates) {
+          const rawDate = phaseReleaseDates[r.phaseKey];
+          if (rawDate) {
+            statusTag += `<div class="dash-phase-release-date muted" style="font-size: 0.85em; margin-top: 2px;">${escapeHtml(formatPlanningUpdatedAt(rawDate))}</div>`;
+          }
+        }
         const phaseKeyAttr = escapeHtmlAttr(r.phaseKey);
         const phaseOrd = r.phaseKey.trim();
         const isCurrent =
@@ -5741,6 +5748,7 @@ export function renderDashboardRootInnerHtml(
   );
   const legacyDeliveredMaxOrdinal = readLegacyDeliveredMaxOrdinal(d);
   const activeQueuePhaseKeys = readPhaseKeysWithActiveQueueWork(d);
+  const phaseReleaseDates = readPhaseReleaseDates(d);
   const phaseFocus = phaseScheduleFocusFromWorkspace(
     ws,
     deliveredPhaseKeys,
@@ -5883,7 +5891,7 @@ export function renderDashboardRootInnerHtml(
       (d.completedSummary as Record<string, unknown> | undefined)?.phaseBuckets,
       (d.cancelledSummary as Record<string, unknown> | undefined)?.phaseBuckets
     ],
-    phaseReleaseDates: readPhaseReleaseDates(d)
+    phaseReleaseDates
   });
 
   const tasksBlock =
@@ -6044,7 +6052,8 @@ export function renderDashboardRootInnerHtml(
     ws as Record<string, unknown> | null,
     rosterDeliveredPhaseKeys,
     legacyDeliveredMaxOrdinal,
-    activeQueuePhaseKeys
+    activeQueuePhaseKeys,
+    phaseReleaseDates
   );
   const planArtifactInner = renderPlanArtifactDraftPanel(d.planArtifact);
   const planningInterviewInner = renderPlanningSession(planningSession, planningWizardPanel);

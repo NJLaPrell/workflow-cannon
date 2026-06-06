@@ -735,7 +735,14 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       return false;
     }
     const tabId = DASHBOARD_SECTION_REGISTRY.find((s) => s.id === sectionId)?.tabId ?? "";
-    return tabId === this.activeDashboardTab;
+    if (tabId === this.activeDashboardTab) {
+      return true;
+    }
+    // Eagerly allow queue slice updates on the overview tab to keep the stat pills fresh.
+    if (name === "queue" && this.activeDashboardTab === "overview") {
+      return true;
+    }
+    return false;
   }
 
   private syncVisibleSectionsToPollers(): void {
@@ -780,7 +787,11 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       return;
     }
     const tabId = DASHBOARD_SECTION_REGISTRY.find((s) => s.id === sectionId)?.tabId ?? "";
-    if (tabId !== this.activeDashboardTab && !isEagerDashboardSection(sectionId)) {
+    if (
+      tabId !== this.activeDashboardTab &&
+      !isEagerDashboardSection(sectionId) &&
+      !(sliceName === "queue" && this.activeDashboardTab === "overview")
+    ) {
       return;
     }
     const prior = this.lastDashboardSummaryData ?? {};
@@ -790,6 +801,9 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       slice.value as Record<string, unknown>
     );
     await this.patchDashboardSectionFromStore(sectionId, slice);
+    if (sliceName === "queue" && this.hydratedDashboardSections.has("overview")) {
+      await this.patchDashboardSectionFromStore("overview");
+    }
   }
 
   private async patchDashboardSectionFromStore(
@@ -914,7 +928,15 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       return;
     }
     if (this.activeDashboardTab === "overview" && this.hydratedDashboardSections.has("overview")) {
-      this.dashboardStore.markStale("overview", "kit-state refresh");
+      await this.patchDashboardSectionsFromSummary(
+        this.hydratedDashboardSections.has("queue") ? ["overview", "queue"] : ["overview"],
+        updateSequence,
+        {
+          light: true,
+          projection: this.hydratedDashboardSections.has("queue") ? "queue" : "overview",
+          source: "kit-state refresh"
+        }
+      );
       return;
     }
     if (this.activeDashboardTab === "planning") {
@@ -1015,7 +1037,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         if (!this.dashboardRootHydrated) {
           await this.renderDashboardStartupDirect(webview);
         } else {
-          logWc("dashboard", "webview ready: secondary hydration deferred until tab activation");
+          logWc("dashboard", "webview ready: triggering background queue hydration");
+          void this.ensureQueueRollupsHydrated(this.refreshController.currentGeneration());
         }
         return;
       }
@@ -1745,8 +1768,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     if (!dashboardSummaryNeedsQueueRollupHydration(this.lastDashboardSummaryData)) {
       return;
     }
-    if (this.activeDashboardTab !== "task-engine") {
-      logWc("dashboard", "queue rollup hydration deferred: task-engine tab not visible");
+    if (this.activeDashboardTab !== "task-engine" && this.activeDashboardTab !== "overview") {
+      logWc("dashboard", `queue rollup hydration deferred: tab ${this.activeDashboardTab} not visible`);
       this.staleDashboardSections.add("queue");
       return;
     }
@@ -1760,7 +1783,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     await this.patchDashboardSectionsFromSummary(["queue", "overview", "planning-interview"], seq, {
       projection: "queue",
       preserveOnSummaryFailure: true,
-      source: "tab:task-engine queue hydration"
+      source: this.activeDashboardTab === "task-engine" ? "tab:task-engine queue hydration" : "tab:overview queue hydration"
     });
   }
 
