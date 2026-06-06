@@ -11,6 +11,10 @@ import {
 } from "./agent-instruction-surface.js";
 import { ModuleRegistry } from "./module-registry.js";
 import { cliPerfTracer } from "./cli-perf-trace.js";
+import {
+  CommandExecutionClass,
+  getBuiltinRunCommandManifestRow
+} from "../contracts/builtin-run-command-manifest.js";
 
 
 export type ModuleCommandDescriptor = {
@@ -18,6 +22,7 @@ export type ModuleCommandDescriptor = {
   moduleId: string;
   instructionFile: string;
   description?: string;
+  executionClass?: CommandExecutionClass;
 };
 
 export type ModuleCommandRouterOptions = {
@@ -152,12 +157,14 @@ export class ModuleCommandRouter {
             `Command '${entry.name}' is declared by both '${existing?.descriptor.moduleId}' and '${module.registration.id}'`
           );
         }
+        const manifestRow = getBuiltinRunCommandManifestRow(entry.name);
         this.commands.set(entry.name, {
           descriptor: {
             name: entry.name,
             moduleId: module.registration.id,
             instructionFile: `${module.registration.instructions.directory}/${entry.file}`,
-            description: entry.description
+            description: entry.description,
+            executionClass: manifestRow?.executionClass
           },
           module,
           entry

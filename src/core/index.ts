@@ -97,6 +97,9 @@ export {
   POLICY_TRACE_SCHEMA_VERSION,
   resolveActor,
   resolvePolicyOperationIdForCommand,
+  CommandExecutionClass,
+  CommandExecutionPolicy,
+  resolveCommandExecutionPolicy,
   type PolicyOperationId,
   type PolicyTraceRecord,
   type PolicyTraceRecordInput

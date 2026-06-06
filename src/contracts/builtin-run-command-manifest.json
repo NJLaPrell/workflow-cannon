@@ -129,7 +129,8 @@
     "description": "Execute a validated task status transition.",
     "policyOperationId": "tasks.run-transition",
     "defaultResponseTemplateId": "default",
-    "policySensitivity": "sensitive"
+    "policySensitivity": "sensitive",
+    "executionClass": "mutation"
   },
   {
     "moduleId": "task-engine",
@@ -586,7 +587,8 @@
     "file": "create-task.md",
     "description": "Create a new task through validated task-engine persistence.",
     "defaultResponseTemplateId": "default",
-    "policySensitivity": "non-sensitive"
+    "policySensitivity": "non-sensitive",
+    "executionClass": "mutation"
   },
   {
     "moduleId": "task-engine",
@@ -820,7 +822,8 @@
     "file": "get-task.md",
     "description": "Retrieve a single task by ID.",
     "defaultResponseTemplateId": "default",
-    "policySensitivity": "non-sensitive"
+    "policySensitivity": "non-sensitive",
+    "executionClass": "read"
   },
   {
     "moduleId": "task-engine",
@@ -828,7 +831,8 @@
     "file": "list-tasks.md",
     "description": "List tasks with optional status/phase filters.",
     "defaultResponseTemplateId": "default",
-    "policySensitivity": "non-sensitive"
+    "policySensitivity": "non-sensitive",
+    "executionClass": "read"
   },
   {
     "moduleId": "task-engine",
@@ -1171,7 +1175,8 @@
     "file": "dashboard-terminal-tasks.md",
     "description": "Retrieve terminal task rows (completed/cancelled) for a given phase or overall (focused lazy-loading command).",
     "defaultResponseTemplateId": "default",
-    "policySensitivity": "non-sensitive"
+    "policySensitivity": "non-sensitive",
+    "executionClass": "read_hot"
   },
   {
     "moduleId": "task-engine",
@@ -1195,7 +1200,8 @@
     "file": "dashboard-service-status.md",
     "description": "Read-only dashboard service health, pid, port, uptime, generation.",
     "defaultResponseTemplateId": "default",
-    "policySensitivity": "non-sensitive"
+    "policySensitivity": "non-sensitive",
+    "executionClass": "read_hot"
   },
   {
     "moduleId": "task-engine",
@@ -1354,7 +1360,8 @@
     "file": "list-subagents.md",
     "description": "List subagent definitions in kit SQLite (user_version 6+).",
     "defaultResponseTemplateId": "default",
-    "policySensitivity": "non-sensitive"
+    "policySensitivity": "non-sensitive",
+    "executionClass": "read"
   },
   {
     "moduleId": "subagents",
@@ -1362,7 +1369,8 @@
     "file": "get-subagent.md",
     "description": "Get one subagent definition by id.",
     "defaultResponseTemplateId": "default",
-    "policySensitivity": "non-sensitive"
+    "policySensitivity": "non-sensitive",
+    "executionClass": "read"
   },
   {
     "moduleId": "subagents",
@@ -1483,7 +1491,8 @@
     "file": "list-assignments.md",
     "description": "List team assignments in kit SQLite with packet audit and stale-context metadata when present.",
     "defaultResponseTemplateId": "default",
-    "policySensitivity": "non-sensitive"
+    "policySensitivity": "non-sensitive",
+    "executionClass": "read"
   },
   {
     "moduleId": "team-execution",
@@ -1508,7 +1517,8 @@
     "description": "Create a supervisor/worker assignment row and persist bounded packet metadata when available.",
     "policyOperationId": "team-execution.persist",
     "defaultResponseTemplateId": "default",
-    "policySensitivity": "sensitive"
+    "policySensitivity": "sensitive",
+    "executionClass": "mutation"
   },
   {
     "moduleId": "team-execution",

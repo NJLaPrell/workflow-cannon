@@ -1,4 +1,5 @@
 import type { ModuleInstructionEntry } from "./module-contract.js";
+import type { CommandExecutionClass } from "./builtin-run-command-manifest.js";
 
 /**
  * Row shape for builtin commands (see `builtin-run-command-manifest.json` + `builtin-run-command-manifest.ts`).
@@ -17,4 +18,6 @@ export type ModuleCommandManifestRow = ModuleInstructionEntry & {
    * When set, resolved before global `responseTemplates.defaultTemplateId` (after explicit args and `commandOverrides`).
    */
   defaultResponseTemplateId?: string;
+  executionClass?: CommandExecutionClass;
 };
+
