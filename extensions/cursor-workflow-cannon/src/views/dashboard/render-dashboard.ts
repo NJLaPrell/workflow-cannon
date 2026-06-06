@@ -5023,6 +5023,11 @@ export function renderPhaseCatalogOverviewSection(
         const desc = sd.length > 0 ? escapeHtml(sd) : '<span class="muted">—</span>';
         const inputValue = escapeHtmlAttr(sd);
         const scheduleTag = resolvePhaseScheduleTag(r.phaseKey, rosterFocus);
+        const phaseOrd = r.phaseKey.trim();
+        const isCurrent =
+          r.status === "current" ||
+          (workspaceCurrent.length > 0 && workspaceCurrent === phaseOrd);
+        const isDelivered = r.status === "delivered";
         let statusTag =
           scheduleTag !== null ? renderPhaseScheduleTagHtml(scheduleTag) : '<span class="muted">—</span>';
         if (isDelivered && phaseReleaseDates) {
@@ -5032,11 +5037,6 @@ export function renderPhaseCatalogOverviewSection(
           }
         }
         const phaseKeyAttr = escapeHtmlAttr(r.phaseKey);
-        const phaseOrd = r.phaseKey.trim();
-        const isCurrent =
-          r.status === "current" ||
-          (workspaceCurrent.length > 0 && workspaceCurrent === phaseOrd);
-        const isDelivered = r.status === "delivered";
         const noCatalogHint =
           r.inCatalog === true
             ? ""

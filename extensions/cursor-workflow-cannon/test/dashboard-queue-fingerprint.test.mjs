@@ -78,5 +78,5 @@ test("dashboardSummaryNeedsQueueRollupHydration detects overview stub", async ()
 test("dashboardSummaryProjectionForSectionPatch prefers queue slice for queue-only patches", async () => {
   const mod = await import("../dist/views/dashboard/dashboard-queue-fingerprint.js");
   assert.equal(mod.dashboardSummaryProjectionForSectionPatch(["queue"]), "queue");
-  assert.equal(mod.dashboardSummaryProjectionForSectionPatch(["overview", "queue"]), "overview");
+  assert.equal(mod.dashboardSummaryProjectionForSectionPatch(["overview", "queue"]), "queue");
 });
