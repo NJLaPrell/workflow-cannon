@@ -7,6 +7,7 @@ import {
   ModuleRegistry,
   UNKNOWN_COMMAND_SAMPLE_LIMIT,
   agentBehaviorModule,
+  createCommandRegistryRuntime,
   documentationModule,
   formatUnknownCommandMessage,
   getAtPath,
@@ -235,6 +236,28 @@ test("ModuleCommandRouter executes explain-config", async () => {
   assert.equal(result.ok, true);
   assert.equal(result.code, "config-explained");
   assert.equal(result.data?.effectiveValue, ".workspace-kit/tasks/state.json");
+});
+
+test("CommandRegistryRuntime invokes commands through shared runtime", async () => {
+  const registry = new ModuleRegistry([
+    workspaceConfigModule,
+    documentationModule,
+    agentBehaviorModule,
+    taskEngineModule
+  ]);
+  const runtime = createCommandRegistryRuntime(registry, {
+    ctx: { ...lifecycleContext, moduleRegistry: registry }
+  });
+
+  assert.ok(runtime.describeCommand("explain-config"));
+  const result = await runtime.invoke({
+    name: "explain-config",
+    args: { path: "tasks.persistenceBackend" }
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.code, "config-explained");
+  assert.equal(result.data?.effectiveValue, "sqlite");
 });
 
 test("ModuleCommandRouter explain-config shows sqlite as default tasks.persistenceBackend", async () => {

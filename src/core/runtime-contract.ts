@@ -3,11 +3,24 @@ import { fileURLToPath } from "node:url";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
+import type {
+  ModuleCommandInvocation,
+  ModuleCommandRuntime,
+  ModuleCommandResult,
+  ModuleCommandDescriptorLike
+} from "../contracts/module-contract.js";
 
 export const WORKSPACE_KIT_RUNTIME_STAMP_RELATIVE_PATH = ".workspace-kit/runtime.json";
 export const WORKSPACE_KIT_RUNTIME_LAUNCHER_RELATIVE_PATH = ".workspace-kit/bin/wk";
 export const WORKSPACE_KIT_RUNTIME_CONTRACT_SCHEMA_VERSION = 1;
 export const WORKSPACE_KIT_REQUIRED_NODE_MAJOR = 22;
+
+export type {
+  ModuleCommandInvocation,
+  ModuleCommandRuntime,
+  ModuleCommandResult,
+  ModuleCommandDescriptorLike
+};
 
 export type WorkspaceKitRuntimeStampV1 = {
   schemaVersion: 1;
