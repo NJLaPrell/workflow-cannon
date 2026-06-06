@@ -1166,6 +1166,20 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
       updateTaskEngineTabBadges(m.readyCount, m.blockedCount);
       return;
     }
+    if (m && m.type === 'wcBannerPatch') {
+      if (typeof m.html === 'string') {
+        var bannerEl = document.querySelector('.wc-banner');
+        if (bannerEl && bannerEl.parentNode) {
+          var tmp = document.createElement('div');
+          tmp.innerHTML = m.html;
+          var newBanner = tmp.firstElementChild;
+          if (newBanner) {
+            bannerEl.parentNode.replaceChild(newBanner, bannerEl);
+          }
+        }
+      }
+      return;
+    }
     if (!m || m.type !== 'wcReplaceRoot' || typeof m.html !== 'string') return;
     if (isLocalUiLocked()) {
       pendingReplaceRootHtml = m.html;

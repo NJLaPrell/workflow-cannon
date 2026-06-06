@@ -88,6 +88,7 @@ import {
   renderDashboardCaeSectionInnerHtml,
   renderDashboardPhaseJournalSectionInnerHtml,
   renderDashboardRootInnerHtml,
+  renderWcDashboardBannerHtml,
   type RenderDashboardRootOptions,
   type DashboardPhaseJournalBundle,
   type PhaseJournalKitPayload,
@@ -841,6 +842,9 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     if (sectionId === "queue") {
       this.lastQueueContentFingerprint = computeQueueContentFingerprint(summaryData);
       await this.postTaskEngineTabBadgesFromSummary(summaryData);
+    }
+    if (sectionId === "overview") {
+      await this.postBannerPatch(summaryData);
     }
   }
 
@@ -1686,6 +1690,19 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     await webview.postMessage({ type: "wcSectionPatch", sectionId, html, state });
   }
 
+  private async postBannerPatch(summaryData: Record<string, unknown>): Promise<void> {
+    const webview = this.view?.webview;
+    if (!webview) {
+      return;
+    }
+    try {
+      const bannerHtml = renderWcDashboardBannerHtml(summaryData);
+      await webview.postMessage({ type: "wcBannerPatch", html: bannerHtml });
+    } catch {
+      // banner patch is best-effort; never block the caller
+    }
+  }
+
   private sectionsForTabActivation(tabId: string): DashboardSectionId[] {
     return DASHBOARD_SECTION_REGISTRY.filter(
       (section) =>
@@ -2198,6 +2215,9 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       const summaryData = raw.data as Record<string, unknown>;
       this.lastQueueContentFingerprint = computeQueueContentFingerprint(summaryData);
       await this.postTaskEngineTabBadgesFromSummary(summaryData);
+    }
+    if (raw.ok === true && raw.data && typeof raw.data === "object" && sectionsToPatch.includes("overview")) {
+      await this.postBannerPatch(raw.data as Record<string, unknown>);
     }
   }
 

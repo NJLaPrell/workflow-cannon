@@ -4644,22 +4644,15 @@ function renderDashboardAgentActivityRow(
 ): string {
   const labelText = cleanDashboardText(row.displayName) || "Unnamed agent";
   const statusText = dashboardAgentStatusLabel(row.status);
-  const statusChipText = dashboardAgentStatusChipLabel(row.status);
   const wcStatus = resolveWcDashboardStatus(row.status);
   const roleText = DASHBOARD_AGENT_ROLE_LABELS[row.role] ?? "Agent";
   const freshnessText = formatDashboardAgentFreshness(row.freshness);
   const sourceText = dashboardAgentSourceLabel(row.source);
   const attentionText = dashboardAgentAttentionLabel(row.attention.state);
-  const taskId = cleanDashboardText(row.work.taskId);
-  const phaseKey = cleanDashboardText(row.work.phaseKey);
-  const chips = [
-    renderDashboardAgentActivityChip(statusChipText, `status-${row.status}`),
-    renderDashboardAgentActivityChip(roleText, `role-${row.role}`),
+  const metaChips = [
     renderDashboardAgentActivityChip(sourceText, row.source),
     renderDashboardAgentActivityChip(freshnessText, `freshness-${row.freshness.state}`),
-    attentionText ? renderDashboardAgentActivityChip(attentionText, `attention-${row.attention.state}`) : "",
-    taskId ? renderDashboardAgentActivityChip(taskId, "task") : "",
-    phaseKey ? renderDashboardAgentActivityChip(`Phase ${phaseKey}`, "phase") : ""
+    attentionText ? renderDashboardAgentActivityChip(attentionText, `attention-${row.attention.state}`) : ""
   ]
     .filter(Boolean)
     .join("");
@@ -4711,9 +4704,7 @@ function renderDashboardAgentActivityRow(
     escapeHtml(dashboardAgentActivityDetail(row)) +
     "</span></div>" +
     renderDashboardAgentTaskLine(row) +
-    '<span class="dash-agent-row-meta">' +
-    chips +
-    "</span>" +
+    (metaChips ? '<span class="dash-agent-row-meta">' + metaChips + "</span>" : "") +
     "</summary>" +
     (hasSubagents
       ? '<div class="wc-agent-tree" role="list" aria-label="Subagents">' +
@@ -4732,10 +4723,11 @@ function renderDashboardAgentSubagentTreeRow(
   rowKind: "main" | "active" | "attention"
 ): string {
   const labelText = cleanDashboardText(row.displayName) || "Unnamed agent";
-  const statusText = dashboardAgentStatusLabel(row.status);
   const wcStatus = resolveWcDashboardStatus(row.status);
   const roleText = DASHBOARD_AGENT_ROLE_LABELS[row.role] ?? "Subagent";
-  const aria = `${labelText}, ${statusText}, ${rowKind === "main" ? "Main Agent" : rowKind === "attention" ? "Needs Attention" : "Active Agent"}`;
+  const activityDetail = dashboardAgentActivityDetail(row);
+  const metaSuffix = activityDetail ? roleText + " · " + activityDetail : roleText;
+  const aria = `${labelText}, ${wcStatus.label}, subagent`;
   return (
     '<div class="wc-agent-tree-row dash-agent-row dash-agent-activity-row dash-agent-activity-row--' +
     rowKind +
@@ -4750,28 +4742,21 @@ function renderDashboardAgentSubagentTreeRow(
     '" aria-label="' +
     escapeHtmlAttr(aria) +
     '">' +
-    '<div class="wc-agent-card-row1">' +
+    '<div class="wc-agent-sub-inner" data-status="' +
+    escapeHtmlAttr(wcStatus.kind) +
+    '">' +
     renderWcAgentDot(wcStatus.kind) +
-    '<span class="wc-agent-card-name dash-agent-row-main"><b>' +
+    '<span class="wc-agent-sub-name">' +
     escapeHtml(labelText) +
-    '</b><span class="muted">' +
-    escapeHtml(statusText) +
-    "</span></span>" +
-    '<span class="wc-agent-card-status-chip">' +
+    "</span>" +
+    '<span class="wc-agent-sub-chip" data-status="' +
+    escapeHtmlAttr(wcStatus.kind) +
+    '">' +
     escapeHtml(wcStatus.label) +
     "</span>" +
-    '<span class="wc-agent-card-role">' +
-    escapeHtml(roleText) +
+    '<span class="wc-agent-sub-meta">' +
+    escapeHtml(metaSuffix) +
     "</span>" +
-    "</div>" +
-    '<div class="wc-agent-card-now dash-agent-row-detail">' +
-    '<div class="wc-agent-card-now-label">Now</div>' +
-    '<span class="wc-agent-card-now-text">' +
-    escapeHtml(dashboardAgentActivityDetail(row)) +
-    "</span></div>" +
-    renderDashboardAgentTaskLine(row) +
-    '<div class="dash-agent-row-details" aria-label="Expanded agent activity context">' +
-    renderDashboardAgentActivityExpandedDetails(row) +
     "</div>" +
     "</div>"
   );
