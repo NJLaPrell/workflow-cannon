@@ -13,8 +13,10 @@ import {
   POLICY_RUN_ENV_LANE_MISMATCH_DETAIL,
   resolveActorWithFallback,
   resolvePolicyOperationIdForCommand,
+  resolveCommandExecutionPolicy,
   type PolicyApprovalPayload,
-  type PolicyOperationId
+  type PolicyOperationId,
+  type CommandExecutionPolicy
 } from "../core/policy.js";
 import { getSessionGrant, recordSessionGrant, resolveSessionId } from "../core/session-policy.js";
 import { createKitLifecycleHookBus } from "../core/kit-lifecycle-hooks.js";
@@ -81,15 +83,17 @@ export async function handleRunCommand(
 
   const peeled = peelRunArgv(args.slice(1));
   const outputFileRequest = peeled.outputFile;
+  let execPolicy: CommandExecutionPolicy | undefined;
   let effectiveForRunLog: Record<string, unknown> | undefined;
   let commandForRunLog: string | undefined;
   let argsForRunLog: Record<string, unknown> = {};
   const emitJson = async (body: Record<string, unknown>) => {
+    const persistLog = execPolicy ? execPolicy.persistRunLog : true;
     await cliPerfTracer.spanAsync("emitRunInvocationJson", () =>
       emitRunInvocationJson(writeLine, cwd, body, {
         invocationId,
         outputFileRequest,
-        persistRunLog: commandForRunLog
+        persistRunLog: (commandForRunLog && persistLog)
           ? {
               effectiveConfig: effectiveForRunLog,
               command: commandForRunLog,
@@ -155,6 +159,7 @@ export async function handleRunCommand(
       subcommand = router.describeCommand(subcommand)
         ? subcommand
         : resolveTaskSyncCommandAlias(subcommand);
+      execPolicy = resolveCommandExecutionPolicy(subcommand);
     }
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
@@ -269,83 +274,87 @@ export async function handleRunCommand(
   let explicitPolicyApproval: PolicyApprovalPayload | undefined;
   let hasPolicyApprovalField = false;
 
-  const policyCheckResult = await cliPerfTracer.spanAsync("policy/session grant checks", async () => {
-    const sensitive = isSensitiveModuleCommandForEffective(subcommand!, commandArgs, effective);
-    sessionId = resolveSessionId(process.env);
-    policyOp = resolvePolicyOperationIdForCommand(subcommand!, effective);
-    explicitPolicyApproval = parsePolicyApproval(commandArgs);
-    hasPolicyApprovalField = Object.hasOwn(commandArgs, "policyApproval");
-    let resolvedApproval: PolicyApprovalPayload | undefined = explicitPolicyApproval;
-    let followup = false;
+  const runPolicyCheck = execPolicy ? execPolicy.requiresPolicy : true;
 
-    if (sensitive) {
-      if (!resolvedApproval && policyOp) {
-        const grant = await getSessionGrant(cwd, policyOp, sessionId, effective);
-        if (grant) {
-          resolvedApproval = { confirmed: true, rationale: grant.rationale };
+  const policyCheckResult = runPolicyCheck
+    ? await cliPerfTracer.spanAsync("policy/session grant checks", async () => {
+        const sensitive = isSensitiveModuleCommandForEffective(subcommand!, commandArgs, effective);
+        sessionId = resolveSessionId(process.env);
+        policyOp = resolvePolicyOperationIdForCommand(subcommand!, effective);
+        explicitPolicyApproval = parsePolicyApproval(commandArgs);
+        hasPolicyApprovalField = Object.hasOwn(commandArgs, "policyApproval");
+        let resolvedApproval: PolicyApprovalPayload | undefined = explicitPolicyApproval;
+        let followup = false;
+
+        if (sensitive) {
+          if (!resolvedApproval && policyOp) {
+            const grant = await getSessionGrant(cwd, policyOp, sessionId, effective);
+            if (grant) {
+              resolvedApproval = { confirmed: true, rationale: grant.rationale };
+            }
+          }
+          if (!resolvedApproval && policyOp) {
+            const interactive = await promptSensitiveRunApproval(
+              { writeError, readStdinLine: io.readStdinLine },
+              policyOp,
+              `run ${subcommand}`,
+              process.env
+            );
+            if (interactive?.kind === "deny") {
+              await cliPerfTracer.spanAsync("policy trace append", () =>
+                appendPolicyTrace(cwd, {
+                  timestamp: new Date().toISOString(),
+                  operationId: policyOp!,
+                  command: `run ${subcommand}`,
+                  actor,
+                  allowed: false,
+                  message: "interactive policy approval denied"
+                })
+              );
+              return {
+                ok: false,
+                policyOp,
+                hasPolicyApprovalField,
+                denyKind: "interactive" as const
+              };
+            }
+            if (interactive?.kind === "approve") {
+              const rationale =
+                interactive.scope === "session" ? "interactive-approval-session" : "interactive-approval-once";
+              resolvedApproval = {
+                confirmed: true,
+                rationale,
+                ...(interactive.scope === "session" ? { scope: "session" } : {})
+              };
+              followup = interactive.scope === "session";
+            }
+          }
+          if (!resolvedApproval) {
+            if (policyOp) {
+              await cliPerfTracer.spanAsync("policy trace append", () =>
+                appendPolicyTrace(cwd, {
+                  timestamp: new Date().toISOString(),
+                  operationId: policyOp!,
+                  command: `run ${subcommand}`,
+                  actor,
+                  allowed: false,
+                  message: hasPolicyApprovalField
+                    ? "invalid policyApproval in JSON args"
+                    : "missing policyApproval in JSON args"
+                })
+              );
+            }
+            return {
+              ok: false,
+              policyOp,
+              hasPolicyApprovalField,
+              denyKind: "missing-or-invalid" as const
+            };
+          }
         }
-      }
-      if (!resolvedApproval && policyOp) {
-        const interactive = await promptSensitiveRunApproval(
-          { writeError, readStdinLine: io.readStdinLine },
-          policyOp,
-          `run ${subcommand}`,
-          process.env
-        );
-        if (interactive?.kind === "deny") {
-          await cliPerfTracer.spanAsync("policy trace append", () =>
-            appendPolicyTrace(cwd, {
-              timestamp: new Date().toISOString(),
-              operationId: policyOp!,
-              command: `run ${subcommand}`,
-              actor,
-              allowed: false,
-              message: "interactive policy approval denied"
-            })
-          );
-          return {
-            ok: false,
-            policyOp,
-            hasPolicyApprovalField,
-            denyKind: "interactive" as const
-          };
-        }
-        if (interactive?.kind === "approve") {
-          const rationale =
-            interactive.scope === "session" ? "interactive-approval-session" : "interactive-approval-once";
-          resolvedApproval = {
-            confirmed: true,
-            rationale,
-            ...(interactive.scope === "session" ? { scope: "session" } : {})
-          };
-          followup = interactive.scope === "session";
-        }
-      }
-      if (!resolvedApproval) {
-        if (policyOp) {
-          await cliPerfTracer.spanAsync("policy trace append", () =>
-            appendPolicyTrace(cwd, {
-              timestamp: new Date().toISOString(),
-              operationId: policyOp!,
-              command: `run ${subcommand}`,
-              actor,
-              allowed: false,
-              message: hasPolicyApprovalField
-                ? "invalid policyApproval in JSON args"
-                : "missing policyApproval in JSON args"
-            })
-          );
-        }
-        return {
-          ok: false,
-          policyOp,
-          hasPolicyApprovalField,
-          denyKind: "missing-or-invalid" as const
-        };
-      }
-    }
-    return { ok: true, resolvedApproval, followup, sensitive, policyOp };
-  });
+        return { ok: true, resolvedApproval, followup, sensitive, policyOp };
+      })
+    : { ok: true, resolvedApproval: undefined, followup: false, sensitive: false, policyOp: undefined };
 
   if (!policyCheckResult.ok) {
     if (policyCheckResult.denyKind === "interactive") {
@@ -399,14 +408,17 @@ export async function handleRunCommand(
     moduleRegistry: registry
   };
 
-  const autoCheckpoint = await cliPerfTracer.spanAsync("tryAutoCheckpointBeforeRun", () =>
-    tryAutoCheckpointBeforeRun({
-      workspacePath: cwd,
-      effectiveConfig: effective,
-      subcommand: subcommand!,
-      actor
-    })
-  );
+  const runCheckpoint = execPolicy ? execPolicy.allowAutoCheckpoint : true;
+  const autoCheckpoint = runCheckpoint
+    ? await cliPerfTracer.spanAsync("tryAutoCheckpointBeforeRun", () =>
+        tryAutoCheckpointBeforeRun({
+          workspacePath: cwd,
+          effectiveConfig: effective,
+          subcommand: subcommand!,
+          actor
+        })
+      )
+    : { ok: true as const, skippedReason: "checkpoint-skipped" };
   if (!autoCheckpoint.ok) {
     await emitJson({
       ok: false,
@@ -416,10 +428,13 @@ export async function handleRunCommand(
     return codes.validationFailure;
   }
 
-  const hookBus = cliPerfTracer.span("lifecycle hook bus setup", () =>
-    createKitLifecycleHookBus(cwd, effective)
-  );
-  if (hookBus.isEnabled()) {
+  const runHooks = execPolicy ? execPolicy.allowLifecycleHooks : true;
+  const hookBus = runHooks
+    ? cliPerfTracer.span("lifecycle hook bus setup", () =>
+        createKitLifecycleHookBus(cwd, effective)
+      )
+    : undefined;
+  if (runHooks && hookBus && hookBus.isEnabled()) {
     const preCmd = await cliPerfTracer.spanAsync("lifecycle hook bus setup", () =>
       hookBus.emitBeforeModuleCommand(subcommand!, commandArgs)
     );
@@ -439,16 +454,19 @@ export async function handleRunCommand(
     }
   }
 
-  const caePre = cliPerfTracer.span("CAE preflight", () =>
-    runCaeCliPreflight({
-      workspacePath: cwd,
-      effective,
-      subcommand: subcommand!,
-      commandArgs,
-      router
-    })
-  );
-  if (caePre.traceToStore) {
+  const runCae = execPolicy ? execPolicy.allowCaePreflight : true;
+  const caePre = runCae
+    ? cliPerfTracer.span("CAE preflight", () =>
+        runCaeCliPreflight({
+          workspacePath: cwd,
+          effective,
+          subcommand: subcommand!,
+          commandArgs,
+          router
+        })
+      )
+    : { shadowAttach: null, enforcementDenial: null, traceToStore: null };
+  if (runCae && caePre.traceToStore) {
     cliPerfTracer.span("CAE preflight", () => {
       storeCaeSession(caePre.traceToStore!.traceId, {
         bundle: caePre.traceToStore!.bundle,
@@ -469,7 +487,7 @@ export async function handleRunCommand(
       )
     );
   }
-  if (caePre.enforcementDenial) {
+  if (runCae && caePre.enforcementDenial) {
     const denied = cliPerfTracer.span("applyResponseTemplate", () =>
       applyResponseTemplateApplication(
         subcommand!,
@@ -521,10 +539,21 @@ export async function handleRunCommand(
       }
     }
     const withCae = mergeCaeIntoCommandResult(rawResult, caePre.shadowAttach);
-    const result = cliPerfTracer.span("applyResponseTemplate", () =>
-      applyResponseTemplateApplication(subcommand!, commandArgs, withCae, effective)
-    );
-    if (hookBus.isEnabled()) {
+    const hasExplicitTemplateRequest =
+      typeof commandArgs.responseTemplateId === "string" ||
+      typeof commandArgs.responseTemplateDirective === "string" ||
+      typeof commandArgs.instructionTemplateDirective === "string" ||
+      typeof commandArgs.instruction === "string";
+
+    const skipTemplateShaping = execPolicy?.class === "read_hot" && !hasExplicitTemplateRequest;
+
+    const result = skipTemplateShaping
+      ? withCae
+      : cliPerfTracer.span("applyResponseTemplate", () =>
+          applyResponseTemplateApplication(subcommand!, commandArgs, withCae, effective)
+        );
+
+    if (runHooks && hookBus && hookBus.isEnabled()) {
       await hookBus.emitAfterModuleCommand(subcommand!, rawResult.ok, rawResult.code);
     }
     await emitJson(result as Record<string, unknown>);
@@ -545,13 +574,13 @@ export async function handleRunCommand(
           instructionPath: "src/modules/task-engine/instructions/run-transition.md"
         };
       }
-      if (hookBus.isEnabled()) {
+      if (runHooks && hookBus && hookBus.isEnabled()) {
         await hookBus.emitAfterModuleCommand(subcommand, false, error.code);
       }
       await emitJson(body);
       return codes.validationFailure;
     }
-    if (hookBus.isEnabled()) {
+    if (runHooks && hookBus && hookBus.isEnabled()) {
       const code =
         error instanceof ModuleCommandRouterError
           ? error.code

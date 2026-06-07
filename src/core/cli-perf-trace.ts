@@ -79,6 +79,20 @@ class CliPerfTracerImpl {
       process.stderr.write(`[cli-perf trace] span=${span.name} durationMs=${(span.durationMs ?? 0).toFixed(2)}\n`);
     }
   }
+
+  reset(): void {
+    const envTrace = process.env.WORKSPACE_KIT_CLI_PERF_TRACE || process.env.WORKSPACE_KIT_PERF_TRACE;
+    if (envTrace && /^(1|true|yes|on)$/i.test(envTrace.trim())) {
+      this.enabled = true;
+    } else {
+      this.enabled = false;
+    }
+    this.spans = [];
+    this.activeSpans.clear();
+    this.startedAt = performance.now();
+    this.flushed = false;
+  }
 }
 
 export const cliPerfTracer = new CliPerfTracerImpl();
+
