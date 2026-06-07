@@ -9,7 +9,12 @@ import {
   buildDashboardOverviewProjection,
   buildDashboardQueueProjection,
   buildDashboardStatusProjection,
-  parseDashboardWishlistPaging
+  parseDashboardWishlistPaging,
+  buildDashboardOverviewSlice,
+  buildDashboardQueueSlice,
+  buildDashboardStatusSlice,
+  buildDashboardAgentActivitySlice,
+  buildDashboardAgentTypesSlice
 } from "../dashboard/build-dashboard-base.js";
 import {
   finalizeDashboardSummaryProjection,
@@ -35,17 +40,18 @@ export async function runDashboardSummaryCommand(
     }
     let data;
     if (projection === "overview") {
-      data = await buildDashboardOverview(ctx, store, planningGeneration, sqliteDual, commandArgs, tracer);
+      data = await buildDashboardOverviewSlice(ctx, store, planningGeneration, sqliteDual, commandArgs, tracer);
+    } else if (projection === "queue") {
+      data = await buildDashboardQueueSlice(ctx, store, planningGeneration, sqliteDual, commandArgs, tracer);
+    } else if (projection === "status") {
+      data = await buildDashboardStatusSlice(ctx, store, planningGeneration, sqliteDual, commandArgs, tracer);
+    } else if (projection === "agentActivity") {
+      data = await buildDashboardAgentActivitySlice(ctx, store, planningGeneration, sqliteDual, commandArgs, tracer);
+    } else if (projection === "agentTypes") {
+      data = await buildDashboardAgentTypesSlice(ctx, store, planningGeneration, sqliteDual, commandArgs, tracer);
     } else {
       const base = await buildDashboardBase(ctx, store, planningGeneration, sqliteDual, commandArgs, tracer);
-      data =
-        projection === "agentActivity"
-          ? buildDashboardAgentActivityProjection(base)
-          : projection === "queue"
-            ? buildDashboardQueueProjection(base)
-            : projection === "status"
-              ? buildDashboardStatusProjection(base)
-              : buildDashboardFullProjection(base);
+      data = buildDashboardFullProjection(base);
     }
     const sliced = tracer?.span("finalizeProjection", () => finalizeDashboardSummaryProjection(data, projection))
       ?? finalizeDashboardSummaryProjection(data, projection);
@@ -63,3 +69,4 @@ export async function runDashboardSummaryCommand(
     tracer?.flush();
   }
 }
+
