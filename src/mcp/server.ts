@@ -74,6 +74,8 @@ interface ReadOnlyMcpToolDefinition {
   toolName: string;
   commandName: string;
   description: string;
+  cliFallbackArgs?: string;
+  commonMistakes: string[];
   inputSchema: McpToolDescriptor["inputSchema"];
   expansionArgs: (args: Record<string, unknown>) => Record<string, unknown>;
   validateArgs?: (args: Record<string, unknown>) => string | null;
@@ -89,11 +91,20 @@ const serverDefaults = {
   version: "0.99.28"
 };
 
+const TOOL_DESCRIPTION_CONTRACT_VERSION = 1;
+const DESCRIPTION_COMMON_MISTAKE_LIMIT = 2;
+
 const packetReadTools: ReadOnlyMcpToolDefinition[] = [
   {
     toolName: "workflow-cannon.phase-release-orchestration-state",
     commandName: "phase-release-orchestration-state",
     description: "Read the Phase release orchestration verdict packet.",
+    cliFallbackArgs:
+      '{"phaseKey":"<phase>","scope":"bucket","integrationBranch":"release/phase-<phase>","dashboardAuthorization":"complete-and-release"}',
+    commonMistakes: [
+      "omitting phaseKey",
+      "treating a tasks-remaining verdict as release approval"
+    ],
     inputSchema: objectSchema({
       phaseKey: stringSchema("Target phase key."),
       scope: enumSchema(["bucket", "phase"], "Release orchestration scope."),
@@ -114,6 +125,11 @@ const packetReadTools: ReadOnlyMcpToolDefinition[] = [
     toolName: "workflow-cannon.agent-execution-packet",
     commandName: "agent-execution-packet",
     description: "Read a draft or locked agent execution packet.",
+    cliFallbackArgs: '{"mode":"draft","taskId":"<task>","phaseKey":"<phase>"}',
+    commonMistakes: [
+      "implementing from a draft packet",
+      "mixing draft task fields with assignmentId"
+    ],
     inputSchema: objectSchema({
       mode: enumSchema(["draft", "assignment"], "Packet mode."),
       taskId: stringSchema("Task id for draft packets."),
@@ -140,6 +156,11 @@ const packetReadTools: ReadOnlyMcpToolDefinition[] = [
     toolName: "workflow-cannon.assignment-reconciliation-preflight",
     commandName: "assignment-reconciliation-preflight",
     description: "Read reconciliation readiness for a submitted assignment handoff.",
+    cliFallbackArgs: '{"assignmentId":"<assignment>","supervisorId":"<supervisor>"}',
+    commonMistakes: [
+      "running before handoff submission",
+      "ignoring outside-owned path findings"
+    ],
     inputSchema: objectSchema({
       assignmentId: stringSchema("Assignment id."),
       supervisorId: stringSchema("Supervisor id.")
@@ -154,6 +175,11 @@ const packetReadTools: ReadOnlyMcpToolDefinition[] = [
     toolName: "workflow-cannon.phase-drain-delta",
     commandName: "phase-drain-delta",
     description: "Read bounded phase drain delta evidence.",
+    cliFallbackArgs: '{"phaseKey":"<phase>"}',
+    commonMistakes: [
+      "continuing after full-refresh recommendation",
+      "reusing a stale cursor"
+    ],
     inputSchema: objectSchema({
       phaseKey: stringSchema("Target phase key."),
       cursor: stringSchema("Optional drain cursor.")
@@ -168,6 +194,11 @@ const packetReadTools: ReadOnlyMcpToolDefinition[] = [
     toolName: "workflow-cannon.phase-release-state",
     commandName: "phase-release-state",
     description: "Read release state for a phase.",
+    cliFallbackArgs: '{"phaseKey":"<phase>"}',
+    commonMistakes: [
+      "confusing release state with closeout approval",
+      "omitting phaseKey"
+    ],
     inputSchema: objectSchema({
       phaseKey: stringSchema("Target phase key.")
     }, ["phaseKey"]),
@@ -180,6 +211,11 @@ const packetReadTools: ReadOnlyMcpToolDefinition[] = [
     toolName: "workflow-cannon.release-closeout-result",
     commandName: "release-closeout-result",
     description: "Read release closeout result evidence for a phase.",
+    cliFallbackArgs: '{"phaseKey":"<phase>"}',
+    commonMistakes: [
+      "using stale closeout evidence after task changes",
+      "treating missing artifacts as warnings"
+    ],
     inputSchema: objectSchema({
       phaseKey: stringSchema("Target phase key.")
     }, ["phaseKey"]),
@@ -192,6 +228,11 @@ const packetReadTools: ReadOnlyMcpToolDefinition[] = [
     toolName: "workflow-cannon.cae-guidance-preview",
     commandName: "cae-guidance-preview",
     description: "Read bounded CAE guidance cards for task or workflow context.",
+    cliFallbackArgs: '{"taskId":"<task>"}',
+    commonMistakes: [
+      "treating guidance as policy approval",
+      "requesting broad unscoped guidance when task context is known"
+    ],
     inputSchema: passthroughObjectSchema({
       taskId: stringSchema("Optional task id to scope guidance."),
       workflowName: stringSchema("Optional workflow name to scope guidance."),
@@ -211,6 +252,11 @@ const packetReadTools: ReadOnlyMcpToolDefinition[] = [
     toolName: "workflow-cannon.cae-evaluate",
     commandName: "cae-evaluate",
     description: "Read a CAE effective activation bundle and trace for an evaluation context.",
+    cliFallbackArgs: '{"evaluationContext":{"command":{"name":"<command>"}}}',
+    commonMistakes: [
+      "passing raw policyApproval or secret values",
+      "treating shadow observations as enforced denials"
+    ],
     inputSchema: passthroughObjectSchema({
       evaluationContext: objectPropertySchema("CAE evaluation context.")
     }),
@@ -228,6 +274,11 @@ const packetReadTools: ReadOnlyMcpToolDefinition[] = [
     toolName: "workflow-cannon.cae-explain",
     commandName: "cae-explain",
     description: "Read an explanation for a CAE trace or evaluation.",
+    cliFallbackArgs: '{"traceId":"<trace>"}',
+    commonMistakes: [
+      "expecting explanation text to be a stable API",
+      "omitting both traceId and replay context"
+    ],
     inputSchema: passthroughObjectSchema({
       traceId: stringSchema("Optional CAE trace id."),
       activationId: stringSchema("Optional CAE activation id.")
@@ -246,6 +297,11 @@ const packetReadTools: ReadOnlyMcpToolDefinition[] = [
     toolName: "workflow-cannon.cae-get-trace",
     commandName: "cae-get-trace",
     description: "Read one CAE trace by id.",
+    cliFallbackArgs: '{"traceId":"<trace>"}',
+    commonMistakes: [
+      "using a trace from another workspace",
+      "assuming ephemeral traces are durable"
+    ],
     inputSchema: objectSchema({
       traceId: stringSchema("CAE trace id.")
     }, ["traceId"]),
@@ -261,6 +317,11 @@ const packetReadTools: ReadOnlyMcpToolDefinition[] = [
     toolName: "workflow-cannon.cae-recent-traces",
     commandName: "cae-recent-traces",
     description: "Read recent durable CAE trace summaries.",
+    cliFallbackArgs: '{"limit":10}',
+    commonMistakes: [
+      "using recent traces as task truth",
+      "requesting unbounded trace history"
+    ],
     inputSchema: passthroughObjectSchema({
       limit: numberSchema("Optional max trace count.")
     }),
@@ -275,6 +336,11 @@ const packetReadTools: ReadOnlyMcpToolDefinition[] = [
     toolName: "workflow-cannon.memory-list",
     commandName: "list-memory",
     description: "Read governed project-memory records with source and status metadata.",
+    cliFallbackArgs: '{"status":"approved"}',
+    commonMistakes: [
+      "treating memory as current task state",
+      "expecting write, approve, or prune through MCP"
+    ],
     inputSchema: objectSchema({
       status: enumSchema(["draft", "approved", "pruned"], "Optional governed memory status filter."),
       category: stringSchema("Optional memory category filter.")
@@ -297,6 +363,11 @@ const packetReadTools: ReadOnlyMcpToolDefinition[] = [
     toolName: "workflow-cannon.memory-precedence",
     commandName: "explain-memory-precedence",
     description: "Read the governance precedence model for project memory.",
+    cliFallbackArgs: "{}",
+    commonMistakes: [
+      "letting memory override policy or source-of-truth docs",
+      "using precedence output as live task evidence"
+    ],
     inputSchema: objectSchema({}, []),
     expansionArgs: () => ({}),
     governance: {
@@ -312,11 +383,42 @@ const packetReadTools: ReadOnlyMcpToolDefinition[] = [
 
 const toolDefinitionsByName = new Map(packetReadTools.map((tool) => [tool.toolName, tool]));
 
+function formatMcpToolDescription(input: {
+  description: string;
+  commandName: string;
+  cliFallbackArgs?: string;
+  commonMistakes: string[];
+}): string {
+  const fallbackArgs = input.cliFallbackArgs ?? "{}";
+  const fallbackCommand =
+    fallbackArgs.length > 0
+      ? `pnpm exec wk run ${input.commandName} '${fallbackArgs}'`
+      : `pnpm exec wk run ${input.commandName}`;
+  const mistakes = input.commonMistakes.slice(0, DESCRIPTION_COMMON_MISTAKE_LIMIT).join("; ");
+  return [
+    input.description,
+    `CLI fallback: ${fallbackCommand}.`,
+    `Common mistakes: ${mistakes}.`
+  ].join(" ");
+}
+
+function capabilitiesToolDescription(): string {
+  return formatMcpToolDescription({
+    description: "Describe the read-only Workspace Kit MCP surface and descriptor contract.",
+    commandName: "--list-commands",
+    cliFallbackArgs: "",
+    commonMistakes: [
+      "assuming capabilities enable mutation",
+      "skipping CLI fallback when MCP is unavailable"
+    ]
+  });
+}
+
 export function listReadOnlyMcpTools(): McpToolDescriptor[] {
   return [
     {
       name: "workflow-cannon.capabilities",
-      description: "Describe the read-only Workspace Kit MCP surface.",
+      description: capabilitiesToolDescription(),
       inputSchema: {
         type: "object",
         properties: {},
@@ -325,7 +427,7 @@ export function listReadOnlyMcpTools(): McpToolDescriptor[] {
     },
     ...packetReadTools.map((tool) => ({
       name: tool.toolName,
-      description: tool.description,
+      description: formatMcpToolDescription(tool),
       inputSchema: tool.inputSchema
     }))
   ];
@@ -430,6 +532,10 @@ async function handleToolCall(
               auditLogging: {
                 bounded: true,
                 redacted: true
+              },
+              toolDescriptionContract: {
+                schemaVersion: TOOL_DESCRIPTION_CONTRACT_VERSION,
+                requiredSegments: ["description", "CLI fallback", "Common mistakes"]
               },
               tools: listReadOnlyMcpTools().map((tool) => tool.name),
               byteBudget: resolveToolResponseByteBudget(options)
