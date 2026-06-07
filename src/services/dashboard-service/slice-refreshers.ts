@@ -3,7 +3,7 @@ import { ModuleCommandRouter } from "../../core/module-command-router.js";
 import { resolveRegistryAndConfig } from "../../core/module-registry-resolve.js";
 import { defaultRegistryModules } from "../../modules/index.js";
 import { runDashboardSummaryCommand } from "../../modules/task-engine/commands/task-engine-dashboard-on-command.js";
-import { openPlanningStores } from "../../modules/task-engine/persistence/planning-open.js";
+import { openPlanningStores, openPlanningStoresReadOnly } from "../../modules/task-engine/persistence/planning-open.js";
 import {
   lookupDashboardServiceSlice,
   type DashboardServiceSliceDefinition
@@ -104,7 +104,7 @@ export class DashboardSliceRefresher {
       if (!this.ctx) {
         throw new Error("dashboard slice refresher not started");
       }
-      this.storesPromise = openPlanningStores(this.ctx);
+      this.storesPromise = openPlanningStoresReadOnly(this.ctx);
     }
     return this.storesPromise;
   }

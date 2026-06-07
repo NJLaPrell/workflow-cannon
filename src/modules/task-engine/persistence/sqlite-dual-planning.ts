@@ -202,12 +202,21 @@ export class SqliteDualPlanningStore {
   private _relationalTasks = false;
   /** Monotonic optimistic-lock counter for unified planning SQLite row (tasks + wishlist + logs). */
   private _planningGeneration = 0;
+  readonly readOnly: boolean;
+  private readonly _loadOptions?: { skipTasks?: boolean; skipLogs?: boolean };
 
-  constructor(workspacePath: string, databaseRelativePath: string) {
+  constructor(
+    workspacePath: string,
+    databaseRelativePath: string,
+    readOnly = false,
+    loadOptions?: { skipTasks?: boolean; skipLogs?: boolean }
+  ) {
     this._workspaceRoot = path.resolve(workspacePath);
     this.dbPath = path.resolve(workspacePath, databaseRelativePath);
     this._taskDoc = emptyTaskStoreDocument();
     this._wishlistDoc = emptyWishlistDocument();
+    this.readOnly = readOnly;
+    this._loadOptions = loadOptions;
   }
 
   get taskDocument(): TaskStoreDocument {
@@ -355,10 +364,12 @@ export class SqliteDualPlanningStore {
 
   private openDatabase(): Database.Database {
     const dir = path.dirname(this.dbPath);
-    fs.mkdirSync(dir, { recursive: true });
+    if (!this.readOnly) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
     try {
       const DatabaseCtor = loadBetterSqlite3Constructor();
-      this.db = new DatabaseCtor(this.dbPath);
+      this.db = new DatabaseCtor(this.dbPath, { readonly: this.readOnly });
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       const classification = classifyNativeSqliteErrorMessage(msg);
@@ -590,17 +601,27 @@ export class SqliteDualPlanningStore {
       try {
         if (useRel) {
           this._taskDoc = emptyTaskStoreDocument();
-          this.loadRelationalTasks(db);
+          if (!this._loadOptions?.skipTasks) {
+            this.loadRelationalTasks(db);
+          }
           const tr = row.transition_log_json;
           const mj = row.mutation_log_json;
           if (typeof tr !== "string" || typeof mj !== "string") {
             throw new TaskEngineError("storage-read-error", "envelope log columns missing");
           }
-          if (!this.loadEvidenceLogs(db)) {
-            this.parseLogs(tr, mj);
+          if (!this._loadOptions?.skipLogs) {
+            if (!this.loadEvidenceLogs(db)) {
+              this.parseLogs(tr, mj);
+            }
           }
         } else {
-          const taskParsed = normalizeTaskStoreDocumentFromUnknown(JSON.parse(row.task_store_json as string));
+          const taskParsed = this._loadOptions?.skipTasks
+            ? emptyTaskStoreDocument()
+            : normalizeTaskStoreDocumentFromUnknown(JSON.parse(row.task_store_json as string));
+          if (this._loadOptions?.skipLogs) {
+            taskParsed.transitionLog = [];
+            taskParsed.mutationLog = [];
+          }
           const wishParsed = JSON.parse(row.wishlist_store_json as string) as WishlistStoreDocument;
           if (wishParsed.schemaVersion !== 1) {
             throw new TaskEngineError(
@@ -645,12 +666,22 @@ export class SqliteDualPlanningStore {
       this._relationalTasks = useRel;
       if (useRel) {
         this._taskDoc = emptyTaskStoreDocument();
-        this.loadRelationalTasks(db);
-        if (!this.loadEvidenceLogs(db)) {
-          this.parseLogs(row.transition_log_json as string, row.mutation_log_json as string);
+        if (!this._loadOptions?.skipTasks) {
+          this.loadRelationalTasks(db);
+        }
+        if (!this._loadOptions?.skipLogs) {
+          if (!this.loadEvidenceLogs(db)) {
+            this.parseLogs(row.transition_log_json as string, row.mutation_log_json as string);
+          }
         }
       } else {
-        this._taskDoc = normalizeTaskStoreDocumentFromUnknown(JSON.parse(row.task_store_json as string));
+        this._taskDoc = this._loadOptions?.skipTasks
+          ? emptyTaskStoreDocument()
+          : normalizeTaskStoreDocumentFromUnknown(JSON.parse(row.task_store_json as string));
+        if (this._loadOptions?.skipLogs) {
+          this._taskDoc.transitionLog = [];
+          this._taskDoc.mutationLog = [];
+        }
         this._wishlistDoc = emptyWishlistDocument();
       }
     } catch (err) {
