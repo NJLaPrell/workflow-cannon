@@ -1,8 +1,8 @@
 import type { ModuleLifecycleContext } from "../../../contracts/module-contract.js";
 import type { TaskStore } from "../persistence/store.js";
 import type { SqliteDualPlanningStore } from "../persistence/sqlite-dual-planning.js";
-import type { DashboardTracer } from "../dashboard/dashboard-summary-trace.js";
-import type { Record<string, unknown> } from "../../../core/types.js";
+import type { DashboardSummaryTracer } from "../dashboard/dashboard-summary-trace.js";
+// import type { Record<string, unknown> } from "../../../core/types.js";
 
 import {
   buildDashboardBase,
@@ -10,7 +10,6 @@ import {
   buildDashboardQueueProjection,
   buildDashboardStatusProjection,
   buildDashboardAgentActivityProjection,
-  buildDashboardAgentTypesProjection,
   buildDashboardFullProjection,
   buildDashboardOverviewProjection,
   buildDashboardQueueSlice as originalBuildDashboardQueueSlice,
@@ -18,8 +17,10 @@ import {
   buildDashboardAgentActivitySlice as originalBuildDashboardAgentActivitySlice,
   buildDashboardAgentTypesSlice as originalBuildDashboardAgentTypesSlice,
   buildDashboardOverviewSlice as originalBuildDashboardOverviewSlice,
+  buildDashboardTerminalTasksPage as originalBuildDashboardTerminalTasksPage,
   parseDashboardWishlistPaging
 } from "./build-dashboard-base.js";
+
 
 /**
  * Slice‑native dashboard builders – thin wrappers around the existing base
@@ -33,7 +34,7 @@ export async function buildDashboardOverviewSlice(
   planningGeneration: number,
   sqliteDual?: SqliteDualPlanningStore,
   commandArgs?: Record<string, unknown>,
-  tracer?: DashboardTracer
+  tracer?: DashboardSummaryTracer
 ) {
   // Currently delegate to the original implementation; future optimisation
   // will replace the call with a read‑only planning‑store version.
@@ -53,7 +54,7 @@ export async function buildDashboardQueueSlice(
   planningGeneration: number,
   sqliteDual?: SqliteDualPlanningStore,
   commandArgs?: Record<string, unknown>,
-  tracer?: DashboardTracer
+  tracer?: DashboardSummaryTracer
 ) {
   return originalBuildDashboardQueueSlice(
     ctx,
@@ -71,7 +72,7 @@ export async function buildDashboardStatusSlice(
   planningGeneration: number,
   sqliteDual?: SqliteDualPlanningStore,
   commandArgs?: Record<string, unknown>,
-  tracer?: DashboardTracer
+  tracer?: DashboardSummaryTracer
 ) {
   return originalBuildDashboardStatusSlice(
     ctx,
@@ -89,7 +90,7 @@ export async function buildDashboardAgentActivitySlice(
   planningGeneration: number,
   sqliteDual?: SqliteDualPlanningStore,
   commandArgs?: Record<string, unknown>,
-  tracer?: DashboardTracer
+  tracer?: DashboardSummaryTracer
 ) {
   return originalBuildDashboardAgentActivitySlice(
     ctx,
@@ -107,9 +108,28 @@ export async function buildDashboardAgentTypesSlice(
   planningGeneration: number,
   sqliteDual?: SqliteDualPlanningStore,
   commandArgs?: Record<string, unknown>,
-  tracer?: DashboardTracer
+  tracer?: DashboardSummaryTracer
 ) {
   return originalBuildDashboardAgentTypesSlice(
+    ctx,
+    store,
+    planningGeneration,
+    sqliteDual,
+    commandArgs,
+    tracer
+  );
+}
+
+export async function buildDashboardTerminalTasksPage(
+  ctx: ModuleLifecycleContext,
+  store: TaskStore,
+  planningGeneration: number,
+  sqliteDual?: SqliteDualPlanningStore,
+  commandArgs?: Record<string, unknown>,
+  tracer?: DashboardSummaryTracer
+) {
+  // Delegate to the original implementation for now.
+  return originalBuildDashboardTerminalTasksPage(
     ctx,
     store,
     planningGeneration,

@@ -4,18 +4,21 @@ import type { TaskStore } from "../persistence/store.js";
 import {
   buildDashboardBase,
   buildDashboardOverview,
-  buildDashboardAgentActivityProjection,
   buildDashboardFullProjection,
   buildDashboardOverviewProjection,
   buildDashboardQueueProjection,
   buildDashboardStatusProjection,
-  parseDashboardWishlistPaging,
+  parseDashboardWishlistPaging
+} from "../dashboard/build-dashboard-base.js";
+
+import {
   buildDashboardOverviewSlice,
   buildDashboardQueueSlice,
   buildDashboardStatusSlice,
   buildDashboardAgentActivitySlice,
-  buildDashboardAgentTypesSlice
-} from "../dashboard/build-dashboard-base.js";
+  buildDashboardAgentTypesSlice,
+  buildDashboardTerminalTasksPage
+} from "../dashboard/slice-builders.js";
 import {
   finalizeDashboardSummaryProjection,
   parseDashboardSummaryProjection

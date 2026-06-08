@@ -23,6 +23,8 @@ import { buildFeatureEnrichmentBySlug, loadTaskFeatureLinkMap } from "../persist
 import { rowToTaskEntity, type TaskEngineTaskRow } from "../persistence/sqlite-task-row-mapping.js";
 import { TASK_ENGINE_TASKS_TABLE } from "../../../core/state/kit-sqlite/planning-sqlite-kernel.js";
 import { inferTaskPhaseKey } from "../phase-resolution.js";
+import { openPlanningStoresForDashboardSlice } from "../persistence/planning-open.js";
+import { parseDashboardSummaryProjection } from "../dashboard/dashboard-summary-projection.js";
 
 import { buildDashboardTerminalTasksPage } from "../dashboard/focused-slice-builders.js";
 
@@ -39,11 +41,16 @@ export async function resolveQueueDashboardReadoutCommands(
   const args = command.args ?? {};
 
   if (command.name === "dashboard-summary") {
+    // Determine projection to decide which slice store mode to use
+    const projection = parseDashboardSummaryProjection(args);
+    // Open planning stores optimized for the requested dashboard slice
+    const slicePlanning = await openPlanningStoresForDashboardSlice(ctx, projection);
+    const generation = slicePlanning.sqliteDual.getPlanningGeneration();
     return runDashboardSummaryCommand(
       ctx,
-      store,
-      planning.sqliteDual.getPlanningGeneration(),
-      planning.sqliteDual,
+      slicePlanning.taskStore,
+      generation,
+      slicePlanning.sqliteDual,
       args
     );
   }
