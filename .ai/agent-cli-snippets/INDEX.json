@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-06-05T19:45:35.641Z",
+  "generatedAt": "2026-06-10T23:40:47.923Z",
   "commands": [
     {
       "name": "accept-improvement",
@@ -458,6 +458,31 @@
       "moduleId": "task-engine"
     },
     {
+      "name": "dashboard-agent-activity-slice",
+      "path": ".ai/agent-cli-snippets/by-command/dashboard-agent-activity-slice.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "dashboard-agent-types-slice",
+      "path": ".ai/agent-cli-snippets/by-command/dashboard-agent-types-slice.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "dashboard-bootstrap-slices",
+      "path": ".ai/agent-cli-snippets/by-command/dashboard-bootstrap-slices.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "dashboard-overview-slice",
+      "path": ".ai/agent-cli-snippets/by-command/dashboard-overview-slice.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "dashboard-queue-slice",
+      "path": ".ai/agent-cli-snippets/by-command/dashboard-queue-slice.json",
+      "moduleId": "task-engine"
+    },
+    {
       "name": "dashboard-service-snapshot",
       "path": ".ai/agent-cli-snippets/by-command/dashboard-service-snapshot.json",
       "moduleId": "task-engine"
@@ -478,6 +503,11 @@
       "moduleId": "task-engine"
     },
     {
+      "name": "dashboard-status-slice",
+      "path": ".ai/agent-cli-snippets/by-command/dashboard-status-slice.json",
+      "moduleId": "task-engine"
+    },
+    {
       "name": "dashboard-summary",
       "path": ".ai/agent-cli-snippets/by-command/dashboard-summary.json",
       "moduleId": "task-engine"
@@ -490,6 +520,11 @@
     {
       "name": "dashboard-terminal-tasks",
       "path": ".ai/agent-cli-snippets/by-command/dashboard-terminal-tasks.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "dashboard-terminal-tasks-page",
+      "path": ".ai/agent-cli-snippets/by-command/dashboard-terminal-tasks-page.json",
       "moduleId": "task-engine"
     },
     {

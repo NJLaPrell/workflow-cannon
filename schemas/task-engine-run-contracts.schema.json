@@ -52,13 +52,20 @@
         "create-task",
         "create-task-from-plan",
         "create-wishlist",
+        "dashboard-agent-activity-slice",
+        "dashboard-agent-types-slice",
+        "dashboard-bootstrap-slices",
+        "dashboard-overview-slice",
+        "dashboard-queue-slice",
         "dashboard-service-snapshot",
         "dashboard-service-start",
         "dashboard-service-status",
         "dashboard-service-stop",
+        "dashboard-status-slice",
         "dashboard-summary",
         "dashboard-terminal-rows",
         "dashboard-terminal-tasks",
+        "dashboard-terminal-tasks-page",
         "demote-task",
         "derive-publish-artifacts",
         "derive-validations",
@@ -521,6 +528,27 @@
           "$ref": "#/$defs/contractBase"
         },
         "dashboard-service-snapshot": {
+          "$ref": "#/$defs/contractBase"
+        },
+        "dashboard-overview-slice": {
+          "$ref": "#/$defs/contractBase"
+        },
+        "dashboard-queue-slice": {
+          "$ref": "#/$defs/contractBase"
+        },
+        "dashboard-status-slice": {
+          "$ref": "#/$defs/contractBase"
+        },
+        "dashboard-agent-activity-slice": {
+          "$ref": "#/$defs/contractBase"
+        },
+        "dashboard-agent-types-slice": {
+          "$ref": "#/$defs/contractBase"
+        },
+        "dashboard-terminal-tasks-page": {
+          "$ref": "#/$defs/contractBase"
+        },
+        "dashboard-bootstrap-slices": {
           "$ref": "#/$defs/contractBase"
         },
         "demote-task": {
