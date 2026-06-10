@@ -96,3 +96,11 @@ class CliPerfTracerImpl {
 
 export const cliPerfTracer = new CliPerfTracerImpl();
 
+// Helper to emit a metric line when performance tracing is enabled
+export function recordMetric(metric: string, value: any): void {
+  if (cliPerfTracer.isEnabled()) {
+    const payload = { metric, value };
+    // Prefix with [benchmark] to allow downstream parsing
+    process.stderr.write(`[benchmark] ${JSON.stringify(payload)}\n`);
+  }
+}

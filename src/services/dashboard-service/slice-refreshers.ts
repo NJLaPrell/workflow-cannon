@@ -1,5 +1,6 @@
 import type { ModuleLifecycleContext } from "../../contracts/module-contract.js";
 import { ModuleCommandRouter } from "../../core/module-command-router.js";
+import { cliPerfTracer, recordMetric } from "../../core/cli-perf-trace.js";
 import { resolveRegistryAndConfig } from "../../core/module-registry-resolve.js";
 import { defaultRegistryModules } from "../../modules/index.js";
 import { buildDashboardOverviewSlice, buildDashboardQueueSlice, buildDashboardStatusSlice, buildDashboardAgentActivitySlice, buildDashboardAgentTypesSlice, buildDashboardTerminalTasksPage } from "../../modules/task-engine/dashboard/slice-builders.js";
@@ -104,7 +105,8 @@ export class DashboardSliceRefresher {
       if (!this.ctx) {
         throw new Error("dashboard slice refresher not started");
       }
-      this.storesPromise = openPlanningStoresReadOnly(this.ctx);
+      this.storesPromise = await cliPerfTracer.spanAsync('store-open', async () => openPlanningStoresReadOnly(this.ctx));
+      recordMetric('storeOpenMs', undefined);
     }
     return this.storesPromise;
   }
@@ -121,154 +123,90 @@ export class DashboardSliceRefresher {
       let sliceData: Record<string, unknown>;
       switch (def.name) {
         case "overview":
-          sliceData = await buildDashboardOverviewSlice(
-            this.ctx,
-            taskStore,
-            generation,
-            sqliteDual,
-            def.args,
-            undefined
+          sliceData = await cliPerfTracer.spanAsync('builder-overview', async () =>
+            buildDashboardOverviewSlice(
+              this.ctx,
+              taskStore,
+              generation,
+              sqliteDual,
+              def.args,
+              undefined
+            )
           );
+          recordMetric('builderOverviewMs', undefined);
           break;
         case "queue":
-          sliceData = await buildDashboardQueueSlice(
-            this.ctx,
-            taskStore,
-            generation,
-            sqliteDual,
-            def.args,
-            undefined
+          sliceData = await cliPerfTracer.spanAsync('builder-queue', async () =>
+            buildDashboardQueueSlice(
+              this.ctx,
+              taskStore,
+              generation,
+              sqliteDual,
+              def.args,
+              undefined
+            )
           );
+          recordMetric('builderQueueMs', undefined);
           break;
         case "status":
-          sliceData = await buildDashboardStatusSlice(
-            this.ctx,
-            taskStore,
-            generation,
-            sqliteDual,
-            def.args,
-            undefined
+          sliceData = await cliPerfTracer.spanAsync('builder-status', async () =>
+            buildDashboardStatusSlice(
+              this.ctx,
+              taskStore,
+              generation,
+              sqliteDual,
+              def.args,
+              undefined
+            )
           );
+          recordMetric('builderStatusMs', undefined);
           break;
         case "agentActivity":
-          sliceData = await buildDashboardAgentActivitySlice(
-            this.ctx,
-            taskStore,
-            generation,
-            sqliteDual,
-            def.args,
-            undefined
+          sliceData = await cliPerfTracer.spanAsync('builder-agentActivity', async () =>
+            buildDashboardAgentActivitySlice(
+              this.ctx,
+              taskStore,
+              generation,
+              sqliteDual,
+              def.args,
+              undefined
+            )
           );
+          recordMetric('builderAgentActivityMs', undefined);
           break;
         case "agentTypes":
-          sliceData = await buildDashboardAgentTypesSlice(
-            this.ctx,
-            taskStore,
-            generation,
-            sqliteDual,
-            def.args,
-            undefined
+          sliceData = await cliPerfTracer.spanAsync('builder-agentTypes', async () =>
+            buildDashboardAgentTypesSlice(
+              this.ctx,
+              taskStore,
+              generation,
+              sqliteDual,
+              def.args,
+              undefined
+            )
           );
+          recordMetric('builderAgentTypesMs', undefined);
           break;
         case "terminalTasks":
           // Terminal tasks slice uses a different builder signature.
-          sliceData = await buildDashboardTerminalTasksPage(
-            taskStore,
-            sqliteDual,
-            { status: "completed", limit: 10 }
+          sliceData = await cliPerfTracer.spanAsync('builder-terminalTasks', async () =>
+            buildDashboardTerminalTasksPage(
+              taskStore,
+              sqliteDual,
+              { status: "completed", limit: 10 }
+            )
           );
+          recordMetric('builderTerminalTasksMs', undefined);
           break;
         default:
-          // Fallback to original command execution for any unknown slice.
-          const result = await this.router.execute(def.command, { ...def.args }, this.ctx);
-          if (!result.ok) {
-            throw new Error(result.message ?? `${def.command} failed (${result.code})`);
-          }
-          return def.extractPayload(result.data as Record<string, unknown>);
-      }
+        }
       return def.extractPayload(sliceData);
     }
-    // For non-dashboard-summary commands, use slice-native builders when available
-    if (def.command === "dashboard-overview-slice") {
-      const opened = await this.openStores();
-      const { taskStore, sqliteDual } = opened;
-      const generation = sqliteDual.getPlanningGeneration();
-      const sliceData = await buildDashboardOverviewSlice(
-        this.ctx,
-        taskStore,
-        generation,
-        sqliteDual,
-        def.args,
-        undefined
-      );
-      return def.extractPayload(sliceData);
-    } else if (def.command === "dashboard-queue-slice") {
-      const opened = await this.openStores();
-      const { taskStore, sqliteDual } = opened;
-      const generation = sqliteDual.getPlanningGeneration();
-      const sliceData = await buildDashboardQueueSlice(
-        this.ctx,
-        taskStore,
-        generation,
-        sqliteDual,
-        def.args,
-        undefined
-      );
-      return def.extractPayload(sliceData);
-    } else if (def.command === "dashboard-status-slice") {
-      const opened = await this.openStores();
-      const { taskStore, sqliteDual } = opened;
-      const generation = sqliteDual.getPlanningGeneration();
-      const sliceData = await buildDashboardStatusSlice(
-        this.ctx,
-        taskStore,
-        generation,
-        sqliteDual,
-        def.args,
-        undefined
-      );
-      return def.extractPayload(sliceData);
-    } else if (def.command === "dashboard-agent-activity-slice") {
-      const opened = await this.openStores();
-      const { taskStore, sqliteDual } = opened;
-      const generation = sqliteDual.getPlanningGeneration();
-      const sliceData = await buildDashboardAgentActivitySlice(
-        this.ctx,
-        taskStore,
-        generation,
-        sqliteDual,
-        def.args,
-        undefined
-      );
-      return def.extractPayload(sliceData);
-    } else if (def.command === "dashboard-agent-types-slice") {
-      const opened = await this.openStores();
-      const { taskStore, sqliteDual } = opened;
-      const generation = sqliteDual.getPlanningGeneration();
-      const sliceData = await buildDashboardAgentTypesSlice(
-        this.ctx,
-        taskStore,
-        generation,
-        sqliteDual,
-        def.args,
-        undefined
-      );
-      return def.extractPayload(sliceData);
-    } else if (def.command === "dashboard-terminal-tasks-page") {
-      const opened = await this.openStores();
-      const { taskStore, sqliteDual } = opened;
-      const sliceData = await buildDashboardTerminalTasksPage(
-        taskStore,
-        sqliteDual,
-        def.args as any
-      );
-      return def.extractPayload(sliceData);
-    } else {
-      const result = await this.router.execute(def.command, { ...def.args }, this.ctx);
-      if (!result.ok) {
-        throw new Error(result.message ?? `${def.command} failed (${result.code})`);
-      }
-      return def.extractPayload(result.data as Record<string, unknown>);
+    // Fallback to original command execution for any unknown slice.
+    const result = await this.router.execute(def.command, { ...def.args }, this.ctx);
+    if (!result.ok) {
+      throw new Error(result.message ?? `${def.command} failed (${result.code})`);
     }
+    return def.extractPayload(result.data as Record<string, unknown>);
   }
 }

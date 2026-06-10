@@ -76,6 +76,10 @@ export async function handleRunCommand(
   codes: RunCommandExitCodes
 ): Promise<number> {
   cliPerfTracer.startSpan("handleRunCommand:start");
+  // Start high-level CLI wrapper span and count process spawns
+  cliPerfTracer.startSpan("cli-wrapper");
+  const spawnCount = (parseInt(process.env.DASHBOARD_CLI_PROCESS_SPAWN_COUNT ?? "0") || 0) + 1;
+  process.env.DASHBOARD_CLI_PROCESS_SPAWN_COUNT = String(spawnCount);
   try {
   const { writeLine, writeError } = io;
   const invocationId = createRunInvocationId();
@@ -616,6 +620,7 @@ export async function handleRunCommand(
     releaseTranscriptHookLockFromEnv();
   }
   } finally {
+    cliPerfTracer.endSpan("cli-wrapper");
     cliPerfTracer.endSpan("handleRunCommand:start");
     cliPerfTracer.flush();
   }
