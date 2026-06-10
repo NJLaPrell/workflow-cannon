@@ -23,6 +23,7 @@ import {
   finalizeDashboardSummaryProjection,
   parseDashboardSummaryProjection
 } from "../dashboard/dashboard-summary-projection.js";
+import type { DashboardSummaryTracer } from "../dashboard/dashboard-summary-trace.js";
 import { createDashboardSummaryTracer } from "../dashboard/dashboard-summary-trace.js";
 
 export { parseDashboardWishlistPaging };
@@ -73,3 +74,75 @@ export async function runDashboardSummaryCommand(
   }
 }
 
+// Slice command wrappers
+export async function dashboardOverviewSliceCommand(
+  ctx: ModuleLifecycleContext,
+  store: TaskStore,
+  planningGeneration: number,
+  sqliteDual?: SqliteDualPlanningStore,
+  commandArgs?: Record<string, unknown>,
+  tracer?: DashboardSummaryTracer
+): Promise<ModuleCommandResult> {
+  const data = await buildDashboardOverviewSlice(ctx, store, planningGeneration, sqliteDual, commandArgs, tracer);
+  return { ok: true, code: "dashboard-overview-slice", message: "Dashboard overview slice built", data: data as Record<string, unknown> };
+}
+
+export async function dashboardQueueSliceCommand(
+  ctx: ModuleLifecycleContext,
+  store: TaskStore,
+  planningGeneration: number,
+  sqliteDual?: SqliteDualPlanningStore,
+  commandArgs?: Record<string, unknown>,
+  tracer?: DashboardSummaryTracer
+): Promise<ModuleCommandResult> {
+  const data = await buildDashboardQueueSlice(ctx, store, planningGeneration, sqliteDual, commandArgs, tracer);
+  return { ok: true, code: "dashboard-queue-slice", message: "Dashboard queue slice built", data: data as Record<string, unknown> };
+}
+
+export async function dashboardStatusSliceCommand(
+  ctx: ModuleLifecycleContext,
+  store: TaskStore,
+  planningGeneration: number,
+  sqliteDual?: SqliteDualPlanningStore,
+  commandArgs?: Record<string, unknown>,
+  tracer?: DashboardSummaryTracer
+): Promise<ModuleCommandResult> {
+  const data = await buildDashboardStatusSlice(ctx, store, planningGeneration, sqliteDual, commandArgs, tracer);
+  return { ok: true, code: "dashboard-status-slice", message: "Dashboard status slice built", data: data as Record<string, unknown> };
+}
+
+export async function dashboardAgentActivitySliceCommand(
+  ctx: ModuleLifecycleContext,
+  store: TaskStore,
+  planningGeneration: number,
+  sqliteDual?: SqliteDualPlanningStore,
+  commandArgs?: Record<string, unknown>,
+  tracer?: DashboardSummaryTracer
+): Promise<ModuleCommandResult> {
+  const data = await buildDashboardAgentActivitySlice(ctx, store, planningGeneration, sqliteDual, commandArgs, tracer);
+  return { ok: true, code: "dashboard-agent-activity-slice", message: "Dashboard agent activity slice built", data: data as Record<string, unknown> };
+}
+
+export async function dashboardAgentTypesSliceCommand(
+  ctx: ModuleLifecycleContext,
+  store: TaskStore,
+  planningGeneration: number,
+  sqliteDual?: SqliteDualPlanningStore,
+  commandArgs?: Record<string, unknown>,
+  tracer?: DashboardSummaryTracer
+): Promise<ModuleCommandResult> {
+  const data = await buildDashboardAgentTypesSlice(ctx, store, planningGeneration, sqliteDual, commandArgs, tracer);
+  return { ok: true, code: "dashboard-agent-types-slice", message: "Dashboard agent types slice built", data: data as Record<string, unknown> };
+}
+
+export async function dashboardTerminalTasksSliceCommand(
+  ctx: ModuleLifecycleContext,
+  store: TaskStore,
+  planningGeneration: number,
+  sqliteDual?: SqliteDualPlanningStore,
+  commandArgs?: Record<string, unknown>,
+  tracer?: DashboardSummaryTracer
+): Promise<ModuleCommandResult> {
+  const data = await buildDashboardTerminalTasksPage(store, sqliteDual, { status: "completed", limit: 10 });
+  return { ok: true, code: "dashboard-terminal-tasks", message: "Dashboard terminal tasks slice built", data: data as Record<string, unknown> };
+}

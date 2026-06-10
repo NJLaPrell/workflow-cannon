@@ -120,23 +120,6 @@ export async function buildDashboardAgentTypesSlice(
   );
 }
 
-export async function buildDashboardTerminalTasksPage(
-  ctx: ModuleLifecycleContext,
-  store: TaskStore,
-  planningGeneration: number,
-  sqliteDual?: SqliteDualPlanningStore,
-  commandArgs?: Record<string, unknown>,
-  tracer?: DashboardSummaryTracer
-) {
-  // Delegate to the original implementation for now.
-  return originalBuildDashboardTerminalTasksPage(
-    ctx,
-    store,
-    planningGeneration,
-    sqliteDual,
-    commandArgs,
-    tracer
-  );
-}
+export const buildDashboardTerminalTasksPage = originalBuildDashboardTerminalTasksPage;
 
 export { parseDashboardWishlistPaging };

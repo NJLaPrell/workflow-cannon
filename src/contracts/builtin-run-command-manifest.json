@@ -1162,6 +1162,60 @@
     "policySensitivity": "non-sensitive"
   },
   {
+  "moduleId": "task-engine",
+  "name": "dashboard-overview-slice",
+  "file": "dashboard-overview-slice.md",
+  "description": "Fast overview slice of dashboard.",
+  "defaultResponseTemplateId": "default",
+  "policySensitivity": "non-sensitive",
+  "classification": "read_hot"
+},
+{
+  "moduleId": "task-engine",
+  "name": "dashboard-queue-slice",
+  "file": "dashboard-queue-slice.md",
+  "description": "Fast queue slice of dashboard.",
+  "defaultResponseTemplateId": "default",
+  "policySensitivity": "non-sensitive",
+  "classification": "read_hot"
+},
+{
+  "moduleId": "task-engine",
+  "name": "dashboard-status-slice",
+  "file": "dashboard-status-slice.md",
+  "description": "Dashboard status slice (may be read_slow if heavy).",
+  "defaultResponseTemplateId": "default",
+  "policySensitivity": "non-sensitive",
+  "classification": "read_hot"
+},
+{
+  "moduleId": "task-engine",
+  "name": "dashboard-agent-activity-slice",
+  "file": "dashboard-agent-activity-slice.md",
+  "description": "Dashboard agent activity slice.",
+  "defaultResponseTemplateId": "default",
+  "policySensitivity": "non-sensitive",
+  "classification": "read_hot"
+},
+{
+  "moduleId": "task-engine",
+  "name": "dashboard-agent-types-slice",
+  "file": "dashboard-agent-types-slice.md",
+  "description": "Dashboard agent types slice.",
+  "defaultResponseTemplateId": "default",
+  "policySensitivity": "non-sensitive",
+  "classification": "read_hot"
+},
+{
+  "moduleId": "task-engine",
+  "name": "dashboard-terminal-tasks",
+  "file": "dashboard-terminal-tasks.md",
+  "description": "Dashboard terminal tasks slice (paginated).",
+  "defaultResponseTemplateId": "default",
+  "policySensitivity": "non-sensitive",
+  "classification": "read_hot"
+},
+{
     "moduleId": "task-engine",
     "name": "dashboard-terminal-rows",
     "file": "dashboard-terminal-rows.md",
