@@ -2174,7 +2174,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       const summaryData = raw.data as Record<string, unknown>;
       this.lastDashboardSummaryData = summaryData;
       ingestPlanningMetaFromData(summaryData);
-      this.ingestDashboardSummaryIntoStore(summaryData, summaryProjection);
+      const ingestProjection = summaryProjection === "full" ? "overview" : summaryProjection;
+      this.ingestDashboardSummaryIntoStore(summaryData, ingestProjection);
       const contentFp = computeQueueContentFingerprint(summaryData);
       if (
         options?.light === true &&
@@ -4722,7 +4723,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       ingestPlanningMetaFromData(raw.data as Record<string, unknown>);
       this.ingestDashboardSummaryIntoStore(
         raw.data as Record<string, unknown>,
-        summaryProjection === "overview" ? "overview" : "full"
+        "overview"
       );
       try {
         if (lightRefresh) {

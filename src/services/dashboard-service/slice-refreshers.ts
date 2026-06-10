@@ -1,6 +1,7 @@
 import type { ModuleLifecycleContext } from "../../contracts/module-contract.js";
 import { ModuleCommandRouter } from "../../core/module-command-router.js";
 import { cliPerfTracer, recordMetric } from "../../core/cli-perf-trace.js";
+import type { OpenedPlanningStores } from "../../modules/task-engine/persistence/planning-open.ts";
 import { resolveRegistryAndConfig } from "../../core/module-registry-resolve.js";
 import { defaultRegistryModules } from "../../modules/index.js";
 import { buildDashboardOverviewSlice, buildDashboardQueueSlice, buildDashboardStatusSlice, buildDashboardAgentActivitySlice, buildDashboardAgentTypesSlice, buildDashboardTerminalTasksPage } from "../../modules/task-engine/dashboard/slice-builders.js";
@@ -29,7 +30,8 @@ export class DashboardSliceRefresher {
   private ctx: ModuleLifecycleContext | null = null;
   private router: ModuleCommandRouter | null = null;
   private planningGeneration = 0;
-  private storesPromise: ReturnType<typeof openPlanningStores> | null = null;
+  // Store the opened planning stores after first access
+  private storesPromise: OpenedPlanningStores | null = null;
 
   constructor(options: DashboardSliceRefresherOptions) {
     this.workspacePath = options.workspacePath;
@@ -50,6 +52,7 @@ export class DashboardSliceRefresher {
     };
     this.router = new ModuleCommandRouter(registry);
     const opened = await this.openStores();
+    // opened is guaranteed non‑null after openStores resolves
     this.planningGeneration = opened.sqliteDual.getPlanningGeneration();
   }
 
@@ -100,15 +103,17 @@ export class DashboardSliceRefresher {
     }
   }
 
-  private async openStores() {
+  private async openStores(): Promise<OpenedPlanningStores> {
     if (!this.storesPromise) {
       if (!this.ctx) {
         throw new Error("dashboard slice refresher not started");
       }
-      this.storesPromise = await cliPerfTracer.spanAsync('store-open', async () => openPlanningStoresReadOnly(this.ctx));
+      // openPlanningStoresReadOnly returns OpenedPlanningStores
+      this.storesPromise = await cliPerfTracer.spanAsync('store-open', async () => openPlanningStoresReadOnly(this.ctx as ModuleLifecycleContext));
       recordMetric('storeOpenMs', undefined);
     }
-    return this.storesPromise;
+    // Non‑null assertion because we just ensured it is set
+    return this.storesPromise!;
   }
 
   private async loadSlicePayload(def: DashboardServiceSliceDefinition): Promise<Record<string, unknown>> {
@@ -120,12 +125,13 @@ export class DashboardSliceRefresher {
       const opened = await this.openStores();
       const { taskStore, sqliteDual } = opened;
       const generation = sqliteDual.getPlanningGeneration();
-      let sliceData: Record<string, unknown>;
+      // Initialise with an empty object to satisfy definite assignment analysis
+      let sliceData: Record<string, unknown> = {};
       switch (def.name) {
         case "overview":
           sliceData = await cliPerfTracer.spanAsync('builder-overview', async () =>
             buildDashboardOverviewSlice(
-              this.ctx,
+              this.ctx!,
               taskStore,
               generation,
               sqliteDual,
@@ -138,7 +144,7 @@ export class DashboardSliceRefresher {
         case "queue":
           sliceData = await cliPerfTracer.spanAsync('builder-queue', async () =>
             buildDashboardQueueSlice(
-              this.ctx,
+              this.ctx!,
               taskStore,
               generation,
               sqliteDual,
@@ -151,7 +157,7 @@ export class DashboardSliceRefresher {
         case "status":
           sliceData = await cliPerfTracer.spanAsync('builder-status', async () =>
             buildDashboardStatusSlice(
-              this.ctx,
+              this.ctx!,
               taskStore,
               generation,
               sqliteDual,
@@ -164,7 +170,7 @@ export class DashboardSliceRefresher {
         case "agentActivity":
           sliceData = await cliPerfTracer.spanAsync('builder-agentActivity', async () =>
             buildDashboardAgentActivitySlice(
-              this.ctx,
+              this.ctx!,
               taskStore,
               generation,
               sqliteDual,
@@ -177,7 +183,7 @@ export class DashboardSliceRefresher {
         case "agentTypes":
           sliceData = await cliPerfTracer.spanAsync('builder-agentTypes', async () =>
             buildDashboardAgentTypesSlice(
-              this.ctx,
+              this.ctx!,
               taskStore,
               generation,
               sqliteDual,
