@@ -1215,14 +1215,14 @@
   "policySensitivity": "non-sensitive",
   "classification": "read_hot"
 },
-    {
+{
       "moduleId": "task-engine",
       "name": "dashboard-terminal-tasks-page",
       "file": "dashboard-terminal-tasks-page.md",
       "description": "Paginated dashboard terminal tasks slice (page).",
       "defaultResponseTemplateId": "default",
       "policySensitivity": "non-sensitive",
-      "classification": "read_hot",
+      "classification": "read_hot"
     },
     {
       "moduleId": "task-engine",
@@ -1253,6 +1253,7 @@
     "name": "dashboard-bootstrap-slices",
     "file": "dashboard-bootstrap-slices.md",
     "description": "Bootstrap multiple cheap dashboard slices in a single CLI call when the service is unavailable.",
+    "classification": "read_hot",
     "defaultResponseTemplateId": "default",
     "policySensitivity": "non-sensitive",
     "executionClass": "read_hot"
