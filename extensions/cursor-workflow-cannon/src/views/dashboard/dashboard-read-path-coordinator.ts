@@ -216,7 +216,8 @@ export class DashboardReadPathCoordinator {
       }
     }
 
-    await this.startCliPollingPath();
+    // Fallback: use CLI bootstrap command to fetch multiple cheap slices in one request.
+    await this.startCliBootstrapPath();
     this.emitModeChanged();
   }
 
@@ -264,6 +265,35 @@ export class DashboardReadPathCoordinator {
     }
     this.activePath = "cli-polling";
     this.deps.log?.("dashboard read path: CLI pollers");
+  }
+
+  private async startCliBootstrapPath(): Promise<void> {
+    // Use the new command to fetch a batch of slices.
+    const result = await this.deps.client.run("dashboard-bootstrap-slices", {});
+    if (result.ok !== true || !result.data || typeof result.data !== "object") {
+      this.deps.log?.(`dashboard-bootstrap-slices failed: ${result.message ?? result.code ?? "unknown"}`);
+      // Fallback to regular CLI polling as a safety net.
+      await this.startCliPollingPath();
+      return;
+    }
+    const data = result.data as Record<string, unknown>;
+    // Populate the store with each slice returned.
+    for (const [sliceName, sliceValue] of Object.entries(data)) {
+      const name = sliceName as DashboardSliceName;
+      try {
+        // @ts-ignore - using any for compatibility
+        this.deps.store.updateSlice(name, sliceValue as any);
+      } catch (e) {
+        this.deps.log?.(`failed to update slice ${name} from bootstrap: ${e instanceof Error ? e.message : String(e)}`);
+      }
+    }
+    // Mark the active path as CLI polling for UI consistency.
+    this.activePath = "cli-polling";
+    // Ensure pollers are running.
+    this.deps.pollers.start();
+    if (!this.pollersPaused) {
+      this.deps.pollers.resume();
+    }
   }
 
   private async stopActivePath(): Promise<void> {

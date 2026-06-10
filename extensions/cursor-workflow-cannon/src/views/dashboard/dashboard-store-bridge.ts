@@ -35,7 +35,7 @@ export function wrapSectionHtmlWithFreshness(html: string, _slice: DashboardSlic
 
 /** Ingest a dashboard-summary `data` object into all matching store slices. */
 export function sliceNamesForDashboardSummaryProjection(
-  projection: "full" | "overview" | "queue" | "status" | "agentActivity"
+  projection: "overview" | "queue" | "status" | "agentActivity"
 ): DashboardSliceName[] {
   return DASHBOARD_SLICE_REGISTRY.filter((desc) => {
     if (desc.command !== "dashboard-summary") {
@@ -43,8 +43,8 @@ export function sliceNamesForDashboardSummaryProjection(
     }
     const sliceProjection = desc.args.projection;
     if (typeof sliceProjection !== "string") {
-      return projection === "full";
+      return projection === "overview";
     }
-    return projection === "full" || sliceProjection === projection;
+    return projection === "overview" || sliceProjection === projection;
   }).map((desc) => desc.name);
 }

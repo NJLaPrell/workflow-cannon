@@ -1222,8 +1222,8 @@
       "description": "Paginated dashboard terminal tasks slice (page).",
       "defaultResponseTemplateId": "default",
       "policySensitivity": "non-sensitive",
-      "classification": "read_hot"
-    },
+      "classification": "read_hot",
+    },,
     {
       "moduleId": "task-engine",
       "name": "dashboard-terminal-rows",
@@ -1247,6 +1247,15 @@
     "description": "Stop the dashboard read service (SIGTERM + runtime cleanup).",
     "defaultResponseTemplateId": "default",
     "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "dashboard-bootstrap-slices",
+    "file": "dashboard-bootstrap-slices.md",
+    "description": "Bootstrap multiple cheap dashboard slices in a single CLI call when the service is unavailable.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive",
+    "executionClass": "read_hot"
   },
   {
     "moduleId": "task-engine",
@@ -2122,6 +2131,14 @@
     "file": "explain-memory-precedence.md",
     "description": "Explain deterministic precedence between policy, canon, docs, and memory.",
     "defaultResponseTemplateId": "default",
+        "policySensitivity": "non-sensitive",
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "dashboard-bootstrap-slices",
+    "file": "dashboard-bootstrap-slices.md",
+    "description": "Return multiple dashboard slices in a single CLI call for fallback when the service is unavailable.",
+    "executionClass": "query",
     "policySensitivity": "non-sensitive"
   }
 ]
