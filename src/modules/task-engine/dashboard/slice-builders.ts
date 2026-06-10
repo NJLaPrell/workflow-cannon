@@ -123,3 +123,193 @@ export async function buildDashboardAgentTypesSlice(
 export const buildDashboardTerminalTasksPage = originalBuildDashboardTerminalTasksPage;
 
 export { parseDashboardWishlistPaging };
+
+export async function buildDashboardPhaseSlice(
+  ctx: ModuleLifecycleContext,
+  store: TaskStore,
+  planningGeneration: number,
+  sqliteDual?: SqliteDualPlanningStore,
+  commandArgs?: Record<string, unknown>,
+  tracer?: DashboardSummaryTracer
+) {
+  // Reuse the queue slice as it already contains phase information
+  return originalBuildDashboardQueueSlice(
+    ctx,
+    store,
+    planningGeneration,
+    sqliteDual,
+    commandArgs,
+    tracer
+  );
+}
+
+export async function buildDashboardAgentSlice(
+  ctx: ModuleLifecycleContext,
+  store: TaskStore,
+  planningGeneration: number,
+  sqliteDual?: SqliteDualPlanningStore,
+  commandArgs?: Record<string, unknown>,
+  tracer?: DashboardSummaryTracer
+) {
+  // Agent slice can reuse the agent activity slice which provides agent status
+  return originalBuildDashboardAgentActivitySlice(
+    ctx,
+    store,
+    planningGeneration,
+    sqliteDual,
+    commandArgs,
+    tracer
+  );
+}
+
+export async function buildDashboardPlanArtifactSlice(
+  ctx: ModuleLifecycleContext,
+  store: TaskStore,
+  planningGeneration: number,
+  sqliteDual?: SqliteDualPlanningStore,
+  commandArgs?: Record<string, unknown>,
+  tracer?: DashboardSummaryTracer
+) {
+  // Plan artifact is part of the overview projection
+  return originalBuildDashboardOverviewSlice(
+    ctx,
+    store,
+    planningGeneration,
+    sqliteDual,
+    commandArgs,
+    tracer
+  );
+}
+
+export async function buildDashboardIdeasSlice(
+  ctx: ModuleLifecycleContext,
+  store: TaskStore,
+  planningGeneration: number,
+  sqliteDual?: SqliteDualPlanningStore,
+  commandArgs?: Record<string, unknown>,
+  tracer?: DashboardSummaryTracer
+) {
+  // Ideas are included in the overview projection
+  return originalBuildDashboardOverviewSlice(
+    ctx,
+    store,
+    planningGeneration,
+    sqliteDual,
+    commandArgs,
+    tracer
+  );
+}
+
+export async function buildDashboardTeamSlice(
+  ctx: ModuleLifecycleContext,
+  store: TaskStore,
+  planningGeneration: number,
+  sqliteDual?: SqliteDualPlanningStore,
+  commandArgs?: Record<string, unknown>,
+  tracer?: DashboardSummaryTracer
+) {
+  // Team execution summary is part of the overview projection
+  return originalBuildDashboardOverviewSlice(
+    ctx,
+    store,
+    planningGeneration,
+    sqliteDual,
+    commandArgs,
+    tracer
+  );
+}
+
+export async function buildDashboardSubagentsSlice(
+  ctx: ModuleLifecycleContext,
+  store: TaskStore,
+  planningGeneration: number,
+  sqliteDual?: SqliteDualPlanningStore,
+  commandArgs?: Record<string, unknown>,
+  tracer?: DashboardSummaryTracer
+) {
+  // Subagent registry is part of the agentTypes projection
+  return originalBuildDashboardAgentTypesSlice(
+    ctx,
+    store,
+    planningGeneration,
+    sqliteDual,
+    commandArgs,
+    tracer
+  );
+}
+
+export async function buildDashboardCheckpointsSlice(
+  ctx: ModuleLifecycleContext,
+  store: TaskStore,
+  planningGeneration: number,
+  sqliteDual?: SqliteDualPlanningStore,
+  commandArgs?: Record<string, unknown>,
+  tracer?: DashboardSummaryTracer
+) {
+  // Checkpoints are included in the overview projection
+  return originalBuildDashboardOverviewSlice(
+    ctx,
+    store,
+    planningGeneration,
+    sqliteDual,
+    commandArgs,
+    tracer
+  );
+}
+
+export async function buildDashboardPhaseJournalSlice(
+  ctx: ModuleLifecycleContext,
+  store: TaskStore,
+  planningGeneration: number,
+  sqliteDual?: SqliteDualPlanningStore,
+  commandArgs?: Record<string, unknown>,
+  tracer?: DashboardSummaryTracer
+) {
+  // Phase journal stats are part of the queue projection
+  return originalBuildDashboardQueueSlice(
+    ctx,
+    store,
+    planningGeneration,
+    sqliteDual,
+    commandArgs,
+    tracer
+  );
+}
+
+export async function buildDashboardConfigSlice(
+  ctx: ModuleLifecycleContext,
+  store: TaskStore,
+  planningGeneration: number,
+  sqliteDual?: SqliteDualPlanningStore,
+  commandArgs?: Record<string, unknown>,
+  tracer?: DashboardSummaryTracer
+) {
+  // Configuration data is lightweight; reuse overview
+  return originalBuildDashboardOverviewSlice(
+    ctx,
+    store,
+    planningGeneration,
+    sqliteDual,
+    commandArgs,
+    tracer
+  );
+}
+
+export async function buildDashboardCaeSlice(
+  ctx: ModuleLifecycleContext,
+  store: TaskStore,
+  planningGeneration: number,
+  sqliteDual?: SqliteDualPlanningStore,
+  commandArgs?: Record<string, unknown>,
+  tracer?: DashboardSummaryTracer
+) {
+  // CAE slice is also lightweight; reuse overview
+  return originalBuildDashboardOverviewSlice(
+    ctx,
+    store,
+    planningGeneration,
+    sqliteDual,
+    commandArgs,
+    tracer
+  );
+}

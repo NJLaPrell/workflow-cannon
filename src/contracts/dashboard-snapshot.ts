@@ -18,7 +18,9 @@ export type DashboardServiceSliceName =
   | "subagents"
   | "checkpoints"
   | "cae"
-  | "config";
+  | "config"
+  | "agentTypes"
+  | "terminalTasks";
 
 export type DashboardServiceSliceStatus = "empty" | "loading" | "fresh" | "stale" | "error";
 
@@ -29,6 +31,7 @@ export type DashboardServiceSlicePayload = {
   value: unknown;
   error?: string;
   planningGeneration?: number | null;
+  args?: Record<string, unknown>;
 };
 
 export type DashboardServiceSnapshot = {
