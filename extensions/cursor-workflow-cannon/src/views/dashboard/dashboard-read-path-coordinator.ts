@@ -43,6 +43,7 @@ export class DashboardReadPathCoordinator {
   private serviceFailDetail: string | undefined;
   private serviceSync: DashboardServiceStoreSync | undefined;
   private pollersPaused = false;
+  private serviceStartAttempted = false;
   private running = false;
 
   constructor(private readonly deps: DashboardReadPathCoordinatorDeps) {}
@@ -184,21 +185,35 @@ export class DashboardReadPathCoordinator {
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         this.deps.log?.(`dashboard service start failed: ${message}`);
-        if (effectiveMode === "service") {
-          this.serviceFailDetail = message;
-          this.activePath = null;
-          this.emitModeChanged();
-          return;
+        // Fall back to CLI polling after log.
+        this.serviceFailDetail = "Dashboard service start failed — using CLI polling";
+      }
+    } else {
+      // Service not healthy.
+      if (effectiveMode === "service") {
+        this.serviceFailDetail = "Dashboard service is not running or failed health check";
+        this.activePath = null;
+        this.emitModeChanged();
+        return;
+      }
+      // Auto mode: attempt to start service once per session.
+      if (!this.serviceStartAttempted) {
+        this.serviceStartAttempted = true;
+        const startResult = await this.restartDashboardService();
+        if (startResult.ok) {
+          // After successful start, re-probe health and try service path.
+          const reprobe = await probeDashboardServiceHealth(this.deps.workspacePath);
+          if (reprobe) {
+            await this.startServicePath();
+            this.emitModeChanged();
+            return;
+          }
         }
+        // If start failed or still unhealthy, fall back.
+        this.serviceFailDetail = startResult.message ?? "Dashboard service start failed — using CLI polling";
+      } else {
         this.serviceFailDetail = "Dashboard service unavailable — using CLI polling";
       }
-    } else if (effectiveMode === "service") {
-      this.serviceFailDetail = "Dashboard service is not running or failed health check";
-      this.activePath = null;
-      this.emitModeChanged();
-      return;
-    } else {
-      this.serviceFailDetail = "Dashboard service unavailable — using CLI polling";
     }
 
     await this.startCliPollingPath();
