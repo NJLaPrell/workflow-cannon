@@ -38,6 +38,28 @@ test("MCP tools/list exposes only the safe read-only tool", async () => {
   assert.ok(!tools.some((tool) => /write-memory|approve-memory|prune-memory/.test(tool.name)));
 });
 
+test("MCP tools/list descriptions include fallback and common-mistake contract", async () => {
+  const response = await handleMcpRequest({
+    jsonrpc: "2.0",
+    id: "tool-descriptions",
+    method: "tools/list"
+  });
+
+  const tools = response?.result.tools;
+  assert.ok(tools.length > 5);
+  for (const tool of tools) {
+    assert.equal(typeof tool.description, "string", `${tool.name} has a description`);
+    assert.ok(tool.description.length > 0, `${tool.name} description is non-empty`);
+    assert.ok(tool.description.length <= 420, `${tool.name} description stays compact`);
+    assert.match(tool.description, /CLI fallback: pnpm exec wk run /, `${tool.name} has CLI fallback`);
+    assert.match(tool.description, /Common mistakes: /, `${tool.name} has common mistakes`);
+  }
+
+  const packetTool = tools.find((tool) => tool.name === "workflow-cannon.agent-execution-packet");
+  assert.match(packetTool.description, /agent-execution-packet/);
+  assert.match(packetTool.description, /implementing from a draft packet/i);
+});
+
 test("MCP tools/call reports mutation tools disabled", async () => {
   const auditLog = [];
   const response = await handleMcpRequest({
@@ -55,6 +77,10 @@ test("MCP tools/call reports mutation tools disabled", async () => {
   const capabilities = JSON.parse(text);
   assert.equal(capabilities.mutationToolsEnabled, false);
   assert.deepEqual(capabilities.auditLogging, { bounded: true, redacted: true });
+  assert.deepEqual(capabilities.toolDescriptionContract, {
+    schemaVersion: 1,
+    requiredSegments: ["description", "CLI fallback", "Common mistakes"]
+  });
   assert.equal(auditLog.length, 1);
   assert.equal(auditLog.at(0).toolName, "workflow-cannon.capabilities");
   assert.equal(auditLog.at(0).resultClassification, "success");
