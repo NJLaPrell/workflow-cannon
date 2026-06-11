@@ -83,7 +83,12 @@ export {
   buildWishlistItemFromIntake,
   WISHLIST_ID_RE
 } from "./wishlist/wishlist-validation.js";
-export { openPlanningStores } from "./persistence/planning-open.js";
+export {
+  openPlanningStores,
+  openPlanningStoresFull,
+  openPlanningStoresReadOnly,
+  openPlanningStoresForDashboardSlice
+} from "./persistence/planning-open.js";
 export type { OpenedPlanningStores } from "./persistence/planning-open.js";
 export { SqliteDualPlanningStore } from "./persistence/sqlite-dual-planning.js";
 export {

@@ -42,7 +42,7 @@
   ],
   "instructionPath": "src/modules/task-engine/instructions/dashboard-terminal-tasks.md",
   "moduleId": "task-engine",
-  "description": "Retrieve terminal task rows (completed/cancelled) for a given phase or overall (focused lazy-loading command).",
+  "description": "Dashboard terminal tasks slice (paginated).",
   "policy": {
     "sensitivity": "non-sensitive",
     "operationId": null,
@@ -63,5 +63,5 @@
     "listCommands": "pnpm exec wk run --list-commands",
     "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
   },
-  "invocationId": "1905b201-9abe-4d70-bba2-3ddd5eca08ca"
+  "invocationId": "6e1613e9-35b4-43e0-bac7-d3965f13e15a"
 }

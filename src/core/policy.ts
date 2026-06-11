@@ -316,3 +316,10 @@ export async function appendPolicyTrace(
     db.close();
   }
 }
+
+export {
+  CommandExecutionClass,
+  CommandExecutionPolicy,
+  resolveCommandExecutionPolicy
+} from "../contracts/builtin-run-command-manifest.js";
+

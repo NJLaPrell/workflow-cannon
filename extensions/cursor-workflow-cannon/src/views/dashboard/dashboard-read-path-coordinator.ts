@@ -43,6 +43,7 @@ export class DashboardReadPathCoordinator {
   private serviceFailDetail: string | undefined;
   private serviceSync: DashboardServiceStoreSync | undefined;
   private pollersPaused = false;
+  private serviceStartAttempted = false;
   private running = false;
 
   constructor(private readonly deps: DashboardReadPathCoordinatorDeps) {}
@@ -184,24 +185,39 @@ export class DashboardReadPathCoordinator {
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         this.deps.log?.(`dashboard service start failed: ${message}`);
-        if (effectiveMode === "service") {
-          this.serviceFailDetail = message;
-          this.activePath = null;
-          this.emitModeChanged();
-          return;
+        // Fall back to CLI polling after log.
+        this.serviceFailDetail = "Dashboard service start failed — using CLI polling";
+      }
+    } else {
+      // Service not healthy.
+      if (effectiveMode === "service") {
+        this.serviceFailDetail = "Dashboard service is not running or failed health check";
+        this.activePath = null;
+        this.emitModeChanged();
+        return;
+      }
+      // Auto mode: attempt to start service once per session.
+      if (!this.serviceStartAttempted) {
+        this.serviceStartAttempted = true;
+        const startResult = await this.restartDashboardService();
+        if (startResult.ok) {
+          // After successful start, re-probe health and try service path.
+          const reprobe = await probeDashboardServiceHealth(this.deps.workspacePath);
+          if (reprobe) {
+            await this.startServicePath();
+            this.emitModeChanged();
+            return;
+          }
         }
+        // If start failed or still unhealthy, fall back.
+        this.serviceFailDetail = startResult.message ?? "Dashboard service start failed — using CLI polling";
+      } else {
         this.serviceFailDetail = "Dashboard service unavailable — using CLI polling";
       }
-    } else if (effectiveMode === "service") {
-      this.serviceFailDetail = "Dashboard service is not running or failed health check";
-      this.activePath = null;
-      this.emitModeChanged();
-      return;
-    } else {
-      this.serviceFailDetail = "Dashboard service unavailable — using CLI polling";
     }
 
-    await this.startCliPollingPath();
+    // Fallback: use CLI bootstrap command to fetch multiple cheap slices in one request.
+    await this.startCliBootstrapPath();
     this.emitModeChanged();
   }
 
@@ -249,6 +265,35 @@ export class DashboardReadPathCoordinator {
     }
     this.activePath = "cli-polling";
     this.deps.log?.("dashboard read path: CLI pollers");
+  }
+
+  private async startCliBootstrapPath(): Promise<void> {
+    // Use the new command to fetch a batch of slices.
+    const result = await this.deps.client.run("dashboard-bootstrap-slices", {});
+    if (result.ok !== true || !result.data || typeof result.data !== "object") {
+      this.deps.log?.(`dashboard-bootstrap-slices failed: ${result.message ?? result.code ?? "unknown"}`);
+      // Fallback to regular CLI polling as a safety net.
+      await this.startCliPollingPath();
+      return;
+    }
+    const data = result.data as Record<string, unknown>;
+    // Populate the store with each slice returned.
+    for (const [sliceName, sliceValue] of Object.entries(data)) {
+      const name = sliceName as DashboardSliceName;
+      try {
+        // @ts-ignore - using any for compatibility
+        this.deps.store.updateSlice(name, sliceValue as any);
+      } catch (e) {
+        this.deps.log?.(`failed to update slice ${name} from bootstrap: ${e instanceof Error ? e.message : String(e)}`);
+      }
+    }
+    // Mark the active path as CLI polling for UI consistency.
+    this.activePath = "cli-polling";
+    // Ensure pollers are running.
+    this.deps.pollers.start();
+    if (!this.pollersPaused) {
+      this.deps.pollers.resume();
+    }
   }
 
   private async stopActivePath(): Promise<void> {

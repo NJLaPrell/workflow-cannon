@@ -1,6 +1,23 @@
 import type { ModuleInstructionEntry } from "./module-contract.js";
 import manifestJson from "./builtin-run-command-manifest.json" with { type: "json" };
 
+export type CommandExecutionClass =
+  | "read_hot"
+  | "read"
+  | "mutation"
+  | "operator"
+  | "debug";
+
+export type CommandExecutionPolicy = {
+  class: CommandExecutionClass;
+  allowAutoCheckpoint: boolean;
+  allowCaePreflight: boolean;
+  allowLifecycleHooks: boolean;
+  persistRunLog: boolean;
+  requiresPolicy: boolean;
+  storeOpenMode?: "none" | "readOnly" | "full";
+};
+
 /**
  * Single source of truth for shipped `workspace-kit run` commands: module ownership, instruction file,
  * optional policy operation id, and optional default response-template id (before global config default).
@@ -20,6 +37,7 @@ export type BuiltinRunCommandManifestRow = {
   policyOperationId?: string;
   defaultResponseTemplateId?: string;
   requiresPeers?: string[];
+  executionClass?: CommandExecutionClass;
 };
 
 export const BUILTIN_RUN_COMMAND_MANIFEST = manifestJson as BuiltinRunCommandManifestRow[];
@@ -44,7 +62,17 @@ export function getBuiltinCommandDefaultTemplateId(commandName: string): string 
 export function getBuiltinRunCommandManifestRow(
   commandName: string
 ): BuiltinRunCommandManifestRow | undefined {
-  return BUILTIN_RUN_COMMAND_MANIFEST.find((row) => row.name === commandName);
+  const ALIASES: Record<string, string> = {
+    "task-state-status": "task-sync-status",
+    "task-state-hydrate": "task-sync-hydrate",
+    "task-state-init": "task-sync-init",
+    "task-state-verify": "task-sync-verify",
+    "task-state-publish": "task-sync-publish",
+    "task-state-snapshot": "task-sync-snapshot",
+    "task-state-compact": "task-sync-compact"
+  };
+  const resolved = ALIASES[commandName] ?? commandName;
+  return BUILTIN_RUN_COMMAND_MANIFEST.find((row) => row.name === resolved);
 }
 
 /** Instruction catalog entries for one module — use in `WorkflowModule.registration.instructions.entries`. */
@@ -61,3 +89,63 @@ export function builtinInstructionEntriesForModule(moduleId: string): ModuleInst
     return e;
   });
 }
+
+export function resolveCommandExecutionPolicy(commandName: string): CommandExecutionPolicy {
+  const row = getBuiltinRunCommandManifestRow(commandName);
+  const cls = row?.executionClass ?? "mutation";
+
+  switch (cls) {
+    case "read_hot":
+      return {
+        class: "read_hot",
+        allowAutoCheckpoint: false,
+        allowCaePreflight: false,
+        allowLifecycleHooks: false,
+        persistRunLog: false,
+        requiresPolicy: false,
+        storeOpenMode: "readOnly"
+      };
+    case "read":
+      return {
+        class: "read",
+        allowAutoCheckpoint: false,
+        allowCaePreflight: true,
+        allowLifecycleHooks: true,
+        persistRunLog: true,
+        requiresPolicy: true,
+        storeOpenMode: "readOnly"
+      };
+    case "operator":
+      return {
+        class: "operator",
+        allowAutoCheckpoint: true,
+        allowCaePreflight: true,
+        allowLifecycleHooks: true,
+        persistRunLog: true,
+        requiresPolicy: true,
+        storeOpenMode: "full"
+      };
+    case "debug":
+      return {
+        class: "debug",
+        allowAutoCheckpoint: false,
+        allowCaePreflight: true,
+        allowLifecycleHooks: true,
+        persistRunLog: false,
+        requiresPolicy: false,
+        storeOpenMode: "readOnly"
+      };
+    case "mutation":
+    default:
+      return {
+        class: "mutation",
+        allowAutoCheckpoint: true,
+        allowCaePreflight: true,
+        allowLifecycleHooks: true,
+        persistRunLog: true,
+        requiresPolicy: true,
+        storeOpenMode: "full"
+      };
+  }
+}
+

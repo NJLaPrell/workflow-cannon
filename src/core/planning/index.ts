@@ -5,7 +5,12 @@
  * The **`planning` module** (`src/modules/planning/`) is the CLI interview surface (`build-plan`, …).
  * This facade keeps non-task-engine modules from importing deep task-engine paths; implementations stay in task-engine.
  */
-export { openPlanningStores } from "../../modules/task-engine/persistence/planning-open.js";
+export {
+  openPlanningStores,
+  openPlanningStoresFull,
+  openPlanningStoresReadOnly,
+  openPlanningStoresForDashboardSlice
+} from "../../modules/task-engine/persistence/planning-open.js";
 export { TaskStore } from "../../modules/task-engine/persistence/store.js";
 export { WishlistStore } from "../../modules/task-engine/persistence/wishlist-store.js";
 export { TransitionService } from "../../modules/task-engine/service.js";

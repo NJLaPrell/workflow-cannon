@@ -731,4 +731,5 @@ export type DashboardSummaryCommandSuccess = {
 };
 
 /** Section slice selector for lazy dashboard hydration (T100396). Default CLI path is `full`. */
-export type DashboardSummaryProjection = "full" | "overview" | "queue" | "status" | "agentActivity";
+export type DashboardSummaryProjection = "full" | "overview" | "queue" | "status" | "agentActivity" | "agentTypes";
+

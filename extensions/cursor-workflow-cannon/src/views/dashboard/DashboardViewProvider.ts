@@ -758,7 +758,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
 
   private ingestDashboardSummaryIntoStore(
     data: Record<string, unknown>,
-    projection: "full" | "overview" | "queue" | "status" | "agentActivity"
+    projection: "overview" | "queue" | "status" | "agentActivity"
   ): void {
     const planningGeneration =
       typeof data.planningGeneration === "number" ? data.planningGeneration : null;
@@ -1012,7 +1012,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         this.dashboardInteractionLocks.clear();
         this.dashboardRefreshAfterInteraction = false;
         await webview.postMessage({ type: "wcReleaseRefreshBlock" });
-        await this.pushUpdate({ projection: "full", skipHeavyFetches: false, source: "manual refresh" });
+        await this.pushUpdate({ projection: "overview", skipHeavyFetches: false, source: "manual refresh" });
       }
       if (msg?.type === "dashboardWebviewBoot") {
         logWc("dashboard", "webview boot");
@@ -2174,7 +2174,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       const summaryData = raw.data as Record<string, unknown>;
       this.lastDashboardSummaryData = summaryData;
       ingestPlanningMetaFromData(summaryData);
-      this.ingestDashboardSummaryIntoStore(summaryData, summaryProjection);
+      const ingestProjection = summaryProjection === "full" ? "overview" : summaryProjection;
+      this.ingestDashboardSummaryIntoStore(summaryData, ingestProjection);
       const contentFp = computeQueueContentFingerprint(summaryData);
       if (
         options?.light === true &&
@@ -2831,7 +2832,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     await this.view?.webview.postMessage({ type: "wcReleaseRefreshBlock" });
     await this.applyDashboardMutationInvalidation("workspace-wide");
     await this.pushUpdate({
-      projection: "full",
+      projection: "overview",
       skipHeavyFetches: false,
       light: false,
       source: "user:phase-roster start"
@@ -3513,7 +3514,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
     await vscode.window.showInformationMessage(`Accepted plan ${planId}.`);
     await this.pushUpdate({
-      projection: "full",
+      projection: "overview",
       skipHeavyFetches: false,
       source: "user:plan-artifact accept"
     });
@@ -3544,7 +3545,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       passed ? `Reviewed plan ${planId}.` : `Reviewed plan ${planId}; findings need attention.`
     );
     await this.pushUpdate({
-      projection: "full",
+      projection: "overview",
       skipHeavyFetches: false,
       source: "user:plan-artifact review"
     });
@@ -3595,7 +3596,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       `Finalized plan ${planId}${Number.isFinite(count) && count > 0 ? ` into ${count} task(s)` : ""}.`
     );
     await this.pushUpdate({
-      projection: "full",
+      projection: "overview",
       skipHeavyFetches: false,
       source: "user:plan-artifact finalize"
     });
@@ -4722,7 +4723,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       ingestPlanningMetaFromData(raw.data as Record<string, unknown>);
       this.ingestDashboardSummaryIntoStore(
         raw.data as Record<string, unknown>,
-        summaryProjection === "overview" ? "overview" : "full"
+        "overview"
       );
       try {
         if (lightRefresh) {

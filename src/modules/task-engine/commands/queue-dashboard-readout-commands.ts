@@ -1,5 +1,14 @@
 import type { ModuleCommandResult, ModuleLifecycleContext } from "../../../contracts/module-contract.js";
-import { runDashboardSummaryCommand } from "./task-engine-dashboard-on-command.js";
+import {
+  runDashboardSummaryCommand,
+  dashboardOverviewSliceCommand,
+  dashboardQueueSliceCommand,
+  dashboardStatusSliceCommand,
+  dashboardAgentActivitySliceCommand,
+  dashboardAgentTypesSliceCommand,
+  dashboardTerminalTasksSliceCommand
+} from "./task-engine-dashboard-on-command.js";
+import { dashboardBootstrapSlices } from "./dashboard-bootstrap-slices.js";
 import type { OpenedPlanningStores } from "../persistence/planning-open.js";
 import { TaskStore } from "../persistence/store.js";
 import { readWorkspaceStatusSnapshotFromDual } from "../persistence/workspace-status-store.js";
@@ -23,6 +32,10 @@ import { buildFeatureEnrichmentBySlug, loadTaskFeatureLinkMap } from "../persist
 import { rowToTaskEntity, type TaskEngineTaskRow } from "../persistence/sqlite-task-row-mapping.js";
 import { TASK_ENGINE_TASKS_TABLE } from "../../../core/state/kit-sqlite/planning-sqlite-kernel.js";
 import { inferTaskPhaseKey } from "../phase-resolution.js";
+import { openPlanningStoresForDashboardSlice } from "../persistence/planning-open.js";
+import { parseDashboardSummaryProjection } from "../dashboard/dashboard-summary-projection.js";
+
+import { buildDashboardTerminalTasksPage } from "../dashboard/focused-slice-builders.js";
 
 /**
  * Dashboard + queue diagnostics that do not mutate task rows.
@@ -37,12 +50,103 @@ export async function resolveQueueDashboardReadoutCommands(
   const args = command.args ?? {};
 
   if (command.name === "dashboard-summary") {
+    // Determine projection to decide which slice store mode to use
+    const projection = parseDashboardSummaryProjection(args);
+    // Open planning stores optimized for the requested dashboard slice
+    const slicePlanning = await openPlanningStoresForDashboardSlice(ctx, projection);
+    const generation = slicePlanning.sqliteDual.getPlanningGeneration();
     return runDashboardSummaryCommand(
       ctx,
-      store,
-      planning.sqliteDual.getPlanningGeneration(),
-      planning.sqliteDual,
+      slicePlanning.taskStore,
+      generation,
+      slicePlanning.sqliteDual,
       args
+    );
+  }
+
+  if (command.name === "dashboard-overview-slice") {
+    const slicePlanning = await openPlanningStoresForDashboardSlice(ctx, "overview");
+    const generation = slicePlanning.sqliteDual.getPlanningGeneration();
+    return dashboardOverviewSliceCommand(
+      ctx,
+      slicePlanning.taskStore,
+      generation,
+      slicePlanning.sqliteDual,
+      args
+    );
+  }
+
+  if (command.name === "dashboard-queue-slice") {
+    const slicePlanning = await openPlanningStoresForDashboardSlice(ctx, "queue");
+    const generation = slicePlanning.sqliteDual.getPlanningGeneration();
+    return dashboardQueueSliceCommand(
+      ctx,
+      slicePlanning.taskStore,
+      generation,
+      slicePlanning.sqliteDual,
+      args
+    );
+  }
+
+  if (command.name === "dashboard-status-slice") {
+    const slicePlanning = await openPlanningStoresForDashboardSlice(ctx, "status");
+    const generation = slicePlanning.sqliteDual.getPlanningGeneration();
+    return dashboardStatusSliceCommand(
+      ctx,
+      slicePlanning.taskStore,
+      generation,
+      slicePlanning.sqliteDual,
+      args
+    );
+  }
+
+  if (command.name === "dashboard-agent-activity-slice") {
+    const slicePlanning = await openPlanningStoresForDashboardSlice(ctx, "agentActivity");
+    const generation = slicePlanning.sqliteDual.getPlanningGeneration();
+    return dashboardAgentActivitySliceCommand(
+      ctx,
+      slicePlanning.taskStore,
+      generation,
+      slicePlanning.sqliteDual,
+      args
+    );
+  }
+
+  if (command.name === "dashboard-agent-types-slice") {
+    const slicePlanning = await openPlanningStoresForDashboardSlice(ctx, "agentTypes");
+    const generation = slicePlanning.sqliteDual.getPlanningGeneration();
+    return dashboardAgentTypesSliceCommand(
+      ctx,
+      slicePlanning.taskStore,
+      generation,
+      slicePlanning.sqliteDual,
+      args
+    );
+  }
+
+  if (command.name === "dashboard-terminal-tasks-page") {
+    const slicePlanning = await openPlanningStoresForDashboardSlice(ctx, "terminalTasks");
+    const generation = slicePlanning.sqliteDual.getPlanningGeneration();
+    return dashboardTerminalTasksSliceCommand(
+      ctx,
+      slicePlanning.taskStore,
+      generation,
+      slicePlanning.sqliteDual,
+      args
+    );
+  }
+
+  if (command.name === "dashboard-bootstrap-slices") {
+    const slices = Array.isArray(args.slices) ? args.slices : ["overview", "agentTypes", "agentActivity"];
+    const sliceName = slices.includes("status") || slices.includes("queue") ? "status" : "overview";
+    const slicePlanning = await openPlanningStoresForDashboardSlice(ctx, sliceName);
+    const generation = slicePlanning.sqliteDual.getPlanningGeneration();
+    return dashboardBootstrapSlices(
+      ctx,
+      slicePlanning.taskStore,
+      generation,
+      slicePlanning.sqliteDual,
+      args as { slices?: string[] }
     );
   }
 
@@ -60,79 +164,26 @@ export async function resolveQueueDashboardReadoutCommands(
     const limit = typeof limitRaw === "number" && Number.isFinite(limitRaw) && limitRaw > 0 ? Math.floor(limitRaw) : 50;
     const cursor = typeof args.cursor === "string" && args.cursor.trim().length > 0 ? args.cursor.trim() : undefined;
 
-    let pageTasks: TaskEntity[] = [];
-    let hasMore = false;
-
-    if (planning.sqliteDual && planning.sqliteDual.relationalTasksEnabled) {
-      try {
-        const db = planning.sqliteDual.getDatabase();
-        let query = `SELECT * FROM ${TASK_ENGINE_TASKS_TABLE} WHERE status = ? AND archived = 0`;
-        const params: any[] = [status];
-        if (phaseKey && phaseKey !== "__no_phase__") {
-          query += ` AND phase_key = ?`;
-          params.push(phaseKey);
-        } else if (phaseKey === "__no_phase__") {
-          query += ` AND (phase_key IS NULL OR phase_key = '')`;
-        }
-        const cursorDecoded = cursor ? decodeListTasksCursor(cursor) : null;
-        if (cursorDecoded) {
-          query += ` AND (updated_at < ? OR (updated_at = ? AND CAST(SUBSTR(id, 2) AS INTEGER) > CAST(SUBSTR(?, 2) AS INTEGER)))`;
-          params.push(cursorDecoded.u, cursorDecoded.u, cursorDecoded.i);
-        }
-        query += ` ORDER BY updated_at DESC, CAST(SUBSTR(id, 2) AS INTEGER) ASC LIMIT ?`;
-        params.push(limit + 1);
-
-        const rows = db.prepare(query).all(...params) as TaskEngineTaskRow[];
-        const linkMap = loadTaskFeatureLinkMap(db);
-        const mapped = rows.map((r) => rowToTaskEntity(r, { taskFeatureLinkMap: linkMap }));
-        if (mapped.length > limit) {
-          pageTasks = mapped.slice(0, limit);
-          hasMore = true;
-        } else {
-          pageTasks = mapped;
-        }
-      } catch (err) {
-        // Fallback to memory
-        pageTasks = [];
-      }
-    }
-
-    if (pageTasks.length === 0) {
-      let filtered = store.getActiveTasks().filter((t) => t.status === status);
-      if (phaseKey && phaseKey !== "__no_phase__") {
-        filtered = filtered.filter((t) => inferTaskPhaseKey(t) === phaseKey);
-      } else if (phaseKey === "__no_phase__") {
-        filtered = filtered.filter((t) => inferTaskPhaseKey(t) === null);
-      }
-      filtered.sort(listTasksComparator);
-      const cursorDecoded = cursor ? decodeListTasksCursor(cursor) : null;
-      if (cursorDecoded) {
-        filtered = filtered.filter((t) => listTaskIsAfterCursor(t, cursorDecoded));
-      }
-      if (filtered.length > limit) {
-        pageTasks = filtered.slice(0, limit);
-        hasMore = true;
-      } else {
-        pageTasks = filtered;
-      }
-    }
-
-    const nextCursor = hasMore && pageTasks.length > 0 ? encodeListTasksCursor(pageTasks[pageTasks.length - 1]!) : undefined;
-    const enrich = buildFeatureEnrichmentBySlug(planning.sqliteDual.getDatabase());
-    const projectedPage = pageTasks.map((task) => projectTaskReadEntity(task, enrich));
+    const result = buildDashboardTerminalTasksPage(store, planning.sqliteDual, {
+      status,
+      limit,
+      cursor,
+      phaseKey
+    });
 
     return {
       ok: true,
       code: command.name,
-      message: `Found ${projectedPage.length} terminal tasks`,
+      message: `Found ${result.tasks.length} terminal tasks`,
       data: {
-        tasks: projectedPage,
-        count: projectedPage.length,
+        tasks: result.tasks,
+        count: result.tasks.length,
         scope: "tasks-only",
-        ...(nextCursor !== undefined ? { nextCursor } : {})
+        ...(result.nextCursor !== undefined ? { nextCursor: result.nextCursor } : {})
       }
     };
   }
+
 
   if (command.name === "queue-health") {
     const tasks = store.getActiveTasks();

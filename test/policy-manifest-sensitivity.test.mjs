@@ -7,7 +7,8 @@ import { fileURLToPath } from "node:url";
 import {
   isSensitiveModuleCommand,
   isSensitiveModuleCommandForEffective,
-  resolvePolicyOperationIdForCommand
+  resolvePolicyOperationIdForCommand,
+  resolveCommandExecutionPolicy
 } from "../dist/index.js";
 
 const root = path.dirname(fileURLToPath(import.meta.url));
@@ -72,3 +73,46 @@ test("extraSensitiveModuleCommands upgrades list-tasks to dynamic-sensitive", ()
   assert.equal(isSensitiveModuleCommandForEffective("list-tasks", {}, eff), true);
   assert.equal(resolvePolicyOperationIdForCommand("list-tasks", eff), "policy.dynamic-sensitive");
 });
+
+test("resolveCommandExecutionPolicy resolves command execution metadata and policies correctly", () => {
+  // 1. Mutation command resolves to mutation class policy
+  const mutationPolicy = resolveCommandExecutionPolicy("run-transition");
+  assert.equal(mutationPolicy.class, "mutation");
+  assert.equal(mutationPolicy.allowAutoCheckpoint, true);
+  assert.equal(mutationPolicy.allowCaePreflight, true);
+  assert.equal(mutationPolicy.allowLifecycleHooks, true);
+  assert.equal(mutationPolicy.persistRunLog, true);
+  assert.equal(mutationPolicy.requiresPolicy, true);
+  assert.equal(mutationPolicy.storeOpenMode, "full");
+
+  // 2. Read command resolves to read class policy
+  const readPolicy = resolveCommandExecutionPolicy("list-tasks");
+  assert.equal(readPolicy.class, "read");
+  assert.equal(readPolicy.allowAutoCheckpoint, false);
+  assert.equal(readPolicy.allowCaePreflight, true);
+  assert.equal(readPolicy.allowLifecycleHooks, true);
+  assert.equal(readPolicy.persistRunLog, true);
+  assert.equal(readPolicy.requiresPolicy, true);
+  assert.equal(readPolicy.storeOpenMode, "readOnly");
+
+  // 3. Hot read command resolves to read_hot class policy
+  const readHotPolicy = resolveCommandExecutionPolicy("dashboard-terminal-tasks");
+  assert.equal(readHotPolicy.class, "read_hot");
+  assert.equal(readHotPolicy.allowAutoCheckpoint, false);
+  assert.equal(readHotPolicy.allowCaePreflight, false);
+  assert.equal(readHotPolicy.allowLifecycleHooks, false);
+  assert.equal(readHotPolicy.persistRunLog, false);
+  assert.equal(readHotPolicy.requiresPolicy, false);
+  assert.equal(readHotPolicy.storeOpenMode, "readOnly");
+
+  // 4. Unknown command defaults to mutation class policy (safe fallback)
+  const unknownPolicy = resolveCommandExecutionPolicy("some-unknown-nonsense-command");
+  assert.equal(unknownPolicy.class, "mutation");
+  assert.equal(unknownPolicy.allowAutoCheckpoint, true);
+  assert.equal(unknownPolicy.allowCaePreflight, true);
+  assert.equal(unknownPolicy.allowLifecycleHooks, true);
+  assert.equal(unknownPolicy.persistRunLog, true);
+  assert.equal(unknownPolicy.requiresPolicy, true);
+  assert.equal(unknownPolicy.storeOpenMode, "full");
+});
+
