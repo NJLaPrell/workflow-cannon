@@ -21,7 +21,7 @@ describe("dashboard service poll groups", () => {
       "phase",
       "planArtifact"
     ]);
-    assert.deepEqual(dashboardServiceSliceNamesForPollGroup("live").sort(), ["agentActivity"]);
+    assert.deepEqual(dashboardServiceSliceNamesForPollGroup("live").sort(), ["agentActivity", "agentTypes"]);
     assert.deepEqual(dashboardServiceSliceNamesForPollGroup("queue").sort(), ["ideas", "queue"]);
     assert.ok(dashboardServiceSliceNamesForPollGroup("manual").includes("cae"));
     assert.equal(listDashboardServicePollGroups().length, 5);

@@ -100,23 +100,24 @@ test('CLI mutation safety and performance boundaries', async (t) => {
     return true;
   };
 
-  // Mutation command: dashboard-service-reconcile (mutates state)
+  // Mutation command: clear-agent-activity (mutates state)
   process.env.WORKSPACE_KIT_CLI_PERF_TRACE = 'true';
   cliPerfTracer.reset();
   stderrOutput = '';
   const capture = createCapture();
-  const mutationCode = await runCli(['run', 'dashboard-service-reconcile', '{}'], { cwd: fixtureRoot, ...capture });
+  const mutationCode = await runCli(['run', 'clear-agent-activity', '{}'], { cwd: fixtureRoot, ...capture });
   assert.equal(mutationCode, 0, 'mutation command should succeed');
   assert.ok(stderrOutput.includes('span=policy/session grant checks'), 'policy span should be present');
-  assert.ok(stderrOutput.includes('span=planning generation'), 'planning generation span should be present');
+  assert.ok(stderrOutput.includes('span=planningGenerationPrelude'), 'planning generation span should be present');
   assert.ok(stderrOutput.includes('span=tryAutoCheckpointBeforeRun'), 'checkpoint span should run for mutation');
 
   // Unknown command defaults to safe behavior
+  delete process.env.WORKSPACE_KIT_CLI_PERF_TRACE;
   cliPerfTracer.reset();
   stderrOutput = '';
   const unknownCapture = createCapture();
   const unknownCode = await runCli(['run', 'unknown-command', '{}'], { cwd: fixtureRoot, ...unknownCapture });
-  assert.equal(unknownCode, 0, 'unknown command should return success code');
+  assert.equal(unknownCode, 1, 'unknown command should return validation failure code');
   assert.ok(!stderrOutput.includes('span='), 'no performance spans should be emitted for unknown command');
 
   process.stderr.write = originalStderrWrite;

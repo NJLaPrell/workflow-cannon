@@ -1168,7 +1168,7 @@
   "description": "Fast overview slice of dashboard.",
   "defaultResponseTemplateId": "default",
   "policySensitivity": "non-sensitive",
-  "classification": "read_hot"
+  "executionClass": "read_hot"
 },
 {
   "moduleId": "task-engine",
@@ -1177,7 +1177,7 @@
   "description": "Fast queue slice of dashboard.",
   "defaultResponseTemplateId": "default",
   "policySensitivity": "non-sensitive",
-  "classification": "read_hot"
+  "executionClass": "read_hot"
 },
 {
   "moduleId": "task-engine",
@@ -1186,7 +1186,7 @@
   "description": "Dashboard status slice (may be read_slow if heavy).",
   "defaultResponseTemplateId": "default",
   "policySensitivity": "non-sensitive",
-  "classification": "read_hot"
+  "executionClass": "read_hot"
 },
 {
   "moduleId": "task-engine",
@@ -1195,7 +1195,7 @@
   "description": "Dashboard agent activity slice.",
   "defaultResponseTemplateId": "default",
   "policySensitivity": "non-sensitive",
-  "classification": "read_hot"
+  "executionClass": "read_hot"
 },
 {
   "moduleId": "task-engine",
@@ -1204,7 +1204,7 @@
   "description": "Dashboard agent types slice.",
   "defaultResponseTemplateId": "default",
   "policySensitivity": "non-sensitive",
-  "classification": "read_hot"
+  "executionClass": "read_hot"
 },
 {
   "moduleId": "task-engine",
@@ -1213,7 +1213,7 @@
   "description": "Dashboard terminal tasks slice (paginated).",
   "defaultResponseTemplateId": "default",
   "policySensitivity": "non-sensitive",
-  "classification": "read_hot"
+  "executionClass": "read_hot"
 },
 {
       "moduleId": "task-engine",
@@ -1222,7 +1222,7 @@
       "description": "Paginated dashboard terminal tasks slice (page).",
       "defaultResponseTemplateId": "default",
       "policySensitivity": "non-sensitive",
-      "classification": "read_hot"
+      "executionClass": "read_hot"
     },
     {
       "moduleId": "task-engine",
@@ -1253,7 +1253,6 @@
     "name": "dashboard-bootstrap-slices",
     "file": "dashboard-bootstrap-slices.md",
     "description": "Bootstrap multiple cheap dashboard slices in a single CLI call when the service is unavailable.",
-    "classification": "read_hot",
     "defaultResponseTemplateId": "default",
     "policySensitivity": "non-sensitive",
     "executionClass": "read_hot"
