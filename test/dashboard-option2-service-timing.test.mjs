@@ -45,35 +45,47 @@ describe("Option 2 service timing", () => {
     const workspace = await tmpWorkspace();
     await seedEmptySqlite(workspace);
     const t0 = performance.now();
-    const svc = await createDashboardService({ workspacePath: workspace });
-    const base = `http://${svc.host}:${svc.port}`;
-    await fetch(`${base}/dashboard/refresh`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ slices: ["overview"] })
-    });
-    const snap = await waitForSliceFresh(base, "overview");
-    const coldMs = performance.now() - t0;
-    await svc.stop();
-    assert.equal(snap.slices.overview?.status, "fresh");
-    assert.ok(coldMs < 25_000, `cold path too slow: ${Math.round(coldMs)} ms`);
+    let svc;
+    try {
+      svc = await createDashboardService({ workspacePath: workspace });
+      const base = `http://${svc.host}:${svc.port}`;
+      await fetch(`${base}/dashboard/refresh`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slices: ["overview"] })
+      });
+      const snap = await waitForSliceFresh(base, "overview");
+      const coldMs = performance.now() - t0;
+      assert.equal(snap.slices.overview?.status, "fresh");
+      assert.ok(coldMs < 25_000, `cold path too slow: ${Math.round(coldMs)} ms`);
+    } finally {
+      if (svc) {
+        await svc.stop();
+      }
+    }
   });
 
   it("warm snapshot re-fetch is faster than cold path", async () => {
     const workspace = await tmpWorkspace();
     await seedEmptySqlite(workspace);
-    const svc = await createDashboardService({ workspacePath: workspace });
-    const base = `http://${svc.host}:${svc.port}`;
-    await fetch(`${base}/dashboard/refresh`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ slices: ["overview"] })
-    });
-    await (await fetch(`${base}/dashboard/snapshot`)).json();
-    const warm0 = performance.now();
-    await (await fetch(`${base}/dashboard/snapshot`)).json();
-    const warmMs = performance.now() - warm0;
-    await svc.stop();
-    assert.ok(warmMs < 5000, `warm snapshot too slow: ${Math.round(warmMs)} ms`);
+    let svc;
+    try {
+      svc = await createDashboardService({ workspacePath: workspace });
+      const base = `http://${svc.host}:${svc.port}`;
+      await fetch(`${base}/dashboard/refresh`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slices: ["overview"] })
+      });
+      await (await fetch(`${base}/dashboard/snapshot`)).json();
+      const warm0 = performance.now();
+      await (await fetch(`${base}/dashboard/snapshot`)).json();
+      const warmMs = performance.now() - warm0;
+      assert.ok(warmMs < 5000, `warm snapshot too slow: ${Math.round(warmMs)} ms`);
+    } finally {
+      if (svc) {
+        await svc.stop();
+      }
+    }
   });
 });

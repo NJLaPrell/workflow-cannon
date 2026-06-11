@@ -143,6 +143,12 @@ export async function dashboardTerminalTasksSliceCommand(
   commandArgs?: Record<string, unknown>,
   tracer?: DashboardSummaryTracer
 ): Promise<ModuleCommandResult> {
-  const data = await buildDashboardTerminalTasksPage(store, sqliteDual, { status: "completed", limit: 10 });
+  const status = commandArgs?.status === "cancelled" ? "cancelled" : "completed";
+  const limitRaw = commandArgs?.limit;
+  const limit = typeof limitRaw === "number" && Number.isFinite(limitRaw) && limitRaw > 0 ? Math.floor(limitRaw) : 10;
+  const cursor = typeof commandArgs?.cursor === "string" && commandArgs.cursor.trim().length > 0 ? commandArgs.cursor.trim() : undefined;
+  const phaseKey = typeof commandArgs?.phaseKey === "string" ? commandArgs.phaseKey.trim() : undefined;
+
+  const data = await buildDashboardTerminalTasksPage(store, sqliteDual, { status, limit, cursor, phaseKey });
   return { ok: true, code: "dashboard-terminal-tasks", message: "Dashboard terminal tasks slice built", data: data as Record<string, unknown> };
 }

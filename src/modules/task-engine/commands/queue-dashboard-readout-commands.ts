@@ -1,5 +1,14 @@
 import type { ModuleCommandResult, ModuleLifecycleContext } from "../../../contracts/module-contract.js";
-import { runDashboardSummaryCommand } from "./task-engine-dashboard-on-command.js";
+import {
+  runDashboardSummaryCommand,
+  dashboardOverviewSliceCommand,
+  dashboardQueueSliceCommand,
+  dashboardStatusSliceCommand,
+  dashboardAgentActivitySliceCommand,
+  dashboardAgentTypesSliceCommand,
+  dashboardTerminalTasksSliceCommand
+} from "./task-engine-dashboard-on-command.js";
+import { dashboardBootstrapSlices } from "./dashboard-bootstrap-slices.js";
 import type { OpenedPlanningStores } from "../persistence/planning-open.js";
 import { TaskStore } from "../persistence/store.js";
 import { readWorkspaceStatusSnapshotFromDual } from "../persistence/workspace-status-store.js";
@@ -52,6 +61,92 @@ export async function resolveQueueDashboardReadoutCommands(
       generation,
       slicePlanning.sqliteDual,
       args
+    );
+  }
+
+  if (command.name === "dashboard-overview-slice") {
+    const slicePlanning = await openPlanningStoresForDashboardSlice(ctx, "overview");
+    const generation = slicePlanning.sqliteDual.getPlanningGeneration();
+    return dashboardOverviewSliceCommand(
+      ctx,
+      slicePlanning.taskStore,
+      generation,
+      slicePlanning.sqliteDual,
+      args
+    );
+  }
+
+  if (command.name === "dashboard-queue-slice") {
+    const slicePlanning = await openPlanningStoresForDashboardSlice(ctx, "queue");
+    const generation = slicePlanning.sqliteDual.getPlanningGeneration();
+    return dashboardQueueSliceCommand(
+      ctx,
+      slicePlanning.taskStore,
+      generation,
+      slicePlanning.sqliteDual,
+      args
+    );
+  }
+
+  if (command.name === "dashboard-status-slice") {
+    const slicePlanning = await openPlanningStoresForDashboardSlice(ctx, "status");
+    const generation = slicePlanning.sqliteDual.getPlanningGeneration();
+    return dashboardStatusSliceCommand(
+      ctx,
+      slicePlanning.taskStore,
+      generation,
+      slicePlanning.sqliteDual,
+      args
+    );
+  }
+
+  if (command.name === "dashboard-agent-activity-slice") {
+    const slicePlanning = await openPlanningStoresForDashboardSlice(ctx, "agentActivity");
+    const generation = slicePlanning.sqliteDual.getPlanningGeneration();
+    return dashboardAgentActivitySliceCommand(
+      ctx,
+      slicePlanning.taskStore,
+      generation,
+      slicePlanning.sqliteDual,
+      args
+    );
+  }
+
+  if (command.name === "dashboard-agent-types-slice") {
+    const slicePlanning = await openPlanningStoresForDashboardSlice(ctx, "agentTypes");
+    const generation = slicePlanning.sqliteDual.getPlanningGeneration();
+    return dashboardAgentTypesSliceCommand(
+      ctx,
+      slicePlanning.taskStore,
+      generation,
+      slicePlanning.sqliteDual,
+      args
+    );
+  }
+
+  if (command.name === "dashboard-terminal-tasks-page") {
+    const slicePlanning = await openPlanningStoresForDashboardSlice(ctx, "terminalTasks");
+    const generation = slicePlanning.sqliteDual.getPlanningGeneration();
+    return dashboardTerminalTasksSliceCommand(
+      ctx,
+      slicePlanning.taskStore,
+      generation,
+      slicePlanning.sqliteDual,
+      args
+    );
+  }
+
+  if (command.name === "dashboard-bootstrap-slices") {
+    const slices = Array.isArray(args.slices) ? args.slices : ["overview", "agentTypes", "agentActivity"];
+    const sliceName = slices.includes("status") || slices.includes("queue") ? "status" : "overview";
+    const slicePlanning = await openPlanningStoresForDashboardSlice(ctx, sliceName);
+    const generation = slicePlanning.sqliteDual.getPlanningGeneration();
+    return dashboardBootstrapSlices(
+      ctx,
+      slicePlanning.taskStore,
+      generation,
+      slicePlanning.sqliteDual,
+      args as { slices?: string[] }
     );
   }
 
