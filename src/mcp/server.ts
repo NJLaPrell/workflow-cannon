@@ -1,4 +1,5 @@
 import { createInterface } from "node:readline";
+import path from "node:path";
 import { Writable } from "node:stream";
 
 import { createCommandRegistryRuntime } from "../core/module-command-router.js";
@@ -58,6 +59,22 @@ export interface McpServerOptions {
   maxToolResponseBytes?: number;
   auditLog?: McpAuditEvent[];
   auditSink?: (event: McpAuditEvent) => void;
+}
+
+export interface McpWorkspaceBinding {
+  schemaVersion: 1;
+  workspaceRoot: string;
+  workspaceTrusted: boolean;
+  bindingSource: "option" | "cwd";
+  launchCommands: {
+    packageBin: string;
+    builtDist: string;
+  };
+  multiWorkspaceBehavior: {
+    mode: "single-workspace-per-process";
+    contract: string;
+    recommendation: string;
+  };
 }
 
 export type McpAuditResultClassification = "success" | "command_error" | "protocol_error" | "rejected";
@@ -449,10 +466,18 @@ export async function handleMcpRequest(
 
   switch (request.method) {
     case "initialize":
+      const workspaceBinding = resolveMcpWorkspaceBinding(options);
       return successResponse(id, {
         protocolVersion: MCP_PROTOCOL_VERSION,
         capabilities: {
           tools: {}
+        },
+        startup: {
+          schemaVersion: 1,
+          healthy: true,
+          mode: "read-only",
+          mutationToolsEnabled: false,
+          workspaceBinding
         },
         serverInfo: {
           name: options.name ?? serverDefaults.name,
@@ -517,9 +542,11 @@ async function handleToolCall(
   }
 
   if (params.name === "workflow-cannon.capabilities") {
+    const workspaceBinding = resolveMcpWorkspaceBinding(options);
     recordAuditEvent(options, params.name, "success", {
       command: "capabilities",
-      mutationToolsEnabled: false
+      mutationToolsEnabled: false,
+      workspaceRoot: workspaceBinding.workspaceRoot
     });
     return successResponse(id, {
       content: [
@@ -529,6 +556,10 @@ async function handleToolCall(
             {
               mode: "read-only",
               mutationToolsEnabled: false,
+              startup: {
+                healthy: true,
+                workspaceBinding
+              },
               auditLogging: {
                 bounded: true,
                 redacted: true
@@ -588,13 +619,35 @@ async function handleToolCall(
 
 function createDefaultMcpRuntime(options: McpServerOptions): ModuleCommandRuntime {
   const registry = new ModuleRegistry(defaultRegistryModules);
+  const workspaceBinding = resolveMcpWorkspaceBinding(options);
   return createCommandRegistryRuntime(registry, {
     ctx: {
       runtimeVersion: "0.1",
-      workspacePath: options.workspacePath ?? process.cwd(),
+      workspacePath: workspaceBinding.workspaceRoot,
       moduleRegistry: registry
     }
   });
+}
+
+export function resolveMcpWorkspaceBinding(options: McpServerOptions = {}): McpWorkspaceBinding {
+  const rawWorkspacePath = options.workspacePath ?? process.cwd();
+  return {
+    schemaVersion: 1,
+    workspaceRoot: path.resolve(rawWorkspacePath),
+    workspaceTrusted: true,
+    bindingSource: options.workspacePath ? "option" : "cwd",
+    launchCommands: {
+      packageBin: "pnpm exec wk-mcp --workspace <workspace-root>",
+      builtDist: "node dist/mcp/cli.js --workspace <workspace-root>"
+    },
+    multiWorkspaceBehavior: {
+      mode: "single-workspace-per-process",
+      contract:
+        "Each MCP server process binds to exactly one workspaceRoot at startup and serves reads for that workspace only.",
+      recommendation:
+        "Launch one wk-mcp process per workspace/root; do not share one process across multiple workspace folders."
+    }
+  };
 }
 
 function formatToolResult(
