@@ -8,7 +8,7 @@ alwaysApply: false
 When **triaging** **`type: "improvement"`** tasks to promote **at most three** from **`proposed`** (or re-ranking focus) onto the **`ready`** queue:
 
 1. Follow **`.ai/playbooks/improvement-triage-top-three.md`** (playbook id `improvement-triage-top-three`). Attach it (`@`) while working.
-2. Use **`workspace-kit run list-tasks`** / **`get-task`** for inventory; **`run-transition`** with **`action":"accept"`** and JSON **`policyApproval`** for each promotion — **`.ai/AGENT-CLI-MAP.md`**, **`.ai/POLICY-APPROVAL.md`**.
+2. Use MCP first for fresh read-only inventory when available; otherwise use **`workspace-kit run list-tasks`** / **`get-task`**. Use **`run-transition`** with **`action":"accept"`** and JSON **`policyApproval`** for each promotion — **`.ai/AGENT-CLI-MAP.md`**, **`.ai/POLICY-APPROVAL.md`**.
 3. Record a short **triage summary** (why these ids, why not others) before or with the transitions.
 
 Invocation: **`.ai/runbooks/agent-playbooks.md`**.
