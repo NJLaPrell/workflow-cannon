@@ -21,7 +21,11 @@ import {
   isStateLikeMcpTool,
   STATE_LIKE_MCP_TOOL_NAMES,
   MCP_ENVELOPE_SCHEMA_VERSION,
-  MCP_DEFAULT_TOOL_SCHEMA_VERSION
+  MCP_DEFAULT_TOOL_SCHEMA_VERSION,
+  MCP_TOOL_OUTPUT_BYTE_BUDGETS,
+  MCP_RESOURCE_OUTPUT_BYTE_BUDGETS,
+  listToolOutputByteBudgets,
+  listResourceOutputByteBudgets
 } from "../dist/mcp/index.js";
 
 test("MCP initialize advertises a minimal read-only server", async () => {
@@ -755,7 +759,18 @@ test("MCP capabilities tool discloses resources and resourceFreshnessPolicy", as
   for (const r of capabilities.resources) {
     assert.equal(typeof r.uri, "string");
     assert.equal(r.cachePolicy.authority, "static");
+    assert.equal(typeof r.outputByteBudget, "number", `${r.uri} discloses outputByteBudget`);
+    assert.ok(r.outputByteBudget > 0, `${r.uri} outputByteBudget is positive`);
   }
+
+  assert.ok(capabilities.outputByteBudgets, "capabilities includes outputByteBudgets");
+  assert.deepEqual(capabilities.outputByteBudgets.tools, listToolOutputByteBudgets());
+  assert.deepEqual(capabilities.outputByteBudgets.resources, listResourceOutputByteBudgets());
+  assert.equal(
+    capabilities.byteBudget,
+    MCP_TOOL_OUTPUT_BYTE_BUDGETS["workflow-cannon.capabilities"],
+    "capabilities byteBudget matches per-tool budget"
+  );
 
   const policy = capabilities.resourceFreshnessPolicy;
   assert.ok(policy, "resourceFreshnessPolicy is present");
@@ -1395,6 +1410,132 @@ test("MCP memory oversized envelope retains content trust marker", async () => {
   assert.equal(envelope.oversized, true, "compact path taken");
   assert.ok(envelope.contentTrust, "contentTrust retained on oversized memory result");
   assert.equal(envelope.contentTrust.level, "governed", "level correct on oversized path");
+});
+
+test("MCP exposes explicit output budgets for every tool and resource", () => {
+  const tools = listReadOnlyMcpTools();
+  for (const tool of tools) {
+    assert.equal(
+      typeof MCP_TOOL_OUTPUT_BYTE_BUDGETS[tool.name],
+      "number",
+      `${tool.name} has explicit tool output budget`
+    );
+    assert.ok(MCP_TOOL_OUTPUT_BYTE_BUDGETS[tool.name] > 0, `${tool.name} budget is positive`);
+  }
+
+  const resources = listReadOnlyMcpResources();
+  for (const resource of resources) {
+    assert.equal(
+      typeof MCP_RESOURCE_OUTPUT_BYTE_BUDGETS[resource.uri],
+      "number",
+      `${resource.uri} has explicit resource output budget`
+    );
+    assert.equal(
+      resource.outputByteBudget,
+      MCP_RESOURCE_OUTPUT_BYTE_BUDGETS[resource.uri],
+      `${resource.uri} descriptor exposes outputByteBudget`
+    );
+  }
+});
+
+test("MCP read tools use per-tool byte budget when override is absent", async () => {
+  const runtime = {
+    listCommands() {
+      return [];
+    },
+    describeCommand() {
+      return undefined;
+    },
+    async invoke() {
+      return {
+        ok: true,
+        code: "phase-release-orchestration-state",
+        message: "large",
+        data: {
+          blob: "x".repeat(20_000)
+        }
+      };
+    }
+  };
+
+  const response = await handleMcpRequest(
+    {
+      jsonrpc: "2.0",
+      id: "per-tool-budget",
+      method: "tools/call",
+      params: {
+        name: "workflow-cannon.phase-release-orchestration-state",
+        arguments: {
+          phaseKey: "134"
+        }
+      }
+    },
+    { runtime }
+  );
+
+  const envelope = JSON.parse(response?.result.content.at(0).text);
+  assert.equal(envelope.oversized, true);
+  assert.equal(
+    envelope.byteBudget,
+    MCP_TOOL_OUTPUT_BYTE_BUDGETS["workflow-cannon.phase-release-orchestration-state"]
+  );
+  assert.equal(envelope.expansionRefs.at(0).kind, "cli");
+});
+
+test("MCP resources/read enforces output budget with expansion refs", async () => {
+  const workspacePath = mkdtempSync(path.join(tmpdir(), "wc-mcp-resource-budget-"));
+  mkdirSync(path.join(workspacePath, ".ai"));
+  const hugeBody = "# Oversized resource\n\n" + "y".repeat(20_000);
+  writeFileSync(path.join(workspacePath, ".ai/mcp-resource-freshness-policy.md"), hugeBody);
+
+  const response = await handleMcpRequest(
+    {
+      jsonrpc: "2.0",
+      id: "resource-budget",
+      method: "resources/read",
+      params: { uri: "workflow-cannon://resources/mcp-freshness-policy" }
+    },
+    { workspacePath }
+  );
+
+  const envelope = response?.result.freshnessEnvelope;
+  assert.equal(envelope.oversized, true, "oversized resource is flagged");
+  assert.equal(
+    envelope.byteBudget,
+    MCP_RESOURCE_OUTPUT_BYTE_BUDGETS["workflow-cannon://resources/mcp-freshness-policy"]
+  );
+  assert.equal(envelope.expansionRefs.at(0).kind, "workspace-file");
+  assert.equal(
+    envelope.expansionRefs.at(0).workspaceRelativePath,
+    ".ai/mcp-resource-freshness-policy.md"
+  );
+  assert.ok(
+    response?.result.contents.at(0).text.includes("truncated"),
+    "resource text is summarized in contents"
+  );
+});
+
+test("MCP agent_start oversized response includes expansion refs", async () => {
+  const auditLog = [];
+  const response = await handleMcpRequest(
+    {
+      jsonrpc: "2.0",
+      id: "agent-start-oversized",
+      method: "tools/call",
+      params: {
+        name: "workflow-cannon.agent_start",
+        arguments: {}
+      }
+    },
+    { auditLog, maxToolResponseBytes: 1000 }
+  );
+
+  const payload = JSON.parse(response?.result.content.at(0).text);
+  assert.equal(payload.oversized, true);
+  assert.equal(payload.byteBudget, 1000);
+  assert.equal(payload.expansionRefs.at(0).kind, "cli");
+  assert.match(payload.expansionRefs.at(0).command, /agent-bootstrap/);
+  assert.equal(auditLog.at(0).metadata.oversized, true);
 });
 
 async function waitFor(predicate, timeoutMs = 3000) {

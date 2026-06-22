@@ -8,10 +8,20 @@ import { ModuleRegistry } from "../core/module-registry.js";
 import type { ModuleCommandResult, ModuleCommandRuntime } from "../contracts/module-contract.js";
 import { defaultRegistryModules } from "../modules/index.js";
 import { buildStateLikeFreshness } from "./state-like-freshness.js";
+import {
+  buildCliExpansionRef,
+  buildWorkspaceFileExpansionRef,
+  listResourceOutputByteBudgets,
+  listToolOutputByteBudgets,
+  MCP_RESOURCE_OUTPUT_BYTE_BUDGETS,
+  MCP_TOOL_OUTPUT_BYTE_BUDGETS,
+  resolveResourceOutputByteBudget,
+  resolveToolOutputByteBudget,
+  summarizeOversizedText
+} from "./output-budgets.js";
 
 const JSON_RPC_VERSION = "2.0";
 const MCP_PROTOCOL_VERSION = "2024-11-05";
-const DEFAULT_TOOL_RESPONSE_BYTE_BUDGET = 24_000;
 const MAX_AUDIT_METADATA_STRING_LENGTH = 160;
 const MAX_AUDIT_METADATA_ARRAY_LENGTH = 8;
 const MAX_AUDIT_METADATA_OBJECT_KEYS = 12;
@@ -114,6 +124,7 @@ export interface McpResourceDescriptor {
   description: string;
   mimeType: string;
   cachePolicy: McpResourceCachePolicy;
+  outputByteBudget: number;
 }
 
 /**
@@ -154,6 +165,8 @@ interface ReadOnlyMcpToolDefinition {
   toolSchemaVersion?: number;
   /** When true, tool output includes state-like freshness metadata and stale handling. */
   stateLike?: boolean;
+  /** Explicit per-tool output byte budget. Must match output-budgets.ts. */
+  outputByteBudget: number;
 }
 
 const serverDefaults = {
@@ -165,8 +178,8 @@ const TOOL_DESCRIPTION_CONTRACT_VERSION = 1;
 const DESCRIPTION_COMMON_MISTAKE_LIMIT = 2;
 const AGENT_START_TOOL_NAME = "workflow-cannon.agent_start";
 const CAPABILITIES_TOOL_NAME = "workflow-cannon.capabilities";
-const AGENT_START_BYTE_BUDGET = 6 * 1024;
 const PHASE_RELEASE_ORCHESTRATION_TOOL_NAME = "workflow-cannon.phase-release-orchestration-state";
+const CAPABILITIES_CLI_FALLBACK = "pnpm exec wk -- list-commands";
 
 /**
  * Freshness policy injected into every tool result envelope. Authority is
@@ -221,7 +234,8 @@ const STATIC_RESOURCE_DEFINITIONS: McpStaticResourceDefinition[] = [
       authority: "static",
       maxAgeSeconds: 86400,
       note: "Static policy document. Content changes on repository commits only. Safe to cache for the duration of a session."
-    }
+    },
+    outputByteBudget: MCP_RESOURCE_OUTPUT_BYTE_BUDGETS["workflow-cannon://resources/mcp-freshness-policy"]
   },
   {
     uri: "workflow-cannon://resources/mcp-adapter-boundary",
@@ -234,7 +248,8 @@ const STATIC_RESOURCE_DEFINITIONS: McpStaticResourceDefinition[] = [
       authority: "static",
       maxAgeSeconds: 86400,
       note: "Static ADR. Content changes on repository commits only. Safe to cache for the duration of a session."
-    }
+    },
+    outputByteBudget: MCP_RESOURCE_OUTPUT_BYTE_BUDGETS["workflow-cannon://resources/mcp-adapter-boundary"]
   }
 ];
 
@@ -251,7 +266,7 @@ export const MCP_ENVELOPE_SCHEMA_VERSION = 1;
  */
 export const MCP_DEFAULT_TOOL_SCHEMA_VERSION = 1;
 
-const packetReadTools: ReadOnlyMcpToolDefinition[] = [
+const packetReadToolDefinitions: Omit<ReadOnlyMcpToolDefinition, "outputByteBudget">[] = [
   {
     toolName: "workflow-cannon.phase-release-orchestration-state",
     commandName: "phase-release-orchestration-state",
@@ -545,6 +560,14 @@ const packetReadTools: ReadOnlyMcpToolDefinition[] = [
   }
 ];
 
+const packetReadTools: ReadOnlyMcpToolDefinition[] = packetReadToolDefinitions.map((tool) => {
+  const outputByteBudget = MCP_TOOL_OUTPUT_BYTE_BUDGETS[tool.toolName];
+  if (outputByteBudget === undefined) {
+    throw new Error(`Missing MCP output byte budget for tool: ${tool.toolName}`);
+  }
+  return { ...tool, outputByteBudget };
+});
+
 const toolDefinitionsByName = new Map(packetReadTools.map((tool) => [tool.toolName, tool]));
 
 function formatMcpToolDescription(input: {
@@ -727,96 +750,153 @@ async function handleAgentStartToolCall(id: JsonRpcId, options: McpServerOptions
     sessionSummary = undefined;
   }
 
-  const payload = buildAgentStartPayload(workspaceBinding, sessionSummary);
+  const payload = buildAgentStartPayload(workspaceBinding, sessionSummary, options);
   const text = JSON.stringify(payload, null, 2);
-  const byteBudget = AGENT_START_BYTE_BUDGET;
+  const byteBudget = resolveToolOutputByteBudget(AGENT_START_TOOL_NAME, options);
   const oversized = Buffer.byteLength(text, "utf8") > byteBudget;
 
   recordAuditEvent(options, AGENT_START_TOOL_NAME, "success", {
     command: "agent-bootstrap",
     mutationToolsEnabled: false,
     workspaceRoot: workspaceBinding.workspaceRoot,
-    oversized
+    oversized,
+    byteBudget
   });
 
+  if (!oversized) {
+    return successResponse(id, {
+      content: [{ type: "text", text }],
+      isError: false
+    });
+  }
+
+  const compactPayload = buildOversizedAgentStartPayload(payload, byteBudget, text);
   return successResponse(id, {
-    content: [{ type: "text", text }],
+    content: [{ type: "text", text: JSON.stringify(compactPayload, null, 2) }],
     isError: false
   });
 }
 
 function handleCapabilitiesToolCall(id: JsonRpcId, options: McpServerOptions): JsonRpcResponse {
   const workspaceBinding = resolveMcpWorkspaceBinding(options);
+  const byteBudget = resolveToolOutputByteBudget(CAPABILITIES_TOOL_NAME, options);
+  const fullPayload = buildCapabilitiesPayload(workspaceBinding, options);
+  const fullText = JSON.stringify(fullPayload, null, 2);
+  const oversized = Buffer.byteLength(fullText, "utf8") > byteBudget;
+
   recordAuditEvent(options, CAPABILITIES_TOOL_NAME, "success", {
     command: "capabilities",
     mutationToolsEnabled: false,
-    workspaceRoot: workspaceBinding.workspaceRoot
+    workspaceRoot: workspaceBinding.workspaceRoot,
+    oversized,
+    byteBudget
   });
+
+  const responseText = oversized
+    ? JSON.stringify(buildOversizedCapabilitiesPayload(fullPayload, byteBudget, fullText), null, 2)
+    : fullText;
+
   return successResponse(id, {
     content: [
       {
         type: "text",
-        text: JSON.stringify(
-          {
-            schemaVersion: MCP_ENVELOPE_SCHEMA_VERSION,
-            toolVersion: MCP_DEFAULT_TOOL_SCHEMA_VERSION,
-            mode: "read-only",
-            mutationToolsEnabled: false,
-            startup: {
-              healthy: true,
-              workspaceBinding
-            },
-            auditLogging: {
-              bounded: true,
-              redacted: true
-            },
-            toolDescriptionContract: {
-              schemaVersion: TOOL_DESCRIPTION_CONTRACT_VERSION,
-              requiredSegments: ["description", "CLI fallback", "Common mistakes"]
-            },
-            versionContract: {
-              envelopeSchemaVersion: MCP_ENVELOPE_SCHEMA_VERSION,
-              defaultToolSchemaVersion: MCP_DEFAULT_TOOL_SCHEMA_VERSION,
-              policy: ".ai/mcp-tool-version-policy.md"
-            },
-            tools: listReadOnlyMcpTools().map((tool) => tool.name),
-            resources: listReadOnlyMcpResources().map((r) => ({
-              uri: r.uri,
-              name: r.name,
-              cachePolicy: r.cachePolicy
-            })),
-            resourceFreshnessPolicy: {
-              schemaVersion: 1,
-              authorityLevels: {
-                live: "Tool results reflect current workspace state at call time. Not safe to cache across turns.",
-                static:
-                  "Resource documents change only on repository commits. Safe to cache for a session.",
-                advisory:
-                  "Memory and summary results are not authoritative for task/release state without CLI confirmation."
-              },
-              stateAuthorityRule:
-                "State-like tool results carry authority:'live' and must be re-invoked for current state. Resources carry authority:'static' and are documentation only.",
-              workspace: buildWorkspaceFreshness(workspaceBinding)
-            },
-            byteBudget: resolveToolResponseByteBudget(options)
-          },
-          null,
-          2
-        )
+        text: responseText
       }
     ],
     isError: false
   });
 }
 
+function buildCapabilitiesPayload(
+  workspaceBinding: McpWorkspaceBinding,
+  options: McpServerOptions
+): Record<string, unknown> {
+  return {
+    schemaVersion: MCP_ENVELOPE_SCHEMA_VERSION,
+    toolVersion: MCP_DEFAULT_TOOL_SCHEMA_VERSION,
+    mode: "read-only",
+    mutationToolsEnabled: false,
+    startup: {
+      healthy: true,
+      workspaceBinding
+    },
+    auditLogging: {
+      bounded: true,
+      redacted: true
+    },
+    toolDescriptionContract: {
+      schemaVersion: TOOL_DESCRIPTION_CONTRACT_VERSION,
+      requiredSegments: ["description", "CLI fallback", "Common mistakes"]
+    },
+    versionContract: {
+      envelopeSchemaVersion: MCP_ENVELOPE_SCHEMA_VERSION,
+      defaultToolSchemaVersion: MCP_DEFAULT_TOOL_SCHEMA_VERSION,
+      policy: ".ai/mcp-tool-version-policy.md"
+    },
+    tools: listReadOnlyMcpTools().map((tool) => tool.name),
+    resources: listReadOnlyMcpResources().map((r) => ({
+      uri: r.uri,
+      name: r.name,
+      cachePolicy: r.cachePolicy,
+      outputByteBudget: r.outputByteBudget
+    })),
+    outputByteBudgets: {
+      tools: listToolOutputByteBudgets(),
+      resources: listResourceOutputByteBudgets()
+    },
+    resourceFreshnessPolicy: {
+      schemaVersion: 1,
+      authorityLevels: {
+        live: "Tool results reflect current workspace state at call time. Not safe to cache across turns.",
+        static:
+          "Resource documents change only on repository commits. Safe to cache for a session.",
+        advisory:
+          "Memory and summary results are not authoritative for task/release state without CLI confirmation."
+      },
+      stateAuthorityRule:
+        "State-like tool results carry authority:'live' and must be re-invoked for current state. Resources carry authority:'static' and are documentation only.",
+      workspace: buildWorkspaceFreshness(workspaceBinding)
+    },
+    byteBudget: resolveToolOutputByteBudget(CAPABILITIES_TOOL_NAME, options)
+  };
+}
+
+function buildOversizedCapabilitiesPayload(
+  fullPayload: Record<string, unknown>,
+  byteBudget: number,
+  fullText: string
+): Record<string, unknown> {
+  const tools = Array.isArray(fullPayload.tools) ? fullPayload.tools : [];
+  const resources = Array.isArray(fullPayload.resources) ? fullPayload.resources : [];
+  return {
+    schemaVersion: MCP_ENVELOPE_SCHEMA_VERSION,
+    toolVersion: MCP_DEFAULT_TOOL_SCHEMA_VERSION,
+    tool: CAPABILITIES_TOOL_NAME,
+    mode: "read-only",
+    mutationToolsEnabled: false,
+    oversized: true,
+    byteBudget,
+    actualBytes: Buffer.byteLength(fullText, "utf8"),
+    resultSummary: {
+      toolCount: tools.length,
+      resourceCount: resources.length,
+      outputByteBudgets: fullPayload.outputByteBudgets
+    },
+    expansionRefs: [buildCliExpansionRef(CAPABILITIES_CLI_FALLBACK)]
+  };
+}
+
 export function listReadOnlyMcpResources(): McpResourceDescriptor[] {
-  return STATIC_RESOURCE_DEFINITIONS.map(({ uri, name, description, mimeType, cachePolicy }) => ({
-    uri,
-    name,
-    description,
-    mimeType,
-    cachePolicy
-  }));
+  return STATIC_RESOURCE_DEFINITIONS.map(
+    ({ uri, name, description, mimeType, cachePolicy, outputByteBudget }) => ({
+      uri,
+      name,
+      description,
+      mimeType,
+      cachePolicy,
+      outputByteBudget
+    })
+  );
 }
 
 function handleResourcesList(id: JsonRpcId): JsonRpcResponse {
@@ -858,7 +938,20 @@ function handleResourceRead(
     return errorResponse(id, -32603, `Resource unavailable: ${uri}`);
   }
 
-  return successResponse(id, {
+  const byteBudget = resolveResourceOutputByteBudget(uri);
+  const freshnessEnvelope = {
+    schemaVersion: 1,
+    authority: definition.cachePolicy.authority,
+    fetchedAt: new Date().toISOString(),
+    cachePolicy: definition.cachePolicy,
+    workspace: buildWorkspaceFreshness(workspaceBinding),
+    authorityNote:
+      "This resource is a static documentation artifact. It is not authoritative for current task, assignment, release, or queue state.",
+    contentTrust: UNTRUSTED_RESOURCE_CONTENT_TRUST,
+    outputByteBudget: byteBudget
+  };
+
+  const fullResponse = {
     contents: [
       {
         uri,
@@ -866,22 +959,37 @@ function handleResourceRead(
         text
       }
     ],
+    freshnessEnvelope
+  };
+  const fullText = JSON.stringify(fullResponse, null, 2);
+  if (Buffer.byteLength(fullText, "utf8") <= byteBudget) {
+    return successResponse(id, fullResponse);
+  }
+
+  const actualBytes = Buffer.byteLength(text, "utf8");
+  return successResponse(id, {
+    contents: [
+      {
+        uri,
+        mimeType: definition.mimeType,
+        text: summarizeOversizedText(text)
+      }
+    ],
     freshnessEnvelope: {
-      schemaVersion: 1,
-      authority: definition.cachePolicy.authority,
-      fetchedAt: new Date().toISOString(),
-      cachePolicy: definition.cachePolicy,
-      workspace: buildWorkspaceFreshness(workspaceBinding),
-      authorityNote:
-        "This resource is a static documentation artifact. It is not authoritative for current task, assignment, release, or queue state.",
-      contentTrust: UNTRUSTED_RESOURCE_CONTENT_TRUST
+      ...freshnessEnvelope,
+      oversized: true,
+      byteBudget,
+      actualBytes,
+      textSummary: summarizeOversizedText(text, 240),
+      expansionRefs: [buildWorkspaceFileExpansionRef(definition.workspaceRelativePath)]
     }
   });
 }
 
 function buildAgentStartPayload(
   workspaceBinding: McpWorkspaceBinding,
-  sessionSummary?: Record<string, unknown>
+  sessionSummary?: Record<string, unknown>,
+  options: McpServerOptions = {}
 ): Record<string, unknown> {
   const tools = listReadOnlyMcpTools().map((tool) => tool.name);
   return {
@@ -920,8 +1028,41 @@ function buildAgentStartPayload(
       healthy: true,
       workspaceBinding
     },
-    byteBudget: AGENT_START_BYTE_BUDGET,
+    byteBudget: resolveToolOutputByteBudget(AGENT_START_TOOL_NAME, options),
     ...(sessionSummary ? { session: sessionSummary } : {})
+  };
+}
+
+function buildOversizedAgentStartPayload(
+  fullPayload: Record<string, unknown>,
+  byteBudget: number,
+  fullText: string
+): Record<string, unknown> {
+  const toolsAvailable = Array.isArray(fullPayload.toolsAvailable) ? fullPayload.toolsAvailable : [];
+  const cliFallback = toRecord(fullPayload.cliFallback);
+  return {
+    schemaVersion: MCP_ENVELOPE_SCHEMA_VERSION,
+    toolVersion: MCP_DEFAULT_TOOL_SCHEMA_VERSION,
+    tool: AGENT_START_TOOL_NAME,
+    mode: "read-only",
+    mutationToolsEnabled: false,
+    oversized: true,
+    byteBudget,
+    actualBytes: Buffer.byteLength(fullText, "utf8"),
+    resultSummary: {
+      toolsAvailableCount: toolsAvailable.length,
+      recommendedNextTool: fullPayload.recommendedNextTool,
+      workflowRecommendationCount: Array.isArray(fullPayload.workflowRecommendations)
+        ? fullPayload.workflowRecommendations.length
+        : 0
+    },
+    expansionRefs: [
+      buildCliExpansionRef(
+        typeof cliFallback.leanProjection === "string"
+          ? cliFallback.leanProjection
+          : "pnpm exec wk run agent-bootstrap '{\"projection\":\"lean\"}'"
+      )
+    ]
   };
 }
 
@@ -1001,7 +1142,7 @@ async function handleToolCall(
     args: commandArgs,
     resultCode: commandResult.code,
     oversized: isOversizedToolResult(toolResult),
-    byteBudget: resolveToolResponseByteBudget(options)
+    byteBudget: resolveToolOutputByteBudget(definition.toolName, options)
   });
   return successResponse(id, toolResult);
 }
@@ -1145,7 +1286,7 @@ function formatToolResult(
     result
   };
   const fullText = JSON.stringify(fullEnvelope, null, 2);
-  const byteBudget = resolveToolResponseByteBudget(options);
+  const byteBudget = resolveToolOutputByteBudget(definition.toolName, options);
   if (Buffer.byteLength(fullText, "utf8") <= byteBudget) {
     return {
       content: [{ type: "text", text: fullText }],
@@ -1169,12 +1310,7 @@ function formatToolResult(
     byteBudget,
     actualBytes: Buffer.byteLength(fullText, "utf8"),
     resultSummary: summarizeCommandResult(result),
-    expansionRefs: [
-      {
-        kind: "cli",
-        command: cliFallbackCommand
-      }
-    ]
+    expansionRefs: [buildCliExpansionRef(cliFallbackCommand)]
   };
   return {
     content: [{ type: "text", text: JSON.stringify(compactEnvelope, null, 2) }],
@@ -1200,10 +1336,6 @@ function summarizeCommandResult(result: ModuleCommandResult): Record<string, unk
     code: result.code,
     message: result.message
   };
-}
-
-function resolveToolResponseByteBudget(options: McpServerOptions): number {
-  return Math.max(1_000, options.maxToolResponseBytes ?? DEFAULT_TOOL_RESPONSE_BYTE_BUDGET);
 }
 
 function toRecord(value: unknown): Record<string, unknown> {
