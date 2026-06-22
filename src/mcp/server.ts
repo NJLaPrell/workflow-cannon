@@ -1,5 +1,6 @@
 import { createInterface } from "node:readline";
 import path from "node:path";
+import { readFileSync } from "node:fs";
 import { Writable } from "node:stream";
 
 import { createCommandRegistryRuntime } from "../core/module-command-router.js";
@@ -87,6 +88,24 @@ export interface McpAuditEvent {
   metadata: Record<string, unknown>;
 }
 
+export interface McpResourceCachePolicy {
+  authority: "live" | "static" | "advisory";
+  maxAgeSeconds?: number;
+  note: string;
+}
+
+export interface McpResourceDescriptor {
+  uri: string;
+  name: string;
+  description: string;
+  mimeType: string;
+  cachePolicy: McpResourceCachePolicy;
+}
+
+interface McpStaticResourceDefinition extends McpResourceDescriptor {
+  workspaceRelativePath: string;
+}
+
 interface ReadOnlyMcpToolDefinition {
   toolName: string;
   commandName: string;
@@ -114,6 +133,50 @@ const AGENT_START_TOOL_NAME = "workflow-cannon.agent_start";
 const CAPABILITIES_TOOL_NAME = "workflow-cannon.capabilities";
 const AGENT_START_BYTE_BUDGET = 6 * 1024;
 const PHASE_RELEASE_ORCHESTRATION_TOOL_NAME = "workflow-cannon.phase-release-orchestration-state";
+
+/**
+ * Freshness policy injected into every tool result envelope. Authority is
+ * always "live" — the command is executed against current workspace state at
+ * call time. Agents must re-invoke to get updated state.
+ */
+const TOOL_FRESHNESS_POLICY: { authority: "live"; note: string; cliFallbackNote: string } = {
+  authority: "live",
+  note: "Tool results reflect current workspace state computed at call time. Re-invoke to get updated state. Do not treat a prior result as current state.",
+  cliFallbackNote: "See expansionRefs for the equivalent CLI command."
+};
+
+/**
+ * Static resource definitions exposed via resources/list and resources/read.
+ * These are documentation and policy artifacts — not live state.
+ */
+const STATIC_RESOURCE_DEFINITIONS: McpStaticResourceDefinition[] = [
+  {
+    uri: "workflow-cannon://resources/mcp-freshness-policy",
+    name: "MCP Resource Freshness and Cache Policy",
+    description:
+      "Cache policy and authority rules for MCP tools and resources. Defines the tool/resource boundary and freshness requirements.",
+    mimeType: "text/markdown",
+    workspaceRelativePath: ".ai/mcp-resource-freshness-policy.md",
+    cachePolicy: {
+      authority: "static",
+      maxAgeSeconds: 86400,
+      note: "Static policy document. Content changes on repository commits only. Safe to cache for the duration of a session."
+    }
+  },
+  {
+    uri: "workflow-cannon://resources/mcp-adapter-boundary",
+    name: "MCP Adapter Boundary ADR",
+    description:
+      "ADR defining the MCP adapter boundary, read-only-first scope, and mutation policy.",
+    mimeType: "text/markdown",
+    workspaceRelativePath: ".ai/adrs/ADR-mcp-adapter-boundary-v1.md",
+    cachePolicy: {
+      authority: "static",
+      maxAgeSeconds: 86400,
+      note: "Static ADR. Content changes on repository commits only. Safe to cache for the duration of a session."
+    }
+  }
+];
 
 const packetReadTools: ReadOnlyMcpToolDefinition[] = [
   {
@@ -502,7 +565,8 @@ export async function handleMcpRequest(
       return successResponse(id, {
         protocolVersion: MCP_PROTOCOL_VERSION,
         capabilities: {
-          tools: {}
+          tools: {},
+          resources: {}
         },
         startup: {
           schemaVersion: 1,
@@ -524,6 +588,12 @@ export async function handleMcpRequest(
 
     case "tools/call":
       return handleToolCall(id, request.params, options);
+
+    case "resources/list":
+      return handleResourcesList(id);
+
+    case "resources/read":
+      return handleResourceRead(id, request.params, options);
 
     default:
       return errorResponse(id, -32601, `Method not found: ${request.method}`);
@@ -623,6 +693,23 @@ function handleCapabilitiesToolCall(id: JsonRpcId, options: McpServerOptions): J
               requiredSegments: ["description", "CLI fallback", "Common mistakes"]
             },
             tools: listReadOnlyMcpTools().map((tool) => tool.name),
+            resources: listReadOnlyMcpResources().map((r) => ({
+              uri: r.uri,
+              name: r.name,
+              cachePolicy: r.cachePolicy
+            })),
+            resourceFreshnessPolicy: {
+              schemaVersion: 1,
+              authorityLevels: {
+                live: "Tool results reflect current workspace state at call time. Not safe to cache across turns.",
+                static:
+                  "Resource documents change only on repository commits. Safe to cache for a session.",
+                advisory:
+                  "Memory and summary results are not authoritative for task/release state without CLI confirmation."
+              },
+              stateAuthorityRule:
+                "State-like tool results carry authority:'live' and must be re-invoked for current state. Resources carry authority:'static' and are documentation only."
+            },
             byteBudget: resolveToolResponseByteBudget(options)
           },
           null,
@@ -631,6 +718,68 @@ function handleCapabilitiesToolCall(id: JsonRpcId, options: McpServerOptions): J
       }
     ],
     isError: false
+  });
+}
+
+export function listReadOnlyMcpResources(): McpResourceDescriptor[] {
+  return STATIC_RESOURCE_DEFINITIONS.map(({ uri, name, description, mimeType, cachePolicy }) => ({
+    uri,
+    name,
+    description,
+    mimeType,
+    cachePolicy
+  }));
+}
+
+function handleResourcesList(id: JsonRpcId): JsonRpcResponse {
+  return successResponse(id, {
+    resources: listReadOnlyMcpResources()
+  });
+}
+
+function handleResourceRead(
+  id: JsonRpcId,
+  params: unknown,
+  options: McpServerOptions
+): JsonRpcResponse {
+  const resourceParams = params as Record<string, unknown> | null | undefined;
+  const uri = typeof resourceParams?.uri === "string" ? resourceParams.uri : null;
+
+  if (!uri) {
+    return errorResponse(id, -32602, "uri is required");
+  }
+
+  const definition = STATIC_RESOURCE_DEFINITIONS.find((r) => r.uri === uri);
+  if (!definition) {
+    return errorResponse(id, -32602, `Unknown resource: ${uri}`);
+  }
+
+  const workspaceBinding = resolveMcpWorkspaceBinding(options);
+  const filePath = path.join(workspaceBinding.workspaceRoot, definition.workspaceRelativePath);
+
+  let text: string;
+  try {
+    text = readFileSync(filePath, "utf8");
+  } catch {
+    return errorResponse(id, -32603, `Resource unavailable: ${uri}`);
+  }
+
+  return successResponse(id, {
+    contents: [
+      {
+        uri,
+        mimeType: definition.mimeType,
+        text
+      }
+    ],
+    freshnessEnvelope: {
+      schemaVersion: 1,
+      authority: definition.cachePolicy.authority,
+      fetchedAt: new Date().toISOString(),
+      cachePolicy: definition.cachePolicy,
+      authorityNote:
+        "This resource is a static documentation artifact. It is not authoritative for current task, assignment, release, or queue state."
+    }
   });
 }
 
@@ -807,6 +956,7 @@ function formatToolResult(
     command: definition.commandName,
     args,
     ...(definition.governance ? { governance: definition.governance } : {}),
+    freshnessPolicy: TOOL_FRESHNESS_POLICY,
     result
   };
   const fullText = JSON.stringify(fullEnvelope, null, 2);
@@ -826,6 +976,7 @@ function formatToolResult(
     command: definition.commandName,
     args,
     ...(definition.governance ? { governance: definition.governance } : {}),
+    freshnessPolicy: TOOL_FRESHNESS_POLICY,
     oversized: true,
     byteBudget,
     actualBytes: Buffer.byteLength(fullText, "utf8"),

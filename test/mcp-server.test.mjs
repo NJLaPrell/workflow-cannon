@@ -3,7 +3,12 @@ import { spawn } from "node:child_process";
 import { once } from "node:events";
 import test from "node:test";
 
-import { handleMcpRequest, listReadOnlyMcpTools, resolveMcpWorkspaceBinding } from "../dist/mcp/index.js";
+import {
+  handleMcpRequest,
+  listReadOnlyMcpTools,
+  listReadOnlyMcpResources,
+  resolveMcpWorkspaceBinding
+} from "../dist/mcp/index.js";
 
 test("MCP initialize advertises a minimal read-only server", async () => {
   const response = await handleMcpRequest({
@@ -15,7 +20,7 @@ test("MCP initialize advertises a minimal read-only server", async () => {
 
   assert.equal(response?.jsonrpc, "2.0");
   assert.equal(response?.id, 1);
-  assert.deepEqual(response?.result.capabilities, { tools: {} });
+  assert.deepEqual(response?.result.capabilities, { tools: {}, resources: {} });
   assert.equal(response?.result.serverInfo.name, "workflow-cannon");
   assert.equal(response?.result.startup.healthy, true);
   assert.equal(response?.result.startup.mode, "read-only");
@@ -524,6 +529,264 @@ test("MCP stdio CLI starts from documented command and proves workspace binding"
     response.result.startup.workspaceBinding.multiWorkspaceBehavior.mode,
     "single-workspace-per-process"
   );
+});
+
+test("MCP initialize advertises resources capability", async () => {
+  const response = await handleMcpRequest({
+    jsonrpc: "2.0",
+    id: "init-resources",
+    method: "initialize",
+    params: {}
+  });
+
+  assert.deepEqual(response?.result.capabilities, { tools: {}, resources: {} });
+});
+
+test("MCP resources/list returns static resources with cache policy", async () => {
+  const response = await handleMcpRequest({
+    jsonrpc: "2.0",
+    id: "res-list",
+    method: "resources/list"
+  });
+
+  assert.equal(response?.jsonrpc, "2.0");
+  assert.equal(response?.id, "res-list");
+  const resources = response?.result.resources;
+  assert.ok(Array.isArray(resources), "resources is an array");
+  assert.ok(resources.length >= 2, "at least two resources");
+
+  for (const resource of resources) {
+    assert.equal(typeof resource.uri, "string", `${resource.uri} has uri`);
+    assert.equal(typeof resource.name, "string", `${resource.uri} has name`);
+    assert.equal(typeof resource.description, "string", `${resource.uri} has description`);
+    assert.equal(typeof resource.mimeType, "string", `${resource.uri} has mimeType`);
+    assert.ok(resource.cachePolicy, `${resource.uri} has cachePolicy`);
+    assert.equal(resource.cachePolicy.authority, "static", `${resource.uri} authority is static`);
+    assert.equal(
+      typeof resource.cachePolicy.note,
+      "string",
+      `${resource.uri} cachePolicy has note`
+    );
+    assert.ok(
+      resource.cachePolicy.maxAgeSeconds > 0,
+      `${resource.uri} cachePolicy has positive maxAgeSeconds`
+    );
+  }
+
+  const uris = resources.map((r) => r.uri);
+  assert.ok(
+    uris.includes("workflow-cannon://resources/mcp-freshness-policy"),
+    "freshness policy resource is listed"
+  );
+  assert.ok(
+    uris.includes("workflow-cannon://resources/mcp-adapter-boundary"),
+    "adapter boundary resource is listed"
+  );
+});
+
+test("MCP resources/list matches listReadOnlyMcpResources()", async () => {
+  const response = await handleMcpRequest({
+    jsonrpc: "2.0",
+    id: "res-list-parity",
+    method: "resources/list"
+  });
+
+  const listedResources = response?.result.resources;
+  const directResources = listReadOnlyMcpResources();
+
+  assert.equal(listedResources.length, directResources.length);
+  for (let i = 0; i < directResources.length; i++) {
+    assert.equal(listedResources[i].uri, directResources[i].uri);
+    assert.equal(listedResources[i].name, directResources[i].name);
+    assert.deepEqual(listedResources[i].cachePolicy, directResources[i].cachePolicy);
+  }
+});
+
+test("MCP resources/read returns content with freshness envelope", async () => {
+  const response = await handleMcpRequest({
+    jsonrpc: "2.0",
+    id: "res-read",
+    method: "resources/read",
+    params: { uri: "workflow-cannon://resources/mcp-freshness-policy" }
+  });
+
+  assert.equal(response?.id, "res-read");
+  assert.ok(!("error" in response), "no error in response");
+
+  const contents = response?.result.contents;
+  assert.ok(Array.isArray(contents) && contents.length === 1, "one content item");
+  assert.equal(contents[0].uri, "workflow-cannon://resources/mcp-freshness-policy");
+  assert.equal(contents[0].mimeType, "text/markdown");
+  assert.equal(typeof contents[0].text, "string", "text is a string");
+  assert.ok(contents[0].text.length > 0, "text is non-empty");
+  assert.match(contents[0].text, /freshness/i, "freshness policy content mentions freshness");
+
+  const envelope = response?.result.freshnessEnvelope;
+  assert.ok(envelope, "freshnessEnvelope is present");
+  assert.equal(envelope.schemaVersion, 1);
+  assert.equal(envelope.authority, "static");
+  assert.equal(typeof envelope.fetchedAt, "string", "fetchedAt is a string");
+  assert.match(envelope.fetchedAt, /^\d{4}-\d{2}-\d{2}T/, "fetchedAt is an ISO timestamp");
+  assert.equal(envelope.cachePolicy.authority, "static");
+  assert.ok(envelope.cachePolicy.maxAgeSeconds > 0);
+  assert.equal(typeof envelope.authorityNote, "string");
+  assert.match(
+    envelope.authorityNote,
+    /not authoritative for current task/i,
+    "authorityNote warns about stale state"
+  );
+});
+
+test("MCP resources/read rejects unknown URI", async () => {
+  const response = await handleMcpRequest({
+    jsonrpc: "2.0",
+    id: "res-unknown",
+    method: "resources/read",
+    params: { uri: "workflow-cannon://resources/does-not-exist" }
+  });
+
+  assert.equal(response?.error.code, -32602);
+  assert.match(response?.error.message, /Unknown resource/);
+});
+
+test("MCP resources/read rejects missing URI", async () => {
+  const response = await handleMcpRequest({
+    jsonrpc: "2.0",
+    id: "res-no-uri",
+    method: "resources/read",
+    params: {}
+  });
+
+  assert.equal(response?.error.code, -32602);
+  assert.equal(response?.error.message, "uri is required");
+});
+
+test("MCP tool result envelope includes freshnessPolicy with live authority", async () => {
+  const runtime = {
+    listCommands() {
+      return [];
+    },
+    describeCommand() {
+      return undefined;
+    },
+    async invoke(invocation) {
+      return {
+        ok: true,
+        code: "phase-release-state",
+        message: "ok",
+        data: { phaseKey: invocation.args.phaseKey }
+      };
+    }
+  };
+
+  const response = await handleMcpRequest(
+    {
+      jsonrpc: "2.0",
+      id: "freshness-check",
+      method: "tools/call",
+      params: {
+        name: "workflow-cannon.phase-release-state",
+        arguments: { phaseKey: "134" }
+      }
+    },
+    { runtime }
+  );
+
+  const envelope = JSON.parse(response?.result.content.at(0).text);
+  assert.ok(envelope.freshnessPolicy, "freshnessPolicy is present in tool result");
+  assert.equal(envelope.freshnessPolicy.authority, "live");
+  assert.equal(typeof envelope.freshnessPolicy.note, "string");
+  assert.match(
+    envelope.freshnessPolicy.note,
+    /Re-invoke/i,
+    "note instructs re-invocation for current state"
+  );
+  assert.equal(typeof envelope.freshnessPolicy.cliFallbackNote, "string");
+});
+
+test("MCP tool result is live authority; resources are static — boundary is distinct", () => {
+  const resources = listReadOnlyMcpResources();
+  assert.ok(resources.length >= 2, "at least two static resources defined");
+  for (const resource of resources) {
+    assert.equal(
+      resource.cachePolicy.authority,
+      "static",
+      `resource ${resource.uri} is static (not live)`
+    );
+  }
+});
+
+test("MCP capabilities tool discloses resources and resourceFreshnessPolicy", async () => {
+  const response = await handleMcpRequest({
+    jsonrpc: "2.0",
+    id: "cap-resources",
+    method: "tools/call",
+    params: {
+      name: "workflow-cannon.capabilities",
+      arguments: {}
+    }
+  });
+
+  assert.equal(response?.result.isError, false);
+  const text = response?.result.content.at(0).text;
+  const capabilities = JSON.parse(text);
+
+  assert.ok(Array.isArray(capabilities.resources), "capabilities lists resources");
+  assert.ok(capabilities.resources.length >= 2, "at least two resources in capabilities");
+  for (const r of capabilities.resources) {
+    assert.equal(typeof r.uri, "string");
+    assert.equal(r.cachePolicy.authority, "static");
+  }
+
+  const policy = capabilities.resourceFreshnessPolicy;
+  assert.ok(policy, "resourceFreshnessPolicy is present");
+  assert.equal(policy.schemaVersion, 1);
+  assert.equal(typeof policy.authorityLevels.live, "string");
+  assert.equal(typeof policy.authorityLevels.static, "string");
+  assert.equal(typeof policy.authorityLevels.advisory, "string");
+  assert.equal(typeof policy.stateAuthorityRule, "string");
+  assert.match(
+    policy.stateAuthorityRule,
+    /re-invoked/i,
+    "stateAuthorityRule mentions re-invocation"
+  );
+});
+
+test("MCP tool result byte-budget compact envelope also includes freshnessPolicy", async () => {
+  const runtime = {
+    listCommands() {
+      return [];
+    },
+    describeCommand() {
+      return undefined;
+    },
+    async invoke() {
+      return {
+        ok: true,
+        code: "phase-release-state",
+        message: "large",
+        data: { blob: "x".repeat(2500) }
+      };
+    }
+  };
+
+  const response = await handleMcpRequest(
+    {
+      jsonrpc: "2.0",
+      id: "freshness-compact",
+      method: "tools/call",
+      params: {
+        name: "workflow-cannon.phase-release-state",
+        arguments: { phaseKey: "134" }
+      }
+    },
+    { runtime, maxToolResponseBytes: 1000 }
+  );
+
+  const envelope = JSON.parse(response?.result.content.at(0).text);
+  assert.equal(envelope.oversized, true, "envelope is oversized");
+  assert.ok(envelope.freshnessPolicy, "compact envelope still has freshnessPolicy");
+  assert.equal(envelope.freshnessPolicy.authority, "live");
 });
 
 async function waitFor(predicate, timeoutMs = 3000) {
