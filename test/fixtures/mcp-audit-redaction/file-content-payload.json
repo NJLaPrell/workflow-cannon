@@ -1,0 +1,6 @@
+{
+  "taskId": "T100730",
+  "text": "# Full file dump\n\nThis is an entire markdown policy document that should never land in audit logs verbatim.",
+  "contents": "export const SECRET = 'do-not-log';",
+  "fileContent": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC\n-----END PRIVATE KEY-----"
+}

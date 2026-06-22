@@ -19,12 +19,16 @@ import {
   resolveToolOutputByteBudget,
   summarizeOversizedText
 } from "./output-budgets.js";
+import { redactAuditMetadata } from "./audit-redaction.js";
+import {
+  describeMcpDebugLoggingPolicy,
+  McpDebugLogger,
+  resolveMcpDebugLogging,
+  type McpDebugLoggingConfig
+} from "./debug-logging.js";
 
 const JSON_RPC_VERSION = "2.0";
 const MCP_PROTOCOL_VERSION = "2024-11-05";
-const MAX_AUDIT_METADATA_STRING_LENGTH = 160;
-const MAX_AUDIT_METADATA_ARRAY_LENGTH = 8;
-const MAX_AUDIT_METADATA_OBJECT_KEYS = 12;
 
 export type JsonRpcId = string | number | null;
 
@@ -71,6 +75,8 @@ export interface McpServerOptions {
   maxToolResponseBytes?: number;
   auditLog?: McpAuditEvent[];
   auditSink?: (event: McpAuditEvent) => void;
+  debugLogging?: McpDebugLoggingConfig;
+  debugLogger?: McpDebugLogger;
 }
 
 export interface McpWorkspaceBinding {
@@ -653,14 +659,22 @@ export async function handleMcpRequest(
   options: McpServerOptions = {}
 ): Promise<JsonRpcResponse | null> {
   const id = request.id ?? null;
+  const debugLogger = resolveMcpDebugLogger(options);
 
   if (!("id" in request)) {
     return null;
   }
 
   if (request.jsonrpc !== JSON_RPC_VERSION || typeof request.method !== "string") {
+    debugLogger.log("protocol-error", { reason: "invalid-request", id });
     return errorResponse(id, -32600, "Invalid Request");
   }
+
+  debugLogger.log("request", {
+    method: request.method,
+    id,
+    ...(request.method === "tools/call" ? summarizeToolCallParams(request.params) : {})
+  });
 
   switch (request.method) {
     case "initialize":
@@ -822,8 +836,12 @@ function buildCapabilitiesPayload(
     },
     auditLogging: {
       bounded: true,
-      redacted: true
+      redacted: true,
+      note: "Audit metadata redacts secrets, prompt bodies, and file-like payloads by default."
     },
+    debugLogging: describeMcpDebugLoggingPolicy(
+      options.debugLogging ?? resolveMcpDebugLogging()
+    ),
     toolDescriptionContract: {
       schemaVersion: TOOL_DESCRIPTION_CONTRACT_VERSION,
       requiredSegments: ["description", "CLI fallback", "Common mistakes"]
@@ -1429,56 +1447,34 @@ function recordAuditEvent(
     timestamp: new Date().toISOString(),
     toolName,
     resultClassification,
-    metadata: redactAuditValue(metadata) as Record<string, unknown>
+    metadata: redactAuditMetadata(metadata) as Record<string, unknown>
   };
   options.auditLog?.push(event);
   options.auditSink?.(event);
+  resolveMcpDebugLogger(options).log("audit", {
+    toolName,
+    resultClassification,
+    metadata
+  });
 }
 
-function redactAuditValue(value: unknown, depth = 0): unknown {
-  if (depth > 4) {
-    return "[redacted:depth-limit]";
+function resolveMcpDebugLogger(options: McpServerOptions): McpDebugLogger {
+  if (options.debugLogger) {
+    return options.debugLogger;
   }
-  if (Array.isArray(value)) {
-    const entries = value.slice(0, MAX_AUDIT_METADATA_ARRAY_LENGTH).map((entry) => redactAuditValue(entry, depth + 1));
-    if (value.length > MAX_AUDIT_METADATA_ARRAY_LENGTH) {
-      entries.push(`[redacted:${value.length - MAX_AUDIT_METADATA_ARRAY_LENGTH}:additional-items]`);
-    }
-    return entries;
-  }
-  if (typeof value === "object" && value !== null) {
-    const out: Record<string, unknown> = {};
-    const entries = Object.entries(value as Record<string, unknown>).slice(0, MAX_AUDIT_METADATA_OBJECT_KEYS);
-    for (const [key, entry] of entries) {
-      out[key] = isSensitiveAuditKey(key) ? "[redacted]" : redactAuditValue(entry, depth + 1);
-    }
-    const totalKeys = Object.keys(value as Record<string, unknown>).length;
-    if (totalKeys > MAX_AUDIT_METADATA_OBJECT_KEYS) {
-      out.__truncatedKeys = totalKeys - MAX_AUDIT_METADATA_OBJECT_KEYS;
-    }
-    return out;
-  }
-  if (typeof value === "string") {
-    if (isSecretShapedAuditString(value)) {
-      return "[redacted]";
-    }
-    if (value.length > MAX_AUDIT_METADATA_STRING_LENGTH) {
-      return `${value.slice(0, MAX_AUDIT_METADATA_STRING_LENGTH)}...[redacted:${value.length - MAX_AUDIT_METADATA_STRING_LENGTH}:additional-chars]`;
-    }
-  }
-  return value;
+  const config = options.debugLogging ?? resolveMcpDebugLogging();
+  options.debugLogger = new McpDebugLogger(config);
+  return options.debugLogger;
 }
 
-function isSensitiveAuditKey(key: string): boolean {
-  return /token|secret|password|credential|authorization|api[-_]?key|policyApproval/i.test(key);
-}
-
-function isSecretShapedAuditString(value: string): boolean {
-  return (
-    /(?:bearer|token|secret|password)\s+[a-z0-9._-]{12,}/i.test(value) ||
-    /sk-[a-z0-9]{16,}/i.test(value) ||
-    /gh[pousr]_[a-z0-9_]{20,}/i.test(value)
-  );
+function summarizeToolCallParams(params: unknown): Record<string, unknown> {
+  if (!isToolCallParams(params)) {
+    return { toolCall: "invalid-params" };
+  }
+  return {
+    toolName: params.name,
+    argumentKeys: Object.keys(toRecord(params.arguments))
+  };
 }
 
 function successResponse(id: JsonRpcId, result: unknown): JsonRpcSuccessResponse {

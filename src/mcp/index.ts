@@ -41,3 +41,27 @@ export {
   type McpStateLikeFreshness,
   type StateLikeMcpToolName
 } from "./state-like-freshness.js";
+export {
+  MAX_AUDIT_METADATA_ARRAY_LENGTH,
+  MAX_AUDIT_METADATA_DEPTH,
+  MAX_AUDIT_METADATA_OBJECT_KEYS,
+  MAX_AUDIT_METADATA_STRING_LENGTH,
+  isFileContentAuditKey,
+  isPromptBodyAuditKey,
+  isSecretShapedAuditString,
+  isSensitiveAuditKey,
+  redactAuditMetadata,
+  summarizeAuditRedaction,
+  type AuditRedactionKind,
+  type AuditRedactionSummary
+} from "./audit-redaction.js";
+export {
+  MCP_DEBUG_ENV_VAR,
+  MCP_DEBUG_MAX_LINE_LENGTH,
+  MCP_DEBUG_MAX_LINES_PER_SESSION,
+  McpDebugLogger,
+  describeMcpDebugLoggingPolicy,
+  resolveMcpDebugLogging,
+  type McpDebugLogEntry,
+  type McpDebugLoggingConfig
+} from "./debug-logging.js";
