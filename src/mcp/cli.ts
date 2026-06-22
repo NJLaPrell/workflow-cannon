@@ -3,10 +3,12 @@
 import path from "node:path";
 
 import { runMcpStdioServer } from "./server.js";
+import { resolveMcpDebugLogging } from "./debug-logging.js";
 
 const workspacePath = resolveWorkspacePath(process.argv.slice(2), process.env);
+const debugLogging = resolveMcpDebugLogging(process.env);
 
-runMcpStdioServer({ workspacePath }).catch((error: unknown) => {
+runMcpStdioServer({ workspacePath, debugLogging }).catch((error: unknown) => {
   const message = error instanceof Error ? error.message : String(error);
   console.error(message);
   process.exitCode = 1;

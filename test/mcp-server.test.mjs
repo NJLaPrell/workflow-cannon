@@ -25,8 +25,17 @@ import {
   MCP_TOOL_OUTPUT_BYTE_BUDGETS,
   MCP_RESOURCE_OUTPUT_BYTE_BUDGETS,
   listToolOutputByteBudgets,
-  listResourceOutputByteBudgets
+  listResourceOutputByteBudgets,
+  redactAuditMetadata,
+  summarizeAuditRedaction,
+  McpDebugLogger,
+  MCP_DEBUG_MAX_LINE_LENGTH,
+  MCP_DEBUG_MAX_LINES_PER_SESSION,
+  resolveMcpDebugLogging,
+  describeMcpDebugLoggingPolicy
 } from "../dist/mcp/index.js";
+
+const AUDIT_FIXTURE_DIR = path.join(__dirname, "fixtures", "mcp-audit-redaction");
 
 test("MCP initialize advertises a minimal read-only server", async () => {
   const response = await handleMcpRequest({
@@ -167,7 +176,11 @@ test("MCP tools/call reports mutation tools disabled", async () => {
     capabilities.startup.workspaceBinding.multiWorkspaceBehavior.mode,
     "single-workspace-per-process"
   );
-  assert.deepEqual(capabilities.auditLogging, { bounded: true, redacted: true });
+  assert.deepEqual(capabilities.auditLogging, {
+    bounded: true,
+    redacted: true,
+    note: "Audit metadata redacts secrets, prompt bodies, and file-like payloads by default."
+  });
   assert.deepEqual(capabilities.toolDescriptionContract, {
     schemaVersion: 1,
     requiredSegments: ["description", "CLI fallback", "Common mistakes"]
@@ -401,6 +414,151 @@ test("MCP audit metadata is bounded and redacts secret-shaped values", async () 
   assert.match(auditLog.at(0).metadata.args.nested.note, /redacted:60:additional-chars/);
   assert.equal(auditLog.at(0).metadata.args.many.length, 9);
   assert.match(auditLog.at(0).metadata.args.many.at(8), /redacted:4:additional-items/);
+});
+
+test("MCP audit redaction fixtures omit secrets before logging", () => {
+  const fixture = JSON.parse(readFileSync(path.join(AUDIT_FIXTURE_DIR, "secret-payload.json"), "utf8"));
+  const redacted = redactAuditMetadata({ args: fixture });
+  const summary = summarizeAuditRedaction({ args: fixture });
+
+  assert.equal(redacted.args.token, "[redacted]");
+  assert.equal(redacted.args.apiKey, "[redacted]");
+  assert.equal(redacted.args.policyApproval, "[redacted]");
+  assert.equal(redacted.args.taskId, "T100730");
+  assert.ok(summary.redacted);
+  assert.ok(summary.kinds.includes("secret-key"));
+});
+
+test("MCP audit redaction fixtures omit prompt bodies before logging", () => {
+  const fixture = JSON.parse(readFileSync(path.join(AUDIT_FIXTURE_DIR, "prompt-body-payload.json"), "utf8"));
+  const redacted = redactAuditMetadata({ args: fixture });
+  const summary = summarizeAuditRedaction({ args: fixture });
+
+  assert.equal(redacted.args.prompt, "[redacted:prompt-body]");
+  assert.equal(redacted.args.messages, "[redacted:prompt-body]");
+  assert.equal(redacted.args.systemPrompt, "[redacted:prompt-body]");
+  assert.equal(redacted.args.taskId, "T100730");
+  assert.ok(summary.kinds.includes("prompt-body"));
+});
+
+test("MCP audit redaction fixtures omit file content before logging", () => {
+  const fixture = JSON.parse(readFileSync(path.join(AUDIT_FIXTURE_DIR, "file-content-payload.json"), "utf8"));
+  const redacted = redactAuditMetadata({ args: fixture });
+  const summary = summarizeAuditRedaction({ args: fixture });
+
+  assert.equal(redacted.args.text, "[redacted:file-content]");
+  assert.equal(redacted.args.contents, "[redacted:file-content]");
+  assert.equal(redacted.args.fileContent, "[redacted:file-content]");
+  assert.equal(redacted.args.taskId, "T100730");
+  assert.ok(summary.kinds.includes("file-content"));
+});
+
+test("MCP tool audit logs redact prompt and file payloads from rejected arguments", async () => {
+  const auditLog = [];
+  const runtime = {
+    listCommands() {
+      return [];
+    },
+    describeCommand() {
+      return undefined;
+    },
+    async invoke() {
+      throw new Error("runtime should not be called");
+    }
+  };
+
+  const promptFixture = JSON.parse(readFileSync(path.join(AUDIT_FIXTURE_DIR, "prompt-body-payload.json"), "utf8"));
+  const fileFixture = JSON.parse(readFileSync(path.join(AUDIT_FIXTURE_DIR, "file-content-payload.json"), "utf8"));
+
+  await handleMcpRequest(
+    {
+      jsonrpc: "2.0",
+      id: "audit-prompt-file",
+      method: "tools/call",
+      params: {
+        name: "workflow-cannon.phase-release-orchestration-state",
+        arguments: {
+          ...promptFixture,
+          ...fileFixture
+        }
+      }
+    },
+    { runtime, auditLog }
+  );
+
+  assert.equal(auditLog.length, 1);
+  assert.equal(auditLog.at(0).metadata.args.prompt, "[redacted:prompt-body]");
+  assert.equal(auditLog.at(0).metadata.args.text, "[redacted:file-content]");
+  assert.equal(auditLog.at(0).metadata.args.fileContent, "[redacted:file-content]");
+});
+
+test("MCP debug logging stays disabled unless explicitly enabled", () => {
+  const config = resolveMcpDebugLogging({});
+  assert.equal(config.enabled, false);
+  const policy = describeMcpDebugLoggingPolicy(config);
+  assert.equal(policy.explicit, true);
+  assert.equal(policy.bounded, true);
+  assert.match(policy.note, /disabled by default/i);
+});
+
+test("MCP debug logging is explicit, bounded, and redacts emitted details", () => {
+  const lines = [];
+  const logger = new McpDebugLogger(
+    { enabled: true, envVar: "WORKFLOW_CANNON_MCP_DEBUG", maxLineLength: MCP_DEBUG_MAX_LINE_LENGTH, maxLinesPerSession: MCP_DEBUG_MAX_LINES_PER_SESSION },
+    (line) => lines.push(line)
+  );
+  const promptFixture = JSON.parse(readFileSync(path.join(AUDIT_FIXTURE_DIR, "prompt-body-payload.json"), "utf8"));
+  const secretFixture = JSON.parse(readFileSync(path.join(AUDIT_FIXTURE_DIR, "secret-payload.json"), "utf8"));
+
+  logger.log("tool-call", {
+    toolName: "workflow-cannon.cae-guidance-preview",
+    args: { ...promptFixture, ...secretFixture }
+  });
+
+  assert.equal(lines.length, 1);
+  const entry = JSON.parse(lines[0]);
+  assert.equal(entry.event, "tool-call");
+  assert.equal(entry.details.args.prompt, "[redacted:prompt-body]");
+  assert.equal(entry.details.args.token, "[redacted]");
+  assert.equal(entry.redaction.applied, true);
+  assert.ok(entry.redaction.kinds.includes("prompt-body"));
+  assert.ok(entry.redaction.kinds.includes("secret-key"));
+  assert.ok(lines[0].length <= MCP_DEBUG_MAX_LINE_LENGTH);
+});
+
+test("MCP debug logging enforces per-session line budget", () => {
+  const lines = [];
+  const logger = new McpDebugLogger(
+    { enabled: true, envVar: "WORKFLOW_CANNON_MCP_DEBUG", maxLineLength: MCP_DEBUG_MAX_LINE_LENGTH, maxLinesPerSession: 2 },
+    (line) => lines.push(line)
+  );
+
+  logger.log("one");
+  logger.log("two");
+  logger.log("three");
+
+  assert.equal(lines.length, 3);
+  assert.equal(JSON.parse(lines.at(-1)).event, "debug-log-limit-reached");
+});
+
+test("MCP capabilities disclose explicit bounded debug logging policy", async () => {
+  const response = await handleMcpRequest({
+    jsonrpc: "2.0",
+    id: "cap-debug-logging",
+    method: "tools/call",
+    params: {
+      name: "workflow-cannon.capabilities",
+      arguments: {}
+    }
+  }, {
+    debugLogging: { enabled: false, envVar: "WORKFLOW_CANNON_MCP_DEBUG", maxLineLength: MCP_DEBUG_MAX_LINE_LENGTH, maxLinesPerSession: MCP_DEBUG_MAX_LINES_PER_SESSION }
+  });
+
+  const capabilities = JSON.parse(response?.result.content.at(0).text);
+  assert.equal(capabilities.debugLogging.explicit, true);
+  assert.equal(capabilities.debugLogging.bounded, true);
+  assert.equal(capabilities.debugLogging.enabled, false);
+  assert.equal(capabilities.debugLogging.envVar, "WORKFLOW_CANNON_MCP_DEBUG");
 });
 
 test("MCP CAE guidance tools carry bounded governance metadata", async () => {
