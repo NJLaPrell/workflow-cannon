@@ -1,6 +1,7 @@
 export {
   handleMcpRequest,
   listReadOnlyMcpTools,
+  listAllMcpTools,
   listReadOnlyMcpResources,
   resolveMcpWorkspaceBinding,
   resolveWorkspaceBoundPath,
@@ -22,6 +23,14 @@ export {
   type McpResourceCachePolicy,
   type McpContentTrust
 } from "./server.js";
+export {
+  MCP_MUTATION_TOOLS_ENV_VAR,
+  MUTATION_TOOL_NAMES_SET,
+  resolveMcpMutationEnabled,
+  listMutationMcpToolDescriptors,
+  type MutationMcpToolDefinition,
+  type MutationMcpToolDescriptor
+} from "./mutation-tools.js";
 export {
   MCP_MIN_OUTPUT_BYTE_BUDGET,
   MCP_DEFAULT_OUTPUT_BYTE_BUDGET,

@@ -54,8 +54,9 @@ if (snapshot.packageVersion !== pkg.version) {
 }
 
 const require = createRequire(import.meta.url);
-const { listReadOnlyMcpTools } = require(DIST_MCP);
+const { listReadOnlyMcpTools, listMutationMcpToolDescriptors } = require(DIST_MCP);
 const liveTools = listReadOnlyMcpTools();
+const liveMutationTools = listMutationMcpToolDescriptors();
 
 if (!Array.isArray(liveTools) || liveTools.length === 0) {
   fail("listReadOnlyMcpTools() returned empty result.");
@@ -146,7 +147,49 @@ if (liveTools.length !== (snapshot.toolCount ?? snapshot.tools?.length)) {
   );
 }
 
+// ── Cross-check 5: mutation tool snapshot ────────────────────────────────────
+if (Array.isArray(snapshot.mutationTools)) {
+  const snapMutByName = new Map(snapshot.mutationTools.map((t) => [t.name, t]));
+  const liveMutByName = new Map(
+    Array.isArray(liveMutationTools) ? liveMutationTools.map((t) => [t.name, t]) : []
+  );
+
+  const missingMutInSnap = [...liveMutByName.keys()].filter((n) => !snapMutByName.has(n));
+  const missingMutInLive = [...snapMutByName.keys()].filter((n) => !liveMutByName.has(n));
+
+  if (missingMutInSnap.length > 0) {
+    fail(
+      `New mutation tool(s) not in snapshot: ${missingMutInSnap.join(", ")}\n` +
+      "Regenerate: pnpm run build && node scripts/generate-mcp-tool-schema-snapshot.mjs"
+    );
+  }
+  if (missingMutInLive.length > 0) {
+    fail(
+      `Snapshot has removed mutation tool(s) not in live server: ${missingMutInLive.join(", ")}\n` +
+      "Regenerate: pnpm run build && node scripts/generate-mcp-tool-schema-snapshot.mjs"
+    );
+  }
+
+  const mutSchemaDrift = [];
+  for (const liveTool of liveMutationTools) {
+    const snapTool = snapMutByName.get(liveTool.name);
+    if (!snapTool) continue;
+    const liveSchema = stableStringify(liveTool.inputSchema);
+    const snapSchema = stableStringify(snapTool.inputSchema);
+    if (liveSchema !== snapSchema) {
+      mutSchemaDrift.push(liveTool.name);
+    }
+  }
+  if (mutSchemaDrift.length > 0) {
+    fail(
+      `Mutation tool inputSchema changed (not reflected in snapshot): ${mutSchemaDrift.join(", ")}\n` +
+      "Regenerate: pnpm run build && node scripts/generate-mcp-tool-schema-snapshot.mjs"
+    );
+  }
+}
+
 console.error(
-  `[check-mcp-tool-schema-snapshot] OK: ${liveTools.length} MCP tool(s); ` +
+  `[check-mcp-tool-schema-snapshot] OK: ${liveTools.length} read-only + ` +
+  `${Array.isArray(liveMutationTools) ? liveMutationTools.length : 0} mutation MCP tool(s); ` +
   `CLI command cross-check passed; no inputSchema drift; package ${pkg.version}.`
 );

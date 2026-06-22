@@ -27,6 +27,13 @@ import {
   resolveMcpDebugLogging,
   type McpDebugLoggingConfig
 } from "./debug-logging.js";
+import {
+  MCP_MUTATION_TOOLS_ENV_VAR,
+  MUTATION_TOOL_DEFS_WITHOUT_BUDGET,
+  MUTATION_TOOL_NAMES_SET,
+  resolveMcpMutationEnabled,
+  type MutationMcpToolDefinition
+} from "./mutation-tools.js";
 
 const JSON_RPC_VERSION = "2.0";
 const MCP_PROTOCOL_VERSION = "2024-11-05";
@@ -78,6 +85,11 @@ export interface McpServerOptions {
   auditSink?: (event: McpAuditEvent) => void;
   debugLogging?: McpDebugLoggingConfig;
   debugLogger?: McpDebugLogger;
+  /**
+   * Override for testing: when set, bypasses the WORKFLOW_CANNON_MCP_MUTATION_TOOLS env gate.
+   * In production the env variable is the only gate.
+   */
+  mutationEnabled?: boolean;
 }
 
 export interface McpWorkspaceBinding {
@@ -579,6 +591,27 @@ const packetReadTools: ReadOnlyMcpToolDefinition[] = packetReadToolDefinitions.m
 
 const toolDefinitionsByName = new Map(packetReadTools.map((tool) => [tool.toolName, tool]));
 
+/** Mutation tools resolved with budgets at module load time. */
+const mutationToolDefinitions: MutationMcpToolDefinition[] = MUTATION_TOOL_DEFS_WITHOUT_BUDGET.map(
+  (tool) => {
+    const outputByteBudget = MCP_TOOL_OUTPUT_BYTE_BUDGETS[tool.toolName];
+    if (outputByteBudget === undefined) {
+      throw new Error(`Missing MCP output byte budget for mutation tool: ${tool.toolName}`);
+    }
+    return { ...tool, outputByteBudget };
+  }
+);
+
+const mutationToolByName = new Map(mutationToolDefinitions.map((t) => [t.toolName, t]));
+
+/** Returns true when mutation tools are active for the given options object. */
+function isMcpMutationEnabled(options: McpServerOptions): boolean {
+  if (typeof options.mutationEnabled === "boolean") {
+    return options.mutationEnabled;
+  }
+  return resolveMcpMutationEnabled();
+}
+
 function formatMcpToolDescription(input: {
   description: string;
   commandName: string;
@@ -657,6 +690,22 @@ export function listReadOnlyMcpTools(): McpToolDescriptor[] {
   ];
 }
 
+/** Returns all MCP tools: read-only tools plus mutation tools when mutation is enabled. */
+export function listAllMcpTools(options: McpServerOptions = {}): McpToolDescriptor[] {
+  const readOnly = listReadOnlyMcpTools();
+  if (!isMcpMutationEnabled(options)) {
+    return readOnly;
+  }
+  return [
+    ...readOnly,
+    ...mutationToolDefinitions.map((t) => ({
+      name: t.toolName,
+      description: formatMcpToolDescription(t),
+      inputSchema: t.inputSchema as McpToolDescriptor["inputSchema"]
+    }))
+  ];
+}
+
 export async function handleMcpRequest(
   request: JsonRpcRequest,
   options: McpServerOptions = {}
@@ -680,8 +729,9 @@ export async function handleMcpRequest(
   });
 
   switch (request.method) {
-    case "initialize":
+    case "initialize": {
       const workspaceBinding = resolveMcpWorkspaceBinding(options);
+      const mutationEnabled = isMcpMutationEnabled(options);
       return successResponse(id, {
         protocolVersion: MCP_PROTOCOL_VERSION,
         capabilities: {
@@ -691,8 +741,8 @@ export async function handleMcpRequest(
         startup: {
           schemaVersion: 1,
           healthy: true,
-          mode: "read-only",
-          mutationToolsEnabled: false,
+          mode: mutationEnabled ? "mutation" : "read-only",
+          mutationToolsEnabled: mutationEnabled,
           workspaceBinding
         },
         serverInfo: {
@@ -700,10 +750,11 @@ export async function handleMcpRequest(
           version: options.version ?? serverDefaults.version
         }
       });
+    }
 
     case "tools/list":
       return successResponse(id, {
-        tools: listReadOnlyMcpTools()
+        tools: listAllMcpTools(options)
       });
 
     case "tools/call":
@@ -753,6 +804,7 @@ async function handleJsonLine(
 
 async function handleAgentStartToolCall(id: JsonRpcId, options: McpServerOptions): Promise<JsonRpcResponse> {
   const workspaceBinding = resolveMcpWorkspaceBinding(options);
+  const mutationEnabled = isMcpMutationEnabled(options);
   let sessionSummary: Record<string, unknown> | undefined;
   try {
     const runtime = await resolveMcpRuntime(options);
@@ -767,14 +819,14 @@ async function handleAgentStartToolCall(id: JsonRpcId, options: McpServerOptions
     sessionSummary = undefined;
   }
 
-  const payload = buildAgentStartPayload(workspaceBinding, sessionSummary, options);
+  const payload = buildAgentStartPayload(workspaceBinding, sessionSummary, options, mutationEnabled);
   const text = JSON.stringify(payload, null, 2);
   const byteBudget = resolveToolOutputByteBudget(AGENT_START_TOOL_NAME, options);
   const oversized = Buffer.byteLength(text, "utf8") > byteBudget;
 
   recordAuditEvent(options, AGENT_START_TOOL_NAME, "success", {
     command: "agent-bootstrap",
-    mutationToolsEnabled: false,
+    mutationToolsEnabled: mutationEnabled,
     workspaceRoot: workspaceBinding.workspaceRoot,
     oversized,
     byteBudget
@@ -797,13 +849,14 @@ async function handleAgentStartToolCall(id: JsonRpcId, options: McpServerOptions
 function handleCapabilitiesToolCall(id: JsonRpcId, options: McpServerOptions): JsonRpcResponse {
   const workspaceBinding = resolveMcpWorkspaceBinding(options);
   const byteBudget = resolveToolOutputByteBudget(CAPABILITIES_TOOL_NAME, options);
-  const fullPayload = buildCapabilitiesPayload(workspaceBinding, options);
+  const mutationEnabled = isMcpMutationEnabled(options);
+  const fullPayload = buildCapabilitiesPayload(workspaceBinding, options, mutationEnabled);
   const fullText = JSON.stringify(fullPayload, null, 2);
   const oversized = Buffer.byteLength(fullText, "utf8") > byteBudget;
 
   recordAuditEvent(options, CAPABILITIES_TOOL_NAME, "success", {
     command: "capabilities",
-    mutationToolsEnabled: false,
+    mutationToolsEnabled: mutationEnabled,
     workspaceRoot: workspaceBinding.workspaceRoot,
     oversized,
     byteBudget
@@ -826,13 +879,21 @@ function handleCapabilitiesToolCall(id: JsonRpcId, options: McpServerOptions): J
 
 function buildCapabilitiesPayload(
   workspaceBinding: McpWorkspaceBinding,
-  options: McpServerOptions
+  options: McpServerOptions,
+  mutationEnabled: boolean
 ): Record<string, unknown> {
   return {
     schemaVersion: MCP_ENVELOPE_SCHEMA_VERSION,
     toolVersion: MCP_DEFAULT_TOOL_SCHEMA_VERSION,
-    mode: "read-only",
-    mutationToolsEnabled: false,
+    mode: mutationEnabled ? "mutation" : "read-only",
+    mutationToolsEnabled: mutationEnabled,
+    mutationPolicy: {
+      envVar: MCP_MUTATION_TOOLS_ENV_VAR,
+      currentlyEnabled: mutationEnabled,
+      note: mutationEnabled
+        ? "Mutation tools are enabled. CLI remains the canonical mutation surface; MCP mutation tools require policyApproval on every call."
+        : `Mutation tools are disabled by default. Set ${MCP_MUTATION_TOOLS_ENV_VAR}=1 to enable the curated mutation tool set.`
+    },
     startup: {
       healthy: true,
       workspaceBinding
@@ -854,7 +915,7 @@ function buildCapabilitiesPayload(
       defaultToolSchemaVersion: MCP_DEFAULT_TOOL_SCHEMA_VERSION,
       policy: ".ai/mcp-tool-version-policy.md"
     },
-    tools: listReadOnlyMcpTools().map((tool) => tool.name),
+    tools: listAllMcpTools(options).map((tool) => tool.name),
     resources: listReadOnlyMcpResources().map((r) => ({
       uri: r.uri,
       name: r.name,
@@ -889,12 +950,13 @@ function buildOversizedCapabilitiesPayload(
 ): Record<string, unknown> {
   const tools = Array.isArray(fullPayload.tools) ? fullPayload.tools : [];
   const resources = Array.isArray(fullPayload.resources) ? fullPayload.resources : [];
+  const mutationEnabled = fullPayload.mutationToolsEnabled === true;
   return {
     schemaVersion: MCP_ENVELOPE_SCHEMA_VERSION,
     toolVersion: MCP_DEFAULT_TOOL_SCHEMA_VERSION,
     tool: CAPABILITIES_TOOL_NAME,
-    mode: "read-only",
-    mutationToolsEnabled: false,
+    mode: mutationEnabled ? "mutation" : "read-only",
+    mutationToolsEnabled: mutationEnabled,
     oversized: true,
     byteBudget,
     actualBytes: Buffer.byteLength(fullText, "utf8"),
@@ -1010,16 +1072,17 @@ function handleResourceRead(
 function buildAgentStartPayload(
   workspaceBinding: McpWorkspaceBinding,
   sessionSummary?: Record<string, unknown>,
-  options: McpServerOptions = {}
+  options: McpServerOptions = {},
+  mutationEnabled = false
 ): Record<string, unknown> {
-  const tools = listReadOnlyMcpTools().map((tool) => tool.name);
+  const tools = listAllMcpTools(options).map((tool) => tool.name);
   return {
     schemaVersion: MCP_ENVELOPE_SCHEMA_VERSION,
     toolVersion: MCP_DEFAULT_TOOL_SCHEMA_VERSION,
     tool: AGENT_START_TOOL_NAME,
-    mode: "read-only",
-    mutationToolsEnabled: false,
-    readOnlyToolsOnly: true,
+    mode: mutationEnabled ? "mutation" : "read-only",
+    mutationToolsEnabled: mutationEnabled,
+    readOnlyToolsOnly: !mutationEnabled,
     toolsAvailable: tools,
     recommendedNextTool: CAPABILITIES_TOOL_NAME,
     workflowRecommendations: [
@@ -1061,12 +1124,13 @@ function buildOversizedAgentStartPayload(
 ): Record<string, unknown> {
   const toolsAvailable = Array.isArray(fullPayload.toolsAvailable) ? fullPayload.toolsAvailable : [];
   const cliFallback = toRecord(fullPayload.cliFallback);
+  const mutationEnabled = fullPayload.mutationToolsEnabled === true;
   return {
     schemaVersion: MCP_ENVELOPE_SCHEMA_VERSION,
     toolVersion: MCP_DEFAULT_TOOL_SCHEMA_VERSION,
     tool: AGENT_START_TOOL_NAME,
-    mode: "read-only",
-    mutationToolsEnabled: false,
+    mode: mutationEnabled ? "mutation" : "read-only",
+    mutationToolsEnabled: mutationEnabled,
     oversized: true,
     byteBudget,
     actualBytes: Buffer.byteLength(fullText, "utf8"),
@@ -1131,11 +1195,31 @@ async function handleToolCall(
     return handleCapabilitiesToolCall(id, options);
   }
 
+  const mutationEnabled = isMcpMutationEnabled(options);
+
+  // Known mutation tool: either route to handler or reject with a specific disabled error.
+  if (MUTATION_TOOL_NAMES_SET.has(params.name)) {
+    if (!mutationEnabled) {
+      const cliCmd = params.name.replace("workflow-cannon.", "");
+      recordAuditEvent(options, params.name, "rejected", {
+        reason: "mutation-tools-disabled",
+        cliAlternative: `pnpm exec wk run ${cliCmd}`
+      });
+      return errorResponse(
+        id,
+        -32602,
+        `Mutation tool '${params.name}' requires ${MCP_MUTATION_TOOLS_ENV_VAR}=1. ` +
+          `CLI fallback: pnpm exec wk run ${cliCmd}`
+      );
+    }
+    return handleMutationToolCall(id, params, mutationToolByName.get(params.name)!, options);
+  }
+
   const definition = toolDefinitionsByName.get(params.name);
   if (!definition) {
     recordAuditEvent(options, params.name, "rejected", {
       reason: "unknown-tool",
-      mutationToolsEnabled: false
+      mutationToolsEnabled: mutationEnabled
     });
     return errorResponse(id, -32602, `Unknown tool: ${params.name}`);
   }
@@ -1166,6 +1250,103 @@ async function handleToolCall(
     byteBudget: resolveToolOutputByteBudget(definition.toolName, options)
   });
   return successResponse(id, toolResult);
+}
+
+async function handleMutationToolCall(
+  id: JsonRpcId,
+  params: { name: string; arguments?: unknown },
+  definition: MutationMcpToolDefinition,
+  options: McpServerOptions
+): Promise<JsonRpcResponse> {
+  const args = toRecord(params.arguments);
+  const validationError = definition.validateArgs(args);
+  if (validationError) {
+    recordAuditEvent(options, params.name, "rejected", {
+      reason: "invalid-arguments",
+      message: validationError,
+      args
+    });
+    return errorResponse(id, -32602, validationError);
+  }
+
+  const commandArgs = definition.expansionArgs(args);
+  const runtime = await resolveMcpRuntime(options);
+  const commandResult = await runtime.invoke({
+    name: definition.commandName,
+    args: commandArgs
+  });
+  const toolResult = formatMutationToolResult(definition, commandArgs, commandResult, options);
+  const policyApprovalPresent =
+    typeof args.policyApproval === "object" && args.policyApproval !== null;
+  recordAuditEvent(options, params.name, commandResult.ok ? "success" : "command_error", {
+    command: definition.commandName,
+    args: commandArgs,
+    // policyApproval at top level so it is redacted by the sensitive-key pattern
+    policyApproval: args.policyApproval,
+    resultCode: commandResult.code,
+    // 'approvalPresent' avoids matching the policyApproval sensitive-key pattern
+    approvalPresent: policyApprovalPresent,
+    oversized: isOversizedToolResult(toolResult),
+    byteBudget: resolveToolOutputByteBudget(definition.toolName, options)
+  });
+  return successResponse(id, toolResult);
+}
+
+function formatMutationToolResult(
+  definition: MutationMcpToolDefinition,
+  args: Record<string, unknown>,
+  result: ModuleCommandResult,
+  options: McpServerOptions
+): { content: Array<{ type: "text"; text: string }>; isError: boolean } {
+  const workspaceBinding = resolveMcpWorkspaceBinding(options);
+  const cliFallbackCommand = `pnpm exec wk run ${definition.commandName} '${JSON.stringify(args)}'`;
+  const freshnessPolicy = {
+    ...TOOL_FRESHNESS_POLICY,
+    workspace: buildWorkspaceFreshness(workspaceBinding)
+  };
+  const policyApprovalPresent =
+    typeof args.policyApproval === "object" && args.policyApproval !== null;
+  const fullEnvelope = {
+    schemaVersion: MCP_ENVELOPE_SCHEMA_VERSION,
+    toolVersion: MCP_DEFAULT_TOOL_SCHEMA_VERSION,
+    mode: "mutation",
+    mutationToolsEnabled: true,
+    tool: definition.toolName,
+    command: definition.commandName,
+    args,
+    policyApprovalPresent,
+    freshnessPolicy,
+    result
+  };
+  const fullText = JSON.stringify(fullEnvelope, null, 2);
+  const byteBudget = resolveToolOutputByteBudget(definition.toolName, options);
+  if (Buffer.byteLength(fullText, "utf8") <= byteBudget) {
+    return {
+      content: [{ type: "text", text: fullText }],
+      isError: !result.ok
+    };
+  }
+
+  const compactEnvelope = {
+    schemaVersion: MCP_ENVELOPE_SCHEMA_VERSION,
+    toolVersion: MCP_DEFAULT_TOOL_SCHEMA_VERSION,
+    mode: "mutation",
+    mutationToolsEnabled: true,
+    tool: definition.toolName,
+    command: definition.commandName,
+    args,
+    policyApprovalPresent,
+    freshnessPolicy,
+    oversized: true,
+    byteBudget,
+    actualBytes: Buffer.byteLength(fullText, "utf8"),
+    resultSummary: summarizeCommandResult(result),
+    expansionRefs: [buildCliExpansionRef(cliFallbackCommand)]
+  };
+  return {
+    content: [{ type: "text", text: JSON.stringify(compactEnvelope, null, 2) }],
+    isError: !result.ok
+  };
 }
 
 async function resolveMcpRuntime(options: McpServerOptions): Promise<ModuleCommandRuntime> {

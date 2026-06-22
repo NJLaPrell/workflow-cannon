@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-06-22T08:04:58.991Z",
+  "generatedAt": "2026-06-22T10:01:57.914Z",
   "packageVersion": "0.99.28",
   "toolCount": 15,
   "tools": [
@@ -281,6 +281,112 @@
         "type": "object",
         "properties": {},
         "required": [],
+        "additionalProperties": false
+      }
+    }
+  ],
+  "mutationToolCount": 2,
+  "mutationTools": [
+    {
+      "name": "workflow-cannon.run-transition",
+      "cliCommand": null,
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "taskId": {
+            "type": "string",
+            "description": "Task id."
+          },
+          "action": {
+            "type": "string",
+            "description": "Transition action (start, complete, etc.)."
+          },
+          "assignmentId": {
+            "type": "string",
+            "description": "Optional assignment id."
+          },
+          "expectedPlanningGeneration": {
+            "description": "Optimistic concurrency token from a prior read."
+          },
+          "clientMutationId": {
+            "type": "string",
+            "description": "Optional idempotency key."
+          },
+          "actor": {
+            "type": "string",
+            "description": "Optional actor recorded on transition evidence."
+          },
+          "policyApproval": {
+            "type": "object",
+            "description": "Required. JSON policy approval payload authorizing this mutation. Include approvedBy, reason, and timestamp.",
+            "properties": {
+              "approvedBy": {
+                "type": "string",
+                "description": "Identity authorizing the mutation."
+              },
+              "reason": {
+                "type": "string",
+                "description": "Rationale for the mutation."
+              },
+              "timestamp": {
+                "type": "string",
+                "description": "ISO-8601 authorization timestamp."
+              }
+            },
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "taskId",
+          "action",
+          "policyApproval"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "workflow-cannon.write-memory",
+      "cliCommand": null,
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "type": "string",
+            "description": "Memory category."
+          },
+          "body": {
+            "type": "string",
+            "description": "Memory record body text."
+          },
+          "id": {
+            "type": "string",
+            "description": "Optional record id for updates."
+          },
+          "policyApproval": {
+            "type": "object",
+            "description": "Required. JSON policy approval payload authorizing this mutation. Include approvedBy, reason, and timestamp.",
+            "properties": {
+              "approvedBy": {
+                "type": "string",
+                "description": "Identity authorizing the mutation."
+              },
+              "reason": {
+                "type": "string",
+                "description": "Rationale for the mutation."
+              },
+              "timestamp": {
+                "type": "string",
+                "description": "ISO-8601 authorization timestamp."
+              }
+            },
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "category",
+          "body",
+          "policyApproval"
+        ],
         "additionalProperties": false
       }
     }

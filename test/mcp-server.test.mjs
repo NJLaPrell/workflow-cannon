@@ -13,6 +13,7 @@ const FIXTURE_DIR = path.join(__dirname, "fixtures", "mcp-prompt-injection");
 import {
   handleMcpRequest,
   listReadOnlyMcpTools,
+  listAllMcpTools,
   listReadOnlyMcpResources,
   resolveMcpWorkspaceBinding,
   resolveWorkspaceBoundPath,
@@ -32,7 +33,10 @@ import {
   MCP_DEBUG_MAX_LINE_LENGTH,
   MCP_DEBUG_MAX_LINES_PER_SESSION,
   resolveMcpDebugLogging,
-  describeMcpDebugLoggingPolicy
+  describeMcpDebugLoggingPolicy,
+  MCP_MUTATION_TOOLS_ENV_VAR,
+  MUTATION_TOOL_NAMES_SET,
+  listMutationMcpToolDescriptors
 } from "../dist/mcp/index.js";
 
 const AUDIT_FIXTURE_DIR = path.join(__dirname, "fixtures", "mcp-audit-redaction");
@@ -291,7 +295,7 @@ test("MCP read tools reject missing required phaseKey before runtime invocation"
   assert.equal(auditLog.at(0).metadata.reason, "invalid-arguments");
 });
 
-test("MCP read tools reject unknown tools and audit the rejection", async () => {
+test("MCP read tools reject truly unknown tools and audit the rejection", async () => {
   const auditLog = [];
   const response = await handleMcpRequest(
     {
@@ -299,14 +303,8 @@ test("MCP read tools reject unknown tools and audit the rejection", async () => 
       id: "unknown",
       method: "tools/call",
       params: {
-        name: "workflow-cannon.run-transition",
-        arguments: {
-          taskId: "T100713",
-          policyApproval: {
-            confirmed: true,
-            rationale: "must not be logged"
-          }
-        }
+        name: "workflow-cannon.totally-unknown-xyzzy",
+        arguments: { taskId: "T100713" }
       }
     },
     { auditLog }
@@ -315,9 +313,36 @@ test("MCP read tools reject unknown tools and audit the rejection", async () => 
   assert.equal(response?.error.code, -32602);
   assert.match(response?.error.message, /Unknown tool/);
   assert.equal(auditLog.length, 1);
-  assert.equal(auditLog.at(0).toolName, "workflow-cannon.run-transition");
+  assert.equal(auditLog.at(0).toolName, "workflow-cannon.totally-unknown-xyzzy");
   assert.equal(auditLog.at(0).resultClassification, "rejected");
   assert.equal(auditLog.at(0).metadata.reason, "unknown-tool");
+});
+
+test("MCP mutation tools return mutation-tools-disabled error when called without enablement", async () => {
+  const auditLog = [];
+  const response = await handleMcpRequest(
+    {
+      jsonrpc: "2.0",
+      id: "mutation-disabled",
+      method: "tools/call",
+      params: {
+        name: "workflow-cannon.run-transition",
+        arguments: {
+          taskId: "T100713",
+          action: "start",
+          policyApproval: { approvedBy: "agent", reason: "must not be logged" }
+        }
+      }
+    },
+    { auditLog }
+  );
+
+  assert.equal(response?.error.code, -32602);
+  assert.match(response?.error.message, /WORKFLOW_CANNON_MCP_MUTATION_TOOLS/);
+  assert.equal(auditLog.length, 1);
+  assert.equal(auditLog.at(0).toolName, "workflow-cannon.run-transition");
+  assert.equal(auditLog.at(0).resultClassification, "rejected");
+  assert.equal(auditLog.at(0).metadata.reason, "mutation-tools-disabled");
 });
 
 test("MCP read tools enforce byte budget with expansion refs", async () => {
@@ -1694,6 +1719,330 @@ test("MCP agent_start oversized response includes expansion refs", async () => {
   assert.equal(payload.expansionRefs.at(0).kind, "cli");
   assert.match(payload.expansionRefs.at(0).command, /agent-bootstrap/);
   assert.equal(auditLog.at(0).metadata.oversized, true);
+});
+
+// ── T100737: MCP mutation tools ───────────────────────────────────────────────
+
+test("MCP mutation tool names set includes run-transition and write-memory", () => {
+  assert.ok(MUTATION_TOOL_NAMES_SET.has("workflow-cannon.run-transition"));
+  assert.ok(MUTATION_TOOL_NAMES_SET.has("workflow-cannon.write-memory"));
+  assert.equal(MUTATION_TOOL_NAMES_SET.size, 2);
+});
+
+test("MCP mutation tool descriptors include required inputSchema fields", () => {
+  const descriptors = listMutationMcpToolDescriptors();
+  assert.equal(descriptors.length, 2);
+
+  const runTrans = descriptors.find((d) => d.name === "workflow-cannon.run-transition");
+  assert.ok(runTrans, "run-transition descriptor present");
+  assert.ok(
+    runTrans.inputSchema.required.includes("policyApproval"),
+    "run-transition requires policyApproval"
+  );
+  assert.ok(
+    runTrans.inputSchema.required.includes("taskId"),
+    "run-transition requires taskId"
+  );
+  assert.ok(
+    runTrans.inputSchema.required.includes("action"),
+    "run-transition requires action"
+  );
+
+  const writeMem = descriptors.find((d) => d.name === "workflow-cannon.write-memory");
+  assert.ok(writeMem, "write-memory descriptor present");
+  assert.ok(
+    writeMem.inputSchema.required.includes("policyApproval"),
+    "write-memory requires policyApproval"
+  );
+  assert.ok(
+    writeMem.inputSchema.required.includes("category"),
+    "write-memory requires category"
+  );
+  assert.ok(writeMem.inputSchema.required.includes("body"), "write-memory requires body");
+});
+
+test("MCP mutation tools are hidden from tools/list by default (disabled-by-default gate)", async () => {
+  const response = await handleMcpRequest({
+    jsonrpc: "2.0",
+    id: "tools-no-mutation",
+    method: "tools/list"
+  });
+  const tools = response?.result.tools;
+  const names = tools.map((t) => t.name);
+  assert.ok(!names.includes("workflow-cannon.run-transition"), "run-transition hidden when disabled");
+  assert.ok(!names.includes("workflow-cannon.write-memory"), "write-memory hidden when disabled");
+  assert.deepEqual(tools, listReadOnlyMcpTools(), "tools/list equals read-only list when disabled");
+});
+
+test("MCP mutation tools appear in tools/list when mutationEnabled option is set", async () => {
+  const response = await handleMcpRequest(
+    { jsonrpc: "2.0", id: "tools-with-mutation", method: "tools/list" },
+    { mutationEnabled: true }
+  );
+  const tools = response?.result.tools;
+  const names = tools.map((t) => t.name);
+  assert.ok(names.includes("workflow-cannon.run-transition"), "run-transition present when enabled");
+  assert.ok(names.includes("workflow-cannon.write-memory"), "write-memory present when enabled");
+  assert.deepEqual(
+    tools,
+    listAllMcpTools({ mutationEnabled: true }),
+    "tools/list equals listAllMcpTools when enabled"
+  );
+  // Mutation tools must satisfy the description contract
+  const runTrans = tools.find((t) => t.name === "workflow-cannon.run-transition");
+  assert.ok(runTrans.description.length <= 420, "run-transition description stays compact");
+  assert.match(runTrans.description, /CLI fallback: pnpm exec wk run run-transition/);
+  assert.match(runTrans.description, /Common mistakes:/);
+  assert.ok(
+    Array.isArray(runTrans.inputSchema.required) &&
+      runTrans.inputSchema.required.includes("policyApproval"),
+    "policyApproval is required in inputSchema"
+  );
+});
+
+test("MCP initialize reflects mutationToolsEnabled when mutation option is set", async () => {
+  const response = await handleMcpRequest(
+    { jsonrpc: "2.0", id: "init-mutation", method: "initialize", params: {} },
+    { mutationEnabled: true }
+  );
+  assert.equal(response?.result.startup.mutationToolsEnabled, true);
+  assert.equal(response?.result.startup.mode, "mutation");
+});
+
+test("MCP mutation run-transition rejects call without policyApproval", async () => {
+  const auditLog = [];
+  const runtime = {
+    listCommands() { return []; },
+    describeCommand() { return undefined; },
+    async invoke() { throw new Error("runtime must not be called"); }
+  };
+
+  const response = await handleMcpRequest(
+    {
+      jsonrpc: "2.0",
+      id: "run-trans-no-approval",
+      method: "tools/call",
+      params: {
+        name: "workflow-cannon.run-transition",
+        arguments: { taskId: "T100737", action: "start" }
+      }
+    },
+    { runtime, auditLog, mutationEnabled: true }
+  );
+
+  assert.equal(response?.error.code, -32602);
+  assert.match(response?.error.message, /policyApproval is required/);
+  assert.equal(auditLog.length, 1);
+  assert.equal(auditLog.at(0).resultClassification, "rejected");
+  assert.equal(auditLog.at(0).metadata.reason, "invalid-arguments");
+});
+
+test("MCP mutation run-transition invokes runtime and returns mutation envelope with policyApproval", async () => {
+  const invocations = [];
+  const auditLog = [];
+  const runtime = {
+    listCommands() { return []; },
+    describeCommand() { return undefined; },
+    async invoke(invocation) {
+      invocations.push(invocation);
+      return {
+        ok: true,
+        code: "run-transition",
+        message: "started",
+        data: { taskId: invocation.args.taskId, action: invocation.args.action }
+      };
+    }
+  };
+
+  const response = await handleMcpRequest(
+    {
+      jsonrpc: "2.0",
+      id: "run-trans-with-approval",
+      method: "tools/call",
+      params: {
+        name: "workflow-cannon.run-transition",
+        arguments: {
+          taskId: "T100737",
+          action: "start",
+          policyApproval: {
+            approvedBy: "agent",
+            reason: "MCP mutation parity test",
+            timestamp: "2026-06-22T09:42:00Z"
+          }
+        }
+      }
+    },
+    { runtime, auditLog, mutationEnabled: true }
+  );
+
+  assert.equal(response?.result.isError, false);
+  const envelope = JSON.parse(response?.result.content.at(0).text);
+  assert.equal(envelope.mode, "mutation");
+  assert.equal(envelope.mutationToolsEnabled, true);
+  assert.equal(envelope.policyApprovalPresent, true);
+  assert.equal(envelope.tool, "workflow-cannon.run-transition");
+  assert.equal(envelope.command, "run-transition");
+  assert.equal(envelope.result.data.taskId, "T100737");
+  assert.equal(invocations.length, 1);
+  assert.equal(invocations.at(0).name, "run-transition");
+  assert.equal(invocations.at(0).args.taskId, "T100737");
+  assert.equal(invocations.at(0).args.action, "start");
+  // policyApproval passed through to runtime args
+  assert.ok(
+    typeof invocations.at(0).args.policyApproval === "object",
+    "policyApproval forwarded to runtime"
+  );
+  assert.equal(auditLog.length, 1);
+  assert.equal(auditLog.at(0).toolName, "workflow-cannon.run-transition");
+  assert.equal(auditLog.at(0).resultClassification, "success");
+  // policyApproval REDACTED in audit metadata (sensitive key pattern)
+  assert.equal(auditLog.at(0).metadata.policyApproval, "[redacted]", "policyApproval redacted in audit");
+  // approvalPresent uses a safe key name that doesn't trigger redaction
+  assert.equal(auditLog.at(0).metadata.approvalPresent, true);
+});
+
+test("MCP mutation write-memory invokes runtime with policyApproval when mutation is enabled", async () => {
+  const invocations = [];
+  const auditLog = [];
+  const runtime = {
+    listCommands() { return []; },
+    describeCommand() { return undefined; },
+    async invoke(invocation) {
+      invocations.push(invocation);
+      return {
+        ok: true,
+        code: "write-memory",
+        message: "written",
+        data: { id: "mem-001", category: invocation.args.category, status: "draft" }
+      };
+    }
+  };
+
+  const response = await handleMcpRequest(
+    {
+      jsonrpc: "2.0",
+      id: "write-mem-with-approval",
+      method: "tools/call",
+      params: {
+        name: "workflow-cannon.write-memory",
+        arguments: {
+          category: "notes",
+          body: "Agent wrote this memory via MCP mutation tool",
+          policyApproval: {
+            approvedBy: "agent",
+            reason: "testing write-memory MCP mutation",
+            timestamp: "2026-06-22T09:42:00Z"
+          }
+        }
+      }
+    },
+    { runtime, auditLog, mutationEnabled: true }
+  );
+
+  assert.equal(response?.result.isError, false);
+  const envelope = JSON.parse(response?.result.content.at(0).text);
+  assert.equal(envelope.mode, "mutation");
+  assert.equal(envelope.mutationToolsEnabled, true);
+  assert.equal(envelope.policyApprovalPresent, true);
+  assert.equal(invocations.length, 1);
+  assert.equal(invocations.at(0).name, "write-memory");
+  assert.equal(invocations.at(0).args.category, "notes");
+  assert.equal(auditLog.at(0).resultClassification, "success");
+  assert.equal(auditLog.at(0).metadata.policyApproval, "[redacted]", "policyApproval redacted in audit");
+  assert.equal(auditLog.at(0).metadata.approvalPresent, true);
+});
+
+test("MCP mutation write-memory rejects missing policyApproval even when mutation is enabled", async () => {
+  const auditLog = [];
+  const runtime = {
+    listCommands() { return []; },
+    describeCommand() { return undefined; },
+    async invoke() { throw new Error("runtime must not be called"); }
+  };
+
+  const response = await handleMcpRequest(
+    {
+      jsonrpc: "2.0",
+      id: "write-mem-no-approval",
+      method: "tools/call",
+      params: {
+        name: "workflow-cannon.write-memory",
+        arguments: { category: "notes", body: "test body" }
+      }
+    },
+    { runtime, auditLog, mutationEnabled: true }
+  );
+
+  assert.equal(response?.error.code, -32602);
+  assert.match(response?.error.message, /policyApproval is required/);
+  assert.equal(auditLog.at(0).resultClassification, "rejected");
+  assert.equal(auditLog.at(0).metadata.reason, "invalid-arguments");
+});
+
+test("MCP capabilities discloses mutationPolicy section with envVar and currentlyEnabled", async () => {
+  const auditLog = [];
+
+  // Default (disabled)
+  const disabledResponse = await handleMcpRequest(
+    {
+      jsonrpc: "2.0",
+      id: "capabilities-disabled",
+      method: "tools/call",
+      params: { name: "workflow-cannon.capabilities", arguments: {} }
+    },
+    { auditLog }
+  );
+  const disabledPayload = JSON.parse(disabledResponse?.result.content.at(0).text);
+  assert.equal(disabledPayload.mutationToolsEnabled, false);
+  assert.ok(disabledPayload.mutationPolicy, "mutationPolicy section present when disabled");
+  assert.equal(disabledPayload.mutationPolicy.currentlyEnabled, false);
+  assert.equal(disabledPayload.mutationPolicy.envVar, MCP_MUTATION_TOOLS_ENV_VAR);
+  assert.match(disabledPayload.mutationPolicy.note, /disabled by default/i);
+
+  // Enabled
+  const enabledResponse = await handleMcpRequest(
+    {
+      jsonrpc: "2.0",
+      id: "capabilities-enabled",
+      method: "tools/call",
+      params: { name: "workflow-cannon.capabilities", arguments: {} }
+    },
+    { mutationEnabled: true }
+  );
+  const enabledPayload = JSON.parse(enabledResponse?.result.content.at(0).text);
+  assert.equal(enabledPayload.mutationToolsEnabled, true);
+  assert.equal(enabledPayload.mutationPolicy.currentlyEnabled, true);
+  assert.match(enabledPayload.mutationPolicy.note, /policyApproval on every call/i);
+  // Mutation tools appear in the tools list
+  assert.ok(
+    enabledPayload.tools.includes("workflow-cannon.run-transition"),
+    "run-transition in capabilities tools when enabled"
+  );
+  assert.ok(
+    enabledPayload.tools.includes("workflow-cannon.write-memory"),
+    "write-memory in capabilities tools when enabled"
+  );
+});
+
+test("MCP mutation tool has explicit output budget in MCP_TOOL_OUTPUT_BYTE_BUDGETS", () => {
+  assert.equal(
+    typeof MCP_TOOL_OUTPUT_BYTE_BUDGETS["workflow-cannon.run-transition"],
+    "number",
+    "run-transition has output budget"
+  );
+  assert.ok(
+    MCP_TOOL_OUTPUT_BYTE_BUDGETS["workflow-cannon.run-transition"] > 0,
+    "run-transition budget positive"
+  );
+  assert.equal(
+    typeof MCP_TOOL_OUTPUT_BYTE_BUDGETS["workflow-cannon.write-memory"],
+    "number",
+    "write-memory has output budget"
+  );
+  assert.ok(
+    MCP_TOOL_OUTPUT_BYTE_BUDGETS["workflow-cannon.write-memory"] > 0,
+    "write-memory budget positive"
+  );
 });
 
 async function waitFor(predicate, timeoutMs = 3000) {

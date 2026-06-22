@@ -29,7 +29,7 @@ node dist/mcp/cli.js --workspace /absolute/path/to/workspace
 WORKFLOW_CANNON_MCP_WORKSPACE=/absolute/path/to/workspace pnpm exec wk-mcp
 ```
 
-Stdio transport only (JSON-RPC 2.0 over stdin/stdout). The server advertises **read-only** mode; mutation tools are disabled by default.
+Stdio transport only (JSON-RPC 2.0 over stdin/stdout). The server advertises **read-only** mode by default; mutation tools are disabled unless explicitly opted in (see [Mutation tools (opt-in)](#mutation-tools-opt-in) below).
 
 ### Healthy startup (verification)
 
@@ -102,6 +102,71 @@ Any host that supports custom stdio MCP servers can use:
 ```
 
 **Verify:** `tools/list` returns only `workflow-cannon.*` read tools (no `run-transition`, `update-task`, or memory mutation tools).
+
+## Mutation tools (opt-in)
+
+Mutation tools are **disabled by default** and hidden from `tools/list` unless explicitly enabled. CLI remains the canonical mutation surface.
+
+### Enable
+
+Set the environment variable before starting the MCP server:
+
+```bash
+WORKFLOW_CANNON_MCP_MUTATION_TOOLS=1 pnpm exec wk-mcp --workspace /path/to/workspace
+```
+
+Or for Cursor platform config, add `env` to your MCP server entry:
+
+```json
+{
+  "mcpServers": {
+    "workflow-cannon": {
+      "command": "pnpm",
+      "args": ["exec", "wk-mcp", "--workspace", "/absolute/path/to/your/project"],
+      "cwd": "/absolute/path/to/your/project",
+      "env": { "WORKFLOW_CANNON_MCP_MUTATION_TOOLS": "1" }
+    }
+  }
+}
+```
+
+### Available mutation tools
+
+When enabled, `tools/list` includes:
+
+| Tool | Command | Required args | Notes |
+| --- | --- | --- | --- |
+| `workflow-cannon.run-transition` | `run-transition` | `taskId`, `action`, `policyApproval` | Task lifecycle transitions. Same runtime as CLI. |
+| `workflow-cannon.write-memory` | `write-memory` | `category`, `body`, `policyApproval` | Creates draft memory records only. Use `approve-memory` via CLI to promote. |
+
+### policyApproval requirement
+
+Every mutation tool call **requires** a `policyApproval` object in the tool arguments:
+
+```json
+{
+  "taskId": "T100737",
+  "action": "start",
+  "policyApproval": {
+    "approvedBy": "agent",
+    "reason": "starting T100737 delivery",
+    "timestamp": "2026-06-22T09:42:00Z"
+  }
+}
+```
+
+Calls without `policyApproval` are rejected before the runtime is invoked. The `policyApproval` value is **redacted** from audit logs by the privacy-safe audit-redaction layer.
+
+### Audit behavior
+
+Mutation tool calls are audit-logged with:
+- `toolName`, `command`, `resultClassification`
+- `policyApprovalPresent: true/false` (presence only — value is redacted)
+- `args` with all sensitive/prompt/file fields redacted
+
+### ADR guardrail
+
+See **`.ai/adrs/ADR-mcp-adapter-boundary-v1.md`** — Mutation Policy section. CLI remains required for release, publish, git, task reconciliation, and all policy-gated work outside this curated opt-in set.
 
 ## Fallback when MCP is unavailable
 
