@@ -12,5 +12,6 @@ Architecture decisions live under `.ai/adrs/` / `docs/maintainers/adrs/`. Agents
 | Workspace Kit first-run init UX (`wk init` vs refresh-context vs upgrade vs doctor) | `.ai/adrs/ADR-workspace-kit-init-first-run-v1.md` |
 | Workflow Cannon runtime contract (Node 22 stamp, launcher, native SQLite drift) | `.ai/adrs/ADR-workflow-cannon-runtime-contract-v1.md` |
 | Hosted API backend (canonical sync HTTP wire contract) | `.ai/adrs/ADR-hosted-api-backend-contract-v1.md` |
+| MCP remote transport and auth non-goals (Phase 134 explicit out-of-scope) | `.ai/adrs/ADR-mcp-remote-transport-auth-non-goals-phase-134-v1.md` |
 
 When a row points only to `docs/maintainers/`, the machine original may be absent — read that single file and stop (see **`.cursor/rules/agent-doc-routing.mdc`** exception list).
