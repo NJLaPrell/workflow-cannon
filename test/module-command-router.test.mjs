@@ -260,6 +260,24 @@ test("CommandRegistryRuntime invokes commands through shared runtime", async () 
   assert.equal(result.data?.effectiveValue, "sqlite");
 });
 
+test("CommandRegistryRuntime matches ModuleCommandRouter output for same invocation", async () => {
+  const registry = new ModuleRegistry([
+    workspaceConfigModule,
+    documentationModule,
+    agentBehaviorModule,
+    taskEngineModule
+  ]);
+  const ctx = { ...lifecycleContext, moduleRegistry: registry };
+  const router = new ModuleCommandRouter(registry);
+  const runtime = createCommandRegistryRuntime(registry, { ctx });
+  const args = { path: "tasks.persistenceBackend" };
+
+  const viaRouter = await router.execute("explain-config", args, ctx);
+  const viaRuntime = await runtime.invoke({ name: "explain-config", args });
+
+  assert.deepEqual(viaRuntime, viaRouter);
+});
+
 test("ModuleCommandRouter explain-config shows sqlite as default tasks.persistenceBackend", async () => {
   const registry = new ModuleRegistry([
     workspaceConfigModule,
