@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
+import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
 import { once } from "node:events";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import test from "node:test";
 
 import {
@@ -8,6 +11,8 @@ import {
   listReadOnlyMcpTools,
   listReadOnlyMcpResources,
   resolveMcpWorkspaceBinding,
+  resolveWorkspaceBoundPath,
+  isPathWithinWorkspaceRoot,
   MCP_ENVELOPE_SCHEMA_VERSION,
   MCP_DEFAULT_TOOL_SCHEMA_VERSION
 } from "../dist/mcp/index.js";
@@ -39,11 +44,16 @@ test("MCP initialize advertises a minimal read-only server", async () => {
 });
 
 test("MCP workspace binding resolves explicit workspace roots", () => {
-  const binding = resolveMcpWorkspaceBinding({ workspacePath: "/tmp/workflow-cannon-mcp-a" });
+  const workspacePath = mkdtempSync(path.join(tmpdir(), "wc-mcp-explicit-root-"));
+  mkdirSync(path.join(workspacePath, ".workspace-kit"));
+  const binding = resolveMcpWorkspaceBinding({ workspacePath });
 
-  assert.equal(binding.workspaceRoot, "/tmp/workflow-cannon-mcp-a");
+  assert.equal(binding.workspaceRoot, workspacePath);
   assert.equal(binding.bindingSource, "option");
   assert.equal(binding.workspaceTrusted, true);
+  assert.equal(binding.workspaceTrustReason, "workspace-kit-present");
+  assert.equal(binding.pathBoundaryEnforced, true);
+  assert.equal(binding.multiWorkspaceBehavior.multiRootSupported, false);
   assert.match(binding.multiWorkspaceBehavior.contract, /exactly one workspaceRoot/);
   assert.match(binding.multiWorkspaceBehavior.recommendation, /one wk-mcp process per workspace/);
 });
@@ -899,6 +909,176 @@ test("MCP agent_start payload includes schemaVersion and toolVersion", async () 
   const payload = JSON.parse(response?.result.content.at(0).text);
   assert.equal(payload.schemaVersion, MCP_ENVELOPE_SCHEMA_VERSION, "agent_start carries schemaVersion");
   assert.equal(payload.toolVersion, MCP_DEFAULT_TOOL_SCHEMA_VERSION, "agent_start carries toolVersion");
+});
+
+test("MCP path boundary helpers reject escapes outside workspace root", () => {
+  const workspaceRoot = path.resolve("/tmp/workflow-cannon-boundary-a");
+  assert.equal(isPathWithinWorkspaceRoot(workspaceRoot, path.join(workspaceRoot, ".ai/foo.md")), true);
+  assert.equal(isPathWithinWorkspaceRoot(workspaceRoot, "/etc/passwd"), false);
+
+  const allowed = resolveWorkspaceBoundPath(workspaceRoot, ".ai/mcp-resource-freshness-policy.md");
+  assert.equal(allowed.ok, true);
+  assert.equal(allowed.absolutePath, path.join(workspaceRoot, ".ai/mcp-resource-freshness-policy.md"));
+
+  const traversal = resolveWorkspaceBoundPath(workspaceRoot, "../outside-secret.txt");
+  assert.equal(traversal.ok, false);
+  assert.equal(traversal.reason, "path-escapes-workspace-root");
+
+  const absolute = resolveWorkspaceBoundPath(workspaceRoot, "/etc/passwd");
+  assert.equal(absolute.ok, false);
+  assert.equal(absolute.reason, "absolute-path-not-allowed");
+});
+
+test("MCP workspace trust is false when workflow-cannon markers are missing", () => {
+  const tempRoot = mkdtempSync(path.join(tmpdir(), "wc-mcp-untrusted-"));
+  const binding = resolveMcpWorkspaceBinding({ workspacePath: tempRoot });
+  assert.equal(binding.workspaceTrusted, false);
+  assert.equal(binding.workspaceTrustReason, "workflow-cannon-markers-missing");
+  assert.equal(binding.pathBoundaryEnforced, true);
+});
+
+test("MCP workspace trust accepts workflow-cannon package.json without .workspace-kit", () => {
+  const tempRoot = mkdtempSync(path.join(tmpdir(), "wc-mcp-trusted-pkg-"));
+  writeFileSync(
+    path.join(tempRoot, "package.json"),
+    JSON.stringify({ name: "@workflow-cannon/workspace-kit" })
+  );
+  const binding = resolveMcpWorkspaceBinding({ workspacePath: tempRoot });
+  assert.equal(binding.workspaceTrusted, true);
+  assert.equal(binding.workspaceTrustReason, "workflow-cannon-package");
+});
+
+test("MCP resources/read cannot expose files outside the bound workspace", async () => {
+  const workspaceRoot = mkdtempSync(path.join(tmpdir(), "wc-mcp-workspace-a-"));
+  const outsideRoot = mkdtempSync(path.join(tmpdir(), "wc-mcp-outside-b-"));
+  mkdirSync(path.join(workspaceRoot, ".ai"), { recursive: true });
+  writeFileSync(path.join(workspaceRoot, ".ai/mcp-resource-freshness-policy.md"), "# trusted copy");
+  writeFileSync(path.join(outsideRoot, "leaked-secret.md"), "# leaked");
+
+  const response = await handleMcpRequest(
+    {
+      jsonrpc: "2.0",
+      id: "res-boundary",
+      method: "resources/read",
+      params: { uri: "workflow-cannon://resources/mcp-freshness-policy" }
+    },
+    { workspacePath: workspaceRoot }
+  );
+
+  assert.ok(!("error" in response), "resource read succeeds inside workspace");
+  assert.match(response?.result.contents.at(0).text, /trusted copy/);
+
+  const symlinkAttempt = resolveWorkspaceBoundPath(
+    workspaceRoot,
+    path.relative(workspaceRoot, path.join(outsideRoot, "leaked-secret.md"))
+  );
+  if (symlinkAttempt.ok) {
+    assert.equal(
+      isPathWithinWorkspaceRoot(workspaceRoot, symlinkAttempt.absolutePath),
+      false,
+      "relative path that resolves outside root is blocked"
+    );
+  }
+});
+
+test("MCP multi-root behavior is explicit: one process binds one workspace root", async () => {
+  const workspaceA = mkdtempSync(path.join(tmpdir(), "wc-mcp-root-a-"));
+  const workspaceB = mkdtempSync(path.join(tmpdir(), "wc-mcp-root-b-"));
+  mkdirSync(path.join(workspaceA, ".workspace-kit"));
+  mkdirSync(path.join(workspaceB, ".workspace-kit"));
+  writeFileSync(path.join(workspaceA, "marker.txt"), "workspace-a");
+  writeFileSync(path.join(workspaceB, "marker.txt"), "workspace-b");
+
+  const bindingA = resolveMcpWorkspaceBinding({ workspacePath: workspaceA });
+  const bindingB = resolveMcpWorkspaceBinding({ workspacePath: workspaceB });
+
+  assert.notEqual(bindingA.workspaceRoot, bindingB.workspaceRoot);
+  assert.equal(bindingA.multiWorkspaceBehavior.mode, "single-workspace-per-process");
+  assert.equal(bindingB.multiWorkspaceBehavior.multiRootSupported, false);
+  assert.match(bindingA.multiWorkspaceBehavior.contract, /one wk-mcp process per root folder/i);
+
+  const initA = await handleMcpRequest(
+    { jsonrpc: "2.0", id: "init-a", method: "initialize", params: {} },
+    { workspacePath: workspaceA }
+  );
+  const initB = await handleMcpRequest(
+    { jsonrpc: "2.0", id: "init-b", method: "initialize", params: {} },
+    { workspacePath: workspaceB }
+  );
+
+  assert.equal(initA?.result.startup.workspaceBinding.workspaceRoot, workspaceA);
+  assert.equal(initB?.result.startup.workspaceBinding.workspaceRoot, workspaceB);
+  assert.equal(initA?.result.startup.workspaceBinding.multiWorkspaceBehavior.multiRootSupported, false);
+});
+
+test("MCP capabilities and resource freshness include bound workspace metadata", async () => {
+  const response = await handleMcpRequest({
+    jsonrpc: "2.0",
+    id: "cap-workspace-freshness",
+    method: "tools/call",
+    params: {
+      name: "workflow-cannon.capabilities",
+      arguments: {}
+    }
+  });
+
+  const capabilities = JSON.parse(response?.result.content.at(0).text);
+  const workspace = capabilities.resourceFreshnessPolicy.workspace;
+  assert.equal(workspace.schemaVersion, 1);
+  assert.equal(workspace.workspaceRoot, process.cwd());
+  assert.equal(workspace.pathBoundaryEnforced, true);
+  assert.equal(typeof workspace.workspaceTrusted, "boolean");
+  assert.equal(workspace.multiWorkspaceBehavior.mode, "single-workspace-per-process");
+  assert.equal(workspace.multiWorkspaceBehavior.multiRootSupported, false);
+
+  const resourceResponse = await handleMcpRequest({
+    jsonrpc: "2.0",
+    id: "res-workspace-freshness",
+    method: "resources/read",
+    params: { uri: "workflow-cannon://resources/mcp-freshness-policy" }
+  });
+
+  const resourceWorkspace = resourceResponse?.result.freshnessEnvelope.workspace;
+  assert.equal(resourceWorkspace.workspaceRoot, process.cwd());
+  assert.equal(resourceWorkspace.pathBoundaryEnforced, true);
+});
+
+test("MCP tool freshnessPolicy includes bound workspace metadata", async () => {
+  const runtime = {
+    listCommands() {
+      return [];
+    },
+    describeCommand() {
+      return undefined;
+    },
+    async invoke(invocation) {
+      return {
+        ok: true,
+        code: "phase-release-state",
+        message: "ok",
+        data: { phaseKey: invocation.args.phaseKey }
+      };
+    }
+  };
+
+  const response = await handleMcpRequest(
+    {
+      jsonrpc: "2.0",
+      id: "tool-workspace-freshness",
+      method: "tools/call",
+      params: {
+        name: "workflow-cannon.phase-release-state",
+        arguments: { phaseKey: "134" }
+      }
+    },
+    { runtime }
+  );
+
+  const envelope = JSON.parse(response?.result.content.at(0).text);
+  assert.equal(envelope.freshnessPolicy.authority, "live");
+  assert.equal(envelope.freshnessPolicy.workspace.workspaceRoot, process.cwd());
+  assert.equal(envelope.freshnessPolicy.workspace.pathBoundaryEnforced, true);
+  assert.equal(envelope.freshnessPolicy.workspace.multiWorkspaceBehavior.multiRootSupported, false);
 });
 
 async function waitFor(predicate, timeoutMs = 3000) {
