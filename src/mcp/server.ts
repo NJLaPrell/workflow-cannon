@@ -1,6 +1,6 @@
 import { createInterface } from "node:readline";
 import path from "node:path";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync, statSync } from "node:fs";
 import { Writable } from "node:stream";
 
 import { createCommandRegistryRuntime } from "../core/module-command-router.js";
@@ -66,6 +66,8 @@ export interface McpWorkspaceBinding {
   schemaVersion: 1;
   workspaceRoot: string;
   workspaceTrusted: boolean;
+  workspaceTrustReason: string;
+  pathBoundaryEnforced: true;
   bindingSource: "option" | "cwd";
   launchCommands: {
     packageBin: string;
@@ -73,9 +75,20 @@ export interface McpWorkspaceBinding {
   };
   multiWorkspaceBehavior: {
     mode: "single-workspace-per-process";
+    multiRootSupported: false;
     contract: string;
     recommendation: string;
   };
+}
+
+export interface McpWorkspaceFreshness {
+  schemaVersion: 1;
+  workspaceRoot: string;
+  workspaceTrusted: boolean;
+  workspaceTrustReason: string;
+  pathBoundaryEnforced: true;
+  bindingSource: McpWorkspaceBinding["bindingSource"];
+  multiWorkspaceBehavior: McpWorkspaceBinding["multiWorkspaceBehavior"];
 }
 
 export type McpAuditResultClassification = "success" | "command_error" | "protocol_error" | "rejected";
@@ -734,7 +747,8 @@ function handleCapabilitiesToolCall(id: JsonRpcId, options: McpServerOptions): J
                   "Memory and summary results are not authoritative for task/release state without CLI confirmation."
               },
               stateAuthorityRule:
-                "State-like tool results carry authority:'live' and must be re-invoked for current state. Resources carry authority:'static' and are documentation only."
+                "State-like tool results carry authority:'live' and must be re-invoked for current state. Resources carry authority:'static' and are documentation only.",
+              workspace: buildWorkspaceFreshness(workspaceBinding)
             },
             byteBudget: resolveToolResponseByteBudget(options)
           },
@@ -781,11 +795,17 @@ function handleResourceRead(
   }
 
   const workspaceBinding = resolveMcpWorkspaceBinding(options);
-  const filePath = path.join(workspaceBinding.workspaceRoot, definition.workspaceRelativePath);
+  const boundPath = resolveWorkspaceBoundPath(
+    workspaceBinding.workspaceRoot,
+    definition.workspaceRelativePath
+  );
+  if (!boundPath.ok) {
+    return errorResponse(id, -32603, `Resource path blocked by workspace boundary: ${uri}`);
+  }
 
   let text: string;
   try {
-    text = readFileSync(filePath, "utf8");
+    text = readFileSync(boundPath.absolutePath, "utf8");
   } catch {
     return errorResponse(id, -32603, `Resource unavailable: ${uri}`);
   }
@@ -803,6 +823,7 @@ function handleResourceRead(
       authority: definition.cachePolicy.authority,
       fetchedAt: new Date().toISOString(),
       cachePolicy: definition.cachePolicy,
+      workspace: buildWorkspaceFreshness(workspaceBinding),
       authorityNote:
         "This resource is a static documentation artifact. It is not authoritative for current task, assignment, release, or queue state."
     }
@@ -948,12 +969,54 @@ function createDefaultMcpRuntime(options: McpServerOptions): ModuleCommandRuntim
   });
 }
 
-export function resolveMcpWorkspaceBinding(options: McpServerOptions = {}): McpWorkspaceBinding {
-  const rawWorkspacePath = options.workspacePath ?? process.cwd();
+export function isPathWithinWorkspaceRoot(workspaceRoot: string, candidatePath: string): boolean {
+  const root = path.resolve(workspaceRoot);
+  const resolved = path.resolve(candidatePath);
+  const relative = path.relative(root, resolved);
+  return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
+}
+
+export function resolveWorkspaceBoundPath(
+  workspaceRoot: string,
+  relativePath: string
+): { ok: true; absolutePath: string } | { ok: false; reason: string } {
+  const trimmed = relativePath.trim();
+  if (trimmed.length === 0) {
+    return { ok: false, reason: "empty-path" };
+  }
+  if (path.isAbsolute(trimmed)) {
+    return { ok: false, reason: "absolute-path-not-allowed" };
+  }
+  const root = path.resolve(workspaceRoot);
+  const absolutePath = path.resolve(root, trimmed);
+  if (!isPathWithinWorkspaceRoot(root, absolutePath)) {
+    return { ok: false, reason: "path-escapes-workspace-root" };
+  }
+  return { ok: true, absolutePath };
+}
+
+export function buildWorkspaceFreshness(binding: McpWorkspaceBinding): McpWorkspaceFreshness {
   return {
     schemaVersion: 1,
-    workspaceRoot: path.resolve(rawWorkspacePath),
-    workspaceTrusted: true,
+    workspaceRoot: binding.workspaceRoot,
+    workspaceTrusted: binding.workspaceTrusted,
+    workspaceTrustReason: binding.workspaceTrustReason,
+    pathBoundaryEnforced: true,
+    bindingSource: binding.bindingSource,
+    multiWorkspaceBehavior: binding.multiWorkspaceBehavior
+  };
+}
+
+export function resolveMcpWorkspaceBinding(options: McpServerOptions = {}): McpWorkspaceBinding {
+  const rawWorkspacePath = options.workspacePath ?? process.cwd();
+  const workspaceRoot = path.resolve(rawWorkspacePath);
+  const trust = assessWorkspaceTrust(workspaceRoot);
+  return {
+    schemaVersion: 1,
+    workspaceRoot,
+    workspaceTrusted: trust.trusted,
+    workspaceTrustReason: trust.reason,
+    pathBoundaryEnforced: true,
     bindingSource: options.workspacePath ? "option" : "cwd",
     launchCommands: {
       packageBin: "pnpm exec wk-mcp --workspace <workspace-root>",
@@ -961,12 +1024,43 @@ export function resolveMcpWorkspaceBinding(options: McpServerOptions = {}): McpW
     },
     multiWorkspaceBehavior: {
       mode: "single-workspace-per-process",
+      multiRootSupported: false,
       contract:
-        "Each MCP server process binds to exactly one workspaceRoot at startup and serves reads for that workspace only.",
+        "Each MCP server process binds to exactly one workspaceRoot at startup and serves reads for that workspace only. Multi-root editor workspaces require one wk-mcp process per root folder.",
       recommendation:
         "Launch one wk-mcp process per workspace/root; do not share one process across multiple workspace folders."
     }
   };
+}
+
+function assessWorkspaceTrust(workspaceRoot: string): { trusted: boolean; reason: string } {
+  if (!existsSync(workspaceRoot)) {
+    return { trusted: false, reason: "workspace-root-missing" };
+  }
+  let stat;
+  try {
+    stat = statSync(workspaceRoot);
+  } catch {
+    return { trusted: false, reason: "workspace-root-unreadable" };
+  }
+  if (!stat.isDirectory()) {
+    return { trusted: false, reason: "workspace-root-not-directory" };
+  }
+  if (existsSync(path.join(workspaceRoot, ".workspace-kit"))) {
+    return { trusted: true, reason: "workspace-kit-present" };
+  }
+  const packageJsonPath = path.join(workspaceRoot, "package.json");
+  if (existsSync(packageJsonPath)) {
+    try {
+      const parsed = JSON.parse(readFileSync(packageJsonPath, "utf8")) as { name?: unknown };
+      if (typeof parsed.name === "string" && parsed.name.includes("workflow-cannon")) {
+        return { trusted: true, reason: "workflow-cannon-package" };
+      }
+    } catch {
+      return { trusted: false, reason: "package-json-unreadable" };
+    }
+  }
+  return { trusted: false, reason: "workflow-cannon-markers-missing" };
 }
 
 function formatToolResult(
@@ -976,6 +1070,7 @@ function formatToolResult(
   options: McpServerOptions
 ): { content: Array<{ type: "text"; text: string }>; isError: boolean } {
   const toolVersion = definition.toolSchemaVersion ?? MCP_DEFAULT_TOOL_SCHEMA_VERSION;
+  const workspaceBinding = resolveMcpWorkspaceBinding(options);
   const fullEnvelope = {
     schemaVersion: MCP_ENVELOPE_SCHEMA_VERSION,
     toolVersion,
@@ -985,7 +1080,10 @@ function formatToolResult(
     command: definition.commandName,
     args,
     ...(definition.governance ? { governance: definition.governance } : {}),
-    freshnessPolicy: TOOL_FRESHNESS_POLICY,
+    freshnessPolicy: {
+      ...TOOL_FRESHNESS_POLICY,
+      workspace: buildWorkspaceFreshness(workspaceBinding)
+    },
     result
   };
   const fullText = JSON.stringify(fullEnvelope, null, 2);
@@ -1006,7 +1104,10 @@ function formatToolResult(
     command: definition.commandName,
     args,
     ...(definition.governance ? { governance: definition.governance } : {}),
-    freshnessPolicy: TOOL_FRESHNESS_POLICY,
+    freshnessPolicy: {
+      ...TOOL_FRESHNESS_POLICY,
+      workspace: buildWorkspaceFreshness(workspaceBinding)
+    },
     oversized: true,
     byteBudget,
     actualBytes: Buffer.byteLength(fullText, "utf8"),
