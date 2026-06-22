@@ -1,11 +1,13 @@
 ---
-description: Prefer workspace-kit CLI for kit-owned mutations and task transitions
+description: Prefer MCP for read/context and workspace-kit CLI for kit-owned mutations and task transitions
 alwaysApply: true
 ---
 
-# Workspace Kit CLI execution
+# Workspace Kit MCP / CLI execution
 
 Agents must use **`workspace-kit`** for kit-owned persistence. Chat-only approval does **not** satisfy policy for sensitive `workspace-kit run` commands.
+
+For read-only context, use Workflow Cannon MCP tools first when they are available and can prove freshness for the specific question. Fall back to the equivalent CLI read when MCP is unavailable, stale, incomplete, or missing the needed tool, and mention that fallback in handoff/evidence.
 
 ## Required behavior
 
@@ -17,7 +19,7 @@ Agents must use **`workspace-kit`** for kit-owned persistence. Chat-only approva
 
 - **Tier table + copy-paste:** `.ai/AGENT-CLI-MAP.md`
 - **Approval semantics:** `.ai/POLICY-APPROVAL.md`
-- **Instruction paths:** `src/modules/<module>/instructions/<command>.md` (discover via `workspace-kit run` with no subcommand)
+- **Instruction paths:** `src/modules/<module>/instructions/<command>.md` (discover via MCP capability/prompt tools when available, otherwise `workspace-kit run` with no subcommand)
 - **Single-task maintainer delivery (branch / PR / merge / transitions):** `.ai/playbooks/task-to-phase-branch.md` — use with **`maintainer-delivery-loop.mdc`**; optional requestable **`.cursor/rules/playbook-task-to-phase-branch.mdc`**
 - **Improvement research → log:** `.ai/playbooks/improvement-task-discovery.md` — optional requestable **`.cursor/rules/playbook-improvement-task-discovery.mdc`**
 - **Improvement triage (≤3 → ready):** `.ai/playbooks/improvement-triage-top-three.md` — optional requestable **`.cursor/rules/playbook-improvement-triage-top-three.mdc`**

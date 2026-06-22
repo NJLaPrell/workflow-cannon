@@ -7,8 +7,8 @@ alwaysApply: false
 
 Use when driving **one execution task** through **`release/phase-<N>`** (not **`main`**).
 
-1. Read **`.ai/playbooks/task-to-phase-branch.md`** (or attach **`@.cursor/rules/playbook-task-to-phase-branch.mdc`**).
-2. Queue facts: **`pnpm run wk doctor`**, **`pnpm run wk run get-next-actions '{}'`** — not roadmap prose.
+1. Use Workflow Cannon MCP first for fresh read-only task/playbook context when available; otherwise read **`.ai/playbooks/task-to-phase-branch.md`** (or attach **`@.cursor/rules/playbook-task-to-phase-branch.mdc`**).
+2. Queue facts: use MCP first when available and fresh; otherwise **`pnpm run wk doctor`**, **`pnpm run wk run get-next-actions '{}'`** — not roadmap prose.
 3. Tier A **`run-transition`**: JSON **`policyApproval`** in the **third** argument; pass **`expectedPlanningGeneration`** when policy **`require`**. Chat-only approval **does not** satisfy policy.
 4. Copy-paste shapes: **`.ai/AGENT-CLI-MAP.md`**, lanes: **`.ai/POLICY-APPROVAL.md`**.
 5. Long sessions: **`.ai/LONG-SESSION-RELOAD.md`**.
