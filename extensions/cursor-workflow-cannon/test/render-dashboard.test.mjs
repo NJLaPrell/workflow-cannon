@@ -2817,18 +2817,20 @@ test("renderDashboardRootInnerHtml merges ready improvement and execution rollup
   assert.match(html, /T2/);
 });
 
-test("buildPhaseCompleteReleaseChatPrompt starts with orchestration-state and stays packet-first", () => {
+test("buildPhaseCompleteReleaseChatPrompt directs MCP-first with CLI fallback and stays packet-first", () => {
   const p = buildPhaseCompleteReleaseChatPrompt("Phase 64", {
     phaseKey: "64",
     currentKitPhase: "64",
     nextKitPhase: "65",
     scope: "current"
   });
+  assert.match(p, /MCP tools first/);
+  assert.match(p, /fall back to the CLI command when MCP is unavailable/);
   assert.match(
     p,
-    /^pnpm exec wk run phase-release-orchestration-state '\{"phaseKey":"64","scope":"current","integrationBranch":"release\/phase-64","dashboardAuthorization":"complete-and-release"\}'\n/
+    /pnpm exec wk run phase-release-orchestration-state '\{"phaseKey":"64","scope":"current","integrationBranch":"release\/phase-64","dashboardAuthorization":"complete-and-release"\}'/
   );
-  assert.match(p, /Run this first\. Work from `data\.verdict`, `refs\.commands`, and `refs\.instructions`/);
+  assert.match(p, /When MCP is unavailable or stale: run the CLI command above\. Work from `data\.verdict`, `refs\.commands`, and `refs\.instructions`/);
   assert.match(p, /target phaseKey: `64`/);
   assert.match(p, /workspace current \/ next: `64` \/ `65`/);
   assert.match(p, /scope: `current`/);
@@ -2869,7 +2871,7 @@ test("buildPhaseCompleteReleaseChatPrompt keeps bucket scope in context", () => 
 
 test("buildPhaseCompleteReleaseChatPrompt without phaseKey uses placeholders", () => {
   const p = buildPhaseCompleteReleaseChatPrompt("Phase 64");
-  assert.match(p, /^pnpm exec wk run phase-release-orchestration-state '\{"phaseKey":"<N>"/);
+  assert.match(p, /pnpm exec wk run phase-release-orchestration-state '\{"phaseKey":"<N>"/);
   assert.match(p, /release\/phase-<N>/);
   assert.doesNotMatch(p, /release\/phase-64/);
 });

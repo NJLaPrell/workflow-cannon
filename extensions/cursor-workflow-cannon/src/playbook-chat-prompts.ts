@@ -48,8 +48,9 @@ export function buildImprovementTriagePrompt(options?: { taskId?: string }): str
   return (
     "Run **Improvement triage (top three)** for this workspace from the dashboard proposed-improvements flow.\n\n" +
     focus +
-    "Attach **`docs/maintainers/playbooks/improvement-triage-top-three.md`** (playbook id **`improvement-triage-top-three`**).\n\n" +
-    "Use **`docs/maintainers/AGENT-CLI-MAP.md`** for **`run-transition`** **`accept`** with JSON **`policyApproval`** when promoting tasks.\n\n" +
+    "Attach **`.ai/playbooks/improvement-triage-top-three.md`** (playbook id **`improvement-triage-top-three`**); optional rule: **`.cursor/rules/playbook-improvement-triage-top-three.mdc`**.\n\n" +
+    "Use **`.ai/AGENT-CLI-MAP.md`** and **`.ai/POLICY-APPROVAL.md`** for **`run-transition`** **`accept`** with JSON **`policyApproval`** when promoting tasks.\n\n" +
+    "For read-only task context, prefer Workflow Cannon MCP tools when available; fall back to `workspace-kit run list-tasks` / `get-task` when MCP is unavailable or stale.\n\n" +
     "Do not hand-edit kit-owned stores for lifecycle transitions."
   );
 }
