@@ -1,0 +1,28 @@
+{
+  "id": "pm-nontechnical",
+  "title": "Project manager (non-technical)",
+  "goals": [
+    "Understand whether the phase is safe to release without reading CLI output",
+    "Get plain-language confidence about release readiness"
+  ],
+  "behaviorProfile": [
+    "Prefers plain English summaries",
+    "Avoids CLI details and internal command mechanics",
+    "Asks whether release is safe before proceeding"
+  ],
+  "likelyConfusions": [
+    "phase vs branch",
+    "task status vs assignment status",
+    "packet digest and policyApproval jargon"
+  ],
+  "successCriteria": [
+    "Can identify whether the phase is ready to ship",
+    "Receives clear explanations for blocked or unsafe states",
+    "Is not forced to read raw command output"
+  ],
+  "uxExpectations": {
+    "prefersPlainLanguage": true,
+    "requiresEvidenceRefs": false,
+    "forbidsTechnicalTerms": ["policyApproval", "SQLite", "jsonrpc"]
+  }
+}

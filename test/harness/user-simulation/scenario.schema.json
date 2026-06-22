@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "workflow-cannon://user-simulation/scenario.schema.json",
+  "title": "UserSimulationScenario",
+  "type": "object",
+  "required": [
+    "id",
+    "title",
+    "entryPoint",
+    "phaseKey",
+    "personaIds",
+    "contextModes",
+    "fixture",
+    "efficiency"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": { "type": "string", "minLength": 1 },
+    "title": { "type": "string", "minLength": 1 },
+    "entryPoint": { "type": "string", "enum": ["dashboard-complete-and-release"] },
+    "phaseKey": { "type": "string", "minLength": 1 },
+    "personaIds": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "contextModes": {
+      "type": "array",
+      "items": { "type": "string", "enum": ["cli", "mcp", "mcp-fallback"] },
+      "minItems": 1
+    },
+    "cliArgs": {
+      "type": "object",
+      "properties": {
+        "scope": { "type": "string" },
+        "integrationBranch": { "type": "string" },
+        "dashboardAuthorization": { "type": "string" }
+      }
+    },
+    "fixture": {
+      "type": "object",
+      "required": ["expectedVerdict", "tasks"],
+      "properties": {
+        "expectedVerdict": { "type": "string" },
+        "currentKitPhase": { "type": "string" },
+        "tasks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "status"],
+            "properties": {
+              "id": { "type": "string" },
+              "status": { "type": "string" },
+              "title": { "type": "string" },
+              "dependsOn": { "type": "array", "items": { "type": "string" } }
+            }
+          }
+        }
+      }
+    },
+    "efficiency": {
+      "type": "object",
+      "required": ["avoidBroadCommands"],
+      "properties": {
+        "avoidBroadCommands": { "type": "array", "items": { "type": "string" } },
+        "avoidRunbookResourceUris": { "type": "array", "items": { "type": "string" } },
+        "mcpModeMaxBroadCommands": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "mcpFallback": {
+      "type": "object",
+      "properties": {
+        "trigger": { "type": "string" },
+        "expectExplicitFallback": { "type": "boolean" }
+      }
+    }
+  }
+}
