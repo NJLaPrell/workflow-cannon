@@ -3,7 +3,7 @@ import { spawn } from "node:child_process";
 import { once } from "node:events";
 import test from "node:test";
 
-import { handleMcpRequest, listReadOnlyMcpTools } from "../dist/mcp/index.js";
+import { handleMcpRequest, listReadOnlyMcpTools, resolveMcpWorkspaceBinding } from "../dist/mcp/index.js";
 
 test("MCP initialize advertises a minimal read-only server", async () => {
   const response = await handleMcpRequest({
@@ -17,6 +17,28 @@ test("MCP initialize advertises a minimal read-only server", async () => {
   assert.equal(response?.id, 1);
   assert.deepEqual(response?.result.capabilities, { tools: {} });
   assert.equal(response?.result.serverInfo.name, "workflow-cannon");
+  assert.equal(response?.result.startup.healthy, true);
+  assert.equal(response?.result.startup.mode, "read-only");
+  assert.equal(response?.result.startup.workspaceBinding.workspaceRoot, process.cwd());
+  assert.equal(response?.result.startup.workspaceBinding.bindingSource, "cwd");
+  assert.equal(
+    response?.result.startup.workspaceBinding.multiWorkspaceBehavior.mode,
+    "single-workspace-per-process"
+  );
+  assert.match(
+    response?.result.startup.workspaceBinding.launchCommands.builtDist,
+    /node dist\/mcp\/cli\.js --workspace <workspace-root>/
+  );
+});
+
+test("MCP workspace binding resolves explicit workspace roots", () => {
+  const binding = resolveMcpWorkspaceBinding({ workspacePath: "/tmp/workflow-cannon-mcp-a" });
+
+  assert.equal(binding.workspaceRoot, "/tmp/workflow-cannon-mcp-a");
+  assert.equal(binding.bindingSource, "option");
+  assert.equal(binding.workspaceTrusted, true);
+  assert.match(binding.multiWorkspaceBehavior.contract, /exactly one workspaceRoot/);
+  assert.match(binding.multiWorkspaceBehavior.recommendation, /one wk-mcp process per workspace/);
 });
 
 test("MCP tools/list exposes only the safe read-only tool", async () => {
@@ -76,6 +98,12 @@ test("MCP tools/call reports mutation tools disabled", async () => {
   const text = response?.result.content.at(0).text;
   const capabilities = JSON.parse(text);
   assert.equal(capabilities.mutationToolsEnabled, false);
+  assert.equal(capabilities.startup.healthy, true);
+  assert.equal(capabilities.startup.workspaceBinding.workspaceRoot, process.cwd());
+  assert.equal(
+    capabilities.startup.workspaceBinding.multiWorkspaceBehavior.mode,
+    "single-workspace-per-process"
+  );
   assert.deepEqual(capabilities.auditLogging, { bounded: true, redacted: true });
   assert.deepEqual(capabilities.toolDescriptionContract, {
     schemaVersion: 1,
@@ -428,8 +456,8 @@ test("MCP memory recall is governed, source-cited, and read-only", async () => {
   assert.equal(envelope.result.data.records.at(0).status, "approved");
 });
 
-test("MCP stdio CLI starts and answers initialize", async () => {
-  const child = spawn(process.execPath, ["dist/mcp/cli.js"], {
+test("MCP stdio CLI starts from documented command and proves workspace binding", async () => {
+  const child = spawn(process.execPath, ["dist/mcp/cli.js", "--workspace", process.cwd()], {
     cwd: process.cwd(),
     stdio: ["pipe", "pipe", "pipe"]
   });
@@ -450,6 +478,17 @@ test("MCP stdio CLI starts and answers initialize", async () => {
   const response = JSON.parse(stdout.trim());
   assert.equal(response.id, "start");
   assert.equal(response.result.serverInfo.name, "workflow-cannon");
+  assert.equal(response.result.startup.healthy, true);
+  assert.equal(response.result.startup.workspaceBinding.workspaceRoot, process.cwd());
+  assert.equal(response.result.startup.workspaceBinding.bindingSource, "option");
+  assert.equal(
+    response.result.startup.workspaceBinding.launchCommands.builtDist,
+    "node dist/mcp/cli.js --workspace <workspace-root>"
+  );
+  assert.equal(
+    response.result.startup.workspaceBinding.multiWorkspaceBehavior.mode,
+    "single-workspace-per-process"
+  );
 });
 
 async function waitFor(predicate, timeoutMs = 3000) {
