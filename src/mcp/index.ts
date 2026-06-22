@@ -19,7 +19,8 @@ export {
   type McpServerOptions,
   type McpToolDescriptor,
   type McpResourceDescriptor,
-  type McpResourceCachePolicy
+  type McpResourceCachePolicy,
+  type McpContentTrust
 } from "./server.js";
 export {
   STATE_LIKE_MCP_TOOL_NAMES,
