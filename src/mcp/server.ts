@@ -4,7 +4,8 @@ import { existsSync, readFileSync, statSync } from "node:fs";
 import { Writable } from "node:stream";
 
 import { createCommandRegistryRuntime } from "../core/module-command-router.js";
-import { ModuleRegistry } from "../core/module-registry.js";
+import { resolveRegistryAndConfig } from "../core/module-registry-resolve.js";
+import { resolveActorWithFallback } from "../core/policy.js";
 import type { ModuleCommandResult, ModuleCommandRuntime } from "../contracts/module-contract.js";
 import { defaultRegistryModules } from "../modules/index.js";
 import { buildStateLikeFreshness } from "./state-like-freshness.js";
@@ -223,6 +224,8 @@ const MEMORY_GOVERNED_TOOL_NAMES = new Set([
   "workflow-cannon.memory-list",
   "workflow-cannon.memory-precedence"
 ]);
+
+const defaultRuntimeCache = new WeakMap<McpServerOptions, Promise<ModuleCommandRuntime>>();
 
 /**
  * Static resource definitions exposed via resources/list and resources/read.
@@ -752,7 +755,7 @@ async function handleAgentStartToolCall(id: JsonRpcId, options: McpServerOptions
   const workspaceBinding = resolveMcpWorkspaceBinding(options);
   let sessionSummary: Record<string, unknown> | undefined;
   try {
-    const runtime = options.runtime ?? createDefaultMcpRuntime(options);
+    const runtime = await resolveMcpRuntime(options);
     const bootstrapResult = await runtime.invoke({
       name: "agent-bootstrap",
       args: { projection: "lean" }
@@ -1149,7 +1152,7 @@ async function handleToolCall(
   }
 
   const commandArgs = definition.expansionArgs(args);
-  const runtime = options.runtime ?? createDefaultMcpRuntime(options);
+  const runtime = await resolveMcpRuntime(options);
   const commandResult = await runtime.invoke({
     name: definition.commandName,
     args: commandArgs
@@ -1165,13 +1168,33 @@ async function handleToolCall(
   return successResponse(id, toolResult);
 }
 
-function createDefaultMcpRuntime(options: McpServerOptions): ModuleCommandRuntime {
-  const registry = new ModuleRegistry(defaultRegistryModules);
+async function resolveMcpRuntime(options: McpServerOptions): Promise<ModuleCommandRuntime> {
+  if (options.runtime) {
+    return options.runtime;
+  }
+  const cached = defaultRuntimeCache.get(options);
+  if (cached) {
+    return await cached;
+  }
+  const runtimePromise = createDefaultMcpRuntime(options);
+  defaultRuntimeCache.set(options, runtimePromise);
+  return await runtimePromise;
+}
+
+async function createDefaultMcpRuntime(options: McpServerOptions): Promise<ModuleCommandRuntime> {
   const workspaceBinding = resolveMcpWorkspaceBinding(options);
+  const { registry, effective } = await resolveRegistryAndConfig(
+    workspaceBinding.workspaceRoot,
+    defaultRegistryModules,
+    {}
+  );
+  const actor = await resolveActorWithFallback(workspaceBinding.workspaceRoot, {}, process.env);
   return createCommandRegistryRuntime(registry, {
     ctx: {
       runtimeVersion: "0.1",
       workspacePath: workspaceBinding.workspaceRoot,
+      effectiveConfig: effective as Record<string, unknown>,
+      resolvedActor: actor,
       moduleRegistry: registry
     }
   });
