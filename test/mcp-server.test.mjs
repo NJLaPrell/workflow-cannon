@@ -13,6 +13,9 @@ import {
   resolveMcpWorkspaceBinding,
   resolveWorkspaceBoundPath,
   isPathWithinWorkspaceRoot,
+  buildStateLikeFreshness,
+  isStateLikeMcpTool,
+  STATE_LIKE_MCP_TOOL_NAMES,
   MCP_ENVELOPE_SCHEMA_VERSION,
   MCP_DEFAULT_TOOL_SCHEMA_VERSION
 } from "../dist/mcp/index.js";
@@ -1079,6 +1082,180 @@ test("MCP tool freshnessPolicy includes bound workspace metadata", async () => {
   assert.equal(envelope.freshnessPolicy.workspace.workspaceRoot, process.cwd());
   assert.equal(envelope.freshnessPolicy.workspace.pathBoundaryEnforced, true);
   assert.equal(envelope.freshnessPolicy.workspace.multiWorkspaceBehavior.multiRootSupported, false);
+});
+
+test("MCP state-like tool results include freshness metadata", async () => {
+  const runtime = {
+    listCommands() {
+      return [];
+    },
+    describeCommand() {
+      return undefined;
+    },
+    async invoke(invocation) {
+      return {
+        ok: true,
+        code: "phase-release-state",
+        message: "ok",
+        data: {
+          phaseKey: invocation.args.phaseKey,
+          planningGeneration: 42
+        }
+      };
+    }
+  };
+
+  const response = await handleMcpRequest(
+    {
+      jsonrpc: "2.0",
+      id: "state-like-freshness",
+      method: "tools/call",
+      params: {
+        name: "workflow-cannon.phase-release-state",
+        arguments: { phaseKey: "134" }
+      }
+    },
+    { runtime }
+  );
+
+  const envelope = JSON.parse(response?.result.content.at(0).text);
+  const freshness = envelope.freshness;
+  assert.ok(freshness, "freshness block is present on state-like tools");
+  assert.equal(freshness.schemaVersion, 1);
+  assert.equal(typeof freshness.generatedAt, "string");
+  assert.equal(freshness.workspaceRoot, process.cwd());
+  assert.equal(typeof freshness.workspaceTrusted, "boolean");
+  assert.equal(freshness.planningGeneration, 42);
+  assert.equal(freshness.provenance.planningGeneration, "command-result");
+  assert.equal(typeof freshness.gitHead, "string");
+  assert.equal(freshness.provenance.gitHead, "git");
+  assert.equal(typeof freshness.stale, "boolean");
+  assert.ok(Array.isArray(freshness.staleReasons));
+});
+
+test("MCP non-state-like tools omit freshness metadata", async () => {
+  const runtime = {
+    listCommands() {
+      return [];
+    },
+    describeCommand() {
+      return undefined;
+    },
+    async invoke() {
+      return {
+        ok: true,
+        code: "cae-guidance-preview",
+        message: "ok",
+        data: { cards: [] }
+      };
+    }
+  };
+
+  const response = await handleMcpRequest(
+    {
+      jsonrpc: "2.0",
+      id: "non-state-like-freshness",
+      method: "tools/call",
+      params: {
+        name: "workflow-cannon.cae-guidance-preview",
+        arguments: { taskId: "T100721" }
+      }
+    },
+    { runtime }
+  );
+
+  const envelope = JSON.parse(response?.result.content.at(0).text);
+  assert.equal(envelope.freshness, undefined, "non-state-like tools omit freshness");
+  assert.ok(envelope.freshnessPolicy, "freshnessPolicy still present");
+});
+
+test("MCP state-like freshness marks stale packet audit with CLI recovery", () => {
+  const binding = resolveMcpWorkspaceBinding();
+  const freshness = buildStateLikeFreshness(
+    binding,
+    {
+      ok: true,
+      code: "agent-execution-packet",
+      message: "ok",
+      data: {
+        packetAudit: { stale: true, registryAvailable: true }
+      }
+    },
+    "pnpm exec wk run agent-execution-packet '{\"mode\":\"assignment\",\"assignmentId\":\"abc\"}'"
+  );
+
+  assert.equal(freshness.stale, true);
+  assert.ok(freshness.staleReasons.includes("packet-context-stale"));
+  assert.ok(freshness.recovery, "stale results include recovery guidance");
+  assert.match(freshness.recovery.note, /CLI fallback/i);
+  assert.match(freshness.recovery.cliFallback, /agent-execution-packet/);
+});
+
+test("MCP state-like freshness exposes missing generation signals explicitly", () => {
+  const workspaceRoot = mkdtempSync(path.join(tmpdir(), "wk-mcp-freshness-"));
+  const binding = resolveMcpWorkspaceBinding({ workspacePath: workspaceRoot });
+  const freshness = buildStateLikeFreshness(
+    binding,
+    { ok: true, code: "phase-release-state", message: "ok", data: {} },
+    "pnpm exec wk run phase-release-state '{\"phaseKey\":\"134\"}'"
+  );
+
+  assert.equal(freshness.planningGeneration, null);
+  assert.equal(freshness.taskStoreGeneration, null);
+  assert.equal(freshness.provenance.planningGeneration, "unavailable");
+  assert.equal(freshness.provenance.taskStoreGeneration, "unavailable");
+  assert.ok(freshness.staleReasons.includes("planning-generation-unavailable"));
+  assert.ok(freshness.staleReasons.includes("task-store-generation-unavailable"));
+  assert.equal(freshness.stale, true);
+  assert.ok(freshness.recovery);
+});
+
+test("MCP state-like tool registry matches policy list", () => {
+  for (const toolName of STATE_LIKE_MCP_TOOL_NAMES) {
+    assert.equal(isStateLikeMcpTool(toolName), true, `${toolName} is state-like`);
+  }
+  assert.equal(isStateLikeMcpTool("workflow-cannon.cae-guidance-preview"), false);
+  const listed = listReadOnlyMcpTools().map((tool) => tool.name);
+  for (const toolName of STATE_LIKE_MCP_TOOL_NAMES) {
+    assert.ok(listed.includes(toolName), `${toolName} is registered`);
+  }
+});
+
+test("MCP state-like oversized envelope retains freshness metadata", async () => {
+  const runtime = {
+    listCommands() {
+      return [];
+    },
+    describeCommand() {
+      return undefined;
+    },
+    async invoke() {
+      return {
+        ok: true,
+        code: "phase-release-state",
+        message: "large",
+        data: { blob: "x".repeat(2500), planningGeneration: 7 }
+      };
+    }
+  };
+
+  const response = await handleMcpRequest(
+    {
+      jsonrpc: "2.0",
+      id: "state-like-freshness-compact",
+      method: "tools/call",
+      params: {
+        name: "workflow-cannon.phase-release-state",
+        arguments: { phaseKey: "134" }
+      }
+    },
+    { runtime, maxToolResponseBytes: 1000 }
+  );
+
+  const envelope = JSON.parse(response?.result.content.at(0).text);
+  assert.equal(envelope.oversized, true);
+  assert.ok(envelope.freshness, "compact state-like envelope keeps freshness");
+  assert.equal(envelope.freshness.planningGeneration, 7);
 });
 
 async function waitFor(predicate, timeoutMs = 3000) {

@@ -7,6 +7,7 @@ import { createCommandRegistryRuntime } from "../core/module-command-router.js";
 import { ModuleRegistry } from "../core/module-registry.js";
 import type { ModuleCommandResult, ModuleCommandRuntime } from "../contracts/module-contract.js";
 import { defaultRegistryModules } from "../modules/index.js";
+import { buildStateLikeFreshness } from "./state-like-freshness.js";
 
 const JSON_RPC_VERSION = "2.0";
 const MCP_PROTOCOL_VERSION = "2024-11-05";
@@ -139,6 +140,8 @@ interface ReadOnlyMcpToolDefinition {
    * MCP_DEFAULT_TOOL_SCHEMA_VERSION if omitted.
    */
   toolSchemaVersion?: number;
+  /** When true, tool output includes state-like freshness metadata and stale handling. */
+  stateLike?: boolean;
 }
 
 const serverDefaults = {
@@ -215,6 +218,7 @@ const packetReadTools: ReadOnlyMcpToolDefinition[] = [
     toolName: "workflow-cannon.phase-release-orchestration-state",
     commandName: "phase-release-orchestration-state",
     description: "Read the Phase release orchestration verdict packet.",
+    stateLike: true,
     cliFallbackArgs:
       '{"phaseKey":"<phase>","scope":"bucket","integrationBranch":"release/phase-<phase>","dashboardAuthorization":"complete-and-release"}',
     commonMistakes: [
@@ -241,6 +245,7 @@ const packetReadTools: ReadOnlyMcpToolDefinition[] = [
     toolName: "workflow-cannon.agent-execution-packet",
     commandName: "agent-execution-packet",
     description: "Read a draft or locked agent execution packet.",
+    stateLike: true,
     cliFallbackArgs: '{"mode":"draft","taskId":"<task>","phaseKey":"<phase>"}',
     commonMistakes: [
       "implementing from a draft packet",
@@ -272,6 +277,7 @@ const packetReadTools: ReadOnlyMcpToolDefinition[] = [
     toolName: "workflow-cannon.assignment-reconciliation-preflight",
     commandName: "assignment-reconciliation-preflight",
     description: "Read reconciliation readiness for a submitted assignment handoff.",
+    stateLike: true,
     cliFallbackArgs: '{"assignmentId":"<assignment>","supervisorId":"<supervisor>"}',
     commonMistakes: [
       "running before handoff submission",
@@ -291,6 +297,7 @@ const packetReadTools: ReadOnlyMcpToolDefinition[] = [
     toolName: "workflow-cannon.phase-drain-delta",
     commandName: "phase-drain-delta",
     description: "Read bounded phase drain delta evidence.",
+    stateLike: true,
     cliFallbackArgs: '{"phaseKey":"<phase>"}',
     commonMistakes: [
       "continuing after full-refresh recommendation",
@@ -310,6 +317,7 @@ const packetReadTools: ReadOnlyMcpToolDefinition[] = [
     toolName: "workflow-cannon.phase-release-state",
     commandName: "phase-release-state",
     description: "Read release state for a phase.",
+    stateLike: true,
     cliFallbackArgs: '{"phaseKey":"<phase>"}',
     commonMistakes: [
       "confusing release state with closeout approval",
@@ -327,6 +335,7 @@ const packetReadTools: ReadOnlyMcpToolDefinition[] = [
     toolName: "workflow-cannon.release-closeout-result",
     commandName: "release-closeout-result",
     description: "Read release closeout result evidence for a phase.",
+    stateLike: true,
     cliFallbackArgs: '{"phaseKey":"<phase>"}',
     commonMistakes: [
       "using stale closeout evidence after task changes",
@@ -452,6 +461,7 @@ const packetReadTools: ReadOnlyMcpToolDefinition[] = [
     toolName: "workflow-cannon.memory-list",
     commandName: "list-memory",
     description: "Read governed project-memory records with source and status metadata.",
+    stateLike: true,
     cliFallbackArgs: '{"status":"approved"}',
     commonMistakes: [
       "treating memory as current task state",
@@ -1071,6 +1081,16 @@ function formatToolResult(
 ): { content: Array<{ type: "text"; text: string }>; isError: boolean } {
   const toolVersion = definition.toolSchemaVersion ?? MCP_DEFAULT_TOOL_SCHEMA_VERSION;
   const workspaceBinding = resolveMcpWorkspaceBinding(options);
+  const cliFallbackCommand = `pnpm exec wk run ${definition.commandName} '${JSON.stringify(args)}'`;
+  const freshnessPolicy = {
+    ...TOOL_FRESHNESS_POLICY,
+    workspace: buildWorkspaceFreshness(workspaceBinding)
+  };
+  const stateLikeFreshness = definition.stateLike
+    ? {
+        freshness: buildStateLikeFreshness(workspaceBinding, result, cliFallbackCommand)
+      }
+    : {};
   const fullEnvelope = {
     schemaVersion: MCP_ENVELOPE_SCHEMA_VERSION,
     toolVersion,
@@ -1080,10 +1100,8 @@ function formatToolResult(
     command: definition.commandName,
     args,
     ...(definition.governance ? { governance: definition.governance } : {}),
-    freshnessPolicy: {
-      ...TOOL_FRESHNESS_POLICY,
-      workspace: buildWorkspaceFreshness(workspaceBinding)
-    },
+    freshnessPolicy,
+    ...stateLikeFreshness,
     result
   };
   const fullText = JSON.stringify(fullEnvelope, null, 2);
@@ -1104,10 +1122,8 @@ function formatToolResult(
     command: definition.commandName,
     args,
     ...(definition.governance ? { governance: definition.governance } : {}),
-    freshnessPolicy: {
-      ...TOOL_FRESHNESS_POLICY,
-      workspace: buildWorkspaceFreshness(workspaceBinding)
-    },
+    freshnessPolicy,
+    ...stateLikeFreshness,
     oversized: true,
     byteBudget,
     actualBytes: Buffer.byteLength(fullText, "utf8"),
@@ -1115,7 +1131,7 @@ function formatToolResult(
     expansionRefs: [
       {
         kind: "cli",
-        command: `pnpm exec wk run ${definition.commandName} '${JSON.stringify(args)}'`
+        command: cliFallbackCommand
       }
     ]
   };
