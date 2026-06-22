@@ -90,6 +90,13 @@ const stages = [
     hint: "pnpm run build && node scripts/generate-agent-cli-snippets.mjs"
   },
   {
+    id: "mcp-tool-schema-snapshot",
+    label: "MCP tool inputSchema snapshot (schema source-of-truth drift gate)",
+    command: process.execPath,
+    args: ["scripts/check-mcp-tool-schema-snapshot.mjs"],
+    hint: "pnpm run build && node scripts/generate-mcp-tool-schema-snapshot.mjs"
+  },
+  {
     id: "orphan-instructions",
     label: "Orphan module instruction files",
     command: process.execPath,
