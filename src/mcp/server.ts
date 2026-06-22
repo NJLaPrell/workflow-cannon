@@ -120,6 +120,12 @@ interface ReadOnlyMcpToolDefinition {
     note: string;
     sourceRefs: string[];
   };
+  /**
+   * Per-tool output contract version. Increment when the tool's result shape
+   * changes in a way that callers must handle differently. Defaults to
+   * MCP_DEFAULT_TOOL_SCHEMA_VERSION if omitted.
+   */
+  toolSchemaVersion?: number;
 }
 
 const serverDefaults = {
@@ -177,6 +183,19 @@ const STATIC_RESOURCE_DEFINITIONS: McpStaticResourceDefinition[] = [
     }
   }
 ];
+
+/**
+ * Version of the MCP tool output envelope schema. Increment when the envelope
+ * shape changes in a breaking way. Test harnesses should assert this equals
+ * MCP_ENVELOPE_SCHEMA_VERSION to catch drift early.
+ */
+export const MCP_ENVELOPE_SCHEMA_VERSION = 1;
+
+/**
+ * Default per-tool output contract version. Individual tools may declare a
+ * higher toolSchemaVersion to signal a breaking change in their result shape.
+ */
+export const MCP_DEFAULT_TOOL_SCHEMA_VERSION = 1;
 
 const packetReadTools: ReadOnlyMcpToolDefinition[] = [
   {
@@ -678,6 +697,8 @@ function handleCapabilitiesToolCall(id: JsonRpcId, options: McpServerOptions): J
         type: "text",
         text: JSON.stringify(
           {
+            schemaVersion: MCP_ENVELOPE_SCHEMA_VERSION,
+            toolVersion: MCP_DEFAULT_TOOL_SCHEMA_VERSION,
             mode: "read-only",
             mutationToolsEnabled: false,
             startup: {
@@ -691,6 +712,11 @@ function handleCapabilitiesToolCall(id: JsonRpcId, options: McpServerOptions): J
             toolDescriptionContract: {
               schemaVersion: TOOL_DESCRIPTION_CONTRACT_VERSION,
               requiredSegments: ["description", "CLI fallback", "Common mistakes"]
+            },
+            versionContract: {
+              envelopeSchemaVersion: MCP_ENVELOPE_SCHEMA_VERSION,
+              defaultToolSchemaVersion: MCP_DEFAULT_TOOL_SCHEMA_VERSION,
+              policy: ".ai/mcp-tool-version-policy.md"
             },
             tools: listReadOnlyMcpTools().map((tool) => tool.name),
             resources: listReadOnlyMcpResources().map((r) => ({
@@ -789,7 +815,8 @@ function buildAgentStartPayload(
 ): Record<string, unknown> {
   const tools = listReadOnlyMcpTools().map((tool) => tool.name);
   return {
-    schemaVersion: 1,
+    schemaVersion: MCP_ENVELOPE_SCHEMA_VERSION,
+    toolVersion: MCP_DEFAULT_TOOL_SCHEMA_VERSION,
     tool: AGENT_START_TOOL_NAME,
     mode: "read-only",
     mutationToolsEnabled: false,
@@ -948,8 +975,10 @@ function formatToolResult(
   result: ModuleCommandResult,
   options: McpServerOptions
 ): { content: Array<{ type: "text"; text: string }>; isError: boolean } {
+  const toolVersion = definition.toolSchemaVersion ?? MCP_DEFAULT_TOOL_SCHEMA_VERSION;
   const fullEnvelope = {
-    schemaVersion: 1,
+    schemaVersion: MCP_ENVELOPE_SCHEMA_VERSION,
+    toolVersion,
     mode: "read-only",
     mutationToolsEnabled: false,
     tool: definition.toolName,
@@ -969,7 +998,8 @@ function formatToolResult(
   }
 
   const compactEnvelope = {
-    schemaVersion: 1,
+    schemaVersion: MCP_ENVELOPE_SCHEMA_VERSION,
+    toolVersion,
     mode: "read-only",
     mutationToolsEnabled: false,
     tool: definition.toolName,
