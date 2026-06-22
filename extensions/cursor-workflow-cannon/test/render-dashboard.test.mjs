@@ -1107,6 +1107,29 @@ test("renderDashboardRootInnerHtml renders editor integration state when provide
   assert.match(statusPanel, /<b>Chat prefill<\/b> VS Code Chat/);
 });
 
+test("renderDashboardRootInnerHtml renders MCP status on Status tab when provided", () => {
+  const fixturePath = path.join(__dirname, "../docs/fixtures/dashboard-summary.example.json");
+  const fixture = JSON.parse(readFileSync(fixturePath, "utf8"));
+  const html = renderDashboardRootInnerHtml(fixture, null, null, null, null, {
+    mcpStatus: {
+      schemaVersion: 1,
+      availability: "not_configured",
+      agentReadMode: "cli-fallback",
+      extensionWorkspaceRoot: "/tmp/wc-workspace",
+      configSource: "none",
+      setupSnippet: "{}",
+      guidance: ["Use CLI until MCP is configured."]
+    }
+  });
+
+  const statusPanelIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="status"');
+  const configPanelIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="config"');
+  const statusPanel = html.slice(statusPanelIdx, configPanelIdx);
+  assert.match(statusPanel, /dash-status-mcp/);
+  assert.match(statusPanel, /data-wc-mcp-status="not_configured"/);
+  assert.match(statusPanel, /CLI fallback/);
+});
+
 test("renderDashboardRootInnerHtml renders escaped WC Agent status banner from agentStatus", () => {
   const html = renderDashboardRootInnerHtml({
     ok: true,

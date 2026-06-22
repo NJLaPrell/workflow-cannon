@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "workflow-cannon": {
+      "command": "pnpm",
+      "args": ["exec", "wk-mcp", "--workspace", "/tmp/other-workspace"],
+      "cwd": "/tmp/other-workspace"
+    }
+  }
+}

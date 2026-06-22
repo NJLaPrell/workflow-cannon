@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import type { DashboardSummaryCommandSuccess } from "@workflow-cannon/workspace-kit/contracts/dashboard-summary-run";
 import { prefillCursorChat, resolveEditorIntegrationState } from "../../cursor-chat-prefill.js";
+import { resolveMcpHostStatus } from "../../mcp/resolve-mcp-host-status.js";
 import type { CommandClient, KitRunResult } from "../../runtime/command-client.js";
 import {
   expectedPlanningGenerationArgs,
@@ -609,7 +610,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   private dashboardRenderRootOptions(extra?: RenderDashboardRootOptions): RenderDashboardRootOptions {
     return {
       ...extra,
-      readModeBadge: this.readPath.getModeBadge()
+      readModeBadge: this.readPath.getModeBadge(),
+      mcpStatus: resolveMcpHostStatus(this.client.getWorkspaceRoot())
     };
   }
 
@@ -5528,6 +5530,49 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       margin-top: 0;
       padding-top: 0;
       border-top: 0;
+    }
+    .dash-status-mcp .dash-mcp-status--embedded {
+      margin-top: 0;
+    }
+    .wc-mcp-pill {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.35));
+      vertical-align: middle;
+    }
+    .wc-mcp-pill--available,
+    .wc-mcp-pill--mcp-first {
+      background: color-mix(in srgb, var(--vscode-testing-iconPassed) 18%, transparent);
+    }
+    .wc-mcp-pill--wrong,
+    .wc-mcp-pill--unavailable {
+      background: color-mix(in srgb, var(--vscode-testing-iconFailed) 15%, transparent);
+    }
+    .wc-mcp-pill--not-configured,
+    .wc-mcp-pill--cli-fallback {
+      background: color-mix(in srgb, var(--vscode-editorWarning-foreground, #cca700) 12%, transparent);
+    }
+    .wc-mcp-guidance {
+      margin: 8px 0 0 18px;
+      padding: 0;
+      font-size: 11px;
+      line-height: 1.45;
+    }
+    .wc-mcp-setup-details summary {
+      cursor: pointer;
+      font-size: 11px;
+      margin-top: 8px;
+    }
+    .wc-mcp-setup-snippet {
+      margin: 8px 0 0;
+      padding: 8px;
+      font-size: 10px;
+      overflow-x: auto;
+      border-radius: 6px;
+      background: var(--vscode-textCodeBlock-background, rgba(127,127,127,.12));
     }
     .wc-header-sticky {
       position: sticky;
