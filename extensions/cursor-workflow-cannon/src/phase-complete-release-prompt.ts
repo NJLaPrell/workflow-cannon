@@ -42,9 +42,13 @@ export function buildPhaseCompleteReleaseChatPrompt(
   const command = orchestrationStateCommand(pk, scope, branch);
 
   return [
+    "## Context source",
+    "Use Workflow Cannon MCP tools first for phase context, verdict, and refs when available; fall back to the CLI command when MCP is unavailable, stale, or missing the needed tool.",
+    "",
     command,
     "",
-    "Run this first. Work from `data.verdict`, `refs.commands`, and `refs.instructions`; refresh only after material changes.",
+    "When MCP is available: request phase context for `" + (pk ?? "{{phaseKey}}") + "`; read verdict and refs directly from the MCP response; skip the CLI command when MCP provides a fresh result.",
+    "When MCP is unavailable or stale: run the CLI command above. Work from `data.verdict`, `refs.commands`, and `refs.instructions`; refresh only after material changes.",
     "",
     "## Context",
     `* target phaseKey: \`${pk ?? "{{phaseKey}}"}\``,
