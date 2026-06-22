@@ -1,0 +1,27 @@
+{
+  "id": "expert-engineer",
+  "title": "Expert engineer (auditor)",
+  "goals": [
+    "Audit release path correctness with concrete evidence",
+    "Verify explicit phaseKey usage and packet authority"
+  ],
+  "behaviorProfile": [
+    "Asks for concrete evidence refs",
+    "Checks explicit phaseKey on every orchestration call",
+    "Challenges unsafe release behavior and stale state"
+  ],
+  "likelyConfusions": [
+    "stale MCP freshness vs live CLI state",
+    "packet draft vs assignment-locked packet"
+  ],
+  "successCriteria": [
+    "Can audit why the agent chose a path",
+    "Can verify state correctness from bounded refs",
+    "Can see packet authority without broad rediscovery"
+  ],
+  "uxExpectations": {
+    "prefersPlainLanguage": false,
+    "requiresEvidenceRefs": true,
+    "forbidsTechnicalTerms": []
+  }
+}

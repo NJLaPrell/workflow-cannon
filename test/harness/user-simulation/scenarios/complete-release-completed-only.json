@@ -1,0 +1,32 @@
+{
+  "id": "complete-release-completed-only",
+  "title": "Complete & Release — completed-only phase (ready-to-ship)",
+  "entryPoint": "dashboard-complete-and-release",
+  "phaseKey": "134",
+  "personaIds": ["pm-nontechnical", "expert-engineer"],
+  "contextModes": ["cli", "mcp", "mcp-fallback"],
+  "cliArgs": {
+    "scope": "current",
+    "integrationBranch": "release/phase-134",
+    "dashboardAuthorization": "complete-and-release"
+  },
+  "fixture": {
+    "expectedVerdict": "ready-to-ship",
+    "currentKitPhase": "134",
+    "tasks": [
+      { "id": "T100700", "status": "completed", "title": "Prior phase task" },
+      { "id": "T100701", "status": "completed", "title": "Another completed task" }
+    ]
+  },
+  "efficiency": {
+    "avoidBroadCommands": ["list-tasks", "phase-status", "dashboard-summary", "get-next-actions"],
+    "avoidRunbookResourceUris": [
+      "workflow-cannon://resources/runbooks/phase-closeout-ordering-recovery"
+    ],
+    "mcpModeMaxBroadCommands": 0
+  },
+  "mcpFallback": {
+    "trigger": "mcp-unavailable",
+    "expectExplicitFallback": true
+  }
+}
