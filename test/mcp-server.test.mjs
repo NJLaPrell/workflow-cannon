@@ -7,7 +7,9 @@ import {
   handleMcpRequest,
   listReadOnlyMcpTools,
   listReadOnlyMcpResources,
-  resolveMcpWorkspaceBinding
+  resolveMcpWorkspaceBinding,
+  MCP_ENVELOPE_SCHEMA_VERSION,
+  MCP_DEFAULT_TOOL_SCHEMA_VERSION
 } from "../dist/mcp/index.js";
 
 test("MCP initialize advertises a minimal read-only server", async () => {
@@ -787,6 +789,116 @@ test("MCP tool result byte-budget compact envelope also includes freshnessPolicy
   assert.equal(envelope.oversized, true, "envelope is oversized");
   assert.ok(envelope.freshnessPolicy, "compact envelope still has freshnessPolicy");
   assert.equal(envelope.freshnessPolicy.authority, "live");
+});
+
+test("MCP version constants are exported and match expected baseline values", () => {
+  assert.equal(typeof MCP_ENVELOPE_SCHEMA_VERSION, "number", "MCP_ENVELOPE_SCHEMA_VERSION is a number");
+  assert.equal(typeof MCP_DEFAULT_TOOL_SCHEMA_VERSION, "number", "MCP_DEFAULT_TOOL_SCHEMA_VERSION is a number");
+  assert.equal(MCP_ENVELOPE_SCHEMA_VERSION, 1, "envelope schema version is 1");
+  assert.equal(MCP_DEFAULT_TOOL_SCHEMA_VERSION, 1, "default tool schema version is 1");
+});
+
+test("MCP tool output envelope includes schemaVersion and toolVersion on success", async () => {
+  const runtime = {
+    listCommands() { return []; },
+    describeCommand() { return undefined; },
+    async invoke(invocation) {
+      return {
+        ok: true,
+        code: "phase-release-state",
+        message: "ok",
+        data: { phaseKey: invocation.args.phaseKey, status: "active" }
+      };
+    }
+  };
+
+  const response = await handleMcpRequest(
+    {
+      jsonrpc: "2.0",
+      id: "version-check",
+      method: "tools/call",
+      params: {
+        name: "workflow-cannon.phase-release-state",
+        arguments: { phaseKey: "134" }
+      }
+    },
+    { runtime }
+  );
+
+  const envelope = JSON.parse(response?.result.content.at(0).text);
+  assert.equal(envelope.schemaVersion, MCP_ENVELOPE_SCHEMA_VERSION, "envelope.schemaVersion matches constant");
+  assert.equal(envelope.toolVersion, MCP_DEFAULT_TOOL_SCHEMA_VERSION, "envelope.toolVersion matches constant");
+  assert.equal(typeof envelope.schemaVersion, "number", "schemaVersion is numeric");
+  assert.equal(typeof envelope.toolVersion, "number", "toolVersion is numeric");
+});
+
+test("MCP tool output envelope includes schemaVersion and toolVersion on oversized response", async () => {
+  const runtime = {
+    listCommands() { return []; },
+    describeCommand() { return undefined; },
+    async invoke() {
+      return {
+        ok: true,
+        code: "phase-release-state",
+        message: "big",
+        data: { blob: "x".repeat(3000) }
+      };
+    }
+  };
+
+  const response = await handleMcpRequest(
+    {
+      jsonrpc: "2.0",
+      id: "version-oversized",
+      method: "tools/call",
+      params: {
+        name: "workflow-cannon.phase-release-state",
+        arguments: { phaseKey: "134" }
+      }
+    },
+    { runtime, maxToolResponseBytes: 500 }
+  );
+
+  const envelope = JSON.parse(response?.result.content.at(0).text);
+  assert.equal(envelope.oversized, true, "confirms oversized path");
+  assert.equal(envelope.schemaVersion, MCP_ENVELOPE_SCHEMA_VERSION, "oversized envelope carries schemaVersion");
+  assert.equal(envelope.toolVersion, MCP_DEFAULT_TOOL_SCHEMA_VERSION, "oversized envelope carries toolVersion");
+});
+
+test("MCP capabilities payload includes versionContract with policy ref", async () => {
+  const response = await handleMcpRequest({
+    jsonrpc: "2.0",
+    id: "capabilities-version",
+    method: "tools/call",
+    params: {
+      name: "workflow-cannon.capabilities",
+      arguments: {}
+    }
+  });
+
+  const capabilities = JSON.parse(response?.result.content.at(0).text);
+  assert.equal(capabilities.schemaVersion, MCP_ENVELOPE_SCHEMA_VERSION, "capabilities carries schemaVersion");
+  assert.equal(capabilities.toolVersion, MCP_DEFAULT_TOOL_SCHEMA_VERSION, "capabilities carries toolVersion");
+  assert.ok(capabilities.versionContract, "versionContract block present");
+  assert.equal(capabilities.versionContract.envelopeSchemaVersion, MCP_ENVELOPE_SCHEMA_VERSION);
+  assert.equal(capabilities.versionContract.defaultToolSchemaVersion, MCP_DEFAULT_TOOL_SCHEMA_VERSION);
+  assert.match(capabilities.versionContract.policy, /mcp-tool-version-policy/);
+});
+
+test("MCP agent_start payload includes schemaVersion and toolVersion", async () => {
+  const response = await handleMcpRequest({
+    jsonrpc: "2.0",
+    id: "agent-start-version",
+    method: "tools/call",
+    params: {
+      name: "workflow-cannon.agent_start",
+      arguments: {}
+    }
+  });
+
+  const payload = JSON.parse(response?.result.content.at(0).text);
+  assert.equal(payload.schemaVersion, MCP_ENVELOPE_SCHEMA_VERSION, "agent_start carries schemaVersion");
+  assert.equal(payload.toolVersion, MCP_DEFAULT_TOOL_SCHEMA_VERSION, "agent_start carries toolVersion");
 });
 
 async function waitFor(predicate, timeoutMs = 3000) {
