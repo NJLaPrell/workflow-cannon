@@ -16,6 +16,7 @@ import {
 import { buildAgentInstructionSurface } from "./core/agent-instruction-surface.js";
 import { runWorkspaceConfigCli } from "./core/config-cli.js";
 import { handleRunCommand } from "./cli/run-command.js";
+import { createCommandRegistryRuntime } from "./core/module-command-router.js";
 import {
   collectPluginDoctorSummaryLines,
   collectPolicyLaneEnvDoctorSummaryLines,
@@ -666,7 +667,8 @@ export async function runCli(
         validationFailure: EXIT_VALIDATION_FAILURE,
         usageError: EXIT_USAGE_ERROR,
         internalError: EXIT_INTERNAL_ERROR
-      }
+      },
+      { createRuntime: createCommandRegistryRuntime }
     );
   }
 

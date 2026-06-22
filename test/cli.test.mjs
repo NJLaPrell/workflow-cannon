@@ -6,6 +6,7 @@ import assert from "node:assert/strict";
 import Database from "better-sqlite3";
 
 import { runCli } from "../dist/cli.js";
+import { handleRunCommand } from "../dist/cli/run-command.js";
 import { prepareKitSqliteDatabase } from "../dist/core/state/workspace-kit-sqlite.js";
 import { writeRuntimeLauncher, writeRuntimeStamp } from "../dist/core/runtime-contract.js";
 
@@ -1139,6 +1140,45 @@ test("runCli run dispatches generate-document with dryRun", async () => {
   const output = JSON.parse(capture.lines.join(""));
   assert.equal(output.ok, true);
   assert.equal(output.code, "generated-document");
+});
+
+test("handleRunCommand executes via injected runtime adapter", async () => {
+  const capture = createCapture();
+  const code = await handleRunCommand(
+    process.cwd(),
+    ["run", "explain-config", '{"path":"tasks.persistenceBackend"}'],
+    capture,
+    {
+      success: 0,
+      validationFailure: 1,
+      usageError: 2,
+      internalError: 3
+    },
+    {
+      createRuntime: (_registry, { ctx }) => ({
+        listCommands: () => [],
+        describeCommand: () => undefined,
+        invoke: async (invocation) => {
+          assert.equal(invocation.name, "explain-config");
+          return {
+            ok: true,
+            code: "runtime-adapter-invoked",
+            data: {
+              fromRuntime: true,
+              workspacePath: ctx.workspacePath
+            }
+          };
+        }
+      })
+    }
+  );
+
+  assert.equal(code, 0);
+  const output = JSON.parse(capture.lines.join(""));
+  assert.equal(output.ok, true);
+  assert.equal(output.code, "runtime-adapter-invoked");
+  assert.equal(output.data?.fromRuntime, true);
+  assert.equal(output.data?.workspacePath, process.cwd());
 });
 
 test("runCli run dispatches document-project batch with dryRun", async () => {

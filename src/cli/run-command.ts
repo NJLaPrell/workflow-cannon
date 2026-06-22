@@ -1,5 +1,9 @@
 import { CLI_REMEDIATION_DOCS } from "../core/cli-remediation.js";
-import { ModuleCommandRouter, ModuleCommandRouterError } from "../core/module-command-router.js";
+import {
+  createCommandRegistryRuntime,
+  ModuleCommandRouter,
+  ModuleCommandRouterError
+} from "../core/module-command-router.js";
 import { resolveRegistryAndConfig } from "../core/module-registry-resolve.js";
 import {
   appendPolicyTrace,
@@ -64,13 +68,19 @@ export type RunCommandExitCodes = {
   internalError: number;
 };
 
+export type RunCommandAdapterOptions = {
+  createRuntime?: typeof createCommandRegistryRuntime;
+};
+
 export async function handleRunCommand(
   cwd: string,
   args: string[],
   io: RunCommandIo,
-  codes: RunCommandExitCodes
+  codes: RunCommandExitCodes,
+  adapters: RunCommandAdapterOptions = {}
 ): Promise<number> {
   const { writeLine, writeError } = io;
+  const createRuntime = adapters.createRuntime ?? createCommandRegistryRuntime;
   const invocationId = createRunInvocationId();
   const runStartedAt = new Date().toISOString();
 
@@ -340,6 +350,7 @@ export async function handleRunCommand(
     resolvedActor: actor,
     moduleRegistry: registry
   };
+  const runtime = createRuntime(registry, { ctx });
 
   const autoCheckpoint = await tryAutoCheckpointBeforeRun({
     workspacePath: cwd,
@@ -409,7 +420,7 @@ export async function handleRunCommand(
   }
 
   try {
-    const rawResult = await router.execute(subcommand, commandArgs, ctx);
+    const rawResult = await runtime.invoke({ name: subcommand, args: commandArgs });
     if (sensitive && resolvedSensitiveApproval && policyOp) {
       const rehearsal =
         subcommand === "generate-recommendations" && commandArgs.dryRun === true ? "policy-rehearsal" : null;
