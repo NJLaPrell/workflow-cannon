@@ -50,6 +50,7 @@ test("MCP tools/list exposes only the safe read-only tool", async () => {
 
   const tools = response?.result.tools;
   const toolNames = tools.map((tool) => tool.name);
+  assert.ok(toolNames.includes("workflow-cannon.agent_start"));
   assert.ok(toolNames.includes("workflow-cannon.capabilities"));
   assert.ok(toolNames.includes("workflow-cannon.agent-execution-packet"));
   assert.ok(toolNames.includes("workflow-cannon.phase-release-orchestration-state"));
@@ -80,6 +81,40 @@ test("MCP tools/list descriptions include fallback and common-mistake contract",
   const packetTool = tools.find((tool) => tool.name === "workflow-cannon.agent-execution-packet");
   assert.match(packetTool.description, /agent-execution-packet/);
   assert.match(packetTool.description, /implementing from a draft packet/i);
+});
+
+test("MCP tools/call agent_start recommends phase release orchestration for Complete and Release", async () => {
+  const auditLog = [];
+  const response = await handleMcpRequest({
+    jsonrpc: "2.0",
+    id: "agent-start",
+    method: "tools/call",
+    params: {
+      name: "workflow-cannon.agent_start",
+      arguments: {}
+    }
+  }, { auditLog });
+
+  assert.equal(response?.result.isError, false);
+  const text = response?.result.content.at(0).text;
+  const payload = JSON.parse(text);
+  assert.equal(payload.mode, "read-only");
+  assert.equal(payload.mutationToolsEnabled, false);
+  assert.equal(payload.readOnlyToolsOnly, true);
+  assert.ok(Array.isArray(payload.toolsAvailable));
+  assert.ok(payload.toolsAvailable.includes("workflow-cannon.agent_start"));
+  assert.ok(payload.toolsAvailable.includes("workflow-cannon.capabilities"));
+  assert.match(payload.cliFallback.command, /agent-bootstrap/);
+  const completeRelease = payload.workflowRecommendations.find(
+    (row) => row.workflowId === "complete-and-release"
+  );
+  assert.ok(completeRelease);
+  assert.equal(
+    completeRelease.recommendedMcpTool,
+    "workflow-cannon.phase-release-orchestration-state"
+  );
+  assert.match(completeRelease.recommendedCliCommand, /phase-release-orchestration-state/);
+  assert.equal(auditLog.at(0).toolName, "workflow-cannon.agent_start");
 });
 
 test("MCP tools/call reports mutation tools disabled", async () => {

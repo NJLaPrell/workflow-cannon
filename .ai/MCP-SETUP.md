@@ -48,9 +48,10 @@ node --test test/mcp-server.test.mjs
 
 ## First MCP calls
 
-1. **`workflow-cannon.capabilities`** — describe the read-only tool surface and recommended bootstrap flow.
-2. **`workflow-cannon.phase-release-orchestration-state`** — phase release path classification (orchestrators).
-3. **`workflow-cannon.agent-execution-packet`** — locked assignment / draft execution packets (workers).
+1. **`workflow-cannon.agent_start`** — cold-start bootstrap: read-only mode, available tools, workflow-specific next steps (including Complete and Release → `phase-release-orchestration-state`).
+2. **`workflow-cannon.capabilities`** — full read-only tool surface and descriptor contract.
+3. **`workflow-cannon.phase-release-orchestration-state`** — phase release path classification (orchestrators).
+4. **`workflow-cannon.agent-execution-packet`** — locked assignment / draft execution packets (workers).
 
 Every tool description includes a **CLI fallback** (`pnpm exec wk run <command> '…'`) and **common mistakes**. Prefer MCP when fresh; use the embedded fallback when not.
 

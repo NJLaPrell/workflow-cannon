@@ -110,6 +110,10 @@ const serverDefaults = {
 
 const TOOL_DESCRIPTION_CONTRACT_VERSION = 1;
 const DESCRIPTION_COMMON_MISTAKE_LIMIT = 2;
+const AGENT_START_TOOL_NAME = "workflow-cannon.agent_start";
+const CAPABILITIES_TOOL_NAME = "workflow-cannon.capabilities";
+const AGENT_START_BYTE_BUDGET = 6 * 1024;
+const PHASE_RELEASE_ORCHESTRATION_TOOL_NAME = "workflow-cannon.phase-release-orchestration-state";
 
 const packetReadTools: ReadOnlyMcpToolDefinition[] = [
   {
@@ -419,6 +423,19 @@ function formatMcpToolDescription(input: {
   ].join(" ");
 }
 
+function agentStartToolDescription(): string {
+  return formatMcpToolDescription({
+    description:
+      "Bootstrap Workflow Cannon MCP: read-only mode, tool availability, and workflow-specific next steps.",
+    commandName: "agent-bootstrap",
+    cliFallbackArgs: '{"projection":"lean"}',
+    commonMistakes: [
+      "skipping agent_start on cold start",
+      "assuming agent_start enables mutation or replaces capabilities for full tool metadata"
+    ]
+  });
+}
+
 function capabilitiesToolDescription(): string {
   return formatMcpToolDescription({
     description: "Describe the read-only Workspace Kit MCP surface and descriptor contract.",
@@ -431,17 +448,32 @@ function capabilitiesToolDescription(): string {
   });
 }
 
-export function listReadOnlyMcpTools(): McpToolDescriptor[] {
+function listBootstrapMcpToolDescriptors(): McpToolDescriptor[] {
   return [
     {
-      name: "workflow-cannon.capabilities",
-      description: capabilitiesToolDescription(),
+      name: AGENT_START_TOOL_NAME,
+      description: agentStartToolDescription(),
       inputSchema: {
         type: "object",
         properties: {},
         additionalProperties: false
       }
     },
+    {
+      name: CAPABILITIES_TOOL_NAME,
+      description: capabilitiesToolDescription(),
+      inputSchema: {
+        type: "object",
+        properties: {},
+        additionalProperties: false
+      }
+    }
+  ];
+}
+
+export function listReadOnlyMcpTools(): McpToolDescriptor[] {
+  return [
+    ...listBootstrapMcpToolDescriptors(),
     ...packetReadTools.map((tool) => ({
       name: tool.toolName,
       description: formatMcpToolDescription(tool),
@@ -529,6 +561,148 @@ async function handleJsonLine(
   }
 }
 
+async function handleAgentStartToolCall(id: JsonRpcId, options: McpServerOptions): Promise<JsonRpcResponse> {
+  const workspaceBinding = resolveMcpWorkspaceBinding(options);
+  let sessionSummary: Record<string, unknown> | undefined;
+  try {
+    const runtime = options.runtime ?? createDefaultMcpRuntime(options);
+    const bootstrapResult = await runtime.invoke({
+      name: "agent-bootstrap",
+      args: { projection: "lean" }
+    });
+    if (bootstrapResult.ok && bootstrapResult.data) {
+      sessionSummary = summarizeAgentBootstrapData(bootstrapResult.data);
+    }
+  } catch {
+    sessionSummary = undefined;
+  }
+
+  const payload = buildAgentStartPayload(workspaceBinding, sessionSummary);
+  const text = JSON.stringify(payload, null, 2);
+  const byteBudget = AGENT_START_BYTE_BUDGET;
+  const oversized = Buffer.byteLength(text, "utf8") > byteBudget;
+
+  recordAuditEvent(options, AGENT_START_TOOL_NAME, "success", {
+    command: "agent-bootstrap",
+    mutationToolsEnabled: false,
+    workspaceRoot: workspaceBinding.workspaceRoot,
+    oversized
+  });
+
+  return successResponse(id, {
+    content: [{ type: "text", text }],
+    isError: false
+  });
+}
+
+function handleCapabilitiesToolCall(id: JsonRpcId, options: McpServerOptions): JsonRpcResponse {
+  const workspaceBinding = resolveMcpWorkspaceBinding(options);
+  recordAuditEvent(options, CAPABILITIES_TOOL_NAME, "success", {
+    command: "capabilities",
+    mutationToolsEnabled: false,
+    workspaceRoot: workspaceBinding.workspaceRoot
+  });
+  return successResponse(id, {
+    content: [
+      {
+        type: "text",
+        text: JSON.stringify(
+          {
+            mode: "read-only",
+            mutationToolsEnabled: false,
+            startup: {
+              healthy: true,
+              workspaceBinding
+            },
+            auditLogging: {
+              bounded: true,
+              redacted: true
+            },
+            toolDescriptionContract: {
+              schemaVersion: TOOL_DESCRIPTION_CONTRACT_VERSION,
+              requiredSegments: ["description", "CLI fallback", "Common mistakes"]
+            },
+            tools: listReadOnlyMcpTools().map((tool) => tool.name),
+            byteBudget: resolveToolResponseByteBudget(options)
+          },
+          null,
+          2
+        )
+      }
+    ],
+    isError: false
+  });
+}
+
+function buildAgentStartPayload(
+  workspaceBinding: McpWorkspaceBinding,
+  sessionSummary?: Record<string, unknown>
+): Record<string, unknown> {
+  const tools = listReadOnlyMcpTools().map((tool) => tool.name);
+  return {
+    schemaVersion: 1,
+    tool: AGENT_START_TOOL_NAME,
+    mode: "read-only",
+    mutationToolsEnabled: false,
+    readOnlyToolsOnly: true,
+    toolsAvailable: tools,
+    recommendedNextTool: CAPABILITIES_TOOL_NAME,
+    workflowRecommendations: [
+      {
+        workflowId: "complete-and-release",
+        label: "Complete and Release",
+        recommendedMcpTool: PHASE_RELEASE_ORCHESTRATION_TOOL_NAME,
+        recommendedCliCommand:
+          "pnpm exec wk run phase-release-orchestration-state '{\"phaseKey\":\"<phase>\",\"scope\":\"current\",\"integrationBranch\":\"release/phase-<phase>\",\"dashboardAuthorization\":\"complete-and-release\"}'",
+        rationale:
+          "Classify the phase release path (verdict, refs, publish safety) before drain, closeout, or publish work."
+      },
+      {
+        workflowId: "task-worker",
+        label: "Task worker delivery",
+        recommendedMcpTool: "workflow-cannon.agent-execution-packet",
+        recommendedCliCommand:
+          "pnpm exec wk run agent-execution-packet '{\"mode\":\"draft\",\"taskId\":\"<task>\",\"phaseKey\":\"<phase>\"}'",
+        rationale: "Fetch a locked assignment packet or draft packet before implementation."
+      }
+    ],
+    cliFallback: {
+      command: "pnpm exec wk run agent-bootstrap '{}'",
+      leanProjection: "pnpm exec wk run agent-bootstrap '{\"projection\":\"lean\"}'"
+    },
+    startup: {
+      healthy: true,
+      workspaceBinding
+    },
+    byteBudget: AGENT_START_BYTE_BUDGET,
+    ...(sessionSummary ? { session: sessionSummary } : {})
+  };
+}
+
+function summarizeAgentBootstrapData(data: unknown): Record<string, unknown> {
+  if (typeof data !== "object" || data === null) {
+    return {};
+  }
+  const record = data as Record<string, unknown>;
+  const suggestedNext =
+    typeof record.suggestedNext === "object" && record.suggestedNext !== null
+      ? (record.suggestedNext as Record<string, unknown>)
+      : null;
+  return {
+    planningGeneration: record.planningGeneration ?? null,
+    planningGenerationPolicy: record.planningGenerationPolicy ?? null,
+    suggestedNext: suggestedNext
+      ? {
+          id: suggestedNext.id ?? null,
+          title: suggestedNext.title ?? null,
+          status: suggestedNext.status ?? null
+        }
+      : null,
+    phase: record.phase ?? null,
+    queueHealth: record.queueHealth ?? null
+  };
+}
+
 async function handleToolCall(
   id: JsonRpcId,
   params: unknown,
@@ -541,43 +715,12 @@ async function handleToolCall(
     return errorResponse(id, -32602, "Invalid params");
   }
 
-  if (params.name === "workflow-cannon.capabilities") {
-    const workspaceBinding = resolveMcpWorkspaceBinding(options);
-    recordAuditEvent(options, params.name, "success", {
-      command: "capabilities",
-      mutationToolsEnabled: false,
-      workspaceRoot: workspaceBinding.workspaceRoot
-    });
-    return successResponse(id, {
-      content: [
-        {
-          type: "text",
-          text: JSON.stringify(
-            {
-              mode: "read-only",
-              mutationToolsEnabled: false,
-              startup: {
-                healthy: true,
-                workspaceBinding
-              },
-              auditLogging: {
-                bounded: true,
-                redacted: true
-              },
-              toolDescriptionContract: {
-                schemaVersion: TOOL_DESCRIPTION_CONTRACT_VERSION,
-                requiredSegments: ["description", "CLI fallback", "Common mistakes"]
-              },
-              tools: listReadOnlyMcpTools().map((tool) => tool.name),
-              byteBudget: resolveToolResponseByteBudget(options)
-            },
-            null,
-            2
-          )
-        }
-      ],
-      isError: false
-    });
+  if (params.name === AGENT_START_TOOL_NAME) {
+    return handleAgentStartToolCall(id, options);
+  }
+
+  if (params.name === CAPABILITIES_TOOL_NAME) {
+    return handleCapabilitiesToolCall(id, options);
   }
 
   const definition = toolDefinitionsByName.get(params.name);
