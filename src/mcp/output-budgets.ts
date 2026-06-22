@@ -33,7 +33,10 @@ export const MCP_TOOL_OUTPUT_BYTE_BUDGETS: Readonly<Record<string, number>> = {
   "workflow-cannon.cae-get-trace": 8 * 1024,
   "workflow-cannon.cae-recent-traces": 8 * 1024,
   "workflow-cannon.memory-list": 8 * 1024,
-  "workflow-cannon.memory-precedence": 8 * 1024
+  "workflow-cannon.memory-precedence": 8 * 1024,
+  // Mutation tools (opt-in via WORKFLOW_CANNON_MCP_MUTATION_TOOLS=1)
+  "workflow-cannon.run-transition": 12 * 1024,
+  "workflow-cannon.write-memory": 8 * 1024
 };
 
 /**

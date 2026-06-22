@@ -40,11 +40,16 @@ const manifestCommandNames = new Set(
 );
 
 const require = createRequire(import.meta.url);
-const { listReadOnlyMcpTools } = require(DIST_MCP);
+const { listReadOnlyMcpTools, listMutationMcpToolDescriptors } = require(DIST_MCP);
 const rawTools = listReadOnlyMcpTools();
 
 if (!Array.isArray(rawTools) || rawTools.length === 0) {
   fail("listReadOnlyMcpTools() returned empty result.");
+}
+
+const rawMutationTools = listMutationMcpToolDescriptors();
+if (!Array.isArray(rawMutationTools)) {
+  fail("listMutationMcpToolDescriptors() did not return an array.");
 }
 
 /** Extract CLI command name from the "CLI fallback: pnpm exec wk run <cmd>" description pattern. */
@@ -80,15 +85,39 @@ if (unknownCmds.length > 0) {
   );
 }
 
+const mutationTools = [];
+const unknownMutationCmds = [];
+
+for (const tool of rawMutationTools) {
+  const cliCommand = extractCliCommand(tool.description);
+  if (cliCommand && !manifestCommandNames.has(cliCommand)) {
+    unknownMutationCmds.push(`${tool.name} -> ${cliCommand}`);
+  }
+  mutationTools.push({
+    name: tool.name,
+    cliCommand: cliCommand ?? null,
+    inputSchema: tool.inputSchema
+  });
+}
+
+if (unknownMutationCmds.length > 0) {
+  fail(
+    `Mutation tool CLI command(s) not found in builtin-run-command-manifest.json:\n  ${unknownMutationCmds.join("\n  ")}\n` +
+    "Update the manifest or fix the CLI fallback in the mutation tool description."
+  );
+}
+
 const snapshot = {
   schemaVersion: 1,
   generatedAt: new Date().toISOString(),
   packageVersion: pkg.version,
   toolCount: tools.length,
-  tools
+  tools,
+  mutationToolCount: mutationTools.length,
+  mutationTools
 };
 
 fs.writeFileSync(OUT_PATH, `${JSON.stringify(snapshot, null, 2)}\n`, "utf8");
 console.error(
-  `[generate-mcp-tool-schema-snapshot] wrote ${tools.length} tool(s) to schemas/mcp-tool-schema-snapshot.json`
+  `[generate-mcp-tool-schema-snapshot] wrote ${tools.length} read-only + ${mutationTools.length} mutation tool(s) to schemas/mcp-tool-schema-snapshot.json`
 );
