@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 1,
+  "fragmentKind": "preparedArtifacts",
+  "releaseVersion": "1.0.0",
+  "date": "2026-06-23",
+  "createdAt": "2026-06-23T18:31:51.156Z",
+  "changedArtifacts": [
+    {
+      "path": "package.json",
+      "refs": [
+        {
+          "kind": "artifact",
+          "value": "package.json"
+        },
+        {
+          "kind": "command",
+          "value": "pnpm exec wk run prepare-release-artifacts '{\"version\":\"1.0.0\",\"date\":\"2026-06-23\"}'",
+          "instructionPath": "src/modules/task-engine/instructions/prepare-release-artifacts.md"
+        }
+      ],
+      "replacements": [
+        {
+          "description": "package version field",
+          "oldText": "\"version\": \"0.99.29\"",
+          "newText": "\"version\": \"1.0.0\""
+        }
+      ]
+    },
+    {
+      "path": "CHANGELOG.md",
+      "refs": [
+        {
+          "kind": "artifact",
+          "value": "CHANGELOG.md"
+        },
+        {
+          "kind": "command",
+          "value": "pnpm exec wk run prepare-release-artifacts '{\"version\":\"1.0.0\",\"date\":\"2026-06-23\"}'",
+          "instructionPath": "src/modules/task-engine/instructions/prepare-release-artifacts.md"
+        }
+      ],
+      "replacements": [
+        {
+          "description": "insert root changelog release pointer",
+          "oldText": "",
+          "newText": "## [1.0.0] - 2026-06-23\n\n- See `docs/maintainers/CHANGELOG.md` for release notes, migration notes, and historical entries.\n\n"
+        }
+      ]
+    },
+    {
+      "path": "docs/maintainers/CHANGELOG.md",
+      "refs": [
+        {
+          "kind": "artifact",
+          "value": "docs/maintainers/CHANGELOG.md"
+        },
+        {
+          "kind": "command",
+          "value": "pnpm exec wk run prepare-release-artifacts '{\"version\":\"1.0.0\",\"date\":\"2026-06-23\"}'",
+          "instructionPath": "src/modules/task-engine/instructions/prepare-release-artifacts.md"
+        }
+      ],
+      "replacements": [
+        {
+          "description": "roll maintainer changelog unreleased notes into a release section",
+          "oldText": "\n\nMajor — **Phase 117 Wishlist removal** (retire wishlist ideation surface; migrate operators to Ideas + planner-chat).\n\n### Breaking\n\n- **Wishlist module and CLI verbs removed** — `add-wishlist`, `list-wishlist`, `get-wishlist`, `update-wishlist`, `convert-wishlist`, `migrate-wishlist-intake`, and related dashboard wishlist hydration controls are gone. Use **Ideas** (`create-idea`, `list-ideas`, planner-chat playbooks) for ideation instead.\n- **`wishlist_intake` task rows discarded on upgrade** — SQLite migration drops legacy wishlist-intake tasks and clears stale wishlist build-plan session state. **Back up `.workspace-kit/tasks/workspace-kit.db` (or your configured planning SQLite path) before upgrading.**\n- **Docs, schemas, and agent surfaces repointed** — wishlist playbooks, prompts, Cursor rules, CLI snippets, and contract defs removed; canon now references Ideas and planner-chat workflows.\n\n### Removed\n\n- Wishlist command module, persistence store, and dashboard wishlist slice wiring.\n- Wishlist intake conversion path from build-plan (default output is tasks-only).\n\n### Migration\n\n1. Export or note any open wishlist items you still need — they are not preserved across upgrade.\n2. Copy `.workspace-kit/tasks/workspace-kit.db` to a safe backup path.\n3. Upgrade to **v1.0.0**, run `pnpm exec wk doctor`, and capture new ideation via Ideas (`create-idea`) or planner-chat as needed.\n\n",
+          "newText": "\n\n## [1.0.0] - 2026-06-23\n\nMajor — **Phase 117 Wishlist removal** (retire wishlist ideation surface; migrate operators to Ideas + planner-chat).\n\n### Breaking\n\n- **Wishlist module and CLI verbs removed** — `add-wishlist`, `list-wishlist`, `get-wishlist`, `update-wishlist`, `convert-wishlist`, `migrate-wishlist-intake`, and related dashboard wishlist hydration controls are gone. Use **Ideas** (`create-idea`, `list-ideas`, planner-chat playbooks) for ideation instead.\n- **`wishlist_intake` task rows discarded on upgrade** — SQLite migration drops legacy wishlist-intake tasks and clears stale wishlist build-plan session state. **Back up `.workspace-kit/tasks/workspace-kit.db` (or your configured planning SQLite path) before upgrading.**\n- **Docs, schemas, and agent surfaces repointed** — wishlist playbooks, prompts, Cursor rules, CLI snippets, and contract defs removed; canon now references Ideas and planner-chat workflows.\n\n### Removed\n\n- Wishlist command module, persistence store, and dashboard wishlist slice wiring.\n- Wishlist intake conversion path from build-plan (default output is tasks-only).\n\n### Migration\n\n1. Export or note any open wishlist items you still need — they are not preserved across upgrade.\n2. Copy `.workspace-kit/tasks/workspace-kit.db` to a safe backup path.\n3. Upgrade to **v1.0.0**, run `pnpm exec wk doctor`, and capture new ideation via Ideas (`create-idea`) or planner-chat as needed.\n\n"
+        }
+      ]
+    },
+    {
+      "path": "schemas/task-engine-run-contracts.schema.json",
+      "refs": [
+        {
+          "kind": "artifact",
+          "value": "schemas/task-engine-run-contracts.schema.json"
+        },
+        {
+          "kind": "command",
+          "value": "pnpm exec wk run prepare-release-artifacts '{\"version\":\"1.0.0\",\"date\":\"2026-06-23\"}'",
+          "instructionPath": "src/modules/task-engine/instructions/prepare-release-artifacts.md"
+        }
+      ],
+      "replacements": [
+        {
+          "description": "schema packageVersion const",
+          "oldText": "\"packageVersion\": {\n      \"const\": \"0.99.29\"",
+          "newText": "\"packageVersion\": {\n      \"const\": \"1.0.0\""
+        }
+      ]
+    },
+    {
+      "path": "schemas/pilot-run-args.snapshot.json",
+      "refs": [
+        {
+          "kind": "artifact",
+          "value": "schemas/pilot-run-args.snapshot.json"
+        },
+        {
+          "kind": "command",
+          "value": "pnpm exec wk run prepare-release-artifacts '{\"version\":\"1.0.0\",\"date\":\"2026-06-23\"}'",
+          "instructionPath": "src/modules/task-engine/instructions/prepare-release-artifacts.md"
+        }
+      ],
+      "replacements": [
+        {
+          "description": "pilot snapshot sourceSchemaPackageVersion",
+          "oldText": "\"sourceSchemaPackageVersion\": \"0.99.29\"",
+          "newText": "\"sourceSchemaPackageVersion\": \"1.0.0\""
+        }
+      ]
+    }
+  ]
+}
