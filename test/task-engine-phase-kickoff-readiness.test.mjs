@@ -3,12 +3,24 @@ import { mkdtemp, mkdir } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { describe, it } from "node:test";
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
 
+import { runCli } from "../dist/cli.js";
 import { SqliteDualPlanningStore, TaskStore, taskEngineModule } from "../dist/index.js";
 
-const execFileAsync = promisify(execFile);
+function createCapture() {
+  const lines = [];
+  const errors = [];
+  return {
+    lines,
+    errors,
+    writeLine(message) {
+      lines.push(message);
+    },
+    writeError(message) {
+      errors.push(message);
+    }
+  };
+}
 
 function makeTask(overrides = {}) {
   const now = new Date().toISOString();
@@ -53,12 +65,13 @@ async function seedSqliteStore(workspace, fn) {
 describe("phase-kickoff-readiness command", () => {
   it("returns schema-only JSON schema", async () => {
     const repoRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
-    const { stdout } = await execFileAsync(
-      "pnpm",
-      ["exec", "wk", "run", "phase-kickoff-readiness", "--schema-only", "{}"],
-      { cwd: repoRoot, env: process.env }
-    );
-    const result = JSON.parse(stdout);
+    const capture = createCapture();
+    const code = await runCli(["run", "phase-kickoff-readiness", "--schema-only", "{}"], {
+      cwd: repoRoot,
+      ...capture
+    });
+    assert.equal(code, 0, capture.errors.join("\n") || capture.lines.join("\n"));
+    const result = JSON.parse(capture.lines.join(""));
     assert.equal(result.ok, true);
     assert.equal(result.code, "run-args-schema");
     assert.equal(result.command, "phase-kickoff-readiness");

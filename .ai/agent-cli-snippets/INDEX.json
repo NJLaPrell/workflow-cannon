@@ -893,12 +893,7 @@
       "moduleId": "task-engine"
     },
     {
-      "name": "phase-kickoff-readiness",
-      "path": ".ai/agent-cli-snippets/by-command/phase-kickoff-readiness.json",
-      "moduleId": "task-engine"
-    },
-    {
-      "name": "phase-release-orchestration-state",
+      "name": "phase-focus-dashboard",
       "path": ".ai/agent-cli-snippets/by-command/phase-release-orchestration-state.json",
       "moduleId": "task-engine"
     },
