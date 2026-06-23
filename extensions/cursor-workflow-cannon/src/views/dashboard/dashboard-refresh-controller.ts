@@ -31,7 +31,7 @@ export class DashboardRefreshController {
   private queued = false;
   private suppressed = false;
   private refreshAfterDeferred = false;
-  private pendingMode: DashboardRefreshMode = "full";
+  private pendingMode: DashboardRefreshMode = "light";
   private debounceTimer: ReturnType<typeof setTimeout> | undefined;
   private readonly debounceMs: number;
 

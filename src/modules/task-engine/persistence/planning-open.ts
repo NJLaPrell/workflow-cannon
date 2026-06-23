@@ -30,16 +30,69 @@ function assertNativeBindingArchitecture(workspacePath: string): void {
   );
 }
 
+import { cliPerfTracer } from "../../../core/cli-perf-trace.js";
+
 export async function openPlanningStores(ctx: ModuleLifecycleContext): Promise<OpenedPlanningStores> {
-  assertNativeBindingArchitecture(ctx.workspacePath);
-  const dual = new SqliteDualPlanningStore(
-    ctx.workspacePath,
-    planningSqliteDatabaseRelativePath(ctx)
-  );
-  dual.loadFromDisk();
-  const taskStore = TaskStore.forSqliteDual(dual);
-  await taskStore.load();
-  collapseLegacyWishlistSqliteIfNeeded(dual, taskStore);
-  await taskStore.load();
-  return { sqliteDual: dual, taskStore };
+  return openPlanningStoresFull(ctx);
 }
+
+export async function openPlanningStoresFull(ctx: ModuleLifecycleContext): Promise<OpenedPlanningStores> {
+  return cliPerfTracer.spanAsync("openPlanningStoresFull", async () => {
+    assertNativeBindingArchitecture(ctx.workspacePath);
+    const dual = new SqliteDualPlanningStore(
+      ctx.workspacePath,
+      planningSqliteDatabaseRelativePath(ctx)
+    );
+    dual.loadFromDisk();
+    const taskStore = TaskStore.forSqliteDual(dual);
+    await taskStore.load();
+    collapseLegacyWishlistSqliteIfNeeded(dual, taskStore);
+    await taskStore.load();
+    return { sqliteDual: dual, taskStore };
+  });
+}
+
+export async function openPlanningStoresReadOnly(ctx: ModuleLifecycleContext): Promise<OpenedPlanningStores> {
+  return cliPerfTracer.spanAsync("openPlanningStoresReadOnly", async () => {
+    assertNativeBindingArchitecture(ctx.workspacePath);
+    const dual = new SqliteDualPlanningStore(
+      ctx.workspacePath,
+      planningSqliteDatabaseRelativePath(ctx),
+      true // readOnly = true
+    );
+    dual.loadFromDisk();
+    const taskStore = TaskStore.forSqliteDual(dual);
+    await taskStore.load();
+    return { sqliteDual: dual, taskStore };
+  });
+}
+
+export async function openPlanningStoresForDashboardSlice(
+  ctx: ModuleLifecycleContext,
+  sliceName: string
+): Promise<OpenedPlanningStores> {
+  return cliPerfTracer.spanAsync(`openPlanningStoresForDashboardSlice:${sliceName}`, async () => {
+    assertNativeBindingArchitecture(ctx.workspacePath);
+    
+    // Choose skip flags based on what slices need
+    // Slices like 'cae' do not need task store hydration at all
+    const skipTasks = sliceName === "cae";
+    // Slices like 'agentActivity', 'team', 'subagents', 'checkpoints', 'config', 'planArtifact'
+    // only read minimal properties and do not need the full transition/mutation logs parsed in JS.
+    const skipLogs = sliceName !== "queue" && sliceName !== "overview" && sliceName !== "status";
+
+    const dual = new SqliteDualPlanningStore(
+      ctx.workspacePath,
+      planningSqliteDatabaseRelativePath(ctx),
+      true, // readOnly = true
+      { skipTasks, skipLogs }
+    );
+    dual.loadFromDisk();
+    const taskStore = TaskStore.forSqliteDual(dual);
+    if (!skipTasks) {
+      await taskStore.load();
+    }
+    return { sqliteDual: dual, taskStore };
+  });
+}
+

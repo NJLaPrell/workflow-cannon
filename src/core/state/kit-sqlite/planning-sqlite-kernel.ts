@@ -1299,8 +1299,14 @@ CREATE INDEX idx_kit_phase_delivery_history_status
 export function prepareKitSqliteDatabase(db: SqliteDatabase): void {
   db.pragma("foreign_keys = ON");
   db.pragma("busy_timeout = 10000");
-  db.pragma("journal_mode = WAL");
-  migrateKitSqliteSchema(db);
+  try {
+    db.pragma("journal_mode = WAL");
+  } catch {
+    // WAL might be blocked on a read-only database / filesystem
+  }
+  if (!db.readonly) {
+    migrateKitSqliteSchema(db);
+  }
 }
 
 function migrateKitSqliteSchema(db: SqliteDatabase): void {

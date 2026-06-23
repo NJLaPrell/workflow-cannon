@@ -1,14 +1,16 @@
 import type { DashboardSummaryData } from "../../../contracts/dashboard-summary-run.js";
 
-export type DashboardSummaryProjection = "full" | "overview" | "queue" | "status" | "agentActivity";
+export type DashboardSummaryProjection = "full" | "overview" | "queue" | "status" | "agentActivity" | "agentTypes";
 
 const PROJECTIONS: readonly DashboardSummaryProjection[] = [
   "full",
   "overview",
   "queue",
   "status",
-  "agentActivity"
+  "agentActivity",
+  "agentTypes"
 ];
+
 
 export function parseDashboardSummaryProjection(args?: Record<string, unknown>): DashboardSummaryProjection {
   const raw = args?.projection;
@@ -169,6 +171,19 @@ export function finalizeDashboardSummaryProjection(
       agentActivitySummary: data.agentActivitySummary,
     } as DashboardSummaryData;
   }
+
+  if (projection === "agentTypes") {
+    return {
+      schemaVersion: data.schemaVersion,
+      planningGeneration: data.planningGeneration,
+      planningGenerationPolicy: data.planningGenerationPolicy,
+      taskStoreLastUpdated: data.taskStoreLastUpdated,
+      dashboardProjection: projection,
+      subagentRegistry: data.subagentRegistry,
+      agentRegistrySessions: data.agentRegistrySessions
+    } as DashboardSummaryData;
+  }
+
 
   if (projection === "queue") {
     return {

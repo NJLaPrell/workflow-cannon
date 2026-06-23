@@ -1363,5 +1363,21 @@
       "project",
       "user"
     ]
+  },
+  "dashboard.enableBootstrapFallback": {
+    "key": "dashboard.enableBootstrapFallback",
+    "type": "boolean",
+    "description": "When true, the dashboard view provider will fall back to a bootstrap batch command if the dashboard service is unavailable.",
+    "default": true,
+    "domainScope": "project",
+    "owningModule": "task-engine",
+    "sensitive": false,
+    "requiresRestart": false,
+    "requiresApproval": false,
+    "exposure": "public",
+    "writableLayers": [
+      "project",
+      "user"
+    ]
   }
 }

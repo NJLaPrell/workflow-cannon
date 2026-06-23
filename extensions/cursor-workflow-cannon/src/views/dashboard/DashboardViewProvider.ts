@@ -760,7 +760,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
 
   private ingestDashboardSummaryIntoStore(
     data: Record<string, unknown>,
-    projection: "full" | "overview" | "queue" | "status" | "agentActivity"
+    projection: "overview" | "queue" | "status" | "agentActivity"
   ): void {
     const planningGeneration =
       typeof data.planningGeneration === "number" ? data.planningGeneration : null;
@@ -1014,7 +1014,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         this.dashboardInteractionLocks.clear();
         this.dashboardRefreshAfterInteraction = false;
         await webview.postMessage({ type: "wcReleaseRefreshBlock" });
-        await this.pushUpdate({ projection: "full", skipHeavyFetches: false, source: "manual refresh" });
+        await this.pushUpdate({ projection: "overview", skipHeavyFetches: false, source: "manual refresh" });
       }
       if (msg?.type === "dashboardWebviewBoot") {
         logWc("dashboard", "webview boot");
@@ -1799,7 +1799,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     logWc("dashboard", "ensureQueueRollupsHydrated: upgrading overview stub to queue projection");
     const seq = updateSequence ?? this.refreshController.currentGeneration();
-    await this.patchDashboardSectionsFromSummary(["queue", "overview", "planning-interview"], seq, {
+    await this.patchDashboardSectionsFromSummary(["queue", "overview"], seq, {
       projection: "queue",
       preserveOnSummaryFailure: true,
       source: this.activeDashboardTab === "task-engine" ? "tab:task-engine queue hydration" : "tab:overview queue hydration"
@@ -2176,7 +2176,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       const summaryData = raw.data as Record<string, unknown>;
       this.lastDashboardSummaryData = summaryData;
       ingestPlanningMetaFromData(summaryData);
-      this.ingestDashboardSummaryIntoStore(summaryData, summaryProjection);
+      const ingestProjection = summaryProjection === "full" ? "overview" : summaryProjection;
+      this.ingestDashboardSummaryIntoStore(summaryData, ingestProjection);
       const contentFp = computeQueueContentFingerprint(summaryData);
       if (
         options?.light === true &&
@@ -2833,7 +2834,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     await this.view?.webview.postMessage({ type: "wcReleaseRefreshBlock" });
     await this.applyDashboardMutationInvalidation("workspace-wide");
     await this.pushUpdate({
-      projection: "full",
+      projection: "overview",
       skipHeavyFetches: false,
       light: false,
       source: "user:phase-roster start"
@@ -3515,7 +3516,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
     await vscode.window.showInformationMessage(`Accepted plan ${planId}.`);
     await this.pushUpdate({
-      projection: "full",
+      projection: "overview",
       skipHeavyFetches: false,
       source: "user:plan-artifact accept"
     });
@@ -3546,7 +3547,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       passed ? `Reviewed plan ${planId}.` : `Reviewed plan ${planId}; findings need attention.`
     );
     await this.pushUpdate({
-      projection: "full",
+      projection: "overview",
       skipHeavyFetches: false,
       source: "user:plan-artifact review"
     });
@@ -3597,7 +3598,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       `Finalized plan ${planId}${Number.isFinite(count) && count > 0 ? ` into ${count} task(s)` : ""}.`
     );
     await this.pushUpdate({
-      projection: "full",
+      projection: "overview",
       skipHeavyFetches: false,
       source: "user:plan-artifact finalize"
     });
@@ -4724,7 +4725,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       ingestPlanningMetaFromData(raw.data as Record<string, unknown>);
       this.ingestDashboardSummaryIntoStore(
         raw.data as Record<string, unknown>,
-        summaryProjection === "overview" ? "overview" : "full"
+        "overview"
       );
       try {
         if (lightRefresh) {
@@ -6247,6 +6248,34 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     .dash-team-assignment-row { align-items: flex-start; }
     .dash-team-assignment-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
     .dash-team-assignment-meta { font-size: 11px; line-height: 1.3; }
+    .dash-subagent-table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: auto;
+      margin-top: 10px;
+      font-size: 11px;
+    }
+    .dash-subagent-table th,
+    .dash-subagent-table td {
+      border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.35));
+      padding: 5px 7px;
+      text-align: left;
+      vertical-align: top;
+    }
+    .dash-subagent-table th {
+      font-weight: 600;
+      background: var(--vscode-textCodeBlock-background);
+    }
+    .dash-subagent-cmd-pill {
+      display: inline-block;
+      background: var(--vscode-badge-background, rgba(127, 127, 127, 0.2));
+      color: var(--vscode-badge-foreground, var(--vscode-foreground));
+      padding: 1px 4px;
+      border-radius: 3px;
+      margin: 1px 2px;
+      font-size: 10px;
+      font-family: var(--vscode-editor-font-family, monospace);
+    }
     .wc-card,
     .dash-card {
       background: var(--wc-surface);
@@ -6918,9 +6947,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     .wc-cae-readiness-title {
       min-width: 0;
       flex: 1;
-      display: inline-flex;
+      display: flex;
       align-items: center;
-      flex-wrap: wrap;
       gap: 4px;
     }
     .wc-cae-readiness-title b {

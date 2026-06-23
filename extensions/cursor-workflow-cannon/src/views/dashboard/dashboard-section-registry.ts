@@ -14,7 +14,6 @@ export type DashboardSectionId =
   | "phase-roster"
   | "ideas"
   | "plan-artifact"
-  | "planning-interview"
   | "queue"
   | "phase-journal"
   | "status"
@@ -69,14 +68,6 @@ export const DASHBOARD_SECTION_REGISTRY: readonly DashboardSectionDescriptor[] =
     refreshPolicy: "eager",
     ttlMs: 45_000,
     commandArgs: { slice: "planArtifact" }
-  },
-  {
-    id: "planning-interview",
-    tabId: "planning",
-    renderTarget: '[data-wc-section="planning-interview"]',
-    refreshPolicy: "eager",
-    ttlMs: 45_000,
-    commandArgs: { slice: "planningSession" }
   },
   {
     id: "queue",

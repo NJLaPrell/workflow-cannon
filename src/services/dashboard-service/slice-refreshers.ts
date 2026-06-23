@@ -1,9 +1,11 @@
 import type { ModuleLifecycleContext } from "../../contracts/module-contract.js";
 import { ModuleCommandRouter } from "../../core/module-command-router.js";
+import { cliPerfTracer, recordMetric } from "../../core/cli-perf-trace.js";
+import type { OpenedPlanningStores } from "../../modules/task-engine/persistence/planning-open.ts";
 import { resolveRegistryAndConfig } from "../../core/module-registry-resolve.js";
 import { defaultRegistryModules } from "../../modules/index.js";
-import { runDashboardSummaryCommand } from "../../modules/task-engine/commands/task-engine-dashboard-on-command.js";
-import { openPlanningStores } from "../../modules/task-engine/persistence/planning-open.js";
+import { buildDashboardOverviewSlice, buildDashboardQueueSlice, buildDashboardStatusSlice, buildDashboardAgentActivitySlice, buildDashboardAgentTypesSlice, buildDashboardTerminalTasksPage } from "../../modules/task-engine/dashboard/slice-builders.js";
+import { openPlanningStores, openPlanningStoresReadOnly } from "../../modules/task-engine/persistence/planning-open.js";
 import {
   lookupDashboardServiceSlice,
   type DashboardServiceSliceDefinition
@@ -28,7 +30,8 @@ export class DashboardSliceRefresher {
   private ctx: ModuleLifecycleContext | null = null;
   private router: ModuleCommandRouter | null = null;
   private planningGeneration = 0;
-  private storesPromise: ReturnType<typeof openPlanningStores> | null = null;
+  // Store the opened planning stores after first access
+  private storesPromise: OpenedPlanningStores | null = null;
 
   constructor(options: DashboardSliceRefresherOptions) {
     this.workspacePath = options.workspacePath;
@@ -49,6 +52,7 @@ export class DashboardSliceRefresher {
     };
     this.router = new ModuleCommandRouter(registry);
     const opened = await this.openStores();
+    // opened is guaranteed non‑null after openStores resolves
     this.planningGeneration = opened.sqliteDual.getPlanningGeneration();
   }
 
@@ -99,34 +103,112 @@ export class DashboardSliceRefresher {
     }
   }
 
-  private async openStores() {
+  private async openStores(): Promise<OpenedPlanningStores> {
     if (!this.storesPromise) {
       if (!this.ctx) {
         throw new Error("dashboard slice refresher not started");
       }
-      this.storesPromise = openPlanningStores(this.ctx);
+      // openPlanningStoresReadOnly returns OpenedPlanningStores
+      this.storesPromise = await cliPerfTracer.spanAsync('store-open', async () => openPlanningStoresReadOnly(this.ctx as ModuleLifecycleContext));
+      recordMetric('storeOpenMs', undefined);
     }
-    return this.storesPromise;
+    // Non‑null assertion because we just ensured it is set
+    return this.storesPromise!;
   }
 
   private async loadSlicePayload(def: DashboardServiceSliceDefinition): Promise<Record<string, unknown>> {
     if (!this.ctx || !this.router) {
       throw new Error("dashboard slice refresher not started");
     }
+    // Use slice-native builders for known slices that previously used dashboard-summary
     if (def.command === "dashboard-summary") {
       const opened = await this.openStores();
-      const result = await runDashboardSummaryCommand(
-        this.ctx,
-        opened.taskStore,
-        opened.sqliteDual.getPlanningGeneration(),
-        opened.sqliteDual,
-        def.args
-      );
-      if (!result.ok) {
-        throw new Error(result.message ?? `dashboard-summary failed (${result.code})`);
-      }
-      return def.extractPayload(result.data as Record<string, unknown>);
+      const { taskStore, sqliteDual } = opened;
+      const generation = sqliteDual.getPlanningGeneration();
+      // Initialise with an empty object to satisfy definite assignment analysis
+      let sliceData: Record<string, unknown> = {};
+      switch (def.name) {
+        case "overview":
+          sliceData = await cliPerfTracer.spanAsync('builder-overview', async () =>
+            buildDashboardOverviewSlice(
+              this.ctx!,
+              taskStore,
+              generation,
+              sqliteDual,
+              def.args,
+              undefined
+            )
+          );
+          recordMetric('builderOverviewMs', undefined);
+          break;
+        case "queue":
+          sliceData = await cliPerfTracer.spanAsync('builder-queue', async () =>
+            buildDashboardQueueSlice(
+              this.ctx!,
+              taskStore,
+              generation,
+              sqliteDual,
+              def.args,
+              undefined
+            )
+          );
+          recordMetric('builderQueueMs', undefined);
+          break;
+        case "status":
+          sliceData = await cliPerfTracer.spanAsync('builder-status', async () =>
+            buildDashboardStatusSlice(
+              this.ctx!,
+              taskStore,
+              generation,
+              sqliteDual,
+              def.args,
+              undefined
+            )
+          );
+          recordMetric('builderStatusMs', undefined);
+          break;
+        case "agentActivity":
+          sliceData = await cliPerfTracer.spanAsync('builder-agentActivity', async () =>
+            buildDashboardAgentActivitySlice(
+              this.ctx!,
+              taskStore,
+              generation,
+              sqliteDual,
+              def.args,
+              undefined
+            )
+          );
+          recordMetric('builderAgentActivityMs', undefined);
+          break;
+        case "agentTypes":
+          sliceData = await cliPerfTracer.spanAsync('builder-agentTypes', async () =>
+            buildDashboardAgentTypesSlice(
+              this.ctx!,
+              taskStore,
+              generation,
+              sqliteDual,
+              def.args,
+              undefined
+            )
+          );
+          recordMetric('builderAgentTypesMs', undefined);
+          break;
+        case "terminalTasks":
+          // Terminal tasks slice uses a different builder signature.
+          sliceData = await cliPerfTracer.spanAsync('builder-terminalTasks', async () =>
+            buildDashboardTerminalTasksPage(
+              taskStore,
+              sqliteDual,
+              { status: "completed", limit: 10 }
+            )
+          );
+          recordMetric('builderTerminalTasksMs', undefined);
+          break;
+        default:
+        }
+      return def.extractPayload(sliceData);
     }
+    // Fallback to original command execution for any unknown slice.
     const result = await this.router.execute(def.command, { ...def.args }, this.ctx);
     if (!result.ok) {
       throw new Error(result.message ?? `${def.command} failed (${result.code})`);

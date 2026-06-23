@@ -150,7 +150,7 @@ Patch — **Phase 122 Dashboard Option 2** (warm read service + extension auto m
 ### Added
 
 - Kit dashboard read service (`src/services/dashboard-service/`) — HTTP/SSE, SQLite snapshot store, tiered watchers, lifecycle commands.
-- `dashboard.dataSource` config: `cli-polling` | `service` | `auto` (default `auto`).
+- `dashboard.dataSource` config: `cli-polling` | `service` | `auto` (default `auto`). Updated to prioritize warm service when healthy (Task T8).
 - Extension `DashboardReadPathCoordinator`, mode badge, restart service / CLI override commands.
 - `/health` per-slice observability; `scripts/bench-dashboard-service.mjs`; Option 2 acceptance tests.
 

@@ -1702,14 +1702,15 @@ export function buildReviewApprovalItemDrawerSpec(p: {
       ? "Accept"
       : p.decision === "decline"
         ? "Decline"
-        : "Accept With Edits";
+        : "Accept Edited";
   const fields: DrawerFormField[] = [];
   if (p.decision === "accept_edited") {
     fields.push({
       id: "editedSummary",
       kind: "textarea",
-      label: "Edited summary",
-      placeholder: "Revised improvement summary",
+      label: "Edited Summary",
+      placeholder: "Revised Improvement Summary",
+      value: p.title,
       required: true,
       rows: 4
     });
@@ -1718,15 +1719,12 @@ export function buildReviewApprovalItemDrawerSpec(p: {
     ...policyRationaleDrawerFields(
       "review-approval-item",
       p.decision,
-      "Policy rationale",
-      "Recorded decision after review"
+      "Policy Rationale",
+      "Recorded Decision After Review"
     )
   );
-  const drawerTitle =
-    p.decision === "accept_edited"
-      ? `Accept With Edits -- ${p.taskId}`
-      : `${decisionLabel} — ${p.taskId}`;
-  const primaryLabel = p.decision === "accept_edited" ? "Accept" : decisionLabel;
+  const drawerTitle = `${decisionLabel} — ${p.taskId}`;
+  const primaryLabel = decisionLabel;
   const descriptionHtml =
     p.decision === "accept_edited"
       ? undefined

@@ -28,7 +28,6 @@ const SECTION_LABELS: Record<DashboardSectionId, string> = {
   "phase-roster": "Phase roster",
   ideas: "Ideas",
   "plan-artifact": "Plan artifact",
-  "planning-interview": "Planning interview",
   queue: "Task queue",
   "phase-journal": "Phase journal",
   status: "Workspace status",
@@ -79,7 +78,6 @@ export function renderDashboardShellInnerHtml(readModeBadge?: DashboardReadModeB
   const phaseRoster = renderDashboardSectionPlaceholder("phase-roster");
   const ideas = renderDashboardSectionPlaceholder("ideas");
   const planArtifact = renderDashboardSectionPlaceholder("plan-artifact");
-  const planningInterview = renderDashboardSectionPlaceholder("planning-interview");
   const queue = renderDashboardSectionPlaceholder("queue");
   const phaseJournal = renderDashboardSectionPlaceholder("phase-journal");
   const status = renderDashboardSectionPlaceholder("status");
@@ -99,7 +97,6 @@ export function renderDashboardShellInnerHtml(readModeBadge?: DashboardReadModeB
     phaseRoster +
     ideas +
     planArtifact +
-    planningInterview +
     "</div>" +
     '<div class="wc-tab-panel" data-wc-tab="task-engine" role="tabpanel" style="display:none">' +
     queue +

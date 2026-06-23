@@ -25,7 +25,7 @@ export function collapseLegacyWishlistSqliteIfNeeded(
   dual: SqliteDualPlanningStore,
   taskStore: TaskStore
 ): void {
-  if (dual.tableShape !== "legacy-dual") {
+  if (dual.readOnly || dual.tableShape !== "legacy-dual") {
     return;
   }
   const wishItems = dual.wishlistDocument.items;

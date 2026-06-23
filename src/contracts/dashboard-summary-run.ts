@@ -194,6 +194,14 @@ export type DashboardSubagentRegistrySummary = {
   definitionsCount: number;
   retiredDefinitionsCount: number;
   openSessionsCount: number;
+  definitions?: Array<{
+    id: string;
+    displayName: string;
+    description: string;
+    allowedCommands: string[];
+    retired: boolean;
+  }>;
+  /** Non-terminal sessions, newest first. */
   topOpenSessions: Array<{
     sessionId: string;
     definitionId: string;
@@ -723,4 +731,5 @@ export type DashboardSummaryCommandSuccess = {
 };
 
 /** Section slice selector for lazy dashboard hydration (T100396). Default CLI path is `full`. */
-export type DashboardSummaryProjection = "full" | "overview" | "queue" | "status" | "agentActivity";
+export type DashboardSummaryProjection = "full" | "overview" | "queue" | "status" | "agentActivity" | "agentTypes";
+

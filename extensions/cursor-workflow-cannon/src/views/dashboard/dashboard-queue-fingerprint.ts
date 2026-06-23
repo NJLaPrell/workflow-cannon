@@ -151,7 +151,7 @@ export function dashboardSummaryProjectionForSectionPatch(
   if (sectionIds.every((id) => id === "status")) {
     return "status";
   }
-  if (sectionIds.some((id) => id === "queue" || id === "planning-interview" || id === "ideas" || id === "phase-journal")) {
+  if (sectionIds.some((id) => id === "queue" || id === "ideas" || id === "phase-journal")) {
     return "queue";
   }
   return "overview";

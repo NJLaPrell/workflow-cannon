@@ -44,3 +44,29 @@ test("overview slice merge does not clobber queue rollups hydrated from queue sl
 test("agentActivity dashboard-summary projection maps to the agentActivity slice only", () => {
   assert.deepEqual(sliceNamesForDashboardSummaryProjection("agentActivity"), ["agentActivity"]);
 });
+
+test("mergeSlicePayloadIntoSummary preserves prior available data when new payload shows unavailable", () => {
+  const summary = {
+    subagentRegistry: {
+      schemaVersion: 1,
+      available: true,
+      definitionsCount: 2,
+      topOpenSessions: []
+    }
+  };
+
+  const payloadUnavailable = lookupDashboardSlice("subagents").extractPayload({
+    schemaVersion: 1,
+    dashboardProjection: "status",
+    subagentRegistry: {
+      schemaVersion: 1,
+      available: false,
+      definitionsCount: 0,
+      topOpenSessions: []
+    }
+  });
+
+  const merged = mergeSlicePayloadIntoSummary(summary, "subagents", payloadUnavailable);
+  assert.equal(merged.subagentRegistry.available, true);
+  assert.equal(merged.subagentRegistry.definitionsCount, 2);
+});

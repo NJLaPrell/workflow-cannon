@@ -18,7 +18,7 @@ export type DashboardMutationKind =
   | "workspace-wide";
 
 const MUTATION_SECTIONS: Readonly<Record<DashboardMutationKind, readonly DashboardSectionId[]>> = {
-  "task-queue": ["queue", "overview", "planning-interview"],
+  "task-queue": ["queue", "overview"],
   ideas: ["ideas"],
   overview: ["overview", "phase-roster", "plan-artifact"],
   "phase-journal": ["phase-journal", "queue"],
@@ -30,7 +30,6 @@ const MUTATION_SECTIONS: Readonly<Record<DashboardMutationKind, readonly Dashboa
     "phase-roster",
     "ideas",
     "plan-artifact",
-    "planning-interview",
     "queue",
     "phase-journal",
     "status",

@@ -165,18 +165,6 @@ export const DASHBOARD_SLICE_REGISTRY: readonly DashboardSliceDescriptor[] = [
       ])
   },
   {
-    name: "planningSession",
-    sectionId: "planning-interview",
-    command: "dashboard-summary",
-    args: { projection: "queue" },
-    pollGroup: "queue",
-    visibleOnly: true,
-    freshnessTtlMs: 10_000,
-    freshnessSlaMs: 10_000,
-    staleOnMutationKinds: ["task-queue", "workspace-wide"],
-    extractPayload: (data) => pick(data, [...SHARED_META_KEYS, "planningSession"])
-  },
-  {
     name: "ideas",
     sectionId: "ideas",
     command: "dashboard-summary",

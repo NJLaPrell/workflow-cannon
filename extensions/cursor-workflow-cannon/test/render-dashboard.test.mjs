@@ -375,7 +375,7 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.doesNotMatch(html, /data-wc-queue-category="blocked"/);
   assert.match(html, /Not Phased/);
   assert.doesNotMatch(html, /Dependency Overview/);
-  assert.match(planningPanel, /Planning Interview/);
+  assert.doesNotMatch(planningPanel, /Planning Interview/);
   assert.doesNotMatch(taskEnginePanel, /Planning Interview/);
   assert.doesNotMatch(html, /data-wc-action="planning-new-plan"/);
   assert.doesNotMatch(html, /data-wc-action="planning-resume-chat"/);
@@ -1491,16 +1491,25 @@ test("renderDashboardRootInnerHtml team execution row exposes handoff and reconc
   assert.match(html, /data-assignment-id="a2"/);
 });
 
-test("renderDashboardRootInnerHtml subagent registry empty state offers register and spawn", () => {
+test("renderDashboardRootInnerHtml subagent registry empty state shows guide and definitions", () => {
   const html = renderDashboardRootInnerHtml({
     ok: true,
     data: {
       subagentRegistry: {
         schemaVersion: 1,
         available: true,
-        definitionsCount: 0,
+        definitionsCount: 1,
         retiredDefinitionsCount: 0,
         openSessionsCount: 0,
+        definitions: [
+          {
+            id: "reviewer",
+            displayName: "Code Reviewer",
+            description: "Reviews code changes and gives feedback.",
+            allowedCommands: ["git", "node"],
+            retired: false
+          }
+        ],
         topOpenSessions: []
       },
       stateSummary: { proposed: 0, ready: 0, in_progress: 0, blocked: 0, completed: 0 },
@@ -1519,13 +1528,19 @@ test("renderDashboardRootInnerHtml subagent registry empty state offers register
       dependencyOverview: deliverTestDepOverview
     }
   });
-  assert.match(html, /subagent-register/);
-  assert.match(html, /subagent-registry-chat/);
-  assert.match(html, /Register role/);
-  assert.match(html, /Register a subagent role first/);
+  assert.doesNotMatch(html, /subagent-registry-chat/);
+  assert.doesNotMatch(html, /Registry Guide/);
+  assert.match(html, /No active subagent sessions/);
+  assert.match(html, /Code Reviewer/);
+  assert.match(html, /Reviews code changes/);
+  assert.match(html, /dash-subagent-cmd-pill/);
+  assert.match(html, /git/);
+  assert.match(html, /node/);
+  assert.doesNotMatch(html, /subagent-register/);
+  assert.doesNotMatch(html, /Register role/);
 });
 
-test("renderDashboardRootInnerHtml subagent registry row exposes close session", () => {
+test("renderDashboardRootInnerHtml subagent registry row is read-only", () => {
   const html = renderDashboardRootInnerHtml({
     ok: true,
     data: {
@@ -1561,8 +1576,9 @@ test("renderDashboardRootInnerHtml subagent registry row exposes close session",
       dependencyOverview: deliverTestDepOverview
     }
   });
-  assert.match(html, /subagent-session-close/);
-  assert.match(html, /data-session-id="sess-1111-2222-3333-4444"/);
+  assert.doesNotMatch(html, /subagent-session-close/);
+  assert.doesNotMatch(html, /Close session/);
+  assert.match(html, /sess-111/);
   assert.match(html, /reviewer/);
   assert.match(html, /T801/);
 });
@@ -1716,82 +1732,6 @@ test("renderDashboardRootInnerHtml approval inbox row exposes review actions", (
   assert.match(html, /data-task-id="T100050"/);
 });
 
-test("renderDashboardRootInnerHtml planning card shows resume CLI when session present", () => {
-  const html = renderDashboardRootInnerHtml({
-    ok: true,
-    data: {
-      agentGuidance: {
-        schemaVersion: 1,
-        profileSetId: "rpg_party_v1",
-        tier: 2,
-        displayLabel: "Adventurer",
-        usingDefaultTier: true,
-        temperamentProfileId: "builtin:balanced",
-        temperamentLabel: "The Steady Adventurer",
-        agentPresentation: {
-          schemaVersion: 1,
-          mode: "derived",
-          workLog: "normal",
-          rationale: "simple",
-          technicality: "balanced",
-          finalAnswerDetail: "normal",
-          privateReasoning: "never_disclose"
-        }
-      },
-      stateSummary: { proposed: 0, ready: 0, in_progress: 0, blocked: 0, completed: 0 },
-      proposedImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
-      proposedExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
-      readyImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
-      readyExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
-      wishlist: { openCount: 0, totalCount: 0, openTop: [] },
-      blockedSummary: { count: 0, top: [] },
-      readyQueueTop: [],
-      readyQueueCount: 0,
-      suggestedNext: null,
-      planningSession: {
-        schemaVersion: 1,
-        updatedAt: "2026-04-01T12:00:00.000Z",
-        planningType: "wishlist",
-        outputMode: "wishlist",
-        status: "in_progress",
-        completionPct: 40,
-        answeredCritical: 2,
-        totalCritical: 5,
-        resumeCli: "pnpm run wk run build-plan '{\"action\":\"resume\"}'"
-      },
-      taskStoreLastUpdated: "2026-01-01T00:00:00.000Z",
-      workspaceStatus: { currentKitPhase: "1", nextKitPhase: "2", activeFocus: "Test" },
-      blockingAnalysis: [],
-      dependencyOverview: {
-        schemaVersion: 1,
-        activeTaskCount: 0,
-        includedTaskCount: 0,
-        edgeCount: 0,
-        truncated: false,
-        perfNote: null,
-        nodes: [],
-        edges: [],
-        mermaidFlowchart: "",
-        criticalPathReady: []
-      }
-    }
-  });
-  assert.match(html, /Planning Interview/);
-  assert.match(html, /<span class="wc-status-kv-label">Presentation<\/span>/);
-  assert.match(html, /Work-log normal/);
-  assert.doesNotMatch(html, /data-wc-action="planning-new-plan"/);
-  assert.doesNotMatch(html, />New Plan<\/button>/);
-  assert.match(html, /Wishlist/);
-  assert.match(html, /data-wc-action="planning-resume-chat"/);
-  assert.match(html, />Resume<\/button>/);
-  assert.match(html, /data-wc-action="planning-discard"/);
-  assert.match(html, />Discard<\/button>/);
-  assert.match(html, /build-plan/);
-  assert.doesNotMatch(html, /copy into a terminal/);
-  assert.doesNotMatch(html, /wc-planning-type/);
-  assert.match(html, /40%/);
-  assert.match(html, /through required questions/);
-});
 
 test("renderDashboardRootInnerHtml omits global suggested-next when no workspace current phase", () => {
   const html = renderDashboardRootInnerHtml({
@@ -3004,42 +2944,6 @@ test("renderPlanningInterviewWizardPanel success shows response-only persistence
   assert.match(html, /data-wc-action="planning-wizard-dismiss"/);
 });
 
-test("renderDashboardRootInnerHtml embeds planning wizard panel when provided", () => {
-  const html = renderDashboardRootInnerHtml(
-    {
-      ok: true,
-      data: {
-        stateSummary: { proposed: 0, ready: 0, in_progress: 0, blocked: 0, completed: 0 },
-        proposedImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
-        proposedExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
-        readyImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
-        readyExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
-        wishlist: { openCount: 0, totalCount: 0, openTop: [] },
-        blockedSummary: { count: 0, top: [] },
-        suggestedNext: null,
-        planningSession: null,
-        taskStoreLastUpdated: "2026-01-01T00:00:00.000Z",
-        workspaceStatus: null,
-        blockingAnalysis: [],
-        dependencyOverview: {
-          schemaVersion: 1,
-          activeTaskCount: 0,
-          includedTaskCount: 0,
-          edgeCount: 0,
-          truncated: false,
-          perfNote: null,
-          nodes: [],
-          edges: [],
-          mermaidFlowchart: "",
-          criticalPathReady: []
-        }
-      }
-    },
-    { kind: "picker" }
-  );
-  assert.match(html, /dash-planning-wizard/);
-  assert.match(html, /wc-planning-type/);
-});
 
 test("renderTaskStateSyncStatusHtml shows display state and remediation", () => {
   const html = renderTaskStateSyncStatusHtml({

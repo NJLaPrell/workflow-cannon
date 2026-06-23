@@ -62,7 +62,7 @@ test("renderDashboardShellInnerHtml includes loading placeholders for every regi
 });
 
 test("dashboard section registry lists overview, planning, queue, phase journal, status, config, cae sections", () => {
-  assert.equal(DASHBOARD_SECTION_REGISTRY.length, 10);
+  assert.equal(DASHBOARD_SECTION_REGISTRY.length, 9);
   const ids = DASHBOARD_SECTION_REGISTRY.map((s) => s.id).sort();
   assert.deepEqual(ids, [
     "cae",
@@ -72,7 +72,6 @@ test("dashboard section registry lists overview, planning, queue, phase journal,
     "phase-journal",
     "phase-roster",
     "plan-artifact",
-    "planning-interview",
     "queue",
     "status"
   ]);

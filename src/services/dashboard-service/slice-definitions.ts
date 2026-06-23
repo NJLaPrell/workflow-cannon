@@ -35,8 +35,8 @@ export const DASHBOARD_SERVICE_SLICE_DEFINITIONS: readonly DashboardServiceSlice
   {
     name: "overview",
     pollGroup: "critical",
-    command: "dashboard-summary",
-    args: { projection: "overview" },
+    command: "dashboard-overview-slice",
+    args: {},
     source: "dashboard-summary:overview",
     extractPayload: (data) =>
       pick(data, [
@@ -101,16 +101,16 @@ export const DASHBOARD_SERVICE_SLICE_DEFINITIONS: readonly DashboardServiceSlice
   {
     name: "agentActivity",
     pollGroup: "live",
-    command: "dashboard-summary",
-    args: { projection: "agentActivity" },
+    command: "dashboard-agent-activity-slice",
+    args: {},
     source: "dashboard-summary:agentActivity",
     extractPayload: (data) => pick(data, [...SHARED_META_KEYS, "agentActivitySummary"])
   },
   {
     name: "queue",
     pollGroup: "queue",
-    command: "dashboard-summary",
-    args: { projection: "queue" },
+    command: "dashboard-queue-slice",
+    args: {},
     source: "dashboard-summary:queue",
     extractPayload: (data) =>
       pick(data, [
@@ -167,8 +167,8 @@ export const DASHBOARD_SERVICE_SLICE_DEFINITIONS: readonly DashboardServiceSlice
   {
     name: "status",
     pollGroup: "status",
-    command: "dashboard-summary",
-    args: { projection: "status" },
+    command: "dashboard-status-slice",
+    args: {},
     source: "dashboard-summary:status",
     extractPayload: (data) =>
       pick(data, [
@@ -205,6 +205,22 @@ export const DASHBOARD_SERVICE_SLICE_DEFINITIONS: readonly DashboardServiceSlice
     source: "dashboard-summary:overview",
     extractPayload: (data) =>
       pick(data, [...SHARED_META_KEYS, "systemStatus", "workspaceStatus"])
+  },
+  {
+    name: "agentTypes",
+    pollGroup: "live",
+    command: "dashboard-agent-types-slice",
+    args: {},
+    source: "dashboard-agent-types-slice",
+    extractPayload: (data) => data
+  },
+  {
+    name: "terminalTasks",
+    pollGroup: "manual",
+    command: "dashboard-terminal-tasks-page",
+    args: { status: "completed", limit: 10 },
+    source: "dashboard-terminal-tasks",
+    extractPayload: (data) => data
   }
 ];
 

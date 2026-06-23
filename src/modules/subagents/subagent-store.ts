@@ -306,6 +306,13 @@ export type SubagentRegistryDashboardRollup = {
   definitionsCount: number;
   retiredDefinitionsCount: number;
   openSessionsCount: number;
+  definitions?: Array<{
+    id: string;
+    displayName: string;
+    description: string;
+    allowedCommands: string[];
+    retired: boolean;
+  }>;
   /** Non-terminal sessions, newest first. */
   topOpenSessions: Array<{
     sessionId: string;
@@ -334,14 +341,21 @@ export function summarizeSubagentsForDashboard(db: Database.Database | undefined
     return empty;
   }
   try {
-    const defRows = db.prepare("SELECT retired FROM kit_subagent_definitions").all() as { retired: number }[];
+    const defRows = db.prepare("SELECT * FROM kit_subagent_definitions").all() as Record<string, unknown>[];
+    const definitions = defRows.map(rowToDefinition).map((d) => ({
+      id: d.id,
+      displayName: d.displayName,
+      description: d.description,
+      allowedCommands: d.allowedCommands,
+      retired: d.retired
+    }));
     let retiredDefinitionsCount = 0;
-    for (const r of defRows) {
-      if (Number(r.retired) === 1) {
+    for (const d of definitions) {
+      if (d.retired) {
         retiredDefinitionsCount++;
       }
     }
-    const definitionsCount = defRows.length;
+    const definitionsCount = definitions.length;
     const sessRows = db
       .prepare(`SELECT id, definition_id, execution_task_id, status, updated_at FROM kit_subagent_sessions`)
       .all() as Record<string, unknown>[];
@@ -362,6 +376,7 @@ export function summarizeSubagentsForDashboard(db: Database.Database | undefined
       definitionsCount,
       retiredDefinitionsCount,
       openSessionsCount: openSessions.length,
+      definitions,
       topOpenSessions
     };
   } catch {

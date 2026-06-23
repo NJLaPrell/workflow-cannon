@@ -58,8 +58,9 @@ test("dashboard-summary exposes taskStateProjection metadata from SQLite", async
 test("dashboard-summary status projection retains taskStateProjection", async () => {
   const workspace = await tmpDir();
   await mkdir(path.join(workspace, ".workspace-kit", "tasks"), { recursive: true });
-  await mkdir(path.join(workspace, ".workspace-kit", "tasks"), { recursive: true });
   const dual = new SqliteDualPlanningStore(workspace, ".workspace-kit/tasks/workspace-kit.db");
+  dual.getDatabase();
+  dual.closeDatabase();
   dual.loadFromDisk();
 
   const result = await taskEngineModule.onCommand(

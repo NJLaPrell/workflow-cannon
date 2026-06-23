@@ -60,6 +60,7 @@ const KNOWN_POLICY_OPERATION_IDS = new Set([
 ]);
 
 const ALLOWED_SENSITIVITY = new Set(["non-sensitive", "sensitive", "sensitive-with-dryrun"]);
+const ALLOWED_EXECUTION_CLASSES = new Set(["read_hot", "read", "mutation", "operator", "debug"]);
 
 function fail(message) {
   console.error(`[check-builtin-command-manifest] ${message}`);
@@ -151,6 +152,23 @@ for (const row of manifest) {
     const lower = tid.toLowerCase();
     if (!BUILTIN_RESPONSE_TEMPLATE_IDS.has(tid) && !BUILTIN_RESPONSE_TEMPLATE_IDS.has(lower)) {
       fail(`Unknown defaultResponseTemplateId '${tid}' for command '${row.name}' (not in response-template-registry BUILTIN keys).`);
+    }
+  }
+
+  if (row.executionClass !== undefined) {
+    if (!ALLOWED_EXECUTION_CLASSES.has(row.executionClass)) {
+      fail(
+        `Command '${row.name}': executionClass '${row.executionClass}' is invalid. Must be one of: ${[
+          ...ALLOWED_EXECUTION_CLASSES
+        ].join(", ")}`
+      );
+    }
+    if (row.executionClass === "read_hot" || row.executionClass === "debug") {
+      if (row.policySensitivity !== "non-sensitive") {
+        fail(
+          `Command '${row.name}': executionClass '${row.executionClass}' is not allowed for sensitive commands (sensitivity: ${row.policySensitivity}).`
+        );
+      }
     }
   }
 
