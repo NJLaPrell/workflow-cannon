@@ -32,11 +32,13 @@ import {
 } from "../modules/task-engine/persistence/canonical-backend-config.js";
 import { readTasksCanonicalAuthority } from "../modules/task-engine/persistence/task-state-canonical-authority.js";
 import { resolveEnabledPlanningSyncDomains } from "../modules/task-engine/persistence/planning-canonical-sync-domains.js";
+import { buildWorkspaceCoordinationStatus } from "../modules/task-engine/coordination/build-workspace-coordination-status.js";
 
 export type DoctorPlanningIssue = { path: string; reason: string };
 
 const DOCTOR_CANONICAL_BACKEND_CONFLICT = "canonical-backend-config-conflict";
 const DOCTOR_CANONICAL_BACKEND_HOSTED_NOT_IMPLEMENTED = "canonical-backend-hosted-not-implemented";
+const DOCTOR_WORKER_BRANCH_TASK_DB_DIRTY = "worker-branch-task-db-dirty";
 
 export function collectDoctorCanonicalBackendConfigIssues(
   effective: Record<string, unknown>
@@ -56,6 +58,30 @@ export function collectDoctorCanonicalBackendConfigIssues(
     });
   }
   return issues;
+}
+
+function collectWorkerBranchTaskDatabaseIssues(
+  cwd: string,
+  effective: Record<string, unknown>
+): DoctorPlanningIssue[] {
+  try {
+    const coordination = buildWorkspaceCoordinationStatus({
+      runtimeVersion: "doctor",
+      workspacePath: cwd,
+      effectiveConfig: effective
+    } as ModuleLifecycleContext);
+    if (coordination.authorityRole === "worker" && coordination.taskDatabaseGitDirty) {
+      return [
+        {
+          path: coordination.taskDatabaseRelativePath,
+          reason: DOCTOR_WORKER_BRANCH_TASK_DB_DIRTY
+        }
+      ];
+    }
+  } catch {
+    /* best-effort advisory only */
+  }
+  return [];
 }
 
 /** Config `kit.currentPhaseNumber` disagrees with `kit_workspace_status.current_kit_phase` (SQLite v10+). */
@@ -118,7 +144,16 @@ export async function collectDoctorPlanningPersistenceIssues(
     const shadowIssues = await collectDoctorTaskStateShadowIssues(cwd, effective);
     const gitHealthIssues = await collectDoctorTaskStateGitHealthIssues(cwd, effective);
     const backendIssues = collectDoctorCanonicalBackendConfigIssues(effective);
-    return [...persistence, ...phaseIssues, ...projectionIssues, ...shadowIssues, ...gitHealthIssues, ...backendIssues];
+    const workerDbIssues = collectWorkerBranchTaskDatabaseIssues(cwd, effective);
+    return [
+      ...persistence,
+      ...phaseIssues,
+      ...projectionIssues,
+      ...shadowIssues,
+      ...gitHealthIssues,
+      ...backendIssues,
+      ...workerDbIssues
+    ];
   } catch (err) {
     return [
       {

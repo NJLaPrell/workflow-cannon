@@ -50,6 +50,7 @@ test("buildWorkspaceCoordinationStatus: clean main is safe / integration_authori
   git(ws, ["commit", "-m", "db"]);
   const s = buildWorkspaceCoordinationStatus(ctx(ws));
   assert.equal(s.authorityRole, "integration_authority");
+  assert.equal(s.taskStateAuthority.classification, "authority");
   assert.equal(s.posture, "safe");
   assert.equal(s.taskDatabaseGitDirty, false);
 });
@@ -69,6 +70,7 @@ test("buildWorkspaceCoordinationStatus: feature branch is worker_branch", async 
   const s = buildWorkspaceCoordinationStatus(ctx(ws));
   assert.equal(s.posture, "worker_branch");
   assert.equal(s.authorityRole, "worker");
+  assert.equal(s.taskStateAuthority.classification, "worker");
 });
 
 test("buildWorkspaceCoordinationStatus: detached HEAD", async () => {

@@ -605,6 +605,7 @@ export async function composeAgentSessionSnapshotPayload(
     workspaceCoordination = {
       posture: c.posture,
       authorityRole: c.authorityRole,
+      taskStateAuthority: c.taskStateAuthority,
       discoverCommand: "pnpm exec wk run workspace-coordination-status '{}'"
     };
   } catch {

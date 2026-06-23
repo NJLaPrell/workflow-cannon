@@ -32,6 +32,35 @@ import { runSyncTaskStoreAfterMergeCommand } from "./sync-task-store-after-merge
 import { isTaskIntentCommand, runClaimNextTaskIntent, runTaskIntentTransition } from "./task-intent-commands.js";
 import { resolveTaskPhaseCommands } from "./task-phase-on-command.js";
 import { runTaskRowMutationCommands } from "./task-row-mutation-commands.js";
+import {
+  isTaskStateAuthorityMutationAllowed,
+  resolveTaskStateAuthorityPosture
+} from "../task-state-authority.js";
+
+const TASK_STATE_AUTHORITY_MUTATION_COMMANDS = new Set<string>([
+  "run-transition",
+  "batch-transition",
+  "start-task",
+  "complete-task",
+  "block-task",
+  "pause-task",
+  "unblock-task",
+  "demote-task",
+  "accept-improvement",
+  "reject-improvement",
+  "claim-next-task",
+  "create-task",
+  "create-task-from-plan",
+  "persist-planning-execution-drafts",
+  "update-task",
+  "apply-task-batch",
+  "convert-phase-note-to-task",
+  "assign-task-phase",
+  "clear-task-phase",
+  "add-dependency",
+  "remove-dependency",
+  "upsert-phase-catalog-entry"
+]);
 
 /**
  * Task Engine commands that require opened planning stores (`openPlanningStores`).
@@ -43,6 +72,32 @@ export async function dispatchTaskEnginePlanningCommands(
   store: TaskStore
 ): Promise<ModuleCommandResult> {
   const args = command.args ?? {};
+  if (TASK_STATE_AUTHORITY_MUTATION_COMMANDS.has(command.name)) {
+    const posture = resolveTaskStateAuthorityPosture(ctx);
+    if (!isTaskStateAuthorityMutationAllowed(posture)) {
+      const payload = {
+        schemaVersion: 1,
+        command: command.name,
+        args,
+        planningGeneration: planning.sqliteDual.getPlanningGeneration(),
+        posture
+      };
+      if (posture.classification === "worker" && posture.workerBranchMutations === "intent") {
+        return {
+          ok: true,
+          code: "task-state-mutation-intent",
+          message: `Captured mutation intent for '${command.name}' on worker branch`,
+          data: payload
+        };
+      }
+      return {
+        ok: false,
+        code: "task-state-authority-denied",
+        message: `Mutation '${command.name}' is denied for task-state authority classification '${posture.classification}'`,
+        data: payload
+      };
+    }
+  }
 
   const agentActivity = resolveAgentActivityCommands(command, ctx, planning);
   if (agentActivity !== null) {

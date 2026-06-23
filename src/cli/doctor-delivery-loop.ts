@@ -8,8 +8,10 @@ import {
   resolvePlanningSqliteAbsolute
 } from "../modules/task-engine/maintainer-delivery-git.js";
 import { planningSqliteDatabaseRelativePath } from "../modules/task-engine/planning-config.js";
+import { buildWorkspaceCoordinationStatus } from "../modules/task-engine/coordination/build-workspace-coordination-status.js";
 
 export const DELIVERY_LOOP_DIRTY_ON_PROTECTED_BRANCH = "maintainer-delivery-loop-dirty-on-protected-branch";
+export const DELIVERY_LOOP_WORKER_BRANCH_DIRTY_TASK_DB = "maintainer-delivery-loop-worker-branch-dirty-task-db";
 
 /**
  * Optional maintainer delivery loop checks after canonical doctor passes.
@@ -20,6 +22,23 @@ export async function collectMaintainerDeliveryLoopIssues(
   cwd: string,
   effective: Record<string, unknown>
 ): Promise<DoctorContractIssue[]> {
+  try {
+    const coordination = buildWorkspaceCoordinationStatus({
+      runtimeVersion: "doctor-delivery-loop",
+      workspacePath: cwd,
+      effectiveConfig: effective
+    } as ModuleLifecycleContext);
+    if (coordination.authorityRole === "worker" && coordination.taskDatabaseGitDirty) {
+      return [
+        {
+          path: coordination.taskDatabaseRelativePath,
+          reason: `${DELIVERY_LOOP_WORKER_BRANCH_DIRTY_TASK_DB}: task DB has local git changes on worker branch '${coordination.branch ?? "unknown"}'; move task-state mutations to an authority branch or commit only non-task-db changes.`
+        }
+      ];
+    }
+  } catch {
+    /* continue to legacy delivery-loop checks */
+  }
   const git = readGitWorkingTreeSnapshot(cwd);
   if (!git.available || !git.isDirty || !isProtectedMaintainerBranch(git.branch)) {
     return [];
