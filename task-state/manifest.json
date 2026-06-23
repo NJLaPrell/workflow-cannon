@@ -23,7 +23,7 @@
     "latestSequence": 1855,
     "latestEventId": "evt-580d4d63-f189-4ae4-b9e5-f7ff473ec933",
     "latestSegmentPath": "task-state/events/0000000000.jsonl",
-    "latestSnapshotId": "snap-2026-06-16T17-23-08-102Z"
+    "latestSnapshotId": "snap-2026-06-23T06-48-58-043Z"
   },
-  "manifestDigest": "7d7cf5d10028f43d2c2ed02027ef60191f4d7d8b40173c7d91cc201cfbfe5b45"
+  "manifestDigest": "fcabd0acb52080602a4cc7fe64bea18019249e7ce5f71e2c72951fe3f830b2a0"
 }
