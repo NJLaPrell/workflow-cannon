@@ -142,19 +142,19 @@
     },
     {
       "file": "src/modules/task-engine/dashboard/focused-slice-builders.ts",
-      "line": "73",
+      "line": "74",
       "importLine": "import { summarizeCheckpointsForDashboard } from \"../../checkpoints/checkpoint-store.js\";",
       "rationale": "Dashboard slice needs checkpoint summary; allowlist pending façade."
     },
     {
       "file": "src/modules/task-engine/dashboard/focused-slice-builders.ts",
-      "line": "74",
+      "line": "75",
       "importLine": "import { summarizeSubagentsForDashboard } from \"../../subagents/subagent-store.js\";",
       "rationale": "Dashboard slice needs subagent summary; allowlist pending façade."
     },
     {
       "file": "src/modules/task-engine/dashboard/focused-slice-builders.ts",
-      "line": "75",
+      "line": "76",
       "importLine": "import { summarizeTeamAssignmentsForDashboard } from \"../../team-execution/assignment-store.js\";",
       "rationale": "Dashboard slice needs team assignment summary; allowlist pending façade."
     }

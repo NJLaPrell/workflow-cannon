@@ -1,0 +1,39 @@
+{
+  "ok": true,
+  "code": "run-args-schema",
+  "command": "list-task-mutation-intents",
+  "schema": {
+    "type": "object"
+  },
+  "schemaSource": "pilot-run-args-snapshot",
+  "sampleArgs": {},
+  "examples": [
+    {
+      "description": "Minimal argv example",
+      "argv": "workspace-kit run list-task-mutation-intents '{\"limit\":20}'"
+    }
+  ],
+  "instructionPath": "src/modules/task-engine/instructions/list-task-mutation-intents.md",
+  "moduleId": "task-engine",
+  "description": "List bounded pending (or resolved) task mutation intents for agent review.",
+  "policy": {
+    "sensitivity": "non-sensitive",
+    "operationId": null,
+    "jsonApprovalRequired": false
+  },
+  "planningGeneration": {
+    "cliPrelude": false,
+    "expectedPlanningGeneration": "not required by CLI prelude"
+  },
+  "idempotency": {
+    "clientMutationId": false
+  },
+  "responseTemplate": {
+    "defaultResponseTemplateId": "default"
+  },
+  "remediationContract": ".ai/runbooks/agent-task-engine-ergonomics.md",
+  "discovery": {
+    "listCommands": "pnpm exec wk run --list-commands",
+    "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
+  }
+}

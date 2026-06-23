@@ -1,0 +1,39 @@
+{
+  "ok": true,
+  "code": "run-args-schema",
+  "command": "create-task-mutation-intent",
+  "schema": {
+    "type": "object"
+  },
+  "schemaSource": "pilot-run-args-snapshot",
+  "sampleArgs": {},
+  "examples": [
+    {
+      "description": "Minimal argv example",
+      "argv": "workspace-kit run create-task-mutation-intent '{\"requestedAction\":\"update-task\",\"payload\":{\"taskId\":\"T400\",\"summary\":\"worker draft\"}}'"
+    }
+  ],
+  "instructionPath": "src/modules/task-engine/instructions/create-task-mutation-intent.md",
+  "moduleId": "task-engine",
+  "description": "Create a clone-local task mutation intent without applying planning SQLite mutations.",
+  "policy": {
+    "sensitivity": "non-sensitive",
+    "operationId": null,
+    "jsonApprovalRequired": false
+  },
+  "planningGeneration": {
+    "cliPrelude": false,
+    "expectedPlanningGeneration": "not required by CLI prelude"
+  },
+  "idempotency": {
+    "clientMutationId": false
+  },
+  "responseTemplate": {
+    "defaultResponseTemplateId": "default"
+  },
+  "remediationContract": ".ai/runbooks/agent-task-engine-ergonomics.md",
+  "discovery": {
+    "listCommands": "pnpm exec wk run --list-commands",
+    "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
+  }
+}

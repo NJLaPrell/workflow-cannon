@@ -98,7 +98,7 @@ test("worker branch enforce+intent converts mutating commands to intents", async
       planning,
       taskStore
     );
-    assert.equal(result.code, "task-state-mutation-intent", commandName);
+    assert.equal(result.code, "task-state-mutation-intent-created", commandName);
     assert.equal(result.ok, true, commandName);
   }
 
@@ -108,7 +108,7 @@ test("worker branch enforce+intent converts mutating commands to intents", async
     planning,
     taskStore
   );
-  assert.notEqual(readResult.code, "task-state-mutation-intent");
+  assert.notEqual(readResult.code, "task-state-mutation-intent-created");
 });
 
 test("worker branch enforce+deny blocks mutating commands", async () => {

@@ -1,0 +1,39 @@
+{
+  "ok": true,
+  "code": "run-args-schema",
+  "command": "reject-task-mutation-intent",
+  "schema": {
+    "type": "object"
+  },
+  "schemaSource": "pilot-run-args-snapshot",
+  "sampleArgs": {},
+  "examples": [
+    {
+      "description": "Minimal argv example",
+      "argv": "workspace-kit run reject-task-mutation-intent '{\"intentId\":\"intent-abc123\",\"reason\":\"superseded\"}'"
+    }
+  ],
+  "instructionPath": "src/modules/task-engine/instructions/reject-task-mutation-intent.md",
+  "moduleId": "task-engine",
+  "description": "Reject a pending task mutation intent while retaining rationale on disk.",
+  "policy": {
+    "sensitivity": "non-sensitive",
+    "operationId": null,
+    "jsonApprovalRequired": false
+  },
+  "planningGeneration": {
+    "cliPrelude": false,
+    "expectedPlanningGeneration": "not required by CLI prelude"
+  },
+  "idempotency": {
+    "clientMutationId": false
+  },
+  "responseTemplate": {
+    "defaultResponseTemplateId": "default"
+  },
+  "remediationContract": ".ai/runbooks/agent-task-engine-ergonomics.md",
+  "discovery": {
+    "listCommands": "pnpm exec wk run --list-commands",
+    "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
+  }
+}

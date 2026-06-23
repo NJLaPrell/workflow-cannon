@@ -43,6 +43,7 @@ import { dashboardOnboardingTemperamentLabel } from "../../agent-behavior/onboar
 import { resolveAgentPresentationPolicy } from "../../../core/agent-presentation-policy.js";
 import { buildDashboardHumanGatesSummary } from "./build-dashboard-human-gates.js";
 import { buildDashboardApprovalQueueSummary } from "./build-dashboard-approval-queue.js";
+import { summarizePendingTaskMutationIntents } from "../coordination/task-mutation-intents.js";
 import { buildDashboardPhaseJournalStats } from "./build-dashboard-phase-journal-stats.js";
 import { buildDashboardPastPhaseNotes } from "./build-dashboard-past-phase-notes.js";
 import { getNextActions, isImprovementLikeTask } from "../suggestions.js";
@@ -407,6 +408,7 @@ export async function buildDashboardQueueSlice(
     new Map()
   );
   const approvalQueue = buildDashboardApprovalQueueSummary(tasks);
+  const taskMutationIntents = summarizePendingTaskMutationIntents(ctx.workspacePath, 15);
 
   const currentPhaseDelivery = buildDashboardCurrentPhaseDelivery({
     tasks,
@@ -516,6 +518,7 @@ export async function buildDashboardQueueSlice(
     },
     humanGatesSummary,
     approvalQueue,
+    taskMutationIntents,
     phaseJournalStats,
     completedSummary: {
       schemaVersion: 1 as const,

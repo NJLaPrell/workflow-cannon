@@ -30,6 +30,13 @@ import { runBatchTransitionCommand } from "./batch-transition-on-command.js";
 import { runReportDefectCommand } from "./report-defect-on-command.js";
 import { runSyncTaskStoreAfterMergeCommand } from "./sync-task-store-after-merge-command.js";
 import { isTaskIntentCommand, runClaimNextTaskIntent, runTaskIntentTransition } from "./task-intent-commands.js";
+import {
+  createTaskMutationIntentFromAuthorityGate,
+  runApplyTaskMutationIntentCommand,
+  runCreateTaskMutationIntentCommand,
+  runListTaskMutationIntentsCommand,
+  runRejectTaskMutationIntentCommand
+} from "./task-mutation-intent-commands.js";
 import { resolveTaskPhaseCommands } from "./task-phase-on-command.js";
 import { runTaskRowMutationCommands } from "./task-row-mutation-commands.js";
 import {
@@ -83,11 +90,20 @@ export async function dispatchTaskEnginePlanningCommands(
         posture
       };
       if (posture.classification === "worker" && posture.workerBranchMutations === "intent") {
+        const created = createTaskMutationIntentFromAuthorityGate(
+          ctx,
+          planning.sqliteDual.getPlanningGeneration(),
+          command.name,
+          args
+        );
+        if (created.ok) {
+          return created;
+        }
         return {
-          ok: true,
-          code: "task-state-mutation-intent",
-          message: `Captured mutation intent for '${command.name}' on worker branch`,
-          data: payload
+          ok: false,
+          code: "task-state-authority-denied",
+          message: `Mutation '${command.name}' requires intent capture, but intent persistence failed`,
+          data: { ...payload, intentCaptureFailure: created }
         };
       }
       return {
@@ -177,6 +193,24 @@ export async function dispatchTaskEnginePlanningCommands(
 
   if (command.name === "claim-next-task") {
     return runClaimNextTaskIntent(ctx, planning, args as Record<string, unknown>);
+  }
+
+  if (command.name === "create-task-mutation-intent") {
+    return runCreateTaskMutationIntentCommand(ctx, planning.sqliteDual.getPlanningGeneration(), args);
+  }
+
+  if (command.name === "list-task-mutation-intents") {
+    return runListTaskMutationIntentsCommand(ctx, args);
+  }
+
+  if (command.name === "apply-task-mutation-intent") {
+    return runApplyTaskMutationIntentCommand(ctx, args, async (commandName, commandArgs) =>
+      dispatchTaskEnginePlanningCommands({ name: commandName, args: commandArgs }, ctx, planning, store)
+    );
+  }
+
+  if (command.name === "reject-task-mutation-intent") {
+    return runRejectTaskMutationIntentCommand(ctx, args);
   }
 
   if (isTaskIntentCommand(command.name)) {
