@@ -23,7 +23,6 @@ export {
   WISHLIST_ID_RE
 } from "../../modules/task-engine/wishlist/wishlist-validation.js";
 export {
-  allocateNextTaskNumericId,
   taskEntityFromNewIntake
 } from "../../modules/task-engine/wishlist/wishlist-intake.js";
 export type {

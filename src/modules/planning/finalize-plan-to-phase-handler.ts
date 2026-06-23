@@ -7,13 +7,13 @@ import {
   type PlanArtifactWbsItem,
   resolvePlanArtifactPhaseProposal
 } from "../../core/planning/index.js";
+import { allocateNextTaskNumericId } from "../task-engine/id-allocation.js";
 import {
   readPlanArtifactVersion,
   resolveLatestPlanArtifactVersion,
   writeNextPlanArtifactVersion
 } from "../../core/planning/plan-artifact-storage.js";
 import { openPlanningStores } from "../../core/planning/index.js";
-import { allocateNextTaskNumericId } from "../../core/planning/index.js";
 import { inferTaskPhaseKey } from "../task-engine/phase-resolution.js";
 import { reviewPlanningExecutionDraftGaps } from "../task-engine/planning-execution-draft-review.js";
 import { runTaskRowMutationCommands } from "../task-engine/commands/task-row-mutation-commands.js";

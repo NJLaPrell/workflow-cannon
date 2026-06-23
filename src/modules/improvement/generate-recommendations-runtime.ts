@@ -16,7 +16,7 @@ import type { ImprovementHeuristicVersion } from "./ingest.js";
 import { buildImprovementTaskPayload } from "./improvement-task-payload.js";
 import { TRANSCRIPT_CHURN_TASK_TYPE } from "../task-engine/transcript-churn.js";
 import { buildImprovementSupportingReasoning } from "./improvement-supporting-reasoning.js";
-import { allocateNextTaskNumericId } from "../task-engine/wishlist/wishlist-intake.js";
+import { allocateNextTaskNumericId } from "../task-engine/id-allocation.js";
 import { planningConcurrencySaveOpts } from "../task-engine/mutation-utils.js";
 import { enforcePlanningGenerationPolicy, getPlanningGenerationPolicy } from "../task-engine/planning-config.js";
 import { TaskEngineError } from "../task-engine/transitions.js";
