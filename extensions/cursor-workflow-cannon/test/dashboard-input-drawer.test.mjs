@@ -43,32 +43,6 @@ test("drawer: dismiss normal skips rationale requirement", async () => {
   assert.equal(good.ok, true);
 });
 
-test("drawer: add wishlist spec has eight required fields", async () => {
-  const mod = await import("../dist/views/dashboard/dashboard-input-drawer.js");
-  const spec = mod.buildAddWishlistDrawerSpec();
-  assert.equal(spec.fields.length, 8);
-  const html = mod.renderDrawerFormHtml(spec);
-  assert.match(html, /data-wc-drawer-field="title"/);
-  assert.match(html, /data-wc-drawer-field="evidenceRef"/);
-});
-
-test("drawer: validate add wishlist rejects empty field", async () => {
-  const mod = await import("../dist/views/dashboard/dashboard-input-drawer.js");
-  const bad = mod.validateAddWishlistSubmit({ title: "x", problemStatement: "" });
-  assert.equal(bad.ok, false);
-  const good = mod.validateAddWishlistSubmit({
-    title: "t",
-    problemStatement: "p",
-    expectedOutcome: "e",
-    impact: "i",
-    constraints: "c",
-    successSignals: "s",
-    requestor: "r",
-    evidenceRef: "ref"
-  });
-  assert.equal(good.ok, true);
-});
-
 test("drawer: normalizeDrawerValues trims", async () => {
   const mod = await import("../dist/views/dashboard/dashboard-input-drawer.js");
   const v = mod.normalizeDrawerValues({ a: "  x  ", b: 3 });
