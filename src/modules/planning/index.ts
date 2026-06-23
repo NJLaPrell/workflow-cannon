@@ -14,11 +14,11 @@ import {
   openPlanningStores,
   validateKnownTaskTypeRequirements,
   validateWishlistContentFields,
-  allocateNextTaskNumericId,
   taskEntityFromNewIntake,
   type TaskEntity,
   type TaskPriority
 } from "../../core/planning/index.js";
+import { allocateNextTaskNumericId } from "../task-engine/id-allocation.js";
 import { builtinInstructionEntriesForModule } from "../../contracts/builtin-run-command-manifest.js";
 import {
   enforcePlanningGenerationPolicy,
