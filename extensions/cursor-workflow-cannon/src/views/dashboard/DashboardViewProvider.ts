@@ -24,6 +24,7 @@ import {
   buildTaskToPhaseBranchPrompt,
   buildTranscriptChurnResearchPrompt
 } from "../../playbook-chat-prompts.js";
+import { buildPhaseCompleteReleaseChatPrompt } from "../../phase-complete-release-prompt.js";
 import { confirmAndRunTransition } from "../../run-transition-with-approval.js";
 import { isWcTraceVerbose, logWc } from "../../runtime/workflow-cannon-log.js";
 import { isKitRefreshRunAborted } from "../../runtime/kit-refresh-run-commands.js";
