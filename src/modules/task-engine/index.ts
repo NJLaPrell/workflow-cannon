@@ -76,13 +76,13 @@ export {
 export { buildQueueGitAlignmentReport, probeGitHead } from "./queue/queue-git-alignment.js";
 export { readWorkspaceStatusSnapshot } from "./dashboard/dashboard-status.js";
 export { WishlistStore } from "./persistence/wishlist-store.js";
-export type { WishlistItem, WishlistStatus, WishlistStoreDocument } from "./wishlist/wishlist-types.js";
+export type { WishlistItem, WishlistStatus, WishlistStoreDocument } from "./wishlist-types.js";
 export {
   validateWishlistIntakePayload,
   validateWishlistUpdatePayload,
   buildWishlistItemFromIntake,
   WISHLIST_ID_RE
-} from "./wishlist/wishlist-validation.js";
+} from "./wishlist-validation.js";
 export {
   openPlanningStores,
   openPlanningStoresFull,

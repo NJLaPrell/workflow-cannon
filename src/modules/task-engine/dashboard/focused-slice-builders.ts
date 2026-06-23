@@ -54,7 +54,7 @@ import {
   listWishlistIntakeTasksAsItems,
   findWishlistIntakeTaskByLegacyOrTaskId,
   isWishlistIntakeTask
-} from "../wishlist/wishlist-intake.js";
+} from "../wishlist-intake.js";
 import { listIdeas } from "../../ideas/idea-store.js";
 import { listPlanningChatSessions } from "../../ideas/planning-chat-session.js";
 import { readBuildPlanSession, toDashboardPlanningSession } from "../../../core/planning/build-plan-session-file.js";

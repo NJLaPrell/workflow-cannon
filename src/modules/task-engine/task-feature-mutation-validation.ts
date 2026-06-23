@@ -1,4 +1,4 @@
-import { WISHLIST_INTAKE_TASK_TYPE } from "./wishlist/wishlist-intake.js";
+import { WISHLIST_INTAKE_TASK_TYPE } from "./wishlist-intake.js";
 
 export function taskTypeFailsClosedOnUnknownFeatures(taskType: string): boolean {
   if (taskType === "improvement" || taskType === WISHLIST_INTAKE_TASK_TYPE) {

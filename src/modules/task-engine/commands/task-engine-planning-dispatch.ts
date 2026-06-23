@@ -32,7 +32,6 @@ import { runSyncTaskStoreAfterMergeCommand } from "./sync-task-store-after-merge
 import { isTaskIntentCommand, runClaimNextTaskIntent, runTaskIntentTransition } from "./task-intent-commands.js";
 import { resolveTaskPhaseCommands } from "./task-phase-on-command.js";
 import { runTaskRowMutationCommands } from "./task-row-mutation-commands.js";
-import { runWishlistStoreCommandWithPlanningPolicyMeta } from "./task-engine-wishlist-on-command.js";
 
 /**
  * Task Engine commands that require opened planning stores (`openPlanningStores`).
@@ -181,17 +180,6 @@ export async function dispatchTaskEnginePlanningCommands(
   const readoutTail = await resolveTaskEngineReadoutTail(command, ctx, planning, store);
   if (readoutTail !== null) {
     return readoutTail;
-  }
-
-  const wishlistResult = runWishlistStoreCommandWithPlanningPolicyMeta(
-    command.name,
-    args as Record<string, unknown>,
-    ctx,
-    store,
-    planning
-  );
-  if (wishlistResult !== undefined) {
-    return wishlistResult;
   }
 
   return {

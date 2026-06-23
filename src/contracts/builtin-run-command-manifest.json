@@ -641,14 +641,6 @@
   },
   {
     "moduleId": "task-engine",
-    "name": "update-wishlist",
-    "file": "update-wishlist.md",
-    "description": "Update mutable fields on an open Wishlist item.",
-    "defaultResponseTemplateId": "default",
-    "policySensitivity": "non-sensitive"
-  },
-  {
-    "moduleId": "task-engine",
     "name": "update-workspace-phase-snapshot",
     "file": "update-workspace-phase-snapshot.md",
     "description": "Compatibility shim for current_kit_phase and/or next_kit_phase; prefer set-current-phase for SQLite-first rollover.",
@@ -769,30 +761,6 @@
   },
   {
     "moduleId": "task-engine",
-    "name": "convert-wishlist",
-    "file": "convert-wishlist.md",
-    "description": "Convert a Wishlist item into one or more phased tasks and close the wishlist item.",
-    "defaultResponseTemplateId": "default",
-    "policySensitivity": "non-sensitive"
-  },
-  {
-    "moduleId": "task-engine",
-    "name": "create-wishlist",
-    "file": "create-wishlist.md",
-    "description": "Create a Wishlist ideation item with strict required fields (separate namespace from tasks).",
-    "defaultResponseTemplateId": "default",
-    "policySensitivity": "non-sensitive"
-  },
-  {
-    "moduleId": "task-engine",
-    "name": "get-wishlist",
-    "file": "get-wishlist.md",
-    "description": "Retrieve a single Wishlist item by ID.",
-    "defaultResponseTemplateId": "default",
-    "policySensitivity": "non-sensitive"
-  },
-  {
-    "moduleId": "task-engine",
     "name": "get-workspace-status",
     "file": "get-workspace-status.md",
     "description": "Read kit_workspace_status singleton from kit SQLite.",
@@ -873,14 +841,6 @@
     "name": "export-workspace-status",
     "file": "export-workspace-status.md",
     "description": "Write non-authoritative workspace-kit-status.db-export.yaml from kit_workspace_status.",
-    "defaultResponseTemplateId": "default",
-    "policySensitivity": "non-sensitive"
-  },
-  {
-    "moduleId": "task-engine",
-    "name": "list-wishlist",
-    "file": "list-wishlist.md",
-    "description": "List Wishlist items (ideation-only; not part of task execution queues).",
     "defaultResponseTemplateId": "default",
     "policySensitivity": "non-sensitive"
   },

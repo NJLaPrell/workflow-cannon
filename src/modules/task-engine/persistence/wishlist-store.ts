@@ -1,4 +1,4 @@
-import type { WishlistItem, WishlistStoreDocument } from "../wishlist/wishlist-types.js";
+import type { WishlistItem, WishlistStoreDocument } from "../wishlist-types.js";
 import { TaskEngineError } from "../transitions.js";
 import type { SqliteDualPlanningStore } from "./sqlite-dual-planning.js";
 

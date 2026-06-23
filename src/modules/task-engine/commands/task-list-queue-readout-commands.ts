@@ -24,7 +24,7 @@ import { readQueueNamespaceArg } from "../queue-namespace-args.js";
 import { buildQueueHintsForTasks } from "../queue/queue-health.js";
 import { filterTasksByQueueNamespace, getNextActions } from "../suggestions.js";
 import type { TaskEntity, TaskStatus } from "../types.js";
-import { isWishlistIntakeTask } from "../wishlist/wishlist-intake.js";
+import { isWishlistIntakeTask } from "../wishlist-intake.js";
 import { buildNextActionsPhaseContext } from "../phase-journal/phase-journal-next-actions-context.js";
 import {
   buildTaskIntakeReadoutBundle,

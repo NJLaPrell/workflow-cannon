@@ -5,9 +5,7 @@
     "agent-session-snapshot",
     "archive-task",
     "backup-planning-sqlite",
-    "convert-wishlist",
     "create-task-from-plan",
-    "create-wishlist",
     "dashboard-agent-activity-slice",
     "dashboard-agent-types-slice",
     "dashboard-bootstrap-slices",
@@ -46,7 +44,6 @@
     "task-sync-status",
     "task-sync-verify",
     "transcript-automation-status",
-    "update-wishlist",
     "update-workspace-status",
     "workspace-status-history"
   ],

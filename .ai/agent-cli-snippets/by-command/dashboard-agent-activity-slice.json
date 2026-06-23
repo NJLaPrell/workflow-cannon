@@ -3,11 +3,9 @@
   "code": "run-args-schema",
   "command": "dashboard-agent-activity-slice",
   "schema": {
-    "type": "object",
-    "additionalProperties": true,
-    "description": "Permissive fallback args schema for 'dashboard-agent-activity-slice'. Use instructionPath for command-specific field guidance until a stricter schema is added."
+    "type": "object"
   },
-  "schemaSource": "manifest-permissive-fallback",
+  "schemaSource": "pilot-run-args-snapshot",
   "sampleArgs": {},
   "examples": [
     {
@@ -38,5 +36,5 @@
     "listCommands": "pnpm exec wk run --list-commands",
     "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
   },
-  "invocationId": "c5307412-5e59-4182-8133-bef109f433e2"
+  "invocationId": "2594d04f-ad8f-4cf5-9161-2ad7153c45e6"
 }

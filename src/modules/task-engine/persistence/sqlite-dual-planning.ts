@@ -22,7 +22,7 @@ import {
   kitSqliteHasRelationalTaskDdl
 } from "../../../core/state/kit-sqlite/planning-sqlite-kernel.js";
 import type { TaskEntity, TaskMutationEvidence, TaskStoreDocument, TransitionEvidence } from "../types.js";
-import type { WishlistStoreDocument } from "../wishlist/wishlist-types.js";
+import type { WishlistStoreDocument } from "../wishlist-types.js";
 import { TaskEngineError } from "../transitions.js";
 import { normalizeTaskStoreDocumentFromUnknown } from "./task-store-migration.js";
 import { stripAgentRoutingFromTask } from "../agent-task-routing-projection.js";
