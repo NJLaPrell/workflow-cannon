@@ -12,7 +12,7 @@ Canonical process remains: [`AGENTS.md`](../AGENTS.md), [`AGENT-CLI-MAP.md`](../
 | --- | --- |
 | “What should I pick up next?” | `pnpm exec wk run get-next-actions '{}'` then `get-task` on the suggested id |
 | “Is the ready queue consistent?” | `pnpm exec wk run queue-health '{}'`; optional `list-tasks` with `"includeQueueHints":true` |
-| “Show me wishlist ideas” | `pnpm exec wk run list-wishlist '{}'` / `get-wishlist` — not default `get-next-actions` scope |
+| Ideas / ideation inventory | `pnpm exec wk run list-ideas '{}'` / `get-idea` — not default `get-next-actions` scope |
 | “Team assignments / handoffs?” | `pnpm exec wk run list-assignments '{}'`; rollup: `dashboard-summary` |
 | “Subagent sessions?” | `list-subagents`, `list-subagent-sessions`; rollup: `dashboard-summary` → `subagentRegistry` |
 | “What phase are we on?” | `pnpm exec wk run phase-status '{}'`; add `{"includeTaskCounts":true,"includeDriftDetails":true}` for closeout audits |
@@ -84,13 +84,13 @@ Canonical process remains: [`AGENTS.md`](../AGENTS.md), [`AGENT-CLI-MAP.md`](../
 
 ## 4. Planning engine → workable tasks
 
-**Problem:** Operators confuse wishlist artifacts, planning sessions, and execution tasks.
+**Problem:** Operators confuse Ideas, planning sessions, PlanArtifacts, and execution tasks.
 
 **Expectation:**
 
-- Use the planning module runbook: [`planning-workflow.md`](./planning-workflow.md) — especially **`build-plan`** with explicit **`finalize`** / wishlist flags when capturing decomposition.
-- Convert wishlist-style outputs to execution work with **`convert-wishlist`** (or the current intake path for **`T###`** wishlist tasks, per [`ADR-unified-task-store-wishlist-and-improvement-state.md`](../adrs/ADR-unified-task-store-wishlist-and-improvement-state.md)).
-- **`get-next-actions`** lists **execution** queue candidates; wishlist / intake items are governed by their own commands and filters.
+- Use the planning module runbook: [`planning-workflow.md`](./planning-workflow.md) — especially **`build-plan`** with explicit **`finalize`** / **`outputMode:"tasks"`** when capturing decomposition.
+- Materialize Ideas or accepted PlanArtifacts to execution work with **`finalize-plan-to-phase`** / **`persist-planning-execution-drafts`** (see **`.ai/playbooks/planner-chat.md`**).
+- **`get-next-actions`** lists **execution** queue candidates; Ideas rows stay outside the ready queue until materialized.
 
 **Transcript alignment:** `imp-a7dcdec79a791b` (`transcript:d298f9c6e0fee583eccc4a72da2cd9f05fbe216e`).
 
@@ -128,7 +128,7 @@ Canonical process remains: [`AGENTS.md`](../AGENTS.md), [`AGENT-CLI-MAP.md`](../
 
 **Expectation:**
 
-- **Public integration surface:** `src/modules/task-engine/index.ts` — typed exports for **`TaskStore`**, **`TransitionService`**, **`getNextActions`**, wishlist helpers, planning store openers, and the **`taskEngineModule`** registration object.
+- **Public integration surface:** `src/modules/task-engine/index.ts` — typed exports for **`TaskStore`**, **`TransitionService`**, **`getNextActions`**, planning store openers, and the **`taskEngineModule`** registration object.
 - **Dispatch and command wiring** live in **`task-engine-internal.ts`** (and related files). Prefer importing from **`index.ts`** in other packages or tests unless you are editing the module implementation.
 
 **Transcript alignment:** `imp-4cf9c424e5bfb2` (`transcript:5295b907609739616ee735747472151630762939`).
@@ -160,11 +160,11 @@ Canonical process remains: [`AGENTS.md`](../AGENTS.md), [`AGENT-CLI-MAP.md`](../
 
 **Intent:** Seed Composer with the same maintainer playbook text the docs describe, without retyping long **`@`** paths or CLI reminders.
 
-**Surfaces:** Command palette (**Workflow Cannon: Prefill Chat — …** for wishlist intake, improvement triage, task-to-phase-branch). Dashboard **Chat** on open wishlist rows; **Accept** / **Chat** on **Proposed · improvements** and **Proposed · execution** rows (**Accept** → **`run-transition`** with modal rationale + **`expectedPlanningGeneration`** when required — same hygiene as Tasks DnD). Tasks tree context menu on an open wishlist row → same prefill as Dashboard **Chat** for that id.
+**Surfaces:** Command palette (**Workflow Cannon: Prefill Chat — …** for planner chat, improvement triage, task-to-phase-branch). Dashboard **Chat** on **Ideas** rows; **Accept** / **Chat** on **Proposed · improvements** and **Proposed · execution** rows (**Accept** → **`run-transition`** with modal rationale + **`expectedPlanningGeneration`** when required — same hygiene as Tasks DnD).
 
 **Mechanism:** Primary **`deeplink.prompt.prefill`** `{ text }`; fallback URI then clipboard + toast. Very long prompts may exceed URI limits. Non-Cursor VS Code may lack the deeplink command — clipboard fallback is expected.
 
-**Playbooks:** [`wishlist-intake-to-execution.md`](../playbooks/wishlist-intake-to-execution.md), [`improvement-triage-top-three.md`](../playbooks/improvement-triage-top-three.md), [`task-to-phase-branch.md`](../playbooks/task-to-phase-branch.md). Source: `extensions/cursor-workflow-cannon/src/cursor-chat-prefill.ts`, `wishlist-chat-prompt.ts`, `playbook-chat-prompts.ts`.
+**Playbooks:** [`planner-chat.md`](../playbooks/planner-chat.md), [`improvement-triage-top-three.md`](../playbooks/improvement-triage-top-three.md), [`task-to-phase-branch.md`](../playbooks/task-to-phase-branch.md). Source: `extensions/cursor-workflow-cannon/src/cursor-chat-prefill.ts`, `playbook-chat-prompts.ts`.
 
 ## Optional: `suggestedNext` vs `get-task`
 

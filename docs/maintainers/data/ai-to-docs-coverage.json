@@ -219,10 +219,6 @@
       "output": "docs/maintainers/runbooks/transcript-ingestion-operations.md"
     },
     {
-      "source": ".ai/runbooks/wishlist-workflow.md",
-      "output": "docs/maintainers/runbooks/wishlist-workflow.md"
-    },
-    {
       "source": ".ai/runbooks/workspace-status-sqlite.md",
       "output": "docs/maintainers/runbooks/workspace-status-sqlite.md"
     },

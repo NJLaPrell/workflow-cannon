@@ -44,7 +44,7 @@ These are **two different surfaces**, both fed by **`pnpm exec wk run dashboard-
 
 | Surface | How you open it | What it is |
 |--------|-------------------|------------|
-| **Sidebar Dashboard** | Activity bar → **Workflow Cannon** → **Dashboard** | Multi-tab webview: **Overview** (rollups + **Up next**), **Queue** (filters, queue, wishlist, planning), **Status** (compact identity / counts cards), **Config** (canonical kit/module key editor), **CAE**. |
+| **Sidebar Dashboard** | Activity bar → **Workflow Cannon** → **Dashboard** | Multi-tab webview: **Overview** (rollups + **Up next**), **Queue** (filters, queue, Ideas, planning), **Status** (compact identity / counts cards), **Config** (canonical kit/module key editor), **CAE**. |
 | **Legacy Config webview** | Activity bar → **Workflow Cannon** → **Config** | Same config engine as **Dashboard → Config**; prefer the dashboard tab for day-to-day edits. |
 | **Status dashboard panel** | Command palette → **Workflow Cannon: Open Status Dashboard** | **Editor-area** `WebviewPanel` for **phase/drift** and **`systemStatus`** — supplementary to **Dashboard → Status** (identity, counts, editor integration). **`StateWatcher`** debounces refresh (**`STATUS_PANEL_DEBOUNCE_MS`** in `StatusDashboardPanel.ts`, default **450ms**) while the tab stays open; **Refresh now** is immediate. |
 
@@ -68,7 +68,7 @@ The extension runs its bundled `@workflow-cannon/workspace-kit` CLI when availab
 
 **Proposed vs ready:** The dashboard “Suggested next” and ready/proposed sections only reflect tasks in the configured task store. **`proposed`** improvement work appears under **Proposed improvements** on the dashboard (after a refresh). When **`dashboard-summary`** returns **`phaseBuckets`** with **`taskIds`**, each phase heading can show **Accept All** (routine dashboard policy trace; the extension refreshes the planning-generation token between each **`run-transition`** **`accept`**). Planning appears when a `build-plan` session file exists.
 
-**Execution queue vs wishlist:** **Ready** / **proposed** rollups on **Overview** and the **Queue** tab follow the kit **execution queue** and **exclude** **`wishlist_intake`** (note under stat pills / filters; points to **Wishlist** on the **Queue** tab). **Status → Task Counts** uses **`stateSummary`** (store-wide); see the muted note under that grid when numbers diverge. **Up next** uses kit **`suggestedNext`** (ready tasks ordered by **current workspace phase**, then **next phase**, then priority). When no runnable ready work exists, it surfaces the **first open wishlist** row. Full store: **`wk run list-tasks`**.
+**Execution queue vs Ideas:** **Ready** / **proposed** rollups on **Overview** and the **Queue** tab follow the kit **execution queue**. **Status → Task Counts** uses **`stateSummary`** (store-wide); see the muted note under that grid when numbers diverge. **Up next** uses kit **`suggestedNext`** (ready tasks ordered by **current workspace phase**, then **next phase**, then priority). When no runnable ready work exists, the dashboard may surface the first open **Ideas** row. Full store: **`wk run list-tasks`**.
 
 ## Testing
 
@@ -81,18 +81,18 @@ pnpm --filter cursor-workflow-cannon test
 
 - Root **`pnpm run build`** is required first because integration tests invoke real `dist/cli.js` from the repository.
 
-**Manual check (wishlist add):** Dashboard **Add wishlist item** opens the in-webview drawer (eight required fields); submit runs **`create-wishlist`**. Success ends with a clear toast plus **Open wishlist detail**; validation / API errors show in the drawer strip; Cancel closes the drawer.
+**Manual check (Ideas add):** Dashboard **Add idea** opens the in-webview drawer; submit runs **`create-idea`**. Success ends with a clear toast; validation / API errors show in the drawer strip; Cancel closes the drawer.
 
 ## Commands and operations
 
 - `Workflow Cannon: Open Dashboard`
 - `Workflow Cannon: Open Status Dashboard`
 - `Workflow Cannon: Show Ready Queue`
-- `Workflow Cannon: Prefill Chat — Wishlist Intake Playbook` (palette; optional wishlist id argument)
+- `Workflow Cannon: Prefill Chat — Planner Chat Playbook` (palette; optional idea id argument)
 - `Workflow Cannon: Generate Features`
 ### Chat prefill (Cursor)
 
-User-facing Cursor slash commands live under **`.cursor/commands/`**: **`/add-wishlist-item`**, **`/generate-features`**, **`/list-tasks`**, **`/what-next`**, **`/onboarding`**, and **`/behavior-interview`**.
+User-facing Cursor slash commands live under **`.cursor/commands/`**: **`/generate-features`**, **`/list-tasks`**, **`/what-next`**, **`/onboarding`**, and **`/behavior-interview`**.
 
 The extension seeds Cursor Composer using **`vscode.commands.executeCommand("deeplink.prompt.prefill", { text })`** (same entry Cursor uses internally). In Standard VS Code, it uses detected command capabilities to prefer the native chat prefill command. The **`cursor://anysphere.cursor-deeplink/prompt?text=…`** URI fallback is only attempted when the editor URI scheme is **`cursor`**; otherwise the prompt is copied to the clipboard with a warning. The dashboard shows the detected editor integration state (editor, URI scheme, and chat prefill route). Very long prompts may hit URI length limits — trim in-session or paste from clipboard.
 
@@ -100,7 +100,7 @@ Dashboard and palette **Generate Features** open a **new** Agent/Composer chat w
 
 **Collaboration profiles** (quick action) prefills a chat that links **`/onboarding`**, **`/behavior-interview`**, and read-mostly **`pnpm exec wk run`** lines (`resolve-behavior-profile`, `list-behavior-profiles`, **`sync-effective-behavior-cursor-rule`**) — advisory only; **chat is not JSON `policyApproval`**.
 
-Dashboard **Wishlist** open rows include **Chat**; **Proposed · improvements** and **Proposed · execution** rows include **Accept** (in-webview drawer: target phase + **`policyApproval`** rationale for **`run-transition`** **`accept`**, then **`assign-task-phase`**) and **Chat** (improvement triage vs task-to-phase-branch playbook text). Agent canon: **`.ai/playbooks/`** (`wishlist-intake-to-execution.md`, `improvement-triage-top-three.md`, `task-to-phase-branch.md`). Maintainer mirrors: `docs/maintainers/playbooks/`.
+Dashboard **Ideas** open rows include **Chat**; **Proposed · improvements** and **Proposed · execution** rows include **Accept** (in-webview drawer: target phase + **`policyApproval`** rationale for **`run-transition`** **`accept`**, then **`assign-task-phase`**) and **Chat** (improvement triage vs task-to-phase-branch playbook text). Agent canon: **`.ai/playbooks/`** (`planner-chat.md`, `improvement-triage-top-three.md`, `task-to-phase-branch.md`). Maintainer mirrors: `docs/maintainers/playbooks/`.
 
 ### Dashboard prompt surface (Phase 91)
 

@@ -64,7 +64,7 @@ Maintainers want **one primary intake surface** for durable work items (tasks on
 
 - **Positive:** Single id namespace (`T###`) for durable work; simpler mental model for agents and dashboards; wishlist provenance still auditable via metadata; improvement pipeline state stays out of the task lifecycle graph.
 - **Negative:** Breaking change for any external tool that assumed `W###` ids or a separate wishlist file; requires a coordinated release note and one-time operator action.
-- **Follow-up:** Update CLI map, TERMS, extension/dashboard filters, parity fixtures, and `convert-wishlist` semantics to operate on tasks-only intake.
+- **Follow-up:** Update CLI map, TERMS, extension/dashboard filters, parity fixtures, and `finalize-plan-to-phase` semantics to operate on tasks-only intake.
 
 ## Related
 

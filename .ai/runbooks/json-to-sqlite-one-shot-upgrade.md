@@ -23,7 +23,7 @@ Use this runbook when a **legacy JSON task file** exists (for example **`.worksp
    workspace-kit run migrate-task-persistence '{"direction":"json-to-sqlite","policyApproval":{"confirmed":true,"rationale":"one-shot json to sqlite"}}'
    ```
 
-3. **Legacy SQLite wishlist blob** — If the planning DB still has **`wishlist_store_json`**, the next **planning store open** (any normal **`run`** that loads tasks) migrates blob items into **`wishlist_intake`** tasks and drops the column.
+3. **Legacy SQLite ideation blob** — If the planning DB still has **`wishlist_store_json`**, the next **planning store open** (any normal **`run`** that loads tasks) migrates legacy rows and drops the column. Legacy ideation data is not retained after Phase 117 removal.
 
 4. **Flip config** — Omit **`tasks.persistenceBackend`** or set **`sqlite`** (default). Remove any legacy **`json`** key (**v0.40+** will reject it if present).
 

@@ -25,7 +25,7 @@ Agents and operators consume `workspace-kit run` primarily as **JSON on stdout**
 | Command / surface | Failure `code` | `remediation` |
 | --- | --- | --- |
 | **`run-transition`** | `invalid-run-args`, `planning-generation-required` (pilot), missing `taskId`/`action` in engine | `run-transition.md`; planning ADR when token policy |
-| **`create-wishlist`** | `invalid-task-schema`, `duplicate-task-id`, `planning-generation-required` | `create-wishlist.md`; planning ADR when token policy |
+| **`create-idea`** | `invalid-task-schema`, `duplicate-task-id`, `planning-generation-required` | `create-idea.md`; planning ADR when token policy |
 | **`generate-recommendations`** | `generate-failed` | `generate-recommendations.md` |
 | **Router** | `unknown-command`, `peer-module-disabled` | `AGENT-CLI-MAP.md`; instruction path for peer-disabled |
 | **Policy gate (run)** | `policy-denied` | `POLICY-APPROVAL.md` |

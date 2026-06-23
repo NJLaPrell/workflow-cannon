@@ -58,14 +58,14 @@ Generated from **`.ai/playbooks/`** where covered — edit **`.ai`** sources, th
 | `improvement-task-discovery` | [`playbooks/improvement-task-discovery.md`](./playbooks/improvement-task-discovery.md) | Research → log improvements |
 | `improvement-scout` | [`playbooks/improvement-scout.md`](./playbooks/improvement-scout.md) | Bounded scout / **`scout-report`** |
 | `improvement-triage-top-three` | [`playbooks/improvement-triage-top-three.md`](./playbooks/improvement-triage-top-three.md) | **`proposed`** → **`ready`** (≤3) |
-| `wishlist-intake-to-execution` | [`playbooks/wishlist-intake-to-execution.md`](./playbooks/wishlist-intake-to-execution.md) | Wishlist → **`convert-wishlist`** |
+| `planner-chat` | [`playbooks/planner-chat.md`](./playbooks/planner-chat.md) | Wishlist → **`finalize-plan-to-phase`** |
 | `skill-attachments` | [`playbooks/skill-attachments.md`](./playbooks/skill-attachments.md) | **`metadata.skillIds`** |
 | `workspace-kit-chat-onboarding` | [`playbooks/workspace-kit-chat-onboarding.md`](./playbooks/workspace-kit-chat-onboarding.md) | **`/onboarding`** |
 | `workspace-kit-chat-behavior-interview` | [`playbooks/workspace-kit-chat-behavior-interview.md`](./playbooks/workspace-kit-chat-behavior-interview.md) | **`/behavior-interview`** |
 
 Invocation / Cursor attachment: [`runbooks/agent-playbooks.md`](./runbooks/agent-playbooks.md). Agent-oriented copy: **`.ai/runbooks/agent-playbooks.md`**.
 
-**Optional Cursor rules:** `playbook-phase-closeout.mdc`, `playbook-task-to-phase-branch.mdc`, `playbook-improvement-task-discovery.mdc`, `playbook-improvement-triage-top-three.mdc`, `playbook-wishlist-intake-to-execution.mdc`, `playbook-workspace-kit-chat-onboarding.mdc`, `playbook-workspace-kit-chat-behavior-interview.mdc` (under `.cursor/rules/`).
+**Optional Cursor rules:** `playbook-phase-closeout.mdc`, `playbook-task-to-phase-branch.mdc`, `playbook-improvement-task-discovery.mdc`, `playbook-improvement-triage-top-three.mdc`, `playbook-planner-chat.mdc`, `playbook-workspace-kit-chat-onboarding.mdc`, `playbook-workspace-kit-chat-behavior-interview.mdc` (under `.cursor/rules/`).
 
 ## Long threads and context reload
 

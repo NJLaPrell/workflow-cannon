@@ -11,7 +11,7 @@ When `tasks.planningGenerationPolicy` is **`require`**, the CLI runs an early ch
 - `run-transition`, `create-task`, `create-task-from-plan`, `update-task`
 - `archive-task`, `add-dependency`, `remove-dependency`
 - `assign-task-phase`, `clear-task-phase`
-- `update-wishlist`, `convert-wishlist`, `create-wishlist`
+- `update-idea`, `finalize-plan-to-phase`, `create-idea`
 - `update-workspace-phase-snapshot`
 - `backfill-task-feature-links`, `backup-planning-sqlite`
 - `migrate-task-persistence`, `migrate-wishlist-intake`

@@ -611,7 +611,7 @@
     "moduleId": "task-engine",
     "name": "persist-planning-execution-drafts",
     "file": "persist-planning-execution-drafts.md",
-    "description": "Persist multiple proposed execution tasks from planning decomposition in one transaction (convert-wishlist-compatible rows).",
+    "description": "Persist multiple proposed execution tasks from planning decomposition in one transaction (planning-decomposition rows).",
     "defaultResponseTemplateId": "default",
     "policySensitivity": "non-sensitive"
   },

@@ -34,7 +34,7 @@ export type DashboardTaskRow = {
 export type DashboardWishlistRow = {
   id: string;
   title: string;
-  /** Backing `wishlist_intake` task id (`T###`); use for `run-transition`, not necessarily equal to `id` when legacy `W###` is shown. */
+  /** Backing task id (`T###`) when the row maps to persisted task state. */
   taskId: string;
 };
 
