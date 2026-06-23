@@ -1,7 +1,7 @@
 import { DASHBOARD_SLICE_REGISTRY, lookupDashboardSlice } from "./dashboard-slice-registry.js";
 import type { DashboardSectionId } from "./dashboard-section-registry.js";
 import type { DashboardSlice, DashboardSliceName } from "./dashboard-snapshot-types.js";
-import { enrichDashboardAgentActivitySummaryWithRegistrySessions } from "@workflow-cannon/workspace-kit/modules/task-engine/dashboard/enrich-dashboard-agent-activity-summary";
+import { enrichDashboardAgentActivitySummaryWithRegistrySessions } from "./enrich-dashboard-agent-activity-summary.js";
 import type {
   DashboardAgentActivitySummary,
   DashboardAgentRegistrySessionSummary
