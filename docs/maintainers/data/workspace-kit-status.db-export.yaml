@@ -2,18 +2,18 @@
 kit_export_envelope:
   schema_version: 1
   authoritative: false
-  generated_at: "2026-06-04T14:02:54.198Z"
-  source_sequence: 32
+  generated_at: "2026-06-23T05:31:13.078Z"
+  source_sequence: 34
   source_kind: "kit_workspace_status"
   role: "sqlite-projection-export"
 schema_version: 1
-current_kit_phase: "130"
-next_kit_phase: "129"
-last_updated: "2026-06-04T14:02:27.238Z"
-active_focus: "Phase 130 — ready for planning and delivery"
+current_kit_phase: "135"
+next_kit_phase: "136"
+last_updated: "2026-06-23T05:31:02.912Z"
+active_focus: "Phase 135 — kickoff"
 blockers: []
 pending_decisions: []
 next_agent_actions:
-  - "Review Phase 130 ready work and start the next delivery loop"
-# workspace_revision: 32
-# updated_at: "2026-06-04T14:02:27.312Z"
+  - "Run phase kickoff assessment for Phase 135"
+# workspace_revision: 34
+# updated_at: "2026-06-23T05:31:03.013Z"
