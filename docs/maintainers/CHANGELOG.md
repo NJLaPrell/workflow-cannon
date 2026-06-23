@@ -8,6 +8,27 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-06-23
+
+Major — **Phase 117 Wishlist removal** (retire wishlist ideation surface; migrate operators to Ideas + planner-chat).
+
+### Breaking
+
+- **Wishlist module and CLI verbs removed** — `add-wishlist`, `list-wishlist`, `get-wishlist`, `update-wishlist`, `convert-wishlist`, `migrate-wishlist-intake`, and related dashboard wishlist hydration controls are gone. Use **Ideas** (`create-idea`, `list-ideas`, planner-chat playbooks) for ideation instead.
+- **`wishlist_intake` task rows discarded on upgrade** — SQLite migration drops legacy wishlist-intake tasks and clears stale wishlist build-plan session state. **Back up `.workspace-kit/tasks/workspace-kit.db` (or your configured planning SQLite path) before upgrading.**
+- **Docs, schemas, and agent surfaces repointed** — wishlist playbooks, prompts, Cursor rules, CLI snippets, and contract defs removed; canon now references Ideas and planner-chat workflows.
+
+### Removed
+
+- Wishlist command module, persistence store, and dashboard wishlist slice wiring.
+- Wishlist intake conversion path from build-plan (default output is tasks-only).
+
+### Migration
+
+1. Export or note any open wishlist items you still need — they are not preserved across upgrade.
+2. Copy `.workspace-kit/tasks/workspace-kit.db` to a safe backup path.
+3. Upgrade to **v1.0.0**, run `pnpm exec wk doctor`, and capture new ideation via Ideas (`create-idea`) or planner-chat as needed.
+
 ## [0.99.29] - 2026-06-22
 
 ## [0.99.28] - 2026-06-05
