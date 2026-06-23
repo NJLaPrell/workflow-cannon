@@ -1,0 +1,419 @@
+{
+  "schemaVersion": 1,
+  "mapId": "cursor-subagent-v1",
+  "hostHint": "cursor",
+  "description": "Cursor Task-tool model selection map: scope signals → cheapest capable subagent model slug. Reconcile capability scores with maintainer Model selection map.pdf.",
+  "models": [
+    {
+      "modelSlug": "composer-2.5-fast",
+      "displayName": "Composer 2.5 Fast",
+      "modelTier": "cheap_fast",
+      "costBand": "minimal",
+      "capabilities": {
+        "reasoning": 2,
+        "code": 3,
+        "speed": 5,
+        "costEfficiency": 5,
+        "contextHandling": 3,
+        "toolUse": 4
+      },
+      "strengths": [
+        "mechanical edits",
+        "docs and fixture updates",
+        "narrow scoped delivery loops",
+        "read-only exploration with tight bounds"
+      ],
+      "avoidWhen": [
+        "cross-module refactors",
+        "schema or migration work",
+        "ambiguous debugging",
+        "policy or security-sensitive mutations"
+      ],
+      "fallbackSlugs": ["composer-2.5"]
+    },
+    {
+      "modelSlug": "composer-2.5",
+      "displayName": "Composer 2.5",
+      "modelTier": "balanced",
+      "costBand": "low",
+      "capabilities": {
+        "reasoning": 3,
+        "code": 4,
+        "speed": 4,
+        "costEfficiency": 4,
+        "contextHandling": 4,
+        "toolUse": 4
+      },
+      "strengths": [
+        "normal feature implementation",
+        "moderate test writing",
+        "bounded refactors in owned paths",
+        "MCP/server feature work with clear acceptance"
+      ],
+      "avoidWhen": [
+        "deep runtime architecture moves",
+        "multi-adapter parity redesign",
+        "irreversible migrations"
+      ],
+      "fallbackSlugs": ["gpt-5.3-codex", "claude-4.6-sonnet-medium-thinking"]
+    },
+    {
+      "modelSlug": "gpt-5.3-codex",
+      "displayName": "GPT-5.3 Codex",
+      "modelTier": "high_reasoning",
+      "costBand": "high",
+      "capabilities": {
+        "reasoning": 4,
+        "code": 5,
+        "speed": 3,
+        "costEfficiency": 2,
+        "contextHandling": 4,
+        "toolUse": 4
+      },
+      "strengths": [
+        "CLI/runtime refactors",
+        "shared runtime extraction",
+        "cross-surface adapter moves",
+        "large TypeScript code changes with parity constraints"
+      ],
+      "avoidWhen": [
+        "simple formatting or inventory",
+        "tasks that only need read-only search"
+      ],
+      "fallbackSlugs": ["gpt-5.5-high", "claude-opus-4-8-thinking-high"]
+    },
+    {
+      "modelSlug": "claude-4.6-sonnet-medium-thinking",
+      "displayName": "Claude 4.6 Sonnet (medium thinking)",
+      "modelTier": "balanced",
+      "costBand": "medium",
+      "capabilities": {
+        "reasoning": 4,
+        "code": 4,
+        "speed": 3,
+        "costEfficiency": 3,
+        "contextHandling": 4,
+        "toolUse": 4
+      },
+      "strengths": [
+        "prompt and UX copy with policy nuance",
+        "security-adjacent design (prompt injection, redaction policy)",
+        "dashboard/extension agent guidance",
+        "tasks needing structured reasoning without full opus cost"
+      ],
+      "avoidWhen": [
+        "purely mechanical edits",
+        "trivial shell-only operations"
+      ],
+      "fallbackSlugs": ["gpt-5.5-high", "claude-opus-4-8-thinking-high"]
+    },
+    {
+      "modelSlug": "gpt-5.5-high",
+      "displayName": "GPT-5.5 High",
+      "modelTier": "high_reasoning",
+      "costBand": "high",
+      "capabilities": {
+        "reasoning": 5,
+        "code": 4,
+        "speed": 2,
+        "costEfficiency": 2,
+        "contextHandling": 5,
+        "toolUse": 4
+      },
+      "strengths": [
+        "ambiguous debugging",
+        "orchestration planning",
+        "large-context reconciliation",
+        "cross-module contract design"
+      ],
+      "avoidWhen": [
+        "narrow low-risk fixes",
+        "single-file mechanical changes"
+      ],
+      "fallbackSlugs": ["claude-opus-4-8-thinking-high"]
+    },
+    {
+      "modelSlug": "claude-opus-4-8-thinking-high",
+      "displayName": "Claude Opus 4.8 (thinking high)",
+      "modelTier": "specialist",
+      "costBand": "premium",
+      "capabilities": {
+        "reasoning": 5,
+        "code": 5,
+        "speed": 2,
+        "costEfficiency": 1,
+        "contextHandling": 5,
+        "toolUse": 4
+      },
+      "strengths": [
+        "architecture direction",
+        "complex multi-step debugging",
+        "security review depth",
+        "high-stakes design trade-offs"
+      ],
+      "avoidWhen": [
+        "cost-sensitive bulk worker waves",
+        "tasks with explicit cheap_fast tier recommendation"
+      ],
+      "fallbackSlugs": ["gpt-5.5-high"]
+    },
+    {
+      "modelSlug": "claude-fable-5-thinking-high",
+      "displayName": "Claude Fable 5 (thinking high)",
+      "modelTier": "specialist",
+      "costBand": "medium",
+      "capabilities": {
+        "reasoning": 4,
+        "code": 4,
+        "speed": 3,
+        "costEfficiency": 3,
+        "contextHandling": 4,
+        "toolUse": 3
+      },
+      "strengths": [
+        "narrative-heavy maintainer docs",
+        "product copy with reasoning",
+        "specialist review when opus is overkill"
+      ],
+      "avoidWhen": [
+        "heavy code refactors",
+        "shell automation"
+      ],
+      "fallbackSlugs": ["claude-4.6-sonnet-medium-thinking"]
+    }
+  ],
+  "scopeDimensions": [
+    {
+      "id": "complexity",
+      "label": "Complexity",
+      "weight": "high",
+      "description": "Many modules, non-local reasoning, or large coordination surface.",
+      "escalatesAt": "high"
+    },
+    {
+      "id": "risk",
+      "label": "Risk",
+      "weight": "high",
+      "description": "Data loss, security, release gates, or irreversible operations.",
+      "escalatesAt": "high"
+    },
+    {
+      "id": "ambiguity",
+      "label": "Ambiguity",
+      "weight": "high",
+      "description": "Unclear acceptance criteria or conflicting specs.",
+      "escalatesAt": "high"
+    },
+    {
+      "id": "file_count",
+      "label": "File count",
+      "weight": "medium",
+      "description": "Large owned-path touch surface.",
+      "escalatesAt": "high"
+    },
+    {
+      "id": "architecture_impact",
+      "label": "Architecture impact",
+      "weight": "high",
+      "description": "Boundary moves, new stores, shared runtime, adapter parity.",
+      "escalatesAt": "high"
+    },
+    {
+      "id": "schema_migration_impact",
+      "label": "Schema / migration impact",
+      "weight": "critical",
+      "description": "SQLite/task-store/schema migrations or contract version bumps.",
+      "escalatesAt": "critical"
+    },
+    {
+      "id": "test_difficulty",
+      "label": "Test difficulty",
+      "weight": "medium",
+      "description": "Flaky CI, integration gaps, or parity harness work.",
+      "escalatesAt": "high"
+    },
+    {
+      "id": "policy_sensitivity",
+      "label": "Policy sensitivity",
+      "weight": "critical",
+      "description": "Tier A/B commands, approval model, or audit/redaction behavior.",
+      "escalatesAt": "critical"
+    },
+    {
+      "id": "context_size",
+      "label": "Context size",
+      "weight": "medium",
+      "description": "Large read slices or multi-artifact reconciliation.",
+      "escalatesAt": "high"
+    },
+    {
+      "id": "reasoning_depth",
+      "label": "Reasoning depth",
+      "weight": "high",
+      "description": "Root-cause debugging or multi-hop planning.",
+      "escalatesAt": "high"
+    }
+  ],
+  "tierDefaults": {
+    "cheap_fast": {
+      "modelSlug": "composer-2.5-fast",
+      "fallbackSlugs": ["composer-2.5"]
+    },
+    "balanced": {
+      "modelSlug": "composer-2.5",
+      "fallbackSlugs": ["claude-4.6-sonnet-medium-thinking"]
+    },
+    "high_reasoning": {
+      "modelSlug": "gpt-5.3-codex",
+      "fallbackSlugs": ["gpt-5.5-high"]
+    },
+    "specialist": {
+      "modelSlug": "claude-opus-4-8-thinking-high",
+      "fallbackSlugs": ["gpt-5.5-high"]
+    }
+  },
+  "subagentTypeDefaults": {
+    "explore": {
+      "modelSlug": "composer-2.5-fast",
+      "modelTier": "cheap_fast",
+      "rationale": "Read-only codebase exploration should prefer the fastest capable model."
+    },
+    "shell": {
+      "modelSlug": "composer-2.5-fast",
+      "modelTier": "cheap_fast",
+      "rationale": "Shell execution subagents are usually bounded command work."
+    },
+    "generalPurpose": {
+      "modelSlug": "composer-2.5",
+      "modelTier": "balanced",
+      "rationale": "Default worker posture; escalate via scope signals when rules fire."
+    },
+    "cursor-guide": {
+      "modelSlug": "composer-2.5-fast",
+      "modelTier": "cheap_fast",
+      "rationale": "Product doc lookup is read-heavy and narrow."
+    },
+    "ci-investigator": {
+      "modelSlug": "claude-4.6-sonnet-medium-thinking",
+      "modelTier": "balanced",
+      "rationale": "CI failure summaries need moderate reasoning on bounded logs."
+    },
+    "bugbot": {
+      "modelSlug": "claude-opus-4-8-thinking-high",
+      "modelTier": "specialist",
+      "rationale": "Review depth outweighs cost for PR defect finding."
+    },
+    "security-review": {
+      "modelSlug": "claude-opus-4-8-thinking-high",
+      "modelTier": "specialist",
+      "rationale": "Security review is specialist-tier by default."
+    },
+    "best-of-n-runner": {
+      "modelSlug": "composer-2.5",
+      "modelTier": "balanced",
+      "rationale": "Parallel attempts inherit worker default unless scope escalates."
+    }
+  },
+  "selectionRules": [
+    {
+      "ruleId": "human_review_gate",
+      "priority": 1000,
+      "label": "Human review required",
+      "match": {
+        "anyAtOrAbove": {
+          "policy_sensitivity": "critical",
+          "schema_migration_impact": "critical",
+          "risk": "critical"
+        }
+      },
+      "outcome": {
+        "modelSlug": null,
+        "modelTier": "human_review",
+        "rationale": "Critical policy, migration, or risk signals require human review before subagent dispatch."
+      }
+    },
+    {
+      "ruleId": "security_specialist",
+      "priority": 900,
+      "label": "Security-heavy implementation",
+      "match": {
+        "anyAtOrAbove": {
+          "policy_sensitivity": "high",
+          "risk": "high"
+        },
+        "taskTypeHints": ["security", "redaction", "prompt-injection", "audit"]
+      },
+      "outcome": {
+        "modelSlug": "claude-4.6-sonnet-medium-thinking",
+        "modelTier": "balanced",
+        "rationale": "Security-adjacent implementation benefits from thinking-capable sonnet before opus spend.",
+        "fallbackSlugs": ["claude-opus-4-8-thinking-high"]
+      }
+    },
+    {
+      "ruleId": "architecture_runtime_refactor",
+      "priority": 800,
+      "label": "Architecture / shared runtime",
+      "match": {
+        "anyAtOrAbove": {
+          "architecture_impact": "high",
+          "complexity": "high"
+        },
+        "taskTypeHints": ["runtime", "adapter", "shared-runtime", "cli-refactor", "mcp-refactor"]
+      },
+      "outcome": {
+        "modelSlug": "gpt-5.3-codex",
+        "modelTier": "high_reasoning",
+        "rationale": "Cross-surface runtime and refactor work maps to the strongest code model tier.",
+        "fallbackSlugs": ["gpt-5.5-high"]
+      }
+    },
+    {
+      "ruleId": "high_weight_escalation",
+      "priority": 700,
+      "label": "Multiple high-weight scope signals",
+      "match": {
+        "highWeightCountAtOrAbove": {
+          "level": "high",
+          "count": 2
+        }
+      },
+      "outcome": {
+        "modelSlug": "gpt-5.5-high",
+        "modelTier": "high_reasoning",
+        "rationale": "Two or more high-weight scope dimensions fired; use high-reasoning tier.",
+        "fallbackSlugs": ["claude-opus-4-8-thinking-high"]
+      }
+    },
+    {
+      "ruleId": "narrow_mechanical",
+      "priority": 600,
+      "label": "Narrow mechanical scope",
+      "match": {
+        "allAtOrAbove": {
+          "complexity": "low",
+          "risk": "low",
+          "ambiguity": "low"
+        },
+        "ownedPathCountAtLeast": 1,
+        "taskTypeHints": ["docs", "fixtures", "formatting", "inventory", "delivery-loop"]
+      },
+      "outcome": {
+        "modelSlug": "composer-2.5-fast",
+        "modelTier": "cheap_fast",
+        "rationale": "Low-risk, narrow scope fits the cheapest capable worker model."
+      }
+    },
+    {
+      "ruleId": "default_balanced_worker",
+      "priority": 100,
+      "label": "Default balanced worker",
+      "match": {},
+      "outcome": {
+        "useTierDefault": true,
+        "modelTier": "balanced",
+        "rationale": "No escalation rules matched; use balanced tier default."
+      }
+    }
+  ]
+}

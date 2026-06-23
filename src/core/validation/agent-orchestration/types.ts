@@ -3,6 +3,7 @@ import type { AgentDefinitionV1 } from "../../../contracts/agent-orchestration.j
 import type { AgentSessionV1 } from "../../../contracts/agent-session.v1.js";
 import type { TeamAssignmentMetadataV1 } from "../../../contracts/team-execution-assignment-metadata.v1.js";
 import type { TeamExecutionHandoffV2 } from "../../../contracts/team-execution-handoff.v2.js";
+import type { ModelSelectionMapV1 } from "../../../contracts/model-selection-map.v1.js";
 
 /** Stable codes from AGENT_ORCHESTRATION_CONTRACTS.md §8.2. */
 export const ORCHESTRATION_VALIDATION_CODES = [
@@ -51,3 +52,4 @@ export type AgentSessionValidationResult = OrchestrationValidationResult<AgentSe
 export type AssignmentMetadataValidationResult = OrchestrationValidationResult<TeamAssignmentMetadataV1>;
 export type AgentActivityValidationResult = OrchestrationValidationResult<AgentActivityV1>;
 export type HandoffV2ValidationResult = OrchestrationValidationResult<TeamExecutionHandoffV2>;
+export type ModelSelectionMapValidationResult = OrchestrationValidationResult<ModelSelectionMapV1>;

@@ -16,6 +16,7 @@ Canonical JSON examples for **AgentDefinition**, **AgentSession**, **assignment 
 | `agent-activity-blocked-worker.v1.json` | AgentActivity v1 | Worker blocked on dependency |
 | `handoff-v2/*.v2.json` | Handoff v2 | Status variants (`completed`, `blocked`, `partial`, `failed`, `needs_review`) |
 | `handoff-*.v2.json` (repo root of this folder) | Handoff v2 | Same golden payloads as `handoff-v2/` for doc paths that cite the flat names |
+| `model-selection-map.cursor.v1.json` | Model selection map v1 | Cursor Task-tool subagent routing catalog + rules |
 
 ## Handoff v2 status map
 
