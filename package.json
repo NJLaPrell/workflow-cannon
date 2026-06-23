@@ -25,6 +25,7 @@
     "./contracts/agent-phase-journal-read-contract": "./dist/contracts/agent-phase-journal-read-contract.js",
     "./contracts/agent-phase-focus-dashboard-contract": "./dist/contracts/agent-phase-focus-dashboard-contract.js",
     "./contracts/dashboard-summary-run": "./dist/contracts/dashboard-summary-run.js",
+    "./modules/task-engine/dashboard/enrich-dashboard-agent-activity-summary": "./dist/modules/task-engine/dashboard/enrich-dashboard-agent-activity-summary.js",
     "./contracts/dashboard-snapshot": "./dist/contracts/dashboard-snapshot.js",
     "./contracts/dashboard-events": "./dist/contracts/dashboard-events.js",
     "./mcp": "./dist/mcp/index.js",

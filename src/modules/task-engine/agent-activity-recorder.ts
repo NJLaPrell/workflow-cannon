@@ -28,6 +28,7 @@ export type RecordAgentActivityInput = AgentActivityIdentityInput & {
   hostHint?: string | null;
   modelTier?: string | null;
   modelHint?: string | null;
+  thinkingLevel?: string | null;
   taskId?: string | null;
   command?: string | null;
   phaseKey?: string | null;
@@ -49,6 +50,7 @@ export type CommandBoundaryActivityInput = {
   hostHint?: string | null;
   modelTier?: string | null;
   modelHint?: string | null;
+  thinkingLevel?: string | null;
   taskId?: string | null;
   phaseKey?: string | null;
   prNumber?: number | null;
@@ -230,6 +232,7 @@ export function recordAgentActivity(
     hostHint: cleanText(input.hostHint) || null,
     modelTier: cleanText(input.modelTier) || null,
     modelHint: cleanText(input.modelHint) || null,
+    thinkingLevel: cleanText(input.thinkingLevel) || null,
     taskId: cleanText(input.taskId) || null,
     command: cleanText(input.command) || null,
     phaseKey: cleanText(input.phaseKey) || null,

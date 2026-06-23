@@ -40,6 +40,7 @@
       "enum": ["cheap_fast", "balanced", "high_reasoning", "specialist", "human_review"]
     },
     "modelHint": { "type": "string" },
+    "thinkingLevel": { "type": "string" },
     "startedAt": { "type": "string", "format": "date-time" },
     "updatedAt": { "type": "string", "format": "date-time" },
     "expiresAt": { "type": "string", "format": "date-time" },

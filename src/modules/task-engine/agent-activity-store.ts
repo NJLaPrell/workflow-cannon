@@ -41,6 +41,7 @@ export type AgentActivityLease = {
   hostHint: string | null;
   modelTier: string | null;
   modelHint: string | null;
+  thinkingLevel: string | null;
   startedAt: string;
   updatedAt: string;
   expiresAt: string;
@@ -64,6 +65,7 @@ export type SetAgentActivityInput = {
   hostHint?: string | null;
   modelTier?: string | null;
   modelHint?: string | null;
+  thinkingLevel?: string | null;
   now: string;
   expiresAt: string;
   taskId?: string | null;
@@ -168,6 +170,7 @@ export function agentActivityLeaseToV1(lease: AgentActivityLease): AgentActivity
   if (lease.hostHint) activity.hostHint = lease.hostHint;
   if (lease.modelTier) activity.modelTier = lease.modelTier as AgentActivityV1["modelTier"];
   if (lease.modelHint) activity.modelHint = lease.modelHint;
+  if (lease.thinkingLevel) activity.thinkingLevel = lease.thinkingLevel;
   if (lease.startedAt) activity.startedAt = lease.startedAt;
   if (lease.details && Object.keys(lease.details).length > 0) {
     activity.details = lease.details;
@@ -215,6 +218,7 @@ function rowToLease(row: Record<string, unknown>): AgentActivityLease | null {
     hostHint: cleanText(row.host_hint) || null,
     modelTier: cleanText(row.model_tier) || null,
     modelHint: cleanText(row.model_hint) || null,
+    thinkingLevel: cleanText(row.thinking_level) || null,
     startedAt,
     updatedAt,
     expiresAt,
@@ -254,9 +258,9 @@ export function setAgentActivityLease(
   db.prepare(
     `INSERT INTO ${TABLE} (
       activity_id, agent_id, session_id, agent_definition_id, assignment_id, kind, label,
-      current_step, host_hint, model_tier, model_hint, task_id, command, phase_key, pr_number,
+      current_step, host_hint, model_tier, model_hint, thinking_level, task_id, command, phase_key, pr_number,
       version, details_json, started_at, updated_at, expires_at
-    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     ON CONFLICT(activity_id) DO UPDATE SET
       agent_id = excluded.agent_id,
       session_id = excluded.session_id,
@@ -268,6 +272,7 @@ export function setAgentActivityLease(
       host_hint = excluded.host_hint,
       model_tier = excluded.model_tier,
       model_hint = excluded.model_hint,
+      thinking_level = excluded.thinking_level,
       task_id = excluded.task_id,
       command = excluded.command,
       phase_key = excluded.phase_key,
@@ -288,6 +293,7 @@ export function setAgentActivityLease(
     input.hostHint ?? null,
     input.modelTier ?? null,
     input.modelHint ?? null,
+    input.thinkingLevel ?? null,
     input.taskId ?? null,
     input.command ?? null,
     input.phaseKey ?? null,

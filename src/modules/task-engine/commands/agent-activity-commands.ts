@@ -90,6 +90,7 @@ export function resolveAgentActivityCommands(
       hostHint: cleanText(args.hostHint),
       modelTier: cleanText(args.modelTier),
       modelHint: cleanText(args.modelHint),
+      thinkingLevel: cleanText(args.thinkingLevel),
       updatedAt: now,
       expiresAt,
       details: details ?? undefined
@@ -110,6 +111,7 @@ export function resolveAgentActivityCommands(
       hostHint: cleanText(args.hostHint),
       modelTier: cleanText(args.modelTier),
       modelHint: cleanText(args.modelHint),
+      thinkingLevel: cleanText(args.thinkingLevel),
       taskId,
       command: commandName,
       phaseKey,

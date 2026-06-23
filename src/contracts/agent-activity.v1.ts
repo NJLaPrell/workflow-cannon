@@ -41,6 +41,8 @@ export type AgentActivityV1 = {
   hostHint?: string;
   modelTier?: AgentModelTier;
   modelHint?: string;
+  /** Host-reported reasoning/thinking level (e.g. high, thinking-high). */
+  thinkingLevel?: string;
   startedAt?: string;
   updatedAt: string;
   expiresAt: string;

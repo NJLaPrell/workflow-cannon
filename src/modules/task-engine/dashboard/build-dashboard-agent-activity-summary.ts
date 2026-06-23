@@ -4,8 +4,11 @@ import type {
   DashboardAgentStatusSummary,
   DashboardSubagentRegistrySummary,
   DashboardTeamAssignmentRow,
-  DashboardTeamExecutionSummary
+  DashboardTeamExecutionSummary,
+  DashboardAgentRegistrySessionSummary
 } from "../../../contracts/dashboard-summary-run.js";
+import type { WorkerPacketModelTierRecommendation } from "../../../contracts/team-execution-assignment-metadata.v1.js";
+import { enrichDashboardAgentActivitySummaryWithRegistrySessions } from "./enrich-dashboard-agent-activity-summary.js";
 import type { AgentActivityLease, AgentActivityLifecycle } from "../agent-activity-store.js";
 import { agentActivityLeaseToDashboardStatus, agentActivityLifecycleConfidence, deriveAgentActivityLifecycle } from "../agent-activity-store.js";
 import type { TaskEntity } from "../types.js";
@@ -17,6 +20,7 @@ export type BuildDashboardAgentActivitySummaryInput = {
   derivedAgentStatus: DashboardAgentStatusSummary;
   teamExecution: DashboardTeamExecutionSummary;
   subagentRegistry: DashboardSubagentRegistrySummary;
+  agentRegistrySessions?: DashboardAgentRegistrySessionSummary | null;
 };
 
 type RowSource = DashboardAgentActivityRow["source"];
@@ -119,14 +123,25 @@ function buildAgentProfile(args: {
   displayName?: string | null;
   modelTier?: string | null;
   modelHint?: string | null;
+  thinkingLevel?: string | null;
+  modelTierRecommendation?: WorkerPacketModelTierRecommendation | null;
+  modelTierRationale?: string | null;
   details?: Record<string, unknown> | null;
 }): DashboardAgentActivityRow["agentProfile"] {
   const model = cleanText(args.modelHint) || null;
+  const thinkingFromExplicit = cleanText(args.thinkingLevel);
   const thinkingFromHint = parseThinkingLevelFromModelHint(model);
   const thinkingFromDetails = readDetailText(args.details, ["thinkingLevel", "thinking_level"]);
+  const thinkingFromRecommendation = args.modelTierRecommendation
+    ? modelTierThinkingLabel(args.modelTierRecommendation.label) ?? args.modelTierRecommendation.label
+    : null;
+  const thinkingFromRationale = cleanText(args.modelTierRationale);
   const thinkingLevel =
-    thinkingFromHint ||
+    thinkingFromExplicit ||
     (thinkingFromDetails ? titleCase(thinkingFromDetails) : null) ||
+    thinkingFromHint ||
+    (thinkingFromRecommendation ? thinkingFromRecommendation : null) ||
+    (thinkingFromRationale ? thinkingFromRationale : null) ||
     modelTierThinkingLabel(args.modelTier);
   const agentNameOrId =
     cleanText(args.displayName) ||
@@ -602,6 +617,7 @@ function buildLiveActivityRows(
           displayName,
           modelTier: lease.modelTier,
           modelHint: lease.modelHint,
+          thinkingLevel: lease.thinkingLevel,
           details: lease.details
         })
       },
@@ -695,10 +711,14 @@ function buildAssignmentRows(
         agentProfile: buildAgentProfile({
           role: "task_worker",
           agentId: assignment.workerId,
+          agentDefinitionId: assignment.agentDefinitionId,
           displayName:
             cleanText(taskDisplayName(assignment.executionTaskId, byTaskId)) ||
             cleanText(assignment.executionTaskTitle) ||
-            cleanText(assignment.workerId)
+            cleanText(assignment.workerId),
+          modelTier: assignment.modelTier,
+          modelTierRecommendation: assignment.modelTierRecommendation ?? null,
+          modelTierRationale: assignment.modelTierRationale ?? null
         })
       },
       "team_execution",
@@ -884,7 +904,7 @@ export function buildDashboardAgentActivitySummary(
       : rows.some((row) => row.source === "live_activity")
         ? "live_activity"
         : "derived_only";
-  return {
+  const summary: DashboardAgentActivitySummary = {
     schemaVersion: 1,
     generatedAt: input.now,
     source,
@@ -902,4 +922,5 @@ export function buildDashboardAgentActivitySummary(
       derivedFallbackUsed: rows.length === 0
     }
   };
+  return enrichDashboardAgentActivitySummaryWithRegistrySessions(summary, input.agentRegistrySessions);
 }

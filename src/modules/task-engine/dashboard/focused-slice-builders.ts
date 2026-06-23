@@ -919,13 +919,19 @@ export async function buildDashboardAgentActivitySlice(
     systemStatus: systemStatusEmpty
   });
 
+  const agentRegistrySessions =
+    db && sqliteDual
+      ? summarizeAgentRegistrySessions(db, sqliteDual.dbPath)
+      : summarizeAgentRegistrySessions(undefined, "");
+
   const agentActivitySummary = buildDashboardAgentActivitySummary({
     now: generatedAt,
     tasks,
     liveActivityLeases,
     derivedAgentStatus,
     teamExecution,
-    subagentRegistry
+    subagentRegistry,
+    agentRegistrySessions
   });
 
   return {

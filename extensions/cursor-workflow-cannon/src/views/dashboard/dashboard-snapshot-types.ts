@@ -11,6 +11,7 @@ export type DashboardSliceName =
   | "status"
   | "agent"
   | "agentActivity"
+  | "agentTypes"
   | "team"
   | "subagents"
   | "checkpoints"

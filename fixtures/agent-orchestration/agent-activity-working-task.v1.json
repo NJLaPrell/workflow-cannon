@@ -13,6 +13,7 @@
   "hostHint": "cursor",
   "modelTier": "balanced",
   "modelHint": "gpt-5.5-high",
+  "thinkingLevel": "high",
   "startedAt": "2026-05-31T08:26:44.738Z",
   "updatedAt": "2026-05-31T08:30:00.000Z",
   "expiresAt": "2026-05-31T08:31:30.000Z",

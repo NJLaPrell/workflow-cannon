@@ -1,6 +1,11 @@
 import { DASHBOARD_SLICE_REGISTRY, lookupDashboardSlice } from "./dashboard-slice-registry.js";
 import type { DashboardSectionId } from "./dashboard-section-registry.js";
 import type { DashboardSlice, DashboardSliceName } from "./dashboard-snapshot-types.js";
+import { enrichDashboardAgentActivitySummaryWithRegistrySessions } from "@workflow-cannon/workspace-kit/modules/task-engine/dashboard/enrich-dashboard-agent-activity-summary";
+import type {
+  DashboardAgentActivitySummary,
+  DashboardAgentRegistrySessionSummary
+} from "@workflow-cannon/workspace-kit/contracts/dashboard-summary-run";
 
 function agentActivitySummaryHasContent(summary: unknown): boolean {
   if (!summary || typeof summary !== "object") {
@@ -39,6 +44,24 @@ function preserveLastKnownDashboardFields(
   return next;
 }
 
+function applyAgentRegistryEnrichment(summary: Record<string, unknown>): Record<string, unknown> {
+  const activity = summary.agentActivitySummary;
+  if (!activity || typeof activity !== "object") {
+    return summary;
+  }
+  const sessions = summary.agentRegistrySessions as DashboardAgentRegistrySessionSummary | undefined;
+  if (!sessions) {
+    return summary;
+  }
+  return {
+    ...summary,
+    agentActivitySummary: enrichDashboardAgentActivitySummaryWithRegistrySessions(
+      activity as DashboardAgentActivitySummary,
+      sessions
+    )
+  };
+}
+
 /** Merge a slice payload into an accumulated dashboard-summary-shaped object. */
 export function mergeSlicePayloadIntoSummary(
   summary: Record<string, unknown>,
@@ -60,7 +83,8 @@ export function mergeSlicePayloadIntoSummary(
 
   extracted = preserveLastKnownDashboardFields(summary, extracted);
 
-  return { ...summary, ...extracted };
+  const merged = { ...summary, ...extracted };
+  return applyAgentRegistryEnrichment(merged);
 }
 
 export function dashboardSectionIdForSlice(sliceName: DashboardSliceName): DashboardSectionId {

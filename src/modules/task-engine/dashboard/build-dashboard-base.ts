@@ -672,7 +672,8 @@ export async function buildDashboardBase(
           liveActivityLeases: liveLeases,
           derivedAgentStatus: derived,
           teamExecution,
-          subagentRegistry
+          subagentRegistry,
+          agentRegistrySessions
         })
       : null;
     return {
@@ -707,7 +708,8 @@ export async function buildDashboardBase(
           liveActivityLeases: liveLeases,
           derivedAgentStatus: derived,
           teamExecution,
-          subagentRegistry
+          subagentRegistry,
+          agentRegistrySessions
         })
       : null;
     return {
@@ -1059,6 +1061,10 @@ export async function buildDashboardOverview(
     topRecent: []
   };
 
+  const agentRegistrySessions = sqliteDual
+    ? summarizeAgentRegistrySessions(sqliteDual.getDatabase(), sqliteDual.dbPath)
+    : summarizeAgentRegistrySessions(dualForStatus.getDatabase(), dualForStatus.dbPath);
+
   const derivedAgentStatus = buildDashboardAgentStatus({
     now: systemStatus.generatedAt,
     tasks,
@@ -1079,7 +1085,8 @@ export async function buildDashboardOverview(
     liveActivityLeases: liveLeases,
     derivedAgentStatus,
     teamExecution: teamExecutionEmpty,
-    subagentRegistry: subagentRegistryEmpty
+    subagentRegistry: subagentRegistryEmpty,
+    agentRegistrySessions
   });
 
   const currentPhaseDelivery = buildDashboardCurrentPhaseDelivery({

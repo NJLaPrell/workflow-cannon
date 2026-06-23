@@ -894,6 +894,7 @@ export function summarizeTeamAssignmentsForDashboard(
       .all() as Record<string, unknown>[];
     const topActive = topRows.map((raw) => {
       const row = mapRow(raw);
+      const orchestration = row.orchestrationMetadataSummary;
       return {
         id: row.id,
         executionTaskId: row.executionTaskId,
@@ -901,7 +902,11 @@ export function summarizeTeamAssignmentsForDashboard(
         supervisorId: row.supervisorId,
         workerId: row.workerId,
         status: row.status,
-        updatedAt: row.updatedAt
+        updatedAt: row.updatedAt,
+        agentDefinitionId: orchestration?.agentDefinitionId ?? null,
+        modelTier: orchestration?.modelTier ?? null,
+        modelTierRationale: orchestration?.modelTierRationale ?? null,
+        modelTierRecommendation: orchestration?.modelTierRecommendation ?? null
       };
     });
     return {

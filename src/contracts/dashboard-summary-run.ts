@@ -4,6 +4,7 @@
  */
 
 import type { AgentPhaseFocusDashboard } from "./agent-phase-focus-dashboard-contract.js";
+import type { WorkerPacketModelTierRecommendation } from "./team-execution-assignment-metadata.v1.js";
 import type { WorkspaceCoordinationStatusV1 } from "./workspace-coordination-status.js";
 
 export type DashboardFeatureDetail = {
@@ -152,6 +153,10 @@ export type DashboardTeamAssignmentRow = {
   workerId: string;
   status: string;
   updatedAt: string;
+  agentDefinitionId?: string | null;
+  modelTier?: string | null;
+  modelTierRationale?: string | null;
+  modelTierRecommendation?: WorkerPacketModelTierRecommendation | null;
 };
 
 export type DashboardTeamExecutionSummary = {

@@ -33,6 +33,7 @@ workspace-kit run set-agent-activity '{
   "hostHint":"cursor-drawer",
   "modelTier":"high_reasoning",
   "modelHint":"PR review",
+  "thinkingLevel":"high",
   "details":{
     "prUrl":"https://github.com/NJLaPrell/workflow-cannon/pull/192",
     "pullRequestUrl":"https://github.com/NJLaPrell/workflow-cannon/pull/192",
@@ -46,7 +47,7 @@ workspace-kit run set-agent-activity '{
 
 Common kinds: `planning`, `working_task`, `blocked`, `validating`, `reviewing_item`, `reviewing_pr`, `releasing`, `awaiting_policy_approval`, and `awaiting_human_gate`.
 
-Optional fields: `label`, `agentId`, `sessionId`, `activityId`, `agentDefinitionId`, `assignmentId`, `currentStep`, `hostHint`, `modelTier`, `modelHint`, `taskId`, `command`, `phaseKey`, `prNumber`, `version`, `details`, and `ttlSeconds`. If `label` is omitted, workspace-kit generates a short label from structured fields. TTL defaults to **90 seconds** and is clamped between 30 seconds and 1 hour. Activity v1 argv is validated against agent-activity.v1 on write; response includes `activityV1` and read-path lifecycle per A-ACTIVITY (fresh for the first 30 seconds after update, aging from 30 to 60 seconds, stale after 60 seconds, expired at `expiresAt`).
+Optional fields: `label`, `agentId`, `sessionId`, `activityId`, `agentDefinitionId`, `assignmentId`, `currentStep`, `hostHint`, `modelTier`, `modelHint`, `thinkingLevel`, `taskId`, `command`, `phaseKey`, `prNumber`, `version`, `details`, and `ttlSeconds`. If `label` is omitted, workspace-kit generates a short label from structured fields. TTL defaults to **90 seconds** and is clamped between 30 seconds and 1 hour. Activity v1 argv is validated against agent-activity.v1 on write; response includes `activityV1` and read-path lifecycle per A-ACTIVITY (fresh for the first 30 seconds after update, aging from 30 to 60 seconds, stale after 60 seconds, expired at `expiresAt`).
 
 ## When to use it
 

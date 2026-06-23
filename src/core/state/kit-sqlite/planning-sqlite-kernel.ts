@@ -1292,6 +1292,17 @@ CREATE INDEX idx_kit_phase_delivery_history_status
 `);
 }
 
+/** Activity v1 thinking level column (explicit host-reported reasoning depth). */
+function migrateV35ToV36(db: SqliteDatabase): void {
+  if (!tableExists(db, "kit_agent_activity_leases")) {
+    return;
+  }
+  const cols = columnNames(db, "kit_agent_activity_leases");
+  if (!cols.has("thinking_level")) {
+    db.exec(`ALTER TABLE kit_agent_activity_leases ADD COLUMN thinking_level TEXT`);
+  }
+}
+
 /**
  * Shared SQLite setup for workspace-kit.db: pragmas, centralized user_version migrations.
  * Call after `new Database(path)` for every open (read/write).
@@ -1489,6 +1500,11 @@ function migrateKitSqliteSchema(db: SqliteDatabase): void {
     migrateV34ToV35(db);
     db.pragma("user_version = 35");
     current = 35;
+  }
+  if (current < 36) {
+    migrateV35ToV36(db);
+    db.pragma("user_version = 36");
+    current = 36;
   }
 }
 

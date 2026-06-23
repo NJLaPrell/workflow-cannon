@@ -136,6 +136,19 @@ export const DASHBOARD_SLICE_REGISTRY: readonly DashboardSliceDescriptor[] = [
     extractPayload: (data) => pick(data, [...SHARED_META_KEYS, "agentActivitySummary"])
   },
   {
+    name: "agentTypes",
+    sectionId: "overview",
+    command: "dashboard-agent-types-slice",
+    args: {},
+    pollGroup: "live",
+    visibleOnly: true,
+    freshnessTtlMs: 10_000,
+    freshnessSlaMs: 10_000,
+    staleOnMutationKinds: ["task-queue", "workspace-wide"],
+    extractPayload: (data) =>
+      pick(data, [...SHARED_META_KEYS, "subagentRegistry", "agentRegistrySessions"])
+  },
+  {
     name: "queue",
     sectionId: "queue",
     command: "dashboard-summary",
