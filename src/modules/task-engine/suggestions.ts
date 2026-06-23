@@ -9,7 +9,7 @@ import {
   parseKitPhaseNumberFromYaml,
   parseLeadingPhaseOrdinal
 } from "./phase-resolution.js";
-import { isWishlistIntakeTask } from "./wishlist/wishlist-intake.js";
+import { isWishlistIntakeTask } from "./wishlist-intake.js";
 
 /** Workspace kit phase pointers for ordering the ready queue and suggested next. */
 export type WorkspacePhaseFocus = {

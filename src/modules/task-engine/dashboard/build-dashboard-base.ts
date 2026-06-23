@@ -30,7 +30,7 @@ import {
   findWishlistIntakeTaskByLegacyOrTaskId,
   isWishlistIntakeTask,
   listWishlistIntakeTasksAsItems
-} from "../wishlist/wishlist-intake.js";
+} from "../wishlist-intake.js";
 import type { TaskStore } from "../persistence/store.js";
 import type { SqliteDualPlanningStore } from "../persistence/sqlite-dual-planning.js";
 import { buildFeatureEnrichmentBySlug } from "../persistence/feature-registry-queries.js";

@@ -157,8 +157,6 @@ function instructionPathForCommand(commandName: string): string {
       return CLI_REMEDIATION_INSTRUCTIONS.getLastOutput;
     case "dashboard-summary":
       return CLI_REMEDIATION_INSTRUCTIONS.dashboardSummary;
-    case "create-wishlist":
-      return CLI_REMEDIATION_INSTRUCTIONS.createWishlist;
     case "archive-task":
       return CLI_REMEDIATION_INSTRUCTIONS.archiveTask;
     case "add-dependency":

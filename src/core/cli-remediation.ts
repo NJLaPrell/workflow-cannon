@@ -13,7 +13,6 @@ export const CLI_REMEDIATION_INSTRUCTIONS = {
     "src/modules/task-engine/instructions/persist-planning-execution-drafts.md",
   updateTask: "src/modules/task-engine/instructions/update-task.md",
   dashboardSummary: "src/modules/task-engine/instructions/dashboard-summary.md",
-  createWishlist: "src/modules/task-engine/instructions/create-wishlist.md",
   archiveTask: "src/modules/task-engine/instructions/archive-task.md",
   addDependency: "src/modules/task-engine/instructions/add-dependency.md",
   generateRecommendations: "src/modules/improvement/instructions/generate-recommendations.md",
@@ -123,7 +122,7 @@ export function buildErrorRemediationCatalog(): ErrorRemediationCatalogEntry[] {
     },
     {
       code: "invalid-task-schema",
-      instructionPath: CLI_REMEDIATION_INSTRUCTIONS.createWishlist
+      instructionPath: CLI_REMEDIATION_INSTRUCTIONS.createTask
     },
     {
       code: "peer-module-disabled",

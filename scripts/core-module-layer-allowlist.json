@@ -34,12 +34,12 @@
     },
     {
       "file": "src/core/planning/index.ts",
-      "specifier": "../../modules/task-engine/wishlist/wishlist-validation.js",
+      "specifier": "../../modules/task-engine/wishlist-validation.js",
       "rationale": "Planning persistence facade — re-export only."
     },
     {
       "file": "src/core/planning/index.ts",
-      "specifier": "../../modules/task-engine/wishlist/wishlist-intake.js",
+      "specifier": "../../modules/task-engine/wishlist-intake.js",
       "rationale": "Planning persistence facade — re-export only."
     },
     {
@@ -49,7 +49,7 @@
     },
     {
       "file": "src/core/planning/index.ts",
-      "specifier": "../../modules/task-engine/wishlist/wishlist-types.js",
+      "specifier": "../../modules/task-engine/wishlist-types.js",
       "rationale": "Planning persistence facade — re-export only."
     },
     {

@@ -3,7 +3,7 @@ import { TaskStore } from "../persistence/store.js";
 import { getNextActions } from "../suggestions.js";
 import { getAllowedTransitionsFrom } from "../transitions.js";
 import type { TaskStatus } from "../types.js";
-import { WISHLIST_INTAKE_TASK_TYPE } from "../wishlist/wishlist-intake.js";
+import { WISHLIST_INTAKE_TASK_TYPE } from "../wishlist-intake.js";
 
 /**
  * Static model explanation + lightweight queue summaries.

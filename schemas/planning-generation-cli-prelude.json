@@ -19,11 +19,9 @@
     "demote-task",
     "close-subagent-session",
     "close-agent-session",
-    "convert-wishlist",
     "convert-phase-note-to-task",
     "create-task",
     "create-task-from-plan",
-    "create-wishlist",
     "generate-recommendations",
     "ingest-transcripts",
     "message-subagent",
@@ -46,7 +44,6 @@
     "unblock-task",
     "update-agent-session",
     "update-task",
-    "update-wishlist",
     "update-workspace-phase-snapshot"
   ]
 }

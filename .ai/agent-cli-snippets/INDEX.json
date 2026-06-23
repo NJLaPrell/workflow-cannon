@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-06-10T23:40:47.923Z",
+  "generatedAt": "2026-06-23T17:55:35.655Z",
   "commands": [
     {
       "name": "accept-improvement",
@@ -423,11 +423,6 @@
       "moduleId": "task-engine"
     },
     {
-      "name": "convert-wishlist",
-      "path": ".ai/agent-cli-snippets/by-command/convert-wishlist.json",
-      "moduleId": "task-engine"
-    },
-    {
       "name": "create-behavior-profile",
       "path": ".ai/agent-cli-snippets/by-command/create-behavior-profile.json",
       "moduleId": "agent-behavior"
@@ -450,11 +445,6 @@
     {
       "name": "create-task-from-plan",
       "path": ".ai/agent-cli-snippets/by-command/create-task-from-plan.json",
-      "moduleId": "task-engine"
-    },
-    {
-      "name": "create-wishlist",
-      "path": ".ai/agent-cli-snippets/by-command/create-wishlist.json",
       "moduleId": "task-engine"
     },
     {
@@ -713,11 +703,6 @@
       "moduleId": "task-engine"
     },
     {
-      "name": "get-wishlist",
-      "path": ".ai/agent-cli-snippets/by-command/get-wishlist.json",
-      "moduleId": "task-engine"
-    },
-    {
       "name": "get-workspace-status",
       "path": ".ai/agent-cli-snippets/by-command/get-workspace-status.json",
       "moduleId": "task-engine"
@@ -860,11 +845,6 @@
     {
       "name": "list-tasks",
       "path": ".ai/agent-cli-snippets/by-command/list-tasks.json",
-      "moduleId": "task-engine"
-    },
-    {
-      "name": "list-wishlist",
-      "path": ".ai/agent-cli-snippets/by-command/list-wishlist.json",
       "moduleId": "task-engine"
     },
     {
@@ -1275,11 +1255,6 @@
     {
       "name": "update-task",
       "path": ".ai/agent-cli-snippets/by-command/update-task.json",
-      "moduleId": "task-engine"
-    },
-    {
-      "name": "update-wishlist",
-      "path": ".ai/agent-cli-snippets/by-command/update-wishlist.json",
       "moduleId": "task-engine"
     },
     {
