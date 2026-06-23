@@ -10,7 +10,7 @@ type SqliteDatabase = InstanceType<typeof Database>;
  */
 
 /** Bump and add a migration step in `migrateKitSqliteSchema` when DDL changes. Exposed for doctor / list-module-states. */
-export const KIT_SQLITE_USER_VERSION = 35;
+export const KIT_SQLITE_USER_VERSION = 37;
 
 export const TASK_ENGINE_TASKS_TABLE = "task_engine_tasks";
 export const TASK_ENGINE_DEPENDENCIES_TABLE = "task_engine_dependencies";
@@ -1304,6 +1304,35 @@ function migrateV35ToV36(db: SqliteDatabase): void {
 }
 
 /**
+ * Remove stale build-plan module snapshots that still reference removed wishlist modes (Phase 117 / T100551).
+ * Keep all other module states intact, including active planning-chat-session rows.
+ */
+function migrateV36ToV37(db: SqliteDatabase): void {
+  if (!tableExists(db, "workspace_module_state")) {
+    return;
+  }
+  const rows = db
+    .prepare("SELECT module_id, state_json FROM workspace_module_state WHERE module_id = ?")
+    .all("planning-build-session") as Array<{ module_id: string; state_json: string }>;
+  if (rows.length === 0) {
+    return;
+  }
+  const remove = db.prepare("DELETE FROM workspace_module_state WHERE module_id = ?");
+  for (const row of rows) {
+    try {
+      const parsed = JSON.parse(row.state_json) as { planningType?: unknown; outputMode?: unknown };
+      const hasWishlistPlanningType = parsed.planningType === "wishlist";
+      const hasWishlistOutputMode = parsed.outputMode === "wishlist";
+      if (hasWishlistPlanningType || hasWishlistOutputMode) {
+        remove.run(row.module_id);
+      }
+    } catch {
+      // Keep non-JSON/unknown payloads untouched; this migration only targets known wishlist-mode snapshots.
+    }
+  }
+}
+
+/**
  * Shared SQLite setup for workspace-kit.db: pragmas, centralized user_version migrations.
  * Call after `new Database(path)` for every open (read/write).
  */
@@ -1505,6 +1534,11 @@ function migrateKitSqliteSchema(db: SqliteDatabase): void {
     migrateV35ToV36(db);
     db.pragma("user_version = 36");
     current = 36;
+  }
+  if (current < 37) {
+    migrateV36ToV37(db);
+    db.pragma("user_version = 37");
+    current = 37;
   }
 }
 
