@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "workflow-cannon://user-simulation/persona.schema.json",
+  "title": "UserSimulationPersona",
+  "type": "object",
+  "required": ["id", "title", "goals", "behaviorProfile", "successCriteria"],
+  "additionalProperties": false,
+  "properties": {
+    "id": { "type": "string", "minLength": 1 },
+    "title": { "type": "string", "minLength": 1 },
+    "goals": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "behaviorProfile": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "likelyConfusions": { "type": "array", "items": { "type": "string" } },
+    "successCriteria": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "uxExpectations": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "prefersPlainLanguage": { "type": "boolean" },
+        "requiresEvidenceRefs": { "type": "boolean" },
+        "forbidsTechnicalTerms": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  }
+}

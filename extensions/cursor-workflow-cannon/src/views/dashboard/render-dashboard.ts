@@ -32,12 +32,16 @@ import type { DashboardSectionId } from "./dashboard-section-registry.js";
 import { lookupDashboardSection } from "./dashboard-section-registry.js";
 import { renderDashboardReadModeBadgeHtml, renderDashboardSectionPlaceholder } from "./render-dashboard-shell.js";
 import type { DashboardReadModeBadge } from "./dashboard-read-mode-badge.js";
+import type { McpHostStatus } from "../../mcp/mcp-status-types.js";
+import { renderMcpStatusSectionHtml } from "./render-mcp-status.js";
 
 export type RenderDashboardRootOptions = {
   /** Sections that stay as loading placeholders until tab activation (T100398). */
   deferredSections?: ReadonlySet<DashboardSectionId>;
   /** Active dashboard read path badge (T100599). */
   readModeBadge?: DashboardReadModeBadge | null;
+  /** MCP host configuration posture for the Status tab (T100725). */
+  mcpStatus?: McpHostStatus | null;
 };
 
 export type WcDashboardStatusKind = "active" | "waiting" | "blocked" | "idle" | "done";
@@ -5310,7 +5314,8 @@ export function renderTaskStateSyncStatusHtml(taskStateProjection: unknown): str
 function renderStatusSectionHtml(
   d: Record<string, unknown>,
   ss: Record<string, unknown>,
-  editorIntegration?: EditorIntegrationRenderState | null
+  editorIntegration?: EditorIntegrationRenderState | null,
+  mcpStatus?: McpHostStatus | null
 ): string {
   const taskStateBlock = renderTaskStateSyncStatusHtml(d.taskStateProjection);
   const sys = (d.systemStatus as Record<string, unknown>) ?? {};
@@ -5411,6 +5416,7 @@ function renderStatusSectionHtml(
     taskStateBlock +
     agentCard +
     renderStatusEditorIntegrationSection(editorIntegration) +
+    renderMcpStatusSectionHtml(mcpStatus) +
     workspaceCard +
     planningCard +
     countsCard +
@@ -6090,7 +6096,7 @@ export function renderDashboardRootInnerHtml(
 
   const statusWrapped = wrapDashboardSection(
     "status",
-    renderStatusSectionHtml(d, ss, editorIntegration),
+    renderStatusSectionHtml(d, ss, editorIntegration, options?.mcpStatus),
     deferred.has("status")
   );
 
@@ -6138,7 +6144,8 @@ export function renderDashboardRootInnerHtml(
 /** Status tab inner HTML for section patch hydration (T100398). */
 export function renderDashboardStatusSectionInnerHtml(
   payload: unknown,
-  editorIntegration?: EditorIntegrationRenderState | null
+  editorIntegration?: EditorIntegrationRenderState | null,
+  mcpStatus?: McpHostStatus | null
 ): string {
   const p = payload as { ok?: unknown; data?: Record<string, unknown> };
   if (p.ok !== true) {
@@ -6146,7 +6153,7 @@ export function renderDashboardStatusSectionInnerHtml(
   }
   const d = p.data ?? {};
   const ss = (d.stateSummary as Record<string, unknown>) || {};
-  return renderStatusSectionHtml(d, ss, editorIntegration ?? null);
+  return renderStatusSectionHtml(d, ss, editorIntegration ?? null, mcpStatus ?? null);
 }
 
 /** CAE tab inner HTML for section patch hydration (T100398). */

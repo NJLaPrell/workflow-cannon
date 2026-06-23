@@ -1107,6 +1107,29 @@ test("renderDashboardRootInnerHtml renders editor integration state when provide
   assert.match(statusPanel, /<b>Chat prefill<\/b> VS Code Chat/);
 });
 
+test("renderDashboardRootInnerHtml renders MCP status on Status tab when provided", () => {
+  const fixturePath = path.join(__dirname, "../docs/fixtures/dashboard-summary.example.json");
+  const fixture = JSON.parse(readFileSync(fixturePath, "utf8"));
+  const html = renderDashboardRootInnerHtml(fixture, null, null, null, null, {
+    mcpStatus: {
+      schemaVersion: 1,
+      availability: "not_configured",
+      agentReadMode: "cli-fallback",
+      extensionWorkspaceRoot: "/tmp/wc-workspace",
+      configSource: "none",
+      setupSnippet: "{}",
+      guidance: ["Use CLI until MCP is configured."]
+    }
+  });
+
+  const statusPanelIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="status"');
+  const configPanelIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="config"');
+  const statusPanel = html.slice(statusPanelIdx, configPanelIdx);
+  assert.match(statusPanel, /dash-status-mcp/);
+  assert.match(statusPanel, /data-wc-mcp-status="not_configured"/);
+  assert.match(statusPanel, /CLI fallback/);
+});
+
 test("renderDashboardRootInnerHtml renders escaped WC Agent status banner from agentStatus", () => {
   const html = renderDashboardRootInnerHtml({
     ok: true,
@@ -2734,18 +2757,20 @@ test("renderDashboardRootInnerHtml merges ready improvement and execution rollup
   assert.match(html, /T2/);
 });
 
-test("buildPhaseCompleteReleaseChatPrompt starts with orchestration-state and stays packet-first", () => {
+test("buildPhaseCompleteReleaseChatPrompt directs MCP-first with CLI fallback and stays packet-first", () => {
   const p = buildPhaseCompleteReleaseChatPrompt("Phase 64", {
     phaseKey: "64",
     currentKitPhase: "64",
     nextKitPhase: "65",
     scope: "current"
   });
+  assert.match(p, /MCP tools first/);
+  assert.match(p, /fall back to the CLI command when MCP is unavailable/);
   assert.match(
     p,
-    /^pnpm exec wk run phase-release-orchestration-state '\{"phaseKey":"64","scope":"current","integrationBranch":"release\/phase-64","dashboardAuthorization":"complete-and-release"\}'\n/
+    /pnpm exec wk run phase-release-orchestration-state '\{"phaseKey":"64","scope":"current","integrationBranch":"release\/phase-64","dashboardAuthorization":"complete-and-release"\}'/
   );
-  assert.match(p, /Run this first\. Work from `data\.verdict`, `refs\.commands`, and `refs\.instructions`/);
+  assert.match(p, /When MCP is unavailable or stale: run the CLI command above\. Work from `data\.verdict`, `refs\.commands`, and `refs\.instructions`/);
   assert.match(p, /target phaseKey: `64`/);
   assert.match(p, /workspace current \/ next: `64` \/ `65`/);
   assert.match(p, /scope: `current`/);
@@ -2786,7 +2811,7 @@ test("buildPhaseCompleteReleaseChatPrompt keeps bucket scope in context", () => 
 
 test("buildPhaseCompleteReleaseChatPrompt without phaseKey uses placeholders", () => {
   const p = buildPhaseCompleteReleaseChatPrompt("Phase 64");
-  assert.match(p, /^pnpm exec wk run phase-release-orchestration-state '\{"phaseKey":"<N>"/);
+  assert.match(p, /pnpm exec wk run phase-release-orchestration-state '\{"phaseKey":"<N>"/);
   assert.match(p, /release\/phase-<N>/);
   assert.doesNotMatch(p, /release\/phase-64/);
 });

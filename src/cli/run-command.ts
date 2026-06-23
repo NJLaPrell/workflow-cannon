@@ -1,5 +1,9 @@
 import { CLI_REMEDIATION_DOCS } from "../core/cli-remediation.js";
-import { ModuleCommandRouter, ModuleCommandRouterError } from "../core/module-command-router.js";
+import {
+  createCommandRegistryRuntime,
+  ModuleCommandRouter,
+  ModuleCommandRouterError
+} from "../core/module-command-router.js";
 import { resolveRegistryAndConfig } from "../core/module-registry-resolve.js";
 import { cliPerfTracer } from "../core/cli-perf-trace.js";
 
@@ -69,11 +73,16 @@ export type RunCommandExitCodes = {
   internalError: number;
 };
 
+export type RunCommandAdapterOptions = {
+  createRuntime?: typeof createCommandRegistryRuntime;
+};
+
 export async function handleRunCommand(
   cwd: string,
   args: string[],
   io: RunCommandIo,
-  codes: RunCommandExitCodes
+  codes: RunCommandExitCodes,
+  adapters: RunCommandAdapterOptions = {}
 ): Promise<number> {
   cliPerfTracer.startSpan("handleRunCommand:start");
   // Start high-level CLI wrapper span and count process spawns
@@ -82,6 +91,7 @@ export async function handleRunCommand(
   process.env.DASHBOARD_CLI_PROCESS_SPAWN_COUNT = String(spawnCount);
   try {
   const { writeLine, writeError } = io;
+  const createRuntime = adapters.createRuntime ?? createCommandRegistryRuntime;
   const invocationId = createRunInvocationId();
   const runStartedAt = new Date().toISOString();
 
@@ -411,6 +421,7 @@ export async function handleRunCommand(
     resolvedActor: actor,
     moduleRegistry: registry
   };
+  const runtime = createRuntime(registry, { ctx });
 
   const runCheckpoint = execPolicy ? execPolicy.allowAutoCheckpoint : true;
   const autoCheckpoint = runCheckpoint
@@ -505,8 +516,8 @@ export async function handleRunCommand(
   }
 
   try {
-    const rawResult = await cliPerfTracer.spanAsync("router.execute", () =>
-      router.execute(subcommand!, commandArgs, ctx)
+    const rawResult = await cliPerfTracer.spanAsync("runtime.invoke", () =>
+      runtime.invoke({ name: subcommand, args: commandArgs })
     );
     if (sensitive && resolvedSensitiveApproval && policyOp) {
       const rehearsal =

@@ -1,0 +1,394 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-06-22T10:22:30.385Z",
+  "packageVersion": "0.99.29",
+  "toolCount": 15,
+  "tools": [
+    {
+      "name": "workflow-cannon.agent_start",
+      "cliCommand": "agent-bootstrap",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "workflow-cannon.capabilities",
+      "cliCommand": null,
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "workflow-cannon.phase-release-orchestration-state",
+      "cliCommand": "phase-release-orchestration-state",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "phaseKey": {
+            "type": "string",
+            "description": "Target phase key."
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "bucket",
+              "phase"
+            ],
+            "description": "Release orchestration scope."
+          },
+          "integrationBranch": {
+            "type": "string",
+            "description": "Expected integration branch."
+          },
+          "dashboardAuthorization": {
+            "type": "string",
+            "description": "Dashboard authorization mode."
+          }
+        },
+        "required": [
+          "phaseKey"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "workflow-cannon.agent-execution-packet",
+      "cliCommand": "agent-execution-packet",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "assignment"
+            ],
+            "description": "Packet mode."
+          },
+          "taskId": {
+            "type": "string",
+            "description": "Task id for draft packets."
+          },
+          "phaseKey": {
+            "type": "string",
+            "description": "Phase key for draft packets."
+          },
+          "assignmentId": {
+            "type": "string",
+            "description": "Assignment id for locked packets."
+          }
+        },
+        "required": [
+          "mode"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "workflow-cannon.assignment-reconciliation-preflight",
+      "cliCommand": "assignment-reconciliation-preflight",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "assignmentId": {
+            "type": "string",
+            "description": "Assignment id."
+          },
+          "supervisorId": {
+            "type": "string",
+            "description": "Supervisor id."
+          }
+        },
+        "required": [
+          "assignmentId",
+          "supervisorId"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "workflow-cannon.phase-drain-delta",
+      "cliCommand": "phase-drain-delta",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "phaseKey": {
+            "type": "string",
+            "description": "Target phase key."
+          },
+          "cursor": {
+            "type": "string",
+            "description": "Optional drain cursor."
+          }
+        },
+        "required": [
+          "phaseKey"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "workflow-cannon.phase-release-state",
+      "cliCommand": "phase-release-state",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "phaseKey": {
+            "type": "string",
+            "description": "Target phase key."
+          }
+        },
+        "required": [
+          "phaseKey"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "workflow-cannon.release-closeout-result",
+      "cliCommand": "release-closeout-result",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "phaseKey": {
+            "type": "string",
+            "description": "Target phase key."
+          }
+        },
+        "required": [
+          "phaseKey"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "workflow-cannon.cae-guidance-preview",
+      "cliCommand": "cae-guidance-preview",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "taskId": {
+            "type": "string",
+            "description": "Optional task id to scope guidance."
+          },
+          "workflowName": {
+            "type": "string",
+            "description": "Optional workflow name to scope guidance."
+          },
+          "commandName": {
+            "type": "string",
+            "description": "Optional command name to scope guidance."
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    {
+      "name": "workflow-cannon.cae-evaluate",
+      "cliCommand": "cae-evaluate",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "evaluationContext": {
+            "type": "object",
+            "description": "CAE evaluation context."
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    {
+      "name": "workflow-cannon.cae-explain",
+      "cliCommand": "cae-explain",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "traceId": {
+            "type": "string",
+            "description": "Optional CAE trace id."
+          },
+          "activationId": {
+            "type": "string",
+            "description": "Optional CAE activation id."
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    {
+      "name": "workflow-cannon.cae-get-trace",
+      "cliCommand": "cae-get-trace",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "traceId": {
+            "type": "string",
+            "description": "CAE trace id."
+          }
+        },
+        "required": [
+          "traceId"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "workflow-cannon.cae-recent-traces",
+      "cliCommand": "cae-recent-traces",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "number",
+            "description": "Optional max trace count."
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    {
+      "name": "workflow-cannon.memory-list",
+      "cliCommand": "list-memory",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "approved",
+              "pruned"
+            ],
+            "description": "Optional governed memory status filter."
+          },
+          "category": {
+            "type": "string",
+            "description": "Optional memory category filter."
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "workflow-cannon.memory-precedence",
+      "cliCommand": "explain-memory-precedence",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      }
+    }
+  ],
+  "mutationToolCount": 2,
+  "mutationTools": [
+    {
+      "name": "workflow-cannon.run-transition",
+      "cliCommand": null,
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "taskId": {
+            "type": "string",
+            "description": "Task id."
+          },
+          "action": {
+            "type": "string",
+            "description": "Transition action (start, complete, etc.)."
+          },
+          "assignmentId": {
+            "type": "string",
+            "description": "Optional assignment id."
+          },
+          "expectedPlanningGeneration": {
+            "description": "Optimistic concurrency token from a prior read."
+          },
+          "clientMutationId": {
+            "type": "string",
+            "description": "Optional idempotency key."
+          },
+          "actor": {
+            "type": "string",
+            "description": "Optional actor recorded on transition evidence."
+          },
+          "policyApproval": {
+            "type": "object",
+            "description": "Required. JSON policy approval payload authorizing this mutation. Include approvedBy, reason, and timestamp.",
+            "properties": {
+              "approvedBy": {
+                "type": "string",
+                "description": "Identity authorizing the mutation."
+              },
+              "reason": {
+                "type": "string",
+                "description": "Rationale for the mutation."
+              },
+              "timestamp": {
+                "type": "string",
+                "description": "ISO-8601 authorization timestamp."
+              }
+            },
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "taskId",
+          "action",
+          "policyApproval"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "workflow-cannon.write-memory",
+      "cliCommand": null,
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "type": "string",
+            "description": "Memory category."
+          },
+          "body": {
+            "type": "string",
+            "description": "Memory record body text."
+          },
+          "id": {
+            "type": "string",
+            "description": "Optional record id for updates."
+          },
+          "policyApproval": {
+            "type": "object",
+            "description": "Required. JSON policy approval payload authorizing this mutation. Include approvedBy, reason, and timestamp.",
+            "properties": {
+              "approvedBy": {
+                "type": "string",
+                "description": "Identity authorizing the mutation."
+              },
+              "reason": {
+                "type": "string",
+                "description": "Rationale for the mutation."
+              },
+              "timestamp": {
+                "type": "string",
+                "description": "ISO-8601 authorization timestamp."
+              }
+            },
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "category",
+          "body",
+          "policyApproval"
+        ],
+        "additionalProperties": false
+      }
+    }
+  ]
+}

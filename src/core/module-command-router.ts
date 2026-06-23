@@ -1,6 +1,9 @@
 import type {
   ModuleCommand,
+  ModuleCommandInvocation,
+  ModuleCommandRuntime,
   ModuleCommandResult,
+  ModuleCommandDescriptorLike,
   ModuleInstructionEntry,
   ModuleLifecycleContext,
   WorkflowModule
@@ -27,6 +30,10 @@ export type ModuleCommandDescriptor = {
 
 export type ModuleCommandRouterOptions = {
   aliases?: Record<string, string>;
+};
+
+export type CommandRuntimeOptions = ModuleCommandRouterOptions & {
+  ctx: ModuleLifecycleContext;
 };
 
 export class ModuleCommandRouterError extends Error {
@@ -199,4 +206,33 @@ export class ModuleCommandRouter {
   private resolveCommandName(name: string): string {
     return this.aliases[name] ?? name;
   }
+}
+
+export class CommandRegistryRuntime implements ModuleCommandRuntime {
+  private readonly router: ModuleCommandRouter;
+  private readonly ctx: ModuleLifecycleContext;
+
+  constructor(registry: ModuleRegistry, options: CommandRuntimeOptions) {
+    this.router = new ModuleCommandRouter(registry, options);
+    this.ctx = options.ctx;
+  }
+
+  listCommands(): ModuleCommandDescriptorLike[] {
+    return this.router.listCommands();
+  }
+
+  describeCommand(name: string): ModuleCommandDescriptorLike | undefined {
+    return this.router.describeCommand(name);
+  }
+
+  invoke(invocation: ModuleCommandInvocation): Promise<ModuleCommandResult> {
+    return this.router.execute(invocation.name, invocation.args, this.ctx);
+  }
+}
+
+export function createCommandRegistryRuntime(
+  registry: ModuleRegistry,
+  options: CommandRuntimeOptions
+): ModuleCommandRuntime {
+  return new CommandRegistryRuntime(registry, options);
 }

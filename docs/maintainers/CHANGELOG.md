@@ -8,6 +8,8 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [0.99.29] - 2026-06-22
+
 ## [0.99.28] - 2026-06-05
 
 Patch — **Phase 130 Dashboard performance and delivery history** (lighter dashboard projections, coalesced refresh/hydration, terminal-task lazy loading, wishlist opt-in controls, delivery-history projection, and dashboard UX polish).

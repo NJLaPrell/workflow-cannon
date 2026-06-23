@@ -5,13 +5,17 @@ alwaysApply: true
 
 # Agent documentation routing
 
+## MCP-first context
+
+When Workflow Cannon MCP tools are available and the result is fresh enough for the question, prefer MCP for read-only packet/context, guidance, memory, resource, prompt, and capability discovery. If MCP is unavailable, stale, incomplete, or missing the needed tool, fall back to the `.ai/`, module-instruction, and CLI JSON surfaces below and call out the fallback in handoff/evidence.
+
 ## Default (must)
 
 For **operating procedure, policy, CLI tiers, terminology, playbooks, runbooks, and maintainer workflow law**, read **only**:
 
 - **`.ai/**/*.md`** (machine-oriented canon)
 - **`src/modules/*/instructions/*.md`** (command payload shapes)
-- **CLI JSON output** (`pnpm run wk doctor`, `pnpm run wk run …`, etc.)
+- **CLI JSON output** (`pnpm run wk doctor`, `pnpm run wk run …`, etc.) for read fallback and for mutation/execution commands
 
 **Do not** open, search, or summarize prose under **`docs/`** for routine work — that tree is **human-first** (and often generated from `.ai/` sources).
 

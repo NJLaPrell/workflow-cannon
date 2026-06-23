@@ -1,0 +1,24 @@
+---
+description: Prefer Workflow Cannon MCP for fresh read/context; keep CLI for mutation and policy-gated work
+alwaysApply: true
+---
+
+# Workspace Kit MCP-first context policy
+
+When Workflow Cannon MCP tools are available and can provide fresh, bounded read-only context, use them first for:
+
+- agent startup / capabilities and prompt discovery
+- phase, task, assignment, and reconciliation packets
+- CAE guidance, memory recall, resources, instruction refs, and architecture summaries
+
+Use `pnpm exec wk run` / `workspace-kit` CLI for mutation, execution, and policy-gated work:
+
+- task lifecycle and assignment lifecycle changes
+- `submit-assignment-handoff`, `run-transition`, reconciliation, release, publish, package, git, validation, and build/test/check commands
+- any command that requires JSON `policyApproval`
+
+Fallback behavior:
+
+- If MCP is unavailable, stale, incomplete, missing the needed tool, or cannot prove freshness for the requested read, use the equivalent CLI read and mention the fallback in handoff/evidence.
+- Treat MCP memory and resources as supporting context only unless the tool result explicitly proves live freshness.
+- MCP availability never widens assignment scope, bypasses path boundaries, replaces policy gates, or substitutes for required CLI mutation evidence.

@@ -17,13 +17,22 @@ export {
   resolveRegistryAndConfig
 } from "./module-registry-resolve.js";
 export {
+  CommandRegistryRuntime,
+  createCommandRegistryRuntime,
   ModuleCommandRouter,
   ModuleCommandRouterError,
   UNKNOWN_COMMAND_SAMPLE_LIMIT,
   formatUnknownCommandMessage,
+  type CommandRuntimeOptions,
   type ModuleCommandDescriptor,
   type ModuleCommandRouterOptions
 } from "./module-command-router.js";
+export {
+  type ModuleCommandInvocation,
+  type ModuleCommandRuntime,
+  type ModuleCommandResult,
+  type ModuleCommandDescriptorLike
+} from "./runtime-contract.js";
 export {
   looksLikePackageManagerBanner,
   parseWorkspaceKitJsonStdout,

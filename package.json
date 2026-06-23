@@ -1,6 +1,6 @@
 {
   "name": "@workflow-cannon/workspace-kit",
-  "version": "0.99.28",
+  "version": "0.99.29",
   "private": false,
   "packageManager": "pnpm@10.26.1",
   "engines": {
@@ -27,6 +27,8 @@
     "./contracts/dashboard-summary-run": "./dist/contracts/dashboard-summary-run.js",
     "./contracts/dashboard-snapshot": "./dist/contracts/dashboard-snapshot.js",
     "./contracts/dashboard-events": "./dist/contracts/dashboard-events.js",
+    "./mcp": "./dist/mcp/index.js",
+    "./mcp/server": "./dist/mcp/server.js",
     "./services/dashboard-service/resolve-data-source-config": "./dist/services/dashboard-service/resolve-data-source-config.js",
     "./services/dashboard-service/server": "./dist/services/dashboard-service/server.js",
     "./contracts/agent-session-snapshot-run": "./dist/contracts/agent-session-snapshot-run.js",
@@ -35,7 +37,8 @@
   },
   "bin": {
     "workspace-kit": "dist/cli.js",
-    "wk": "dist/cli.js"
+    "wk": "dist/cli.js",
+    "wk-mcp": "dist/mcp/cli.js"
   },
   "scripts": {
     "postinstall": "node scripts/check-native-binding-arch.mjs && node scripts/ensure-native-sqlite.mjs",
