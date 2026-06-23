@@ -873,6 +873,11 @@
       "moduleId": "task-engine"
     },
     {
+      "name": "phase-kickoff-readiness",
+      "path": ".ai/agent-cli-snippets/by-command/phase-kickoff-readiness.json",
+      "moduleId": "task-engine"
+    },
+    {
       "name": "phase-delivery-preflight",
       "path": ".ai/agent-cli-snippets/by-command/phase-delivery-preflight.json",
       "moduleId": "task-engine"
