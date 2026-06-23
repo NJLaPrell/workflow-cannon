@@ -41,6 +41,69 @@ function preserveLastKnownDashboardFields(
   ) {
     next = { ...next, agentActivitySummary: priorSummary };
   }
+  return preservePhaseDeliveryFields(summary, next);
+}
+
+const PHASE_DELIVERY_PRESERVE_KEYS = [
+  "deliveredPhaseKeys",
+  "rolledOutPhaseKeys",
+  "legacyDeliveredMaxOrdinal",
+  "phaseReleaseDates",
+  "phaseDeliveryHistory",
+  "lastDeliveredPhase",
+  "phaseKeysWithActiveQueueWork"
+] as const;
+
+function phaseDeliveryFieldHasContent(key: (typeof PHASE_DELIVERY_PRESERVE_KEYS)[number], value: unknown): boolean {
+  if (value === undefined) {
+    return false;
+  }
+  if (key === "legacyDeliveredMaxOrdinal" || key === "lastDeliveredPhase") {
+    return value !== null;
+  }
+  if (Array.isArray(value)) {
+    return value.length > 0;
+  }
+  if (key === "phaseReleaseDates" && value && typeof value === "object") {
+    return Object.keys(value as Record<string, unknown>).length > 0;
+  }
+  return false;
+}
+
+function phaseDeliveryFieldIsEmpty(key: (typeof PHASE_DELIVERY_PRESERVE_KEYS)[number], value: unknown): boolean {
+  if (value === undefined) {
+    return true;
+  }
+  if (key === "legacyDeliveredMaxOrdinal" || key === "lastDeliveredPhase") {
+    return value === null;
+  }
+  if (Array.isArray(value)) {
+    return value.length === 0;
+  }
+  if (key === "phaseReleaseDates") {
+    if (!value || typeof value !== "object") {
+      return true;
+    }
+    return Object.keys(value as Record<string, unknown>).length === 0;
+  }
+  return false;
+}
+
+function preservePhaseDeliveryFields(
+  summary: Record<string, unknown>,
+  extracted: Record<string, unknown>
+): Record<string, unknown> {
+  let next = extracted;
+  for (const key of PHASE_DELIVERY_PRESERVE_KEYS) {
+    if (!(key in extracted)) {
+      continue;
+    }
+    const newVal = extracted[key];
+    const priorVal = summary[key];
+    if (phaseDeliveryFieldIsEmpty(key, newVal) && phaseDeliveryFieldHasContent(key, priorVal)) {
+      next = { ...next, [key]: priorVal };
+    }
+  }
   return next;
 }
 

@@ -228,3 +228,31 @@ test("mergeSlicePayloadIntoSummary preserves prior available data when new paylo
   assert.equal(merged.subagentRegistry.available, true);
   assert.equal(merged.subagentRegistry.definitionsCount, 2);
 });
+
+test("mergeSlicePayloadIntoSummary preserves prior phase delivery fields when slice zeros them", () => {
+  const prior = {
+    deliveredPhaseKeys: ["121", "130"],
+    rolledOutPhaseKeys: ["113"],
+    legacyDeliveredMaxOrdinal: 120,
+    phaseReleaseDates: { "130": "2026-06-01T00:00:00.000Z" }
+  };
+  const payload = lookupDashboardSlice("overview").extractPayload({
+    schemaVersion: 7,
+    dashboardProjection: "overview",
+    deliveredPhaseKeys: [],
+    rolledOutPhaseKeys: [],
+    legacyDeliveredMaxOrdinal: null,
+    phaseReleaseDates: {},
+    stateSummary: { ready: 0, proposed: 0, blocked: 0, done: 0 },
+    workspaceStatus: {},
+    humanGatesSummary: { schemaVersion: 1, count: 0, top: [] },
+    approvalQueue: { schemaVersion: 1, count: 0, top: [] },
+    taskStateProjection: { schemaVersion: 1, available: false },
+    currentPhaseDelivery: { schemaVersion: 2, phaseKey: null }
+  });
+  const merged = mergeSlicePayloadIntoSummary(prior, "overview", payload);
+  assert.deepEqual(merged.deliveredPhaseKeys, ["121", "130"]);
+  assert.deepEqual(merged.rolledOutPhaseKeys, ["113"]);
+  assert.equal(merged.legacyDeliveredMaxOrdinal, 120);
+  assert.equal(merged.phaseReleaseDates["130"], "2026-06-01T00:00:00.000Z");
+});

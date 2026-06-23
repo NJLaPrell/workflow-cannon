@@ -114,7 +114,7 @@ test("buildNarrowPhaseRosterRows synthesizes current when missing from catalog",
   assert.equal(r.rows[1].inCatalog, false);
 });
 
-test("buildPhaseRosterRowsWhenNoCurrent keeps phases with active queue work despite legacy delivered ceiling", () => {
+test("buildPhaseRosterRowsWhenNoCurrent hides explicit delivered phases even with active queue work", () => {
   const slice = { currentKitPhase: null, nextKitPhase: "116" };
   const phases = [
     { phaseKey: "107", shortDescription: "Shipped", inCatalog: true },
@@ -132,8 +132,7 @@ test("buildPhaseRosterRowsWhenNoCurrent keeps phases with active queue work desp
   assert.deepEqual(
     rows.map((x) => ({ k: x.phaseKey, s: x.status })),
     [
-      { k: "107", s: "delivered" },
-      { k: "108", s: "future" },
+      { k: "108", s: "delivered" },
       { k: "109", s: "future" },
       { k: "116", s: "next" }
     ]

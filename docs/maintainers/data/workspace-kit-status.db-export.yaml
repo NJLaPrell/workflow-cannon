@@ -2,19 +2,18 @@
 kit_export_envelope:
   schema_version: 1
   authoritative: false
-  generated_at: "2026-06-23T05:52:15.527Z"
-  source_sequence: 35
+  generated_at: "2026-06-23T16:37:53.259Z"
+  source_sequence: 36
   source_kind: "kit_workspace_status"
   role: "sqlite-projection-export"
 schema_version: 1
-current_kit_phase: ""
+current_kit_phase: "117"
 next_kit_phase: "136"
-last_updated: "2026-06-23T05:31:02.912Z"
-active_focus: "Phase 135 complete — use roster Start when ready for Phase 136"
+last_updated: "2026-06-23T16:37:39.493Z"
+active_focus: "Phase 117 — delivery in progress"
 blockers: []
 pending_decisions: []
 next_agent_actions:
-  - "Start Phase 136 from the Phase Roster when you are ready to deliver"
-  - "Or use Complete & Release when you are ready to ship this phase."
-# workspace_revision: 35
-# updated_at: "2026-06-23T05:51:59.968Z"
+  - "Open Queue tab and pick up ready work for this phase"
+# workspace_revision: 36
+# updated_at: "2026-06-23T16:37:39.581Z"
