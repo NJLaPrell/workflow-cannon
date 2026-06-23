@@ -1,4 +1,4 @@
-import type { TaskEntity, TaskStatus } from "../types.js";
+import type { TaskEntity, TaskStatus } from "./types.js";
 import type { WishlistItem, WishlistStatus } from "./wishlist-types.js";
 import { WISHLIST_ID_RE } from "./wishlist-validation.js";
 
@@ -24,19 +24,7 @@ export function isWishlistIntakeTask(task: TaskEntity): boolean {
   return task.type === WISHLIST_INTAKE_TASK_TYPE;
 }
 
-export function allocateNextTaskNumericId(tasks: TaskEntity[]): string {
-  let max = 0;
-  for (const task of tasks) {
-    const m = /^T(\d+)$/.exec(task.id);
-    if (m) {
-      const n = Number(m[1]);
-      if (Number.isFinite(n)) {
-        max = Math.max(max, n);
-      }
-    }
-  }
-  return `T${max + 1}`;
-}
+export { allocateNextTaskNumericId } from "./id-allocation.js";
 
 function wishlistStatusToTaskStatus(status: WishlistStatus): TaskStatus {
   if (status === "open") {

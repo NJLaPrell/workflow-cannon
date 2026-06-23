@@ -20,6 +20,18 @@ export type PhaseScheduleFocus = {
 };
 
 function phaseKeyWasReleased(key: string, focus: PhaseScheduleFocus): boolean {
+  const released = focus.releasedPhaseKeys;
+  if (released instanceof Set) {
+    if (released.has(key)) {
+      return true;
+    }
+  } else if (released) {
+    for (const candidate of released) {
+      if (candidate === key) {
+        return true;
+      }
+    }
+  }
   const active = focus.activeQueuePhaseKeys;
   if (active && active.has(key)) {
     return false;
@@ -28,18 +40,6 @@ function phaseKeyWasReleased(key: string, focus: PhaseScheduleFocus): boolean {
   if (typeof legacyMax === "number" && Number.isFinite(legacyMax)) {
     const ord = parseLeadingPhaseOrdinalFromKey(key);
     if (ord !== null && ord >= 0 && ord <= legacyMax) {
-      return true;
-    }
-  }
-  const released = focus.releasedPhaseKeys;
-  if (!released) {
-    return false;
-  }
-  if (released instanceof Set) {
-    return released.has(key);
-  }
-  for (const candidate of released) {
-    if (candidate === key) {
       return true;
     }
   }

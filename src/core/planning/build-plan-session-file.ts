@@ -54,6 +54,11 @@ function dbRelativePath(
   } as ModuleLifecycleContext);
 }
 
+/** Legacy build-plan sessions may still store outputMode "wishlist"; normalize for resume. */
+export function normalizeBuildPlanOutputMode(outputMode: string): string {
+  return outputMode === "wishlist" ? "tasks" : outputMode;
+}
+
 function parseSession(raw: unknown): BuildPlanSessionSnapshotV1 | null {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
     return null;
@@ -64,6 +69,9 @@ function parseSession(raw: unknown): BuildPlanSessionSnapshotV1 | null {
   }
   if (typeof parsed.resumeCli !== "string") {
     return null;
+  }
+  if (typeof parsed.outputMode === "string") {
+    parsed.outputMode = normalizeBuildPlanOutputMode(parsed.outputMode);
   }
   return parsed;
 }

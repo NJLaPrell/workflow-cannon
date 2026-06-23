@@ -5,7 +5,7 @@ import {
   REQUIRES_PHASE_BRANCH_METADATA_KEY
 } from "./maintainer-delivery-metadata-keys.js";
 import type { TaskEntity } from "./types.js";
-import { WISHLIST_INTAKE_TASK_TYPE } from "./wishlist/wishlist-intake.js";
+import { WISHLIST_INTAKE_TASK_TYPE } from "./wishlist-intake.js";
 
 export {
   MAINTAINER_DELIVERY_PROFILE_METADATA_KEY,

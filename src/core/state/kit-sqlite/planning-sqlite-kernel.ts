@@ -10,7 +10,7 @@ type SqliteDatabase = InstanceType<typeof Database>;
  */
 
 /** Bump and add a migration step in `migrateKitSqliteSchema` when DDL changes. Exposed for doctor / list-module-states. */
-export const KIT_SQLITE_USER_VERSION = 35;
+export const KIT_SQLITE_USER_VERSION = 38;
 
 export const TASK_ENGINE_TASKS_TABLE = "task_engine_tasks";
 export const TASK_ENGINE_DEPENDENCIES_TABLE = "task_engine_dependencies";
@@ -1304,6 +1304,177 @@ function migrateV35ToV36(db: SqliteDatabase): void {
 }
 
 /**
+ * Remove stale build-plan module snapshots that still reference removed wishlist modes (Phase 117 / T100551).
+ * Keep all other module states intact, including active planning-chat-session rows.
+ */
+function migrateV36ToV37(db: SqliteDatabase): void {
+  if (!tableExists(db, "workspace_module_state")) {
+    return;
+  }
+  const rows = db
+    .prepare("SELECT module_id, state_json FROM workspace_module_state WHERE module_id = ?")
+    .all("planning-build-session") as Array<{ module_id: string; state_json: string }>;
+  if (rows.length === 0) {
+    return;
+  }
+  const remove = db.prepare("DELETE FROM workspace_module_state WHERE module_id = ?");
+  for (const row of rows) {
+    try {
+      const parsed = JSON.parse(row.state_json) as { planningType?: unknown; outputMode?: unknown };
+      const hasWishlistPlanningType = parsed.planningType === "wishlist";
+      const hasWishlistOutputMode = parsed.outputMode === "wishlist";
+      if (hasWishlistPlanningType || hasWishlistOutputMode) {
+        remove.run(row.module_id);
+      }
+    } catch {
+      // Keep non-JSON/unknown payloads untouched; this migration only targets known wishlist-mode snapshots.
+    }
+  }
+}
+
+function dropWishlistColumnFromPlanningState(db: SqliteDatabase): void {
+  const planningCols = columnNames(db, "workspace_planning_state");
+  if (!planningCols.has("wishlist_store_json")) {
+    return;
+  }
+  const hasTransition = planningCols.has("transition_log_json");
+  const hasMutation = planningCols.has("mutation_log_json");
+  const hasRelationalFlag = planningCols.has("relational_tasks");
+  const hasPlanningGeneration = planningCols.has("planning_generation");
+  const row = db
+    .prepare("SELECT * FROM workspace_planning_state WHERE id = 1")
+    .get() as Record<string, unknown> | undefined;
+  const taskStoreJson =
+    typeof row?.task_store_json === "string" ? row.task_store_json : '{"schemaVersion":1,"tasks":[],"transitionLog":[],"mutationLog":[],"lastUpdated":""}';
+  const transitionLogJson = typeof row?.transition_log_json === "string" ? row.transition_log_json : "[]";
+  const mutationLogJson = typeof row?.mutation_log_json === "string" ? row.mutation_log_json : "[]";
+  const relationalTasks =
+    typeof row?.relational_tasks === "number" && Number(row.relational_tasks) === 1 ? 1 : 0;
+  const planningGeneration =
+    typeof row?.planning_generation === "number" ? Number(row.planning_generation) || 0 : 0;
+
+  db.exec(`
+CREATE TABLE workspace_planning_state_new (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  task_store_json TEXT NOT NULL
+);
+`);
+  if (hasTransition) {
+    db.exec(
+      "ALTER TABLE workspace_planning_state_new ADD COLUMN transition_log_json TEXT NOT NULL DEFAULT '[]'"
+    );
+  }
+  if (hasMutation) {
+    db.exec("ALTER TABLE workspace_planning_state_new ADD COLUMN mutation_log_json TEXT NOT NULL DEFAULT '[]'");
+  }
+  if (hasRelationalFlag) {
+    db.exec(
+      "ALTER TABLE workspace_planning_state_new ADD COLUMN relational_tasks INTEGER NOT NULL DEFAULT 0"
+    );
+  }
+  if (hasPlanningGeneration) {
+    db.exec(
+      "ALTER TABLE workspace_planning_state_new ADD COLUMN planning_generation INTEGER NOT NULL DEFAULT 0"
+    );
+  }
+
+  const cols = ["id", "task_store_json"];
+  const vals: unknown[] = [1, taskStoreJson];
+  if (hasTransition) {
+    cols.push("transition_log_json");
+    vals.push(transitionLogJson);
+  }
+  if (hasMutation) {
+    cols.push("mutation_log_json");
+    vals.push(mutationLogJson);
+  }
+  if (hasRelationalFlag) {
+    cols.push("relational_tasks");
+    vals.push(relationalTasks);
+  }
+  if (hasPlanningGeneration) {
+    cols.push("planning_generation");
+    vals.push(planningGeneration);
+  }
+  const placeholders = cols.map(() => "?").join(", ");
+  db.prepare(`INSERT INTO workspace_planning_state_new (${cols.join(", ")}) VALUES (${placeholders})`).run(...vals);
+  db.exec("DROP TABLE workspace_planning_state");
+  db.exec("ALTER TABLE workspace_planning_state_new RENAME TO workspace_planning_state");
+}
+
+/**
+ * Phase 117 / T100552:
+ * - Remove legacy wishlist persistence column (`wishlist_store_json`)
+ * - Delete all `wishlist_intake` tasks from active task storage
+ * - Prune related dependency and evidence rows
+ * - Keep workflow_ideas intact
+ */
+function migrateV37ToV38(db: SqliteDatabase): void {
+  if (tableExists(db, TASK_ENGINE_TASKS_TABLE)) {
+    const wishlistTaskIds = (
+      db
+        .prepare(`SELECT id FROM ${TASK_ENGINE_TASKS_TABLE} WHERE type = 'wishlist_intake'`)
+        .all() as Array<{ id: string }>
+    ).map((row) => row.id);
+    if (wishlistTaskIds.length > 0) {
+      const qMarks = wishlistTaskIds.map(() => "?").join(", ");
+      if (tableExists(db, TASK_ENGINE_DEPENDENCIES_TABLE)) {
+        db.prepare(
+          `DELETE FROM ${TASK_ENGINE_DEPENDENCIES_TABLE} WHERE task_id IN (${qMarks}) OR depends_on_task_id IN (${qMarks})`
+        ).run(...wishlistTaskIds, ...wishlistTaskIds);
+      }
+      if (tableExists(db, TASK_ENGINE_TRANSITION_LOG_TABLE)) {
+        db.prepare(`DELETE FROM ${TASK_ENGINE_TRANSITION_LOG_TABLE} WHERE task_id IN (${qMarks})`).run(
+          ...wishlistTaskIds
+        );
+      }
+      if (tableExists(db, TASK_ENGINE_MUTATION_LOG_TABLE)) {
+        db.prepare(`DELETE FROM ${TASK_ENGINE_MUTATION_LOG_TABLE} WHERE task_id IN (${qMarks})`).run(
+          ...wishlistTaskIds
+        );
+      }
+      db.prepare(`DELETE FROM ${TASK_ENGINE_TASKS_TABLE} WHERE id IN (${qMarks})`).run(...wishlistTaskIds);
+    }
+  }
+
+  if (tableExists(db, "workspace_planning_state")) {
+    const row = db
+      .prepare("SELECT task_store_json FROM workspace_planning_state WHERE id = 1")
+      .get() as { task_store_json: string } | undefined;
+    if (row && typeof row.task_store_json === "string") {
+      try {
+        const parsed = JSON.parse(row.task_store_json) as {
+          tasks?: Array<{ id?: string; type?: string }>;
+          transitionLog?: Array<{ taskId?: string }>;
+          mutationLog?: Array<{ taskId?: string }>;
+        };
+        const tasks = Array.isArray(parsed.tasks) ? parsed.tasks : [];
+        const removedIds = new Set(
+          tasks
+            .filter((task) => task && task.type === "wishlist_intake" && typeof task.id === "string")
+            .map((task) => task.id as string)
+        );
+        if (removedIds.size > 0) {
+          parsed.tasks = tasks.filter((task) => !(task && task.type === "wishlist_intake"));
+          if (Array.isArray(parsed.transitionLog)) {
+            parsed.transitionLog = parsed.transitionLog.filter((entry) => !removedIds.has(entry.taskId ?? ""));
+          }
+          if (Array.isArray(parsed.mutationLog)) {
+            parsed.mutationLog = parsed.mutationLog.filter((entry) => !removedIds.has(entry.taskId ?? ""));
+          }
+          db.prepare("UPDATE workspace_planning_state SET task_store_json = ? WHERE id = 1").run(
+            JSON.stringify(parsed)
+          );
+        }
+      } catch {
+        // Keep unknown payloads unchanged; migration still removes relational wishlist rows and legacy column.
+      }
+    }
+    dropWishlistColumnFromPlanningState(db);
+  }
+}
+
+/**
  * Shared SQLite setup for workspace-kit.db: pragmas, centralized user_version migrations.
  * Call after `new Database(path)` for every open (read/write).
  */
@@ -1505,6 +1676,16 @@ function migrateKitSqliteSchema(db: SqliteDatabase): void {
     migrateV35ToV36(db);
     db.pragma("user_version = 36");
     current = 36;
+  }
+  if (current < 37) {
+    migrateV36ToV37(db);
+    db.pragma("user_version = 37");
+    current = 37;
+  }
+  if (current < 38) {
+    migrateV37ToV38(db);
+    db.pragma("user_version = 38");
+    current = 38;
   }
 }
 

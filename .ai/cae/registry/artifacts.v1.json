@@ -52,14 +52,6 @@
     },
     {
       "schemaVersion": 1,
-      "artifactId": "cae.playbook.wishlist-intake",
-      "artifactType": "playbook",
-      "ref": { "path": ".ai/playbooks/wishlist-intake-to-execution.md" },
-      "title": "Wishlist intake to execution playbook",
-      "tags": ["cae", "playbook", "wishlist"]
-    },
-    {
-      "schemaVersion": 1,
       "artifactId": "cae.runbook.operator-golden-path",
       "artifactType": "runbook",
       "ref": { "path": ".ai/cae/operator-golden-path.md" },

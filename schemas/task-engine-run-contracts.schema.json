@@ -16,7 +16,7 @@
       "const": 1
     },
     "packageVersion": {
-      "const": "0.99.29",
+      "const": "1.0.0",
       "description": "Must match package.json version."
     },
     "moduleId": {
@@ -48,10 +48,8 @@
         "complete-task",
         "completion-preflight",
         "convert-phase-note-to-task",
-        "convert-wishlist",
         "create-task",
         "create-task-from-plan",
-        "create-wishlist",
         "dashboard-agent-activity-slice",
         "dashboard-agent-types-slice",
         "dashboard-bootstrap-slices",
@@ -85,7 +83,6 @@
         "get-task",
         "get-task-history",
         "get-task-summary",
-        "get-wishlist",
         "get-workspace-status",
         "harvest-delivery-evidence",
         "heartbeat-workspace-edit-lease",
@@ -98,7 +95,6 @@
         "list-phase-catalog",
         "list-phase-notes",
         "list-tasks",
-        "list-wishlist",
         "migrate-task-persistence",
         "pause-task",
         "persist-planning-execution-drafts",
@@ -156,7 +152,6 @@
         "uninstall-git-hooks",
         "update-phase-note",
         "update-task",
-        "update-wishlist",
         "update-workspace-phase-snapshot",
         "update-workspace-status",
         "upsert-phase-catalog-entry",
@@ -178,9 +173,6 @@
         },
         "update-task": {
           "$ref": "#/$defs/contractUpdateTask"
-        },
-        "update-wishlist": {
-          "$ref": "#/$defs/contractUpdateWishlist"
         },
         "update-workspace-phase-snapshot": {
           "$ref": "#/$defs/contractUpdateWorkspacePhaseSnapshot"
@@ -317,17 +309,8 @@
         "clear-task-phase": {
           "$ref": "#/$defs/contractClearTaskPhase"
         },
-        "convert-wishlist": {
-          "$ref": "#/$defs/contractConvertWishlist"
-        },
         "convert-phase-note-to-task": {
           "$ref": "#/$defs/contractBase"
-        },
-        "create-wishlist": {
-          "$ref": "#/$defs/contractCreateWishlist"
-        },
-        "get-wishlist": {
-          "$ref": "#/$defs/contractGetWishlist"
         },
         "get-workspace-status": {
           "$ref": "#/$defs/contractGetWorkspaceStatus"
@@ -424,9 +407,6 @@
         },
         "list-tasks": {
           "$ref": "#/$defs/contractListTasks"
-        },
-        "list-wishlist": {
-          "$ref": "#/$defs/contractListWishlist"
         },
         "get-ready-queue": {
           "$ref": "#/$defs/contractReadyQueue"
@@ -1453,86 +1433,6 @@
         }
       ]
     },
-    "contractCreateWishlist": {
-      "allOf": [
-        {
-          "$ref": "#/$defs/contractBase"
-        },
-        {
-          "properties": {
-            "args": {
-              "type": "object",
-              "required": [
-                "title",
-                "problemStatement",
-                "expectedOutcome",
-                "impact",
-                "constraints",
-                "successSignals",
-                "requestor",
-                "evidenceRef"
-              ],
-              "additionalProperties": true
-            },
-            "responseData": {
-              "type": "object",
-              "required": [
-                "wishlist",
-                "presentation"
-              ],
-              "additionalProperties": true
-            }
-          }
-        }
-      ]
-    },
-    "contractUpdateWishlist": {
-      "allOf": [
-        {
-          "$ref": "#/$defs/contractBase"
-        },
-        {
-          "properties": {
-            "args": {
-              "type": "object",
-              "required": [
-                "wishlistId"
-              ],
-              "additionalProperties": true,
-              "properties": {
-                "wishlistId": {
-                  "type": "string"
-                },
-                "updates": {
-                  "type": "object",
-                  "additionalProperties": true
-                },
-                "patch": {
-                  "type": "object",
-                  "additionalProperties": true
-                }
-              },
-              "anyOf": [
-                {
-                  "required": [
-                    "updates"
-                  ]
-                },
-                {
-                  "required": [
-                    "patch"
-                  ]
-                }
-              ]
-            },
-            "responseData": {
-              "type": "object",
-              "additionalProperties": true
-            }
-          }
-        }
-      ]
-    },
     "contractUpdateWorkspacePhaseSnapshot": {
       "allOf": [
         {
@@ -1918,65 +1818,6 @@
               "required": [
                 "events",
                 "limit"
-              ],
-              "additionalProperties": true
-            }
-          }
-        }
-      ]
-    },
-    "contractGetWishlist": {
-      "allOf": [
-        {
-          "$ref": "#/$defs/contractBase"
-        },
-        {
-          "properties": {
-            "args": {
-              "type": "object",
-              "required": [
-                "wishlistId"
-              ],
-              "additionalProperties": false,
-              "properties": {
-                "wishlistId": {
-                  "type": "string",
-                  "pattern": "^(?:W|T)[0-9]+$"
-                }
-              }
-            },
-            "responseData": {
-              "type": "object",
-              "required": [
-                "wishlist"
-              ],
-              "additionalProperties": true
-            }
-          }
-        }
-      ]
-    },
-    "contractConvertWishlist": {
-      "allOf": [
-        {
-          "$ref": "#/$defs/contractBase"
-        },
-        {
-          "properties": {
-            "args": {
-              "type": "object",
-              "required": [
-                "decomposition",
-                "tasks"
-              ],
-              "additionalProperties": true
-            },
-            "responseData": {
-              "type": "object",
-              "required": [
-                "wishlist",
-                "createdTasks",
-                "presentation"
               ],
               "additionalProperties": true
             }
@@ -2680,35 +2521,6 @@
         }
       ]
     },
-    "contractListWishlist": {
-      "allOf": [
-        {
-          "$ref": "#/$defs/contractBase"
-        },
-        {
-          "properties": {
-            "args": {
-              "type": "object",
-              "additionalProperties": false,
-              "properties": {
-                "status": {
-                  "type": "string"
-                }
-              }
-            },
-            "responseData": {
-              "type": "object",
-              "required": [
-                "items",
-                "count",
-                "scope"
-              ],
-              "additionalProperties": true
-            }
-          }
-        }
-      ]
-    },
     "contractReadyQueue": {
       "allOf": [
         {
@@ -2795,25 +2607,74 @@
               "type": "object",
               "additionalProperties": true,
               "properties": {
-                "sessionId": { "type": "string", "minLength": 1 },
-                "agentId": { "type": "string", "minLength": 1 },
-                "subagentSessionId": { "type": "string", "minLength": 1 },
+                "sessionId": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "agentId": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "subagentSessionId": {
+                  "type": "string",
+                  "minLength": 1
+                },
                 "hostHint": {
                   "type": "string",
-                  "enum": ["cursor", "vscode", "cli", "manual"]
+                  "enum": [
+                    "cursor",
+                    "vscode",
+                    "cli",
+                    "manual"
+                  ]
                 },
-                "modelTier": { "type": ["string", "null"] },
-                "currentAssignmentId": { "type": ["string", "null"] },
-                "currentActivityId": { "type": ["string", "null"] },
-                "currentTaskId": { "type": ["string", "null"] },
-                "metadata": { "type": ["object", "null"] },
-                "expectedPlanningGeneration": { "type": ["integer", "string"] },
-                "policyApproval": { "type": "object" }
+                "modelTier": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "currentAssignmentId": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "currentActivityId": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "currentTaskId": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "metadata": {
+                  "type": [
+                    "object",
+                    "null"
+                  ]
+                },
+                "expectedPlanningGeneration": {
+                  "type": [
+                    "integer",
+                    "string"
+                  ]
+                },
+                "policyApproval": {
+                  "type": "object"
+                }
               }
             },
             "responseData": {
               "type": "object",
-              "required": ["schemaVersion", "session"],
+              "required": [
+                "schemaVersion",
+                "session"
+              ],
               "additionalProperties": true
             }
           }
@@ -2829,26 +2690,71 @@
           "properties": {
             "args": {
               "type": "object",
-              "required": ["sessionId"],
+              "required": [
+                "sessionId"
+              ],
               "additionalProperties": true,
               "properties": {
-                "sessionId": { "type": "string", "minLength": 1 },
+                "sessionId": {
+                  "type": "string",
+                  "minLength": 1
+                },
                 "hostHint": {
                   "type": "string",
-                  "enum": ["cursor", "vscode", "cli", "manual"]
+                  "enum": [
+                    "cursor",
+                    "vscode",
+                    "cli",
+                    "manual"
+                  ]
                 },
-                "modelTier": { "type": ["string", "null"] },
-                "currentAssignmentId": { "type": ["string", "null"] },
-                "currentActivityId": { "type": ["string", "null"] },
-                "currentTaskId": { "type": ["string", "null"] },
-                "metadata": { "type": ["object", "null"] },
-                "expectedPlanningGeneration": { "type": ["integer", "string"] },
-                "policyApproval": { "type": "object" }
+                "modelTier": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "currentAssignmentId": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "currentActivityId": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "currentTaskId": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "metadata": {
+                  "type": [
+                    "object",
+                    "null"
+                  ]
+                },
+                "expectedPlanningGeneration": {
+                  "type": [
+                    "integer",
+                    "string"
+                  ]
+                },
+                "policyApproval": {
+                  "type": "object"
+                }
               }
             },
             "responseData": {
               "type": "object",
-              "required": ["schemaVersion", "session"],
+              "required": [
+                "schemaVersion",
+                "session"
+              ],
               "additionalProperties": true
             }
           }
@@ -2864,17 +2770,32 @@
           "properties": {
             "args": {
               "type": "object",
-              "required": ["sessionId"],
+              "required": [
+                "sessionId"
+              ],
               "additionalProperties": true,
               "properties": {
-                "sessionId": { "type": "string", "minLength": 1 },
-                "expectedPlanningGeneration": { "type": ["integer", "string"] },
-                "policyApproval": { "type": "object" }
+                "sessionId": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "expectedPlanningGeneration": {
+                  "type": [
+                    "integer",
+                    "string"
+                  ]
+                },
+                "policyApproval": {
+                  "type": "object"
+                }
               }
             },
             "responseData": {
               "type": "object",
-              "required": ["schemaVersion", "session"],
+              "required": [
+                "schemaVersion",
+                "session"
+              ],
               "additionalProperties": true
             }
           }
@@ -2890,15 +2811,23 @@
           "properties": {
             "args": {
               "type": "object",
-              "required": ["sessionId"],
+              "required": [
+                "sessionId"
+              ],
               "additionalProperties": false,
               "properties": {
-                "sessionId": { "type": "string", "minLength": 1 }
+                "sessionId": {
+                  "type": "string",
+                  "minLength": 1
+                }
               }
             },
             "responseData": {
               "type": "object",
-              "required": ["schemaVersion", "session"],
+              "required": [
+                "schemaVersion",
+                "session"
+              ],
               "additionalProperties": true
             }
           }
@@ -2916,16 +2845,26 @@
               "type": "object",
               "additionalProperties": false,
               "properties": {
-                "agentId": { "type": "string", "minLength": 1 },
+                "agentId": {
+                  "type": "string",
+                  "minLength": 1
+                },
                 "status": {
                   "type": "string",
-                  "enum": ["open", "closed"]
+                  "enum": [
+                    "open",
+                    "closed"
+                  ]
                 }
               }
             },
             "responseData": {
               "type": "object",
-              "required": ["schemaVersion", "sessions", "count"],
+              "required": [
+                "schemaVersion",
+                "sessions",
+                "count"
+              ],
               "additionalProperties": true
             }
           }

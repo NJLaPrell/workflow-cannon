@@ -8,11 +8,10 @@ import {
   ingestPlanningGenerationFromMismatch,
   ingestPlanningMetaFromData
 } from "../../planning-generation-cache.js";
-import { buildWishlistIntakeAgentPrompt } from "../../wishlist-chat-prompt.js";
 import { buildPlannerChatPrompt } from "../../planner-chat-prompt.js";
-import { buildPhaseCompleteReleaseChatPrompt } from "../../phase-complete-release-prompt.js";
 import {
   GENERATE_FEATURES_SLASH_TEXT,
+  buildGenerateFeaturesPrompt,
   buildCollaborationProfilesHubPrompt,
   buildImprovementTriagePrompt,
   buildPhaseNotesDiscoveryPrompt,
@@ -25,6 +24,7 @@ import {
   buildTaskToPhaseBranchPrompt,
   buildTranscriptChurnResearchPrompt
 } from "../../playbook-chat-prompts.js";
+import { buildPhaseCompleteReleaseChatPrompt } from "../../phase-complete-release-prompt.js";
 import { confirmAndRunTransition } from "../../run-transition-with-approval.js";
 import { isWcTraceVerbose, logWc } from "../../runtime/workflow-cannon-log.js";
 import { isKitRefreshRunAborted } from "../../runtime/kit-refresh-run-commands.js";
@@ -1095,12 +1095,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         await this.applyDashboardMutationInvalidation("task-queue");
       }
       if (msg?.type === "prefillWishlistChat") {
-        const raw = msg?.wishlistId;
-        const wishlistId = typeof raw === "string" ? raw.trim() : "";
-        const prompt = buildWishlistIntakeAgentPrompt(
-          wishlistId.length > 0 ? { wishlistId } : undefined
-        );
-        await prefillCursorChat(prompt);
+        await prefillCursorChat(buildGenerateFeaturesPrompt());
       }
       if (msg?.type === "prefillGenerateFeaturesChat") {
         await prefillCursorChat(GENERATE_FEATURES_SLASH_TEXT, { newChat: true });

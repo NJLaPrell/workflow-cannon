@@ -15,6 +15,9 @@ import assignmentMetadataSchema from "../../../../schemas/agent-orchestration/as
   type: "json"
 };
 import handoffV2Schema from "../../../../schemas/agent-orchestration/handoff.v2.json" with { type: "json" };
+import modelSelectionMapSchema from "../../../../schemas/agent-orchestration/model-selection-map.v1.json" with {
+  type: "json"
+};
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- ajv default export shape varies by bundler
 const Ajv2020Ctor = (Ajv2020Import as any).default ?? Ajv2020Import;
@@ -24,14 +27,16 @@ export type OrchestrationSchemaKey =
   | "agent-session.v1"
   | "assignment-metadata.v1"
   | "agent-activity.v1"
-  | "handoff.v2";
+  | "handoff.v2"
+  | "model-selection-map.v1";
 
 const SCHEMA_IDS: Record<OrchestrationSchemaKey, string> = {
   "agent-definition.v1": agentDefinitionSchema.$id as string,
   "agent-session.v1": agentSessionSchema.$id as string,
   "assignment-metadata.v1": assignmentMetadataSchema.$id as string,
   "agent-activity.v1": agentActivitySchema.$id as string,
-  "handoff.v2": handoffV2Schema.$id as string
+  "handoff.v2": handoffV2Schema.$id as string,
+  "model-selection-map.v1": modelSelectionMapSchema.$id as string
 };
 
 let validators: Map<OrchestrationSchemaKey, ValidateFunction> | null = null;
@@ -57,6 +62,7 @@ function getValidators(): Map<OrchestrationSchemaKey, ValidateFunction> {
   ajv.addSchema(assignmentMetadataSchema as object);
   ajv.addSchema(agentActivitySchema as object);
   ajv.addSchema(handoffV2Schema as object);
+  ajv.addSchema(modelSelectionMapSchema as object);
 
   const map = new Map<OrchestrationSchemaKey, ValidateFunction>();
   for (const [key, id] of Object.entries(SCHEMA_IDS) as Array<[OrchestrationSchemaKey, string]>) {

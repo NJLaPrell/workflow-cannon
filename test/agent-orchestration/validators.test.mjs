@@ -12,7 +12,8 @@ import {
   validateAgentDefinitionV1,
   validateAgentSessionV1,
   validateAssignmentMetadataV1,
-  validateHandoffV2
+  validateHandoffV2,
+  validateModelSelectionMapV1
 } from "../../dist/core/validation/agent-orchestration/index.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
@@ -58,6 +59,9 @@ function validateGoldenFixture(relativePath, payload) {
   }
   if (base.startsWith("handoff-") && base.endsWith(".v2.json")) {
     return validateHandoffV2(payload);
+  }
+  if (base.startsWith("model-selection-map.")) {
+    return validateModelSelectionMapV1(payload);
   }
   return null;
 }

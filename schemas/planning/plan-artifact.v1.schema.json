@@ -283,7 +283,7 @@
         "createdBy": { "type": "string", "minLength": 1 },
         "source": {
           "type": "string",
-          "enum": ["draft-plan-artifact", "import-build-plan", "import-wishlist"]
+          "enum": ["draft-plan-artifact", "import-build-plan", "import-ideas"]
         },
         "chatSessionRef": { "type": "string" },
         "parentPlanId": { "type": "string" },

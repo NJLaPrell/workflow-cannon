@@ -4,7 +4,7 @@ import path from "node:path";
 import type { ModuleCommandResult, ModuleLifecycleContext } from "../../../contracts/module-contract.js";
 import { UnifiedStateDb } from "../../../core/state/unified-state-db.js";
 import type { TaskStoreDocument } from "../types.js";
-import type { WishlistStoreDocument } from "../wishlist/wishlist-types.js";
+import type { WishlistStoreDocument } from "../wishlist-types.js";
 import { TaskEngineError } from "../transitions.js";
 import { normalizeTaskStoreDocumentFromUnknown } from "./task-store-migration.js";
 import { SqliteDualPlanningStore } from "./sqlite-dual-planning.js";

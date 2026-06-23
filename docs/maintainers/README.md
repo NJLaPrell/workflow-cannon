@@ -260,7 +260,7 @@ Then open the editor workflow surface:
 | --- | --- |
 | **Chat + dashboard experience** | The primary operating surface for agents and humans working through Workflow Cannon. |
 | **CLI infrastructure** | `workspace-kit` / `wk` provide the deterministic command layer beneath the chat and dashboard experience. |
-| **Task engine** | Queue lives in SQLite (`.workspace-kit/tasks/workspace-kit.db`); **`tasks.persistenceBackend: json`** is rejected (**v0.40+**). Import legacy JSON via **`migrate-task-persistence`**. Lifecycle via `run-transition`. **Which task id to create** (`T###` execution vs wishlist intake vs `type: "improvement"` — same `T###` shape; legacy `imp-*` may exist in older stores): [`docs/maintainers/runbooks/wishlist-workflow.md`](runbooks/wishlist-workflow.md). **Persistence map:** **`workspace-kit run get-kit-persistence-map`** and [`docs/maintainers/runbooks/task-persistence-operator.md`](runbooks/task-persistence-operator.md). |
+| **Task engine** | Queue lives in SQLite (`.workspace-kit/tasks/workspace-kit.db`); **`tasks.persistenceBackend: json`** is rejected (**v0.40+**). Import legacy JSON via **`migrate-task-persistence`**. Lifecycle via `run-transition`. **Which task id to create** (`T###` execution vs wishlist intake vs `type: "improvement"` — same `T###` shape; legacy `imp-*` may exist in older stores): [`docs/maintainers/runbooks/planner-chat.md`](runbooks/planner-chat.md). **Persistence map:** **`workspace-kit run get-kit-persistence-map`** and [`docs/maintainers/runbooks/task-persistence-operator.md`](runbooks/task-persistence-operator.md). |
 | **Docs** | Maintainer process, roadmap, and changelog under `docs/maintainers/`. |
 | **Cursor extension** | Dashboard and editor workflow surface in `extensions/cursor-workflow-cannon/` — pnpm workspace member; build with `pnpm run ui:prepare` after root `pnpm install` (see **`CONTRIBUTING.md`**). |
 
@@ -317,7 +317,7 @@ These are **chat-shaped** recipes: what to say, what to attach, and what you sho
 **How to drive it in chat:**
 
 1. Paste or describe ranked wishlist items and constraints
-2. Attach `.ai/playbooks/wishlist-intake-to-execution.md` or `.cursor/rules/playbook-wishlist-intake-to-execution.mdc`
+2. Attach `.ai/playbooks/planner-chat.md` or `.cursor/rules/playbook-planner-chat.mdc`
 3. Tell the agent to follow intake questions then conversion steps the playbook specifies
 
 ### Run structured onboarding in chat

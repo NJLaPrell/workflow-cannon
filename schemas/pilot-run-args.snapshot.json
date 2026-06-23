@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "sourceSchemaPackageVersion": "0.99.29",
+  "sourceSchemaPackageVersion": "1.0.0",
   "pilotCommands": [
     "accept-improvement",
     "add-dependency",
@@ -25,17 +25,22 @@
     "complete-task",
     "completion-preflight",
     "convert-phase-note-to-task",
-    "convert-wishlist",
     "create-task",
     "create-task-from-plan",
-    "create-wishlist",
+    "dashboard-agent-activity-slice",
+    "dashboard-agent-types-slice",
+    "dashboard-bootstrap-slices",
+    "dashboard-overview-slice",
+    "dashboard-queue-slice",
     "dashboard-service-snapshot",
     "dashboard-service-start",
     "dashboard-service-status",
     "dashboard-service-stop",
+    "dashboard-status-slice",
     "dashboard-summary",
     "dashboard-terminal-rows",
     "dashboard-terminal-tasks",
+    "dashboard-terminal-tasks-page",
     "demote-task",
     "derive-publish-artifacts",
     "derive-validations",
@@ -55,7 +60,6 @@
     "get-task",
     "get-task-history",
     "get-task-summary",
-    "get-wishlist",
     "get-workspace-status",
     "harvest-delivery-evidence",
     "heartbeat-workspace-edit-lease",
@@ -68,7 +72,6 @@
     "list-phase-catalog",
     "list-phase-notes",
     "list-tasks",
-    "list-wishlist",
     "migrate-task-persistence",
     "pause-task",
     "persist-planning-execution-drafts",
@@ -126,7 +129,6 @@
     "uninstall-git-hooks",
     "update-phase-note",
     "update-task",
-    "update-wishlist",
     "update-workspace-phase-snapshot",
     "update-workspace-status",
     "upsert-phase-catalog-entry",
@@ -628,14 +630,6 @@
     "convert-phase-note-to-task": {
       "type": "object"
     },
-    "convert-wishlist": {
-      "type": "object",
-      "required": [
-        "decomposition",
-        "tasks"
-      ],
-      "additionalProperties": true
-    },
     "create-task": {
       "type": "object",
       "required": [
@@ -693,19 +687,20 @@
         "planRef"
       ]
     },
-    "create-wishlist": {
-      "type": "object",
-      "required": [
-        "title",
-        "problemStatement",
-        "expectedOutcome",
-        "impact",
-        "constraints",
-        "successSignals",
-        "requestor",
-        "evidenceRef"
-      ],
-      "additionalProperties": true
+    "dashboard-agent-activity-slice": {
+      "type": "object"
+    },
+    "dashboard-agent-types-slice": {
+      "type": "object"
+    },
+    "dashboard-bootstrap-slices": {
+      "type": "object"
+    },
+    "dashboard-overview-slice": {
+      "type": "object"
+    },
+    "dashboard-queue-slice": {
+      "type": "object"
     },
     "dashboard-service-snapshot": {
       "type": "object"
@@ -717,6 +712,9 @@
       "type": "object"
     },
     "dashboard-service-stop": {
+      "type": "object"
+    },
+    "dashboard-status-slice": {
       "type": "object"
     },
     "dashboard-summary": {
@@ -818,6 +816,9 @@
         }
       },
       "additionalProperties": false
+    },
+    "dashboard-terminal-tasks-page": {
+      "type": "object"
     },
     "demote-task": {
       "type": "object",
@@ -978,19 +979,6 @@
     },
     "get-task-summary": {
       "type": "object",
-      "additionalProperties": false
-    },
-    "get-wishlist": {
-      "type": "object",
-      "required": [
-        "wishlistId"
-      ],
-      "properties": {
-        "wishlistId": {
-          "type": "string",
-          "pattern": "^(?:W|T)[0-9]+$"
-        }
-      },
       "additionalProperties": false
     },
     "get-workspace-status": {
@@ -1220,15 +1208,6 @@
         "cursor": {
           "type": "string",
           "minLength": 1
-        }
-      },
-      "additionalProperties": false
-    },
-    "list-wishlist": {
-      "type": "object",
-      "properties": {
-        "status": {
-          "type": "string"
         }
       },
       "additionalProperties": false
@@ -2262,38 +2241,6 @@
         }
       },
       "additionalProperties": false
-    },
-    "update-wishlist": {
-      "type": "object",
-      "required": [
-        "wishlistId"
-      ],
-      "properties": {
-        "wishlistId": {
-          "type": "string"
-        },
-        "updates": {
-          "type": "object",
-          "additionalProperties": true
-        },
-        "patch": {
-          "type": "object",
-          "additionalProperties": true
-        }
-      },
-      "additionalProperties": true,
-      "anyOf": [
-        {
-          "required": [
-            "updates"
-          ]
-        },
-        {
-          "required": [
-            "patch"
-          ]
-        }
-      ]
     },
     "update-workspace-phase-snapshot": {
       "type": "object",

@@ -16,7 +16,7 @@ Tasks may carry **feature taxonomy** slugs for reporting, filtering, and roadmap
 
 3. **Components** — Table `task_engine_components` groups features (one row per distinct former “category” string, stable slug id).
 
-4. **Exceptions** — `improvement` and `wishlist_intake` tasks do not require feature links. Unknown feature ids on those types produce **warnings** only. All other task types **fail closed** on unknown ids when `features` is non-empty.
+4. **Exceptions** — `improvement` and `ideas` tasks do not require feature links. Unknown feature ids on those types produce **warnings** only. All other task types **fail closed** on unknown ids when `features` is non-empty.
 
 5. **Reads before backfill** — If the junction is empty for a task but `features_json` still has slugs, assembly uses `features_json` until `backfill-task-feature-links` runs.
 

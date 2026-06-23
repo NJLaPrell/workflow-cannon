@@ -123,8 +123,7 @@ test("planningModule build-plan persists then clears session in SQLite (no sidec
           technology: "TS",
           targetAudience: "ops"
         },
-        finalize: true,
-        createWishlist: false
+        finalize: true
       }
     },
     ctx
@@ -177,7 +176,7 @@ test("planningModule build-plan hard-blocks finalize when critical unknowns rema
   assert.equal(result.code, "planning-critical-unknowns");
 });
 
-test("planningModule build-plan returns ready when critical answers are present", async () => {
+test("planningModule build-plan returns task preview when critical answers are present", async () => {
   const workspace = await tmpDir();
   const result = await planningModule.onCommand(
     {
@@ -190,14 +189,14 @@ test("planningModule build-plan returns ready when critical answers are present"
           technology: "TypeScript",
           targetAudience: "AI Agent Operators"
         },
-        finalize: true,
-        createWishlist: false
+        finalize: true
       }
     },
     { runtimeVersion: "0.1", workspacePath: workspace }
   );
   assert.equal(result.ok, true);
-  assert.equal(result.code, "planning-wishlist-ready");
+  assert.equal(result.code, "planning-task-output-preview");
+  assert.equal(result.data.outputMode, "tasks");
   assert.equal(result.data.cliGuidance.completionPct, 100);
 });
 
@@ -661,46 +660,49 @@ test("planningModule explain-planning-rules returns effective defaults and quest
   assert.ok(Array.isArray(result.data.baseQuestions));
 });
 
-test("planningModule build-plan finalize can persist wishlist artifact", async () => {
+test("planningModule build-plan rejects createWishlist and removed wishlist outputMode", async () => {
   const workspace = await tmpDir();
-  const result = await planningModule.onCommand(
+  const ctx = { runtimeVersion: "0.1", workspacePath: workspace };
+
+  const createWishlistRejected = await planningModule.onCommand(
     {
       name: "build-plan",
       args: {
         planningType: "new-feature",
-        finalize: true,
+        createWishlist: true,
         answers: {
           featureGoal: "Guide operators through planning interviews",
           placement: "CLI",
           technology: "TypeScript",
-          targetAudience: "AI Agent Operators",
-          constraints: "Single-release scope",
-          successSignals: "Wishlist artifact generated",
-          problemStatement: "Planning quality is inconsistent",
-          expectedOutcome: "Consistent high-quality planning artifact",
-          impact: "Higher confidence delivery"
-        }
+          targetAudience: "AI Agent Operators"
+        },
+        finalize: true
       }
     },
-    {
-      runtimeVersion: "0.1",
-      workspacePath: workspace,
-      effectiveConfig: {
-        tasks: {
-          persistenceBackend: "sqlite",
-          sqliteDatabaseRelativePath: ".workspace-kit/tasks/workspace-kit.db"
-        }
-      }
-    }
+    ctx
   );
-  assert.equal(result.ok, true);
-  assert.equal(result.code, "planning-artifact-created");
-  assert.equal(result.data.taskId, "T1");
-  assert.equal(result.data.wishlistId, "T1");
+  assert.equal(createWishlistRejected.ok, false);
+  assert.equal(createWishlistRejected.code, "invalid-planning-args");
+  assert.match(createWishlistRejected.message, /createWishlist/i);
 
-  const taskStore = await loadSqliteTaskStore(workspace);
-  const created = taskStore.getTask("T1");
-  assert.ok(created);
-  assert.equal(created.type, "wishlist_intake");
-  assert.equal(created.title.includes("plan artifact"), true);
+  const wishlistModeRejected = await planningModule.onCommand(
+    {
+      name: "build-plan",
+      args: {
+        planningType: "new-feature",
+        outputMode: "wishlist",
+        answers: {
+          featureGoal: "Guide operators through planning interviews",
+          placement: "CLI",
+          technology: "TypeScript",
+          targetAudience: "AI Agent Operators"
+        },
+        finalize: true
+      }
+    },
+    ctx
+  );
+  assert.equal(wishlistModeRejected.ok, false);
+  assert.equal(wishlistModeRejected.code, "invalid-planning-output-mode");
+  assert.match(wishlistModeRejected.message, /wishlist/i);
 });

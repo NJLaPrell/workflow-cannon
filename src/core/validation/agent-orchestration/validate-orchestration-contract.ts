@@ -3,6 +3,7 @@ import type { AgentDefinitionV1 } from "../../../contracts/agent-orchestration.j
 import type { AgentSessionV1 } from "../../../contracts/agent-session.v1.js";
 import type { TeamAssignmentMetadataV1 } from "../../../contracts/team-execution-assignment-metadata.v1.js";
 import type { TeamExecutionHandoffV2 } from "../../../contracts/team-execution-handoff.v2.js";
+import type { ModelSelectionMapV1 } from "../../../contracts/model-selection-map.v1.js";
 import { TEAM_EXECUTION_HANDOFF_SCHEMA_VERSION } from "../../../contracts/team-execution-handoff.v2.js";
 import { getOrchestrationSchemaValidator } from "./ajv-registry.js";
 import { collectUnknownCapabilityWarnings } from "./capability-advisories.js";
@@ -17,6 +18,7 @@ import type {
   AgentSessionValidationResult,
   AssignmentMetadataValidationResult,
   HandoffV2ValidationResult,
+  ModelSelectionMapValidationResult,
   OrchestrationValidationIssue,
   OrchestrationValidationOptions
 } from "./types.js";
@@ -147,4 +149,11 @@ export function validateHandoffV2(
   return validateWithSchema<TeamExecutionHandoffV2>(input, "handoff.v2", "Handoff v2", {
     handoffV2: true
   });
+}
+
+export function validateModelSelectionMapV1(
+  input: unknown,
+  _options?: OrchestrationValidationOptions
+): ModelSelectionMapValidationResult {
+  return validateWithSchema<ModelSelectionMapV1>(input, "model-selection-map.v1", "Model selection map v1");
 }

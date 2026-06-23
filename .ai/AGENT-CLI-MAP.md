@@ -137,7 +137,7 @@ Operator runbook: [`.ai/runbooks/task-state-git-operator.md`](./runbooks/task-st
 
 ## Where did the big tables go?
 
-- **Tier A/B/C examples, CAE block, queue-health copy-paste, wishlist ladder:** **`.ai/AGENT-CLI-MAP.extended.md`**
+- **Tier A/B/C examples, CAE block, queue-health copy-paste, Ideas/planning ladder:** **`.ai/AGENT-CLI-MAP.extended.md`**
 - **Runnable command → schema + sample argv:** **`.ai/agent-cli-snippets/`**
 
 Regenerate snippets after changing pilot args or manifest (requires build):

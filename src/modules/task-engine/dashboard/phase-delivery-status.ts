@@ -218,6 +218,37 @@ export function collectPhaseKeysWithActiveQueueWork(tasks: TaskEntity[]): string
   });
 }
 
+/** Shared delivery rollup for dashboard projections (overview, queue, status). */
+export function collectPhaseDeliveryDashboardFields(
+  db: SqliteDb | null | undefined,
+  tasks: TaskEntity[],
+  effectiveConfig?: Record<string, unknown>
+) {
+  const legacyDeliveredMaxOrdinal = resolveLegacyDeliveredMaxOrdinal(effectiveConfig);
+  const phaseKeysWithActiveQueueWork = collectPhaseKeysWithActiveQueueWork(tasks);
+  if (!db) {
+    return {
+      deliveredPhaseKeys: [] as string[],
+      rolledOutPhaseKeys: [] as string[],
+      phaseReleaseDates: {} as Record<string, string>,
+      phaseDeliveryHistory: [] as PhaseDeliveryHistoryRow[],
+      lastDeliveredPhase: null as PhaseDeliveryHistoryRow | null,
+      legacyDeliveredMaxOrdinal,
+      phaseKeysWithActiveQueueWork
+    };
+  }
+  const phaseDeliveryHistory = collectPhaseDeliveryHistoryRows(db);
+  return {
+    deliveredPhaseKeys: collectDeliveredPhaseKeys(db, tasks),
+    rolledOutPhaseKeys: collectRolledOutPhaseKeys(db),
+    phaseReleaseDates: collectPhaseReleaseDatesByKey(db),
+    phaseDeliveryHistory,
+    lastDeliveredPhase: phaseDeliveryHistory.find((row) => row.status === "delivered") ?? null,
+    legacyDeliveredMaxOrdinal,
+    phaseKeysWithActiveQueueWork
+  };
+}
+
 /** True when a live `set-current-phase` rolled workspace off this phase key. */
 export function wasWorkspacePhaseRolledOut(db: SqliteDb, phaseKey: string): boolean {
   const key = phaseKey.trim();

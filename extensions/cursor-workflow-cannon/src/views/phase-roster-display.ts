@@ -70,11 +70,11 @@ function phaseIsDelivered(
   activeQueuePhaseKeys?: ReadonlySet<string>
 ): boolean {
   const pk = phaseKey.trim();
-  if (phaseHasActiveQueueWork(pk, activeQueuePhaseKeys)) {
-    return false;
-  }
   if (deliveredSet.has(pk)) {
     return true;
+  }
+  if (phaseHasActiveQueueWork(pk, activeQueuePhaseKeys)) {
+    return false;
   }
   if (typeof legacyDeliveredMaxOrdinal === "number" && Number.isFinite(legacyDeliveredMaxOrdinal)) {
     const ord = parseLeadingPhaseOrdinalFromKey(pk);

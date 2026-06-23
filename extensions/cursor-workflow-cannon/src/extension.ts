@@ -10,9 +10,9 @@ import { GuidancePanel } from "./views/guidance/GuidancePanel.js";
 import { StatusDashboardPanel } from "./views/status/StatusDashboardPanel.js";
 import { prefillCursorChat } from "./cursor-chat-prefill.js";
 import { buildTaskDetailMarkdown } from "./task-detail-markdown.js";
-import { buildWishlistIntakeAgentPrompt } from "./wishlist-chat-prompt.js";
 import {
   GENERATE_FEATURES_SLASH_TEXT,
+  buildGenerateFeaturesPrompt,
   buildImprovementTriagePrompt,
   buildPhaseNotesDiscoveryPrompt,
   buildTaskToPhaseBranchPrompt,
@@ -214,48 +214,6 @@ export function activate(context: vscode.ExtensionContext): void {
     const doc = await vscode.workspace.openTextDocument({
       language: "markdown",
       content: md
-    });
-    await vscode.window.showTextDocument(doc, { preview: true });
-  };
-
-  const showWishlistDetail = async (wishlistId: string) => {
-    const runtime = requireClient();
-    if (!runtime) {
-      return;
-    }
-    const r = await runtime.run("get-wishlist", { wishlistId });
-    if (!r.ok) {
-      await vscode.window.showErrorMessage(r.message ?? "Failed to get wishlist item");
-      return;
-    }
-    const item = (r.data?.item as Record<string, unknown>) ?? {};
-    const lines = [
-      `# ${String(item.id ?? wishlistId)} — ${String(item.title ?? "")}`,
-      "",
-      `- Status: ${String(item.status ?? "")}`,
-      "",
-      "## Problem",
-      String(item.problemStatement ?? ""),
-      "",
-      "## Expected outcome",
-      String(item.expectedOutcome ?? ""),
-      "",
-      "## Impact",
-      String(item.impact ?? ""),
-      "",
-      "## Constraints",
-      String(item.constraints ?? ""),
-      "",
-      "## Success signals",
-      String(item.successSignals ?? ""),
-      "",
-      "## Requestor / evidence",
-      `- Requestor: ${String(item.requestor ?? "")}`,
-      `- Evidence: ${String(item.evidenceRef ?? "")}`
-    ];
-    const doc = await vscode.workspace.openTextDocument({
-      language: "markdown",
-      content: lines.join("\n")
     });
     await vscode.window.showTextDocument(doc, { preview: true });
   };
@@ -560,10 +518,6 @@ export function activate(context: vscode.ExtensionContext): void {
       if (!taskId) return;
       await showTaskDetail(taskId);
     }),
-    vscode.commands.registerCommand("workflowCannon.wishlist.showDetail", async (wishlistId?: string) => {
-      if (!wishlistId) return;
-      await showWishlistDetail(wishlistId);
-    }),
     vscode.commands.registerCommand("workflowCannon.task.start", async (taskId?: string) => {
       if (!taskId) return;
       await runTransition(taskId, "start");
@@ -584,10 +538,8 @@ export function activate(context: vscode.ExtensionContext): void {
       if (!taskId) return;
       await runTransition(taskId, "unblock");
     }),
-    vscode.commands.registerCommand("workflowCannon.chat.prefillWishlistFlow", async (wishlistId?: string) => {
-      const id = typeof wishlistId === "string" ? wishlistId.trim() : "";
-      const prompt = buildWishlistIntakeAgentPrompt(id.length > 0 ? { wishlistId: id } : undefined);
-      await prefillCursorChat(prompt);
+    vscode.commands.registerCommand("workflowCannon.chat.prefillWishlistFlow", async () => {
+      await prefillCursorChat(buildGenerateFeaturesPrompt());
     }),
     vscode.commands.registerCommand("workflowCannon.chat.generateFeatures", async () => {
       await prefillCursorChat(GENERATE_FEATURES_SLASH_TEXT, { newChat: true });

@@ -34,9 +34,8 @@ import { buildDashboardAgentStatus } from "./dashboard-agent-status.js";
 import { buildDashboardAgentActivitySummary } from "./build-dashboard-agent-activity-summary.js";
 import {
   buildDashboardCurrentPhaseDelivery,
-  collectPhaseKeysWithActiveQueueWork
+  collectPhaseDeliveryDashboardFields
 } from "./phase-delivery-status.js";
-import { resolveLegacyDeliveredMaxOrdinal } from "../phase-resolution.js";
 import { resolveAgentGuidanceFromEffectiveConfig } from "../../../core/agent-guidance-catalog.js";
 import { loadBehaviorWorkspaceState } from "../../agent-behavior/persistence.js";
 import { BehaviorProfileStore } from "../../agent-behavior/store.js";
@@ -54,7 +53,7 @@ import {
   listWishlistIntakeTasksAsItems,
   findWishlistIntakeTaskByLegacyOrTaskId,
   isWishlistIntakeTask
-} from "../wishlist/wishlist-intake.js";
+} from "../wishlist-intake.js";
 import { listIdeas } from "../../ideas/idea-store.js";
 import { listPlanningChatSessions } from "../../ideas/planning-chat-session.js";
 import { readBuildPlanSession, toDashboardPlanningSession } from "../../../core/planning/build-plan-session-file.js";
@@ -425,10 +424,11 @@ export async function buildDashboardQueueSlice(
     completedDeliveryTaskCount: currentPhaseDelivery.segments.completed
   });
 
-  const legacyDeliveredMaxOrdinal = resolveLegacyDeliveredMaxOrdinal(
+  const phaseDeliveryFields = collectPhaseDeliveryDashboardFields(
+    dualForStatus?.getDatabase() ?? null,
+    tasks,
     ctx.effectiveConfig as Record<string, unknown> | undefined
   );
-  const phaseKeysWithActiveQueueWork = collectPhaseKeysWithActiveQueueWork(tasks);
 
   const systemStatusPhaseCatalog = systemStatus.phase?.phaseCatalog?.phases ?? [];
   const pastPhaseNotes = buildDashboardPastPhaseNotes({
@@ -584,13 +584,7 @@ export async function buildDashboardQueueSlice(
       phaseKey: null
     },
     currentPhaseDelivery,
-    deliveredPhaseKeys: [],
-    rolledOutPhaseKeys: [],
-    phaseReleaseDates: {},
-    phaseDeliveryHistory: [],
-    lastDeliveredPhase: null,
-    legacyDeliveredMaxOrdinal,
-    phaseKeysWithActiveQueueWork,
+    ...phaseDeliveryFields,
     pastPhaseNotes
   };
 }
@@ -651,6 +645,11 @@ export async function buildDashboardStatusSlice(
   };
 
   const tasks = store.getActiveTasks();
+  const phaseDeliveryFields = collectPhaseDeliveryDashboardFields(
+    db,
+    tasks,
+    ctx.effectiveConfig as Record<string, unknown> | undefined
+  );
 
   const teamExecution = db
     ? (summarizeTeamAssignmentsForDashboard(db, (id) => store.getTask(id)?.title ?? null) as DashboardTeamExecutionSummary)
@@ -830,13 +829,7 @@ export async function buildDashboardStatusSlice(
       releaseReadyPercent: 0,
       deliveryEvidenceViolationCount: 0
     },
-    deliveredPhaseKeys: [],
-    rolledOutPhaseKeys: [],
-    phaseReleaseDates: {},
-    phaseDeliveryHistory: [],
-    lastDeliveredPhase: null,
-    legacyDeliveredMaxOrdinal: null,
-    phaseKeysWithActiveQueueWork: [],
+    ...phaseDeliveryFields,
     pastPhaseNotes: []
   };
 }

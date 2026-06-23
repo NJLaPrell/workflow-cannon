@@ -30,10 +30,11 @@ test("buildTranscriptChurnResearchPrompt focuses task id when provided", () => {
   assert.match(p, /get-task/);
 });
 
-test("buildGenerateFeaturesPrompt references slash and wishlist intake playbook", () => {
+test("buildGenerateFeaturesPrompt references slash and planner-chat playbook", () => {
   const p = buildGenerateFeaturesPrompt();
   assert.match(p, /\/generate-features/);
-  assert.match(p, /\.ai\/playbooks\/wishlist-intake-to-execution\.md/);
+  assert.match(p, /\.ai\/playbooks\/planner-chat\.md/);
+  assert.match(p, /planner-chat/);
 });
 
 test("buildPlannerChatPrompt references planner-chat playbook and provenance", () => {
@@ -103,7 +104,7 @@ test("buildPlanningInterviewPrompt references planning runbook and build-plan", 
   assert.match(p, /planning-workflow\.md/);
   assert.match(p, /pnpm exec wk run list-planning-types/);
   assert.match(p, /pnpm exec wk run build-plan/);
-  assert.match(p, /list-wishlist/);
+  assert.doesNotMatch(p, /list-wishlist/);
   assert.match(p, /Start Interview/);
 });
 

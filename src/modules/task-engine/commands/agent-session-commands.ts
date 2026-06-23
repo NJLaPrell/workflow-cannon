@@ -25,7 +25,7 @@ import { buildMaintainerDeliveryHints } from "../maintainer-delivery-hints.js";
 import { buildPhaseJournalSnapshotSummary } from "../phase-journal/phase-journal-snapshot-summary.js";
 import { buildTaskIntakeReadoutBundle } from "../task-intake-readout-hints.js";
 import { buildWorkspaceCoordinationStatus } from "../coordination/build-workspace-coordination-status.js";
-import { isWishlistIntakeTask } from "../wishlist/wishlist-intake.js";
+import { isWishlistIntakeTask } from "../wishlist-intake.js";
 import { buildPhaseFocusDashboard } from "../dashboard/build-phase-focus-dashboard.js";
 import { summarizeAgentRegistrySessionsForAgentSnapshot } from "../agent-registry-session-summary.js";
 

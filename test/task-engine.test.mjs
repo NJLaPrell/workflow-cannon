@@ -1326,16 +1326,11 @@ test("taskEngineModule registration includes all instruction entries", () => {
   assert.ok(names.includes("queue-health"));
   assert.ok(names.includes("replay-queue-snapshot"));
   assert.ok(names.includes("dashboard-summary"));
-  assert.ok(names.includes("create-wishlist"));
-  assert.ok(names.includes("list-wishlist"));
-  assert.ok(names.includes("get-wishlist"));
-  assert.ok(names.includes("update-wishlist"));
   assert.ok(names.includes("update-workspace-phase-snapshot"));
   assert.ok(names.includes("set-current-phase"));
   assert.ok(names.includes("phase-status"));
   assert.ok(names.includes("list-phase-catalog"));
   assert.ok(names.includes("upsert-phase-catalog-entry"));
-  assert.ok(names.includes("convert-wishlist"));
   assert.ok(names.includes("migrate-task-persistence"));
   assert.ok(names.includes("task-persistence-readiness"));
   assert.ok(names.includes("persist-planning-execution-drafts"));
@@ -2661,21 +2656,27 @@ test("build-plan records planning live activity while questions remain and clear
 
 test("taskEngineModule dashboard-summary disables wishlist by default and includes backing taskId when opted in", async () => {
   const workspace = await tmpDir();
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(
+      makeTask({
+        id: "T901",
+        type: "wishlist_intake",
+        title: "Dash taskId row",
+        status: "proposed",
+        metadata: {
+          legacyWishlistId: "W901",
+          problemStatement: "Need row shape",
+          expectedOutcome: "taskId present",
+          impact: "UI",
+          constraints: "None",
+          successSignals: "Assert passes",
+          requestor: "test",
+          evidenceRef: "task-engine.test.mjs"
+        }
+      })
+    );
+  });
   const ctx = sqliteTaskEngineCtx(workspace);
-  const wl = {
-    id: "W901",
-    title: "Dash taskId row",
-    problemStatement: "Need row shape",
-    expectedOutcome: "taskId present",
-    impact: "UI",
-    constraints: "None",
-    successSignals: "Assert passes",
-    requestor: "test",
-    evidenceRef: "task-engine.test.mjs"
-  };
-  const created = await taskEngineModule.onCommand({ name: "create-wishlist", args: wl }, ctx);
-  assert.equal(created.ok, true);
-  const backingTaskId = created.data.taskId;
   const summary = await taskEngineModule.onCommand({ name: "dashboard-summary", args: {} }, ctx);
   assert.equal(summary.ok, true);
   assert.equal(summary.data.wishlist.enabled, false);
@@ -2690,7 +2691,7 @@ test("taskEngineModule dashboard-summary disables wishlist by default and includ
   assert.equal(optedIn.data.wishlist.enabled, true);
   const row = optedIn.data.wishlist.openTop[0];
   assert.equal(row.id, "W901");
-  assert.equal(row.taskId, backingTaskId);
+  assert.equal(row.taskId, "T901");
   assert.match(String(row.taskId), /^T\d+$/);
   assert.equal(optedIn.data.wishlist.openPage, 0);
   assert.equal(optedIn.data.wishlist.openPageSize, 10);
@@ -2699,26 +2700,30 @@ test("taskEngineModule dashboard-summary disables wishlist by default and includ
 
 test("taskEngineModule dashboard-summary wishlist paging clamps page and slices openTop", async () => {
   const workspace = await tmpDir();
+  await seedSqliteStore(workspace, (store) => {
+    for (let i = 0; i < 11; i++) {
+      const taskId = `T${String(920 + i)}`;
+      store.addTask(
+        makeTask({
+          id: taskId,
+          type: "wishlist_intake",
+          title: `Wishlist paging ${i}`,
+          status: "proposed",
+          metadata: {
+            legacyWishlistId: `W${String(920 + i)}`,
+            problemStatement: "p",
+            expectedOutcome: "o",
+            impact: "i",
+            constraints: "c",
+            successSignals: "s",
+            requestor: "t",
+            evidenceRef: "e"
+          }
+        })
+      );
+    }
+  });
   const ctx = sqliteTaskEngineCtx(workspace);
-  const baseWl = {
-    problemStatement: "p",
-    expectedOutcome: "o",
-    impact: "i",
-    constraints: "c",
-    successSignals: "s",
-    requestor: "t",
-    evidenceRef: "e"
-  };
-  for (let i = 0; i < 11; i++) {
-    const created = await taskEngineModule.onCommand(
-      {
-        name: "create-wishlist",
-        args: { ...baseWl, title: `Wishlist paging ${i}` }
-      },
-      ctx
-    );
-    assert.equal(created.ok, true);
-  }
   const defaultSummary = await taskEngineModule.onCommand({ name: "dashboard-summary", args: {} }, ctx);
   assert.equal(defaultSummary.ok, true);
   assert.equal(defaultSummary.data.wishlist.enabled, false);
@@ -2869,26 +2874,26 @@ test("taskEngineModule dashboard-summary overview projection keeps startup-only 
     store.addTask(makeTask({ id: "T910", status: "ready", priority: "P1", title: "Ready visible" }));
     store.addTask(makeTask({ id: "T911", status: "completed", phaseKey: "80", title: "Completed archived" }));
     store.addTask(makeTask({ id: "T912", status: "cancelled", phaseKey: "80", title: "Cancelled archived" }));
+    store.addTask(
+      makeTask({
+        id: "T913",
+        type: "wishlist_intake",
+        status: "proposed",
+        title: "Startup wish",
+        metadata: {
+          legacyWishlistId: "W910",
+          problemStatement: "Need fast startup",
+          expectedOutcome: "No eager wishlist load",
+          impact: "Performance",
+          constraints: "None",
+          successSignals: "Overview stays small",
+          requestor: "maintainer",
+          evidenceRef: "T9"
+        }
+      })
+    );
   });
   const ctx = sqliteTaskEngineCtx(workspace);
-  const wish = await taskEngineModule.onCommand(
-    {
-      name: "create-wishlist",
-      args: {
-        id: "W910",
-        title: "Startup wish",
-        problemStatement: "Need fast startup",
-        expectedOutcome: "No eager wishlist load",
-        impact: "Performance",
-        constraints: "None",
-        successSignals: "Overview stays small",
-        requestor: "maintainer",
-        evidenceRef: "T9"
-      }
-    },
-    ctx
-  );
-  assert.equal(wish.ok, true);
 
   const overview = await taskEngineModule.onCommand(
     { name: "dashboard-summary", args: { projection: "overview", includeWishlist: true } },
@@ -5647,83 +5652,39 @@ const wishlistIntake = {
   evidenceRef: "docs/x"
 };
 
-test("taskEngineModule wishlist: create, list, convert closes wishlist and creates tasks", async () => {
+test("taskEngineModule rejects removed wishlist commands", async () => {
   const workspace = await tmpDir();
   const ctx = sqliteTaskEngineCtx(workspace);
-
-  let r = await taskEngineModule.onCommand({ name: "create-wishlist", args: wishlistIntake }, ctx);
-  assert.equal(r.ok, true);
-  assert.equal(r.code, "wishlist-created");
-
-  r = await taskEngineModule.onCommand({ name: "list-wishlist", args: { status: "open" } }, ctx);
-  assert.equal(r.ok, true);
-  assert.equal(r.data.count, 1);
-  assert.equal(r.data.scope, "wishlist-only");
-
-  r = await taskEngineModule.onCommand(
-    {
-      name: "convert-wishlist",
-      args: {
-        wishlistId: "W900",
-        decomposition: {
-          rationale: "One task for slice",
-          boundaries: "Engine only",
-          dependencyIntent: "none"
-        },
-        tasks: [
-          {
-            id: "T9001",
-            title: "Do the thing",
-            phase: "Phase test",
-            approach: "Implement",
-            technicalScope: ["Add code"],
-            acceptanceCriteria: ["It works"]
-          }
-        ]
-      }
-    },
-    ctx
-  );
-  assert.equal(r.ok, true);
-  assert.equal(r.code, "wishlist-converted");
-  assert.equal(r.data.wishlist.status, "converted");
-  assert.deepEqual(r.data.wishlist.convertedToTaskIds, ["T9001"]);
-
-  r = await taskEngineModule.onCommand({ name: "get-task", args: { taskId: "T9001" } }, ctx);
-  assert.equal(r.ok, true);
-  assert.equal(r.data.task.phase, "Phase test");
-
-  r = await taskEngineModule.onCommand({ name: "list-tasks", args: {} }, ctx);
-  assert.equal(r.ok, true);
-  assert.ok(r.data.tasks.some((t) => t.id === "T9001"));
-});
-
-test("taskEngineModule update-wishlist accepts patch alias without updates", async () => {
-  const workspace = await tmpDir();
-  const ctx = sqliteTaskEngineCtx(workspace);
-  let r = await taskEngineModule.onCommand({ name: "create-wishlist", args: wishlistIntake }, ctx);
-  assert.equal(r.ok, true);
-  r = await taskEngineModule.onCommand(
-    {
-      name: "update-wishlist",
-      args: {
-        wishlistId: "W900",
-        patch: { title: "Patched via patch alias" }
-      }
-    },
-    ctx
-  );
-  assert.equal(r.ok, true);
-  assert.equal(r.code, "wishlist-updated");
-  r = await taskEngineModule.onCommand({ name: "get-wishlist", args: { wishlistId: "W900" } }, ctx);
-  assert.equal(r.ok, true);
-  assert.equal(r.data.item.title, "Patched via patch alias");
+  for (const commandName of ["create-wishlist", "list-wishlist", "get-wishlist", "update-wishlist", "convert-wishlist"]) {
+    const result = await taskEngineModule.onCommand({ name: commandName, args: wishlistIntake }, ctx);
+    assert.equal(result.ok, false);
+    assert.equal(result.code, "unsupported-command");
+  }
 });
 
 test("taskEngineModule get-next-actions never includes wishlist ids", async () => {
   const workspace = await tmpDir();
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(
+      makeTask({
+        id: "T900",
+        type: "wishlist_intake",
+        title: "Wishlist-backed intake",
+        status: "proposed",
+        metadata: {
+          legacyWishlistId: "W900",
+          problemStatement: "Need tests",
+          expectedOutcome: "Green CI",
+          impact: "Quality",
+          constraints: "None",
+          successSignals: "Tests pass",
+          requestor: "maintainer",
+          evidenceRef: "docs/x"
+        }
+      })
+    );
+  });
   const ctx = sqliteTaskEngineCtx(workspace);
-  await taskEngineModule.onCommand({ name: "create-wishlist", args: wishlistIntake }, ctx);
 
   const r = await taskEngineModule.onCommand({ name: "get-next-actions", args: {} }, ctx);
   assert.equal(r.ok, true);

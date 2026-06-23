@@ -4,7 +4,7 @@
 
 Machine operator guide for **PlanArtifact v1** — brainstorm → draft → review → accept → finalize → execution tasks.
 
-**Related (legacy interview path):** [`.ai/runbooks/planning-workflow.md`](./planning-workflow.md) (`build-plan`, wishlist).  
+**Related (legacy interview path):** [`.ai/runbooks/planning-workflow.md`](./planning-workflow.md) (`build-plan`, Ideas).  
 **CAE planning lenses:** [`.ai/cae/planning-lenses/README.md`](../cae/planning-lenses/README.md) (advisory; deterministic review is code, not shadow CAE alone).
 
 ## Intent
@@ -86,7 +86,7 @@ Integration proof: `test/planning-session-cae-scope.test.mjs`.
 | `review-planning-execution-drafts` | Preflight normalized task rows before finalize persist |
 | `persist-planning-execution-drafts` | **Only** writer for execution tasks from an accepted plan |
 
-See **`.ai/AGENT-CLI-MAP.extended.md`** → planning / wishlist ladder for copy-paste.
+See **`.ai/AGENT-CLI-MAP.extended.md`** → planning / Ideas ladder for copy-paste.
 
 ## Policy tiers (summary)
 
@@ -114,7 +114,7 @@ Full index: repo-root **`PLANNER_COMMANDS.md`** §8.
 
 ## Compatibility
 
-- **`build-plan`** interview + wishlist path remains valid; bridge via `importSource: import-build-plan` when drafting (handler era).
+- **`build-plan`** interview path remains valid; bridge via `importSource: import-build-plan` when drafting (handler era).
 - Dashboard **`planningSession`** is interview state only — not a PlanArtifact. Promote through **`draft-plan-artifact`** when WP-3+ is live.
 
 ## Do not

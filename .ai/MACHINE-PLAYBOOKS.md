@@ -62,14 +62,6 @@ Investigate **`transcript_churn` / `research`** rows from transcript pipelines, 
 
 Full checklist: **`.ai/playbooks/transcript-churn-research.md`**.
 
-## Wishlist intake → execution
-
-Rank **`wishlist_intake`** items with **`list-wishlist`** / **`get-wishlist`**, confirm operator timing, clarify scope, pick a target **`phaseKey`**, then **`convert-wishlist`** with **`expectedPlanningGeneration`** when policy is **`require`**.
-
-Full checklist: **`.ai/playbooks/wishlist-intake-to-execution.md`**.
-
-Cursor slash: **`/generate-features`** → **`.cursor/commands/generate-features.md`**.
-
 ## Planner chat (Ideas → PlanArtifact)
 
 Use **`planner-chat`** when an Ideas row should become a draft/reviewed/accepted PlanArtifact and, optionally, executable phase tasks. Preserve Ideas provenance (`sourceIdeaId`, `previousPlanArtifacts`), ask one planning decision at a time, keep CLI details out of normal user-facing chat, and leave the session resumable on rejection or partial progress.
@@ -77,8 +69,6 @@ Use **`planner-chat`** when an Ideas row should become a draft/reviewed/accepted
 Full checklist: **`.ai/playbooks/planner-chat.md`**.
 
 Agents attach the **`.ai/playbooks/...`** path; rendered copies under **`docs/maintainers/playbooks/`** are for humans after **`pnpm run generate-maintainer-docs-from-ai`** (see playbook **Agent paths vs maintainer-rendered mirrors**).
-
-Optional Cursor rule: `.cursor/rules/playbook-wishlist-intake-to-execution.mdc`.
 
 ## Chat onboarding (`/onboarding`)
 

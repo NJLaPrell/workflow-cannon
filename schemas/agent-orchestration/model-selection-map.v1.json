@@ -1,0 +1,219 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workflow-cannon.dev/schemas/agent-orchestration/model-selection-map.v1.json",
+  "title": "Subagent model selection map v1",
+  "description": "Host-specific model catalog, capability scores, scope dimensions, and ordered selection rules for orchestrators delegating to subagents.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "mapId",
+    "hostHint",
+    "models",
+    "scopeDimensions",
+    "selectionRules"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "mapId": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]*$",
+      "minLength": 1
+    },
+    "hostHint": {
+      "type": "string",
+      "enum": ["cursor", "vscode", "cli", "codex", "mcp", "service", "manual", "unknown"]
+    },
+    "description": { "type": "string" },
+    "models": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/modelEntry" }
+    },
+    "scopeDimensions": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/scopeDimension" }
+    },
+    "selectionRules": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/selectionRule" }
+    },
+    "subagentTypeDefaults": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/subagentTypeDefault" }
+    },
+    "tierDefaults": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "cheap_fast": { "$ref": "#/$defs/tierDefault" },
+        "balanced": { "$ref": "#/$defs/tierDefault" },
+        "high_reasoning": { "$ref": "#/$defs/tierDefault" },
+        "specialist": { "$ref": "#/$defs/tierDefault" }
+      }
+    }
+  },
+  "$defs": {
+    "modelTier": {
+      "type": "string",
+      "enum": ["cheap_fast", "balanced", "high_reasoning", "specialist", "human_review"]
+    },
+    "scopeLevel": {
+      "type": "string",
+      "enum": ["low", "medium", "high", "critical"]
+    },
+    "capabilityScores": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reasoning", "code", "speed", "costEfficiency"],
+      "properties": {
+        "reasoning": { "type": "integer", "minimum": 1, "maximum": 5 },
+        "code": { "type": "integer", "minimum": 1, "maximum": 5 },
+        "speed": { "type": "integer", "minimum": 1, "maximum": 5 },
+        "costEfficiency": { "type": "integer", "minimum": 1, "maximum": 5 },
+        "contextHandling": { "type": "integer", "minimum": 1, "maximum": 5 },
+        "toolUse": { "type": "integer", "minimum": 1, "maximum": 5 }
+      }
+    },
+    "modelEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["modelSlug", "modelTier", "capabilities", "costBand"],
+      "properties": {
+        "modelSlug": { "type": "string", "minLength": 1 },
+        "displayName": { "type": "string" },
+        "modelTier": { "$ref": "#/$defs/modelTier" },
+        "capabilities": { "$ref": "#/$defs/capabilityScores" },
+        "costBand": {
+          "type": "string",
+          "enum": ["minimal", "low", "medium", "high", "premium"]
+        },
+        "strengths": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "avoidWhen": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "fallbackSlugs": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "enabled": { "type": "boolean", "default": true }
+      }
+    },
+    "scopeDimension": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "label", "weight", "description"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "minLength": 1
+        },
+        "label": { "type": "string", "minLength": 1 },
+        "weight": {
+          "type": "string",
+          "enum": ["low", "medium", "high", "critical"]
+        },
+        "description": { "type": "string", "minLength": 1 },
+        "escalatesAt": { "$ref": "#/$defs/scopeLevel" }
+      }
+    },
+    "scopeMatch": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "anyAtOrAbove": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/scopeLevel" },
+          "minProperties": 1
+        },
+        "allAtOrAbove": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/scopeLevel" },
+          "minProperties": 1
+        },
+        "highWeightCountAtOrAbove": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["level", "count"],
+          "properties": {
+            "level": { "$ref": "#/$defs/scopeLevel" },
+            "count": { "type": "integer", "minimum": 1 }
+          }
+        },
+        "subagentTypes": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "minItems": 1
+        },
+        "taskTypeHints": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "minItems": 1
+        },
+        "ownedPathCountAtLeast": { "type": "integer", "minimum": 1 },
+        "ownedAreaCountAtLeast": { "type": "integer", "minimum": 2 },
+        "requiresApprovalPaths": { "type": "boolean" }
+      }
+    },
+    "selectionOutcome": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["modelTier", "rationale"],
+      "properties": {
+        "modelSlug": { "type": ["string", "null"], "minLength": 1 },
+        "modelTier": { "$ref": "#/$defs/modelTier" },
+        "rationale": { "type": "string", "minLength": 1 },
+        "useTierDefault": { "type": "boolean" },
+        "fallbackSlugs": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "selectionRule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ruleId", "priority", "match", "outcome"],
+      "properties": {
+        "ruleId": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_-]*$",
+          "minLength": 1
+        },
+        "priority": { "type": "integer", "minimum": 0 },
+        "label": { "type": "string" },
+        "match": { "$ref": "#/$defs/scopeMatch" },
+        "outcome": { "$ref": "#/$defs/selectionOutcome" }
+      }
+    },
+    "tierDefault": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["modelSlug"],
+      "properties": {
+        "modelSlug": { "type": "string", "minLength": 1 },
+        "fallbackSlugs": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "subagentTypeDefault": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["modelSlug", "modelTier", "rationale"],
+      "properties": {
+        "modelSlug": { "type": "string", "minLength": 1 },
+        "modelTier": { "$ref": "#/$defs/modelTier" },
+        "rationale": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}
