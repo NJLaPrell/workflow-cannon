@@ -31,7 +31,12 @@ export function validateValueForMetadata(meta: ConfigKeyMetadata, value: unknown
         }
       }
     }
-    if (meta.key === "skills.discoveryRoots" || meta.key === "plugins.discoveryRoots") {
+    if (
+      meta.key === "skills.discoveryRoots" ||
+      meta.key === "plugins.discoveryRoots" ||
+      meta.key === "tasks.stateAuthority.authorityBranchPatterns" ||
+      meta.key === "tasks.stateAuthority.workerBranchPatterns"
+    ) {
       for (const item of value) {
         if (typeof item !== "string" || item.trim().length === 0) {
           throw new Error(`config-type-error(${meta.key}): array entries must be non-empty strings`);
@@ -588,7 +593,8 @@ export function validatePersistedConfigDocument(
         k !== "planningGenerationPolicy" &&
         k !== "canonicalAuthority" &&
         k !== "canonicalBackend" &&
-        k !== "canonicalPublishQueue"
+        k !== "canonicalPublishQueue" &&
+        k !== "stateAuthority"
       ) {
         throw new Error(`config-invalid(${label}): unknown tasks.${k}`);
       }
@@ -670,6 +676,43 @@ export function validatePersistedConfigDocument(
         (typeof queue.maxAttempts !== "number" || !Number.isFinite(queue.maxAttempts) || Math.trunc(queue.maxAttempts) <= 0)
       ) {
         throw new Error(`config-invalid(${label}): tasks.canonicalPublishQueue.maxAttempts must be a positive number`);
+      }
+    }
+    if (t.stateAuthority !== undefined) {
+      if (typeof t.stateAuthority !== "object" || t.stateAuthority === null || Array.isArray(t.stateAuthority)) {
+        throw new Error(`config-invalid(${label}): tasks.stateAuthority must be an object`);
+      }
+      const sa = t.stateAuthority as Record<string, unknown>;
+      for (const k of Object.keys(sa)) {
+        if (
+          k !== "mode" &&
+          k !== "authorityBranchPatterns" &&
+          k !== "workerBranchPatterns" &&
+          k !== "workerBranchMutations"
+        ) {
+          throw new Error(`config-invalid(${label}): unknown tasks.stateAuthority.${k}`);
+        }
+      }
+      if (sa.mode !== undefined) {
+        validateValueForMetadata(REGISTRY["tasks.stateAuthority.mode"]!, sa.mode);
+      }
+      if (sa.workerBranchMutations !== undefined) {
+        validateValueForMetadata(
+          REGISTRY["tasks.stateAuthority.workerBranchMutations"]!,
+          sa.workerBranchMutations
+        );
+      }
+      if (sa.authorityBranchPatterns !== undefined) {
+        validateValueForMetadata(
+          REGISTRY["tasks.stateAuthority.authorityBranchPatterns"]!,
+          sa.authorityBranchPatterns
+        );
+      }
+      if (sa.workerBranchPatterns !== undefined) {
+        validateValueForMetadata(
+          REGISTRY["tasks.stateAuthority.workerBranchPatterns"]!,
+          sa.workerBranchPatterns
+        );
       }
     }
     if (t.deliveryEvidence !== undefined) {

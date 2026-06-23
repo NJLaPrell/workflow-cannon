@@ -8,6 +8,16 @@ export type WorkspaceCoordinationAuthorityRole =
   | "worker"
   | "unknown";
 
+export type WorkspaceCoordinationTaskStateAuthority = {
+  schemaVersion: 1;
+  mode: "enforce" | "advisory" | "disabled";
+  classification: "authority" | "worker" | "unknown" | "disabled";
+  workerBranchMutations: "deny" | "intent";
+  branch: string | null;
+  detachedHead: boolean;
+  explain: Array<{ code: string; message: string }>;
+};
+
 export type WorkspaceCoordinationPosture =
   | "unknown_git"
   | "detached_head"
@@ -68,5 +78,6 @@ export type WorkspaceCoordinationStatusV1 = {
   taskDatabaseGitDirty: boolean;
   dirtyManifest: WorkspaceCoordinationDirtyManifest;
   lease: WorkspaceCoordinationLeaseSlice;
+  taskStateAuthority: WorkspaceCoordinationTaskStateAuthority;
   suspectFlags: string[];
 };
