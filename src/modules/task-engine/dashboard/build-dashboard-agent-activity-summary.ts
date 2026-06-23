@@ -56,6 +56,110 @@ function titleCase(value: string): string {
     .join(" ");
 }
 
+const MODEL_TIER_LABELS: Record<string, string> = {
+  cheap_fast: "Fast",
+  balanced: "Balanced",
+  high_reasoning: "High reasoning",
+  specialist: "Specialist",
+  human_review: "Human review"
+};
+
+function modelTierThinkingLabel(modelTier: string | null | undefined): string | null {
+  const tier = cleanText(modelTier);
+  if (!tier) {
+    return null;
+  }
+  return MODEL_TIER_LABELS[tier] ?? titleCase(tier);
+}
+
+/** Extract Cursor-style thinking/reasoning level from a model slug when present. */
+export function parseThinkingLevelFromModelHint(modelHint: string | null | undefined): string | null {
+  const hint = cleanText(modelHint);
+  if (!hint) {
+    return null;
+  }
+  const thinkingMatch = hint.match(/-thinking(?:-([a-z0-9-]+))?$/i);
+  if (thinkingMatch) {
+    const suffix = cleanText(thinkingMatch[1]);
+    return suffix ? titleCase(suffix) : "Thinking";
+  }
+  const levelMatch = hint.match(/-(high|medium|low|max)$/i);
+  if (levelMatch) {
+    return titleCase(levelMatch[1]!);
+  }
+  return null;
+}
+
+function resolveAgentTypeLabel(args: {
+  agentDefinitionId?: string | null;
+  subagentDefinitionId?: string | null;
+  role: DashboardAgentActivityRow["role"];
+}): string | null {
+  const definitionId = cleanText(args.agentDefinitionId) || cleanText(args.subagentDefinitionId);
+  if (definitionId) {
+    return titleCase(definitionId);
+  }
+  switch (args.role) {
+    case "orchestrator":
+      return "Orchestrator";
+    case "task_worker":
+      return "Task worker";
+    case "subagent":
+      return "Subagent";
+    default:
+      return null;
+  }
+}
+
+function buildAgentProfile(args: {
+  agentDefinitionId?: string | null;
+  subagentDefinitionId?: string | null;
+  role: DashboardAgentActivityRow["role"];
+  agentId?: string | null;
+  displayName?: string | null;
+  modelTier?: string | null;
+  modelHint?: string | null;
+  details?: Record<string, unknown> | null;
+}): DashboardAgentActivityRow["agentProfile"] {
+  const model = cleanText(args.modelHint) || null;
+  const thinkingFromHint = parseThinkingLevelFromModelHint(model);
+  const thinkingFromDetails = readDetailText(args.details, ["thinkingLevel", "thinking_level"]);
+  const thinkingLevel =
+    thinkingFromHint ||
+    (thinkingFromDetails ? titleCase(thinkingFromDetails) : null) ||
+    modelTierThinkingLabel(args.modelTier);
+  const agentNameOrId =
+    cleanText(args.displayName) ||
+    cleanText(readDetailText(args.details, ["agentDisplayName", "customAgentName"])) ||
+    cleanText(args.agentId) ||
+    null;
+  const agentType = resolveAgentTypeLabel(args);
+  if (!agentType && !model && !thinkingLevel && !agentNameOrId) {
+    return undefined;
+  }
+  return {
+    agentType,
+    model,
+    thinkingLevel,
+    agentNameOrId
+  };
+}
+
+function mergeAgentProfile(
+  winner: DashboardAgentActivityRow["agentProfile"] | undefined,
+  loser: DashboardAgentActivityRow["agentProfile"] | undefined
+): DashboardAgentActivityRow["agentProfile"] | undefined {
+  if (!winner && !loser) {
+    return undefined;
+  }
+  return {
+    agentType: winner?.agentType ?? loser?.agentType ?? null,
+    model: winner?.model ?? loser?.model ?? null,
+    thinkingLevel: winner?.thinkingLevel ?? loser?.thinkingLevel ?? null,
+    agentNameOrId: winner?.agentNameOrId ?? loser?.agentNameOrId ?? null
+  };
+}
+
 function isoMillis(value: string | null): number {
   return value ? Date.parse(value) : Number.NaN;
 }
@@ -383,7 +487,8 @@ function mergeRow(existing: RowCandidate | undefined, candidate: RowCandidate): 
     },
     freshness: freshnessBest(winner, loser).freshness,
     attention: attentionBest(winner, loser).attention,
-    metadata: mergeMetadata(winner.metadata, loser.metadata)
+    metadata: mergeMetadata(winner.metadata, loser.metadata),
+    agentProfile: mergeAgentProfile(winner.agentProfile, loser.agentProfile)
   };
 }
 
@@ -489,7 +594,16 @@ function buildLiveActivityRows(
         },
         freshness,
         attention: attentionFromStatus(status.kind, freshness.state),
-        metadata: readKnownDetailMetadata(lease.details)
+        metadata: readKnownDetailMetadata(lease.details),
+        agentProfile: buildAgentProfile({
+          agentDefinitionId: lease.agentDefinitionId,
+          role: roleFromAgentId(lease.agentId, status.kind),
+          agentId: lease.agentId,
+          displayName,
+          modelTier: lease.modelTier,
+          modelHint: lease.modelHint,
+          details: lease.details
+        })
       },
       "live_activity",
       keyParts
@@ -577,7 +691,15 @@ function buildAssignmentRows(
           prNumber: null
         },
         freshness,
-        attention: attentionFromStatus(status, freshness.state)
+        attention: attentionFromStatus(status, freshness.state),
+        agentProfile: buildAgentProfile({
+          role: "task_worker",
+          agentId: assignment.workerId,
+          displayName:
+            cleanText(taskDisplayName(assignment.executionTaskId, byTaskId)) ||
+            cleanText(assignment.executionTaskTitle) ||
+            cleanText(assignment.workerId)
+        })
       },
       "team_execution",
       keyParts
@@ -639,7 +761,16 @@ function buildSubagentRows(
           prNumber: null
         },
         freshness,
-        attention: attentionFromStatus(status, freshness.state)
+        attention: attentionFromStatus(status, freshness.state),
+        agentProfile: buildAgentProfile({
+          agentDefinitionId: session.definitionId,
+          subagentDefinitionId: session.definitionId,
+          role: "subagent",
+          agentId: session.definitionId,
+          displayName:
+            cleanText(taskDisplayName(session.executionTaskId, byTaskId)) ||
+            titleCase(session.definitionId)
+        })
       },
       "subagent_registry",
       [session.definitionId, session.sessionId]

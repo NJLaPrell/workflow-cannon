@@ -439,6 +439,13 @@ export type DashboardAgentActivityRow = {
     agentDisplayName?: string;
     customAgentName?: string;
   };
+  /** Resolved orchestration profile for dashboard agent cards (live lease preferred). */
+  agentProfile?: {
+    agentType: string | null;
+    model: string | null;
+    thinkingLevel: string | null;
+    agentNameOrId: string | null;
+  };
 };
 
 export type DashboardAgentActivitySummary = {

@@ -1096,6 +1096,13 @@ export async function buildDashboardOverview(
     ctx.effectiveConfig as Record<string, unknown> | undefined
   );
   const phaseKeysWithActiveQueueWork = collectPhaseKeysWithActiveQueueWork(tasks);
+  const { deliveredPhaseKeys, rolledOutPhaseKeys, phaseReleaseDates, phaseDeliveryHistory } = {
+    deliveredPhaseKeys: collectDeliveredPhaseKeys(dualForStatus.getDatabase(), tasks),
+    rolledOutPhaseKeys: collectRolledOutPhaseKeys(dualForStatus.getDatabase()),
+    phaseReleaseDates: collectPhaseReleaseDatesByKey(dualForStatus.getDatabase()),
+    phaseDeliveryHistory: collectPhaseDeliveryHistoryRows(dualForStatus.getDatabase())
+  };
+  const lastDeliveredPhase = phaseDeliveryHistory.find((row) => row.status === "delivered") ?? null;
 
   const effCfg =
     ctx.effectiveConfig && typeof ctx.effectiveConfig === "object" && !Array.isArray(ctx.effectiveConfig)
@@ -1246,11 +1253,11 @@ export async function buildDashboardOverview(
     agentStatus,
     agentActivitySummary,
     currentPhaseDelivery,
-    deliveredPhaseKeys: [],
-    rolledOutPhaseKeys: [],
-    phaseReleaseDates: {},
-    phaseDeliveryHistory: [],
-    lastDeliveredPhase: null,
+    deliveredPhaseKeys,
+    rolledOutPhaseKeys,
+    phaseReleaseDates,
+    phaseDeliveryHistory,
+    lastDeliveredPhase,
     legacyDeliveredMaxOrdinal,
     phaseKeysWithActiveQueueWork,
     pastPhaseNotes: []

@@ -2,6 +2,43 @@ import { DASHBOARD_SLICE_REGISTRY, lookupDashboardSlice } from "./dashboard-slic
 import type { DashboardSectionId } from "./dashboard-section-registry.js";
 import type { DashboardSlice, DashboardSliceName } from "./dashboard-snapshot-types.js";
 
+function agentActivitySummaryHasContent(summary: unknown): boolean {
+  if (!summary || typeof summary !== "object") {
+    return false;
+  }
+  const record = summary as Record<string, unknown>;
+  if (record.main && typeof record.main === "object") {
+    return true;
+  }
+  if (record.inferredFallback && typeof record.inferredFallback === "object") {
+    return true;
+  }
+  if (Array.isArray(record.active) && record.active.length > 0) {
+    return true;
+  }
+  if (Array.isArray(record.needsAttention) && record.needsAttention.length > 0) {
+    return true;
+  }
+  return false;
+}
+
+/** Keys whose empty/unavailable payloads should not replace a prior populated dashboard card. */
+function preserveLastKnownDashboardFields(
+  summary: Record<string, unknown>,
+  extracted: Record<string, unknown>
+): Record<string, unknown> {
+  let next = extracted;
+  const priorSummary = summary.agentActivitySummary;
+  const nextSummary = extracted.agentActivitySummary;
+  if (
+    agentActivitySummaryHasContent(priorSummary) &&
+    !agentActivitySummaryHasContent(nextSummary)
+  ) {
+    next = { ...next, agentActivitySummary: priorSummary };
+  }
+  return next;
+}
+
 /** Merge a slice payload into an accumulated dashboard-summary-shaped object. */
 export function mergeSlicePayloadIntoSummary(
   summary: Record<string, unknown>,
@@ -20,6 +57,8 @@ export function mergeSlicePayloadIntoSummary(
       }
     }
   }
+
+  extracted = preserveLastKnownDashboardFields(summary, extracted);
 
   return { ...summary, ...extracted };
 }

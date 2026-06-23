@@ -1660,7 +1660,12 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
           "Dashboard overview timed out before JSON was returned. From a terminal, run: pnpm exec wk run dashboard-summary '{\"projection\":\"overview\"}'";
       }
       if (raw.ok === true && raw.data && typeof raw.data === "object") {
-        this.lastDashboardSummaryData = raw.data as Record<string, unknown>;
+        const prior = this.lastDashboardSummaryData ?? {};
+        this.lastDashboardSummaryData = mergeSlicePayloadIntoSummary(
+          prior,
+          "overview",
+          raw.data as Record<string, unknown>
+        );
         this.lastQueueContentFingerprint = computeQueueContentFingerprint(this.lastDashboardSummaryData);
         ingestPlanningMetaFromData(raw.data as Record<string, unknown>);
         this.ingestDashboardSummaryIntoStore(raw.data as Record<string, unknown>, "overview");
@@ -1874,7 +1879,12 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     try {
       const raw = await this.runDashboardSummaryStatus({}, { source: "tab:status status hydration" });
       if (raw.ok === true && raw.data && typeof raw.data === "object") {
-        this.lastDashboardSummaryData = raw.data as Record<string, unknown>;
+        const prior = this.lastDashboardSummaryData ?? {};
+        this.lastDashboardSummaryData = mergeSlicePayloadIntoSummary(
+          prior,
+          "status",
+          raw.data as Record<string, unknown>
+        );
         ingestPlanningMetaFromData(raw.data as Record<string, unknown>);
         this.ingestDashboardSummaryIntoStore(raw.data as Record<string, unknown>, "status");
 
@@ -2174,9 +2184,10 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     let embeddedCaePanelHtml: string | null = this.lastEmbeddedCaePanelHtml;
     if (raw.ok === true && raw.data && typeof raw.data === "object") {
       const summaryData = raw.data as Record<string, unknown>;
-      this.lastDashboardSummaryData = summaryData;
-      ingestPlanningMetaFromData(summaryData);
+      const prior = this.lastDashboardSummaryData ?? {};
       const ingestProjection = summaryProjection === "full" ? "overview" : summaryProjection;
+      this.lastDashboardSummaryData = mergeSlicePayloadIntoSummary(prior, ingestProjection, summaryData);
+      ingestPlanningMetaFromData(summaryData);
       this.ingestDashboardSummaryIntoStore(summaryData, ingestProjection);
       const contentFp = computeQueueContentFingerprint(summaryData);
       if (
@@ -4718,7 +4729,12 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     let phaseJournal: DashboardPhaseJournalBundle | undefined;
     let embeddedCaePanelHtml: string | null = null;
     if (raw.ok === true && raw.data && typeof raw.data === "object") {
-      this.lastDashboardSummaryData = raw.data as Record<string, unknown>;
+      const prior = this.lastDashboardSummaryData ?? {};
+      this.lastDashboardSummaryData = mergeSlicePayloadIntoSummary(
+        prior,
+        "overview",
+        raw.data as Record<string, unknown>
+      );
       this.lastQueueContentFingerprint = computeQueueContentFingerprint(
         this.lastDashboardSummaryData
       );
@@ -5692,6 +5708,16 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       text-overflow: ellipsis;
       line-height: 1.3;
     }
+    .wc-banner-agent-profile {
+      display: block;
+      font-size: 10px;
+      color: var(--wc-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      line-height: 1.25;
+      margin-top: 2px;
+    }
     .dash-agent-status-banner,
     .wc-agent-board,
     .dash-agent-activity-section {
@@ -5858,6 +5884,18 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       letter-spacing: 0.06em;
       text-transform: uppercase;
       white-space: nowrap;
+    }
+    .wc-agent-card-profile {
+      font-size: 10px;
+      line-height: 1.35;
+      margin-top: 2px;
+      overflow-wrap: anywhere;
+    }
+    .wc-agent-card-profile-label {
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      font-size: 9px;
     }
     .wc-agent-card-chevron {
       font-size: 10px;

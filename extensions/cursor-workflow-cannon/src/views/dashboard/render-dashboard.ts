@@ -411,6 +411,7 @@ function resolveDashboardBannerState(d: Record<string, unknown> | null | undefin
   statusKind: WcDashboardStatusKind;
   statusLabel: string;
   taskText: string;
+  agentProfileText: string;
 } {
   const summary = (d?.agentActivitySummary as DashboardAgentActivitySummary | null | undefined) ?? null;
   const main = summary?.main && summary.main.freshness.state !== "expired" ? summary.main : null;
@@ -419,7 +420,8 @@ function resolveDashboardBannerState(d: Record<string, unknown> | null | undefin
     return {
       statusKind: status.kind,
       statusLabel: status.label,
-      taskText: buildDashboardBannerTaskTextFromActivityRow(main) || cleanDashboardText(main.statusLabel) || "Agent activity is live"
+      taskText: buildDashboardBannerTaskTextFromActivityRow(main) || cleanDashboardText(main.statusLabel) || "Agent activity is live",
+      agentProfileText: buildDashboardBannerAgentProfileText(main)
     };
   }
   const fallback = summary?.inferredFallback ?? null;
@@ -428,7 +430,8 @@ function resolveDashboardBannerState(d: Record<string, unknown> | null | undefin
     return {
       statusKind: status.kind,
       statusLabel: status.label,
-      taskText: buildDashboardBannerTaskTextFromStatus(fallback) || "Inferred from workspace state"
+      taskText: buildDashboardBannerTaskTextFromStatus(fallback) || "Inferred from workspace state",
+      agentProfileText: ""
     };
   }
   const agentStatus =
@@ -447,7 +450,8 @@ function resolveDashboardBannerState(d: Record<string, unknown> | null | undefin
     return {
       statusKind: status.kind,
       statusLabel: status.label,
-      taskText: buildDashboardBannerTaskTextFromStatus(agentStatus) || "Workspace agent status"
+      taskText: buildDashboardBannerTaskTextFromStatus(agentStatus) || "Workspace agent status",
+      agentProfileText: ""
     };
   }
   const workspaceStatus =
@@ -458,7 +462,8 @@ function resolveDashboardBannerState(d: Record<string, unknown> | null | undefin
   return {
     statusKind: "idle",
     statusLabel: wcDashboardStatusLabel("idle"),
-    taskText: activeFocus || "No current task"
+    taskText: activeFocus || "No current task",
+    agentProfileText: ""
   };
 }
 
@@ -490,6 +495,13 @@ export function renderWcDashboardBannerHtml(data?: Record<string, unknown> | nul
     '">' +
     escapeHtml(state.taskText) +
     "</span>" +
+    (state.agentProfileText
+      ? '<span class="wc-banner-agent-profile muted" title="' +
+        escapeHtmlAttr(state.agentProfileText) +
+        '">' +
+        escapeHtml(state.agentProfileText) +
+        "</span>"
+      : "") +
     "</div>" +
     "</header>"
   );
@@ -4415,6 +4427,79 @@ function dashboardAgentAttentionLabel(state: DashboardAgentActivityRow["attentio
   return DASHBOARD_AGENT_ATTENTION_LABELS[state] ?? "";
 }
 
+function formatDashboardAgentProfileParts(
+  row: DashboardAgentActivityRow
+): string[] {
+  const profile = row.agentProfile;
+  const parts: string[] = [];
+  const agentType = cleanDashboardText(profile?.agentType) || DASHBOARD_AGENT_ROLE_LABELS[row.role] || "";
+  if (agentType) {
+    parts.push(agentType);
+  }
+  const model = cleanDashboardText(profile?.model);
+  if (model) {
+    parts.push(model);
+  }
+  const thinking = cleanDashboardText(profile?.thinkingLevel);
+  if (thinking) {
+    parts.push(thinking);
+  }
+  const agentNameOrId =
+    cleanDashboardText(profile?.agentNameOrId) ||
+    cleanDashboardText(row.refs.agentId) ||
+    cleanDashboardText(row.displayName);
+  if (agentNameOrId && agentNameOrId !== cleanDashboardText(row.displayName)) {
+    parts.push(agentNameOrId);
+  } else if (agentNameOrId && parts.length === 0) {
+    parts.push(agentNameOrId);
+  }
+  return parts;
+}
+
+function renderDashboardAgentProfileLine(row: DashboardAgentActivityRow): string {
+  const profile = row.agentProfile;
+  const items: Array<[string, string]> = [];
+  const agentType = cleanDashboardText(profile?.agentType) || DASHBOARD_AGENT_ROLE_LABELS[row.role] || "";
+  if (agentType) {
+    items.push(["Type", agentType]);
+  }
+  const model = cleanDashboardText(profile?.model);
+  if (model) {
+    items.push(["Model", model]);
+  }
+  const thinking = cleanDashboardText(profile?.thinkingLevel);
+  if (thinking) {
+    items.push(["Thinking", thinking]);
+  }
+  const agentNameOrId =
+    cleanDashboardText(profile?.agentNameOrId) ||
+    cleanDashboardText(row.refs.agentId);
+  if (agentNameOrId) {
+    items.push(["Agent", agentNameOrId]);
+  }
+  if (items.length === 0) {
+    return "";
+  }
+  return (
+    '<div class="wc-agent-card-profile dash-agent-row-profile muted">' +
+    items
+      .map(
+        ([label, value]) =>
+          '<span class="wc-agent-card-profile-item"><span class="wc-agent-card-profile-label">' +
+          escapeHtml(label) +
+          "</span> " +
+          escapeHtml(value) +
+          "</span>"
+      )
+      .join('<span class="wc-agent-card-profile-sep" aria-hidden="true"> · </span>') +
+    "</div>"
+  );
+}
+
+function buildDashboardBannerAgentProfileText(row: DashboardAgentActivityRow): string {
+  return formatDashboardAgentProfileParts(row).join(" · ");
+}
+
 function compareDashboardAgentText(a: string, b: string): number {
   return a.localeCompare(b, undefined, { sensitivity: "base" });
 }
@@ -4571,6 +4656,10 @@ function dashboardAgentActivityDetailItems(row: DashboardAgentActivityRow): Arra
   add("Expires", row.freshness.expiresAt);
   add("Custom agent", row.metadata?.customAgentName);
   add("Agent display", row.metadata?.agentDisplayName);
+  add("Agent type", row.agentProfile?.agentType);
+  add("Model", row.agentProfile?.model);
+  add("Thinking", row.agentProfile?.thinkingLevel);
+  add("Agent id", row.agentProfile?.agentNameOrId ?? row.refs.agentId);
   if (row.attention.message) {
     add("Attention", row.attention.message);
   }
@@ -4714,6 +4803,7 @@ function renderDashboardAgentActivityRow(
     escapeHtml(dashboardAgentActivityDetail(row)) +
     "</span></div>" +
     renderDashboardAgentTaskLine(row) +
+    renderDashboardAgentProfileLine(row) +
     (metaChips ? '<span class="dash-agent-row-meta">' + metaChips + "</span>" : "") +
     "</summary>" +
     (hasSubagents
@@ -4736,7 +4826,8 @@ function renderDashboardAgentSubagentTreeRow(
   const wcStatus = resolveWcDashboardStatus(row.status);
   const roleText = DASHBOARD_AGENT_ROLE_LABELS[row.role] ?? "Subagent";
   const activityDetail = dashboardAgentActivityDetail(row);
-  const metaSuffix = activityDetail ? roleText + " · " + activityDetail : roleText;
+  const profileText = formatDashboardAgentProfileParts(row).join(" · ");
+  const metaSuffix = [roleText, profileText, activityDetail].filter(Boolean).join(" · ");
   const aria = `${labelText}, ${wcStatus.label}, subagent`;
   return (
     '<div class="wc-agent-tree-row dash-agent-row dash-agent-activity-row dash-agent-activity-row--' +

@@ -45,6 +45,73 @@ test("agentActivity dashboard-summary projection maps to the agentActivity slice
   assert.deepEqual(sliceNamesForDashboardSummaryProjection("agentActivity"), ["agentActivity"]);
 });
 
+test("mergeSlicePayloadIntoSummary preserves prior agentActivitySummary when new payload is empty", () => {
+  const prior = {
+    agentActivitySummary: {
+      schemaVersion: 1,
+      generatedAt: "2026-06-22T00:00:00.000Z",
+      source: "live_activity",
+      activeCount: 1,
+      staleCount: 0,
+      needsAttentionCount: 0,
+      main: {
+        schemaVersion: 1,
+        rowId: "main",
+        displayName: "Orchestrator",
+        role: "orchestrator",
+        source: "live_activity",
+        sourceConfidence: "high",
+        status: "working_task",
+        statusLabel: "Working",
+        work: {
+          taskId: "T1",
+          title: "Task",
+          command: null,
+          phaseKey: "132",
+          assignmentId: null,
+          sessionId: null,
+          currentStep: null
+        },
+        refs: {
+          activityId: "a1",
+          agentId: "orchestrator",
+          sessionId: null,
+          assignmentId: null,
+          agentDefinitionId: "orchestration-agent",
+          subagentDefinitionId: null,
+          taskId: "T1",
+          prNumber: null
+        },
+        freshness: {
+          updatedAt: "2026-06-22T00:00:00.000Z",
+          startedAt: null,
+          expiresAt: null,
+          state: "fresh"
+        },
+        attention: { state: "none", message: null }
+      },
+      active: [],
+      needsAttention: [],
+      inferredFallback: null,
+      sourceMap: {
+        liveActivityCount: 1,
+        teamExecutionCount: 0,
+        subagentSessionCount: 0,
+        derivedFallbackUsed: false
+      }
+    }
+  };
+
+  const payload = lookupDashboardSlice("agentActivity").extractPayload({
+    schemaVersion: 1,
+    dashboardProjection: "agentActivity",
+    agentActivitySummary: null
+  });
+
+  const merged = mergeSlicePayloadIntoSummary(prior, "agentActivity", payload);
+  assert.equal(merged.agentActivitySummary.main.displayName, "Orchestrator");
+});
+
 test("mergeSlicePayloadIntoSummary preserves prior available data when new payload shows unavailable", () => {
   const summary = {
     subagentRegistry: {
