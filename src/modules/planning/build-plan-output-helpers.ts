@@ -1,7 +1,7 @@
 import type { ModuleLifecycleContext } from "../../contracts/module-contract.js";
 import { persistBuildPlanSessionWithPlanningSync } from "./build-plan-session-persist.js";
 
-export type PlanningOutputMode = "wishlist" | "tasks" | "response";
+export type PlanningOutputMode = "tasks" | "response";
 
 export function resolveOutputMode(args: Record<string, unknown>): {
   ok: true;
@@ -12,14 +12,21 @@ export function resolveOutputMode(args: Record<string, unknown>): {
 } {
   const raw = typeof args.outputMode === "string" ? args.outputMode.trim() : "";
   if (raw === "") {
-    return { ok: true, mode: "wishlist" };
+    return { ok: true, mode: "tasks" };
   }
-  if (raw === "wishlist" || raw === "tasks" || raw === "response") {
+  if (raw === "wishlist") {
+    return {
+      ok: false,
+      message:
+        'build-plan outputMode "wishlist" was removed; use "tasks" (default) or "response"'
+    };
+  }
+  if (raw === "tasks" || raw === "response") {
     return { ok: true, mode: raw };
   }
   return {
     ok: false,
-    message: "build-plan outputMode must be one of: wishlist, tasks, response"
+    message: 'build-plan outputMode must be one of: tasks, response'
   };
 }
 
@@ -107,7 +114,7 @@ export function toCliGuidance(args: {
       planningType,
       answers,
       finalize: finalize === true,
-      outputMode: outputMode ?? "wishlist"
+      outputMode: outputMode ?? "tasks"
     })}'`
   };
 }
