@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "description": "Source (.ai) \u2192 human render (docs/maintainers). Regenerate list when adding paths; drift + orphan checks consume this file.",
+  "description": "Source (.ai) → human render (docs/maintainers). Regenerate list when adding paths; drift + orphan checks consume this file.",
   "mappings": [
     {
       "source": ".ai/playbooks/improvement-scout.md",
@@ -37,10 +37,6 @@
     {
       "source": ".ai/playbooks/transcript-churn-research.md",
       "output": "docs/maintainers/playbooks/transcript-churn-research.md"
-    },
-    {
-      "source": ".ai/playbooks/wishlist-intake-to-execution.md",
-      "output": "docs/maintainers/playbooks/wishlist-intake-to-execution.md"
     },
     {
       "source": ".ai/playbooks/workspace-kit-chat-behavior-interview.md",

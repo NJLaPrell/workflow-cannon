@@ -3,8 +3,7 @@
  * Avoid exfil-ish patterns that Cursor's deeplink validator rejects.
  */
 
-import { buildWishlistIntakeAgentPrompt } from "./wishlist-chat-prompt.js";
-import { buildPlannerChatPrompt } from "./planner-chat-prompt.js";
+import { buildPlannerChatPrompt, type PlannerChatPromptOptions } from "./planner-chat-prompt.js";
 
 export { buildPlannerChatPrompt };
 
@@ -12,12 +11,13 @@ export { buildPlannerChatPrompt };
 export const GENERATE_FEATURES_SLASH_TEXT = "/generate-features";
 
 /**
- * Operator banner + {@link buildWishlistIntakeAgentPrompt} (dashboard **Generate Features** uses {@link GENERATE_FEATURES_SLASH_TEXT} only).
+ * Operator banner + {@link buildPlannerChatPrompt} (dashboard **Generate Features** uses {@link GENERATE_FEATURES_SLASH_TEXT} only).
  */
-export function buildGenerateFeaturesPrompt(options?: { wishlistId?: string }): string {
+export function buildGenerateFeaturesPrompt(options?: PlannerChatPromptOptions): string {
   return (
     "The operator ran **Generate Features** (Cursor slash **`/generate-features`**).\n\n" +
-    buildWishlistIntakeAgentPrompt(options)
+    "Rank open Ideas, pick a candidate, then run **planner-chat** for that row.\n\n" +
+    buildPlannerChatPrompt(options)
   );
 }
 
@@ -152,7 +152,7 @@ export function buildPlanningInterviewPrompt(): string {
     "1. Run **`pnpm exec wk run list-planning-types '{}'`** and choose a **`planningType`** (or use the type the user names).\n" +
     "2. Iterate **`pnpm exec wk run build-plan`** with **`answers`** from **`data.nextQuestions`** until you can **`finalize`**.\n" +
     "3. When **`tasks.planningGenerationPolicy`** is **`require`**, pass **`expectedPlanningGeneration`** from your latest read (`dashboard-summary`, **`get-next-actions`**, or prior **`build-plan`** response).\n" +
-    "4. When the user wants a persisted handoff, use **`finalize:true`** and **`createWishlist:true`** per the runbook so **`list-wishlist`** shows the new row.\n\n" +
+    "4. When the user wants a persisted handoff, use **`finalize:true`** per the runbook so execution tasks or Ideas rows reflect the plan.\n\n" +
     "Use **`.ai/AGENT-CLI-MAP.md`** and **`.ai/POLICY-APPROVAL.md`** for gated mutators — chat-only approval does not replace JSON **`policyApproval`** where required."
   );
 }
