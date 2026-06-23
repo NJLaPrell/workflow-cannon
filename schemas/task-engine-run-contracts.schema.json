@@ -364,6 +364,9 @@
         "phase-focus-dashboard": {
           "$ref": "#/$defs/contractBase"
         },
+        "phase-kickoff-readiness": {
+          "$ref": "#/$defs/contractBase"
+        },
         "phase-release-orchestration-state": {
           "$ref": "#/$defs/contractBase"
         },
