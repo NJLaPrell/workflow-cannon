@@ -13,12 +13,9 @@ import { composePlanningWishlistArtifact } from "./artifact.js";
 import {
   openPlanningStores,
   validateKnownTaskTypeRequirements,
-  validateWishlistContentFields,
-  taskEntityFromNewIntake,
   type TaskEntity,
   type TaskPriority
 } from "../../core/planning/index.js";
-import { allocateNextTaskNumericId } from "../task-engine/id-allocation.js";
 import { builtinInstructionEntriesForModule } from "../../contracts/builtin-run-command-manifest.js";
 import {
   enforcePlanningGenerationPolicy,
@@ -288,6 +285,14 @@ export const planningModule: WorkflowModule = {
         };
       }
       const outputMode = outputModeResolved.mode;
+      if ("createWishlist" in args) {
+        return {
+          ok: false,
+          code: "invalid-planning-args",
+          message:
+            "build-plan no longer accepts createWishlist; use outputMode \"tasks\" (default) with finalize:true"
+        };
+      }
       const planningType = typeof args.planningType === "string" ? args.planningType.trim() : "";
       if (!PLANNING_WORKFLOW_TYPES.includes(planningType as PlanningWorkflowType)) {
         return {
@@ -308,7 +313,6 @@ export const planningModule: WorkflowModule = {
         typeof args.answers === "object" && args.answers !== null && !Array.isArray(args.answers)
           ? (args.answers as Record<string, unknown>)
           : {};
-      const createWishlist = args.createWishlist !== false;
       const finalize = args.finalize === true;
       const { missingCritical, adaptiveFollowups } = nextPlanningQuestions(
         planningType as PlanningWorkflowType,
@@ -721,149 +725,10 @@ export const planningModule: WorkflowModule = {
         };
       }
 
-      if (!finalize || !createWishlist) {
-        await clearBuildPlanSessionWithPlanningSync(ctx, { commandName: "build-plan" });
-        await clearBuildPlanActivity(ctx);
-        return {
-          ok: true,
-          code: "planning-wishlist-ready",
-          message: `Planning interview complete for ${planningType}; wishlist artifact ready`,
-          data: {
-            responseSchemaVersion: 1,
-            planningType,
-            descriptor,
-            outputMode,
-            scaffoldVersion: 3,
-            status: "ready-for-wishlist",
-            unresolvedCritical: [],
-            adaptiveWarnings,
-            adaptiveFollowups,
-            scoringHints,
-            capturedAnswers: answers,
-            artifact,
-            cliGuidance: toCliGuidance({
-              planningType,
-              answers,
-              unresolvedCriticalCount: 0,
-              totalCriticalCount,
-              finalize: createWishlist,
-              outputMode
-            })
-          }
-        };
-      }
-
-      const stores = await openPlanningStores(ctx);
-      const now = new Date().toISOString();
-      const intake = {
-        title:
-          typeof args.title === "string" && args.title.trim().length > 0
-            ? args.title.trim()
-            : `${descriptor?.title ?? planningType} plan artifact`,
-        problemStatement:
-          typeof answers.problemStatement === "string"
-            ? answers.problemStatement
-            : typeof answers.featureGoal === "string"
-              ? answers.featureGoal
-              : "Planning artifact generated from guided workflow.",
-        expectedOutcome:
-          typeof answers.expectedOutcome === "string"
-            ? answers.expectedOutcome
-            : "Clear, reviewable planning artifact for execution decomposition.",
-        impact:
-          typeof answers.impact === "string" ? answers.impact : "Improved planning quality and delivery confidence.",
-        constraints:
-          typeof answers.constraints === "string"
-            ? answers.constraints
-            : artifact.risksAndConstraints.join("; ") || "None explicitly provided.",
-        successSignals:
-          typeof answers.successSignals === "string"
-            ? answers.successSignals
-            : "Critical questions answered and artifact accepted by operators.",
-        requestor:
-          typeof args.requestor === "string" && args.requestor.trim().length > 0
-            ? args.requestor.trim()
-            : ctx.resolvedActor ?? "planning-module",
-        evidenceRef:
-          typeof args.evidenceRef === "string" && args.evidenceRef.trim().length > 0
-            ? args.evidenceRef.trim()
-            : `planning:${planningType}:${now}`
-      };
-      const valid = validateWishlistContentFields(intake);
-      if (!valid.ok) {
-        return {
-          ok: false,
-          code: "invalid-planning-artifact",
-          message: valid.errors.join("; ")
-        };
-      }
-
-      const taskId = allocateNextTaskNumericId(stores.taskStore.getAllTasks());
-      const task = taskEntityFromNewIntake(intake, taskId, now, {
-        planningType,
-        artifactSchemaVersion: artifact.schemaVersion,
-        artifact
-      });
-      const typeErr = validateKnownTaskTypeRequirements(task);
-      if (typeErr) {
-        return { ok: false, code: typeErr.code, message: typeErr.message };
-      }
-      if (planningStrictValidationEnabled({ effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined })) {
-        const strictIssue = validateTaskSetForStrictMode([...stores.taskStore.getAllTasks(), task]);
-        if (strictIssue) {
-          return { ok: false, code: "strict-task-validation-failed", message: strictIssue };
-        }
-      }
-      const bpWishGate = enforcePlanningGenerationPolicy(
-        getPlanningGenerationPolicy({
-          effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined
-        }),
-        args as Record<string, unknown>
-      );
-      if (!bpWishGate.ok) {
-        return { ok: false, code: bpWishGate.code, message: bpWishGate.message };
-      }
-      try {
-        stores.sqliteDual.withTransaction(
-          () => {
-            stores.taskStore.addTask(task);
-          },
-          planningConcurrencySaveOpts(args as Record<string, unknown>)
-        );
-      } catch (e) {
-        const msg = e instanceof Error ? e.message : String(e);
-        return { ok: false, code: "invalid-planning-artifact", message: msg };
-      }
-      await clearBuildPlanSessionWithPlanningSync(ctx, { commandName: "build-plan" });
-      await clearBuildPlanActivity(ctx);
       return {
-        ok: true,
-        code: "planning-artifact-created",
-        message: `Planning artifact created as wishlist intake task ${taskId}`,
-        data: {
-          responseSchemaVersion: 1,
-          planningType,
-          descriptor,
-          outputMode,
-          scaffoldVersion: 3,
-          status: "artifact-created",
-          wishlistId: taskId,
-          taskId,
-          adaptiveWarnings,
-          artifact,
-          unresolvedCritical: [],
-          adaptiveFollowups,
-          scoringHints,
-          capturedAnswers: answers,
-          cliGuidance: toCliGuidance({
-            planningType,
-            answers,
-            unresolvedCriticalCount: 0,
-            totalCriticalCount,
-            finalize: true,
-            outputMode
-          })
-        }
+        ok: false,
+        code: "invalid-planning-output-mode",
+        message: `build-plan reached an unsupported outputMode branch: ${outputMode}`
       };
     }
 
