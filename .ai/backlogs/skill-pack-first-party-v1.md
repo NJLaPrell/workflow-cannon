@@ -41,7 +41,7 @@ Machine backlog for **Claude-shaped** skill trees under **`.claude/skills/<id>/S
 
 **Shared tags (all packs):** `workflow-cannon`
 
-**Workflow tags (pick 1–3 per pack):** `delivery`, `release`, `task`, `improvement`, `wishlist`, `dashboard`, `docs`, `policy`, `bootstrap`, `phase-journal`, `transcript`
+**Workflow tags (pick 1–3 per pack):** `delivery`, `release`, `task`, `improvement`, `ideas`, `planning`, `dashboard`, `docs`, `policy`, `bootstrap`, `phase-journal`, `transcript`
 
 **Task-type tags (maintainer execution packs):** `task-type:workspace-kit`
 
@@ -94,7 +94,7 @@ tags: workflow-cannon, <workflow-tags>, ...
 | 2 | `wc-release-captain` | P1 | `.ai/playbooks/phase-closeout-and-release.md`, `.ai/RELEASING.md` | Phase closeout / release |
 | 2 | `wc-improvement-discovery` | P1 | `.ai/playbooks/improvement-task-discovery.md` | `improvement` research tasks |
 | 2 | `wc-improvement-triage` | P1 | `.ai/playbooks/improvement-triage-top-three.md` | Backlog promotion |
-| 3 | `wc-wishlist-intake` | P1 | `.ai/playbooks/wishlist-intake-to-execution.md` | Wishlist → execution |
+| 3 | `wc-planner-chat` | P1 | `.ai/playbooks/planner-chat.md` | Ideas → PlanArtifact → execution |
 | 3 | `wc-transcript-churn` | P2 | `.ai/playbooks/transcript-churn-research.md` | `transcript_churn` / research |
 | 3 | `wc-dashboard-operator` | P2 | `.ai/DASHBOARD-POLICY-UX.md`, extension dashboard | UI/policy from dashboard |
 | 3 | `wc-doc-governance` | P2 | `src/modules/documentation/RULES.md`, `.cursor/rules/agent-doc-routing.mdc` | Doc generation / drift |
@@ -212,16 +212,16 @@ tags: workflow-cannon, <workflow-tags>, ...
 
 ---
 
-### `wc-wishlist-intake` (Wave 3, P1)
+### `wc-planner-chat` (Wave 3, P1)
 
 | Field | Value |
 | --- | --- |
-| **displayName** | Workflow Cannon wishlist intake |
-| **description** | Use when ranking wishlist items, clarifying scope, and converting to execution tasks with convert-wishlist and planning generation hygiene. |
-| **tags** | `workflow-cannon`, `wishlist`, `task-type:workspace-kit` |
-| **Playbooks** | `.ai/playbooks/wishlist-intake-to-execution.md` |
-| **Canon links** | `list-wishlist` / `convert-wishlist` instructions via CLI map |
-| **Body focus** | Dashboard wishlist flows optional cross-link |
+| **displayName** | Workflow Cannon planner chat |
+| **description** | Use when an Ideas row should become a PlanArtifact draft and phased execution tasks with planning generation hygiene. |
+| **tags** | `workflow-cannon`, `ideas`, `planning`, `task-type:workspace-kit` |
+| **Playbooks** | `.ai/playbooks/planner-chat.md` |
+| **Canon links** | `create-idea` / `finalize-plan-to-phase` via CLI map |
+| **Body focus** | Dashboard Ideas flows optional cross-link |
 
 ---
 
@@ -303,7 +303,7 @@ Suggested arrays when **creating** tasks (adjust per task; validate with `list-s
 | Phase closeout / release | `["wc-release-captain","wc-policy-cli"]` |
 | `improvement` proposed (research) | `["wc-improvement-discovery"]` |
 | `improvement` triage promotion | `["wc-improvement-triage","wc-policy-cli"]` |
-| Wishlist conversion | `["wc-wishlist-intake","wc-task-author"]` |
+| Ideas → execution | `["wc-planner-chat","wc-task-author"]` |
 | `transcript_churn` / research | `["wc-transcript-churn"]` |
 | Documentation / doc-module work | `["wc-doc-governance"]` |
 | Dashboard UX / extension | `["wc-dashboard-operator"]` |
@@ -358,7 +358,7 @@ pnpm exec wk run recommend-skills '{"tags":["workflow-cannon","task"],"taskType"
 
 ### Wave 3 — intake, UI, docs (5 skills)
 
-`wc-wishlist-intake`, `wc-transcript-churn`, `wc-dashboard-operator`, `wc-doc-governance`, `wc-agent-doc-routing`, `wc-phase-journal`
+`wc-planner-chat`, `wc-transcript-churn`, `wc-dashboard-operator`, `wc-doc-governance`, `wc-agent-doc-routing`, `wc-phase-journal`
 
 ### Wave 4 — hygiene
 

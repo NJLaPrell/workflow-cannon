@@ -62,5 +62,5 @@ When you **persist**, the task must read like an **improvement request** / **pro
 - **Bounded scout pass (lenses, rotation, evidence floor):** **`improvement-scout`** (`docs/maintainers/playbooks/improvement-scout.md`) and read-only **`workspace-kit run scout-report`**
 - **Requestable Cursor rule:** `.cursor/rules/playbook-improvement-task-discovery.mdc`
 - **Promote backlog to `ready`:** [`improvement-triage-top-three.md`](./improvement-triage-top-three.md)
-- **Which id / type to create:** [`runbooks/wishlist-workflow.md`](../runbooks/wishlist-workflow.md)
+- **Which id / type to create:** use **`create-idea`** for ideation and **`.ai/playbooks/planner-chat.md`** when materializing execution tasks
 - **Enhancement direction (high level):** `.ai/PRINCIPLES.md` trade-off order

@@ -212,13 +212,13 @@ Headless **`run-transition`** from GitHub Actions must pass **`policyApproval` i
 
 ### Planning generation (SQLite optimistic lock)
 
-Config **`tasks.planningGenerationPolicy`**: **`off`** (consumer default; optional **`expectedPlanningGeneration`**), **`warn`** (omit allowed; watch **`planningGenerationPolicyWarnings`** on success JSON), **`require`** (**this repo** — mutating task-engine / wishlist / planning persist / **`generate-recommendations`** must pass **`expectedPlanningGeneration`** from **`planningGeneration`** on your **last read**).
+Config **`tasks.planningGenerationPolicy`**: **`off`** (consumer default; optional **`expectedPlanningGeneration`**), **`warn`** (omit allowed; watch **`planningGenerationPolicyWarnings`** on success JSON), **`require`** (**this repo** — mutating task-engine / planning persist / **`generate-recommendations`** must pass **`expectedPlanningGeneration`** from **`planningGeneration`** on your **last read**).
 
 **Strong-consistency lap (policy `require`):** (1) `workspace-kit run list-tasks '{}'` (or **`get-next-actions`**, **`get-task`**, **`dashboard-summary`**) → read **`data.planningGeneration`**. (2) Include **`"expectedPlanningGeneration": <int>`** on the mutating command. (3) On **`planning-generation-mismatch`**, re-read and retry.
 
 **Idempotency:** **`clientMutationId`** replay responses (**`*-idempotent-replay`**) do not write the planning row again and **do not** require **`expectedPlanningGeneration`** even under **`require`**. Same id + different payload → **`idempotency-key-conflict`** (unchanged).
 
-**Human / IDE:** The Cursor extension caches **`planningGeneration`** and **`planningGenerationPolicy`** from each **`dashboard-summary`** refresh; dashboard mutations (e.g. proposed-row **Accept** / **Decline**, wishlist **Decline**) and palette **Task** actions merge **`expectedPlanningGeneration`** when policy is **`require`**. Refresh the dashboard after concurrent CLI writes if you see **`planning-generation-mismatch`**. The dashboard does **not** include a read-only **Approvals & policy** discoverability card (removed); use **`pnpm exec wk run list-approval-queue '{}'`** for the review-item queue (**`.ai/POLICY-APPROVAL.md`**).
+**Human / IDE:** The Cursor extension caches **`planningGeneration`** and **`planningGenerationPolicy`** from each **`dashboard-summary`** refresh; dashboard mutations (e.g. proposed-row **Accept** / **Decline**) and palette **Task** actions merge **`expectedPlanningGeneration`** when policy is **`require`**. Refresh the dashboard after concurrent CLI writes if you see **`planning-generation-mismatch`**. The dashboard does **not** include a read-only **Approvals & policy** discoverability card (removed); use **`pnpm exec wk run list-approval-queue '{}'`** for the review-item queue (**`.ai/POLICY-APPROVAL.md`**).
 
 ADR: **`docs/maintainers/adrs/ADR-planning-generation-optimistic-concurrency.md`**.
 
@@ -416,9 +416,9 @@ workspace-kit run list-features '{}'
 workspace-kit run list-features '{"componentId":"task-engine-queue"}'
 ```
 
-**Task id spaces** (execution vs wishlist intake vs **`type: "improvement"`** — all use **`T###`** today; legacy **`imp-*`** may remain in older stores): [`runbooks/wishlist-workflow.md`](./runbooks/wishlist-workflow.md).
+**Task id spaces** (execution vs **`type: "improvement"`** — all use **`T###`** today; legacy **`imp-*`** may remain in older stores): use **`create-idea`** / **`list-ideas`** for ideation and **`.ai/playbooks/planner-chat.md`** when materializing PlanArtifact work.
 
-**Wishlist intake operator ladder:** end-to-end playbook [`.ai/playbooks/wishlist-intake-to-execution.md`](./playbooks/wishlist-intake-to-execution.md); model + commands in [`.ai/runbooks/wishlist-workflow.md`](./runbooks/wishlist-workflow.md) (**`list-wishlist`**, **`get-wishlist`**, **`convert-wishlist`**). Wishlist rows are **not** in default **`get-next-actions`** / **`list-tasks`** scopes — use wishlist commands or **`dashboard-summary`** **`wishlist.*`** counts.
+**Ideas operator ladder:** capture with **`create-idea`**, refine in Dashboard **Ideas**, then **`planner-chat`** / **`finalize-plan-to-phase`** when ready for phased execution tasks. Execution queue reads (**`get-next-actions`**, **`list-tasks`**) stay **`tasks-only`** — Ideas rows are separate from the ready queue until materialized.
 
 Instruction: `src/modules/task-engine/instructions/queue-health.md`. Related runbook: [`runbooks/agent-task-engine-ergonomics.md`](./runbooks/agent-task-engine-ergonomics.md).
 
@@ -503,14 +503,12 @@ workspace-kit run explain-task-engine-model '{}'
 workspace-kit run list-planning-types '{}'
 workspace-kit run explain-planning-rules '{"planningType":"new-feature"}'
 workspace-kit run build-plan '{"planningType":"new-feature","answers":{"featureGoal":"...","placement":"CLI","technology":"TypeScript"}}'
-workspace-kit run build-plan '{"planningType":"new-feature","answers":{"featureGoal":"...","placement":"CLI","technology":"TypeScript","targetAudience":"AI Agent Operators","problemStatement":"...","expectedOutcome":"...","impact":"...","constraints":"...","successSignals":"..."},"finalize":true,"createWishlist":true}'
-# Multi-task execution drafts: finalize + outputMode tasks + executionTaskDrafts[] (convert-wishlist row shape) → code planning-multi-task-decomposition-preview; then persist with expectedPlanningGeneration when policy requires:
+workspace-kit run build-plan '{"planningType":"new-feature","answers":{"featureGoal":"...","placement":"CLI","technology":"TypeScript","targetAudience":"AI Agent Operators","problemStatement":"...","expectedOutcome":"...","impact":"...","constraints":"...","successSignals":"..."},"finalize":true,"outputMode":"tasks"}'
+# Multi-task execution drafts: finalize + outputMode tasks + executionTaskDrafts[] → code planning-multi-task-decomposition-preview; then persist with expectedPlanningGeneration when policy requires:
 workspace-kit run build-plan '{"planningType":"new-feature","outputMode":"tasks","finalize":true,"answers":{"featureGoal":"...","placement":"CLI","technology":"TypeScript","targetAudience":"AI Agent Operators"},"executionTaskDrafts":[{"title":"...","phase":"Phase 68","approach":"...","technicalScope":["..."],"acceptanceCriteria":["..."]}]}'
 workspace-kit run persist-planning-execution-drafts '{"tasks":[...],"expectedPlanningGeneration":<n>,"planRef":"planning:new-feature:...","planningType":"new-feature","clientMutationId":"agent-bulk-1"}'
 workspace-kit run review-planning-execution-drafts '{"targetPhaseKey":"73","targetPhase":"Phase 73","desiredStatus":"ready","tasks":[...]}'
 workspace-kit run persist-planning-execution-drafts '{"targetPhaseKey":"73","targetPhase":"Phase 73","desiredStatus":"ready","tasks":[...],"expectedPlanningGeneration":<n>,"planRef":"planning:new-feature:phase-73","clientMutationId":"phase-73-task-open"}'
-workspace-kit run list-wishlist '{}'
-workspace-kit run get-wishlist '{"wishlistId":"T42"}'
 # PlanArtifact lifecycle (contracts in PLANNER_COMMANDS.md; runbook .ai/runbooks/plan-artifact-workflow.md):
 workspace-kit run draft-plan-artifact '{"persist":false,"artifact":{...}}'
 workspace-kit run draft-plan-artifact '{"persist":true,"artifact":{...},"expectedPlanningGeneration":<n>,"policyApproval":{"confirmed":true,"rationale":"persist plan draft"}}'
@@ -549,7 +547,7 @@ Preflight (Tier C): **`pnpm exec wk run resolve-task-intake-policy`** with **`"a
 
 **Agent behavior** (`list-behavior-profiles`, `get-behavior-profile`, `resolve-behavior-profile`, `set-active-behavior-profile`, `create-behavior-profile`, `update-behavior-profile`, `delete-behavior-profile`, `diff-behavior-profiles`, `explain-behavior-profiles`, `interview-behavior-profile`, `sync-effective-behavior-cursor-rule`) are **Tier C**: advisory interaction posture only; **subordinate** to PRINCIPLES and policy. They persist under `.workspace-kit/agent-behavior/` (JSON) or unified SQLite (`module_id` `agent-behavior`) when `tasks.persistenceBackend` is `sqlite`. **`sync-effective-behavior-cursor-rule`** writes a generated **`.cursor/rules/*.mdc`** summary (also auto-scheduled after common profile / guidance mutators; fail-open).
 
-**Wishlist mutations** (`create-wishlist`, `update-wishlist`, `convert-wishlist`), **`persist-planning-execution-drafts`**, and **`migrate-task-persistence`** are Tier C by default (same as `create-task`): they persist workspace state (legacy task JSON import and/or the configured SQLite planning DB under `tasks.sqliteDatabaseRelativePath`) but do not use `policyApproval` unless listed in `policy.extraSensitiveModuleCommands`. **`update-workspace-phase-snapshot`** is Tier C compatibility: it updates SQLite/export first and then writes the legacy **`docs/maintainers/data/workspace-kit-status.yaml`** surface (see **`.ai/agent-source-of-truth-order.md`** and task-engine instructions for phase snapshot).
+**`persist-planning-execution-drafts`**, and **`migrate-task-persistence`** are Tier C by default (same as `create-task`): they persist workspace state (legacy task JSON import and/or the configured SQLite planning DB under `tasks.sqliteDatabaseRelativePath`) but do not use `policyApproval` unless listed in `policy.extraSensitiveModuleCommands`. **`update-workspace-phase-snapshot`** is Tier C compatibility: it updates SQLite/export first and then writes the legacy **`docs/maintainers/data/workspace-kit-status.yaml`** surface (see **`.ai/agent-source-of-truth-order.md`** and task-engine instructions for phase snapshot).
 
 Instruction paths: run `workspace-kit run` with no subcommand to list commands; each line lists `(moduleId)` and points to the module’s instruction file pattern above.
 
@@ -561,7 +559,7 @@ Instruction paths: run `workspace-kit run` with no subcommand to list commands; 
 4. `.ai/POLICY-APPROVAL.md` — JSON vs env vs interactive approval.
 5. Task Engine run schemas: `schemas/task-engine-run-contracts.schema.json` (versioned with package; command coverage verified by `pnpm run check`).
 6. Agent behavior plan: `docs/maintainers/plans/agent-behavior-module.md` + profile schema `schemas/agent-behavior-profile.schema.json`.
-7. Planning module runbook: `.ai/runbooks/planning-workflow.md` (build-plan / wishlist); PlanArtifact: `.ai/runbooks/plan-artifact-workflow.md`.
+7. Planning module runbook: `.ai/runbooks/planning-workflow.md` (build-plan / Ideas); PlanArtifact: `.ai/runbooks/plan-artifact-workflow.md`.
 8. Agent task-engine ergonomics: `.ai/runbooks/agent-task-engine-ergonomics.md` (includes **§0** natural-language → command exemplar table).
 9. CAE read-only CLI contract (when enabled): `.ai/cae/cli-read-only.md` + `schemas/cae/cli-read-only-*.v1.json`.
 

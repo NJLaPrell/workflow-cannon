@@ -109,10 +109,10 @@ Project-specific glossary for consistent language across AI-agent guidance, plan
   - **Enforced in**: **`list-skills`** / **`inspect-skill`** / **`apply-skill`** / **`recommend-skills`**; **`metadata.skillIds`** validation on task create/update when the skills module is enabled.
 
 - **Wishlist**
-  - **Definition**: Ideation backlog represented as Task Engine tasks with `type: "wishlist_intake"` and stable `T###` ids. Legacy `W###` ids may appear only as provenance in `metadata.legacyWishlistId` after a one-time migration; new intake does not mint `W###` ids.
+  - **Definition**: Ideation backlog represented as Task Engine tasks with `type: "ideas"` and stable `T###` ids. Legacy `W###` ids may appear only as provenance in `metadata.legacyWishlistId` after a one-time migration; new intake does not mint `W###` ids.
   - **Defined in**: `src/modules/task-engine/wishlist/wishlist-intake.ts`, `wishlist/wishlist-types.ts` (legacy wire shapes), instructions under `src/modules/task-engine/instructions/`, ADR `docs/maintainers/adrs/ADR-unified-task-store-wishlist-and-improvement-state.md`.
-  - **Workflow (which id to create)**: `docs/maintainers/runbooks/wishlist-workflow.md` — table for **`T###` execution** vs **`wishlist_intake`** vs **`type: "improvement"`** (same **`T###`** id pattern; legacy **`imp-*`** hashes may remain in older task stores).
-  - **Enforced in**: Task Engine `create-wishlist` / `list-wishlist` / `get-wishlist` / `update-wishlist` / `convert-wishlist`, strict known-type rules for `wishlist_intake`, and planning-boundary responses (`scope: tasks-only` for execution queues).
+  - **Workflow (which id to create)**: `docs/maintainers/runbooks/planner-chat.md` — table for **`T###` execution** vs **`ideas`** vs **`type: "improvement"`** (same **`T###`** id pattern; legacy **`imp-*`** hashes may remain in older task stores).
+  - **Enforced in**: Task Engine `create-idea` / `list-ideas` / `get-idea` / `update-idea` / `finalize-plan-to-phase`, strict known-type rules for `ideas`, and planning-boundary responses (`scope: tasks-only` for execution queues).
 
 - **Execution Task**
   - **Definition**: Canonical `T###` task entity that participates in lifecycle transitions (`proposed` → `ready` → `in_progress` → `completed` / `blocked` / `cancelled`) and execution planning queues.
@@ -125,7 +125,7 @@ Project-specific glossary for consistent language across AI-agent guidance, plan
   - **Enforced in**: `create-task` / `update-task` validation (`invalid-task-type-requirements`) and improvement workflow docs/tasks. Legacy **`imp-<hex>`** ids may omit **`metadata.supportingReasoning`** until updated.
 
 - **Unified Work Record**
-  - **Definition**: Combined conceptual model of execution tasks (`T###`) and wishlist intake tasks (`type: "wishlist_intake"`) as one planning surface; execution queues remain `tasks-only` while ideation uses task rows with distinct type/metadata.
+  - **Definition**: Combined conceptual model of execution tasks (`T###`) and wishlist intake tasks (`type: "ideas"`) as one planning surface; execution queues remain `tasks-only` while ideation uses task rows with distinct type/metadata.
   - **Defined in**: `explain-task-engine-model` command output and roadmap/phase guidance where variant behavior is discussed.
   - **Enforced in**: command surfaces that explicitly separate execution planning (`tasks-only`) from wishlist ideation.
 
@@ -141,9 +141,9 @@ Project-specific glossary for consistent language across AI-agent guidance, plan
   - **Disambiguation**: Prefer the phrase **planning module** when discussing CLI flows and `planning.*` settings; use **Planning persistence** for SQLite/JSON task stores and `tasks.*` paths.
 
 - **Planning persistence (task engine)**
-  - **Definition**: Task-engine–owned storage for execution tasks: legacy JSON file import path, or SQLite — either a single **`task_store_json`** document blob or, after **`migrate-task-persistence`** **`sqlite-blob-to-relational`**, normalized rows in **`task_engine_tasks`** plus envelope log columns on **`workspace_planning_state`** (**`relational_tasks=1`**). Wishlist ideation is persisted **inside** the task document as `wishlist_intake` tasks; `WishlistStore` remains for **migration** off legacy artifacts only.
+  - **Definition**: Task-engine–owned storage for execution tasks: legacy JSON file import path, or SQLite — either a single **`task_store_json`** document blob or, after **`migrate-task-persistence`** **`sqlite-blob-to-relational`**, normalized rows in **`task_engine_tasks`** plus envelope log columns on **`workspace_planning_state`** (**`relational_tasks=1`**). Wishlist ideation is persisted **inside** the task document as `ideas` tasks; `WishlistStore` remains for **migration** off legacy artifacts only.
   - **Defined in**: `src/modules/task-engine/` (stores under `persistence/`, `persistence/planning-open.ts`, `persistence/sqlite-dual-planning.ts`), `src/core/state/workspace-kit-sqlite.ts`, `src/core/planning/index.ts`.
-  - **Enforced in**: Task engine commands, atomic `convert-wishlist`, optional SQLite planning DB (legacy rows may include a second wishlist column until `migrate-wishlist-intake` runs).
+  - **Enforced in**: Task engine commands, atomic `finalize-plan-to-phase`, optional SQLite planning DB (legacy rows may include a second wishlist column until `migrate-wishlist-intake` runs).
   - **Disambiguation**: Say **planning persistence** (or **task-engine persistence**) when discussing `TaskStore`, `tasks.persistenceBackend`, or the planning DB file — not “the planning module,” which is the separate `planning` module package under `src/modules/planning/`.
 
 - **Build-plan session file**

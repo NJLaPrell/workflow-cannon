@@ -17,7 +17,7 @@ Single place to answer: **where is data?**, **how do I import legacy JSON?**, an
 
 | Role | Location | Config keys |
 | --- | --- | --- |
-| **Runtime** tasks + wishlist intake | SQLite: **`tasks.sqliteDatabaseRelativePath`** or default **`.workspace-kit/tasks/workspace-kit.db`** — row **`workspace_planning_state`**; optional relational layout **`task_engine_tasks`** after **`migrate-task-persistence`** **`sqlite-blob-to-relational`**; wishlist intake rows live in **`task_engine_tasks`** (or legacy blob until opened) | `tasks.sqliteDatabaseRelativePath` |
+| **Runtime** tasks + Ideas | SQLite: **`tasks.sqliteDatabaseRelativePath`** or default **`.workspace-kit/tasks/workspace-kit.db`** — row **`workspace_planning_state`**; optional relational layout **`task_engine_tasks`** after **`migrate-task-persistence`** **`sqlite-blob-to-relational`** | `tasks.sqliteDatabaseRelativePath` |
 | **Legacy import only** | Task JSON: **`tasks.storeRelativePath`** or default **`.workspace-kit/tasks/state.json`** | Used by **`migrate-task-persistence`** (**task** document only) |
 | **Module state** (improvement, agent-behavior, …) | Same SQLite file as planning: **`workspace_module_state`** | `tasks.sqliteDatabaseRelativePath` |
 
