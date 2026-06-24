@@ -326,6 +326,15 @@
   },
   {
     "moduleId": "task-engine",
+    "name": "list-remote-runs",
+    "file": "list-remote-runs.md",
+    "description": "List Cursor background-agent remote runs linked to T### tasks (Phase 1 read stub; persistence deferred).",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive",
+    "executionClass": "read_hot"
+  },
+  {
+    "moduleId": "task-engine",
     "name": "propose-tasks-from-phase-notes",
     "file": "propose-tasks-from-phase-notes.md",
     "description": "Harvest active follow-up / task-suggestion notes as proposed-task candidates; optional persist upserts phase_note_task_suggestions (no execution tasks).",

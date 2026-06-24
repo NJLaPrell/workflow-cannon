@@ -100,6 +100,7 @@
         "list-phase-catalog",
         "list-task-mutation-intents",
         "list-phase-notes",
+        "list-remote-runs",
         "list-tasks",
         "migrate-task-persistence",
         "pause-task",
@@ -582,6 +583,9 @@
           "$ref": "#/$defs/contractBase"
         },
         "list-phase-notes": {
+          "$ref": "#/$defs/contractBase"
+        },
+        "list-remote-runs": {
           "$ref": "#/$defs/contractBase"
         },
         "list-module-states": {

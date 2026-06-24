@@ -18,6 +18,7 @@ Symptom → **one** `.ai/runbooks/*.md` target (agents: prefer this table over d
 | PlanArtifact v1 (draft → review → accept → finalize) | [`plan-artifact-workflow.md`](./plan-artifact-workflow.md) |
 | Legacy planning interview (`build-plan`) | [`planning-workflow.md`](./planning-workflow.md) |
 | Subagent registry | [`subagent-registry.md`](./subagent-registry.md) |
+| Cursor background-agent handoff / take-over-in-Cursor | [`cursor-remote-agent-handoff.md`](./cursor-remote-agent-handoff.md) |
 | Principal architectural review themes (cold start) | [`principal-architectural-review-themes.md`](./principal-architectural-review-themes.md) |
 | Task persistence operator | [`task-persistence-operator.md`](./task-persistence-operator.md) |
 | `git pull` / dirty `workspace-kit.db` / task-state hydrate | [`task-state-git-operator.md`](./task-state-git-operator.md) |
