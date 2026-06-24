@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workflow-cannon.dev/schemas/phase-kickoff-readiness-contract.v1.json",
+  "title": "Phase kickoff readiness contract v1",
+  "description": "Read-only kickoff audit envelope from phase-kickoff-readiness.",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "phaseKey",
+    "mode",
+    "passed",
+    "findingCount",
+    "findings",
+    "checkedTaskCount",
+    "slices"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "phaseKey": { "type": ["string", "null"] },
+    "mode": { "enum": ["advisory", "enforce"] },
+    "passed": { "type": "boolean" },
+    "findingCount": { "type": "integer", "minimum": 0 },
+    "checkedTaskCount": { "type": "integer", "minimum": 0 },
+    "findings": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/kickoffFinding" }
+    },
+    "slices": { "$ref": "#/$defs/kickoffSlices" }
+  },
+  "$defs": {
+    "kickoffFinding": {
+      "type": "object",
+      "required": ["code", "severity", "message", "slice"],
+      "additionalProperties": true,
+      "properties": {
+        "code": { "type": "string", "minLength": 1 },
+        "severity": { "enum": ["advisory", "warn", "block"] },
+        "message": { "type": "string", "minLength": 1 },
+        "slice": { "enum": ["planning", "git", "scope", "validation", "doctor"] },
+        "taskId": { "type": "string" },
+        "path": { "type": "string" }
+      }
+    },
+    "kickoffSlices": {
+      "type": "object",
+      "required": ["planning", "git", "scope", "validation", "doctor"],
+      "additionalProperties": true,
+      "properties": {
+        "planning": { "type": "object" },
+        "git": { "type": "object" },
+        "scope": { "type": "object" },
+        "validation": { "type": "object" },
+        "doctor": { "type": "object" }
+      }
+    }
+  }
+}
