@@ -507,6 +507,10 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         delete newArgs.wishlistPage;
         delete newArgs.wishlistPageSize;
       }
+      const projection = args?.projection;
+      if (projection === "overview" || projection === "full" || projection === undefined) {
+        newArgs.includePhaseKickoff = true;
+      }
       return newArgs;
     };
 
@@ -2757,6 +2761,54 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         "Start phase"
       );
       if (pick !== "Start phase") {
+        return;
+      }
+    }
+
+    const kickoffOut = await this.client.run("phase-kickoff-readiness", {
+      phaseKey: targetKey,
+      includeValidationPlans: false
+    });
+    if (kickoffOut.ok !== true) {
+      await vscode.window.showErrorMessage(
+        `Phase kickoff audit failed: ${String(kickoffOut.message ?? kickoffOut.code ?? "unknown error")}`
+      );
+      return;
+    }
+    const kickoffData = kickoffOut.data as Record<string, unknown> | undefined;
+    const findings = Array.isArray(kickoffData?.findings)
+      ? (kickoffData!.findings as Array<Record<string, unknown>>)
+      : [];
+    const enforcementMode =
+      kickoffData?.enforcementMode === "enforce" || kickoffData?.enforcementMode === "advisory"
+        ? kickoffData.enforcementMode
+        : "off";
+    const hasBlock = findings.some((f) => f.severity === "block");
+    if (enforcementMode === "enforce" && hasBlock) {
+      const summary = findings
+        .filter((f) => f.severity === "block")
+        .slice(0, 2)
+        .map((f) => String(f.message ?? f.code ?? "block"))
+        .join("; ");
+      const pick = await vscode.window.showWarningMessage(
+        `Phase ${targetKey} kickoff blocked${summary.length > 0 ? `: ${summary}` : ""}`,
+        { modal: true },
+        "Open Queue",
+        "Cancel"
+      );
+      if (pick === "Open Queue") {
+        await this.view?.webview.postMessage({ type: "wcOpenQueueForPhase", phaseKey: targetKey });
+      }
+      return;
+    }
+    if (enforcementMode === "advisory" && findings.length > 0) {
+      const pick = await vscode.window.showInformationMessage(
+        `Kickoff audit found ${findings.length} finding(s) for Phase ${targetKey}. Continue anyway?`,
+        { modal: true },
+        "Continue anyway",
+        "Cancel"
+      );
+      if (pick !== "Continue anyway") {
         return;
       }
     }

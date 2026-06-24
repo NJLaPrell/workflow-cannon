@@ -1925,10 +1925,48 @@ const PHASE_ROSTER_TABLE_HEAD =
   "</tr>";
 
 /** Phase readiness — can we work this phase now? (scoped to current phase). */
+export function renderPhaseKickoffFindingsList(findings: unknown): string {
+  const rows = Array.isArray(findings) ? findings : [];
+  if (rows.length === 0) {
+    return "";
+  }
+  const items = rows
+    .map((raw) => {
+      const f =
+        raw && typeof raw === "object" && !Array.isArray(raw) ? (raw as Record<string, unknown>) : {};
+      const severity = typeof f.severity === "string" ? f.severity : "advisory";
+      const code = typeof f.code === "string" ? f.code : "kickoff-finding";
+      const message = typeof f.message === "string" ? f.message : "";
+      const cls =
+        severity === "block"
+          ? "wc-kickoff-finding-block"
+          : severity === "warn"
+            ? "wc-kickoff-finding-warn"
+            : "wc-kickoff-finding-advisory";
+      return (
+        '<div class="wc-kickoff-finding ' +
+        cls +
+        '"><span class="wc-kickoff-finding-severity">' +
+        escapeHtml(severity) +
+        "</span> <code>" +
+        escapeHtml(code) +
+        "</code> " +
+        escapeHtml(message) +
+        "</div>"
+      );
+    })
+    .join("");
+  return (
+    '<div class="wc-phase-kickoff-findings"><p><b>Kickoff findings</b></p>' + items + "</div>"
+  );
+}
+
+/** Phase readiness — can we work this phase now? (scoped to current phase). */
 function renderPhaseReadinessCard(
   ws: Record<string, unknown> | null,
   snapshot: PhaseSnapshot | null,
-  orderingInputs?: PhaseOrderingInputs
+  orderingInputs?: PhaseOrderingInputs,
+  phaseKickoff?: Record<string, unknown> | null
 ): string {
   const curPhase = workspaceCurrentPhaseKey(ws);
   if (curPhase.length === 0) {
@@ -1973,6 +2011,11 @@ function renderPhaseReadinessCard(
   const workBegunNote = workBegun
     ? '<p class="muted wc-phase-readiness-locked">Work in this phase has already started. Readiness stays at 100%.</p>'
     : "";
+
+  const kickoffBlock =
+    phaseKickoff && Array.isArray(phaseKickoff.findings) && phaseKickoff.findings.length > 0
+      ? renderPhaseKickoffFindingsList(phaseKickoff.findings)
+      : "";
 
   const pendingBlock =
     pending.length > 0
@@ -2036,6 +2079,7 @@ function renderPhaseReadinessCard(
     workBegunNote +
     phaseSection +
     checksSection +
+    kickoffBlock +
     pendingBlock +
     "</div>" +
     "</section>"
@@ -6120,7 +6164,8 @@ export function renderDashboardRootInnerHtml(
     renderPhaseReadinessCard(
       ws as Record<string, unknown> | null,
       phaseSnapshot,
-      phaseOrderingInputs
+      phaseOrderingInputs,
+      (d.phaseKickoff as Record<string, unknown> | undefined) ?? null
     ) +
     renderPhaseProgressCard(
       ws as Record<string, unknown> | null,

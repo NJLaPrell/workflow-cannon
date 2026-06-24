@@ -5,6 +5,7 @@ import type { TaskStore } from "../persistence/store.js";
 import { readWorkspaceStatusSnapshotFromDual } from "../persistence/workspace-status-store.js";
 import { resolveCanonicalPhase } from "../phase-resolution.js";
 import { buildPhaseKickoffReadiness } from "../phase-kickoff-readiness-runtime.js";
+import { readPhaseKickoffConfig } from "../phase-kickoff-policy.js";
 
 export async function runPhaseKickoffReadinessCommand(
   ctx: ModuleLifecycleContext,
@@ -22,17 +23,27 @@ export async function runPhaseKickoffReadinessCommand(
       ? args.phaseKey.trim()
       : phaseRes.canonicalPhaseKey;
 
+  const kickoffConfig = readPhaseKickoffConfig(ctx.effectiveConfig as Record<string, unknown> | undefined);
+  const modeArg = typeof args.mode === "string" ? args.mode.trim() : "";
+  const mode =
+    modeArg === "enforce" || modeArg === "advisory"
+      ? modeArg
+      : kickoffConfig.enforcementMode === "enforce"
+        ? "enforce"
+        : "advisory";
+
   const packet = await buildPhaseKickoffReadiness({
     ctx,
     planning,
     store,
-    commandArgs: args,
+    commandArgs: { ...args, mode },
     phaseKey
   });
 
   const data: Record<string, unknown> = {
     ...packet,
-    canonicalPhase: phaseRes
+    canonicalPhase: phaseRes,
+    enforcementMode: kickoffConfig.enforcementMode
   };
   attachPolicyMeta(data, ctx, planning.sqliteDual.getPlanningGeneration());
 
