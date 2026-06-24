@@ -11,6 +11,7 @@ Symptom → **one** `.ai/runbooks/*.md` target (agents: prefer this table over d
 | GitHub-native `workspace-kit` invocation | [`github-workflow-cannon-invocation.md`](./github-workflow-cannon-invocation.md) |
 | Install / attach Workflow Cannon to a repository | [`install-attach-workflow-cannon.md`](./install-attach-workflow-cannon.md) |
 | Workspace status + SQLite authority | [`workspace-status-sqlite.md`](./workspace-status-sqlite.md) |
+| Phase kickoff readiness (before rollover / delivery) | [`phase-kickoff-readiness.md`](./phase-kickoff-readiness.md) |
 | Phase journal retention / phase-close defaults | [`phase-journal-retention.md`](./phase-journal-retention.md) |
 | Response templates | [`response-templates.md`](./response-templates.md) |
 | Agent presentation policy | [`agent-presentation-policy.md`](./agent-presentation-policy.md) |

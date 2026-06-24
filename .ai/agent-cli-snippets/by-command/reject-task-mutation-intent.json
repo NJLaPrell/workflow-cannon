@@ -10,7 +10,7 @@
   "examples": [
     {
       "description": "Minimal argv example",
-      "argv": "workspace-kit run reject-task-mutation-intent '{\"intentId\":\"intent-abc123\",\"reason\":\"superseded\"}'"
+      "argv": "workspace-kit run reject-task-mutation-intent '{}'"
     }
   ],
   "instructionPath": "src/modules/task-engine/instructions/reject-task-mutation-intent.md",
@@ -35,5 +35,6 @@
   "discovery": {
     "listCommands": "pnpm exec wk run --list-commands",
     "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
-  }
+  },
+  "invocationId": "e249509a-bffd-4ad4-9c87-bb8ef32dd16b"
 }

@@ -357,6 +357,33 @@ pnpm exec wk run set-current-phase '{"currentKitPhase":"72","nextKitPhase":"73",
 pnpm exec wk run set-current-phase '{"currentKitPhase":"72","nextKitPhase":"73","dryRun":true}'
 ```
 
+## Phase kickoff readiness (Tier C)
+
+Read-only aggregate audit **before** phase rollover or delivery start. Composes planning staleness, git integration branch, task scope paths, validation recommendations, and doctor contract slices. **`passed`** is `false` only when a finding has **`severity: "block"`** (for example missing integration branch when `mode` is **`enforce`**). No `policyApproval`; no task-store or workspace-status mutations.
+
+Runbook: [`.ai/runbooks/phase-kickoff-readiness.md`](./runbooks/phase-kickoff-readiness.md) (finding codes + remediation loops). Instruction: `src/modules/task-engine/instructions/phase-kickoff-readiness.md`.
+
+**Copy-paste — kickoff audit (default workspace phase):**
+
+```bash
+pnpm exec wk run phase-kickoff-readiness '{}'
+```
+
+**Copy-paste — kickoff audit (explicit phase + integration branch):**
+
+```bash
+pnpm exec wk run phase-kickoff-readiness '{"phaseKey":"137","baseRef":"origin/main","integrationRef":"origin/release/phase-137","staleTaskDays":14,"checkScopePaths":true,"includeValidationPlans":true,"mode":"advisory"}'
+```
+
+**Copy-paste — dry-run rollover after kickoff:**
+
+```bash
+pnpm exec wk run phase-kickoff-readiness '{"phaseKey":"137"}'
+pnpm exec wk run set-current-phase '{"currentKitPhase":"137","dryRun":true}'
+```
+
+When **`tasks.phaseKickoff.enforcementMode`** is **`enforce`**, live **`set-current-phase`** returns **`phase-kickoff-blocked`** (no SQLite mutation) if kickoff has block-severity findings — remediate per the runbook, then retry.
+
 **Copy-paste — full audit:**
 
 ```bash
