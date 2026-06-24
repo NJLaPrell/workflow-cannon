@@ -893,7 +893,7 @@
       "moduleId": "task-engine"
     },
     {
-      "name": "phase-focus-dashboard",
+      "name": "phase-release-orchestration-state",
       "path": ".ai/agent-cli-snippets/by-command/phase-release-orchestration-state.json",
       "moduleId": "task-engine"
     },
