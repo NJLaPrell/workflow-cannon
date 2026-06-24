@@ -38,6 +38,17 @@ import {
   runListTaskMutationIntentsCommand,
   runRejectTaskMutationIntentCommand
 } from "./task-mutation-intent-commands.js";
+import {
+  runApplyIsolatedProposalCommand,
+  runCreateIsolatedProposalCommand,
+  runDiscardIsolatedProposalCommand,
+  runListIsolatedProposalsCommand,
+  runOpenIsolatedProposalPrCommand,
+  runRecordIsolatedProposalValidationCommand,
+  runRecoverIsolatedProposalCommand,
+  runViewIsolatedProposalDiffCommand
+} from "./isolated-proposal-commands.js";
+import { runExportTaskStateArtifactsCommand } from "./task-state-export-commands.js";
 import { resolveTaskPhaseCommands } from "./task-phase-on-command.js";
 import { runTaskRowMutationCommands } from "./task-row-mutation-commands.js";
 import {
@@ -216,6 +227,42 @@ export async function dispatchTaskEnginePlanningCommands(
 
   if (command.name === "reject-task-mutation-intent") {
     return runRejectTaskMutationIntentCommand(ctx, args);
+  }
+
+  if (command.name === "create-isolated-proposal") {
+    return runCreateIsolatedProposalCommand(ctx, args, store);
+  }
+
+  if (command.name === "list-isolated-proposals") {
+    return runListIsolatedProposalsCommand(ctx, args);
+  }
+
+  if (command.name === "discard-isolated-proposal") {
+    return runDiscardIsolatedProposalCommand(ctx, args);
+  }
+
+  if (command.name === "recover-isolated-proposal") {
+    return runRecoverIsolatedProposalCommand(ctx, args);
+  }
+
+  if (command.name === "view-isolated-proposal-diff") {
+    return runViewIsolatedProposalDiffCommand(ctx, args);
+  }
+
+  if (command.name === "apply-isolated-proposal") {
+    return runApplyIsolatedProposalCommand(ctx, args);
+  }
+
+  if (command.name === "open-isolated-proposal-pr") {
+    return runOpenIsolatedProposalPrCommand(ctx, args);
+  }
+
+  if (command.name === "record-isolated-proposal-validation") {
+    return runRecordIsolatedProposalValidationCommand(ctx, args);
+  }
+
+  if (command.name === "export-task-state-artifacts") {
+    return runExportTaskStateArtifactsCommand(ctx, args, store);
   }
 
   if (isTaskIntentCommand(command.name)) {

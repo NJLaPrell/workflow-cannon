@@ -10,7 +10,7 @@
   "examples": [
     {
       "description": "Minimal argv example",
-      "argv": "workspace-kit run list-task-mutation-intents '{\"limit\":20}'"
+      "argv": "workspace-kit run list-task-mutation-intents '{}'"
     }
   ],
   "instructionPath": "src/modules/task-engine/instructions/list-task-mutation-intents.md",
@@ -35,5 +35,6 @@
   "discovery": {
     "listCommands": "pnpm exec wk run --list-commands",
     "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
-  }
+  },
+  "invocationId": "f826fb50-8bff-4b5a-ae4a-634e053fa6c7"
 }

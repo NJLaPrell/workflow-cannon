@@ -10,7 +10,7 @@
   "examples": [
     {
       "description": "Minimal argv example",
-      "argv": "workspace-kit run apply-task-mutation-intent '{\"intentId\":\"intent-abc123\",\"expectedPlanningGeneration\":42,\"policyApproval\":{\"confirmed\":true,\"rationale\":\"apply worker intent\"}}'"
+      "argv": "workspace-kit run apply-task-mutation-intent '{}'"
     }
   ],
   "instructionPath": "src/modules/task-engine/instructions/apply-task-mutation-intent.md",
@@ -22,8 +22,8 @@
     "jsonApprovalRequired": true
   },
   "planningGeneration": {
-    "cliPrelude": true,
-    "expectedPlanningGeneration": "required when policy is require"
+    "cliPrelude": false,
+    "expectedPlanningGeneration": "not required by CLI prelude"
   },
   "idempotency": {
     "clientMutationId": false
@@ -35,5 +35,6 @@
   "discovery": {
     "listCommands": "pnpm exec wk run --list-commands",
     "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
-  }
+  },
+  "invocationId": "1f64209e-3d51-4282-815a-6be402d8beb3"
 }

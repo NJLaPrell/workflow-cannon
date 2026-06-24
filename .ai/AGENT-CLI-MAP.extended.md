@@ -563,6 +563,41 @@ Instruction paths: run `workspace-kit run` with no subcommand to list commands; 
 8. Agent task-engine ergonomics: `.ai/runbooks/agent-task-engine-ergonomics.md` (includes **§0** natural-language → command exemplar table).
 9. CAE read-only CLI contract (when enabled): `.ai/cae/cli-read-only.md` + `schemas/cae/cli-read-only-*.v1.json`.
 
+## Isolated proposal mode (Tier B)
+
+Branch/worktree-isolated delivery for one or more tasks without taking over the visible checkout lease. Proposals live under `$GIT_COMMON_DIR/workflow-cannon/proposals/` with metadata, diff artifacts, validation evidence, and optional PR open. Integrates with **`claim-workspace-edit-lease`** / **`workspace-edit-status`** — apply and PR flows respect lease guards from T100192.
+
+ADR: [`.ai/adrs/ADR-workflow-cannon-state-backend-v1.md`](./adrs/ADR-workflow-cannon-state-backend-v1.md). Instructions: `src/modules/task-engine/instructions/<command>.md`.
+
+**Copy-paste — create and inspect:**
+
+```bash
+pnpm exec wk run create-isolated-proposal '{"taskId":"T100193","baseBranch":"release/phase-137"}'
+pnpm exec wk run list-isolated-proposals '{}'
+pnpm exec wk run view-isolated-proposal-diff '{"proposalId":"<id>"}'
+```
+
+**Copy-paste — apply, validate, ship:**
+
+```bash
+pnpm exec wk run apply-isolated-proposal '{"proposalId":"<id>","dryRun":true}'
+pnpm exec wk run record-isolated-proposal-validation '{"proposalId":"<id>","command":"pnpm run check","exitCode":0}'
+pnpm exec wk run open-isolated-proposal-pr '{"proposalId":"<id>","baseBranch":"release/phase-137"}'
+```
+
+**Copy-paste — discard / recover:**
+
+```bash
+pnpm exec wk run discard-isolated-proposal '{"proposalId":"<id>"}'
+pnpm exec wk run recover-isolated-proposal '{"proposalId":"<id>"}'
+```
+
+**Copy-paste — deterministic task-state export (snapshot + event JSONL):**
+
+```bash
+pnpm exec wk run export-task-state-artifacts '{"includeEvents":true}'
+```
+
 ## Optional session opener (habit hook)
 
 Use this Tier C starter block at session start to avoid stale queue assumptions:
