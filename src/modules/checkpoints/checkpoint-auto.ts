@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { openPlanningStores } from "../task-engine/persistence/planning-open.js";
 import { TaskEngineError } from "../task-engine/transitions.js";
 import {
+  createPatchArtifactForDirtyWork,
   createStash,
   getHeadSha,
   isGitRepo,
@@ -9,6 +10,7 @@ import {
   readWorkingTreeManifest
 } from "./checkpoint-git.js";
 import { assertCheckpointKitSchema, insertCheckpoint } from "./checkpoint-store.js";
+import { guardWorkspaceMutationByLease } from "../task-engine/coordination/workspace-edit-lease.js";
 
 const SKIP_AUTO = new Set([
   "create-checkpoint",
@@ -75,6 +77,7 @@ export async function tryAutoCheckpointBeforeRun(opts: {
   effectiveConfig: Record<string, unknown>;
   subcommand: string;
   actor: string | null;
+  callerAgentSessionId?: string | null;
 }): Promise<
   { ok: true; checkpointId?: string; skippedReason?: string } | { ok: false; code: string; message: string }
 > {
@@ -172,6 +175,41 @@ export async function tryAutoCheckpointBeforeRun(opts: {
       message:
         "kit.autoCheckpoint enabled with stashWhenDirty=false but working tree is dirty; commit/stash manually or enable stashWhenDirty"
     };
+  }
+
+  const leaseGuard = guardWorkspaceMutationByLease({
+    workspacePath: opts.workspacePath,
+    action: "checkpoint-dirty-capture",
+    callerAgentSessionId: opts.callerAgentSessionId
+  });
+  if (!leaseGuard.ok) {
+    return {
+      ok: false,
+      code: "auto-checkpoint-lease-held",
+      message: `${leaseGuard.message}; holder=${leaseGuard.holder?.agentSessionId ?? "unknown"}`
+    };
+  }
+
+  const patchArtifact = createPatchArtifactForDirtyWork(opts.workspacePath, id);
+  if (patchArtifact.ok && patchArtifact.artifact) {
+    insertCheckpoint(db, {
+      id,
+      createdAt: now,
+      actor: opts.actor,
+      actionType: "auto",
+      refKind: "head",
+      gitHeadSha: head.sha,
+      manifest: manifestR.paths,
+      metadata: {
+        trigger: opts.subcommand,
+        auto: true,
+        dirtyCaptureMode: "patch-artifact",
+        patchArtifact
+      }
+    });
+    planning.sqliteDual.persistSync();
+    planning.sqliteDual.closeDatabase();
+    return { ok: true, checkpointId: id };
   }
 
   const stash = createStash(opts.workspacePath, `workspace-kit:auto-checkpoint:${opts.subcommand}:${id}`);

@@ -54,6 +54,35 @@ export type WorkspaceEditLeaseStatusV1 = {
   invalidReason: string | null;
 };
 
+export type WorkspaceEditLeaseMutationAction =
+  | "stash"
+  | "checkpoint-dirty-capture"
+  | "rewind"
+  | "checkout"
+  | "reset"
+  | "branch-switch"
+  | "workspace-files";
+
+export type WorkspaceEditLeaseMutationGuardResult =
+  | {
+      ok: true;
+      leasePath: string;
+      status: WorkspaceEditLeaseStatusV1;
+      reason: "no-git-common-dir" | "lease-free-or-stale" | "lease-held-by-caller" | "explicit-override";
+      overrideUsed: boolean;
+      warning?: string;
+    }
+  | {
+      ok: false;
+      code: "workspace-edit-lease-held";
+      message: string;
+      leasePath: string;
+      status: WorkspaceEditLeaseStatusV1;
+      holder: WorkspaceEditLeaseHolderSummary | null;
+      action: WorkspaceEditLeaseMutationAction;
+      overrideRequired: boolean;
+    };
+
 export function runGit(workspacePath: string, argv: string[]): { code: number; stdout: string; stderr: string } {
   const r = spawnSync("git", argv, {
     cwd: workspacePath,
@@ -341,4 +370,81 @@ export function clampExtendSeconds(raw: unknown, fallback: number): number {
     return fallback;
   }
   return Math.min(Math.floor(n), 86_400);
+}
+
+export function guardWorkspaceMutationByLease(opts: {
+  workspacePath: string;
+  action: WorkspaceEditLeaseMutationAction;
+  callerAgentSessionId?: string | null;
+  allowOtherLeaseOwnerOverride?: boolean;
+  otherLeaseOwnerOverride?: boolean;
+}): WorkspaceEditLeaseMutationGuardResult {
+  const commonDir = resolveGitCommonDir(opts.workspacePath);
+  if (!commonDir) {
+    const leasePath = "(no-git-common-dir)/workflow-cannon/leases/workspace-edit.json";
+    return {
+      ok: true,
+      leasePath,
+      status: summarizeWorkspaceEditLeaseStatus(leasePath, opts.callerAgentSessionId),
+      reason: "no-git-common-dir",
+      overrideUsed: false
+    };
+  }
+  const leasePath = leaseFilePathFromCommonDir(commonDir);
+  const status = summarizeWorkspaceEditLeaseStatus(leasePath, opts.callerAgentSessionId);
+  if (!status.active || status.state === "lease-free" || status.state === "stale-invalid") {
+    return {
+      ok: true,
+      leasePath,
+      status,
+      reason: "lease-free-or-stale",
+      overrideUsed: false
+    };
+  }
+  if (status.state === "lease-held-by-me") {
+    return {
+      ok: true,
+      leasePath,
+      status,
+      reason: "lease-held-by-caller",
+      overrideUsed: false
+    };
+  }
+  if (opts.allowOtherLeaseOwnerOverride === true && opts.otherLeaseOwnerOverride === true) {
+    return {
+      ok: true,
+      leasePath,
+      status,
+      reason: "explicit-override",
+      overrideUsed: true,
+      warning: `Explicit override bypassed active lease held by session '${status.holder?.agentSessionId ?? "unknown"}'`
+    };
+  }
+  const holder = status.holder;
+  return {
+    ok: false,
+    code: "workspace-edit-lease-held",
+    message:
+      `Refused '${opts.action}' because another session holds the active workspace edit lease` +
+      (holder?.agentSessionId ? ` (${holder.agentSessionId})` : ""),
+    leasePath,
+    status,
+    holder,
+    action: opts.action,
+    overrideRequired: opts.allowOtherLeaseOwnerOverride === true
+  };
+}
+
+export function guardBranchSwitchByLease(opts: {
+  workspacePath: string;
+  callerAgentSessionId?: string | null;
+  ownerOverride?: boolean;
+}): WorkspaceEditLeaseMutationGuardResult {
+  return guardWorkspaceMutationByLease({
+    workspacePath: opts.workspacePath,
+    action: "branch-switch",
+    callerAgentSessionId: opts.callerAgentSessionId,
+    allowOtherLeaseOwnerOverride: true,
+    otherLeaseOwnerOverride: opts.ownerOverride === true
+  });
 }

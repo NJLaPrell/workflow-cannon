@@ -265,6 +265,13 @@ export function renderStatusTabInnerHtml(
       ? (coord.suspectFlags as unknown[]).filter((flag): flag is string => typeof flag === "string")
       : [];
     const suspectTxt = suspectFlags.length > 0 ? suspectFlags.join(", ") : "none";
+    const leaseActive = lease?.active === true;
+    const branchOrHeadDrift =
+      suspectFlags.includes("lease:branch_drift") || suspectFlags.includes("lease:head_drift");
+    const leaseDriftWarning =
+      leaseActive && branchOrHeadDrift
+        ? '<p class="wc-hint wc-bad">Active lease looks suspect: branch/HEAD changed after lease claim. Treat as external checkout drift and re-claim before mutating files.</p>'
+        : "";
     const body =
       kvRow("Posture", "<code>" + escapeHtml(posture) + "</code>") +
       kvRow("Authority pattern", escapeHtml(role)) +
@@ -274,6 +281,7 @@ export function renderStatusTabInnerHtml(
       kvRow("Task DB dirty in git", escapeHtml(dbDirty)) +
       kvRow("Lease file", escapeHtml(leaseTxt)) +
       kvRow("Suspect flags", escapeHtml(suspectTxt)) +
+      leaseDriftWarning +
       '<p class="wc-hint">Read-only from <code>workspace-coordination-status</code>; lease enforcement lands later.</p>';
     parts.push(card("Coordination", body));
   }

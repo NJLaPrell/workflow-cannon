@@ -430,7 +430,11 @@ export async function handleRunCommand(
           workspacePath: cwd,
           effectiveConfig: effective,
           subcommand: subcommand!,
-          actor
+          actor,
+          callerAgentSessionId:
+            typeof commandArgs.agentSessionId === "string" && commandArgs.agentSessionId.trim().length > 0
+              ? commandArgs.agentSessionId.trim()
+              : null
         })
       )
     : { ok: true as const, skippedReason: "checkpoint-skipped" };
