@@ -16,6 +16,7 @@ import { resolveFeatureTaxonomyRuntimeCommands } from "./task-feature-taxonomy-r
 import type { OpenedPlanningStores } from "../persistence/planning-open.js";
 import { TaskStore } from "../persistence/store.js";
 import { resolvePhaseDeliveryReadoutCommands } from "./phase-delivery-readout-commands.js";
+import { runPhaseKickoffReadinessCommand } from "./phase-kickoff-readiness-command.js";
 import { runUpsertPhaseCatalogEntry } from "../phase-catalog-commands-runtime.js";
 import {
   resolveMaintainerDeliveryPolicyCommand,
@@ -138,6 +139,10 @@ export async function dispatchTaskEnginePlanningCommands(
   const phaseDeliveryReadout = await resolvePhaseDeliveryReadoutCommands(command, ctx, planning);
   if (phaseDeliveryReadout !== null) {
     return phaseDeliveryReadout;
+  }
+
+  if (command.name === "phase-kickoff-readiness") {
+    return runPhaseKickoffReadinessCommand(ctx, planning, store, args as Record<string, unknown>);
   }
 
   if (command.name === "upsert-phase-catalog-entry") {

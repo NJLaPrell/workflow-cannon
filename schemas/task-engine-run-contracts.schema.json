@@ -105,6 +105,7 @@
         "phase-delivery-preflight",
         "phase-drain-delta",
         "phase-focus-dashboard",
+        "phase-kickoff-readiness",
         "phase-release-orchestration-state",
         "phase-release-state",
         "phase-status",
@@ -365,6 +366,9 @@
           "$ref": "#/$defs/contractBase"
         },
         "phase-focus-dashboard": {
+          "$ref": "#/$defs/contractBase"
+        },
+        "phase-kickoff-readiness": {
           "$ref": "#/$defs/contractBase"
         },
         "phase-release-orchestration-state": {

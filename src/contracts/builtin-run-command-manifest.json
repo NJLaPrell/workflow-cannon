@@ -150,6 +150,14 @@
   },
   {
     "moduleId": "task-engine",
+    "name": "phase-kickoff-readiness",
+    "file": "phase-kickoff-readiness.md",
+    "description": "Read-only phase kickoff audit: planning, git, scope paths, validation, and doctor slices.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
     "name": "phase-drain-delta",
     "file": "phase-drain-delta.md",
     "description": "Generation-aware delta for phase drain refreshes with bounded changed task and assignment slices.",

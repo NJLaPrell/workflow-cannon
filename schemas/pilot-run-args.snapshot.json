@@ -82,6 +82,7 @@
     "phase-delivery-preflight",
     "phase-drain-delta",
     "phase-focus-dashboard",
+    "phase-kickoff-readiness",
     "phase-release-orchestration-state",
     "phase-release-state",
     "phase-status",
@@ -1349,6 +1350,9 @@
       "type": "object"
     },
     "phase-focus-dashboard": {
+      "type": "object"
+    },
+    "phase-kickoff-readiness": {
       "type": "object"
     },
     "phase-release-orchestration-state": {
