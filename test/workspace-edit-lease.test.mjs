@@ -254,6 +254,43 @@ test("workspace coordination status surfaces lease suspect flags without mutatin
   assert.equal(readFileSync(workspaceLeasePath(ws), "utf8"), before);
 });
 
+test("workspace edit lease: branch switch helper denies non-owner unless override", async () => {
+  const {
+    runClaimWorkspaceEditLease
+  } = await import("../dist/modules/task-engine/workspace-edit-lease-commands-runtime.js");
+  const { guardBranchSwitchByLease } = await import(
+    "../dist/modules/task-engine/coordination/workspace-edit-lease.js"
+  );
+
+  const ws = mkdtempSync(path.join(tmpdir(), "wc-lease-branch-guard-"));
+  git(ws, ["init", "-b", "main"]);
+  git(ws, ["config", "user.email", "t@example.com"]);
+  git(ws, ["config", "user.name", "T"]);
+  writeFileSync(path.join(ws, "README.md"), "x\n");
+  git(ws, ["add", "README.md"]);
+  git(ws, ["commit", "-m", "init"]);
+
+  const c = ctx(ws);
+  assert.equal(runClaimWorkspaceEditLease(c, { agentSessionId: "lease-owner", leaseTtlSeconds: 120 }).ok, true);
+
+  const blocked = guardBranchSwitchByLease({
+    workspacePath: ws,
+    callerAgentSessionId: "other-session"
+  });
+  assert.equal(blocked.ok, false);
+  assert.equal(blocked.code, "workspace-edit-lease-held");
+  assert.equal(blocked.overrideRequired, true);
+
+  const overridden = guardBranchSwitchByLease({
+    workspacePath: ws,
+    callerAgentSessionId: "other-session",
+    ownerOverride: true
+  });
+  assert.equal(overridden.ok, true);
+  assert.equal(overridden.overrideUsed, true);
+  assert.match(overridden.warning, /Explicit override/);
+});
+
 test("workspace edit lease: waitForLease is opt-in and succeeds when free", async () => {
   const { waitForWorkspaceEditLease } = await import("../dist/modules/task-engine/workspace-edit-lease-commands-runtime.js");
 

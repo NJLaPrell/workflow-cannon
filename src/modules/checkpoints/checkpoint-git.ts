@@ -101,6 +101,11 @@ export function isWorkingTreeCleanIgnoringWorkspaceKit(workspacePath: string): b
 
 export function createStash(workspacePath: string, message: string): GitRunResult & { stashSha?: string } {
   const stashMsg = message.slice(0, 200);
+  const before = runGit(workspacePath, ["stash", "list", "--format=%H"]);
+  if (!before.ok) {
+    return before;
+  }
+  const beforeSet = new Set(before.stdout.split("\n").map((line) => line.trim()).filter(Boolean));
   /** Exclude `.workspace-kit` so kit SQLite + config are never stashed away (would delete DB from disk). */
   const push = runGit(workspacePath, [
     "stash",
@@ -115,12 +120,101 @@ export function createStash(workspacePath: string, message: string): GitRunResul
   if (!push.ok) {
     return push;
   }
-  const shaR = runGit(workspacePath, ["rev-parse", "stash@{0}"]);
-  if (!shaR.ok) {
-    return shaR;
+  const after = runGit(workspacePath, ["stash", "list", "--format=%H"]);
+  if (!after.ok) {
+    return after;
   }
-  const stashSha = shaR.stdout.split(/\s+/)[0]!;
+  const stashSha = after.stdout
+    .split("\n")
+    .map((line) => line.trim())
+    .find((line) => line.length > 0 && !beforeSet.has(line));
+  if (!stashSha) {
+    return {
+      ok: false,
+      error: "Unable to resolve exact stash commit SHA for recovery; stash push may have raced with another writer"
+    };
+  }
   return { ok: true, stdout: push.stdout, stashSha };
+}
+
+export type CheckpointPatchArtifact = {
+  artifactId: string;
+  patchPath: string;
+  patchPathRelativeToGitCommonDir: string;
+  capturedAt: string;
+  includesUntrackedFiles: false;
+};
+
+function resolveGitPath(workspacePath: string, raw: string): string {
+  return path.isAbsolute(raw) ? path.normalize(raw) : path.normalize(path.join(workspacePath, raw));
+}
+
+/**
+ * Persist a deterministic patch artifact for dirty tracked changes.
+ * Returns `ok:false` when untracked files exist (stash fallback required).
+ */
+export function createPatchArtifactForDirtyWork(
+  workspacePath: string,
+  checkpointId: string
+): GitRunResult & { artifact?: CheckpointPatchArtifact } {
+  const status = runGit(workspacePath, ["status", "--porcelain=v1", "--", ".", ":!.workspace-kit"]);
+  if (!status.ok) {
+    return status;
+  }
+  const lines = status.stdout.split("\n").filter((line) => line.trim().length > 0);
+  if (lines.length === 0) {
+    return { ok: false, error: "No dirty paths to capture as a patch artifact" };
+  }
+  if (lines.some((line) => line.startsWith("?? "))) {
+    return {
+      ok: false,
+      error: "Untracked files are present; patch artifact mode is not safely recoverable for this dirty state"
+    };
+  }
+  const staged = runGit(workspacePath, ["diff", "--binary", "--full-index", "--cached", "--", ".", ":!.workspace-kit"]);
+  if (!staged.ok) {
+    return staged;
+  }
+  const unstaged = runGit(workspacePath, ["diff", "--binary", "--full-index", "--", ".", ":!.workspace-kit"]);
+  if (!unstaged.ok) {
+    return unstaged;
+  }
+  const patchBody = [
+    "# workspace-kit checkpoint patch artifact",
+    `# checkpointId=${checkpointId}`,
+    `# generatedAt=${new Date().toISOString()}`,
+    "# apply staged first, then unstaged",
+    "",
+    "--- staged.patch ---",
+    staged.stdout,
+    "",
+    "--- unstaged.patch ---",
+    unstaged.stdout,
+    ""
+  ].join("\n");
+  if (!patchBody.includes("diff --git")) {
+    return { ok: false, error: "No tracked git diff hunks were captured for patch artifact mode" };
+  }
+  const commonDir = runGit(workspacePath, ["rev-parse", "--git-common-dir"]);
+  if (!commonDir.ok) {
+    return commonDir;
+  }
+  const commonDirPath = resolveGitPath(workspacePath, commonDir.stdout.trim());
+  const relPatchPath = path.join("workflow-cannon", "checkpoints", `${checkpointId}.patch`);
+  const absPatchPath = path.join(commonDirPath, relPatchPath);
+  fs.mkdirSync(path.dirname(absPatchPath), { recursive: true });
+  fs.writeFileSync(absPatchPath, patchBody, "utf8");
+  return {
+    ok: true,
+    stdout: absPatchPath,
+    artifact: {
+      artifactId: `patch-${checkpointId}`,
+      patchPath: absPatchPath,
+      patchPathRelativeToGitCommonDir: relPatchPath.replace(/\\/g, "/"),
+      capturedAt: new Date().toISOString(),
+      includesUntrackedFiles: false
+    }
+  };
 }
 
 export function diffNameStatus(
