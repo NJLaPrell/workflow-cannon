@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-06-23T18:26:37.916Z",
+  "generatedAt": "2026-06-23T23:57:10.415Z",
   "commands": [
     {
       "name": "accept-improvement",
@@ -853,13 +853,13 @@
       "moduleId": "subagents"
     },
     {
-      "name": "list-tasks",
-      "path": ".ai/agent-cli-snippets/by-command/list-tasks.json",
+      "name": "list-task-mutation-intents",
+      "path": ".ai/agent-cli-snippets/by-command/list-task-mutation-intents.json",
       "moduleId": "task-engine"
     },
     {
-      "name": "list-task-mutation-intents",
-      "path": ".ai/agent-cli-snippets/by-command/list-task-mutation-intents.json",
+      "name": "list-tasks",
+      "path": ".ai/agent-cli-snippets/by-command/list-tasks.json",
       "moduleId": "task-engine"
     },
     {
