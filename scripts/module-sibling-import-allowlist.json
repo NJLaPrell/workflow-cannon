@@ -82,43 +82,43 @@
     },
     {
       "file": "src/modules/task-engine/dashboard/build-dashboard-base.ts",
-      "line": "8",
+      "line": "9",
       "importLine": "import { listIdeas } from \"../../ideas/idea-store.js\";",
       "rationale": "Dashboard base builder extracted from task-engine-dashboard-on-command; same ideas aggregation."
     },
     {
       "file": "src/modules/task-engine/dashboard/build-dashboard-base.ts",
-      "line": "9",
+      "line": "10",
       "importLine": "import { summarizeCheckpointsForDashboard } from \"../../checkpoints/checkpoint-store.js\";",
       "rationale": "Dashboard base builder extracted from task-engine-dashboard-on-command; same checkpoint rollup."
     },
     {
       "file": "src/modules/task-engine/dashboard/build-dashboard-base.ts",
-      "line": "10",
+      "line": "11",
       "importLine": "import { summarizeSubagentsForDashboard } from \"../../subagents/subagent-store.js\";",
       "rationale": "Dashboard base builder extracted from task-engine-dashboard-on-command; same subagent rollup."
     },
     {
       "file": "src/modules/task-engine/dashboard/build-dashboard-base.ts",
-      "line": "11",
+      "line": "12",
       "importLine": "import { summarizeTeamAssignmentsForDashboard } from \"../../team-execution/assignment-store.js\";",
       "rationale": "Dashboard base builder extracted from task-engine-dashboard-on-command; same team rollup."
     },
     {
       "file": "src/modules/task-engine/dashboard/build-dashboard-base.ts",
-      "line": "25",
+      "line": "26",
       "importLine": "import { dashboardOnboardingTemperamentLabel } from \"../../agent-behavior/onboarding-temperament-label.js\";",
       "rationale": "Dashboard base builder extracted from task-engine-dashboard-on-command; guidance label."
     },
     {
       "file": "src/modules/task-engine/dashboard/build-dashboard-base.ts",
-      "line": "26",
+      "line": "27",
       "importLine": "import { loadBehaviorWorkspaceState } from \"../../agent-behavior/persistence.js\";",
       "rationale": "Dashboard base builder extracted from task-engine-dashboard-on-command; behavior state."
     },
     {
       "file": "src/modules/task-engine/dashboard/build-dashboard-base.ts",
-      "line": "27",
+      "line": "28",
       "importLine": "import { BehaviorProfileStore } from \"../../agent-behavior/store.js\";",
       "rationale": "Dashboard base builder extracted from task-engine-dashboard-on-command; behavior profile."
     },
