@@ -17,14 +17,14 @@
     "moduleId": "workspace-config",
     "name": "resolve-agent-guidance",
     "file": "resolve-agent-guidance.md",
-    "description": "Effective agent guidance tier (RPG party v1), labels, and behavioral hints — advisory only.",
+    "description": "Effective agent guidance tier (RPG party v1), labels, and behavioral hints \u2014 advisory only.",
     "policySensitivity": "non-sensitive"
   },
   {
     "moduleId": "workspace-config",
     "name": "set-agent-guidance",
     "file": "set-agent-guidance.md",
-    "description": "Persist kit.agentGuidance tier (1–5) to project config; optional interactive picker.",
+    "description": "Persist kit.agentGuidance tier (1\u20135) to project config; optional interactive picker.",
     "policySensitivity": "non-sensitive"
   },
   {
@@ -119,7 +119,7 @@
     "moduleId": "agent-behavior",
     "name": "sync-effective-behavior-cursor-rule",
     "file": "sync-effective-behavior-cursor-rule.md",
-    "description": "Render effective role × temperament into an advisory Cursor rule under .cursor/rules.",
+    "description": "Render effective role \u00d7 temperament into an advisory Cursor rule under .cursor/rules.",
     "policySensitivity": "non-sensitive"
   },
   {
@@ -241,6 +241,14 @@
     "name": "list-phase-catalog",
     "file": "list-phase-catalog.md",
     "description": "List phase keys with optional short descriptions (kit_phase_catalog) merged with current/next workspace phase keys and non-archived task-assigned phases (all statuses, including completed/cancelled) in deterministic order.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "list-task-mutation-intents",
+    "file": "list-task-mutation-intents.md",
+    "description": "List bounded pending (or resolved) task mutation intents for agent review.",
     "defaultResponseTemplateId": "default",
     "policySensitivity": "non-sensitive"
   },
@@ -532,6 +540,14 @@
   },
   {
     "moduleId": "task-engine",
+    "name": "reject-task-mutation-intent",
+    "file": "reject-task-mutation-intent.md",
+    "description": "Reject a pending task mutation intent while retaining rationale on disk.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
     "name": "reject-improvement",
     "file": "reject-improvement.md",
     "description": "Intent wrapper around run-transition reject (proposed to cancelled).",
@@ -597,6 +613,15 @@
     "defaultResponseTemplateId": "default",
     "policySensitivity": "non-sensitive",
     "executionClass": "mutation"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "apply-task-mutation-intent",
+    "file": "apply-task-mutation-intent.md",
+    "description": "Apply a pending task mutation intent on an authority branch through normal task-engine validation.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive",
+    "policyOperationId": "tasks.run-transition"
   },
   {
     "moduleId": "task-engine",
@@ -753,6 +778,14 @@
   },
   {
     "moduleId": "task-engine",
+    "name": "create-task-mutation-intent",
+    "file": "create-task-mutation-intent.md",
+    "description": "Create a clone-local task mutation intent without applying planning SQLite mutations.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
     "name": "create-task-from-plan",
     "file": "create-task-from-plan.md",
     "description": "Promote planning output into a canonical task.",
@@ -888,7 +921,7 @@
     "moduleId": "task-engine",
     "name": "queue-git-alignment",
     "file": "queue-git-alignment.md",
-    "description": "Read-only heuristic: git HEAD vs last task transition; stale in_progress hints (merge ≠ complete guardian).",
+    "description": "Read-only heuristic: git HEAD vs last task transition; stale in_progress hints (merge \u2260 complete guardian).",
     "defaultResponseTemplateId": "default",
     "policySensitivity": "non-sensitive"
   },
@@ -1130,76 +1163,76 @@
     "policySensitivity": "non-sensitive"
   },
   {
-  "moduleId": "task-engine",
-  "name": "dashboard-overview-slice",
-  "file": "dashboard-overview-slice.md",
-  "description": "Fast overview slice of dashboard.",
-  "defaultResponseTemplateId": "default",
-  "policySensitivity": "non-sensitive",
-  "executionClass": "read_hot"
-},
-{
-  "moduleId": "task-engine",
-  "name": "dashboard-queue-slice",
-  "file": "dashboard-queue-slice.md",
-  "description": "Fast queue slice of dashboard.",
-  "defaultResponseTemplateId": "default",
-  "policySensitivity": "non-sensitive",
-  "executionClass": "read_hot"
-},
-{
-  "moduleId": "task-engine",
-  "name": "dashboard-status-slice",
-  "file": "dashboard-status-slice.md",
-  "description": "Dashboard status slice (may be read_slow if heavy).",
-  "defaultResponseTemplateId": "default",
-  "policySensitivity": "non-sensitive",
-  "executionClass": "read_hot"
-},
-{
-  "moduleId": "task-engine",
-  "name": "dashboard-agent-activity-slice",
-  "file": "dashboard-agent-activity-slice.md",
-  "description": "Dashboard agent activity slice.",
-  "defaultResponseTemplateId": "default",
-  "policySensitivity": "non-sensitive",
-  "executionClass": "read_hot"
-},
-{
-  "moduleId": "task-engine",
-  "name": "dashboard-agent-types-slice",
-  "file": "dashboard-agent-types-slice.md",
-  "description": "Dashboard agent types slice.",
-  "defaultResponseTemplateId": "default",
-  "policySensitivity": "non-sensitive",
-  "executionClass": "read_hot"
-},
-{
-  "moduleId": "task-engine",
-  "name": "dashboard-terminal-tasks",
-  "file": "dashboard-terminal-tasks.md",
-  "description": "Dashboard terminal tasks slice (paginated).",
-  "defaultResponseTemplateId": "default",
-  "policySensitivity": "non-sensitive",
-  "executionClass": "read_hot"
-},
-{
-      "moduleId": "task-engine",
-      "name": "dashboard-terminal-tasks-page",
-      "file": "dashboard-terminal-tasks-page.md",
-      "description": "Paginated dashboard terminal tasks slice (page).",
-      "defaultResponseTemplateId": "default",
-      "policySensitivity": "non-sensitive",
-      "executionClass": "read_hot"
-    },
-    {
-      "moduleId": "task-engine",
-      "name": "dashboard-terminal-rows",
-      "file": "dashboard-terminal-rows.md",
-      "description": "Retrieve terminal task rows (completed/cancelled) for a given phase or overall.",
-      "defaultResponseTemplateId": "default",
-      "policySensitivity": "non-sensitive"
-    },
+    "moduleId": "task-engine",
+    "name": "dashboard-overview-slice",
+    "file": "dashboard-overview-slice.md",
+    "description": "Fast overview slice of dashboard.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive",
+    "executionClass": "read_hot"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "dashboard-queue-slice",
+    "file": "dashboard-queue-slice.md",
+    "description": "Fast queue slice of dashboard.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive",
+    "executionClass": "read_hot"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "dashboard-status-slice",
+    "file": "dashboard-status-slice.md",
+    "description": "Dashboard status slice (may be read_slow if heavy).",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive",
+    "executionClass": "read_hot"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "dashboard-agent-activity-slice",
+    "file": "dashboard-agent-activity-slice.md",
+    "description": "Dashboard agent activity slice.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive",
+    "executionClass": "read_hot"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "dashboard-agent-types-slice",
+    "file": "dashboard-agent-types-slice.md",
+    "description": "Dashboard agent types slice.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive",
+    "executionClass": "read_hot"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "dashboard-terminal-tasks",
+    "file": "dashboard-terminal-tasks.md",
+    "description": "Dashboard terminal tasks slice (paginated).",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive",
+    "executionClass": "read_hot"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "dashboard-terminal-tasks-page",
+    "file": "dashboard-terminal-tasks-page.md",
+    "description": "Paginated dashboard terminal tasks slice (page).",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive",
+    "executionClass": "read_hot"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "dashboard-terminal-rows",
+    "file": "dashboard-terminal-rows.md",
+    "description": "Retrieve terminal task rows (completed/cancelled) for a given phase or overall.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
   {
     "moduleId": "task-engine",
     "name": "dashboard-service-start",
@@ -1555,7 +1588,7 @@
     "moduleId": "team-execution",
     "name": "submit-assignment-handoff",
     "file": "submit-assignment-handoff.md",
-    "description": "Worker submits handoff contract v1 (assigned → submitted).",
+    "description": "Worker submits handoff contract v1 (assigned \u2192 submitted).",
     "policyOperationId": "team-execution.persist",
     "defaultResponseTemplateId": "default",
     "policySensitivity": "sensitive"
@@ -1564,7 +1597,7 @@
     "moduleId": "team-execution",
     "name": "block-assignment",
     "file": "block-assignment.md",
-    "description": "Supervisor blocks an assignment (assigned or submitted → blocked).",
+    "description": "Supervisor blocks an assignment (assigned or submitted \u2192 blocked).",
     "policyOperationId": "team-execution.persist",
     "defaultResponseTemplateId": "default",
     "policySensitivity": "sensitive"
@@ -1573,7 +1606,7 @@
     "moduleId": "team-execution",
     "name": "reconcile-assignment",
     "file": "reconcile-assignment.md",
-    "description": "Supervisor reconciles submitted handoff (submitted → reconciled).",
+    "description": "Supervisor reconciles submitted handoff (submitted \u2192 reconciled).",
     "policyOperationId": "team-execution.persist",
     "defaultResponseTemplateId": "default",
     "policySensitivity": "sensitive"
@@ -1706,7 +1739,7 @@
     "moduleId": "context-activation",
     "name": "cae-validate-registry",
     "file": "cae-validate-registry.md",
-    "description": "Alias of cae-registry-validate — validate active CAE registry (SQLite or JSON per kit.cae.registryStore).",
+    "description": "Alias of cae-registry-validate \u2014 validate active CAE registry (SQLite or JSON per kit.cae.registryStore).",
     "policySensitivity": "non-sensitive"
   },
   {
@@ -1976,7 +2009,7 @@
     "moduleId": "context-activation",
     "name": "cae-archive-retired-workspace-artifact-file",
     "file": "cae-archive-retired-workspace-artifact-file.md",
-    "description": "Move a retired workspace artifact markdown file into `.ai/cae/artifacts/_archive/…` and update the registry path.",
+    "description": "Move a retired workspace artifact markdown file into `.ai/cae/artifacts/_archive/\u2026` and update the registry path.",
     "policySensitivity": "non-sensitive"
   },
   {

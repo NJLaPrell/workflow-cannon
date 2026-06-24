@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-06-23T23:47:31.064Z",
+  "generatedAt": "2026-06-24T00:14:00.000Z",
   "commands": [
     {
       "name": "accept-improvement",
@@ -50,6 +50,11 @@
     {
       "name": "apply-task-batch",
       "path": ".ai/agent-cli-snippets/by-command/apply-task-batch.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "apply-task-mutation-intent",
+      "path": ".ai/agent-cli-snippets/by-command/apply-task-mutation-intent.json",
       "moduleId": "task-engine"
     },
     {
@@ -448,6 +453,11 @@
       "moduleId": "task-engine"
     },
     {
+      "name": "create-task-mutation-intent",
+      "path": ".ai/agent-cli-snippets/by-command/create-task-mutation-intent.json",
+      "moduleId": "task-engine"
+    },
+    {
       "name": "dashboard-agent-activity-slice",
       "path": ".ai/agent-cli-snippets/by-command/dashboard-agent-activity-slice.json",
       "moduleId": "task-engine"
@@ -843,6 +853,11 @@
       "moduleId": "subagents"
     },
     {
+      "name": "list-task-mutation-intents",
+      "path": ".ai/agent-cli-snippets/by-command/list-task-mutation-intents.json",
+      "moduleId": "task-engine"
+    },
+    {
       "name": "list-tasks",
       "path": ".ai/agent-cli-snippets/by-command/list-tasks.json",
       "moduleId": "task-engine"
@@ -980,6 +995,11 @@
     {
       "name": "reject-improvement",
       "path": ".ai/agent-cli-snippets/by-command/reject-improvement.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "reject-task-mutation-intent",
+      "path": ".ai/agent-cli-snippets/by-command/reject-task-mutation-intent.json",
       "moduleId": "task-engine"
     },
     {

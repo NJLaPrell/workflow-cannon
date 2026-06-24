@@ -9,6 +9,7 @@
     "agent-mutation-plan",
     "agent-session-snapshot",
     "apply-task-batch",
+    "apply-task-mutation-intent",
     "apply-task-state-events",
     "archive-task",
     "assign-task-phase",
@@ -27,6 +28,7 @@
     "convert-phase-note-to-task",
     "create-task",
     "create-task-from-plan",
+    "create-task-mutation-intent",
     "dashboard-agent-activity-slice",
     "dashboard-agent-types-slice",
     "dashboard-bootstrap-slices",
@@ -71,6 +73,7 @@
     "list-module-states",
     "list-phase-catalog",
     "list-phase-notes",
+    "list-task-mutation-intents",
     "list-tasks",
     "migrate-task-persistence",
     "pause-task",
@@ -92,6 +95,7 @@
     "rebuild-task-state-cache",
     "recommend-validation",
     "reject-improvement",
+    "reject-task-mutation-intent",
     "release-closeout-result",
     "release-evidence-manifest",
     "release-status",
@@ -307,6 +311,9 @@
         }
       },
       "additionalProperties": true
+    },
+    "apply-task-mutation-intent": {
+      "type": "object"
     },
     "apply-task-state-events": {
       "type": "object",
@@ -687,6 +694,9 @@
       "required": [
         "planRef"
       ]
+    },
+    "create-task-mutation-intent": {
+      "type": "object"
     },
     "dashboard-agent-activity-slice": {
       "type": "object"
@@ -1086,6 +1096,9 @@
       "type": "object"
     },
     "list-phase-notes": {
+      "type": "object"
+    },
+    "list-task-mutation-intents": {
       "type": "object"
     },
     "list-tasks": {
@@ -1488,6 +1501,9 @@
         }
       },
       "additionalProperties": true
+    },
+    "reject-task-mutation-intent": {
+      "type": "object"
     },
     "release-closeout-result": {
       "type": "object"

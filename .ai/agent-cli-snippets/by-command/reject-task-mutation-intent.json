@@ -1,23 +1,21 @@
 {
   "ok": true,
   "code": "run-args-schema",
-  "command": "cae-list-acks",
+  "command": "reject-task-mutation-intent",
   "schema": {
-    "type": "object",
-    "additionalProperties": true,
-    "description": "Permissive fallback args schema for 'cae-list-acks'. Use instructionPath for command-specific field guidance until a stricter schema is added."
+    "type": "object"
   },
-  "schemaSource": "manifest-permissive-fallback",
+  "schemaSource": "pilot-run-args-snapshot",
   "sampleArgs": {},
   "examples": [
     {
       "description": "Minimal argv example",
-      "argv": "workspace-kit run cae-list-acks '{}'"
+      "argv": "workspace-kit run reject-task-mutation-intent '{\"intentId\":\"intent-abc123\",\"reason\":\"superseded\"}'"
     }
   ],
-  "instructionPath": "src/modules/context-activation/instructions/cae-list-acks.md",
-  "moduleId": "context-activation",
-  "description": "List persisted CAE acknowledgement satisfaction rows by trace or activation.",
+  "instructionPath": "src/modules/task-engine/instructions/reject-task-mutation-intent.md",
+  "moduleId": "task-engine",
+  "description": "Reject a pending task mutation intent while retaining rationale on disk.",
   "policy": {
     "sensitivity": "non-sensitive",
     "operationId": null,
@@ -31,12 +29,11 @@
     "clientMutationId": false
   },
   "responseTemplate": {
-    "defaultResponseTemplateId": null
+    "defaultResponseTemplateId": "default"
   },
   "remediationContract": ".ai/runbooks/agent-task-engine-ergonomics.md",
   "discovery": {
     "listCommands": "pnpm exec wk run --list-commands",
     "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
-  },
-  "invocationId": "66a80f0d-3f8f-482a-ad0b-00289eee375e"
+  }
 }

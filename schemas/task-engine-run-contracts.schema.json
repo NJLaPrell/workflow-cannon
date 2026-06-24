@@ -31,6 +31,7 @@
         "agent-bootstrap",
         "agent-mutation-plan",
         "agent-session-snapshot",
+        "apply-task-mutation-intent",
         "apply-task-batch",
         "apply-task-state-events",
         "archive-task",
@@ -49,6 +50,7 @@
         "completion-preflight",
         "convert-phase-note-to-task",
         "create-task",
+        "create-task-mutation-intent",
         "create-task-from-plan",
         "dashboard-agent-activity-slice",
         "dashboard-agent-types-slice",
@@ -93,6 +95,7 @@
         "list-features",
         "list-module-states",
         "list-phase-catalog",
+        "list-task-mutation-intents",
         "list-phase-notes",
         "list-tasks",
         "migrate-task-persistence",
@@ -114,6 +117,7 @@
         "queue-health",
         "rebuild-task-state-cache",
         "recommend-validation",
+        "reject-task-mutation-intent",
         "reject-improvement",
         "release-closeout-result",
         "release-evidence-manifest",
@@ -567,6 +571,18 @@
         },
         "list-module-states": {
           "$ref": "#/$defs/contractListModuleStates"
+        },
+        "apply-task-mutation-intent": {
+          "$ref": "#/$defs/contractBase"
+        },
+        "create-task-mutation-intent": {
+          "$ref": "#/$defs/contractBase"
+        },
+        "list-task-mutation-intents": {
+          "$ref": "#/$defs/contractBase"
+        },
+        "reject-task-mutation-intent": {
+          "$ref": "#/$defs/contractBase"
         }
       }
     }

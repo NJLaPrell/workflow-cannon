@@ -106,6 +106,8 @@ export type DashboardApprovalQueueSummary = {
   policyArtifacts: Array<{ relativePath: string; role: string }>;
 };
 
+export type DashboardTaskMutationIntentsSummary = { schemaVersion: 1; count: number; top: Array<{ intentId: string; taskId: string | null; requestedAction: string; status: string; createdAt: string; createdBy: string | null; branch: string | null; planningGeneration: number | null; }>; };
+
 export type DashboardPhaseBucket = Record<string, unknown>;
 
 export type DashboardListSummary = {
@@ -634,6 +636,7 @@ export type DashboardSummaryData = {
   humanGatesSummary: DashboardHumanGatesSummary;
   /** Improvement tasks awaiting `review-item` (ready / in_progress). */
   approvalQueue: DashboardApprovalQueueSummary;
+  taskMutationIntents?: DashboardTaskMutationIntentsSummary;
   /** Present when `dashboard-summary` is invoked with `includePhaseFocus: true`. */
   phaseFocus?: AgentPhaseFocusDashboard;
   /** Per-phase phase-journal note counts + current-phase silence signal. */
