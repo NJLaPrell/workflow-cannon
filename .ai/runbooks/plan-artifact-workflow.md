@@ -30,6 +30,7 @@ Human-reviewed contracts (repo root, not `docs/`): **`PLANNER_COMMANDS.md`**, **
 5. **Accept** (Tier B): `accept-plan-artifact` with `approvalRecord` + `policyApproval`.
 6. **Finalize preview** (Tier C): `finalize-plan-to-phase` with `dryRun: true`.
 7. **Finalize persist** (Tier B): `finalize-plan-to-phase` with `dryRun: false` — delegates task writes to **`persist-planning-execution-drafts`** only.
+8. **Execute linkage** (Tier B): `execute-plan-artifact` — record plan↔task evidence before `run-transition` `start` when `tasks.planArtifactExecute.enforcementMode` is `enforce` or `advisory`.
 
 ```bash
 # 0) Read generation when policy require
@@ -83,8 +84,19 @@ Integration proof: `test/planning-session-cae-scope.test.mjs`.
 | --- | --- |
 | `review-planning-execution-drafts` | Preflight normalized task rows before finalize persist |
 | `persist-planning-execution-drafts` | **Only** writer for execution tasks from an accepted plan |
+| `execute-plan-artifact` | Link task to accepted/finalized plan before `run-transition` `start` when execute gating is on |
 
 See **`.ai/AGENT-CLI-MAP.extended.md`** → planning / Ideas ladder for copy-paste.
+
+## Execute path gating (`tasks.planArtifactExecute.enforcementMode`)
+
+| Mode | `run-transition` `start` | `persist-planning-execution-drafts` `planRef` |
+| --- | --- | --- |
+| `off` (default) | No execute linkage required | Any `planRef` allowed |
+| `advisory` | Warn when `metadata.planExecutionEvidence` missing | No extra `planRef` gate |
+| `enforce` | Block `start` without prior **`execute-plan-artifact`** | `planRef` must be `plan-artifact:<uuid>` for an accepted/finalized plan |
+
+Bypass: `metadata.localOnly: true` or `metadata.planArtifactExecuteRequired: false`. Task metadata: **`metadata.planExecutionEvidence`**. Plan audit: **`executionLinkages[]`**.
 
 ## Policy tiers (summary)
 
@@ -94,6 +106,7 @@ See **`.ai/AGENT-CLI-MAP.extended.md`** → planning / Ideas ladder for copy-pas
 | `review-plan-artifact` | C | `recordReview: true` → **B** |
 | `accept-plan-artifact` | **B** | |
 | `finalize-plan-to-phase` | C if `dryRun: true`; **B** if `dryRun: false` | Prefer dry-run first |
+| `execute-plan-artifact` | **B** | Run before `start` when execute gating is on |
 
 JSON **`policyApproval`** on argv for Tier B — not chat-only ([`.ai/POLICY-APPROVAL.md`](../POLICY-APPROVAL.md)).
 

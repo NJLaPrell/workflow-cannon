@@ -6,6 +6,10 @@ import {
   readDeliveryEvidenceEnforcementMode
 } from "../delivery-evidence.js";
 import {
+  createPlanArtifactExecuteGuard,
+  readPlanArtifactExecuteEnforcementMode
+} from "../plan-artifact-execute-policy.js";
+import {
   buildDeliveryEvidencePolicyContext,
   resolveMaintainerDeliveryPolicy
 } from "../maintainer-delivery-policy-resolver.js";
@@ -68,6 +72,7 @@ function buildTransitionValidator(ctx: ModuleLifecycleContext): TransitionValida
   const deliveryEvidenceMode = readDeliveryEvidenceEnforcementMode(effectiveConfig);
   return new TransitionValidator([
     createTaskIntakeAcceptGuard({ effectiveConfig }),
+    createPlanArtifactExecuteGuard({ enforcementMode: readPlanArtifactExecuteEnforcementMode(effectiveConfig), effectiveConfig, workspacePath: ctx.workspacePath }),
     createDeliveryEvidenceGuard({
       enforcementMode: deliveryEvidenceMode,
       resolvePolicyContext: (task) => {

@@ -87,6 +87,7 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
     "dismiss-phase-note",
     "document-project",
     "draft-plan-artifact",
+    "execute-plan-artifact",
     "explain-behavior-profiles",
     "explain-config",
     "explain-planning-rules",

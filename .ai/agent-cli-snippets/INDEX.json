@@ -573,6 +573,11 @@
       "moduleId": "plugins"
     },
     {
+      "name": "execute-plan-artifact",
+      "path": ".ai/agent-cli-snippets/by-command/execute-plan-artifact.json",
+      "moduleId": "planning"
+    },
+    {
       "name": "explain-behavior-profiles",
       "path": ".ai/agent-cli-snippets/by-command/explain-behavior-profiles.json",
       "moduleId": "agent-behavior"
