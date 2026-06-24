@@ -627,7 +627,7 @@ pnpm exec wk run export-task-state-artifacts '{"includeEvents":true}'
 
 ## Remote runs (Cursor background agents) — Tier C
 
-Phase 1 read stub only; persistence and launch/write paths deferred (ADR: `.ai/adrs/ADR-cursor-remote-agent-handoff-v1.md`). Runbook: `.ai/runbooks/cursor-remote-agent-handoff.md`. Metadata: `schemas/remote-run-metadata.v1.json`.
+Phase 1 read stub only; Phase 2 launch/sync targets **Cursor SDK** (ADR: `.ai/adrs/ADR-cursor-remote-agent-handoff-v1.md`). Runbook: `.ai/runbooks/cursor-remote-agent-handoff.md`. Metadata: `schemas/remote-run-metadata.v1.json`. SDK docs: [TypeScript](https://cursor.com/docs/sdk/typescript), [Python](https://cursor.com/docs/sdk/python).
 
 ```bash
 pnpm exec wk run list-remote-runs '{}'

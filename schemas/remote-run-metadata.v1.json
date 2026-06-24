@@ -30,7 +30,16 @@
     },
     "hostRunId": {
       "type": ["string", "null"],
-      "description": "Provider-assigned run/agent id when known."
+      "description": "Cursor SDK run id (run.id after send) when known — not the agent id."
+    },
+    "hostAgentId": {
+      "type": ["string", "null"],
+      "description": "Cursor SDK agent id (agent.agentId / agent.agent_id). Cloud ids often use bc- prefix."
+    },
+    "sdkRuntime": {
+      "type": ["string", "null"],
+      "enum": ["local", "cloud", null],
+      "description": "Cursor SDK runtime explicitly selected at launch."
     },
     "hostHint": {
       "type": ["string", "null"],
@@ -99,6 +108,8 @@
         },
         "hostProvider": { "type": "string", "enum": ["cursor"] },
         "hostRunId": { "type": ["string", "null"] },
+        "hostAgentId": { "type": ["string", "null"] },
+        "sdkRuntime": { "type": ["string", "null"], "enum": ["local", "cloud", null] },
         "branch": { "type": ["string", "null"] },
         "updatedAt": { "type": "string", "format": "date-time" },
         "evidenceCount": { "type": "integer", "minimum": 0 },

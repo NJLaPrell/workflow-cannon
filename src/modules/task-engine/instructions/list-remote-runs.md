@@ -6,7 +6,7 @@ agentCapsule|v=1|command=list-remote-runs|module=task-engine|schema_only=pnpm ex
 
 **Tier C** — read-only discovery for Cursor background-agent remote runs linked to **`T###`** tasks.
 
-Phase 1 (T100334): **spec + read stub only**. Returns an empty `runs[]` projection with `persistence: "none"` until SQLite storage ships in Phase 2. Launch/write commands are **not** registered.
+Phase 1 (T100334): **spec + read stub only**. Returns an empty `runs[]` projection with `persistence: "none"` until SQLite storage ships in Phase 2. Launch/write commands are **not** registered; Phase 2 adapters target the **Cursor SDK** (`@cursor/sdk`, `cursor-sdk`) per ADR.
 
 ## Purpose
 
@@ -33,11 +33,11 @@ Aligned with `schemas/remote-run-metadata.v1.json` → `$defs/listRemoteRunsResp
 | --- | --- |
 | `schemaVersion` | `1` |
 | `count` | Number of runs returned |
-| `runs[]` | List items: `remoteRunId`, `taskId`, `status`, `hostProvider`, `hostRunId`, `branch`, `updatedAt`, `evidenceCount`, `takeOverEligible` |
+| `runs[]` | List items: `remoteRunId`, `taskId`, `status`, `hostProvider`, `hostRunId`, `hostAgentId`, `sdkRuntime`, `branch`, `updatedAt`, `evidenceCount`, `takeOverEligible` |
 | `persistence` | `none` (Phase 1 stub) or `sqlite` (Phase 2) |
 | `filters` | Echo of applied filters |
 
-Full metadata document (Phase 2 persistence): `remoteRunId`, `taskId`, `status`, `hostProvider`, `hostRunId`, `hostHint`, `branch`, `worktreePath`, `baseBranch`, `launchedAt`, `updatedAt`, `completedAt`, `launchedBy`, `approvalRecord`, `evidenceRefs[]`, `handoffState`, `failureReason`, `metadata`.
+Full metadata document (Phase 2 persistence): `remoteRunId`, `taskId`, `status`, `hostProvider`, `hostRunId`, `hostAgentId`, `sdkRuntime`, `hostHint`, `branch`, `worktreePath`, `baseBranch`, `launchedAt`, `updatedAt`, `completedAt`, `launchedBy`, `approvalRecord`, `evidenceRefs[]`, `handoffState`, `failureReason`, `metadata`.
 
 ## Example
 
@@ -56,4 +56,4 @@ pnpm exec wk run list-remote-runs '{"taskId":"T100334","status":"running"}'
 | `attach-remote-run-evidence` | B | Append `evidenceRefs` for delivery |
 | `cancel-remote-run` | B | Terminal `cancelled` state |
 
-See ADR Phase 2 table before implementing any write path.
+See ADR Phase 2 table and Cursor SDK integration surface before implementing any write path.

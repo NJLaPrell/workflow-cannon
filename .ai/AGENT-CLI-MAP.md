@@ -149,7 +149,7 @@ Operator runbook: [`.ai/runbooks/task-state-git-operator.md`](./runbooks/task-st
 
 ## Remote runs (Cursor background agents)
 
-Phase 1 (T100334): read-only `list-remote-runs` stub; launch/write deferred per `.ai/adrs/ADR-cursor-remote-agent-handoff-v1.md`.
+Phase 1 (T100334): read-only `list-remote-runs` stub; launch/write kit commands not shipped. Phase 2 adapters use **Cursor SDK** (`@cursor/sdk` / `cursor-sdk`) per `.ai/adrs/ADR-cursor-remote-agent-handoff-v1.md`.
 
 - `pnpm exec wk run list-remote-runs '{}'`
 - `pnpm exec wk run list-remote-runs '{"taskId":"T100334"}'`
