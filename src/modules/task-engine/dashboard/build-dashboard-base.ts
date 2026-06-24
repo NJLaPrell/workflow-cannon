@@ -2,6 +2,7 @@ import type { ModuleLifecycleContext } from "../../../contracts/module-contract.
 import type {
   DashboardSubagentRegistrySummary,
   DashboardSummaryData,
+  DashboardPhaseKickoffSummary,
   DashboardTaskCheckpointsSummary,
   DashboardTeamExecutionSummary
 } from "../../../contracts/dashboard-summary-run.js";
@@ -50,10 +51,11 @@ import {
   collectRolledOutPhaseKeys,
   collectPhaseReleaseDatesByKey
 } from "./phase-delivery-status.js";
-import { resolveLegacyDeliveredMaxOrdinal } from "../phase-resolution.js";
+import { resolveLegacyDeliveredMaxOrdinal, parseKitPhaseNumberFromYaml } from "../phase-resolution.js";
 import { buildDashboardPastPhaseNotes } from "./build-dashboard-past-phase-notes.js";
 import { buildDashboardApprovalQueueSummary } from "./build-dashboard-approval-queue.js";
 import { buildPhaseFocusDashboard } from "./build-phase-focus-dashboard.js";
+import { buildDashboardPhaseKickoffSlice } from "../phase-kickoff-policy.js";
 import type { OpenedPlanningStores } from "../persistence/planning-open.js";
 import { buildDashboardHumanGatesSummary } from "./build-dashboard-human-gates.js";
 import { buildDashboardPhaseJournalStats } from "./build-dashboard-phase-journal-stats.js";
@@ -836,6 +838,22 @@ export async function buildDashboardBase(
     typeof commandArgs?.phaseKey === "string" && commandArgs.phaseKey.trim().length > 0
       ? commandArgs.phaseKey.trim()
       : undefined;
+  const includePhaseKickoff =
+    commandArgs?.includePhaseKickoff === true || commandArgs?.includePhaseKickoff === "true";
+  const phaseKickoffPhaseKey =
+    typeof commandArgs?.phaseKey === "string" && commandArgs.phaseKey.trim().length > 0
+      ? commandArgs.phaseKey.trim()
+      : parseKitPhaseNumberFromYaml(workspaceStatus?.currentKitPhase ?? null);
+
+  let phaseKickoff: DashboardPhaseKickoffSummary | null = null;
+  if (includePhaseKickoff && sqliteDual && phaseKickoffPhaseKey) {
+    phaseKickoff = await buildDashboardPhaseKickoffSlice(
+      ctx,
+      { taskStore: store, sqliteDual } satisfies OpenedPlanningStores,
+      phaseKickoffPhaseKey,
+      { includeValidationPlans: commandArgs?.includeKickoffValidationPlans === true }
+    );
+  }
 
   const data = {
     schemaVersion: 7 as const,
@@ -956,7 +974,8 @@ export async function buildDashboardBase(
             phaseKey: phaseFocusPhaseKey
           })
         }
-      : {})
+      : {}),
+    ...(phaseKickoff ? { phaseKickoff } : {})
   } satisfies DashboardSummaryData;
 
   return {
@@ -1195,6 +1214,22 @@ export async function buildDashboardOverview(
       }
     : null;
 
+  const includePhaseKickoff =
+    commandArgs?.includePhaseKickoff === true || commandArgs?.includePhaseKickoff === "true";
+  const phaseKickoffPhaseKey =
+    typeof commandArgs?.phaseKey === "string" && commandArgs.phaseKey.trim().length > 0
+      ? commandArgs.phaseKey.trim()
+      : parseKitPhaseNumberFromYaml(workspaceStatus?.currentKitPhase ?? null);
+  let phaseKickoff: DashboardPhaseKickoffSummary | null = null;
+  if (includePhaseKickoff && sqliteDual && phaseKickoffPhaseKey) {
+    phaseKickoff = await buildDashboardPhaseKickoffSlice(
+      ctx,
+      { taskStore: store, sqliteDual } satisfies OpenedPlanningStores,
+      phaseKickoffPhaseKey,
+      { includeValidationPlans: false }
+    );
+  }
+
   return {
     schemaVersion: 7 as const,
     dashboardProjection: "overview",
@@ -1267,7 +1302,8 @@ export async function buildDashboardOverview(
     lastDeliveredPhase,
     legacyDeliveredMaxOrdinal,
     phaseKeysWithActiveQueueWork,
-    pastPhaseNotes: []
+    pastPhaseNotes: [],
+    ...(phaseKickoff ? { phaseKickoff } : {})
   } satisfies DashboardSummaryData;
 }
 

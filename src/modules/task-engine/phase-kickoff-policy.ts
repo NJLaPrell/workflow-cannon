@@ -1,5 +1,7 @@
 import type { ModuleLifecycleContext } from "../../contracts/module-contract.js";
+import type { DashboardPhaseKickoffSummary } from "../../contracts/dashboard-summary-run.js";
 import { buildPhaseKickoffReadiness } from "./phase-kickoff-readiness-runtime.js";
+import type { OpenedPlanningStores } from "./persistence/planning-open.js";
 import { openPlanningStores } from "./persistence/planning-open.js";
 
 export type PhaseKickoffEnforcementMode = "off" | "advisory" | "enforce";
@@ -54,14 +56,15 @@ export function kickoffSummaryFromReadiness(readiness: Record<string, unknown>):
 export async function buildKickoffReadinessForSetCurrentPhase(
   ctx: ModuleLifecycleContext,
   phaseKey: string,
-  kickoffConfig: PhaseKickoffConfig
+  kickoffConfig: PhaseKickoffConfig,
+  planning?: OpenedPlanningStores
 ): Promise<Record<string, unknown>> {
-  const planning = await openPlanningStores(ctx);
+  const opened = planning ?? (await openPlanningStores(ctx));
   const auditMode = kickoffConfig.enforcementMode === "enforce" ? "enforce" : "advisory";
   return buildPhaseKickoffReadiness({
     ctx,
-    planning,
-    store: planning.taskStore,
+    planning: opened,
+    store: opened.taskStore,
     phaseKey,
     commandArgs: {
       phaseKey,
@@ -71,4 +74,53 @@ export async function buildKickoffReadinessForSetCurrentPhase(
       includeValidationPlans: true
     }
   });
+}
+
+export async function buildDashboardPhaseKickoffSlice(
+  ctx: ModuleLifecycleContext,
+  planning: OpenedPlanningStores,
+  phaseKey: string | null,
+  options?: { includeValidationPlans?: boolean }
+): Promise<DashboardPhaseKickoffSummary | null> {
+  if (!phaseKey) {
+    return null;
+  }
+  const kickoffConfig = readPhaseKickoffConfig(ctx.effectiveConfig as Record<string, unknown> | undefined);
+  const auditMode = kickoffConfig.enforcementMode === "enforce" ? "enforce" : "advisory";
+  const packet = await buildPhaseKickoffReadiness({
+    ctx,
+    planning,
+    store: planning.taskStore,
+    phaseKey,
+    commandArgs: {
+      phaseKey,
+      mode: auditMode,
+      staleTaskDays: kickoffConfig.staleTaskDays,
+      checkScopePaths: kickoffConfig.checkScopePaths,
+      includeValidationPlans: options?.includeValidationPlans !== false
+    }
+  });
+  const findings = Array.isArray(packet.findings) ? packet.findings : [];
+  return {
+    schemaVersion: 1,
+    phaseKey,
+    passed: packet.passed === true,
+    findingCount:
+      typeof packet.findingCount === "number" && Number.isFinite(packet.findingCount)
+        ? packet.findingCount
+        : findings.length,
+    enforcementMode: kickoffConfig.enforcementMode,
+    findings: findings.slice(0, 5).map((raw) => {
+      const f =
+        raw && typeof raw === "object" && !Array.isArray(raw) ? (raw as Record<string, unknown>) : {};
+      return {
+        code: typeof f.code === "string" ? f.code : "kickoff-finding",
+        severity: typeof f.severity === "string" ? f.severity : "advisory",
+        message: typeof f.message === "string" ? f.message : "",
+        ...(typeof f.slice === "string" ? { slice: f.slice } : {}),
+        ...(typeof f.taskId === "string" ? { taskId: f.taskId } : {}),
+        ...(typeof f.path === "string" ? { path: f.path } : {})
+      };
+    })
+  };
 }
