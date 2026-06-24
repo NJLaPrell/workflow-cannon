@@ -5,6 +5,7 @@
 
 import type { AgentPhaseJournalSnapshotBlock } from "./agent-phase-journal-read-contract.js";
 import type { DashboardAgentRegistrySessionSummary } from "./dashboard-summary-run.js";
+import type { WorkspaceCoordinationTaskStateAuthority } from "./workspace-coordination-status.js";
 
 export type AgentSessionSnapshotTeamContext = {
   schemaVersion: 1;
@@ -41,6 +42,12 @@ export type AgentSessionSnapshotData = {
   phaseJournal?: AgentPhaseJournalSnapshotBlock;
   planningGeneration?: number;
   planningGenerationPolicy?: string;
+  workspaceCoordination?: {
+    posture: string;
+    authorityRole: "integration_authority" | "worker" | "unknown";
+    taskStateAuthority: WorkspaceCoordinationTaskStateAuthority;
+    discoverCommand: string;
+  };
 };
 
 export type AgentSessionSnapshotAgentRegistrySessionContext = DashboardAgentRegistrySessionSummary;

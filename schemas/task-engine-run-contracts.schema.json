@@ -31,6 +31,7 @@
         "agent-bootstrap",
         "agent-mutation-plan",
         "agent-session-snapshot",
+        "apply-task-mutation-intent",
         "apply-task-batch",
         "apply-task-state-events",
         "archive-task",
@@ -49,6 +50,8 @@
         "completion-preflight",
         "convert-phase-note-to-task",
         "create-task",
+        "create-isolated-proposal",
+        "create-task-mutation-intent",
         "create-task-from-plan",
         "dashboard-agent-activity-slice",
         "dashboard-agent-types-slice",
@@ -70,6 +73,7 @@
         "dismiss-phase-note",
         "explain-task-engine-model",
         "export-feature-taxonomy-json",
+        "export-task-state-artifacts",
         "export-workspace-status",
         "get-blocked-summary",
         "get-dependency-graph",
@@ -92,8 +96,11 @@
         "list-components",
         "list-features",
         "list-module-states",
+        "list-isolated-proposals",
         "list-phase-catalog",
+        "list-task-mutation-intents",
         "list-phase-notes",
+        "list-remote-runs",
         "list-tasks",
         "migrate-task-persistence",
         "pause-task",
@@ -102,6 +109,7 @@
         "phase-delivery-preflight",
         "phase-drain-delta",
         "phase-focus-dashboard",
+        "phase-kickoff-readiness",
         "phase-release-orchestration-state",
         "phase-release-state",
         "phase-status",
@@ -112,12 +120,15 @@
         "queue-git-alignment",
         "queue-health",
         "rebuild-task-state-cache",
+        "record-isolated-proposal-validation",
         "recommend-validation",
+        "reject-task-mutation-intent",
         "reject-improvement",
         "release-closeout-result",
         "release-evidence-manifest",
         "release-status",
         "release-workspace-edit-lease",
+        "recover-isolated-proposal",
         "remove-dependency",
         "repair-task-state-cache",
         "replay-queue-snapshot",
@@ -148,6 +159,10 @@
         "task-sync-snapshot",
         "task-sync-status",
         "task-sync-verify",
+        "view-isolated-proposal-diff",
+        "apply-isolated-proposal",
+        "open-isolated-proposal-pr",
+        "discard-isolated-proposal",
         "unblock-task",
         "uninstall-git-hooks",
         "update-phase-note",
@@ -363,6 +378,9 @@
         "phase-focus-dashboard": {
           "$ref": "#/$defs/contractBase"
         },
+        "phase-kickoff-readiness": {
+          "$ref": "#/$defs/contractBase"
+        },
         "phase-release-orchestration-state": {
           "$ref": "#/$defs/contractBase"
         },
@@ -448,6 +466,9 @@
           "$ref": "#/$defs/contractExplainTaskEngineModel"
         },
         "export-feature-taxonomy-json": {
+          "$ref": "#/$defs/contractBase"
+        },
+        "export-task-state-artifacts": {
           "$ref": "#/$defs/contractBase"
         },
         "export-workspace-status": {
@@ -555,14 +576,53 @@
         "list-features": {
           "$ref": "#/$defs/contractListFeatures"
         },
+        "list-isolated-proposals": {
+          "$ref": "#/$defs/contractBase"
+        },
         "list-phase-catalog": {
           "$ref": "#/$defs/contractBase"
         },
         "list-phase-notes": {
           "$ref": "#/$defs/contractBase"
         },
+        "list-remote-runs": {
+          "$ref": "#/$defs/contractBase"
+        },
         "list-module-states": {
           "$ref": "#/$defs/contractListModuleStates"
+        },
+        "apply-task-mutation-intent": {
+          "$ref": "#/$defs/contractBase"
+        },
+        "create-task-mutation-intent": {
+          "$ref": "#/$defs/contractBase"
+        },
+        "create-isolated-proposal": {
+          "$ref": "#/$defs/contractBase"
+        },
+        "list-task-mutation-intents": {
+          "$ref": "#/$defs/contractBase"
+        },
+        "reject-task-mutation-intent": {
+          "$ref": "#/$defs/contractBase"
+        },
+        "view-isolated-proposal-diff": {
+          "$ref": "#/$defs/contractBase"
+        },
+        "apply-isolated-proposal": {
+          "$ref": "#/$defs/contractBase"
+        },
+        "open-isolated-proposal-pr": {
+          "$ref": "#/$defs/contractBase"
+        },
+        "discard-isolated-proposal": {
+          "$ref": "#/$defs/contractBase"
+        },
+        "recover-isolated-proposal": {
+          "$ref": "#/$defs/contractBase"
+        },
+        "record-isolated-proposal-validation": {
+          "$ref": "#/$defs/contractBase"
         }
       }
     }

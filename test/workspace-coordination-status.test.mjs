@@ -50,6 +50,7 @@ test("buildWorkspaceCoordinationStatus: clean main is safe / integration_authori
   git(ws, ["commit", "-m", "db"]);
   const s = buildWorkspaceCoordinationStatus(ctx(ws));
   assert.equal(s.authorityRole, "integration_authority");
+  assert.equal(s.taskStateAuthority.classification, "authority");
   assert.equal(s.posture, "safe");
   assert.equal(s.taskDatabaseGitDirty, false);
 });
@@ -69,6 +70,7 @@ test("buildWorkspaceCoordinationStatus: feature branch is worker_branch", async 
   const s = buildWorkspaceCoordinationStatus(ctx(ws));
   assert.equal(s.posture, "worker_branch");
   assert.equal(s.authorityRole, "worker");
+  assert.equal(s.taskStateAuthority.classification, "worker");
 });
 
 test("buildWorkspaceCoordinationStatus: detached HEAD", async () => {
@@ -224,4 +226,50 @@ test("buildWorkspaceCoordinationStatus: active future lease is lease_held", asyn
   assert.equal(s.lease.holder.taskId, "T1");
   assert.deepEqual(s.lease.suspectFlags, []);
   assert.equal(s.posture, "lease_held");
+});
+
+test("buildWorkspaceCoordinationStatus: active lease with head drift is lease_suspect", async () => {
+  const { buildWorkspaceCoordinationStatus } = await import(
+    "../dist/modules/task-engine/coordination/build-workspace-coordination-status.js"
+  );
+  const ws = mkdtempSync(path.join(tmpdir(), "wc-coord-head-drift-"));
+  git(ws, ["init", "-b", "main"]);
+  git(ws, ["config", "user.email", "t@example.com"]);
+  git(ws, ["config", "user.name", "T"]);
+  writeFileSync(path.join(ws, "README.md"), "x\n");
+  git(ws, ["add", "README.md"]);
+  git(ws, ["commit", "-m", "init"]);
+
+  const common = spawnSync("git", ["rev-parse", "--git-common-dir"], { cwd: ws, encoding: "utf8" });
+  const raw = common.stdout.trim();
+  const commonAbs = path.isAbsolute(raw) ? raw : path.join(ws, raw);
+  const leaseDir = path.join(commonAbs, "workflow-cannon", "leases");
+  mkdirSync(leaseDir, { recursive: true });
+  const startHead = spawnSync("git", ["rev-parse", "HEAD"], { cwd: ws, encoding: "utf8" });
+  const top = spawnSync("git", ["rev-parse", "--show-toplevel"], { cwd: ws, encoding: "utf8" });
+  writeFileSync(
+    path.join(leaseDir, "workspace-edit.json"),
+    JSON.stringify({
+      schemaVersion: 1,
+      expiresAt: new Date(Date.now() + 3_600_000).toISOString(),
+      leaseId: "live",
+      agentSessionId: "sess",
+      taskId: "T1",
+      branch: "main",
+      headSha: startHead.stdout.trim(),
+      worktreePath: top.stdout.trim(),
+      dirtyManifest: { lineCount: 0, capped: false },
+      claimedAt: new Date().toISOString(),
+      heartbeatAt: new Date().toISOString()
+    })
+  );
+
+  writeFileSync(path.join(ws, "head-drift.txt"), "new\n");
+  git(ws, ["add", "head-drift.txt"]);
+  git(ws, ["commit", "-m", "head drift"]);
+
+  const status = buildWorkspaceCoordinationStatus(ctx(ws));
+  assert.equal(status.posture, "lease_suspect");
+  assert.ok(status.lease.suspectFlags.includes("lease:head_drift"));
+  assert.ok(status.suspectFlags.includes("lease:head_drift"));
 });

@@ -357,6 +357,33 @@ pnpm exec wk run set-current-phase '{"currentKitPhase":"72","nextKitPhase":"73",
 pnpm exec wk run set-current-phase '{"currentKitPhase":"72","nextKitPhase":"73","dryRun":true}'
 ```
 
+## Phase kickoff readiness (Tier C)
+
+Read-only aggregate audit **before** phase rollover or delivery start. Composes planning staleness, git integration branch, task scope paths, validation recommendations, and doctor contract slices. **`passed`** is `false` only when a finding has **`severity: "block"`** (for example missing integration branch when `mode` is **`enforce`**). No `policyApproval`; no task-store or workspace-status mutations.
+
+Runbook: [`.ai/runbooks/phase-kickoff-readiness.md`](./runbooks/phase-kickoff-readiness.md) (finding codes + remediation loops). Instruction: `src/modules/task-engine/instructions/phase-kickoff-readiness.md`.
+
+**Copy-paste — kickoff audit (default workspace phase):**
+
+```bash
+pnpm exec wk run phase-kickoff-readiness '{}'
+```
+
+**Copy-paste — kickoff audit (explicit phase + integration branch):**
+
+```bash
+pnpm exec wk run phase-kickoff-readiness '{"phaseKey":"137","baseRef":"origin/main","integrationRef":"origin/release/phase-137","staleTaskDays":14,"checkScopePaths":true,"includeValidationPlans":true,"mode":"advisory"}'
+```
+
+**Copy-paste — dry-run rollover after kickoff:**
+
+```bash
+pnpm exec wk run phase-kickoff-readiness '{"phaseKey":"137"}'
+pnpm exec wk run set-current-phase '{"currentKitPhase":"137","dryRun":true}'
+```
+
+When **`tasks.phaseKickoff.enforcementMode`** is **`enforce`**, live **`set-current-phase`** returns **`phase-kickoff-blocked`** (no SQLite mutation) if kickoff has block-severity findings — remediate per the runbook, then retry.
+
 **Copy-paste — full audit:**
 
 ```bash
@@ -562,6 +589,51 @@ Instruction paths: run `workspace-kit run` with no subcommand to list commands; 
 7. Planning module runbook: `.ai/runbooks/planning-workflow.md` (build-plan / Ideas); PlanArtifact: `.ai/runbooks/plan-artifact-workflow.md`.
 8. Agent task-engine ergonomics: `.ai/runbooks/agent-task-engine-ergonomics.md` (includes **§0** natural-language → command exemplar table).
 9. CAE read-only CLI contract (when enabled): `.ai/cae/cli-read-only.md` + `schemas/cae/cli-read-only-*.v1.json`.
+
+## Isolated proposal mode (Tier B)
+
+Branch/worktree-isolated delivery for one or more tasks without taking over the visible checkout lease. Proposals live under `$GIT_COMMON_DIR/workflow-cannon/proposals/` with metadata, diff artifacts, validation evidence, and optional PR open. Integrates with **`claim-workspace-edit-lease`** / **`workspace-edit-status`** — apply and PR flows respect lease guards from T100192.
+
+ADR: [`.ai/adrs/ADR-workflow-cannon-state-backend-v1.md`](./adrs/ADR-workflow-cannon-state-backend-v1.md). Instructions: `src/modules/task-engine/instructions/<command>.md`.
+
+**Copy-paste — create and inspect:**
+
+```bash
+pnpm exec wk run create-isolated-proposal '{"taskId":"T100193","baseBranch":"release/phase-137"}'
+pnpm exec wk run list-isolated-proposals '{}'
+pnpm exec wk run view-isolated-proposal-diff '{"proposalId":"<id>"}'
+```
+
+**Copy-paste — apply, validate, ship:**
+
+```bash
+pnpm exec wk run apply-isolated-proposal '{"proposalId":"<id>","dryRun":true}'
+pnpm exec wk run record-isolated-proposal-validation '{"proposalId":"<id>","command":"pnpm run check","exitCode":0}'
+pnpm exec wk run open-isolated-proposal-pr '{"proposalId":"<id>","baseBranch":"release/phase-137"}'
+```
+
+**Copy-paste — discard / recover:**
+
+```bash
+pnpm exec wk run discard-isolated-proposal '{"proposalId":"<id>"}'
+pnpm exec wk run recover-isolated-proposal '{"proposalId":"<id>"}'
+```
+
+**Copy-paste — deterministic task-state export (snapshot + event JSONL):**
+
+```bash
+pnpm exec wk run export-task-state-artifacts '{"includeEvents":true}'
+```
+
+## Remote runs (Cursor background agents) — Tier C
+
+Phase 1 read stub only; persistence and launch/write paths deferred (ADR: `.ai/adrs/ADR-cursor-remote-agent-handoff-v1.md`). Runbook: `.ai/runbooks/cursor-remote-agent-handoff.md`. Metadata: `schemas/remote-run-metadata.v1.json`.
+
+```bash
+pnpm exec wk run list-remote-runs '{}'
+pnpm exec wk run list-remote-runs '{"taskId":"T100334"}'
+pnpm exec wk run list-remote-runs '{"taskId":"T100334","status":"running"}'
+```
 
 ## Optional session opener (habit hook)
 

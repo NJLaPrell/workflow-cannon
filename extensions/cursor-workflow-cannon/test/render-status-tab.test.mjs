@@ -195,4 +195,5 @@ test("renderStatusTabInnerHtml renders coordination suspect flags", () => {
   assert.match(html, /lease_suspect/);
   assert.match(html, /Suspect flags/);
   assert.match(html, /lease:branch_drift, lease:head_drift/);
+  assert.match(html, /Active lease looks suspect/);
 });

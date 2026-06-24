@@ -85,7 +85,7 @@
   ],
   "instructionPath": "src/modules/task-engine/instructions/persist-planning-execution-drafts.md",
   "moduleId": "task-engine",
-  "description": "Persist multiple proposed execution tasks from planning decomposition in one transaction (convert-wishlist-compatible rows).",
+  "description": "Persist multiple proposed execution tasks from planning decomposition in one transaction (planning-decomposition rows).",
   "policy": {
     "sensitivity": "non-sensitive",
     "operationId": null,
@@ -106,5 +106,5 @@
     "listCommands": "pnpm exec wk run --list-commands",
     "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
   },
-  "invocationId": "e891534a-f009-473b-bb7b-302ef39fe517"
+  "invocationId": "b47d0690-c14a-4041-a1bc-6bd729e364c6"
 }

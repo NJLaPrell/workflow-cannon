@@ -15,6 +15,7 @@ import {
   summarizeWorkspaceEditLeaseStatus,
   type WorkspaceEditLeaseSuspectFlag
 } from "./workspace-edit-lease.js";
+import { resolveTaskStateAuthorityPosture } from "../task-state-authority.js";
 
 const PORCELAIN_CAP = 500;
 
@@ -42,20 +43,18 @@ function resolveGitPath(workspacePath: string, raw: string | null): string | nul
   return path.normalize(path.join(workspacePath, t));
 }
 
-function classifyAuthority(branch: string | null): WorkspaceCoordinationAuthorityRole {
-  if (!branch) {
-    return "unknown";
+function classifyAuthority(ctx: ModuleLifecycleContext): {
+  role: WorkspaceCoordinationAuthorityRole;
+  posture: ReturnType<typeof resolveTaskStateAuthorityPosture>;
+} {
+  const posture = resolveTaskStateAuthorityPosture(ctx);
+  if (posture.classification === "authority") {
+    return { role: "integration_authority", posture };
   }
-  if (branch === "main" || branch === "master") {
-    return "integration_authority";
+  if (posture.classification === "worker") {
+    return { role: "worker", posture };
   }
-  if (/^release\/phase-\d+$/i.test(branch)) {
-    return "integration_authority";
-  }
-  if (/^(feature|task)\//i.test(branch)) {
-    return "worker";
-  }
-  return "unknown";
+  return { role: "unknown", posture };
 }
 
 function readLeaseSlice(
@@ -200,7 +199,8 @@ export function buildWorkspaceCoordinationStatus(ctx: ModuleLifecycleContext): W
     }
   }
 
-  const authorityRole = classifyAuthority(branch);
+  const authorityResolution = classifyAuthority(ctx);
+  const authorityRole = authorityResolution.role;
   const lease = readLeaseSlice(gitCommonDir, currentFingerprint);
   suspectFlags.push(...lease.suspectFlags);
 
@@ -228,6 +228,7 @@ export function buildWorkspaceCoordinationStatus(ctx: ModuleLifecycleContext): W
     taskDatabaseGitDirty,
     dirtyManifest,
     lease,
+    taskStateAuthority: authorityResolution.posture,
     suspectFlags
   };
 }

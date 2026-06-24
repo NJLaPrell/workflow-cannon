@@ -48,6 +48,7 @@ import {
 import { runReviewPlanArtifact } from "./review-plan-artifact-handler.js";
 import { runAcceptPlanArtifact } from "./accept-plan-artifact-handler.js";
 import { runFinalizePlanToPhase } from "./finalize-plan-to-phase-handler.js";
+import { runExecutePlanArtifact } from "./execute-plan-artifact-handler.js";
 import { attachPolicyMeta } from "../task-engine/attach-planning-response-meta.js";
 import { planningGenPolicyGate } from "../task-engine/planning-generation-gate.js";
 import { TaskEngineError } from "../task-engine/transitions.js";
@@ -57,6 +58,7 @@ const REVIEW_PLAN_ARTIFACT_INSTRUCTION = "src/modules/planning/instructions/revi
 const ACCEPT_PLAN_ARTIFACT_INSTRUCTION = "src/modules/planning/instructions/accept-plan-artifact.md";
 const FINALIZE_PLAN_TO_PHASE_INSTRUCTION =
   "src/modules/planning/instructions/finalize-plan-to-phase.md";
+const EXECUTE_PLAN_ARTIFACT_INSTRUCTION = "src/modules/planning/instructions/execute-plan-artifact.md";
 
 async function recordBuildPlanActivity(
   ctx: Parameters<NonNullable<WorkflowModule["onCommand"]>>[1],
@@ -127,6 +129,10 @@ export const planningModule: WorkflowModule = {
         ctx,
         FINALIZE_PLAN_TO_PHASE_INSTRUCTION
       );
+    }
+
+    if (command.name === "execute-plan-artifact") {
+      return runExecutePlanArtifact((command.args ?? {}) as Record<string, unknown>, ctx, EXECUTE_PLAN_ARTIFACT_INSTRUCTION);
     }
 
     if (command.name === "draft-plan-artifact") {

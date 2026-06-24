@@ -1,0 +1,131 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workflow-cannon.dev/schemas/remote-run-metadata.v1.json",
+  "title": "Remote run metadata v1",
+  "description": "Canonical metadata for Cursor background-agent (and future host) remote runs managed by Workflow Cannon. Documented in Phase 1 (T100334); persistence ships in Phase 2.",
+  "type": "object",
+  "required": ["schemaVersion", "remoteRunId", "taskId", "status", "hostProvider", "updatedAt"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "remoteRunId": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Kit-owned stable id (UUID recommended)."
+    },
+    "taskId": {
+      "type": "string",
+      "pattern": "^T[0-9]+$",
+      "description": "Required linkage to execution task T###."
+    },
+    "status": {
+      "type": "string",
+      "enum": ["queued", "running", "needs_input", "completed", "failed", "cancelled", "handed_off"],
+      "description": "Run lifecycle state."
+    },
+    "hostProvider": {
+      "type": "string",
+      "enum": ["cursor"],
+      "description": "Execution host; extensible in future schema versions."
+    },
+    "hostRunId": {
+      "type": ["string", "null"],
+      "description": "Provider-assigned run/agent id when known."
+    },
+    "hostHint": {
+      "type": ["string", "null"],
+      "description": "Operator hint (e.g. cursor-background, cloud-agent)."
+    },
+    "branch": { "type": ["string", "null"] },
+    "worktreePath": { "type": ["string", "null"] },
+    "baseBranch": { "type": ["string", "null"] },
+    "launchedAt": { "type": ["string", "null"], "format": "date-time" },
+    "updatedAt": { "type": "string", "format": "date-time" },
+    "completedAt": { "type": ["string", "null"], "format": "date-time" },
+    "launchedBy": { "type": ["string", "null"] },
+    "approvalRecord": {
+      "type": ["object", "null"],
+      "description": "Snapshot of policy approval at launch (Phase 2).",
+      "additionalProperties": true
+    },
+    "evidenceRefs": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/evidenceRef" },
+      "default": []
+    },
+    "handoffState": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "properties": {
+        "takeOverEligible": { "type": "boolean" },
+        "cursorDeepLink": { "type": ["string", "null"] },
+        "lastSyncedAt": { "type": ["string", "null"], "format": "date-time" },
+        "handedOffAt": { "type": ["string", "null"], "format": "date-time" },
+        "handedOffBy": { "type": ["string", "null"] }
+      }
+    },
+    "failureReason": { "type": ["string", "null"] },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Extensible operator/agent annotations."
+    }
+  },
+  "$defs": {
+    "evidenceRef": {
+      "type": "object",
+      "required": ["kind", "ref"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": ["pr_url", "commit_sha", "validation_command", "transcript_path", "artifact_path", "other"]
+        },
+        "ref": { "type": "string", "minLength": 1 },
+        "label": { "type": ["string", "null"] },
+        "recordedAt": { "type": ["string", "null"], "format": "date-time" }
+      }
+    },
+    "remoteRunListItem": {
+      "type": "object",
+      "required": ["remoteRunId", "taskId", "status", "hostProvider", "updatedAt"],
+      "additionalProperties": false,
+      "properties": {
+        "remoteRunId": { "type": "string" },
+        "taskId": { "type": "string", "pattern": "^T[0-9]+$" },
+        "status": {
+          "type": "string",
+          "enum": ["queued", "running", "needs_input", "completed", "failed", "cancelled", "handed_off"]
+        },
+        "hostProvider": { "type": "string", "enum": ["cursor"] },
+        "hostRunId": { "type": ["string", "null"] },
+        "branch": { "type": ["string", "null"] },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "evidenceCount": { "type": "integer", "minimum": 0 },
+        "takeOverEligible": { "type": ["boolean", "null"] }
+      }
+    },
+    "listRemoteRunsResponse": {
+      "type": "object",
+      "required": ["schemaVersion", "count", "runs", "persistence"],
+      "additionalProperties": false,
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "count": { "type": "integer", "minimum": 0 },
+        "runs": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/remoteRunListItem" }
+        },
+        "persistence": {
+          "type": "string",
+          "enum": ["none", "sqlite"],
+          "description": "Phase 1 stub returns none; Phase 2 returns sqlite when table is wired."
+        },
+        "filters": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      }
+    }
+  }
+}

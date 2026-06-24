@@ -21,7 +21,8 @@ import {
   lookupProposedTaskPhaseKey,
   pickNextTaskInCurrentPhase,
   renderPhaseCatalogOverviewSection,
-  renderTaskStateSyncStatusHtml
+  renderTaskStateSyncStatusHtml,
+  renderPhaseKickoffFindingsList
 } from "../dist/views/dashboard/render-dashboard.js";
 import { buildPhaseCompleteReleaseChatPrompt } from "../dist/phase-complete-release-prompt.js";
 import { renderGuidanceAuthoringPanelInnerHtml } from "../dist/views/guidance/render-guidance-panel.js";
@@ -3112,6 +3113,40 @@ test("Phase Readiness shows phase-scoped ready counts not workspace ready total"
   assert.match(html, /Tasks assigned to this phase/);
   assert.match(html, /5 ready · 2 in progress/);
   assert.doesNotMatch(html, /71 ready/);
+});
+
+test("renderPhaseKickoffFindingsList and Phase Readiness card show kickoff findings", () => {
+  const list = renderPhaseKickoffFindingsList([
+    {
+      code: "kickoff-git-integration-branch-missing",
+      severity: "block",
+      message: "Integration ref origin/release/phase-137 is not available"
+    }
+  ]);
+  assert.match(list, /Kickoff findings/);
+  assert.match(list, /kickoff-git-integration-branch-missing/);
+  assert.match(list, /wc-kickoff-finding-block/);
+
+  const html = renderDashboardRootInnerHtml(
+    readinessDashboardPayload({
+      phaseKickoff: {
+        schemaVersion: 1,
+        phaseKey: "100",
+        passed: false,
+        findingCount: 1,
+        enforcementMode: "advisory",
+        findings: [
+          {
+            code: "kickoff-planning-stale-task",
+            severity: "warn",
+            message: "Stale ready task T001"
+          }
+        ]
+      }
+    })
+  );
+  assert.match(html, /Kickoff findings/);
+  assert.match(html, /kickoff-planning-stale-task/);
 });
 
 test("Phase Readiness score is 100% when phase delivery has started", () => {

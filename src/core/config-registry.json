@@ -35,6 +35,114 @@
       "user"
     ]
   },
+  "tasks.stateAuthority": {
+    "key": "tasks.stateAuthority",
+    "type": "object",
+    "description": "Branch authority gate for task-state mutations. mode=enforce blocks non-authority writes, advisory allows with posture signaling, disabled bypasses branch classification.",
+    "default": {
+      "mode": "advisory",
+      "authorityBranchPatterns": [
+        "main",
+        "master",
+        "release/phase-*"
+      ],
+      "workerBranchPatterns": [
+        "feature/*",
+        "task/*"
+      ],
+      "workerBranchMutations": "deny"
+    },
+    "domainScope": "project",
+    "owningModule": "task-engine",
+    "sensitive": false,
+    "requiresRestart": false,
+    "requiresApproval": false,
+    "exposure": "public",
+    "writableLayers": [
+      "project",
+      "user"
+    ]
+  },
+  "tasks.stateAuthority.mode": {
+    "key": "tasks.stateAuthority.mode",
+    "type": "string",
+    "description": "Task-state branch authority posture: enforce, advisory, or disabled.",
+    "default": "advisory",
+    "allowedValues": [
+      "enforce",
+      "advisory",
+      "disabled"
+    ],
+    "domainScope": "project",
+    "owningModule": "task-engine",
+    "sensitive": false,
+    "requiresRestart": false,
+    "requiresApproval": false,
+    "exposure": "public",
+    "writableLayers": [
+      "project",
+      "user"
+    ]
+  },
+  "tasks.stateAuthority.workerBranchMutations": {
+    "key": "tasks.stateAuthority.workerBranchMutations",
+    "type": "string",
+    "description": "When mode=enforce and branch is classified worker, either return a structured denial (deny) or emit a mutation intent payload (intent).",
+    "default": "deny",
+    "allowedValues": [
+      "deny",
+      "intent"
+    ],
+    "domainScope": "project",
+    "owningModule": "task-engine",
+    "sensitive": false,
+    "requiresRestart": false,
+    "requiresApproval": false,
+    "exposure": "public",
+    "writableLayers": [
+      "project",
+      "user"
+    ]
+  },
+  "tasks.stateAuthority.authorityBranchPatterns": {
+    "key": "tasks.stateAuthority.authorityBranchPatterns",
+    "type": "array",
+    "description": "Glob-like branch patterns treated as authority (supports * and ? wildcards).",
+    "default": [
+      "main",
+      "master",
+      "release/phase-*"
+    ],
+    "domainScope": "project",
+    "owningModule": "task-engine",
+    "sensitive": false,
+    "requiresRestart": false,
+    "requiresApproval": false,
+    "exposure": "public",
+    "writableLayers": [
+      "project",
+      "user"
+    ]
+  },
+  "tasks.stateAuthority.workerBranchPatterns": {
+    "key": "tasks.stateAuthority.workerBranchPatterns",
+    "type": "array",
+    "description": "Glob-like branch patterns treated as worker branches (supports * and ? wildcards).",
+    "default": [
+      "feature/*",
+      "task/*"
+    ],
+    "domainScope": "project",
+    "owningModule": "task-engine",
+    "sensitive": false,
+    "requiresRestart": false,
+    "requiresApproval": false,
+    "exposure": "public",
+    "writableLayers": [
+      "project",
+      "user"
+    ]
+  },
   "tasks.canonicalBackend": {
     "key": "tasks.canonicalBackend",
     "type": "object",
@@ -155,6 +263,59 @@
       "advisory",
       "enforce"
     ],
+    "domainScope": "project",
+    "owningModule": "task-engine",
+    "sensitive": false,
+    "requiresRestart": false,
+    "requiresApproval": false,
+    "exposure": "public",
+    "writableLayers": [
+      "project",
+      "user"
+    ]
+  },
+  "tasks.phaseKickoff.enforcementMode": {
+    "key": "tasks.phaseKickoff.enforcementMode",
+    "type": "string",
+    "description": "Phase rollover kickoff gate for set-current-phase: off runs advisory audit only, advisory returns findings without blocking, enforce blocks live rollover when kickoff readiness reports block-severity findings.",
+    "default": "off",
+    "allowedValues": [
+      "off",
+      "advisory",
+      "enforce"
+    ],
+    "domainScope": "project",
+    "owningModule": "task-engine",
+    "sensitive": false,
+    "requiresRestart": false,
+    "requiresApproval": false,
+    "exposure": "public",
+    "writableLayers": [
+      "project",
+      "user"
+    ]
+  },
+  "tasks.phaseKickoff.staleTaskDays": {
+    "key": "tasks.phaseKickoff.staleTaskDays",
+    "type": "number",
+    "description": "Stale-task threshold in days for set-current-phase kickoff audit (delegates to phase-kickoff-readiness).",
+    "default": 14,
+    "domainScope": "project",
+    "owningModule": "task-engine",
+    "sensitive": false,
+    "requiresRestart": false,
+    "requiresApproval": false,
+    "exposure": "public",
+    "writableLayers": [
+      "project",
+      "user"
+    ]
+  },
+  "tasks.phaseKickoff.checkScopePaths": {
+    "key": "tasks.phaseKickoff.checkScopePaths",
+    "type": "boolean",
+    "description": "When true, set-current-phase kickoff audit includes scope-path staleness checks.",
+    "default": true,
     "domainScope": "project",
     "owningModule": "task-engine",
     "sensitive": false,

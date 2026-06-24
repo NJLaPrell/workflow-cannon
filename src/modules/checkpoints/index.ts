@@ -17,6 +17,10 @@ import {
   rewindBlockedByManifest
 } from "./checkpoint-git.js";
 import {
+  guardBranchSwitchByLease,
+  guardWorkspaceMutationByLease
+} from "../task-engine/coordination/workspace-edit-lease.js";
+import {
   assertCheckpointKitSchema,
   getCheckpointById,
   insertCheckpoint,
@@ -162,6 +166,10 @@ export const checkpointsModule: WorkflowModule = {
 
     if (name === "create-checkpoint") {
       const mode = args.mode === "stash" ? "stash" : "head";
+      const agentSessionId =
+        typeof args.agentSessionId === "string" && args.agentSessionId.trim().length > 0
+          ? args.agentSessionId.trim()
+          : null;
       const taskId = typeof args.taskId === "string" ? args.taskId.trim() : "";
       if (taskId && !TASK_ID_RE.test(taskId)) {
         return { ok: false, code: "invalid-args", message: "taskId must match T### pattern when set" };
@@ -207,6 +215,24 @@ export const checkpointsModule: WorkflowModule = {
             code: "checkpoint-created",
             message: "Checkpoint created (clean tree; head record)",
             data: { checkpointId: id, refKind: "head" as const }
+          };
+        }
+        const guard = guardWorkspaceMutationByLease({
+          workspacePath: ws,
+          action: "stash",
+          callerAgentSessionId: agentSessionId
+        });
+        if (!guard.ok) {
+          return {
+            ok: false,
+            code: "workspace-edit-lease-held",
+            message: guard.message,
+            data: {
+              leasePath: guard.leasePath,
+              leaseStatus: guard.status,
+              holder: guard.holder,
+              action: guard.action
+            }
           };
         }
         const stash = createStash(ws, `workspace-kit:checkpoint:${id}`);
@@ -261,6 +287,11 @@ export const checkpointsModule: WorkflowModule = {
 
     if (name === "rewind-to-checkpoint") {
       const checkpointId = typeof args.checkpointId === "string" ? args.checkpointId.trim() : "";
+      const agentSessionId =
+        typeof args.agentSessionId === "string" && args.agentSessionId.trim().length > 0
+          ? args.agentSessionId.trim()
+          : null;
+      const ownerOverride = args.ownerOverride === true;
       if (!checkpointId) {
         return { ok: false, code: "invalid-args", message: "rewind-to-checkpoint requires checkpointId" };
       }
@@ -281,6 +312,26 @@ export const checkpointsModule: WorkflowModule = {
             "Working tree is not clean; pass force:true to allow destructive rewind, or stash/commit first"
         };
       }
+      const branchGuard = guardBranchSwitchByLease({
+        workspacePath: ws,
+        callerAgentSessionId: agentSessionId,
+        ownerOverride
+      });
+      if (!branchGuard.ok) {
+        return {
+          ok: false,
+          code: "workspace-edit-lease-held",
+          message: branchGuard.message,
+          data: {
+            leasePath: branchGuard.leasePath,
+            leaseStatus: branchGuard.status,
+            holder: branchGuard.holder,
+            action: branchGuard.action,
+            overrideRequired: branchGuard.overrideRequired
+          }
+        };
+      }
+      const branchGuardWarning = branchGuard.warning;
 
       if (row.refKind === "stash") {
         if (!row.secondaryRef) {
@@ -302,7 +353,12 @@ export const checkpointsModule: WorkflowModule = {
           ok: true,
           code: "checkpoint-rewound",
           message: "Applied stash checkpoint",
-          data: { checkpointId, refKind: "stash", stashSha: row.secondaryRef }
+          data: {
+            checkpointId,
+            refKind: "stash",
+            stashSha: row.secondaryRef,
+            leaseOverrideWarning: branchGuardWarning ?? null
+          }
         };
       }
 
@@ -318,7 +374,12 @@ export const checkpointsModule: WorkflowModule = {
         ok: true,
         code: "checkpoint-rewound",
         message: "Reset hard to recorded HEAD",
-        data: { checkpointId, refKind: "head", commitSha: row.gitHeadSha }
+        data: {
+          checkpointId,
+          refKind: "head",
+          commitSha: row.gitHeadSha,
+          leaseOverrideWarning: branchGuardWarning ?? null
+        }
       };
     }
 

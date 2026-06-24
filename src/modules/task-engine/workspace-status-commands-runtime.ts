@@ -16,6 +16,11 @@ import {
 } from "./persistence/planning-event-draft.js";
 import { upsertPhaseDeliveryHistory } from "./persistence/phase-delivery-history-store.js";
 import { openPlanningStores } from "./persistence/planning-open.js";
+import {
+  buildKickoffReadinessForSetCurrentPhase,
+  kickoffSummaryFromReadiness,
+  readPhaseKickoffConfig
+} from "./phase-kickoff-policy.js";
 import { isPlanningGitSyncPublishActive } from "./persistence/planning-canonical-sync-domains.js";
 import type { TaskEntity, TaskStatus } from "./types.js";
 import {
@@ -241,6 +246,7 @@ function phaseRolloverPresentation(args: {
   exportStatus: Record<string, unknown>;
   suggestedFollowUpCommand: string | null;
   taskCounts?: Record<TaskStatus, number> | null;
+  kickoffSummary?: Record<string, unknown> | null;
 }): Record<string, unknown> {
   return {
     schemaVersion: 1,
@@ -268,6 +274,7 @@ function phaseRolloverPresentation(args: {
     exportStatus: args.exportStatus,
     suggestedFollowUpCommand: args.suggestedFollowUpCommand,
     taskCounts: args.taskCounts ?? null,
+    kickoffSummary: args.kickoffSummary ?? null,
     agentRenderHint:
       "Use this stable phase_rollover_v1 projection for summaries; raw workspaceStatus/config/export fields remain the source of truth."
   };
@@ -773,6 +780,14 @@ export async function runSetCurrentPhase(
     });
     const exportYamlBody = formatWorkspaceStatusDbExportYaml(plannedAfter);
 
+    const kickoffConfig = readPhaseKickoffConfig(ctx.effectiveConfig as Record<string, unknown> | undefined);
+    const kickoffReadiness = await buildKickoffReadinessForSetCurrentPhase(
+      ctx,
+      requiredPhase.phaseKey,
+      kickoffConfig
+    );
+    const kickoffSummary = kickoffSummaryFromReadiness(kickoffReadiness);
+
     if (dryRun) {
       const exportStatus = {
         dryRun: true,
@@ -792,6 +807,7 @@ export async function runSetCurrentPhase(
           canonicalPhase: canonicalAfter,
           exportStatus,
           suggestedFollowUpCommand: null,
+          kickoffReadiness,
           presentation: {
             phaseRollover: phaseRolloverPresentation({
               dryRun: true,
@@ -801,10 +817,35 @@ export async function runSetCurrentPhase(
               configHintAfter,
               canonicalPhase: canonicalAfter,
               exportStatus,
-              suggestedFollowUpCommand: null
+              suggestedFollowUpCommand: null,
+              kickoffSummary
             })
           }
         } as Record<string, unknown>
+      };
+    }
+
+    if (kickoffConfig.enforcementMode === "enforce" && kickoffReadiness.passed !== true) {
+      return {
+        ok: false,
+        code: "phase-kickoff-blocked",
+        message: `Phase kickoff readiness blocked set-current-phase for phase ${requiredPhase.phaseKey}`,
+        data: {
+          kickoffReadiness,
+          presentation: {
+            phaseRollover: phaseRolloverPresentation({
+              dryRun: false,
+              workspaceStatusBefore: before,
+              workspaceStatusAfter: plannedAfter,
+              configHintBefore,
+              configHintAfter,
+              canonicalPhase: canonicalAfter,
+              exportStatus: { dryRun: false, blocked: true },
+              suggestedFollowUpCommand: null,
+              kickoffSummary
+            })
+          }
+        }
       };
     }
 
@@ -923,6 +964,7 @@ export async function runSetCurrentPhase(
         canonicalPhase: canonicalVerified,
         exportStatus,
         suggestedFollowUpCommand,
+        kickoffReadiness,
         presentation: {
           phaseRollover: phaseRolloverPresentation({
             dryRun: false,
@@ -935,7 +977,8 @@ export async function runSetCurrentPhase(
             configHintAfter: projectConfigPhaseHint(configAfter),
             canonicalPhase: canonicalVerified,
             exportStatus,
-            suggestedFollowUpCommand
+            suggestedFollowUpCommand,
+            kickoffSummary
           })
         }
       } as Record<string, unknown>

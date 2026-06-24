@@ -16,6 +16,12 @@ const webviewClientSrc = readDash("dashboard-webview-client.ts");
 const refreshControllerSrc = readDash("dashboard-refresh-controller.ts");
 const drawerSessionSrc = readDash("drawer-session.ts");
 
+test("phase roster Start runs kickoff audit before set-current-phase", () => {
+  assert.match(providerSrc, /onStartPhaseFromRoster[\s\S]*phase-kickoff-readiness/);
+  assert.match(providerSrc, /Open Queue/);
+  assert.match(providerSrc, /includePhaseKickoff/);
+});
+
 test("DashboardViewProvider defers host refresh while interaction locks are held", () => {
   assert.match(providerSrc, /dashboardInteractionLocks = new Set/);
   assert.match(providerSrc, /isDashboardRefreshDeferred/);
@@ -87,7 +93,7 @@ test("dashboard roster start forces full workspace-wide refresh after set-curren
   );
   assert.match(
     providerSrc,
-    /onStartPhaseFromRoster[\s\S]*projection: "full"[\s\S]*source: "user:phase-roster start"/
+    /onStartPhaseFromRoster[\s\S]*projection: "overview"[\s\S]*source: "user:phase-roster start"/
   );
   assert.match(refreshControllerSrc, /notifyMutationEnd\(\): void \{[\s\S]*onDeferredCleared/);
 });

@@ -56,7 +56,8 @@ const KNOWN_POLICY_OPERATION_IDS = new Set([
   "planning.draft-plan-artifact",
   "planning.review-plan-artifact",
   "planning.accept-plan-artifact",
-  "planning.finalize-plan-to-phase"
+  "planning.finalize-plan-to-phase",
+  "planning.execute-plan-artifact"
 ]);
 
 const ALLOWED_SENSITIVITY = new Set(["non-sensitive", "sensitive", "sensitive-with-dryrun"]);

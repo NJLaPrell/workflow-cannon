@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workflow-cannon.dev/schemas/task-mutation-intent.v1.json",
+  "title": "Task mutation intent v1",
+  "description": "Worker-branch captured mutation intent persisted under git common-dir workflow-cannon/intents.",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "intentId",
+    "kind",
+    "requestedAction",
+    "payload",
+    "evidence",
+    "createdAt",
+    "status"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "intentId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{5,127}$"
+    },
+    "kind": { "const": "task-mutation" },
+    "taskId": { "type": ["string", "null"] },
+    "requestedAction": { "type": "string", "minLength": 1 },
+    "payload": { "type": "object" },
+    "evidence": { "type": "object" },
+    "createdBy": { "type": ["string", "null"] },
+    "branch": { "type": ["string", "null"] },
+    "headSha": { "type": ["string", "null"] },
+    "worktreePath": { "type": ["string", "null"] },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "planningGeneration": { "type": ["integer", "null"], "minimum": 0 },
+    "status": {
+      "type": "string",
+      "enum": ["pending", "applied", "rejected"]
+    },
+    "resolvedAt": { "type": "string", "format": "date-time" },
+    "resolvedBy": { "type": ["string", "null"] },
+    "resolutionReason": { "type": ["string", "null"] },
+    "appliedCommand": { "type": "string" },
+    "applyResultCode": { "type": "string" }
+  }
+}

@@ -66,7 +66,8 @@ export type PolicyOperationId =
   | "planning.draft-plan-artifact"
   | "planning.review-plan-artifact"
   | "planning.accept-plan-artifact"
-  | "planning.finalize-plan-to-phase";
+  | "planning.finalize-plan-to-phase"
+  | "planning.execute-plan-artifact";
 
 function buildBuiltinCommandToOperation(): Record<string, PolicyOperationId | undefined> {
   const out: Record<string, PolicyOperationId | undefined> = {};

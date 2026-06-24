@@ -1,0 +1,40 @@
+{
+  "ok": true,
+  "code": "run-args-schema",
+  "command": "phase-kickoff-readiness",
+  "schema": {
+    "type": "object"
+  },
+  "schemaSource": "pilot-run-args-snapshot",
+  "sampleArgs": {},
+  "examples": [
+    {
+      "description": "Minimal argv example",
+      "argv": "workspace-kit run phase-kickoff-readiness '{}'"
+    }
+  ],
+  "instructionPath": "src/modules/task-engine/instructions/phase-kickoff-readiness.md",
+  "moduleId": "task-engine",
+  "description": "Read-only phase kickoff audit: planning, git, scope paths, validation, and doctor slices.",
+  "policy": {
+    "sensitivity": "non-sensitive",
+    "operationId": null,
+    "jsonApprovalRequired": false
+  },
+  "planningGeneration": {
+    "cliPrelude": false,
+    "expectedPlanningGeneration": "not required by CLI prelude"
+  },
+  "idempotency": {
+    "clientMutationId": false
+  },
+  "responseTemplate": {
+    "defaultResponseTemplateId": "default"
+  },
+  "remediationContract": ".ai/runbooks/agent-task-engine-ergonomics.md",
+  "discovery": {
+    "listCommands": "pnpm exec wk run --list-commands",
+    "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
+  },
+  "invocationId": "eed078e8-a62d-4536-b923-853d4f79fcf4"
+}

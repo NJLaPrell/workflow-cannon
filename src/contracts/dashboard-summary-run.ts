@@ -106,6 +106,8 @@ export type DashboardApprovalQueueSummary = {
   policyArtifacts: Array<{ relativePath: string; role: string }>;
 };
 
+export type DashboardTaskMutationIntentsSummary = { schemaVersion: 1; count: number; top: Array<{ intentId: string; taskId: string | null; requestedAction: string; status: string; createdAt: string; createdBy: string | null; branch: string | null; planningGeneration: number | null; }>; };
+
 export type DashboardPhaseBucket = Record<string, unknown>;
 
 export type DashboardListSummary = {
@@ -581,6 +583,25 @@ export type DashboardPhaseDeliveryHistoryRow = {
   updatedAt: string;
 };
 
+export type DashboardPhaseKickoffFinding = {
+  code: string;
+  severity: string;
+  message: string;
+  slice?: string;
+  taskId?: string;
+  path?: string;
+};
+
+/** Present when `dashboard-summary` is invoked with `includePhaseKickoff: true`. */
+export type DashboardPhaseKickoffSummary = {
+  schemaVersion: 1;
+  phaseKey: string | null;
+  passed: boolean;
+  findingCount: number;
+  enforcementMode: "off" | "advisory" | "enforce";
+  findings: DashboardPhaseKickoffFinding[];
+};
+
 export type DashboardSummaryData = {
   schemaVersion: 7;
   /** When set, indicates which section slice this payload targets (`full` when omitted for legacy callers). */
@@ -634,8 +655,11 @@ export type DashboardSummaryData = {
   humanGatesSummary: DashboardHumanGatesSummary;
   /** Improvement tasks awaiting `review-item` (ready / in_progress). */
   approvalQueue: DashboardApprovalQueueSummary;
+  taskMutationIntents?: DashboardTaskMutationIntentsSummary;
   /** Present when `dashboard-summary` is invoked with `includePhaseFocus: true`. */
   phaseFocus?: AgentPhaseFocusDashboard;
+  /** Present when `dashboard-summary` is invoked with `includePhaseKickoff: true`. */
+  phaseKickoff?: DashboardPhaseKickoffSummary;
   /** Per-phase phase-journal note counts + current-phase silence signal. */
   phaseJournalStats: DashboardPhaseJournalStats;
   completedSummary: DashboardListSummary;

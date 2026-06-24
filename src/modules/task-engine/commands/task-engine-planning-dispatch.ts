@@ -16,6 +16,7 @@ import { resolveFeatureTaxonomyRuntimeCommands } from "./task-feature-taxonomy-r
 import type { OpenedPlanningStores } from "../persistence/planning-open.js";
 import { TaskStore } from "../persistence/store.js";
 import { resolvePhaseDeliveryReadoutCommands } from "./phase-delivery-readout-commands.js";
+import { runPhaseKickoffReadinessCommand } from "./phase-kickoff-readiness-command.js";
 import { runUpsertPhaseCatalogEntry } from "../phase-catalog-commands-runtime.js";
 import {
   resolveMaintainerDeliveryPolicyCommand,
@@ -30,8 +31,56 @@ import { runBatchTransitionCommand } from "./batch-transition-on-command.js";
 import { runReportDefectCommand } from "./report-defect-on-command.js";
 import { runSyncTaskStoreAfterMergeCommand } from "./sync-task-store-after-merge-command.js";
 import { isTaskIntentCommand, runClaimNextTaskIntent, runTaskIntentTransition } from "./task-intent-commands.js";
+import {
+  createTaskMutationIntentFromAuthorityGate,
+  runApplyTaskMutationIntentCommand,
+  runCreateTaskMutationIntentCommand,
+  runListTaskMutationIntentsCommand,
+  runRejectTaskMutationIntentCommand
+} from "./task-mutation-intent-commands.js";
+import {
+  runApplyIsolatedProposalCommand,
+  runCreateIsolatedProposalCommand,
+  runDiscardIsolatedProposalCommand,
+  runListIsolatedProposalsCommand,
+  runOpenIsolatedProposalPrCommand,
+  runRecordIsolatedProposalValidationCommand,
+  runRecoverIsolatedProposalCommand,
+  runViewIsolatedProposalDiffCommand
+} from "./isolated-proposal-commands.js";
+import { runExportTaskStateArtifactsCommand } from "./task-state-export-commands.js";
+import { runListRemoteRunsCommand } from "./remote-run-commands.js";
 import { resolveTaskPhaseCommands } from "./task-phase-on-command.js";
 import { runTaskRowMutationCommands } from "./task-row-mutation-commands.js";
+import {
+  isTaskStateAuthorityMutationAllowed,
+  resolveTaskStateAuthorityPosture
+} from "../task-state-authority.js";
+
+const TASK_STATE_AUTHORITY_MUTATION_COMMANDS = new Set<string>([
+  "run-transition",
+  "batch-transition",
+  "start-task",
+  "complete-task",
+  "block-task",
+  "pause-task",
+  "unblock-task",
+  "demote-task",
+  "accept-improvement",
+  "reject-improvement",
+  "claim-next-task",
+  "create-task",
+  "create-task-from-plan",
+  "persist-planning-execution-drafts",
+  "update-task",
+  "apply-task-batch",
+  "convert-phase-note-to-task",
+  "assign-task-phase",
+  "clear-task-phase",
+  "add-dependency",
+  "remove-dependency",
+  "upsert-phase-catalog-entry"
+]);
 
 /**
  * Task Engine commands that require opened planning stores (`openPlanningStores`).
@@ -43,6 +92,41 @@ export async function dispatchTaskEnginePlanningCommands(
   store: TaskStore
 ): Promise<ModuleCommandResult> {
   const args = command.args ?? {};
+  if (TASK_STATE_AUTHORITY_MUTATION_COMMANDS.has(command.name)) {
+    const posture = resolveTaskStateAuthorityPosture(ctx);
+    if (!isTaskStateAuthorityMutationAllowed(posture)) {
+      const payload = {
+        schemaVersion: 1,
+        command: command.name,
+        args,
+        planningGeneration: planning.sqliteDual.getPlanningGeneration(),
+        posture
+      };
+      if (posture.classification === "worker" && posture.workerBranchMutations === "intent") {
+        const created = createTaskMutationIntentFromAuthorityGate(
+          ctx,
+          planning.sqliteDual.getPlanningGeneration(),
+          command.name,
+          args
+        );
+        if (created.ok) {
+          return created;
+        }
+        return {
+          ok: false,
+          code: "task-state-authority-denied",
+          message: `Mutation '${command.name}' requires intent capture, but intent persistence failed`,
+          data: { ...payload, intentCaptureFailure: created }
+        };
+      }
+      return {
+        ok: false,
+        code: "task-state-authority-denied",
+        message: `Mutation '${command.name}' is denied for task-state authority classification '${posture.classification}'`,
+        data: payload
+      };
+    }
+  }
 
   const agentActivity = resolveAgentActivityCommands(command, ctx, planning);
   if (agentActivity !== null) {
@@ -67,6 +151,10 @@ export async function dispatchTaskEnginePlanningCommands(
   const phaseDeliveryReadout = await resolvePhaseDeliveryReadoutCommands(command, ctx, planning);
   if (phaseDeliveryReadout !== null) {
     return phaseDeliveryReadout;
+  }
+
+  if (command.name === "phase-kickoff-readiness") {
+    return runPhaseKickoffReadinessCommand(ctx, planning, store, args as Record<string, unknown>);
   }
 
   if (command.name === "upsert-phase-catalog-entry") {
@@ -122,6 +210,64 @@ export async function dispatchTaskEnginePlanningCommands(
 
   if (command.name === "claim-next-task") {
     return runClaimNextTaskIntent(ctx, planning, args as Record<string, unknown>);
+  }
+
+  if (command.name === "create-task-mutation-intent") {
+    return runCreateTaskMutationIntentCommand(ctx, planning.sqliteDual.getPlanningGeneration(), args);
+  }
+
+  if (command.name === "list-task-mutation-intents") {
+    return runListTaskMutationIntentsCommand(ctx, args);
+  }
+
+  if (command.name === "apply-task-mutation-intent") {
+    return runApplyTaskMutationIntentCommand(ctx, args, async (commandName, commandArgs) =>
+      dispatchTaskEnginePlanningCommands({ name: commandName, args: commandArgs }, ctx, planning, store)
+    );
+  }
+
+  if (command.name === "reject-task-mutation-intent") {
+    return runRejectTaskMutationIntentCommand(ctx, args);
+  }
+
+  if (command.name === "create-isolated-proposal") {
+    return runCreateIsolatedProposalCommand(ctx, args, store);
+  }
+
+  if (command.name === "list-isolated-proposals") {
+    return runListIsolatedProposalsCommand(ctx, args);
+  }
+
+  if (command.name === "list-remote-runs") {
+    return runListRemoteRunsCommand(ctx, args);
+  }
+
+  if (command.name === "discard-isolated-proposal") {
+    return runDiscardIsolatedProposalCommand(ctx, args);
+  }
+
+  if (command.name === "recover-isolated-proposal") {
+    return runRecoverIsolatedProposalCommand(ctx, args);
+  }
+
+  if (command.name === "view-isolated-proposal-diff") {
+    return runViewIsolatedProposalDiffCommand(ctx, args);
+  }
+
+  if (command.name === "apply-isolated-proposal") {
+    return runApplyIsolatedProposalCommand(ctx, args);
+  }
+
+  if (command.name === "open-isolated-proposal-pr") {
+    return runOpenIsolatedProposalPrCommand(ctx, args);
+  }
+
+  if (command.name === "record-isolated-proposal-validation") {
+    return runRecordIsolatedProposalValidationCommand(ctx, args);
+  }
+
+  if (command.name === "export-task-state-artifacts") {
+    return runExportTaskStateArtifactsCommand(ctx, args, store);
   }
 
   if (isTaskIntentCommand(command.name)) {
