@@ -77,7 +77,10 @@ test("isolated proposal lifecycle tracks branch/worktree, actions, validation, i
   const proposal = created.data.proposal;
   assert.equal(proposal.taskIds[0], "T100193");
   assert.ok(fs.existsSync(proposal.worktreePath));
-  assert.equal(git(workspacePath, ["branch", "--list", proposal.proposalBranch]), proposal.proposalBranch);
+  assert.equal(
+    git(workspacePath, ["branch", "--list", proposal.proposalBranch]).replace(/^[*+\s]+/, ""),
+    proposal.proposalBranch
+  );
 
   await writeFile(path.join(proposal.worktreePath, "feature.txt"), "hello\n", "utf8");
   git(proposal.worktreePath, ["add", "feature.txt"]);
