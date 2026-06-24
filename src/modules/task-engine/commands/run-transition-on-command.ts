@@ -8,6 +8,10 @@ import {
   readDeliveryEvidenceEnforcementMode
 } from "../delivery-evidence.js";
 import {
+  createPlanArtifactExecuteGuard,
+  readPlanArtifactExecuteEnforcementMode
+} from "../plan-artifact-execute-policy.js";
+import {
   buildDeliveryEvidencePolicyContext,
   resolveMaintainerDeliveryPolicy
 } from "../maintainer-delivery-policy-resolver.js";
@@ -139,6 +143,7 @@ export async function runTransitionOnCommand(
       store,
       [
         createTaskIntakeAcceptGuard({ effectiveConfig }),
+        createPlanArtifactExecuteGuard({ enforcementMode: readPlanArtifactExecuteEnforcementMode(ctx.effectiveConfig as Record<string, unknown> | undefined), effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined, workspacePath: ctx.workspacePath }),
         createDeliveryEvidenceGuard({
           enforcementMode: deliveryEvidenceMode,
           resolvePolicyContext: (task) => {

@@ -31,6 +31,7 @@ import { TaskStore } from "../persistence/store.js";
 import { strictValidationError } from "./strict-store-validation.js";
 import { validateTaskSetForStrictMode } from "../strict-task-validation.js";
 import { validateDeliveryEvidenceMetadata } from "../delivery-evidence.js";
+import { evaluatePersistPlanRefExecuteGate, readPlanArtifactExecuteEnforcementMode } from "../plan-artifact-execute-policy.js";
 import { findUnknownFeatureIds, taskTypeFailsClosedOnUnknownFeatures } from "../task-feature-mutation-validation.js";
 import { validateKnownTaskTypeRequirements } from "../task-type-validation.js";
 import {
@@ -589,6 +590,8 @@ export async function runTaskRowMutationCommands(
     }
     const planRef =
       typeof args.planRef === "string" && args.planRef.trim().length > 0 ? args.planRef.trim() : undefined;
+    const planRefGate = evaluatePersistPlanRefExecuteGate({ enforcementMode: readPlanArtifactExecuteEnforcementMode(ctx.effectiveConfig as Record<string, unknown> | undefined), workspacePath: ctx.workspacePath, planRef });
+    if (planRefGate) return planRefGate;
     const planningTypeMeta =
       typeof args.planningType === "string" && args.planningType.trim().length > 0 ? args.planningType.trim() : undefined;
     const targetPhaseKey =

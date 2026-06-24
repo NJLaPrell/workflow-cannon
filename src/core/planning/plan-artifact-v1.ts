@@ -151,6 +151,31 @@ export type PlanArtifactWbsItem = {
   generatedTaskPayload: PlanArtifactGeneratedTaskPayload;
 };
 
+/** Recorded when `execute-plan-artifact` links a task to an accepted/finalized plan. */
+export type PlanArtifactExecuteEvidenceBundle = {
+  schemaVersion: 1;
+  command: "execute-plan-artifact";
+  planId: string;
+  planRef: string;
+  planRevision: number;
+  approvedPlanVersion?: number;
+  taskId: string;
+  wbsId?: string;
+  linkedAt: string;
+  linkedBy: string;
+};
+
+export type PlanArtifactExecutionLinkage = {
+  schemaVersion: 1;
+  taskId: string;
+  wbsId?: string;
+  linkedAt: string;
+  linkedBy: string;
+  planVersion: number;
+  approvedPlanVersion?: number;
+  evidenceBundle: PlanArtifactExecuteEvidenceBundle;
+};
+
 export type PlanArtifactApprovalRecord = {
   schemaVersion: 1;
   confirmed: boolean;
@@ -207,6 +232,7 @@ export type PlanArtifactV1 = {
    */
   taskGenerationPayloads?: PlanArtifactGeneratedTaskPayload[];
   approvalRecord?: PlanArtifactApprovalRecord;
+  executionLinkages?: PlanArtifactExecutionLinkage[];
   provenance: PlanArtifactProvenance;
 };
 

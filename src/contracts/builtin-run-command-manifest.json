@@ -1354,6 +1354,15 @@
   },
   {
     "moduleId": "planning",
+    "name": "execute-plan-artifact",
+    "file": "execute-plan-artifact.md",
+    "description": "Link a task to an accepted or finalized PlanArtifact before execute paths (run-transition start).",
+    "policyOperationId": "planning.execute-plan-artifact",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "planning",
     "name": "list-planning-types",
     "file": "list-planning-types.md",
     "description": "List supported planning workflow types and their intent.",

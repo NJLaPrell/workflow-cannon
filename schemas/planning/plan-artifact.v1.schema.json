@@ -91,7 +91,12 @@
         "$ref": "https://workflow-cannon.dev/schemas/planning/plan-artifact-wbs-item.v1.json#/$defs/generatedTaskPayload"
       }
     },
+    "executionLinkage": { "$ref": "#/$defs/executionLinkage" },
     "approvalRecord": { "$ref": "#/$defs/approvalRecord" },
+    "executionLinkages": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/executionLinkage" }
+    },
     "provenance": { "$ref": "#/$defs/provenance" }
   },
   "$defs": {
@@ -246,6 +251,53 @@
         "label": { "type": "string", "minLength": 1 },
         "rationale": { "type": "string", "minLength": 1 },
         "isPrimary": { "type": "boolean" }
+      }
+    },
+    "executionLinkage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion",
+        "taskId",
+        "linkedAt",
+        "linkedBy",
+        "planVersion",
+        "evidenceBundle"
+      ],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "taskId": { "type": "string", "minLength": 1 },
+        "wbsId": { "type": "string", "minLength": 1 },
+        "linkedAt": { "type": "string", "minLength": 1 },
+        "linkedBy": { "type": "string", "minLength": 1 },
+        "planVersion": { "type": "integer", "minimum": 1 },
+        "approvedPlanVersion": { "type": "integer", "minimum": 1 },
+        "evidenceBundle": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "schemaVersion",
+            "command",
+            "planId",
+            "planRef",
+            "planRevision",
+            "taskId",
+            "linkedAt",
+            "linkedBy"
+          ],
+          "properties": {
+            "schemaVersion": { "const": 1 },
+            "command": { "const": "execute-plan-artifact" },
+            "planId": { "type": "string", "minLength": 1 },
+            "planRef": { "type": "string", "minLength": 1 },
+            "planRevision": { "type": "integer", "minimum": 1 },
+            "approvedPlanVersion": { "type": "integer", "minimum": 1 },
+            "taskId": { "type": "string", "minLength": 1 },
+            "wbsId": { "type": "string", "minLength": 1 },
+            "linkedAt": { "type": "string", "minLength": 1 },
+            "linkedBy": { "type": "string", "minLength": 1 }
+          }
+        }
       }
     },
     "approvalRecord": {

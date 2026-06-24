@@ -55,6 +55,8 @@ export {
   type PlanArtifactArchitecture,
   type PlanArtifactArchitectureDecision,
   type PlanArtifactConfidence,
+  type PlanArtifactExecuteEvidenceBundle,
+  type PlanArtifactExecutionLinkage,
   type PlanArtifactGeneratedTaskPayload,
   type PlanArtifactIdentity,
   type PlanArtifactPhaseRecommendation,
