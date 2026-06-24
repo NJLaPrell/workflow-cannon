@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-06-24T00:14:00.000Z",
+  "generatedAt": "2026-06-24T01:42:47.283Z",
   "commands": [
     {
       "name": "accept-improvement",
@@ -893,11 +893,6 @@
       "moduleId": "task-engine"
     },
     {
-      "name": "phase-kickoff-readiness",
-      "path": ".ai/agent-cli-snippets/by-command/phase-kickoff-readiness.json",
-      "moduleId": "task-engine"
-    },
-    {
       "name": "phase-delivery-preflight",
       "path": ".ai/agent-cli-snippets/by-command/phase-delivery-preflight.json",
       "moduleId": "task-engine"
@@ -910,6 +905,11 @@
     {
       "name": "phase-focus-dashboard",
       "path": ".ai/agent-cli-snippets/by-command/phase-focus-dashboard.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "phase-kickoff-readiness",
+      "path": ".ai/agent-cli-snippets/by-command/phase-kickoff-readiness.json",
       "moduleId": "task-engine"
     },
     {

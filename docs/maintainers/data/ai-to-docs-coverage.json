@@ -1,7 +1,11 @@
 {
   "version": 1,
-  "description": "Source (.ai) → human render (docs/maintainers). Regenerate list when adding paths; drift + orphan checks consume this file.",
+  "description": "Source (.ai) \u2192 human render (docs/maintainers). Regenerate list when adding paths; drift + orphan checks consume this file.",
   "mappings": [
+    {
+      "source": ".ai/playbooks/README.md",
+      "output": "docs/maintainers/playbooks/README.md"
+    },
     {
       "source": ".ai/playbooks/improvement-scout.md",
       "output": "docs/maintainers/playbooks/improvement-scout.md"
@@ -23,10 +27,6 @@
       "output": "docs/maintainers/playbooks/planner-chat.md"
     },
     {
-      "source": ".ai/playbooks/README.md",
-      "output": "docs/maintainers/playbooks/README.md"
-    },
-    {
       "source": ".ai/playbooks/skill-attachments.md",
       "output": "docs/maintainers/playbooks/skill-attachments.md"
     },
@@ -45,6 +45,10 @@
     {
       "source": ".ai/playbooks/workspace-kit-chat-onboarding.md",
       "output": "docs/maintainers/playbooks/workspace-kit-chat-onboarding.md"
+    },
+    {
+      "source": ".ai/runbooks/README.md",
+      "output": "docs/maintainers/runbooks/README.md"
     },
     {
       "source": ".ai/runbooks/agent-guidance-onboarding.md",
@@ -167,6 +171,10 @@
       "output": "docs/maintainers/runbooks/phase-journal-retention.md"
     },
     {
+      "source": ".ai/runbooks/phase-kickoff-readiness.md",
+      "output": "docs/maintainers/runbooks/phase-kickoff-readiness.md"
+    },
+    {
       "source": ".ai/runbooks/plan-artifact-workflow.md",
       "output": "docs/maintainers/runbooks/plan-artifact-workflow.md"
     },
@@ -177,10 +185,6 @@
     {
       "source": ".ai/runbooks/principal-architectural-review-themes.md",
       "output": "docs/maintainers/runbooks/principal-architectural-review-themes.md"
-    },
-    {
-      "source": ".ai/runbooks/README.md",
-      "output": "docs/maintainers/runbooks/README.md"
     },
     {
       "source": ".ai/runbooks/recommendation-and-transcript-triggers.md",
@@ -223,12 +227,12 @@
       "output": "docs/maintainers/runbooks/workspace-status-sqlite.md"
     },
     {
-      "source": ".ai/workbooks/phase2-config-policy-workbook.md",
-      "output": "docs/maintainers/workbooks/phase2-config-policy-workbook.md"
-    },
-    {
       "source": ".ai/workbooks/README.md",
       "output": "docs/maintainers/workbooks/README.md"
+    },
+    {
+      "source": ".ai/workbooks/phase2-config-policy-workbook.md",
+      "output": "docs/maintainers/workbooks/phase2-config-policy-workbook.md"
     },
     {
       "source": ".ai/workbooks/task-engine-workbook.md",

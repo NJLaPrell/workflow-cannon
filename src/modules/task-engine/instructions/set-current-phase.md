@@ -43,6 +43,8 @@ For agent summaries, read **`data.presentation.phaseRollover`**. It is the stabl
 
 When **`tasks.phaseKickoff.enforcementMode`** is not **`off`**, responses also include **`data.kickoffReadiness`** with the full kickoff audit (same contract as **`phase-kickoff-readiness`**). Live writes with **`enforce`** return **`phase-kickoff-blocked`** when block-severity findings are present and leave **`kit_workspace_status`** unchanged.
 
+**Agent runbook:** **`.ai/runbooks/phase-kickoff-readiness.md`** — when to run, argv table, finding codes, remediation loops.
+
 ## Examples
 
 Dry run:
