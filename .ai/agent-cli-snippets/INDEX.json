@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-06-24T01:42:47.283Z",
+  "generatedAt": "2026-06-24T01:52:27.479Z",
   "commands": [
     {
       "name": "accept-improvement",
@@ -40,6 +40,11 @@
     {
       "name": "agent-session-snapshot",
       "path": ".ai/agent-cli-snippets/by-command/agent-session-snapshot.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "apply-isolated-proposal",
+      "path": ".ai/agent-cli-snippets/by-command/apply-isolated-proposal.json",
       "moduleId": "task-engine"
     },
     {
@@ -443,6 +448,11 @@
       "moduleId": "ideas"
     },
     {
+      "name": "create-isolated-proposal",
+      "path": ".ai/agent-cli-snippets/by-command/create-isolated-proposal.json",
+      "moduleId": "task-engine"
+    },
+    {
       "name": "create-task",
       "path": ".ai/agent-cli-snippets/by-command/create-task.json",
       "moduleId": "task-engine"
@@ -563,6 +573,11 @@
       "moduleId": "plugins"
     },
     {
+      "name": "discard-isolated-proposal",
+      "path": ".ai/agent-cli-snippets/by-command/discard-isolated-proposal.json",
+      "moduleId": "task-engine"
+    },
+    {
       "name": "dismiss-phase-note",
       "path": ".ai/agent-cli-snippets/by-command/dismiss-phase-note.json",
       "moduleId": "task-engine"
@@ -615,6 +630,11 @@
     {
       "name": "export-feature-taxonomy-json",
       "path": ".ai/agent-cli-snippets/by-command/export-feature-taxonomy-json.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "export-task-state-artifacts",
+      "path": ".ai/agent-cli-snippets/by-command/export-task-state-artifacts.json",
       "moduleId": "task-engine"
     },
     {
@@ -808,6 +828,11 @@
       "moduleId": "ideas"
     },
     {
+      "name": "list-isolated-proposals",
+      "path": ".ai/agent-cli-snippets/by-command/list-isolated-proposals.json",
+      "moduleId": "task-engine"
+    },
+    {
       "name": "list-memory",
       "path": ".ai/agent-cli-snippets/by-command/list-memory.json",
       "moduleId": "project-memory"
@@ -875,6 +900,11 @@
     {
       "name": "migrate-task-persistence",
       "path": ".ai/agent-cli-snippets/by-command/migrate-task-persistence.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "open-isolated-proposal-pr",
+      "path": ".ai/agent-cli-snippets/by-command/open-isolated-proposal-pr.json",
       "moduleId": "task-engine"
     },
     {
@@ -986,6 +1016,16 @@
       "name": "reconcile-assignment",
       "path": ".ai/agent-cli-snippets/by-command/reconcile-assignment.json",
       "moduleId": "team-execution"
+    },
+    {
+      "name": "record-isolated-proposal-validation",
+      "path": ".ai/agent-cli-snippets/by-command/record-isolated-proposal-validation.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "recover-isolated-proposal",
+      "path": ".ai/agent-cli-snippets/by-command/recover-isolated-proposal.json",
+      "moduleId": "task-engine"
     },
     {
       "name": "register-assignment",
@@ -1300,6 +1340,11 @@
     {
       "name": "upsert-phase-catalog-entry",
       "path": ".ai/agent-cli-snippets/by-command/upsert-phase-catalog-entry.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "view-isolated-proposal-diff",
+      "path": ".ai/agent-cli-snippets/by-command/view-isolated-proposal-diff.json",
       "moduleId": "task-engine"
     },
     {

@@ -254,6 +254,70 @@
   },
   {
     "moduleId": "task-engine",
+    "name": "create-isolated-proposal",
+    "file": "create-isolated-proposal.md",
+    "description": "Create an isolated proposal branch/worktree artifact tied to task ids with metadata tracking.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "list-isolated-proposals",
+    "file": "list-isolated-proposals.md",
+    "description": "List isolated proposal artifacts with actions (View Diff, Apply, Open PR, Discard).",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "view-isolated-proposal-diff",
+    "file": "view-isolated-proposal-diff.md",
+    "description": "Show changed-file tracking and optional patch diff for one isolated proposal.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "apply-isolated-proposal",
+    "file": "apply-isolated-proposal.md",
+    "description": "Dry-run or apply isolated proposal branch merge into current checkout.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "open-isolated-proposal-pr",
+    "file": "open-isolated-proposal-pr.md",
+    "description": "Dry-run or execute push + gh pr create for isolated proposal branch.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "discard-isolated-proposal",
+    "file": "discard-isolated-proposal.md",
+    "description": "Discard isolated proposal by removing its worktree and marking metadata discarded.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "recover-isolated-proposal",
+    "file": "recover-isolated-proposal.md",
+    "description": "Recover a discarded isolated proposal by re-attaching branch/worktree.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "record-isolated-proposal-validation",
+    "file": "record-isolated-proposal-validation.md",
+    "description": "Append validation evidence rows to isolated proposal metadata.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
     "name": "list-phase-notes",
     "file": "list-phase-notes.md",
     "description": "List phase notes for a phase with optional filters (bounded projection).",
@@ -882,6 +946,14 @@
     "name": "export-workspace-status",
     "file": "export-workspace-status.md",
     "description": "Write non-authoritative workspace-kit-status.db-export.yaml from kit_workspace_status.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "task-engine",
+    "name": "export-task-state-artifacts",
+    "file": "export-task-state-artifacts.md",
+    "description": "Write deterministic sorted snapshot JSON and append-only event JSONL export artifacts from SQLite/task-state log.",
     "defaultResponseTemplateId": "default",
     "policySensitivity": "non-sensitive"
   },

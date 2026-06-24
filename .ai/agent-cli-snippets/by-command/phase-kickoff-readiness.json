@@ -10,12 +10,12 @@
   "examples": [
     {
       "description": "Minimal argv example",
-      "argv": "workspace-kit run phase-kickoff-readiness '{\"phaseKey\":\"137\"}'"
+      "argv": "workspace-kit run phase-kickoff-readiness '{}'"
     }
   ],
   "instructionPath": "src/modules/task-engine/instructions/phase-kickoff-readiness.md",
   "moduleId": "task-engine",
-  "description": "Read-only phase kickoff audit: scope paths, git staleness, and advisory findings.",
+  "description": "Read-only phase kickoff audit: planning, git, scope paths, validation, and doctor slices.",
   "policy": {
     "sensitivity": "non-sensitive",
     "operationId": null,
@@ -36,5 +36,5 @@
     "listCommands": "pnpm exec wk run --list-commands",
     "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
   },
-  "invocationId": "4f8ed194-8728-4e14-9d87-52a0ede9ef09"
+  "invocationId": "78e75bab-3318-46dc-9ef2-80ae8b47281e"
 }

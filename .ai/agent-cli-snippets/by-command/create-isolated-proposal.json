@@ -1,0 +1,42 @@
+{
+  "ok": true,
+  "code": "run-args-schema",
+  "command": "create-isolated-proposal",
+  "schema": {
+    "type": "object",
+    "additionalProperties": true,
+    "description": "Permissive fallback args schema for 'create-isolated-proposal'. Use instructionPath for command-specific field guidance until a stricter schema is added."
+  },
+  "schemaSource": "manifest-permissive-fallback",
+  "sampleArgs": {},
+  "examples": [
+    {
+      "description": "Minimal argv example",
+      "argv": "workspace-kit run create-isolated-proposal '{}'"
+    }
+  ],
+  "instructionPath": "src/modules/task-engine/instructions/create-isolated-proposal.md",
+  "moduleId": "task-engine",
+  "description": "Create an isolated proposal branch/worktree artifact tied to task ids with metadata tracking.",
+  "policy": {
+    "sensitivity": "non-sensitive",
+    "operationId": null,
+    "jsonApprovalRequired": false
+  },
+  "planningGeneration": {
+    "cliPrelude": false,
+    "expectedPlanningGeneration": "not required by CLI prelude"
+  },
+  "idempotency": {
+    "clientMutationId": false
+  },
+  "responseTemplate": {
+    "defaultResponseTemplateId": "default"
+  },
+  "remediationContract": ".ai/runbooks/agent-task-engine-ergonomics.md",
+  "discovery": {
+    "listCommands": "pnpm exec wk run --list-commands",
+    "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
+  },
+  "invocationId": "ba340e11-3528-4355-9ab5-56e267989dba"
+}
