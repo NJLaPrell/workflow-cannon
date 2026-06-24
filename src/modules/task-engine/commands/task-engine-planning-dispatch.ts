@@ -49,6 +49,7 @@ import {
   runViewIsolatedProposalDiffCommand
 } from "./isolated-proposal-commands.js";
 import { runExportTaskStateArtifactsCommand } from "./task-state-export-commands.js";
+import { runListRemoteRunsCommand } from "./remote-run-commands.js";
 import { resolveTaskPhaseCommands } from "./task-phase-on-command.js";
 import { runTaskRowMutationCommands } from "./task-row-mutation-commands.js";
 import {
@@ -235,6 +236,10 @@ export async function dispatchTaskEnginePlanningCommands(
 
   if (command.name === "list-isolated-proposals") {
     return runListIsolatedProposalsCommand(ctx, args);
+  }
+
+  if (command.name === "list-remote-runs") {
+    return runListRemoteRunsCommand(ctx, args);
   }
 
   if (command.name === "discard-isolated-proposal") {

@@ -132,6 +132,7 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
     "list-phase-catalog",
     "list-phase-notes",
     "list-planning-types",
+    "list-remote-runs",
     "list-task-mutation-intents",
     "list-tasks",
     "migrate-task-persistence",

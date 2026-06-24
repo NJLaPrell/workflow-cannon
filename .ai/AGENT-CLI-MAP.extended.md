@@ -625,6 +625,16 @@ pnpm exec wk run recover-isolated-proposal '{"proposalId":"<id>"}'
 pnpm exec wk run export-task-state-artifacts '{"includeEvents":true}'
 ```
 
+## Remote runs (Cursor background agents) — Tier C
+
+Phase 1 read stub only; persistence and launch/write paths deferred (ADR: `.ai/adrs/ADR-cursor-remote-agent-handoff-v1.md`). Runbook: `.ai/runbooks/cursor-remote-agent-handoff.md`. Metadata: `schemas/remote-run-metadata.v1.json`.
+
+```bash
+pnpm exec wk run list-remote-runs '{}'
+pnpm exec wk run list-remote-runs '{"taskId":"T100334"}'
+pnpm exec wk run list-remote-runs '{"taskId":"T100334","status":"running"}'
+```
+
 ## Optional session opener (habit hook)
 
 Use this Tier C starter block at session start to avoid stale queue assumptions:

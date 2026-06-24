@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-06-24T01:52:27.479Z",
+  "generatedAt": "2026-06-24T02:06:17.738Z",
   "commands": [
     {
       "name": "accept-improvement",
@@ -861,6 +861,11 @@
       "name": "list-plugins",
       "path": ".ai/agent-cli-snippets/by-command/list-plugins.json",
       "moduleId": "plugins"
+    },
+    {
+      "name": "list-remote-runs",
+      "path": ".ai/agent-cli-snippets/by-command/list-remote-runs.json",
+      "moduleId": "task-engine"
     },
     {
       "name": "list-session-grants",

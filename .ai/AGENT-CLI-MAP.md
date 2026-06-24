@@ -147,6 +147,15 @@ Operator runbook: [`.ai/runbooks/task-state-git-operator.md`](./runbooks/task-st
 - `pnpm exec wk run record-isolated-proposal-validation '{"proposalId":"proposal-<id>","command":"pnpm run check","status":"passed"}'`
 - `pnpm exec wk run export-task-state-artifacts '{"outputDir":".workspace-kit/state-export","dryRun":false}'`
 
+## Remote runs (Cursor background agents)
+
+Phase 1 (T100334): read-only `list-remote-runs` stub; launch/write deferred per `.ai/adrs/ADR-cursor-remote-agent-handoff-v1.md`.
+
+- `pnpm exec wk run list-remote-runs '{}'`
+- `pnpm exec wk run list-remote-runs '{"taskId":"T100334"}'`
+
+Runbook: [`.ai/runbooks/cursor-remote-agent-handoff.md`](./runbooks/cursor-remote-agent-handoff.md). Schema: `schemas/remote-run-metadata.v1.json`.
+
 ## Where did the big tables go?
 
 - **Tier A/B/C examples, CAE block, queue-health copy-paste, Ideas/planning ladder:** **`.ai/AGENT-CLI-MAP.extended.md`**

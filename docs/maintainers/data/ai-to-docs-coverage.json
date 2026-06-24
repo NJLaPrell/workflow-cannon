@@ -107,6 +107,10 @@
       "output": "docs/maintainers/runbooks/cursor-long-session.md"
     },
     {
+      "source": ".ai/runbooks/cursor-remote-agent-handoff.md",
+      "output": "docs/maintainers/runbooks/cursor-remote-agent-handoff.md"
+    },
+    {
       "source": ".ai/runbooks/cursor-transcript-automation.md",
       "output": "docs/maintainers/runbooks/cursor-transcript-automation.md"
     },
