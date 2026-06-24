@@ -8,6 +8,8 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-06-24
+
 ## [1.0.0] - 2026-06-23
 
 Major — **Phase 117 Wishlist removal** (retire wishlist ideation surface; migrate operators to Ideas + planner-chat).
