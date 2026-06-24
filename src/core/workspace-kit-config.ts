@@ -121,6 +121,11 @@ export const KIT_CONFIG_DEFAULTS: Record<string, unknown> = {
     },
     deliveryEvidence: {
       enforcementMode: "enforce"
+    },
+    phaseKickoff: {
+      enforcementMode: "off",
+      staleTaskDays: 14,
+      checkScopePaths: true
     }
   },
   /** Dashboard extension read path (Option 2); see `dashboard.dataSource` registry key. */

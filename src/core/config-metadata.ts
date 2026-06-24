@@ -589,6 +589,8 @@ export function validatePersistedConfigDocument(
         k !== "sqliteDatabaseRelativePath" &&
         k !== "strictValidation" &&
         k !== "deliveryEvidence" &&
+        k !== "phaseKickoff" &&
+        k !== "planArtifactExecute" &&
         k !== "intakePolicy" &&
         k !== "planningGenerationPolicy" &&
         k !== "canonicalAuthority" &&
@@ -727,6 +729,37 @@ export function validatePersistedConfigDocument(
       }
       if (de.enforcementMode !== undefined) {
         validateValueForMetadata(REGISTRY["tasks.deliveryEvidence.enforcementMode"]!, de.enforcementMode);
+      }
+    }
+    if (t.phaseKickoff !== undefined) {
+      if (typeof t.phaseKickoff !== "object" || t.phaseKickoff === null || Array.isArray(t.phaseKickoff)) {
+        throw new Error(`config-invalid(${label}): tasks.phaseKickoff must be an object`);
+      }
+      const pk = t.phaseKickoff as Record<string, unknown>;
+      for (const k of Object.keys(pk)) {
+        if (k !== "enforcementMode" && k !== "staleTaskDays" && k !== "checkScopePaths") {
+          throw new Error(`config-invalid(${label}): unknown tasks.phaseKickoff.${k}`);
+        }
+      }
+      if (pk.enforcementMode !== undefined) {
+        validateValueForMetadata(REGISTRY["tasks.phaseKickoff.enforcementMode"]!, pk.enforcementMode);
+      }
+      if (pk.staleTaskDays !== undefined) {
+        validateValueForMetadata(REGISTRY["tasks.phaseKickoff.staleTaskDays"]!, pk.staleTaskDays);
+      }
+      if (pk.checkScopePaths !== undefined) {
+        validateValueForMetadata(REGISTRY["tasks.phaseKickoff.checkScopePaths"]!, pk.checkScopePaths);
+      }
+    }
+    if (t.planArtifactExecute !== undefined) {
+      if (typeof t.planArtifactExecute !== "object" || t.planArtifactExecute === null || Array.isArray(t.planArtifactExecute)) {
+        throw new Error(`config-invalid(${label}): tasks.planArtifactExecute must be an object`);
+      }
+      const pe = t.planArtifactExecute as Record<string, unknown>;
+      for (const k of Object.keys(pe)) {
+        if (k !== "enforcementMode") {
+          throw new Error(`config-invalid(${label}): unknown tasks.planArtifactExecute.${k}`);
+        }
       }
     }
     if (t.intakePolicy !== undefined) {

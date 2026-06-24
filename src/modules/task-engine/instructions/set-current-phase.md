@@ -39,7 +39,9 @@ It does **not** modify task **`phaseKey`** values. Workspace current phase and p
 
 Returns authoritative domain result data: before/after workspace status rows, before/after config hints, canonical phase verification, export status, revisions, and a **`suggestedFollowUpCommand`** when verification detects remaining drift.
 
-For agent summaries, read **`data.presentation.phaseRollover`**. It is the stable summarizer contract (**`kind: "phase_rollover_v1"`**) and is present for dry runs, live writes, and idempotent replays. It contains the compact before/after phase, workspace revision, config hint, export status, optional task counts, and follow-up command fields derived from the raw domain result. Do not retry a mutation just because summary rendering fails; use this projection to summarize the already-returned result.
+For agent summaries, read **`data.presentation.phaseRollover`**. It is the stable summarizer contract (**`kind: "phase_rollover_v1"`**) and is present for dry runs, live writes, and idempotent replays. It contains the compact before/after phase, workspace revision, config hint, export status, optional task counts, optional **`kickoffSummary`** (`passed`, `findingCount`, `topFindings`), and follow-up command fields derived from the raw domain result. Do not retry a mutation just because summary rendering fails; use this projection to summarize the already-returned result.
+
+When **`tasks.phaseKickoff.enforcementMode`** is not **`off`**, responses also include **`data.kickoffReadiness`** with the full kickoff audit (same contract as **`phase-kickoff-readiness`**). Live writes with **`enforce`** return **`phase-kickoff-blocked`** when block-severity findings are present and leave **`kit_workspace_status`** unchanged.
 
 ## Examples
 

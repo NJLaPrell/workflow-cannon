@@ -8,6 +8,9 @@
 - `sqliteDatabaseRelativePath`: SQLite file path for planning + unified module state. Default: `.workspace-kit/tasks/workspace-kit.db`
 - `strictValidation`: Optional runtime strict mode (default `false`). When `true`, task mutations validate the active task set before persistence and fail with `strict-task-validation-failed` on invalid task records.
 - `planArtifactExecute.enforcementMode`: Optional PlanArtifact execute-path gating (`off` | `advisory` | `enforce`; default `off`). When `enforce` or `advisory`, `run-transition` `start` requires prior `execute-plan-artifact` linkage on tasks unless `metadata.localOnly: true` or `metadata.planArtifactExecuteRequired: false`. When `enforce`, `persist-planning-execution-drafts` with `planRef` must reference an accepted or finalized `plan-artifact:<uuid>` plan.
+- `phaseKickoff.enforcementMode`: Phase rollover kickoff gate for **`set-current-phase`** (`off` | `advisory` | `enforce`; default `off`). When not `off`, live and dry-run responses include **`data.kickoffReadiness`** (same shape as **`phase-kickoff-readiness`**) and **`data.presentation.phaseRollover.kickoffSummary`**. When `enforce`, block-severity kickoff findings return **`phase-kickoff-blocked`** without mutating **`kit_workspace_status`**. When `off`, the audit still runs in advisory mode and findings are returned without blocking.
+- `phaseKickoff.staleTaskDays`: Stale-task threshold in days for the embedded kickoff audit (default `14`).
+- `phaseKickoff.checkScopePaths`: When `true` (default), include scope-path staleness checks in the kickoff audit.
 - `transitions.strict`: Enforce strict lifecycle transitions (default: `true`)
 - `defaultTaskType`: Default task type label for new tasks (default: `workspace-kit`)
 - `autoUnblock`: Automatically unblock dependents when a task completes (default: `true`)
