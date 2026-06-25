@@ -752,6 +752,9 @@
         "includePhaseFocus": {
           "type": "boolean"
         },
+        "includePhaseKickoff": {
+          "type": "boolean"
+        },
         "phaseKey": {
           "type": "string"
         },
