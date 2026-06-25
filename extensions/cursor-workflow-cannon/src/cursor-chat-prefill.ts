@@ -1,10 +1,12 @@
 import * as vscode from "vscode";
+import { logWc } from "./runtime/workflow-cannon-log.js";
 
 /** Same handler Cursor's `cursor://anysphere.cursor-deeplink/prompt?text=…` deeplink uses internally. */
 const CURSOR_DEEPLINK_PROMPT_PREFILL = "deeplink.prompt.prefill";
 const CURSOR_PROMPT_DEEPLINK = "cursor://anysphere.cursor-deeplink/prompt";
 const VSCODE_CHAT_OPEN = "workbench.action.chat.open";
 const VSCODE_NEW_CHAT = "workbench.action.chat.newChat";
+const VSCODE_EDITOR_CHAT_START = "vscode.editorChat.start";
 
 /** Cursor-internal IDs vary by build; first match wins. */
 const NEW_AGENT_CHAT_COMMAND_IDS = [
@@ -35,6 +37,7 @@ export type EditorIntegrationState = {
       cursorNewChat: boolean;
       vscodeChatOpen: boolean;
       vscodeNewChat: boolean;
+      vscodeEditorChatStart: boolean;
     };
   };
 };
@@ -45,6 +48,13 @@ export type PrefillCursorChatOptions = {
    * Unknown command IDs are ignored so VS Code / older Cursor still get prefill-only behavior.
    */
   newChat?: boolean;
+};
+
+export type PrefillCursorChatResult = {
+  route: ChatPrefillRoute;
+  opened: boolean;
+  copiedToClipboard: boolean;
+  openedDraft: boolean;
 };
 
 function detectIdeKind(appName: string, uriScheme: string): EditorIdeKind {
@@ -93,6 +103,7 @@ function buildEditorIntegrationState(commandIds: ReadonlySet<string>): EditorInt
   const cursorNewChat = NEW_AGENT_CHAT_COMMAND_IDS.some((id) => commandIds.has(id));
   const vscodeChatOpen = commandIds.has(VSCODE_CHAT_OPEN);
   const vscodeNewChat = commandIds.has(VSCODE_NEW_CHAT);
+  const vscodeEditorChatStart = commandIds.has(VSCODE_EDITOR_CHAT_START);
   const externalCursorDeeplink = uriScheme === "cursor";
   const route = chooseChatPrefillRoute({
     cursorPrefill,
@@ -111,7 +122,8 @@ function buildEditorIntegrationState(commandIds: ReadonlySet<string>): EditorInt
         cursorPrefill,
         cursorNewChat,
         vscodeChatOpen,
-        vscodeNewChat
+        vscodeNewChat,
+        vscodeEditorChatStart
       }
     }
   };
@@ -121,7 +133,7 @@ export async function resolveEditorIntegrationState(): Promise<EditorIntegration
   return buildEditorIntegrationState(await getAvailableCommandIds());
 }
 
-async function tryOpenNewAgentChat(commandIds: ReadonlySet<string>): Promise<void> {
+async function tryOpenNewAgentChat(commandIds: ReadonlySet<string>): Promise<boolean> {
   for (const id of NEW_AGENT_CHAT_COMMAND_IDS) {
     if (!commandIds.has(id)) {
       continue;
@@ -130,10 +142,35 @@ async function tryOpenNewAgentChat(commandIds: ReadonlySet<string>): Promise<voi
       await vscode.commands.executeCommand(id);
       // Let the new session take focus before prefill (avoids racing the previous composer).
       await new Promise<void>((resolve) => setTimeout(resolve, 75));
-      return;
+      return true;
     } catch {
       // Command not registered in this host — try next candidate.
     }
+  }
+  return false;
+}
+
+async function tryOpenCursorPromptDeeplink(text: string): Promise<boolean> {
+  try {
+    const uri = vscode.Uri.parse(`${CURSOR_PROMPT_DEEPLINK}?text=${encodeURIComponent(text)}`);
+    return await vscode.env.openExternal(uri);
+  } catch {
+    return false;
+  }
+}
+
+async function tryOpenPromptDraft(text: string): Promise<boolean> {
+  try {
+    const doc = await vscode.workspace.openTextDocument({
+      language: "markdown",
+      content: text
+    });
+    await vscode.window.showTextDocument(doc, { preview: false, preserveFocus: false });
+    logWc("chat", "prefill fallback draft=openTextDocument success");
+    return true;
+  } catch (error) {
+    logWc("chat", `prefill fallback draft=openTextDocument failed: ${error instanceof Error ? error.message : String(error)}`);
+    return false;
   }
 }
 
@@ -143,10 +180,20 @@ async function tryPrefillVsCodeChat(
   options?: PrefillCursorChatOptions
 ): Promise<boolean> {
   if (options?.newChat) {
+    if (commandIds.has(VSCODE_EDITOR_CHAT_START)) {
+      try {
+        await vscode.commands.executeCommand(VSCODE_EDITOR_CHAT_START);
+        await new Promise<void>((resolve) => setTimeout(resolve, 75));
+        logWc("chat", "prefill route=vscode.editorChat.start success");
+      } catch (error) {
+        logWc("chat", `prefill route=vscode.editorChat.start failed: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    }
     if (commandIds.has(VSCODE_NEW_CHAT)) {
       try {
         await vscode.commands.executeCommand(VSCODE_NEW_CHAT);
         await new Promise<void>((resolve) => setTimeout(resolve, 75));
+        logWc("chat", "prefill route=workbench.action.chat.newChat success");
       } catch {
         // Command registration is necessary but not a guarantee the host can open a new chat.
       }
@@ -157,15 +204,27 @@ async function tryPrefillVsCodeChat(
     return false;
   }
 
-  try {
-    await vscode.commands.executeCommand(VSCODE_CHAT_OPEN, {
-      query: text,
-      isPartialQuery: true
-    });
-    return true;
-  } catch {
-    return false;
+  const attempts: unknown[] = [
+    { query: text, isPartialQuery: true },
+    { query: text },
+    text
+  ];
+  for (const args of attempts) {
+    try {
+      await vscode.commands.executeCommand(VSCODE_CHAT_OPEN, args as never);
+      logWc(
+        "chat",
+        `prefill route=workbench.action.chat.open success args=${typeof args === "string" ? "string" : JSON.stringify(args)}`
+      );
+      return true;
+    } catch (error) {
+      logWc(
+        "chat",
+        `prefill route=workbench.action.chat.open failed args=${typeof args === "string" ? "string" : JSON.stringify(args)} message=${error instanceof Error ? error.message : String(error)}`
+      );
+    }
   }
+  return false;
 }
 
 /**
@@ -175,56 +234,70 @@ async function tryPrefillVsCodeChat(
 export async function prefillCursorChat(
   text: string,
   options?: PrefillCursorChatOptions
-): Promise<void> {
+): Promise<PrefillCursorChatResult> {
   const trimmed = text.trim();
   if (!trimmed) {
     void vscode.window.showWarningMessage("Workflow Cannon: prompt text is empty.");
-    return;
+    return { route: "clipboard", opened: false, copiedToClipboard: false, openedDraft: false };
   }
 
   const commandIds = await getAvailableCommandIds();
   const integration = buildEditorIntegrationState(commandIds);
+  logWc(
+    "chat",
+    `prefill start ide=${integration.ideKind} route=${integration.chatPrefill.route} newChat=${options?.newChat === true}`
+  );
+  let openedNewChat = false;
 
   if (options?.newChat) {
-    await tryOpenNewAgentChat(commandIds);
+    openedNewChat = await tryOpenNewAgentChat(commandIds);
+  }
+
+  const canUseCursorDeeplink = integration.chatPrefill.externalCursorDeeplink;
+
+  // When a fresh chat is requested in Cursor but no known new-chat command exists,
+  // prefer the external deeplink because it visibly opens the prompt instead of
+  // potentially pre-filling a hidden composer session.
+  if (options?.newChat && canUseCursorDeeplink && !openedNewChat) {
+    if (await tryOpenCursorPromptDeeplink(trimmed)) {
+      return { route: "cursor-external-deeplink", opened: true, copiedToClipboard: false, openedDraft: false };
+    }
   }
 
   if (integration.chatPrefill.commands.cursorPrefill) {
     try {
       await vscode.commands.executeCommand(CURSOR_DEEPLINK_PROMPT_PREFILL, { text: trimmed });
-      return;
+      logWc("chat", "prefill route=deeplink.prompt.prefill success");
+      return { route: "cursor-command", opened: true, copiedToClipboard: false, openedDraft: false };
     } catch {
       // Registered commands can still fail; fall through to the next detected route.
     }
   }
 
-  const canUseCursorDeeplink = integration.chatPrefill.externalCursorDeeplink;
   if (!canUseCursorDeeplink && (await tryPrefillVsCodeChat(trimmed, commandIds, options))) {
-    return;
+    return { route: "vscode-chat-command", opened: true, copiedToClipboard: false, openedDraft: false };
   }
 
   if (!canUseCursorDeeplink) {
     await vscode.env.clipboard.writeText(trimmed);
+    const openedDraft = await tryOpenPromptDraft(trimmed);
+    logWc("chat", "prefill fallback=clipboard");
     void vscode.window.showWarningMessage(
       "Workflow Cannon: could not prefill chat. Prompt copied to clipboard — paste into chat."
     );
-    return;
+    return { route: "clipboard", opened: false, copiedToClipboard: true, openedDraft };
   }
 
-  try {
-    const uri = vscode.Uri.parse(
-      `${CURSOR_PROMPT_DEEPLINK}?text=${encodeURIComponent(trimmed)}`
-    );
-    const opened = await vscode.env.openExternal(uri);
-    if (opened) {
-      return;
-    }
-  } catch {
-    // Last resort below
+  if (await tryOpenCursorPromptDeeplink(trimmed)) {
+    logWc("chat", "prefill route=cursor external deeplink success");
+    return { route: "cursor-external-deeplink", opened: true, copiedToClipboard: false, openedDraft: false };
   }
 
   await vscode.env.clipboard.writeText(trimmed);
+  const openedDraft = await tryOpenPromptDraft(trimmed);
+  logWc("chat", "prefill fallback=clipboard after cursor deeplink failure");
   void vscode.window.showWarningMessage(
     "Workflow Cannon: could not open Cursor chat prefill. Prompt copied to clipboard — paste into chat."
   );
+  return { route: "clipboard", opened: false, copiedToClipboard: true, openedDraft };
 }

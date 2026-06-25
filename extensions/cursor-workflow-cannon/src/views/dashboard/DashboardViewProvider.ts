@@ -3343,8 +3343,23 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     this.notifyKitStateChanged();
     await this.applyDashboardMutationInvalidation("ideas");
 
-    await prefillCursorChat(prompt, { newChat: true });
-    await this.view?.webview.postMessage({ type: "wcIdeaMutationResult", operation: "plan", ideaId, ok: true });
+    const prefill = await prefillCursorChat(prompt, { newChat: true });
+    const message = prefill.opened
+      ? prefill.route === "vscode-chat-command"
+        ? "Planning prompt opened in chat."
+        : "Planning prompt opened."
+      : prefill.openedDraft
+        ? "Planning prompt opened in an editor and copied to clipboard."
+      : prefill.copiedToClipboard
+        ? "Planning prompt copied to clipboard. Paste it into chat."
+        : "Planning prompt prepared.";
+    await this.view?.webview.postMessage({
+      type: "wcIdeaMutationResult",
+      operation: "plan",
+      ideaId,
+      ok: true,
+      message
+    });
   }
 
   private async onTaskCommentsComingSoon(taskId: string, mode: "view" | "add"): Promise<void> {

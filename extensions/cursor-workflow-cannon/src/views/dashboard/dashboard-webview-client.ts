@@ -1084,7 +1084,7 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
       if (op === 'delete') showIdeasToast('Idea deleted.', true);
       else if (op === 'undo-delete') showIdeasToast('Idea restored.', false);
       else if (op === 'reorder') showIdeasToast('Ideas reordered.', false);
-      else if (op === 'plan') showIdeasToast('Planning chat opened.', false);
+      else if (op === 'plan') showIdeasToast(typeof m.message === 'string' && m.message ? m.message : 'Planning prompt opened.', false);
       return;
     }
     if (m && m.type === 'wcPhaseDeliverablesSaved') {
