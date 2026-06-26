@@ -4,7 +4,9 @@ agentCapsule|v=1|command=list-approval-queue|module=approvals|schema_only=pnpm e
 
 # list-approval-queue
 
-Read-only: list **improvement** tasks in **`ready`** or **`in_progress`** — the queue **`review-item`** operates on — plus stable pointers to policy and decision artifacts under **`.workspace-kit/`**.
+Read-only: list **improvement** tasks in **`ready`** or **`in_progress`** that are **governance review candidates** for **`review-item`**, plus stable pointers to policy and decision artifacts under **`.workspace-kit/`**.
+
+Excludes **retrospective execution imports** (`metadata.retrospectiveId`) and improvements tagged with **`metadata.queueNamespace: "execution"`** — those are phased delivery backlog, not inbox sign-off.
 
 Does not mutate task store, approvals JSONL, or policy files.
 

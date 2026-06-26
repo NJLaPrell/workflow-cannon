@@ -67,6 +67,34 @@ export function isImprovementLikeTask(t: TaskEntity): boolean {
   return typeof t.id === "string" && IMPROVEMENT_ID_RE.test(t.id);
 }
 
+/** Retro imports from RETROSPECTIVE_TASKS.md are phased execution backlog, not governance review items. */
+export function isRetrospectiveExecutionImport(task: TaskEntity): boolean {
+  const meta = task.metadata;
+  if (meta === null || typeof meta !== "object" || Array.isArray(meta)) {
+    return false;
+  }
+  const retrospectiveId = (meta as Record<string, unknown>).retrospectiveId;
+  return typeof retrospectiveId === "string" && retrospectiveId.trim().length > 0;
+}
+
+/** Improvements in ready/in_progress that belong in the policy approval inbox (`review-item` queue). */
+export function isReviewItemQueueCandidate(task: TaskEntity): boolean {
+  const status = task.status;
+  if (status !== "ready" && status !== "in_progress") {
+    return false;
+  }
+  if (!isImprovementLikeTask(task)) {
+    return false;
+  }
+  if (isRetrospectiveExecutionImport(task)) {
+    return false;
+  }
+  if (getTaskQueueNamespace(task) === "execution") {
+    return false;
+  }
+  return true;
+}
+
 /** Canonical queue partition for filtered next-actions (`metadata.queueNamespace`); missing → `"default"`. */
 export function getTaskQueueNamespace(task: TaskEntity): string {
   const meta = task.metadata;

@@ -1,12 +1,8 @@
 import type { ModuleLifecycleContext } from "../../contracts/module-contract.js";
 import { openPlanningStores } from "../../core/planning/index.js";
 import { getPlanningGenerationPolicy } from "../task-engine/planning-config.js";
-import { isImprovementLikeTask } from "../task-engine/suggestions.js";
+import { isReviewItemQueueCandidate } from "../task-engine/suggestions.js";
 import type { TaskEntity } from "../task-engine/types.js";
-
-function inReviewItemStatuses(status: string): boolean {
-  return status === "ready" || status === "in_progress";
-}
 
 function summarizeForQueue(t: TaskEntity) {
   return {
@@ -28,7 +24,7 @@ export async function runListApprovalQueue(ctx: ModuleLifecycleContext): Promise
   const planning = await openPlanningStores(ctx);
   const tasks = planning.taskStore
     .getActiveTasks()
-    .filter((t) => isImprovementLikeTask(t) && inReviewItemStatuses(t.status))
+    .filter((t) => isReviewItemQueueCandidate(t))
     .sort((a, b) => {
       const pa = a.priority ?? "P9";
       const pb = b.priority ?? "P9";
