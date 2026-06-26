@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "branch": "workflow-cannon/task-state",
+  "root": "task-state",
+  "integrity": {
+    "algorithm": "sha256",
+    "canonicalJson": true
+  },
+  "retention": {
+    "maxEventSegments": 256,
+    "maxSnapshots": 32,
+    "segmentMaxBytes": 1048576
+  },
+  "eventLog": {
+    "segmentFilePattern": "events/{segmentIndex}.jsonl",
+    "eventSchemaRef": "src/modules/task-engine/task-state-events/schemas/task-state-event.v1.json"
+  },
+  "snapshots": {
+    "metadataFilePattern": "snapshots/{snapshotId}.meta.json",
+    "contentFilePattern": "snapshots/{snapshotId}.json"
+  },
+  "head": {
+    "latestSequence": 2007,
+    "latestEventId": "evt-912b3a1d-dffd-4d10-9da6-f885afa6ca93",
+    "latestSegmentPath": "task-state/events/0000000000.jsonl",
+    "latestSnapshotId": "snap-2026-06-24T00-31-10-504Z"
+  },
+  "manifestDigest": "8080947d40d490273b37955c7facd03ff5eedb2fa32e5e970c3bc3bb843ad93b"
+}
