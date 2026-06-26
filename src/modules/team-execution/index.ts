@@ -904,7 +904,8 @@ async function resolveAssignmentPacketContext(args: {
   ctx: ModuleLifecycleContext;
   planning: Awaited<ReturnType<typeof openPlanningStores>>;
 }): Promise<AssignmentPacketContext | null> {
-  const task = readRelationalTask(args.db, args.assignment.executionTaskId);
+  const task = args.planning.taskStore.getTask(args.assignment.executionTaskId)
+    ?? readRelationalTask(args.db, args.assignment.executionTaskId);
   if (!task) {
     return null;
   }
@@ -1174,7 +1175,7 @@ export const teamExecutionModule: WorkflowModule = {
             message: "agent-execution-packet draft mode requires taskId and does not accept assignmentId or workerId"
           };
         }
-        const task = readRelationalTask(db, taskId);
+        const task = planning.taskStore.getTask(taskId) ?? readRelationalTask(db, taskId);
         if (!task) {
           return {
             ok: false,
@@ -1404,7 +1405,7 @@ export const teamExecutionModule: WorkflowModule = {
             if (getAssignment(db, assignmentId)) {
               throw new TaskEngineError("invalid-task-schema", `assignmentId '${assignmentId}' already exists`);
             }
-            if (!taskExistsInRelationalStore(db, executionTaskId)) {
+            if (!planning.taskStore.getTask(executionTaskId) && !taskExistsInRelationalStore(db, executionTaskId)) {
               throw new TaskEngineError(
                 "task-not-found",
                 `execution task '${executionTaskId}' not found in relational task store (task_engine_tasks)`

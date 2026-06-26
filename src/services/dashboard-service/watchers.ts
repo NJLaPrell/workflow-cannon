@@ -16,7 +16,7 @@ const TASK_STATE_EVENT_LOG_REL = ".workspace-kit/tasks/task-state-events.jsonl";
 const PLANNING_WATCH_SLICES = ["overview", "ideas", "phaseJournal", "queue"] as const;
 
 /** Slices invalidated when workspace config changes. */
-const CONFIG_WATCH_SLICES = ["status", "config", "agent"] as const;
+const CONFIG_WATCH_SLICES = ["status", "config", "agent", "cae"] as const;
 
 /** Slices invalidated when task store or git task-state stream changes. */
 const TASK_STORE_WATCH_SLICES = [
