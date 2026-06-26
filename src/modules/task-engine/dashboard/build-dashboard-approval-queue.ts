@@ -1,15 +1,11 @@
 import type { DashboardApprovalQueueSummary } from "../../../contracts/dashboard-summary-run.js";
-import { isImprovementLikeTask } from "../suggestions.js";
+import { isReviewItemQueueCandidate } from "../suggestions.js";
 import type { TaskEntity } from "../types.js";
-
-function inReviewItemStatuses(status: string): boolean {
-  return status === "ready" || status === "in_progress";
-}
 
 /** Read-only improvement review queue for dashboard / extension (approvals module). */
 export function buildDashboardApprovalQueueSummary(tasks: TaskEntity[]): DashboardApprovalQueueSummary {
   const queue = tasks
-    .filter((t) => isImprovementLikeTask(t) && inReviewItemStatuses(t.status))
+    .filter((t) => isReviewItemQueueCandidate(t))
     .sort((a, b) => {
       const pa = a.priority ?? "P9";
       const pb = b.priority ?? "P9";

@@ -264,3 +264,80 @@ test("list-approval-queue returns in_progress improvement rows (read-only)", asy
   assert.equal(q.data?.reviewItemQueue?.[0]?.id, taskId);
   assert.ok(Array.isArray(q.data?.operatorHints?.policyArtifacts));
 });
+
+test("list-approval-queue excludes retrospective execution imports", async () => {
+  const workspacePath = await tmpWs();
+  await mkdir(path.join(workspacePath, ".workspace-kit", "tasks"), { recursive: true });
+  const now = new Date().toISOString();
+  await writeFile(
+    path.join(workspacePath, ".workspace-kit", "tasks", "state.json"),
+    JSON.stringify({
+      schemaVersion: 1,
+      tasks: [
+        {
+          id: "imp-governance-01",
+          status: "ready",
+          type: "improvement",
+          title: "governance candidate",
+          phase: "Phase 1",
+          createdAt: now,
+          updatedAt: now,
+          technicalScope: ["scope"],
+          acceptanceCriteria: ["done"],
+          metadata: { issue: "problem", supportingReasoning: "because" }
+        },
+        {
+          id: "T100408",
+          status: "ready",
+          type: "improvement",
+          title: "Retro: branch cleanup",
+          phase: "Phase 109",
+          phaseKey: "109",
+          createdAt: now,
+          updatedAt: now,
+          technicalScope: ["git"],
+          acceptanceCriteria: ["ship"],
+          metadata: {
+            issue: "problem",
+            supportingReasoning: "because",
+            retrospectiveId: "R001",
+            source: "RETROSPECTIVE_TASKS.md"
+          }
+        }
+      ],
+      transitionLog: [],
+      lastUpdated: now
+    }),
+    "utf8"
+  );
+
+  const registry = new ModuleRegistry([
+    workspaceConfigModule,
+    documentationModule,
+    taskEngineModule,
+    approvalsModule,
+    planningModule,
+    improvementModule
+  ]);
+  const router = new ModuleCommandRouter(registry);
+  const resolved = await resolveWorkspaceConfigWithLayers({ workspacePath, registry });
+  const ctx = {
+    runtimeVersion: "0.1",
+    workspacePath,
+    effectiveConfig: withSqliteTaskPersistence(resolved.effective),
+    resolvedActor: "tester@example.com",
+    moduleRegistry: registry
+  };
+
+  const mig = await router.execute(
+    "migrate-task-persistence",
+    { direction: "json-to-sqlite" },
+    ctx
+  );
+  assert.equal(mig.ok, true, mig.message);
+
+  const q = await router.execute("list-approval-queue", {}, ctx);
+  assert.equal(q.ok, true, q.message);
+  assert.equal(q.data?.count, 1);
+  assert.equal(q.data?.reviewItemQueue?.[0]?.id, "imp-governance-01");
+});
