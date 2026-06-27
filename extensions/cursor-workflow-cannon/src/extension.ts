@@ -4,6 +4,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { findWorkflowCannonRoot } from "./workspace-detect.js";
 import { CommandClient } from "./runtime/command-client.js";
+import { AgentActivitySyncCoordinator } from "./runtime/agent-activity-sync.js";
 import { StateWatcher } from "./runtime/state-watcher.js";
 import { DashboardViewProvider } from "./views/dashboard/DashboardViewProvider.js";
 import { GuidancePanel } from "./views/guidance/GuidancePanel.js";
@@ -94,13 +95,6 @@ async function runLeaseAction(
 export function activate(context: vscode.ExtensionContext): void {
   const root = findWorkflowCannonRoot();
   const folder = root ? vscode.workspace.getWorkspaceFolder(vscode.Uri.file(root)) : undefined;
-  const client = root
-    ? new CommandClient(root, {
-        extensionRoot: context.extensionUri.fsPath,
-        resolveNodeExecutable: readWorkflowCannonNodeSetting,
-        ...kitRunTraceHooks()
-      })
-    : undefined;
   const kitStateEmitter = new vscode.EventEmitter<void>();
   const onKitStateChanged = kitStateEmitter.event;
   const leaseSessionKey = "workflowCannon.workspaceEditLease.agentSessionId";
@@ -110,6 +104,22 @@ export function activate(context: vscode.ExtensionContext): void {
     : `vscode:${randomUUID()}`;
   if (!existingLeaseSessionId) {
     void context.globalState.update(leaseSessionKey, leaseAgentSessionId);
+  }
+
+  let agentActivitySync: AgentActivitySyncCoordinator | undefined;
+  const client = root
+    ? new CommandClient(root, {
+        extensionRoot: context.extensionUri.fsPath,
+        resolveNodeExecutable: readWorkflowCannonNodeSetting,
+        ...kitRunTraceHooks(),
+        activityEnvelopeProvider: () => agentActivitySync?.resolveEnvelope(),
+        onDashboardActivityBoundary: () => agentActivitySync?.noteDashboardActivity()
+      })
+    : undefined;
+  if (client && root) {
+    agentActivitySync = new AgentActivitySyncCoordinator(root, client, () => kitStateEmitter.fire());
+    agentActivitySync.start();
+    context.subscriptions.push({ dispose: () => agentActivitySync?.stop() });
   }
 
   let dashboard: DashboardViewProvider | undefined;

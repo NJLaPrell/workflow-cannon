@@ -30,7 +30,20 @@ export type CommandClientExecResult = {
 };
 export type CommandClientExecFn = (workspaceRoot: string, cliArgs: string[]) => Promise<CommandClientExecResult>;
 
-export type CommandClientActivityInput = {
+export type CommandClientActivityEnvelope = {
+  activityId?: string;
+  agentId?: string;
+  sessionId?: string;
+  agentDefinitionId?: string;
+  assignmentId?: string;
+  currentStep?: string;
+  hostHint?: string;
+  modelTier?: string;
+  modelHint?: string;
+  thinkingLevel?: string;
+};
+
+export type CommandClientActivityInput = CommandClientActivityEnvelope & {
   kind: DashboardAgentStatusKind;
   label?: string;
   taskId?: string;
@@ -41,6 +54,27 @@ export type CommandClientActivityInput = {
   details?: Record<string, unknown>;
   ttlSeconds?: number;
 };
+
+export type CommandClientRecordActivityOptions = {
+  /** When false, background transcript sync may refresh orchestrator activity sooner. */
+  dashboardBoundary?: boolean;
+};
+
+function mergeActivityPayload(
+  envelope: CommandClientActivityEnvelope | undefined,
+  input: CommandClientActivityInput
+): Record<string, unknown> {
+  const payload: Record<string, unknown> = {
+    ...(envelope ?? {}),
+    ...input
+  };
+  if (input.details && Object.keys(input.details).length > 0) {
+    payload.details = input.details;
+  } else {
+    delete payload.details;
+  }
+  return payload;
+}
 
 type CommandClientOptions = {
   cliPathOverride?: string;
@@ -61,6 +95,10 @@ type CommandClientOptions = {
     result: { ok: boolean; code?: string; message?: string }
   ) => void;
   onKitRunNotice?: (message: string) => void;
+  /** Default orchestration identity/model fields merged into set-agent-activity writes. */
+  activityEnvelopeProvider?: () => CommandClientActivityEnvelope | undefined;
+  /** Fired when dashboard code records a visible workflow boundary. */
+  onDashboardActivityBoundary?: () => void;
 };
 
 export type RefreshPauseOwner = {
@@ -717,6 +755,8 @@ export class CommandClient {
     result: { ok: boolean; code?: string; message?: string }
   ) => void;
   private readonly onKitRunNotice?: (message: string) => void;
+  private readonly activityEnvelopeProvider?: () => CommandClientActivityEnvelope | undefined;
+  private readonly onDashboardActivityBoundary?: () => void;
   /** When true, dashboard refresh reads return immediately without hitting the CLI queue. */
   private refreshPaused = false;
   private readonly refreshPauseOwners = new Map<
@@ -748,6 +788,8 @@ export class CommandClient {
     this.onKitRunStart = options?.onKitRunStart;
     this.onKitRunEnd = options?.onKitRunEnd;
     this.onKitRunNotice = options?.onKitRunNotice;
+    this.activityEnvelopeProvider = options?.activityEnvelopeProvider;
+    this.onDashboardActivityBoundary = options?.onDashboardActivityBoundary;
     this.execFn =
       options?.execFn ??
       ((root, cliArgs) => this.execTracked(root, cliArgs));
@@ -1090,9 +1132,16 @@ export class CommandClient {
     }
   }
 
-  async recordActivity(input: CommandClientActivityInput): Promise<void> {
+  async recordActivity(
+    input: CommandClientActivityInput,
+    options?: CommandClientRecordActivityOptions
+  ): Promise<void> {
+    if (options?.dashboardBoundary !== false) {
+      this.onDashboardActivityBoundary?.();
+    }
+    const envelope = this.activityEnvelopeProvider?.();
     const out = await this.run("set-agent-activity", {
-      ...input,
+      ...mergeActivityPayload(envelope, input),
       source: "vscode-extension"
     });
     if (!out.ok) {

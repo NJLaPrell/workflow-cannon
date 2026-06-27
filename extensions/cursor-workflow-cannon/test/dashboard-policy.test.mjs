@@ -61,15 +61,15 @@ test("resolveDashboardPolicyTierRow returns routine Ideas update/delete", () => 
 test("buildDashboardPolicyApproval auto rationale for routine path", () => {
   const out = approvalMod.buildDashboardPolicyApproval({
     channel: "dashboard",
-    workflowId: "review-approval-item",
-    action: "accept",
-    command: "review-item",
+    workflowId: "accept-proposed",
+    action: "accept-single",
+    command: "run-transition",
     taskId: "T100391",
     phaseKey: "107"
   });
   assert.equal(out.confirmed, true);
   assert.match(out.rationale, /^dashboard\|/);
-  assert.match(out.rationale, /workflow=review-approval-item/);
+  assert.match(out.rationale, /workflow=accept-proposed/);
   assert.match(out.rationale, /tier=routine/);
   assert.match(out.rationale, /taskId=T100391/);
 });

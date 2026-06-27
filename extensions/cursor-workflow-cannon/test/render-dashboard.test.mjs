@@ -1657,14 +1657,22 @@ test("renderDashboardRootInnerHtml task checkpoint row exposes compare and rewin
   assert.match(html, /before refactor/);
 });
 
-test("renderDashboardRootInnerHtml approval inbox empty state shows guide and artifacts", () => {
+test("renderDashboardRootInnerHtml omits policy approval inbox section", () => {
   const html = renderDashboardRootInnerHtml({
     ok: true,
     data: {
       approvalQueue: {
         schemaVersion: 1,
-        count: 0,
-        top: [],
+        count: 1,
+        top: [
+          {
+            id: "T100050",
+            title: "Improve dashboard policy UX",
+            status: "ready",
+            phaseKey: "100",
+            priority: "P2"
+          }
+        ],
         policyArtifacts: [
           {
             relativePath: "kit_approval_decisions",
@@ -1688,49 +1696,9 @@ test("renderDashboardRootInnerHtml approval inbox empty state shows guide and ar
       dependencyOverview: deliverTestDepOverview
     }
   });
-  assert.match(html, /dashboard-approvals/);
-  assert.match(html, /approval-inbox-chat/);
-  assert.match(html, /Policy Approval Inbox/);
-  assert.match(html, /kit_approval_decisions/);
-});
-
-test("renderDashboardRootInnerHtml approval inbox row exposes review actions", () => {
-  const html = renderDashboardRootInnerHtml({
-    ok: true,
-    data: {
-      approvalQueue: {
-        schemaVersion: 1,
-        count: 1,
-        top: [
-          {
-            id: "T100050",
-            title: "Improve dashboard policy UX",
-            status: "ready",
-            phaseKey: "100",
-            priority: "P2"
-          }
-        ],
-        policyArtifacts: []
-      },
-      stateSummary: { proposed: 0, ready: 0, in_progress: 0, blocked: 0, completed: 0 },
-      proposedImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
-      proposedExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
-      readyImprovementsSummary: { schemaVersion: 1, count: 0, top: [] },
-      readyExecutionSummary: { schemaVersion: 1, count: 0, top: [] },
-      wishlist: { openCount: 0, totalCount: 0, openTop: [] },
-      blockedSummary: { count: 0, top: [] },
-      readyQueueTop: [],
-      readyQueueCount: 0,
-      suggestedNext: null,
-      planningSession: null,
-      workspaceStatus: { currentKitPhase: "100" },
-      blockingAnalysis: [],
-      dependencyOverview: deliverTestDepOverview
-    }
-  });
-  assert.match(html, /approval-review-accept/);
-  assert.match(html, /approval-review-decline/);
-  assert.match(html, /data-task-id="T100050"/);
+  assert.doesNotMatch(html, /dashboard-approvals/);
+  assert.doesNotMatch(html, /Policy Approval Inbox/);
+  assert.doesNotMatch(html, /approval-review-accept/);
 });
 
 

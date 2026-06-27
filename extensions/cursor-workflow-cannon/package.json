@@ -78,6 +78,58 @@
           "type": "boolean",
           "default": false,
           "description": "Stop wishlist from adding dashboard cost by default. When enabled, dashboard loads and renders the wishlist."
+        },
+        "workflowCannon.agentActivity.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Record live agent activity leases for the Workflow Cannon dashboard (orchestrator + Cursor Task subagents)."
+        },
+        "workflowCannon.agentActivity.syncFromTranscripts": {
+          "type": "boolean",
+          "default": true,
+          "description": "Watch Cursor agent transcripts and mirror active Task subagents into kit agent activity."
+        },
+        "workflowCannon.agentActivity.agentId": {
+          "type": "string",
+          "default": "cursor-orchestrator",
+          "description": "Agent id written on orchestrator activity leases."
+        },
+        "workflowCannon.agentActivity.agentDefinitionId": {
+          "type": "string",
+          "default": "orchestrator",
+          "description": "Agent definition id for the main Cursor chat on the dashboard."
+        },
+        "workflowCannon.agentActivity.modelHint": {
+          "type": "string",
+          "default": "",
+          "description": "Optional model slug for the orchestrator (e.g. composer-2.5). Task subagent models are inferred from transcripts when sync is enabled."
+        },
+        "workflowCannon.agentActivity.thinkingLevel": {
+          "type": "string",
+          "default": "",
+          "description": "Optional thinking level label for the orchestrator when Cursor does not expose it."
+        },
+        "workflowCannon.agentActivity.modelTier": {
+          "type": "string",
+          "default": "",
+          "description": "Optional kit model tier for orchestrator sessions (cheap_fast, balanced, high_reasoning, …)."
+        },
+        "workflowCannon.agentActivity.hostHint": {
+          "type": "string",
+          "default": "cursor",
+          "description": "Host hint stored on activity leases."
+        },
+        "workflowCannon.agentActivity.idlePulseSeconds": {
+          "type": "number",
+          "default": 60,
+          "minimum": 30,
+          "description": "How often to refresh orchestrator/subagent activity leases while the extension is active."
+        },
+        "workflowCannon.agentActivity.activeSubagentWindowSeconds": {
+          "type": "number",
+          "default": 120,
+          "minimum": 30,
+          "description": "Treat a Task subagent transcript as active when its JSONL changed within this window."
         }
       }
     },

@@ -518,6 +518,32 @@ test("CommandClient.recordActivity invokes set-agent-activity best-effort", asyn
   assert.equal(payload.source, "vscode-extension");
 });
 
+test("CommandClient.recordActivity merges activity envelope defaults", async () => {
+  const calls = [];
+  const client = new CommandClient("/tmp/noop", {
+    activityEnvelopeProvider: () => ({
+      agentId: "cursor-orchestrator",
+      sessionId: "sess-1",
+      agentDefinitionId: "orchestrator",
+      modelHint: "composer-2.5",
+      thinkingLevel: "high"
+    }),
+    execFn: async (_root, args) => {
+      calls.push(args);
+      return { exitCode: 0, stdout: JSON.stringify({ ok: true, code: "agent-activity-set" }), stderr: "" };
+    }
+  });
+
+  await client.recordActivity({ kind: "working_task", taskId: "T1" });
+  const payload = JSON.parse(calls[0][2]);
+  assert.equal(payload.agentId, "cursor-orchestrator");
+  assert.equal(payload.sessionId, "sess-1");
+  assert.equal(payload.agentDefinitionId, "orchestrator");
+  assert.equal(payload.modelHint, "composer-2.5");
+  assert.equal(payload.thinkingLevel, "high");
+  assert.equal(payload.taskId, "T1");
+});
+
 test("CommandClient.run serializes concurrent kit invocations", async () => {
   let inFlight = 0;
   let maxInFlight = 0;

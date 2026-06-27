@@ -15,7 +15,6 @@ import {
   buildCollaborationProfilesHubPrompt,
   buildImprovementTriagePrompt,
   buildPhaseNotesDiscoveryPrompt,
-  buildPolicyApprovalInboxPrompt,
   buildSubagentRegistryPrompt,
   buildTaskCheckpointsRecoveryPrompt,
   buildTeamExecutionSupervisorPrompt,
@@ -137,7 +136,6 @@ import {
   buildCreateCheckpointDrawerSpec,
   buildRewindCheckpointDrawerSpec,
   buildViewCheckpointCompareDrawerSpec,
-  buildReviewApprovalItemDrawerSpec,
   buildViewPhaseNoteDrawerSpec,
   normalizeDrawerValues,
   validateRegisterTeamAssignmentSubmit,
@@ -151,7 +149,6 @@ import {
   validateRetireSubagentSubmit,
   validateCreateCheckpointSubmit,
   validateRewindCheckpointSubmit,
-  validateReviewApprovalItemSubmit,
   renderDrawerFormHtml,
   validateAcceptProposedSubmit,
   validateAddPhaseNoteSubmit,
@@ -203,13 +200,7 @@ type DashboardDrawerSession =
   | { kind: "retire-subagent"; subagentId?: string }
   | { kind: "create-checkpoint"; mode: "head" | "stash"; taskId?: string }
   | { kind: "rewind-checkpoint"; checkpointId: string; refKind: string; taskId?: string }
-  | { kind: "view-checkpoint-compare" }
-  | {
-      kind: "review-approval-item";
-      taskId: string;
-      title: string;
-      decision: "accept" | "decline" | "accept_edited";
-    };
+  | { kind: "view-checkpoint-compare" };
 
 function summarizeDrawerSession(session: DashboardDrawerSession): string {
   switch (session.kind) {
@@ -1400,20 +1391,6 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         const taskId = typeof msg.taskId === "string" ? msg.taskId.trim() : "";
         if (checkpointId) {
           await this.openRewindCheckpointDrawer(checkpointId, refKind, taskId);
-        }
-      }
-      if (msg?.type === "prefillPolicyApprovalInboxChat") {
-        await prefillCursorChat(buildPolicyApprovalInboxPrompt(), { newChat: true });
-      }
-      if (msg?.type === "reviewApprovalItem") {
-        const taskId = typeof msg.taskId === "string" ? msg.taskId.trim() : "";
-        const title = typeof msg.title === "string" ? msg.title.trim() : "";
-        const decision = msg.decision;
-        if (
-          taskId &&
-          (decision === "accept" || decision === "decline" || decision === "accept_edited")
-        ) {
-          await this.openReviewApprovalItemDrawer(taskId, title, decision);
         }
       }
       if (msg?.type === "convertPhaseNote") {
@@ -4332,35 +4309,6 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       this.closeDashboardDrawer();
       return false;
     }
-    if (session.kind === "review-approval-item") {
-      const validated = validateReviewApprovalItemSubmit(values, session.decision);
-      if (!validated.ok) {
-        await this.postDrawerValidationToWebview(validated.error);
-        return false;
-      }
-      const payload: Record<string, unknown> = {
-        taskId: session.taskId,
-        decision: session.decision,
-        policyApproval: dashboardPolicyApproval(
-          { workflowId: "review-approval-item", action: session.decision, command: "review-item" },
-          { taskId: session.taskId, humanRationale: validated.values.policyRationale }
-        ),
-        ...expectedPlanningGenerationArgs()
-      };
-      if (session.decision === "accept_edited" && validated.values.editedSummary) {
-        payload.editedSummary = validated.values.editedSummary;
-      }
-      const r = await this.client.run("review-item", payload);
-      if (!r.ok) {
-        await this.postDrawerValidationToWebview((r.message ?? JSON.stringify(r)).slice(0, 900));
-        return false;
-      }
-      ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
-      this.closeDashboardDrawer();
-      this.notifyKitStateChanged();
-      this.queueDrawerNotify(r.message ?? `Recorded ${session.decision} for ${session.taskId}`);
-      return true;
-    }
     return false;
   }
   /**
@@ -4575,21 +4523,6 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       })
     );
     this.dashboardDrawerSession = { kind: "view-checkpoint-compare" };
-    await this.postWcDrawerOpen(html);
-  }
-
-  private async openReviewApprovalItemDrawer(
-    taskId: string,
-    title: string,
-    decision: "accept" | "decline" | "accept_edited"
-  ): Promise<void> {
-    if (this.dashboardDrawerSession) {
-      return;
-    }
-    const html = renderDrawerFormHtml(
-      buildReviewApprovalItemDrawerSpec({ taskId, title: title || taskId, decision })
-    );
-    this.dashboardDrawerSession = { kind: "review-approval-item", taskId, title, decision };
     await this.postWcDrawerOpen(html);
   }
 

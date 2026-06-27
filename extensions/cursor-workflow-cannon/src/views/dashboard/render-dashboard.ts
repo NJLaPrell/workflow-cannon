@@ -4013,94 +4013,6 @@ function renderTeamExecutionSection(team: unknown): string {
   );
 }
 
-function renderApprovalInboxSection(queue: unknown): string {
-  if (!queue || typeof queue !== "object") {
-    return "";
-  }
-  const o = queue as Record<string, unknown>;
-  if (o.schemaVersion !== 1) {
-    return "";
-  }
-  const count = typeof o.count === "number" ? o.count : 0;
-  const top = Array.isArray(o.top) ? (o.top as unknown[]) : [];
-  const artifacts = Array.isArray(o.policyArtifacts) ? (o.policyArtifacts as unknown[]) : [];
-  const artifactLines = artifacts
-    .map((a) => {
-      const r = a as Record<string, unknown>;
-      const path = escapeHtml(String(r.relativePath ?? ""));
-      const role = escapeHtml(String(r.role ?? ""));
-      return "<li><code>" + path + "</code> — " + role + "</li>";
-    })
-    .join("");
-  const statusLine = '<p class="muted">Awaiting review ' + String(count) + "</p>";
-  const toolbar =
-    '<div class="dash-team-exec-toolbar" role="toolbar" aria-label="Policy Approval Inbox">' +
-    '<button type="button" class="wc-btn wc-btn-md wc-btn-secondary" data-wc-action="approval-inbox-chat" title="Approval inbox playbook in chat">Inbox Guide</button>' +
-    "</div>";
-  if (top.length === 0) {
-    return (
-      '<section class="dash-card dashboard-approvals" aria-label="Policy Approval Inbox">' +
-      "<p><b>Policy Approval Inbox</b></p>" +
-      statusLine +
-      '<p class="muted">Improvement tasks in <b>ready</b> or <b>in_progress</b> need a <code>review-item</code> decision. Proposed improvements are triaged from the queue above.</p>' +
-      toolbar +
-      '<p class="muted">Queue empty — audit artifacts:</p><ul class="muted">' +
-      artifactLines +
-      "</ul></section>"
-    );
-  }
-  const rows = top
-    .map((x) => {
-      const r = x as Record<string, unknown>;
-      const id = escapeHtml(String(r.id ?? ""));
-      const title = escapeHtml(String(r.title ?? ""));
-      const st = escapeHtml(String(r.status ?? ""));
-      const pri = r.priority != null ? escapeHtml(String(r.priority)) : "—";
-      return (
-        '<div class="dash-row dash-team-assignment-row" role="listitem">' +
-        '<div class="dash-team-assignment-main">' +
-        '<span class="dash-row-label"><b>' +
-        id +
-        "</b> — " +
-        title +
-        "</span>" +
-        '<span class="dash-team-assignment-meta muted">' +
-        st +
-        " · " +
-        pri +
-        "</span>" +
-        "</div>" +
-        '<div class="dash-row-actions">' +
-        '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="approval-review-accept" data-task-id="' +
-        id +
-        '" data-task-title="' +
-        title +
-        '" title="review-item accept">Accept</button>' +
-        '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="approval-review-decline" data-task-id="' +
-        id +
-        '" data-task-title="' +
-        title +
-        '" title="review-item decline">Decline</button>' +
-        '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="approval-review-accept-edited" data-task-id="' +
-        id +
-        '" data-task-title="' +
-        title +
-        '" title="review-item accept_edited">Accept Edited</button>' +
-        "</div></div>"
-      );
-    })
-    .join("");
-  return (
-    '<section class="dash-card dashboard-approvals" aria-label="Policy Approval Inbox">' +
-    "<p><b>Policy Approval Inbox</b></p>" +
-    statusLine +
-    toolbar +
-    '<div class="dash-row-list" role="list">' +
-    rows +
-    "</div></section>"
-  );
-}
-
 function checkpointRefKindPhrase(refKind: string): string {
   return refKind === "stash" ? "Stash snapshot" : "HEAD pointer";
 }
@@ -6176,8 +6088,7 @@ export function renderDashboardRootInnerHtml(
     renderWorkspaceBlockersPendingSection(ws as Record<string, unknown> | null) +
     renderTeamExecutionSection(d.teamExecution) +
     renderSubagentRegistrySection(d.subagentRegistry) +
-    renderTaskCheckpointsSection(d.taskCheckpoints) +
-    renderApprovalInboxSection(d.approvalQueue);
+    renderTaskCheckpointsSection(d.taskCheckpoints);
 
   const phaseRosterInner = renderPhaseCatalogOverviewSection(
     phaseSystemSlice,
