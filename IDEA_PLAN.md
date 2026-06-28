@@ -1,231 +1,406 @@
-# Idea Planning System Plan
+# Idea Planning Implementation Plan
 
-## Purpose
+## Executive Summary
 
-Workflow Cannon should turn a raw human idea into a reliable execution plan through a natural collaboration between a human operator and a planning agent.
-
-The target loop is:
+Workflow Cannon needs one clear planning path:
 
 ```text
-Idea
-→ planner-chat brainstorming
-→ PlanArtifact v1 draft
+Ideas row
+→ click Plan this
+→ planner-chat brainstorming session
+→ complete PlanArtifact draft with WBS
 → deterministic review
-→ explicit human acceptance
-→ WBS-backed phase/task preview
-→ finalized Task Engine tasks
-→ dashboard visibility and execution tracking
+→ explicit user approval
+→ accepted PlanArtifact becomes durable planning truth
+→ WBS can be finalized into Task Engine tasks
 ```
 
-The plan should not be a loose chat summary, a wishlist item, or a manually assembled pile of tasks. The durable planning source of truth is the structured, versioned `PlanArtifact v1`. Chat is the discovery surface. Task Engine remains the execution source of truth.
+The product goal is not simply to generate tasks. The goal is to turn a raw idea into an approved, structured plan with a complete WBS. Only after that approval should the system create executable tasks.
 
-## Product Goal
+This document is the implementation plan for making that flow stable, reliable, efficient, and obvious in the dashboard.
 
-Create a stable, efficient, and reliable planning workflow that allows an operator to click **Plan this** for an Ideas row in the dashboard and start a planning session in Cursor chat.
+## Non-Negotiable Product Outcome
 
-The planning agent should then work with the human user to:
+When an operator clicks **Plan this** on an Ideas row, Workflow Cannon must start a guided brainstorming session in Cursor chat. By the end of that session, the operator should have:
 
-- understand the idea;
-- clarify intent, constraints, non-goals, affected systems, and target outcome;
-- suggest better options when the first idea is weak or incomplete;
-- assess value, risk, technical impact, UI impact, testing needs, and rollout concerns;
-- produce a complete PlanArtifact with WBS and task-generation-ready payloads;
-- guide the user through review and explicit acceptance;
-- generate phase-ready tasks from the accepted WBS only after approval.
+1. A saved `PlanArtifact v1` linked to the original idea.
+2. A complete WBS inside that plan.
+3. Review results showing whether the plan is complete enough to accept.
+4. An explicit approval/acceptance step.
+5. A durable accepted plan that can later be finalized into phase-ready Task Engine tasks.
 
-## Current State Summary
+A successful implementation lets the operator move from idea to approved plan without manually assembling JSON, manually remembering CLI commands, or using the legacy planning wizard as the primary path.
 
-The repository already contains the correct direction and most of the foundation:
+## Core Design Decision
 
-- `PLANNER.md` defines the product direction: PlanArtifact as durable design truth, Task Engine as execution truth, Dashboard as operating surface, and CAE as guidance layer.
-- `PLANNER_TASKS.md` contains an implementation WBS for PlanArtifact v1 and the planner lifecycle.
-- `PLANNER_SCHEMA.md` defines the field-level contract for PlanArtifact v1.
-- `PLANNER_COMMANDS.md` defines command contracts for `draft-plan-artifact`, `review-plan-artifact`, `accept-plan-artifact`, and `finalize-plan-to-phase`.
-- `.ai/playbooks/planner-chat.md` defines the natural chat workflow for turning an Ideas row into an accepted plan and executable tasks.
-- `extensions/cursor-workflow-cannon/src/planner-chat-prompt.ts` builds the chat prompt used when planning from an Ideas row.
-- `src/modules/planning/index.ts` already routes the PlanArtifact lifecycle commands.
-- `src/modules/ideas/index.ts` supports Ideas rows, idea status, linked plan artifact metadata, and planning-chat session persistence.
-- `test/plan-artifact-e2e-cli.test.mjs` proves the CLI golden path can draft, review, accept, finalize, persist, and list ready tasks.
-- `extensions/cursor-workflow-cannon/test/dashboard-plan-artifact-happy-path.test.mjs` already asserts the dashboard should expose Review, Accept, Finalize, Resume planning, and should not leak raw CLI invocations.
+Make `planner-chat + PlanArtifact v1` the flagship planning system.
 
-The problem is not missing vision. The problem is that the newer PlanArtifact flow and the older guided `build-plan` interview flow still coexist in ways that make the product surface ambiguous.
+Keep `build-plan` only as:
 
-## Core Architectural Decision
+- a compatibility path;
+- a migration/import source;
+- a simple guided-planning fallback;
+- a source of reusable question/planning utilities where useful.
 
-Make the PlanArtifact lifecycle the primary planning path.
+Do not center the dashboard around `build-plan` or the in-memory guided wizard.
 
-Keep `build-plan` as a compatibility path, migration bridge, and optional legacy/simple interview tool. Do not make it the flagship planning experience.
-
-Authoritative boundaries:
+## Authoritative Roles
 
 ```text
 Idea
-  raw opportunity or seed captured by the operator
+  Raw opportunity, feature request, improvement, bug-driven concept, or product seed.
 
-planner-chat / Planning Agent
-  natural brainstorming and decision-making session
+Dashboard Plan this button
+  Entry point that starts or resumes a planning session for exactly one Ideas row.
+
+Planner Chat Prompt
+  A safe, context-rich prompt that tells Cursor to run the planner-chat playbook for the selected idea.
+
+Planning Agent / planner-chat
+  Natural brainstorming surface. It asks one useful question at a time, challenges weak assumptions, and guides the operator toward a complete plan.
 
 PlanArtifact v1
-  durable, structured, versioned design intent and WBS source of truth
+  Durable, structured, versioned planning source of truth. The transcript is not the source of truth.
+
+Review
+  Deterministic quality gate that identifies blockers, warnings, missing WBS coverage, and unresolved decisions.
+
+Acceptance
+  Explicit human approval that pins a reviewed plan version as accepted.
+
+WBS
+  The plan’s decomposition layer. Each WBS item should be small enough to become one focused execution task or a clearly bounded task group.
 
 finalize-plan-to-phase
-  deterministic compiler from accepted WBS rows into task-engine-compatible drafts/tasks
+  Deterministic compiler from accepted WBS rows into Task Engine drafts/tasks.
 
 Task Engine
-  execution truth, lifecycle, phase membership, dependencies, evidence
-
-Dashboard
-  human control surface for idea status, plan state, WBS, review findings, acceptance, finalize preview, created tasks
-
-CAE
-  adaptive planning lenses, risk/value/architecture/testing/decomposition guidance
+  Execution source of truth after approval and finalize.
 ```
 
-## Desired Operator Experience
+## End-to-End User Flow
 
-### 1. Capture Idea
+## 1. Idea Capture
 
-The operator creates an Ideas row in the dashboard with a title and optional note.
+The operator creates an Ideas row in the dashboard.
 
-The idea starts as `open`.
+Minimum fields:
 
-### 2. Click Plan This
+- `ideaId`;
+- `title`;
+- `note`;
+- `status`.
 
-When the operator clicks **Plan this**:
+Optional planning fields:
 
-1. The extension resolves the canonical Ideas row.
-2. It builds a `planner-chat` prompt containing:
-   - `ideaId`;
-   - title;
-   - note;
-   - existing `linkedPlanArtifact`, when present;
-   - `previousPlanArtifacts`, when present.
-3. It updates the idea to `planning`.
-4. It persists a planning-chat session keyed by `ideaId`.
-5. It opens or prefills Cursor chat in a new chat session.
-6. The dashboard refreshes and shows **Resume planning** for the active planning session.
+- `linkedPlanArtifact`;
+- `previousPlanArtifacts`;
+- `planningChatSession`;
+- `planningStartedAt`;
+- `planningCompletedAt`;
+- `lastPlanningPrompt`;
+- `lastPlanningSummary`.
 
-### 3. Planning Agent Brainstorm
+Initial status should be `open`.
 
-The Planning Agent opens with a concise recap and asks the next most important clarifying question.
+## 2. Click Plan This
 
-The agent should not run a rigid survey unless the user explicitly requests a fast form. It should ask one useful question at a time and maintain a collaborative planning flow.
+The Ideas row exposes a primary **Plan this** button when no active planning session or accepted plan exists.
 
-The agent should proactively cover these planning lenses:
+When clicked, the extension must:
 
-- outcome and success definition;
-- value and priority;
-- scope and non-goals;
-- affected systems and integration points;
-- user stories or operator scenarios;
-- architecture implications;
-- UI/UX implications;
-- risk and mitigation;
-- testing and verification;
-- rollout, migration, rollback, and support concerns;
-- decomposition into one-session-sized WBS rows;
-- dependencies and recommended work order;
-- implementation guidance and anti-patterns.
+1. Resolve the canonical idea by `ideaId` from the workspace kit command layer, not only from stale webview row data.
+2. Determine whether an active planning session already exists for the idea.
+3. If an active matching session exists, offer/resume that session instead of blindly creating another.
+4. Build a planner-chat prompt using canonical idea data.
+5. Include plan lineage context:
+   - current `linkedPlanArtifact`, when present;
+   - `previousPlanArtifacts`, when present;
+   - current idea status;
+   - existing planning session summary, when present.
+6. Persist or update planning-chat session state for the idea.
+7. Update the idea status to `planning`.
+8. Open or prefill Cursor chat with the generated planner-chat prompt.
+9. Refresh dashboard state so the row shows **Resume planning** and planning lifecycle status.
 
-### 4. Draft PlanArtifact
+The handler should be idempotent. Double-clicking **Plan this** must not create competing planning sessions or conflicting prompt state.
 
-When enough information exists, the agent drafts a `PlanArtifact v1` object.
+## 3. Planner Chat Session Start
 
-The draft should include, as appropriate:
+The generated prompt should make the agent do the following:
 
-- identity;
+- load the selected Ideas row;
+- preserve `sourceIdeaId` provenance;
+- use `.ai/playbooks/planner-chat.md` as the controlling workflow;
+- avoid exposing raw CLI choreography to the operator;
+- ask one useful question at a time;
+- keep an evolving session summary;
+- know that the target output is a complete PlanArtifact with WBS and approval-ready review.
+
+The agent’s first message should not be a giant questionnaire. It should briefly restate the idea and ask the highest-value clarifying question.
+
+Example opening behavior:
+
+```text
+I found the idea: “Add recurring task schedules.”
+Before I draft the plan, I need to clarify the execution target: should this support one-time reminders only, recurring schedules, or both in the first version?
+```
+
+## 4. Brainstorming and Discovery
+
+The Planning Agent must gather enough information to create a plan that can survive review.
+
+It should cover these lenses naturally during conversation:
+
+- desired outcome;
+- user/operator problem;
+- success criteria;
+- non-goals;
+- affected modules/files/surfaces;
+- dashboard/UI impact;
+- command/API impact;
+- persistence/data model impact;
+- compatibility and migration concerns;
+- safety/policy concerns;
+- failure modes;
+- test strategy;
+- rollout and rollback;
+- likely WBS decomposition;
+- task sizing and dependencies;
+- open questions and assumptions.
+
+The agent should actively improve the idea, not merely record it. If the requested idea is under-scoped, risky, or unclear, the agent should suggest a better shape.
+
+## 5. Session Completion Criteria
+
+The brainstorming session is complete only when the Planning Agent can produce a PlanArtifact draft that includes:
+
+- a clear title;
+- planning type/profile;
 - goals;
 - non-goals;
-- user stories;
+- user stories or operator scenarios;
 - value assessment;
 - risk assessment;
 - technical impact;
-- architecture notes;
-- UI/UX direction;
+- architecture direction;
+- UI/UX direction, when applicable;
 - testing strategy;
 - implementation guidance;
 - what not to do;
 - assumptions;
-- open questions;
+- open questions with disposition;
 - WBS rows;
 - phase recommendations;
-- task-generation payloads or per-WBS generated task payloads;
-- provenance.
+- generated task payload guidance or per-WBS task payloads;
+- provenance linking back to the Ideas row.
 
-The provenance must preserve the Ideas row relationship:
+A session is not complete just because the chat feels done. It is complete when the plan can be reviewed, accepted, and later finalized into tasks.
+
+## 6. PlanArtifact Draft
+
+The Planning Agent drafts a `PlanArtifact v1` object.
+
+The plan must be structured data. Markdown summaries are allowed as human-readable views, but they are not the durable source of truth.
+
+Minimum envelope:
 
 ```json
 {
+  "schemaVersion": "plan-artifact/v1",
+  "planId": "plan_<stable-id>",
+  "version": 1,
+  "planRef": "plan-artifact:plan_<stable-id>",
+  "status": "draft",
+  "identity": {
+    "title": "...",
+    "planningType": "full-feature"
+  },
   "provenance": {
-    "source": "draft-plan-artifact",
-    "sourceIdeaId": "I001",
+    "source": "planner-chat",
+    "sourceIdeaId": "...",
     "previousPlanArtifacts": []
+  },
+  "sections": {}
+}
+```
+
+The exact shape should continue to follow `PLANNER_SCHEMA.md`.
+
+## 7. WBS Requirements
+
+The WBS is the heart of the implementation plan.
+
+Each WBS row should include:
+
+- `wbsId`;
+- `path`;
+- `title`;
+- mapped goal or story;
+- suggested task title;
+- approach;
+- technical scope;
+- acceptance criteria;
+- testing/verification;
+- dependencies;
+- recommended phase;
+- recommended order;
+- sizing confidence;
+- risk notes;
+- definition of done;
+- generated task payload or enough data to produce one.
+
+WBS rows should be sized for execution:
+
+- one focused coding/agent session where possible;
+- clear boundaries;
+- no vague “implement everything” tasks;
+- no hidden dependencies;
+- no task without acceptance criteria;
+- no task without verification guidance.
+
+Good WBS examples:
+
+```text
+WBS-1 — Normalize idea planning session state
+Scope: canonical idea fetch, active session detection, idempotent session update.
+Done means: Plan this creates or resumes exactly one planning session per idea.
+Verification: dashboard test for repeated Plan this click and matching Resume planning state.
+```
+
+```text
+WBS-2 — Add plan lineage to planner-chat prompt
+Scope: include linkedPlanArtifact and previousPlanArtifacts in the prompt context.
+Done means: resumed planning sessions preserve prior plan context and provenance.
+Verification: unit tests for prompt with no prior plan, one linked plan, and multiple previous plans.
+```
+
+Bad WBS examples:
+
+```text
+WBS-1 — Build planner
+```
+
+```text
+WBS-2 — Improve dashboard
+```
+
+## 8. Draft Validation and Persistence
+
+The Planning Agent should validate before persisting.
+
+Flow:
+
+1. Create draft PlanArtifact in memory/chat.
+2. Run `draft-plan-artifact` in validate-only mode, if supported.
+3. Repair schema or completeness issues.
+4. Ask operator whether to save the draft.
+5. Persist with policy approval, planning generation, and client mutation id.
+6. Link the persisted PlanArtifact to the source idea.
+7. Mark idea as `plan_drafted` or equivalent durable planning state.
+
+If the command set does not yet expose all of these semantics, implement the missing command behavior as part of this plan.
+
+## 9. Review
+
+A draft plan must be reviewed before acceptance.
+
+`review-plan-artifact` should check:
+
+- required sections exist;
+- profile-specific sections are present;
+- goals map to WBS rows;
+- user stories map to WBS rows;
+- each WBS row has acceptance criteria;
+- each WBS row has verification guidance;
+- dependencies are valid;
+- technical impact is concrete;
+- architecture is adequate for the profile;
+- UI/UX direction exists when a UI surface is affected;
+- migration/rollback exists when persistence or task generation changes;
+- open questions are either resolved or explicitly deferred;
+- generated task payloads are sufficient for `finalize-plan-to-phase`.
+
+Review result should return a dashboard-friendly shape:
+
+```json
+{
+  "status": "blocked",
+  "blockers": [
+    {
+      "code": "missing-rollback-plan",
+      "message": "The plan changes persisted planning session state but does not define rollback behavior.",
+      "path": "sections.riskAssessment",
+      "wbsId": "WBS-1"
+    }
+  ],
+  "warnings": [],
+  "summary": {
+    "wbsCount": 8,
+    "openQuestionCount": 1,
+    "coverage": "partial"
   }
 }
 ```
 
-### 5. Validate and Persist Draft
+The dashboard should display review findings as decisions to fix, not raw validator noise.
 
-The agent should run `draft-plan-artifact` first as validate-only while shaping the plan.
+## 10. Approval / Acceptance
 
-Once the user agrees the draft is worth saving, the agent persists it using `draft-plan-artifact` with policy approval and planning-generation metadata as required by the command contract.
+The user must explicitly approve the reviewed plan.
 
-The dashboard should then show the current PlanArtifact draft associated with the idea.
+Approval is not implied by drafting, saving, or reviewing the plan.
 
-### 6. Review PlanArtifact
+Acceptance requires:
 
-The agent or dashboard runs `review-plan-artifact`.
+- reviewed plan version;
+- no blockers, unless an explicit policy allows override;
+- open questions resolved or explicitly deferred;
+- user confirmation;
+- approval metadata;
+- idempotent acceptance behavior.
 
-Review should produce:
+Approval record should include:
 
-- pass/fail state;
-- blockers;
-- warnings;
-- open question count;
-- WBS sizing findings;
-- goal/story-to-WBS coverage;
-- missing architecture/UI/testing/rollout/migration slices when required by profile.
+```json
+{
+  "approved": true,
+  "approvedVersion": 2,
+  "approvedAt": "<iso timestamp>",
+  "approvedBy": "operator",
+  "reviewStatus": "passed",
+  "deferredQuestions": [],
+  "notes": "Approved from dashboard after planner-chat review."
+}
+```
 
-Review findings should be surfaced as human decisions, not diagnostic noise.
+After acceptance:
 
-Examples:
+- plan status becomes `accepted`;
+- idea status becomes `planned` or equivalent;
+- dashboard shows Accepted and Finalize actions;
+- WBS is locked for task generation unless a new plan version is drafted and accepted.
 
-- “Acceptance criteria are too vague for WBS-2.”
-- “No rollback path is defined for the dashboard persistence change.”
-- “The UI work is present, but there is no extension test coverage.”
+## 11. Finalize to Tasks
 
-If there are blockers, the dashboard must disable Accept and keep Resume planning available.
+Finalizing is separate from approval.
 
-### 7. Accept PlanArtifact
+Approval means the plan and WBS are accepted. Finalize means creating Task Engine tasks from the accepted WBS.
 
-The plan can only be accepted after review blockers are resolved or explicitly allowed by policy.
+`finalize-plan-to-phase` should:
 
-Acceptance must record:
-
-- confirmed approval;
-- approved version;
-- approver;
-- timestamp;
-- planRef;
-- review summary;
-- any accepted/deferred open questions.
-
-Acceptance is the gate between design and execution. No executable task batch should be created from an unaccepted plan.
-
-### 8. Finalize Plan to Phase
-
-After acceptance, `finalize-plan-to-phase` should:
-
-1. Load the accepted PlanArtifact.
-2. Validate that the requested version is accepted.
-3. Normalize selected WBS rows into task-engine-compatible drafts.
+1. Require an accepted PlanArtifact version.
+2. Select all WBS rows by default or a user-selected subset if explicitly requested.
+3. Normalize WBS rows into task-engine-compatible drafts.
 4. Run task draft review.
 5. Return a dry-run preview by default.
-6. Persist tasks only when the operator explicitly confirms.
-7. Write plan provenance onto each generated task.
-8. Mark the plan finalized after successful persistence.
+6. Require explicit confirmation before persistence.
+7. Persist tasks only once per accepted plan/version/client mutation id.
+8. Write plan and WBS provenance onto every task.
+9. Link created tasks back to the idea and plan.
+10. Mark plan status `finalized` only after successful task persistence.
 
-Generated task metadata should include at least:
+Generated task metadata should include:
 
 ```json
 {
@@ -236,58 +411,320 @@ Generated task metadata should include at least:
       "planVersion": 2,
       "wbsId": "WBS-3",
       "wbsPath": "1.3",
+      "sourceIdeaId": "<ideaId>",
       "source": "finalize-plan-to-phase"
     }
   }
 }
 ```
 
-## Cleanup Strategy
+## Dashboard UX Contract
 
-### Keep but Demote
+## Ideas Row States
 
-#### `build-plan`
+The Ideas row should expose actions based on durable planning state.
 
-Keep `build-plan` for compatibility and migration. It can remain useful for existing guided planning workflows, old scripts, and potential import into PlanArtifact.
+| State | Meaning | Primary Action | Secondary Action |
+|---|---|---|---|
+| `open` | Idea exists, no active planning | Plan this | Edit idea |
+| `planning` | Planner chat session active | Resume planning | Restart planning |
+| `drafted` | Draft PlanArtifact exists | Review plan | Resume planning |
+| `review_blocked` | Review found blockers | Resume planning | View blockers |
+| `reviewed` | Review passed or warning-only | Accept plan | Resume planning |
+| `planned` / `accepted` | User accepted reviewed plan | Finalize tasks | View plan |
+| `finalized` | Tasks created from WBS | View tasks | View plan |
+| `superseded` | Newer plan version exists | View latest | View history |
 
-Do not keep it as the primary dashboard planning UX.
+Use existing status names where possible, but the UI must represent this lifecycle clearly even if the underlying enum names differ.
 
-#### Fixed planning question engine
+## Dashboard Panels
 
-Keep as secondary infrastructure. It may help with small/simple planning types, but it should not drive the flagship “Idea to PlanArtifact” flow.
+The dashboard should include:
 
-#### Wishlist artifact planning output
+### Idea Planning Summary
 
-Keep as a bridge only. Wishlist artifacts are not the canonical planning source of truth.
+- idea title;
+- idea status;
+- planning session status;
+- current planRef;
+- current plan version;
+- current plan status;
+- last planning activity;
+- linked task count after finalize.
 
-### Deprecate or Hide
+### Current Plan Card
 
-#### Dashboard planning wizard
+- plan title;
+- planRef;
+- version;
+- status;
+- planning type/profile;
+- WBS count;
+- open question count;
+- blocker count;
+- warning count;
+- phase recommendation;
+- available actions.
 
-The dashboard still has an in-memory `planningWizard` state and `planningWizardStart` / `planningWizardSubmit` flow that calls `build-plan`.
+### WBS Preview
 
-This should be moved to an advanced/legacy section or removed after compatibility coverage exists.
+Show each WBS row with:
 
-The main dashboard planning surface should be:
+- path;
+- title;
+- recommended phase;
+- dependencies;
+- acceptance criteria summary;
+- verification summary;
+- generated task title.
 
-```text
-Ideas row
-→ Plan this / Resume planning
-→ current PlanArtifact status
-→ Review / Accept / Finalize
+### Review Findings
+
+Show blockers and warnings as repairable decisions.
+
+### Finalize Preview
+
+Show generated tasks before persistence:
+
+- title;
+- target phase;
+- desired status;
+- dependency links;
+- source WBS row;
+- planRef;
+- acceptance criteria;
+- verification summary.
+
+## Command/API Contract
+
+## `start-idea-planning` or Equivalent Handler
+
+If this command does not exist, implement the behavior inside the dashboard extension first, then consider promoting it into a workspace-kit command.
+
+Input:
+
+```json
+{
+  "ideaId": "...",
+  "clientMutationId": "...",
+  "policyApproval": {...},
+  "planningGeneration": 123
+}
 ```
 
-#### Direct task creation from `build-plan`
+Output:
 
-Do not use direct task output from `build-plan` for serious planning. WBS-driven task generation should flow through accepted PlanArtifact and `finalize-plan-to-phase`.
+```json
+{
+  "ideaId": "...",
+  "status": "planning",
+  "planningChatPrompt": "...",
+  "planningChatSession": {
+    "sessionId": "...",
+    "status": "active",
+    "startedAt": "...",
+    "resumePrompt": "..."
+  },
+  "currentPlanArtifact": null
+}
+```
 
-## Implementation Plan
+Responsibilities:
 
-## Phase 0 — Baseline and Safety
+- canonical idea fetch;
+- active session detection;
+- idempotent mutation;
+- prompt generation;
+- session persistence;
+- dashboard-friendly result.
 
-### Task 0.1 — Confirm Current Health
+## `complete-idea-planning` or Equivalent Session Completion Update
 
-Run the baseline commands from repo root:
+The first plan version can be persisted by `draft-plan-artifact`, but the idea also needs to know that the planning session produced a plan.
+
+Input:
+
+```json
+{
+  "ideaId": "...",
+  "planRef": "plan-artifact:<planId>",
+  "planId": "...",
+  "version": 1,
+  "sessionId": "...",
+  "summary": "...",
+  "clientMutationId": "..."
+}
+```
+
+Output:
+
+```json
+{
+  "ideaId": "...",
+  "status": "drafted",
+  "linkedPlanArtifact": "plan-artifact:<planId>",
+  "planningChatSession": {
+    "status": "completed"
+  }
+}
+```
+
+Responsibilities:
+
+- link idea to plan;
+- mark planning session complete;
+- preserve session summary;
+- keep Resume planning available when review blockers later require more work.
+
+## `draft-plan-artifact`
+
+Responsibilities:
+
+- validate PlanArtifact v1 shape;
+- validate required profile sections;
+- assign or preserve planId;
+- increment version when updating existing plan;
+- write artifact to canonical plan-artifact storage;
+- return planRef, path, version, status, and summary;
+- preserve provenance.
+
+Acceptance criteria:
+
+- validate-only does not mutate state;
+- persist requires policy approval;
+- same client mutation does not create duplicate plan versions;
+- sourceIdeaId is required when draft originates from an Ideas row.
+
+## `review-plan-artifact`
+
+Responsibilities:
+
+- produce blocker/warning review result;
+- write or return review record;
+- support dashboard-friendly rendering;
+- identify exact WBS row or section for each finding.
+
+Acceptance criteria:
+
+- blocker prevents acceptance;
+- warning does not prevent acceptance;
+- review result is stable enough for dashboard display;
+- tests cover missing WBS, vague acceptance criteria, missing verification, and unresolved open questions.
+
+## `accept-plan-artifact`
+
+Responsibilities:
+
+- require reviewed version;
+- require no blockers unless override is intentionally supported;
+- record approval;
+- pin approved version;
+- mark plan status accepted;
+- update linked idea to planned/accepted state.
+
+Acceptance criteria:
+
+- acceptance is explicit;
+- acceptance is idempotent;
+- stale version acceptance is blocked;
+- accepted plan can be finalized;
+- unaccepted plan cannot be finalized.
+
+## `finalize-plan-to-phase`
+
+Responsibilities:
+
+- require accepted plan;
+- map WBS rows to task drafts;
+- run task draft review;
+- dry-run by default;
+- persist only after confirmation;
+- write plan/WBS provenance;
+- update plan and idea status after successful persistence.
+
+Acceptance criteria:
+
+- no task batch from draft/reviewed/unaccepted plan;
+- dry run is mutation-free;
+- persisted tasks are traceable to plan and WBS;
+- duplicate finalize is prevented.
+
+## Data Model Additions / Clarifications
+
+## Idea Planning Fields
+
+The Ideas model should support or emulate:
+
+```ts
+type IdeaPlanningState = {
+  linkedPlanArtifact?: string;
+  previousPlanArtifacts?: string[];
+  planningChatSession?: {
+    sessionId: string;
+    status: 'active' | 'completed' | 'abandoned' | 'superseded';
+    startedAt: string;
+    updatedAt: string;
+    completedAt?: string;
+    prompt?: string;
+    resumePrompt?: string;
+    summary?: string;
+    currentPlanRef?: string;
+    currentPlanVersion?: number;
+  };
+};
+```
+
+If the existing store already represents some of this differently, adapt to the existing shape while preserving the semantics.
+
+## PlanArtifact Statuses
+
+Recommended statuses:
+
+```text
+draft
+reviewed
+blocked
+accepted
+finalized
+superseded
+abandoned
+```
+
+Status transitions:
+
+```text
+draft → reviewed
+reviewed → accepted
+blocked → draft/reviewed after repair
+accepted → finalized
+accepted → superseded if new version is drafted and accepted
+```
+
+Do not allow:
+
+```text
+draft → finalized
+reviewed → finalized
+blocked → accepted
+finalized → draft in-place
+```
+
+## Plan Lineage
+
+When a user replans an idea that already has a linked plan:
+
+1. Keep the existing accepted/finalized plan immutable.
+2. Create a new draft version or new plan artifact according to schema rules.
+3. Preserve old planRef in `previousPlanArtifacts`.
+4. Mark old plan as superseded only after the new plan is accepted.
+
+## Implementation Phases
+
+## Phase 0 — Baseline and Current-State Verification
+
+### Task 0.1 — Run Baseline Health Checks
+
+Run:
 
 ```bash
 pnpm exec wk doctor
@@ -295,443 +732,509 @@ pnpm run build
 pnpm run test
 ```
 
-Record any pre-existing failures separately. Do not mix planner work with unrelated store hygiene repairs.
+Acceptance criteria:
 
-### Task 0.2 — Confirm Existing PlanArtifact Golden Path
+- failures are recorded before implementation;
+- unrelated failures are not silently mixed with planner changes;
+- planner-specific tests are identified.
 
-Run or preserve coverage for:
+### Task 0.2 — Confirm Existing Golden Paths
+
+Confirm these tests still reflect the intended direction:
 
 - `test/plan-artifact-e2e-cli.test.mjs`;
 - `extensions/cursor-workflow-cannon/test/dashboard-plan-artifact-happy-path.test.mjs`.
 
 Acceptance criteria:
 
-- CLI golden path passes.
-- Dashboard happy path asserts Review / Accept / Finalize behavior.
-- Dashboard tests verify raw CLI invocations are not leaked.
+- CLI path proves draft → review → accept → finalize dry-run → finalize persist;
+- dashboard path proves Review / Accept / Finalize / Resume behavior;
+- raw CLI invocations are not exposed in dashboard HTML or prompt text.
 
-## Phase 1 — Stabilize Ideas → Planner Chat Entry Point
+## Phase 1 — Make Plan This Correct and Idempotent
 
-### Task 1.1 — Resolve Canonical Idea Before Prompt Generation
+### Task 1.1 — Canonical Idea Fetch
 
-Update `onPrefillIdeaPlanningChat` so it calls `get-idea` or otherwise reads canonical idea state before building the prompt.
-
-Why:
-
-- The webview row payload can be stale or incomplete.
-- The playbook explicitly expects existing data to be loaded instead of asking the operator to restate it.
+Update the dashboard `Plan this` handler so it fetches the canonical idea by `ideaId` before building the prompt.
 
 Acceptance criteria:
 
-- If only `ideaId` is supplied, the handler can still build a full prompt from canonical data.
-- Missing idea returns a clear dashboard mutation result.
-- Tests cover stale/missing title and note inputs.
+- handler works with only `ideaId`;
+- stale title/note from webview do not corrupt prompt;
+- missing idea produces clear error;
+- test covers stale webview payload.
 
-### Task 1.2 — Carry PlanArtifact History Into Prompt
+### Task 1.2 — Include Plan Lineage in Prompt
 
-Update `onPrefillIdeaPlanningChat` to pass:
+Update `buildPlannerChatPrompt` and caller logic so the prompt includes:
 
-- `linkedPlanArtifact` as part of context when present;
-- `previousPlanArtifacts` into `buildPlannerChatPrompt`.
-
-If `linkedPlanArtifact` exists and the user starts a new planning pass, move or preserve it consistently as part of prior artifact lineage according to the Ideas/PlanArtifact compatibility policy.
-
-Acceptance criteria:
-
-- Prompt includes previous plan artifact refs when present.
-- Provenance instructions remain clear.
-- Tests cover idea with no artifact, one linked artifact, and multiple previous artifacts.
-
-### Task 1.3 — Make Plan This Idempotent
-
-Repeated clicks on **Plan this** should not create conflicting planning-chat state.
-
-Behavior:
-
-- If an active planning-chat session already exists for the same idea, show/open Resume planning rather than rewriting everything blindly.
-- If no active session exists, create/update session and open a new chat prompt.
-- Use a stable `clientMutationId` for the dashboard plan action where appropriate.
+- linked current plan;
+- previous plans;
+- active session summary;
+- source idea id;
+- explicit target: produce PlanArtifact + WBS + review + approval.
 
 Acceptance criteria:
 
-- Double-clicking Plan this does not produce duplicate sessions or confusing dashboard state.
-- Dashboard message says whether planning was opened, resumed, copied, or prepared.
+- prompt has enough context for replanning;
+- prompt does not expose raw CLI command choreography;
+- provenance instructions are explicit;
+- tests cover no plan, one linked plan, and prior plans.
 
-### Task 1.4 — Improve Resume Planning
+### Task 1.3 — Idempotent Session Start
 
-Resume should use the latest durable planning-chat session and plan state.
+Plan this should create or resume one session per idea.
 
 Acceptance criteria:
 
-- Resume planning appears only for matching active session and idea.
-- Resume prompt includes latest draft/review context when available.
-- Closed/mismatched sessions do not show Resume planning.
+- double-click Plan this is safe;
+- repeated mutation id returns same session/prompt;
+- active session causes Resume planning state;
+- stale generation retries once and then fails clearly.
 
-## Phase 2 — Add Explicit Planning Agent Surface
+### Task 1.4 — Persist Planning Session State
 
-### Task 2.1 — Define Planning Agent Contract
+Persist session state with enough data to resume:
 
-Add a named planning agent profile or equivalent registry entry if the project’s agent model supports it.
+- session id;
+- idea id;
+- prompt;
+- resume prompt;
+- status;
+- started/updated timestamps;
+- current planRef/version if available;
+- summary if available.
 
-The Planning Agent should reference:
+Acceptance criteria:
+
+- dashboard survives reload and still shows Resume planning;
+- session state is tied to the correct idea;
+- mismatched sessions are not displayed on unrelated ideas.
+
+## Phase 2 — Make Planner Chat Produce a Complete Plan
+
+### Task 2.1 — Strengthen Planner Chat Prompt
+
+The prompt must explicitly state the required output and lifecycle:
+
+1. brainstorm;
+2. draft PlanArtifact;
+3. validate/persist draft;
+4. run review;
+5. ask user for approval;
+6. accept the approved plan;
+7. optionally finalize after separate confirmation.
+
+Acceptance criteria:
+
+- agent knows the session is not done until there is a reviewed/approval-ready PlanArtifact with WBS;
+- agent asks focused questions instead of dumping a survey;
+- agent preserves idea provenance.
+
+### Task 2.2 — Add Planning Agent Contract
+
+Add a named Planning Agent profile or equivalent if supported by the project.
+
+The agent should reference:
 
 - `.ai/playbooks/planner-chat.md`;
 - `PLANNER_SCHEMA.md`;
 - `PLANNER_COMMANDS.md`;
-- `.ai/AGENT-CLI-MAP.md`;
-- `.ai/POLICY-APPROVAL.md`;
-- CAE planning lenses.
-
-Behavioral contract:
-
-- ask one useful question at a time;
-- challenge weak assumptions;
-- assess value and risk;
-- suggest better options;
-- create PlanArtifact v1;
-- review before acceptance;
-- finalize only accepted plans;
-- keep user-facing chat focused on planning decisions, not raw command choreography.
+- CAE planning lenses;
+- policy approval rules;
+- command map.
 
 Acceptance criteria:
 
-- The dashboard prompt clearly asks for the planning agent/playbook.
-- Agents can discover the planner workflow from a stable documented entry.
-- Existing tests still assert no raw CLI invocation leaks into prompt text.
+- the prompt can call for a stable planning agent/playbook;
+- agent instructions define done state;
+- user-facing output remains product/planning-oriented.
 
-### Task 2.2 — Add CAE Planning Lens Activation
+### Task 2.3 — Add Session Completion Handshake
 
-Ensure CAE can activate planning lenses for:
+Define how planner-chat marks a planning session complete.
 
-- completeness;
-- architecture;
-- risk;
-- testing;
-- UI/UX;
-- decomposition;
-- implementation anti-patterns;
-- task sizing;
-- rollout/rollback.
+Recommended completion sequence:
 
-Acceptance criteria:
-
-- The planner-chat flow has a documented way to use CAE guidance without becoming a rigid questionnaire.
-- Lens wording is specific enough to improve plan quality.
-
-## Phase 3 — Make PlanArtifact the Dashboard Planning Center
-
-### Task 3.1 — Render Idea Planning State
-
-For each Ideas row, show planning status derived from durable state:
-
-- open idea;
-- active planning-chat session;
-- linked/current PlanArtifact;
-- draft/reviewed/accepted/finalized state;
-- blocker/warning count;
-- WBS count;
-- open question count.
+```text
+Agent drafts plan
+→ validates draft
+→ persists PlanArtifact
+→ runs review
+→ asks operator to approve or revise
+→ user approves
+→ agent runs accept-plan-artifact
+→ idea updates to planned/accepted
+→ session status becomes completed
+```
 
 Acceptance criteria:
 
-- Operator can understand where each idea is in the planning lifecycle without opening chat.
-- Planned and finalized ideas are visually distinct from raw open ideas.
+- completed session always has a linked planRef;
+- completed session records summary and approved version;
+- incomplete sessions remain resumable;
+- reviewed-but-blocked sessions remain resumable.
 
-### Task 3.2 — Render PlanArtifact Current Card
+## Phase 3 — PlanArtifact and Review Hardening
 
-The dashboard planning tab should show the current PlanArtifact card:
+### Task 3.1 — Enforce PlanArtifact Schema
 
-- title;
-- planRef;
-- version;
-- status;
-- planning type;
-- updated time;
-- WBS row count;
-- open question count;
-- phase recommendation;
-- review findings.
+Make sure draft persistence enforces the schema required by `PLANNER_SCHEMA.md`.
 
 Acceptance criteria:
 
-- Draft plans show Review.
-- Reviewed plans show Accept when no blockers exist.
-- Reviewed plans with blockers disable Accept and keep Resume planning available.
-- Accepted plans show Finalize.
-- Finalized plans show created task links or task count.
+- required core sections validated;
+- conditional profile sections validated;
+- WBS rows validated;
+- generated task payload requirements validated;
+- errors are actionable.
 
-### Task 3.3 — Show Review Findings as Decisions
+### Task 3.2 — Versioning and Lineage
 
-Review findings should be displayed in a concise operator-oriented form.
-
-Acceptance criteria:
-
-- Blockers are visually distinct from warnings.
-- Findings include enough path/WBS context to repair the plan.
-- Accept is blocked when blockers exist.
-- The UI avoids dumping raw validator output.
-
-### Task 3.4 — Show Finalize Preview
-
-Before persisting tasks, the dashboard should show a dry-run preview:
-
-- task titles;
-- target phase;
-- desired status;
-- dependencies;
-- WBS id/path;
-- acceptance criteria summary;
-- review result.
+Ensure plan updates are versioned, not overwritten destructively.
 
 Acceptance criteria:
 
-- `finalize-plan-to-phase` defaults to dry-run preview.
-- Persist requires explicit operator confirmation.
-- Persist uses policy approval and planning generation correctly.
+- accepted versions remain immutable;
+- new revisions increment version;
+- old plan/version can be referenced;
+- superseded state is explicit.
 
-## Phase 4 — Harden PlanArtifact Commands
+### Task 3.3 — Review Quality Gate
 
-### Task 4.1 — Draft Command Hardening
+Implement review rules that catch actual planning weakness.
 
-Ensure `draft-plan-artifact` validates shape, assigns/stabilizes `planId`, increments version correctly, handles idempotency, and returns storage path and planRef.
+Blockers should include:
 
-Acceptance criteria:
+- no WBS;
+- WBS without acceptance criteria;
+- WBS without verification;
+- missing affected-system analysis for code changes;
+- unresolved critical open questions;
+- missing rollback/migration plan for persistence changes;
+- task payloads insufficient for finalization.
 
-- Validate-only mode does not mutate state.
-- Persist mode respects policy and planning-generation gates.
-- Idempotent replay returns the same artifact metadata.
+Warnings should include:
 
-### Task 4.2 — Review Command Hardening
-
-Ensure `review-plan-artifact` checks:
-
-- required core sections;
-- conditional profile requirements;
-- open questions;
-- WBS completeness;
-- goal/story coverage;
-- acceptance criteria quality;
-- test coverage;
-- architecture/UI/rollout/migration coverage when applicable;
-- task sizing and dependency sanity.
+- low sizing confidence;
+- optional UI polish missing;
+- minor test gaps;
+- implementation risk that does not block planning approval.
 
 Acceptance criteria:
 
-- Review returns actionable blockers/warnings.
-- Dashboard can render findings without transformation hacks.
-- Tests cover minimal, refactor, full-feature, blocked, and warning-only cases.
+- review output is deterministic;
+- dashboard can render it directly;
+- tests cover blocker and warning cases.
 
-### Task 4.3 — Acceptance Command Hardening
+### Task 3.4 — Acceptance Gate
 
-Ensure `accept-plan-artifact` refuses acceptance when:
-
-- plan is missing;
-- version mismatches latest accepted/reviewed version;
-- review blockers remain;
-- open questions remain without explicit deferral;
-- policy approval is missing.
+`accept-plan-artifact` must be the only way to mark a plan approved.
 
 Acceptance criteria:
 
-- Acceptance pins `approvedVersion`.
-- Acceptance writes a complete `approvalRecord`.
-- Repeated accept with same version is idempotent.
+- cannot accept unreviewed plan;
+- cannot accept blocked plan unless explicit override exists;
+- open questions must be resolved or deferred;
+- acceptance pins version;
+- idea linked state updates after acceptance.
 
-### Task 4.4 — Finalize Command Hardening
+## Phase 4 — Dashboard Planning Lifecycle
 
-Ensure `finalize-plan-to-phase`:
+### Task 4.1 — Ideas Row Actions
 
-- requires accepted plan status;
-- normalizes WBS rows into task drafts;
-- runs task draft review;
-- dry-runs by default;
-- persists only after explicit approval;
-- writes plan provenance onto every task;
-- updates plan status to finalized after successful persistence;
-- avoids duplicate task creation through idempotency.
+Replace primary planning affordance with the PlanArtifact lifecycle.
 
 Acceptance criteria:
 
-- Finalize before acceptance is blocked.
-- Dry-run does not mutate tasks.
-- Persist creates correct task count.
-- Generated tasks link back to planRef and WBS id/path.
+- open ideas show Plan this;
+- active sessions show Resume planning;
+- draft plans show Review;
+- blocked reviews show Resume planning and View blockers;
+- reviewed plans show Accept;
+- accepted plans show Finalize;
+- finalized plans show View tasks.
 
-## Phase 5 — Legacy Migration and Deprecation
+### Task 4.2 — Current Plan Card
 
-### Task 5.1 — Label Legacy Planning Interview
-
-Rename or visually demote dashboard guided interview surfaces.
-
-Recommended labels:
-
-- “Legacy planning interview”;
-- “Simple guided planning”;
-- “Compatibility planner”.
+Render the current linked PlanArtifact in the dashboard.
 
 Acceptance criteria:
 
-- The primary dashboard action for ideas is Plan this / Resume planning.
-- The old wizard is not confused with the PlanArtifact planner.
+- status, version, planRef, WBS count, blocker count, warning count, and open question count are visible;
+- actions are derived from durable plan state;
+- UI does not depend on in-memory wizard state.
 
-### Task 5.2 — Add Build-Plan to PlanArtifact Import Path
+### Task 4.3 — WBS Preview
 
-Create or document a path to convert old `build-plan` / wishlist planning artifacts into PlanArtifact v1.
-
-Acceptance criteria:
-
-- Existing planning outputs are not stranded.
-- Legacy artifacts can become PlanArtifact drafts with clear provenance: `import-build-plan` or `import-wishlist`.
-
-### Task 5.3 — Remove Direct Serious Task Creation From Build-Plan UX
-
-Do not encourage direct task creation from `build-plan` for serious planning.
+Show WBS rows before finalize.
 
 Acceptance criteria:
 
-- Documentation points serious planning to PlanArtifact.
-- Any direct `build-plan` task output is marked preview/compatibility.
-- Dashboard task creation from plans routes through `finalize-plan-to-phase`.
+- operator can inspect decomposition before task creation;
+- rows show acceptance criteria and verification summary;
+- phase/order/dependencies are visible.
 
-## Phase 6 — Reliability and Efficiency
+### Task 4.4 — Review and Approval UI
 
-### Task 6.1 — Planning Generation Retry Discipline
-
-Use the existing dashboard mutation retry pattern where appropriate for idea planning mutations, plan acceptance, and finalize persistence.
+Review/Accept should feel like product decisions, not raw command output.
 
 Acceptance criteria:
 
-- Common planning-generation mismatch is retried once after ingesting fresh generation.
-- Repeated mismatch returns a clear error.
+- blockers disable Accept;
+- warnings allow Accept;
+- open questions are visible;
+- approval requires explicit click/confirmation.
 
-### Task 6.2 — Refresh Discipline
+### Task 4.5 — Finalize Preview UI
 
-Planner actions should not trigger excessive full dashboard refreshes.
-
-Acceptance criteria:
-
-- Idea mutation invalidates only relevant slices/sections.
-- PlanArtifact review/accept/finalize refreshes planning and queue sections as needed.
-- Active drawer/chat interaction is not disrupted by background refresh.
-
-### Task 6.3 — Idempotency Everywhere
-
-Use client mutation ids for:
-
-- idea planning status updates;
-- PlanArtifact draft persistence;
-- acceptance;
-- finalize persist.
+Before persisting tasks, show dry-run generated tasks.
 
 Acceptance criteria:
 
-- Retry does not duplicate plans or tasks.
-- The same finalized plan cannot create the same task batch twice under the same mutation id.
+- Finalize first previews;
+- Persist tasks requires separate confirmation;
+- generated task count and provenance are visible;
+- duplicates are prevented.
 
-### Task 6.4 — Provenance and Drift Readiness
+## Phase 5 — Finalize to Task Engine
 
-Every generated task should retain enough plan metadata to support future drift detection.
+### Task 5.1 — WBS to Task Draft Normalization
+
+Map each WBS row into task-engine-compatible draft payload.
 
 Acceptance criteria:
 
-- Task metadata includes `planRef`, `planId`, `planVersion`, `wbsId`, `wbsPath`, and `source`.
-- Dashboard can later compare task scope/status against the originating WBS row.
+- title, body, status, phase, acceptance criteria, verification, dependencies, and metadata are populated;
+- task body retains enough context for implementation agent;
+- all generated tasks include plan provenance.
 
-## Phase 7 — Tests
+### Task 5.2 — Task Draft Review
 
-### Unit Tests
+Reuse existing task draft review instead of duplicating validation.
 
-Add or extend tests for:
+Acceptance criteria:
 
-- `buildPlannerChatPrompt` with prior artifacts;
-- idea plan action with canonical idea fetch;
-- planning-chat session persistence;
+- finalize previews review findings before persistence;
+- failing task draft review blocks persistence;
+- warning-only results can proceed with confirmation.
+
+### Task 5.3 — Idempotent Task Persistence
+
+Prevent duplicate task creation from repeated finalize calls.
+
+Acceptance criteria:
+
+- same plan/version/mutation id returns same task batch;
+- subsequent finalize of already-finalized plan is blocked or returns existing result;
+- task links are stored back to plan/idea if supported.
+
+## Phase 6 — Legacy Cleanup
+
+### Task 6.1 — Demote Dashboard Planning Wizard
+
+Move the existing in-memory planning wizard out of the primary flow.
+
+Acceptance criteria:
+
+- main Ideas action no longer routes to `build-plan` wizard;
+- legacy path is clearly labeled if retained;
+- old wizard cannot be mistaken for PlanArtifact planning.
+
+### Task 6.2 — Preserve `build-plan` Compatibility
+
+Keep `build-plan` available for old workflows.
+
+Acceptance criteria:
+
+- old tests continue to pass;
+- docs state that serious planning uses PlanArtifact;
+- any direct task creation from `build-plan` is marked preview/legacy.
+
+### Task 6.3 — Add Import/Migration Path
+
+Create or document conversion from legacy planning outputs to PlanArtifact draft.
+
+Acceptance criteria:
+
+- legacy output can become draft PlanArtifact;
+- provenance shows `import-build-plan` or equivalent;
+- user can review/accept imported plan like any other PlanArtifact.
+
+## Phase 7 — Reliability, Error Handling, and Efficiency
+
+### Task 7.1 — Generation Handling
+
+Use planning generation/store generation consistently.
+
+Acceptance criteria:
+
+- stale generation retries once;
+- repeated mismatch shows clear message;
+- no silent overwrites.
+
+### Task 7.2 — Clear User-Facing Errors
+
+Errors should explain the repair path.
+
+Examples:
+
+```text
+Cannot accept this plan yet: WBS-3 has no verification strategy.
+```
+
+```text
+Cannot finalize this plan because version 2 is not accepted.
+```
+
+```text
+This idea already has an active planning session. Resume that session or restart planning.
+```
+
+Acceptance criteria:
+
+- no raw stack traces in dashboard;
+- command errors include actionable messages;
+- blocked states remain resumable.
+
+### Task 7.3 — Refresh Discipline
+
+Avoid excessive full dashboard refreshes.
+
+Acceptance criteria:
+
+- Plan this refreshes idea/planning state;
+- Review/Accept refresh plan card and idea row;
+- Finalize refreshes plan, idea, and task/phase sections;
+- active chat/prompt state is not lost during refresh.
+
+### Task 7.4 — Audit Trail
+
+Every major transition should be inspectable.
+
+Track:
+
+- idea status changes;
+- planning session start/resume/complete;
+- plan draft versions;
+- review records;
+- approval records;
+- finalize previews;
+- persisted task batch ids.
+
+Acceptance criteria:
+
+- debugging a planning failure does not require reading the chat transcript;
+- plan and task provenance are sufficient for later drift detection.
+
+## Test Plan
+
+## Unit Tests
+
+Add or extend unit tests for:
+
+- `buildPlannerChatPrompt` with idea-only input;
+- prompt with linked plan;
+- prompt with previous plan artifacts;
+- prompt with active session summary;
+- no raw CLI command leakage;
 - PlanArtifact schema validation;
-- WBS normalization;
-- review blocker/warning rules;
-- acceptance gate behavior;
-- finalize dry-run and persist behavior.
+- WBS row validation;
+- review blocker generation;
+- review warning generation;
+- accept gate behavior;
+- finalize gate behavior;
+- WBS-to-task draft normalization;
+- finalize idempotency.
 
-### Dashboard Tests
+## Dashboard Tests
 
-Add or extend tests for:
+Add or extend dashboard tests for:
 
-- Plan this button shows for open idea;
-- Resume planning shows only for active matching session;
-- Review button appears for draft PlanArtifact;
-- Accept button appears for reviewed plan with no blockers;
-- Accept disabled when blockers exist;
-- Finalize button appears for accepted plan;
-- Finalized plan shows generated task links/count;
-- raw CLI invocations do not appear in dashboard HTML.
+- open idea shows Plan this;
+- Plan this uses canonical idea data;
+- double Plan this click is idempotent;
+- active session shows Resume planning;
+- draft plan shows Review;
+- blocked review disables Accept;
+- warning-only review allows Accept;
+- accepted plan shows Finalize;
+- finalize first shows dry-run preview;
+- confirmed finalize creates tasks;
+- finalized plan shows task count/links;
+- legacy wizard is not primary planning path.
 
-### E2E Tests
+## CLI/E2E Tests
 
 Maintain a golden path:
 
 ```text
 create idea
-→ click/prefill planning chat
-→ draft plan artifact
-→ review plan artifact
-→ accept plan artifact
+→ start idea planning
+→ generate planner-chat prompt
+→ persist PlanArtifact draft with WBS
+→ complete idea planning session
+→ review PlanArtifact
+→ accept reviewed PlanArtifact
 → finalize dry-run
 → finalize persist
-→ list ready tasks by phase
+→ list created tasks
 → verify task provenance
 ```
 
 Maintain blocked paths:
 
-- finalize before accept;
-- accept with review blockers;
-- accept with unresolved open questions and no deferral;
-- duplicate finalize mutation;
-- stale planning generation.
+- missing idea;
+- duplicate Plan this click;
+- stale planning generation;
+- draft without WBS;
+- review blockers;
+- accept before review;
+- accept blocked plan;
+- finalize unaccepted plan;
+- duplicate finalize;
+- replan accepted idea and preserve lineage.
 
-## Success Criteria
+## Documentation Updates
 
-This plan is complete when an operator can reliably do the following from the dashboard:
+Update or cross-link:
 
-1. Create an idea.
-2. Click **Plan this**.
-3. Start a planner-chat session with the Planning Agent.
-4. Brainstorm naturally and answer targeted clarifying questions.
-5. Produce a valid PlanArtifact v1 draft.
-6. Review the plan and see actionable findings.
-7. Accept the reviewed plan explicitly.
-8. Preview generated phase-ready tasks from the WBS.
-9. Persist those tasks through Task Engine.
-10. See the idea, plan, WBS, phase recommendation, created tasks, and status in the dashboard.
+- `PLANNER.md` with this final product flow;
+- `PLANNER_TASKS.md` with current task order;
+- `PLANNER_SCHEMA.md` with any status/lineage clarifications;
+- `PLANNER_COMMANDS.md` with `start-idea-planning` / `complete-idea-planning` semantics if promoted to commands;
+- `.ai/playbooks/planner-chat.md` with session completion and approval handshake;
+- dashboard extension docs/readme if present.
 
-The implementation is successful only if task generation is gated by explicit plan acceptance and every generated task can be traced back to the accepted PlanArtifact and WBS row.
+## Definition of Done
 
-## Non-Goals
+The implementation is done when:
 
-Do not:
+1. Clicking **Plan this** on an Ideas row starts or resumes exactly one planning session for that idea.
+2. The generated planner-chat prompt contains the idea context, plan lineage, provenance instructions, and complete session target.
+3. The Planning Agent can brainstorm naturally and knows the session is not complete until a reviewed approval-ready PlanArtifact with WBS exists.
+4. The PlanArtifact draft persists as structured data and links back to the idea.
+5. The WBS is complete enough to create execution tasks later.
+6. Review identifies blockers and warnings with actionable messages.
+7. The user explicitly accepts a reviewed plan version.
+8. Accepted plans are immutable for task generation.
+9. Finalize creates task drafts from accepted WBS rows only.
+10. Persisted tasks include plan and WBS provenance.
+11. The dashboard clearly shows the idea’s state from raw idea through finalized tasks.
+12. Legacy `build-plan` does not confuse the primary dashboard flow.
+13. Tests cover happy path, blocked path, idempotency, lineage, and finalize provenance.
 
-- replace Task Engine with PlanArtifact;
-- make chat transcripts the source of truth;
-- make markdown the only plan representation;
-- force every idea through a rigid questionnaire;
-- require every optional PlanArtifact section for tiny plans;
-- create execution tasks from half-baked planning chat;
-- let the dashboard own planning business logic;
-- delete `build-plan` before compatibility and import paths are safe.
+## Final Target System
 
-## Strong Recommendation
-
-The project should treat `planner-chat + PlanArtifact v1` as the flagship planning system immediately.
-
-The old `build-plan` wizard should become compatibility infrastructure, not the visible center of the product.
-
-This gives Workflow Cannon a coherent and defensible product loop:
+The final mental model should be simple:
 
 ```text
-ideas become plans
-plans become WBS rows
-accepted WBS rows become tasks
-tasks produce execution evidence
+Idea = seed
+Planner chat = discovery
+PlanArtifact = approved design and WBS truth
+Finalize = compile accepted WBS into tasks
+Task Engine = execution truth
+Dashboard = control surface
 ```
 
-That is the system to stabilize.
+Anything that does not support that model should either be demoted, hidden, migrated, or removed.
