@@ -7,6 +7,8 @@ Workflow Cannon needs one clear planning path:
 ```text
 Ideas row
 → click Plan this
+→ start-idea-planning command
+→ tiny dashboard-generated chat prompt
 → planner-chat brainstorming session
 → complete PlanArtifact draft with WBS
 → deterministic review
@@ -19,15 +21,149 @@ The goal is not simply to generate tasks. The goal is to turn a raw idea into an
 
 This document is the implementation plan and right-sized WBS for that integration. Each WBS item is scoped so a middle-cost coding model should be able to complete it in one focused session.
 
+## Locked Product Decisions
+
+These decisions are now part of the implementation plan and should not be treated as open questions.
+
+### Decision 1 — `start-idea-planning` is a real command
+
+`start-idea-planning` must be implemented as a real workspace-kit command, not as dashboard-only glue.
+
+Reason:
+
+- The dashboard prompt can stay very small and simple.
+- Canonical idea loading, active-session detection, idempotency, and prompt generation belong in the command layer.
+- The dashboard should be a control surface, not the owner of planning lifecycle rules.
+
+### Decision 2 — `update-idea-planning-session` is a real command
+
+`update-idea-planning-session` must be implemented as a real workspace-kit command.
+
+Reason:
+
+- Session state transitions need to be durable and inspectable.
+- Chat, dashboard, tests, and future automations need one consistent way to move a session through `active`, `draft_ready`, `needs_revision`, `approval_ready`, and `completed`.
+- Planner-specific session semantics should not be hidden inside a generic `update-idea` call.
+
+### Decision 3 — Use a derived lifecycle-state reducer for dashboard state
+
+The best direction is to store raw facts separately, then derive one dashboard lifecycle state through a pure helper.
+
+Raw facts may include:
+
+- Idea status.
+- Planning session status.
+- `linkedPlanArtifact`.
+- `activeDraftPlanArtifact`.
+- latest review result.
+- PlanArtifact status.
+- finalize result.
+
+The dashboard must not independently reason about these facts in multiple places. It should call one helper:
+
+```ts
+const lifecycle = deriveIdeaPlanningLifecycleState({
+  idea,
+  planningChatSession,
+  linkedPlanArtifact,
+  activeDraftPlanArtifact,
+  latestReview,
+  finalizeResult
+});
+```
+
+Recommended precedence:
+
+```text
+finalized task batch / finalize result
+> accepted linkedPlanArtifact
+> latest review result for activeDraftPlanArtifact
+> activeDraftPlanArtifact
+> planningChatSession
+> raw idea status
+```
+
+Reason:
+
+- This prevents contradictory UI actions.
+- Persistence remains flexible.
+- The reducer becomes easy to unit test.
+- Dashboard rendering stays deterministic.
+
+### Decision 4 — Use both `linkedPlanArtifact` and `activeDraftPlanArtifact`
+
+The Ideas model must support both concepts.
+
+```text
+linkedPlanArtifact
+  The latest accepted/finalized plan for the idea.
+
+activeDraftPlanArtifact
+  The current draft/review candidate plan for the idea.
+```
+
+Replanning must not overwrite `linkedPlanArtifact` until the replacement plan is accepted.
+
+### Decision 5 — Default planning profile is `minimal`
+
+Default profile:
+
+```text
+minimal
+```
+
+The agent may recommend upgrading to `refactor` or `full-feature`, and the user may explicitly choose a higher profile before acceptance.
+
+Reason:
+
+- Small ideas should not be forced through heavyweight architecture and rollout requirements.
+- Review strictness must scale with the kind of plan.
+
+### Decision 6 — Warnings do not block acceptance
+
+Review blockers prevent acceptance. Review warnings are visible but non-blocking.
+
+Reason:
+
+- Warnings should inform the operator, not trap the plan.
+- The approval step is already explicit.
+
+### Decision 7 — Approval and finalization stay separate
+
+Accepting a plan approves the design and WBS. Finalizing creates Task Engine tasks.
+
+Do not auto-finalize immediately after approval.
+
+### Decision 8 — Subset finalization blocks on unselected dependencies in v1
+
+If a selected WBS row depends on an unselected WBS row, finalization must block in v1.
+
+Later versions may add explicit dependency deferral.
+
+### Decision 9 — One WBS row creates one task draft in v1
+
+For v1, finalization should map:
+
+```text
+one WBS row → one Task Engine task draft
+```
+
+Grouping and splitting can be added later.
+
+### Decision 10 — Legacy import is documented/deferred until primary path works
+
+Legacy `build-plan` import should be documented as a future compatibility path, but implementation should not block the primary idea → planner-chat → PlanArtifact path.
+
 ## Product Outcome
 
 When an operator clicks **Plan this** on an Ideas row, Workflow Cannon must start a guided brainstorming session in Cursor chat. By the end of that session, the operator should have:
 
-1. A saved `PlanArtifact v1` linked to the original idea.
+1. A saved `PlanArtifact v1` linked to the original idea as `activeDraftPlanArtifact` until acceptance.
 2. A complete WBS inside that plan.
 3. Review results showing whether the plan is complete enough to accept.
 4. An explicit approval/acceptance step.
-5. A durable accepted plan that can later be finalized into phase-ready Task Engine tasks.
+5. A durable accepted plan promoted to `linkedPlanArtifact`.
+6. A finalized task batch only after a separate explicit finalize confirmation.
 
 A successful implementation lets the operator move from idea to approved plan without manually assembling JSON, manually remembering CLI commands, or using the legacy planning wizard as the primary path.
 
@@ -38,7 +174,7 @@ Make `planner-chat + PlanArtifact v1` the flagship planning system.
 Keep `build-plan` only as:
 
 - a compatibility path;
-- a migration/import source;
+- a documented future migration/import source;
 - a simple guided-planning fallback;
 - a source of reusable question/planning utilities where useful.
 
@@ -50,14 +186,20 @@ Do not center the dashboard around `build-plan` or the in-memory guided wizard.
 Idea
   Raw opportunity, feature request, improvement, bug-driven concept, or product seed.
 
+start-idea-planning
+  Real command that owns canonical idea fetch, active session detection, idempotent session start/resume, and prompt generation.
+
 Dashboard Plan this button
-  Entry point that starts or resumes a planning session for exactly one Ideas row.
+  Thin control surface that calls start-idea-planning and opens/prefills Cursor chat with the returned prompt.
 
 Planner Chat Prompt
-  Safe, context-rich prompt that tells Cursor to run the planner-chat playbook for the selected idea.
+  Small, safe, context-rich prompt returned by start-idea-planning.
 
 Planning Agent / planner-chat
   Natural brainstorming surface. It asks one useful question at a time, challenges weak assumptions, and guides the operator toward a complete plan.
+
+update-idea-planning-session
+  Real command that owns durable planning session state transitions.
 
 PlanArtifact v1
   Durable, structured, versioned planning source of truth. The transcript is not the source of truth.
@@ -69,7 +211,7 @@ Acceptance
   Explicit human approval that pins a reviewed plan version as accepted.
 
 WBS
-  The plan’s decomposition layer. Each WBS item should be small enough to become one focused execution task or a clearly bounded task group.
+  The plan’s decomposition layer. In v1, one WBS row maps to one task draft.
 
 finalize-plan-to-phase
   Deterministic compiler from accepted WBS rows into Task Engine drafts/tasks.
@@ -78,7 +220,7 @@ Task Engine
   Execution source of truth after approval and finalize.
 
 Dashboard
-  Human control surface. It displays state and invokes commands; it must not own planning business logic.
+  Human control surface. It displays derived state and invokes commands; it must not own planning business logic.
 ```
 
 ## End-to-End Flow
@@ -94,7 +236,7 @@ Minimum fields:
 - `note`;
 - `status`.
 
-Planning-related fields should support or emulate:
+Planning-related fields must support or emulate:
 
 ```ts
 type IdeaPlanningState = {
@@ -116,18 +258,20 @@ type IdeaPlanningState = {
 };
 ```
 
-`linkedPlanArtifact` should mean the latest accepted/finalized plan. `activeDraftPlanArtifact` should mean the current draft/review plan. Replanning must not overwrite the accepted plan until the replacement is accepted.
+`linkedPlanArtifact` means the latest accepted/finalized plan. `activeDraftPlanArtifact` means the current draft/review plan. Replanning must not overwrite the accepted plan until the replacement is accepted.
 
 ## 2. Click Plan This
 
 The Ideas row exposes **Plan this** when no active planning session or accepted plan blocks the primary action.
 
-When clicked, the system must:
+When clicked, the dashboard must call `start-idea-planning`.
+
+The command must:
 
 1. Resolve the canonical idea by `ideaId` from the command layer.
 2. Determine whether an active planning session already exists for the idea.
 3. Resume an active matching session instead of blindly creating another.
-4. Build a planner-chat prompt using canonical idea data.
+4. Build a small planner-chat prompt using canonical idea data.
 5. Include plan lineage context:
    - current `linkedPlanArtifact`, when present;
    - `activeDraftPlanArtifact`, when present;
@@ -135,23 +279,24 @@ When clicked, the system must:
    - current idea status;
    - existing planning session summary, when present.
 6. Persist or update planning-chat session state for the idea.
-7. Update the idea status to `planning`.
-8. Open or prefill Cursor chat with the generated prompt.
-9. Refresh dashboard state so the row shows **Resume planning** and lifecycle status.
+7. Update the idea status to `planning` when starting a new session.
+8. Return prompt/session/status data to the dashboard.
+9. Let the dashboard open or prefill Cursor chat with the returned prompt.
 
 Double-clicking **Plan this** must not create competing sessions or conflicting prompt state.
 
 ## 3. Planner Chat Session
 
-The generated prompt should make the agent:
+Because `start-idea-planning` owns context loading and prompt generation, the dashboard-generated prompt can be small.
 
-- load the selected Ideas row;
+The returned prompt should tell the agent:
+
+- use `.ai/playbooks/planner-chat.md`;
 - preserve `sourceIdeaId` provenance;
-- use `.ai/playbooks/planner-chat.md` as the controlling workflow;
-- avoid exposing raw CLI choreography to the operator;
+- brainstorm naturally;
 - ask one useful question at a time;
-- keep an evolving session summary;
-- know the target output is a complete PlanArtifact with WBS, review, and approval.
+- target an accepted PlanArtifact with complete WBS;
+- use command-layer transitions for draft, review, approval, and session updates.
 
 The agent’s first response should briefly restate the idea and ask the highest-value clarifying question. It should not open with a giant questionnaire.
 
@@ -159,7 +304,7 @@ The agent’s first response should briefly restate the idea and ask the highest
 
 The brainstorming session is complete only when there is an accepted PlanArtifact version.
 
-Recommended session states:
+Session states:
 
 ```text
 active
@@ -195,7 +340,7 @@ Minimum envelope:
   "status": "draft",
   "identity": {
     "title": "...",
-    "planningType": "full-feature"
+    "planningType": "minimal"
   },
   "provenance": {
     "source": "planner-chat",
@@ -240,7 +385,41 @@ WBS rows should be sized for execution:
 
 ## 7. Dashboard Lifecycle Contract
 
-The dashboard should derive actions from durable state, not from in-memory wizard state.
+The dashboard must derive actions from durable state, not from in-memory wizard state.
+
+Implement a pure helper:
+
+```ts
+type IdeaPlanningLifecycleState =
+  | 'open'
+  | 'planning'
+  | 'draft_ready'
+  | 'needs_revision'
+  | 'approval_ready'
+  | 'accepted'
+  | 'finalized'
+  | 'superseded';
+
+function deriveIdeaPlanningLifecycleState(input: {
+  idea: IdeaRecord;
+  planningChatSession?: PlanningChatSession;
+  linkedPlanArtifact?: PlanArtifactSummary;
+  activeDraftPlanArtifact?: PlanArtifactSummary;
+  latestReview?: PlanArtifactReviewSummary;
+  finalizeResult?: PlanFinalizeSummary;
+}): IdeaPlanningLifecycleState;
+```
+
+Recommended precedence:
+
+```text
+finalized task batch / finalize result
+> accepted linkedPlanArtifact
+> latest review result for activeDraftPlanArtifact
+> activeDraftPlanArtifact
+> planningChatSession
+> raw idea status
+```
 
 | Derived State | Meaning | Primary Action | Secondary Action |
 |---|---|---|---|
@@ -253,13 +432,13 @@ The dashboard should derive actions from durable state, not from in-memory wizar
 | `finalized` | Tasks created from WBS | View tasks | View plan |
 | `superseded` | Newer plan version exists | View latest | View history |
 
-Implement one deterministic derived-state helper rather than scattering this logic across the dashboard.
-
 ## 8. Command/API Contract
 
-Prefer command-layer ownership for lifecycle transitions.
+Lifecycle transitions must be owned by command-layer contracts.
 
 ### `start-idea-planning`
+
+This must be a real command.
 
 Input:
 
@@ -272,23 +451,63 @@ Input:
 }
 ```
 
+Output:
+
+```json
+{
+  "ideaId": "...",
+  "status": "planning",
+  "mode": "started" | "resumed",
+  "planningChatPrompt": "...",
+  "planningChatSession": {
+    "sessionId": "...",
+    "status": "active",
+    "startedAt": "...",
+    "updatedAt": "...",
+    "resumePrompt": "..."
+  },
+  "linkedPlanArtifact": "...",
+  "activeDraftPlanArtifact": "...",
+  "previousPlanArtifacts": []
+}
+```
+
 Responsibilities:
 
 - canonical idea fetch;
 - active session detection;
 - idempotent mutation;
-- prompt generation;
+- small prompt generation;
 - session persistence;
 - dashboard-friendly result.
 
 ### `update-idea-planning-session`
 
+This must be a real command.
+
+Input:
+
+```json
+{
+  "ideaId": "...",
+  "sessionId": "...",
+  "status": "draft_ready" | "needs_revision" | "approval_ready" | "completed" | "abandoned" | "superseded",
+  "currentPlanRef": "plan-artifact:<planId>",
+  "currentPlanVersion": 1,
+  "summary": "...",
+  "clientMutationId": "...",
+  "policyApproval": {...},
+  "planningGeneration": 123
+}
+```
+
 Responsibilities:
 
-- update planning session state;
-- record prompt/resume prompt/summary;
-- move session to `draft_ready`, `needs_revision`, `approval_ready`, or `completed`;
-- keep session tied to one idea and current plan version.
+- update durable planning session state;
+- record prompt/resume prompt/summary where applicable;
+- move session through the approved state machine;
+- keep session tied to one idea and current plan version;
+- return a dashboard-friendly result.
 
 ### `draft-plan-artifact`
 
@@ -296,39 +515,48 @@ Responsibilities:
 
 - validate PlanArtifact v1 shape;
 - validate required profile sections;
+- default planning profile to `minimal` when unspecified;
 - assign or preserve planId;
 - increment version when updating existing plan;
 - write artifact to canonical plan-artifact storage;
 - return planRef, path, version, status, and summary;
-- preserve provenance.
+- preserve provenance;
+- require `sourceIdeaId` when draft originates from an Ideas row.
 
 ### `review-plan-artifact`
 
 Responsibilities:
 
 - produce blocker/warning review result;
+- apply profile-aware review rules;
 - write or return review record;
 - support dashboard-friendly rendering;
-- identify exact WBS row or section for each finding.
+- identify exact WBS row or section for each finding;
+- call `update-idea-planning-session` to move the session to `needs_revision` or `approval_ready` when idea/session context is present.
 
 ### `accept-plan-artifact`
 
 Responsibilities:
 
 - require reviewed version;
-- require no blockers unless override is intentionally supported;
+- require no blockers;
+- allow warnings;
+- require resolved/deferred open questions;
 - record approval;
 - pin approved version;
 - mark plan status accepted;
 - promote `activeDraftPlanArtifact` to `linkedPlanArtifact`;
-- update linked idea to accepted/planned state.
+- update linked idea to accepted/planned state;
+- call `update-idea-planning-session` to move the session to `completed` when idea/session context is present.
 
 ### `finalize-plan-to-phase`
 
 Responsibilities:
 
 - require accepted plan;
-- map WBS rows to task drafts;
+- keep approval and finalization separate;
+- map one WBS row to one task draft in v1;
+- block subset finalization when selected WBS rows depend on unselected WBS rows;
 - run task draft review;
 - dry-run by default;
 - persist only after confirmation;
@@ -337,7 +565,15 @@ Responsibilities:
 
 ## 9. Review Rules
 
-Review should be profile-aware.
+Review is profile-aware.
+
+### Default Profile
+
+```text
+minimal
+```
+
+The agent may recommend `refactor` or `full-feature`, and the user may override the profile before acceptance.
 
 ### Minimal Plan Blockers
 
@@ -362,20 +598,21 @@ Review should be profile-aware.
 
 Warnings should include low sizing confidence, minor test gaps, optional polish gaps, or risks that should be visible but do not block approval.
 
+Warnings do not block acceptance.
+
 ## 10. Finalize Algorithm
 
-Finalize should use a two-pass mapping so WBS dependencies resolve cleanly.
+Finalize uses a two-pass mapping so WBS dependencies resolve cleanly.
 
 ```text
 Pass 1: create deterministic draft identities for each selected WBS row.
 Pass 2: resolve WBS dependencies to task draft IDs or persisted task IDs.
-Pass 3: run task draft review.
-Pass 4: dry-run preview by default.
-Pass 5: persist transactionally after confirmation.
-Pass 6: write created task IDs and provenance back to finalize result and plan/idea metadata.
+Pass 3: block if selected rows depend on unselected rows.
+Pass 4: run task draft review.
+Pass 5: dry-run preview by default.
+Pass 6: persist transactionally after confirmation.
+Pass 7: write created task IDs and provenance back to finalize result and plan/idea metadata.
 ```
-
-If a user finalizes a subset of WBS rows and a selected row depends on an unselected row, finalize should either block or require explicit dependency deferral.
 
 Generated task metadata must include:
 
@@ -413,8 +650,6 @@ A task is too small if it only renames a label, edits one string, or adds one tr
 
 **Scope:** Run baseline commands, record failures, identify planner/dashboard tests that must remain green.
 
-**Files likely touched:** none, unless adding a short note to existing planner task docs.
-
 **Acceptance criteria:**
 
 - `pnpm exec wk doctor` result recorded.
@@ -428,36 +663,57 @@ A task is too small if it only renames a label, edits one string, or adds one tr
 
 **Sizing:** one short session.
 
-## WBS-1 — Idea Planning Entry Point
+## WBS-1 — Real Idea Planning Commands
 
-### WBS-1.1 — Add or centralize canonical idea planning start helper
+### WBS-1.1 — Implement `start-idea-planning` command contract
 
-**Goal:** Stop the dashboard from owning scattered Plan this business logic.
+**Goal:** Make Plan this a command-layer lifecycle transition.
 
-**Scope:** Implement a command-layer helper or workspace-kit command equivalent to `start-idea-planning` that fetches the canonical idea, detects active session state, and returns a dashboard-friendly planning-start result.
+**Scope:** Add a real workspace-kit `start-idea-planning` command that fetches the canonical idea, detects active sessions, handles idempotency, generates the small planner-chat prompt, persists session state, and returns dashboard-ready data.
 
 **Acceptance criteria:**
 
-- Helper works with `ideaId` only.
+- Command works with `ideaId` only.
 - Missing idea returns actionable error.
-- Active session returns resume result instead of creating a new session.
-- Result includes prompt/session/status data needed by the dashboard.
+- Active session returns `mode: "resumed"` instead of creating another session.
+- Open idea returns `mode: "started"` and a prompt.
+- Result includes session, linked plan, active draft plan, and previous plan lineage data.
 
-**Verification:** Unit test for missing idea, open idea, active session.
+**Verification:** Unit tests for missing idea, open idea, active session, and repeated mutation id.
 
 **Dependencies:** WBS-0.1.
 
 **Sizing:** one medium session.
 
-### WBS-1.2 — Make Plan this dashboard action call the centralized start helper
+### WBS-1.2 — Implement `update-idea-planning-session` command contract
 
-**Goal:** Wire the dashboard button to the correct integration boundary.
+**Goal:** Make planning session transitions explicit, durable, and command-owned.
 
-**Scope:** Replace direct or scattered Plan this logic in the dashboard provider with a call to the centralized helper/command.
+**Scope:** Add a real workspace-kit command that moves a session through `active`, `draft_ready`, `needs_revision`, `approval_ready`, `completed`, `abandoned`, and `superseded` with idea/session/version validation.
 
 **Acceptance criteria:**
 
-- Open idea Plan this creates or resumes planning through the helper.
+- Command updates status, summary, currentPlanRef, and currentPlanVersion.
+- Command rejects mismatched idea/session updates.
+- Command returns dashboard-ready session state.
+- Command is idempotent for repeated mutation ids.
+
+**Verification:** Unit tests for each session state transition and mismatched session rejection.
+
+**Dependencies:** WBS-1.1.
+
+**Sizing:** one medium session.
+
+### WBS-1.3 — Wire dashboard Plan this to `start-idea-planning`
+
+**Goal:** Make the dashboard a thin caller of the command.
+
+**Scope:** Replace direct/scattered Plan this logic in the dashboard provider with a call to `start-idea-planning`.
+
+**Acceptance criteria:**
+
+- Open idea Plan this invokes the command.
+- Returned prompt opens/prefills Cursor chat.
 - Dashboard row refreshes into planning/resume state.
 - User-facing errors are clear.
 
@@ -467,11 +723,11 @@ A task is too small if it only renames a label, edits one string, or adds one tr
 
 **Sizing:** one medium session.
 
-### WBS-1.3 — Make Plan this idempotent under repeated clicks
+### WBS-1.4 — Verify Plan this idempotency from dashboard
 
-**Goal:** Prevent duplicate sessions and conflicting prompts.
+**Goal:** Prevent duplicate sessions and conflicting prompts from the real UI path.
 
-**Scope:** Add client mutation id handling and active-session reuse behavior for repeated Plan this clicks.
+**Scope:** Add dashboard-level tests around repeated Plan this clicks and command replay behavior.
 
 **Acceptance criteria:**
 
@@ -479,78 +735,62 @@ A task is too small if it only renames a label, edits one string, or adds one tr
 - Repeated mutation returns same prompt/session result.
 - Dashboard does not show Plan this and Resume planning simultaneously.
 
-**Verification:** Unit or dashboard test for repeated Plan this click.
+**Verification:** Dashboard or integration test for repeated Plan this click.
 
-**Dependencies:** WBS-1.1, WBS-1.2.
+**Dependencies:** WBS-1.1, WBS-1.3.
 
-**Sizing:** one medium session.
-
-### WBS-1.4 — Persist resumable planning session state
-
-**Goal:** Make planning sessions durable across dashboard reloads.
-
-**Scope:** Persist session id, idea id, prompt, resume prompt, status, timestamps, summary, and current planRef/version if present.
-
-**Acceptance criteria:**
-
-- Dashboard reload still shows Resume planning for active session.
-- Session appears only on the matching idea.
-- Mismatched/stale sessions do not leak to other ideas.
-
-**Verification:** Unit test for session persistence and dashboard test for reload state if test harness supports it.
-
-**Dependencies:** WBS-1.1.
-
-**Sizing:** one medium session.
+**Sizing:** one small-to-medium session.
 
 ## WBS-2 — Planner Chat Prompt and Agent Contract
 
-### WBS-2.1 — Extend planner-chat prompt with lineage and completion target
+### WBS-2.1 — Generate a small command-backed planner-chat prompt
 
-**Goal:** Ensure the agent knows the full target: PlanArtifact + WBS + review + approval.
+**Goal:** Keep the dashboard prompt simple because `start-idea-planning` already loaded context.
 
-**Scope:** Update `buildPlannerChatPrompt` to include linked plan, active draft plan, previous plans, active session summary, source idea id, and session completion rules.
+**Scope:** Update prompt generation so the returned prompt references the idea/session/plan lineage compactly and delegates details to planner-chat playbook and command layer.
 
 **Acceptance criteria:**
 
-- Prompt includes idea context and plan lineage.
-- Prompt states that the session is not complete until an accepted PlanArtifact exists.
+- Prompt includes source idea id and plan lineage summary.
+- Prompt states that the target is accepted PlanArtifact + WBS.
+- Prompt tells agent to use command-layer transitions.
 - Prompt does not expose raw CLI choreography as user-facing instructions.
 
-**Verification:** Unit tests for no plan, active draft plan, linked accepted plan, previous plans, active session summary.
+**Verification:** Unit tests for no plan, active draft plan, linked accepted plan, previous plans, and active session summary.
 
 **Dependencies:** WBS-1.1.
 
 **Sizing:** one medium session.
 
-### WBS-2.2 — Update planner-chat playbook with session state transitions
+### WBS-2.2 — Update planner-chat playbook with locked decisions
 
-**Goal:** Make the playbook match the desired completion handshake.
+**Goal:** Make the playbook match the chosen session and approval model.
 
-**Scope:** Update `.ai/playbooks/planner-chat.md` so draft, review blocked, approval ready, accepted, and finalized states are explicit.
+**Scope:** Update `.ai/playbooks/planner-chat.md` so it references real commands, session states, default minimal profile, warning behavior, approval/finalize separation, and v1 WBS/task mapping rules.
 
 **Acceptance criteria:**
 
 - Playbook distinguishes `draft_ready`, `needs_revision`, `approval_ready`, and `completed`.
-- Playbook tells the agent not to mark session complete on draft persistence alone.
-- Playbook tells the agent how to proceed after blockers.
+- Playbook does not mark a session complete on draft persistence alone.
+- Playbook says warnings do not block acceptance.
+- Playbook says finalization requires separate confirmation.
 
-**Verification:** Documentation review plus prompt unit test if playbook text is imported into prompt tests.
+**Verification:** Documentation review plus prompt/playbook fixture test if available.
 
 **Dependencies:** WBS-2.1.
 
-**Sizing:** one small-to-medium session.
+**Sizing:** one medium session.
 
 ### WBS-2.3 — Add explicit Planning Agent contract or registry entry
 
 **Goal:** Give agents a stable planner role and instruction anchor.
 
-**Scope:** Add a named Planning Agent profile, registry entry, or documented equivalent that references planner-chat, schema, commands, and policy rules.
+**Scope:** Add a named Planning Agent profile, registry entry, or documented equivalent that references planner-chat, schema, commands, policy rules, and locked product decisions.
 
 **Acceptance criteria:**
 
-- Agent contract defines done state.
-- Agent contract references PlanArtifact schema and command contracts.
+- Agent contract defines done state as accepted PlanArtifact with WBS.
+- Agent contract references `start-idea-planning` and `update-idea-planning-session`.
 - Agent contract stays user-facing in tone and avoids raw command noise.
 
 **Verification:** Static/documentation test if available; otherwise review and one prompt fixture test.
@@ -559,7 +799,7 @@ A task is too small if it only renames a label, edits one string, or adds one tr
 
 **Sizing:** one medium session.
 
-## WBS-3 — PlanArtifact Draft and Session Completion
+## WBS-3 — PlanArtifact Draft and Lineage
 
 ### WBS-3.1 — Enforce source idea provenance on idea-originated drafts
 
@@ -579,11 +819,11 @@ A task is too small if it only renames a label, edits one string, or adds one tr
 
 **Sizing:** one medium session.
 
-### WBS-3.2 — Link draft PlanArtifact as active draft without replacing accepted plan
+### WBS-3.2 — Link draft PlanArtifact as `activeDraftPlanArtifact`
 
 **Goal:** Prevent replanning from overwriting the last accepted plan too early.
 
-**Scope:** Update idea-plan linking so persisted drafts become `activeDraftPlanArtifact`, not `linkedPlanArtifact`, unless no accepted plan concept exists yet and compatibility requires fallback.
+**Scope:** Update idea-plan linking so persisted drafts become `activeDraftPlanArtifact`, not `linkedPlanArtifact`.
 
 **Acceptance criteria:**
 
@@ -597,21 +837,21 @@ A task is too small if it only renames a label, edits one string, or adds one tr
 
 **Sizing:** one medium session.
 
-### WBS-3.3 — Add session-state update after draft persistence
+### WBS-3.3 — Move session to `draft_ready` after draft persistence
 
-**Goal:** Move planning session to `draft_ready` after a draft is saved.
+**Goal:** Record that the session produced a draft but is not complete.
 
-**Scope:** Add or update session mutation so the draft planRef/version is recorded and session status becomes `draft_ready`.
+**Scope:** After draft persistence, call or require `update-idea-planning-session` with `draft_ready`, currentPlanRef, and currentPlanVersion.
 
 **Acceptance criteria:**
 
-- Draft persistence updates session state.
+- Draft persistence updates session state to `draft_ready`.
 - Session is not marked completed.
 - Dashboard can resume planning from draft-ready state.
 
 **Verification:** Unit test and dashboard state test.
 
-**Dependencies:** WBS-3.2.
+**Dependencies:** WBS-1.2, WBS-3.2.
 
 **Sizing:** one medium session.
 
@@ -639,15 +879,16 @@ A task is too small if it only renames a label, edits one string, or adds one tr
 
 **Goal:** Catch incomplete plans without overblocking small ideas.
 
-**Scope:** Implement minimal blockers: missing goals, missing WBS, WBS missing acceptance criteria, WBS missing verification, unresolved critical open question.
+**Scope:** Implement minimal blockers: missing goals, missing WBS, WBS missing acceptance criteria, WBS missing verification, unresolved critical open question. Default unspecified profile to `minimal`.
 
 **Acceptance criteria:**
 
 - Minimal profile validates only core planning completeness.
+- Default profile is `minimal`.
 - Blockers include path and WBS id when applicable.
 - Warnings are distinct from blockers.
 
-**Verification:** Unit tests for missing WBS, missing acceptance criteria, missing verification, unresolved critical question.
+**Verification:** Unit tests for missing WBS, missing acceptance criteria, missing verification, unresolved critical question, and unspecified profile.
 
 **Dependencies:** WBS-3.1.
 
@@ -671,21 +912,22 @@ A task is too small if it only renames a label, edits one string, or adds one tr
 
 **Sizing:** one medium session.
 
-### WBS-4.3 — Persist or expose dashboard-friendly review records
+### WBS-4.3 — Persist/expose review records and update session state
 
-**Goal:** Let dashboard render review results without parsing raw validator output.
+**Goal:** Let dashboard render review results and session state without parsing raw validator output.
 
-**Scope:** Return or store review status, blockers, warnings, WBS count, open question count, and coverage summary.
+**Scope:** Return or store review status, blockers, warnings, WBS count, open question count, and coverage summary; call `update-idea-planning-session` when idea/session context exists.
 
 **Acceptance criteria:**
 
 - Review output has stable shape.
 - Dashboard can show blocker count and warning count directly.
-- Review result updates session status to `needs_revision` or `approval_ready`.
+- Blocked review moves session to `needs_revision`.
+- Passed/warning-only review moves session to `approval_ready`.
 
 **Verification:** Unit test for review output shape and session status update.
 
-**Dependencies:** WBS-4.1.
+**Dependencies:** WBS-1.2, WBS-4.1.
 
 **Sizing:** one medium session.
 
@@ -695,16 +937,17 @@ A task is too small if it only renames a label, edits one string, or adds one tr
 
 **Goal:** Make acceptance the only approval path.
 
-**Scope:** Ensure accept requires reviewed version, no blockers unless explicit override exists, resolved/deferred open questions, user confirmation metadata, and current version match.
+**Scope:** Ensure accept requires reviewed version, no blockers, resolved/deferred open questions, user confirmation metadata, and current version match. Warnings must not block.
 
 **Acceptance criteria:**
 
 - Cannot accept unreviewed plan.
 - Cannot accept blocked plan.
+- Can accept warning-only reviewed plan.
 - Cannot accept stale version.
 - Acceptance record is written with approved version and metadata.
 
-**Verification:** Unit tests for unreviewed, blocked, stale, and successful acceptance.
+**Verification:** Unit tests for unreviewed, blocked, warning-only, stale, and successful acceptance.
 
 **Dependencies:** WBS-4.3.
 
@@ -720,32 +963,33 @@ A task is too small if it only renames a label, edits one string, or adds one tr
 
 - Accepted plan becomes current linked plan.
 - Active draft is cleared or marked accepted according to store design.
-- Session status becomes completed.
+- Session status becomes completed through `update-idea-planning-session`.
 - Replanning lineage remains intact.
 
 **Verification:** Unit test for first plan acceptance and replan acceptance.
 
-**Dependencies:** WBS-5.1, WBS-3.2.
+**Dependencies:** WBS-1.2, WBS-5.1, WBS-3.2.
 
 **Sizing:** one medium session.
 
 ## WBS-6 — Dashboard Lifecycle UI
 
-### WBS-6.1 — Implement derived idea planning lifecycle helper
+### WBS-6.1 — Implement `deriveIdeaPlanningLifecycleState`
 
 **Goal:** Prevent contradictory dashboard actions.
 
-**Scope:** Add a pure helper that derives UI state from idea, session, current draft/linked plan, review, and finalize result.
+**Scope:** Add a pure reducer/helper that derives UI state from idea, session, linked plan, active draft plan, review, and finalize result using the locked precedence order.
 
 **Acceptance criteria:**
 
 - Helper returns one lifecycle state at a time.
+- Precedence matches finalized > accepted > review > active draft > session > idea.
 - Impossible action combos are prevented.
 - Tests cover open, planning, draft_ready, needs_revision, approval_ready, accepted, finalized, superseded.
 
-**Verification:** Unit tests for state matrix.
+**Verification:** Unit tests for state matrix and precedence conflicts.
 
-**Dependencies:** WBS-1.4, WBS-4.3, WBS-5.2.
+**Dependencies:** WBS-1.2, WBS-4.3, WBS-5.2.
 
 **Sizing:** one medium session.
 
@@ -753,13 +997,14 @@ A task is too small if it only renames a label, edits one string, or adds one tr
 
 **Goal:** Make the row action model obvious and correct.
 
-**Scope:** Use derived helper to show Plan this, Resume planning, Review, Accept, Finalize, View tasks, or View plan.
+**Scope:** Use the derived helper to show Plan this, Resume planning, Review, Accept, Finalize, View tasks, or View plan.
 
 **Acceptance criteria:**
 
 - Open ideas show Plan this.
 - Active sessions show Resume planning.
 - Blocked reviews disable Accept.
+- Warning-only approval-ready state allows Accept.
 - Accepted plans show Finalize.
 - Finalized plans show View tasks.
 
@@ -773,7 +1018,7 @@ A task is too small if it only renames a label, edits one string, or adds one tr
 
 **Goal:** Let the operator inspect plan status without reopening chat.
 
-**Scope:** Add card showing plan title, planRef, version, status, WBS count, blocker count, warning count, open question count, and phase recommendation.
+**Scope:** Add card showing plan title, planRef, version, status, WBS count, blocker count, warning count, open question count, profile, and phase recommendation.
 
 **Acceptance criteria:**
 
@@ -808,15 +1053,15 @@ A task is too small if it only renames a label, edits one string, or adds one tr
 
 ## WBS-7 — Finalize to Task Engine
 
-### WBS-7.1 — Implement WBS-to-task draft normalization
+### WBS-7.1 — Implement one-WBS-row-to-one-task draft normalization
 
-**Goal:** Convert WBS rows into task-engine-compatible drafts.
+**Goal:** Convert WBS rows into task-engine-compatible drafts with v1 mapping rules.
 
-**Scope:** Map WBS title, body, acceptance criteria, verification, phase, desired status, dependencies, and metadata into draft payloads.
+**Scope:** Map each selected WBS row to exactly one task draft with title, body, acceptance criteria, verification, phase, desired status, dependencies, and metadata.
 
 **Acceptance criteria:**
 
-- Each selected WBS row produces one task draft or an explicit grouped draft according to plan data.
+- Each selected WBS row produces exactly one task draft.
 - Draft body includes enough context for implementation.
 - Draft metadata includes planRef, planId, planVersion, wbsId, wbsPath, and sourceIdeaId.
 
@@ -835,10 +1080,10 @@ A task is too small if it only renames a label, edits one string, or adds one tr
 **Acceptance criteria:**
 
 - WBS dependency on selected row resolves to generated task dependency.
-- Dependency on unselected row blocks or requires explicit deferral.
+- Dependency on unselected row blocks in v1.
 - Invalid dependency is reported clearly.
 
-**Verification:** Unit tests for internal dependency, unselected dependency, invalid dependency.
+**Verification:** Unit tests for internal dependency, unselected dependency block, and invalid dependency.
 
 **Dependencies:** WBS-7.1.
 
@@ -854,7 +1099,7 @@ A task is too small if it only renames a label, edits one string, or adds one tr
 
 - Dry-run does not mutate tasks.
 - Failing task draft review blocks persistence.
-- Warning-only review can proceed after confirmation.
+- Warning-only result can proceed after confirmation.
 
 **Verification:** Unit/E2E test for dry-run preview and blocked draft review.
 
@@ -900,7 +1145,7 @@ A task is too small if it only renames a label, edits one string, or adds one tr
 
 **Sizing:** one medium session.
 
-## WBS-8 — Legacy Cleanup and Migration
+## WBS-8 — Legacy Cleanup and Deferred Migration
 
 ### WBS-8.1 — Demote dashboard planning wizard from primary idea flow
 
@@ -938,23 +1183,23 @@ A task is too small if it only renames a label, edits one string, or adds one tr
 
 **Sizing:** one small session.
 
-### WBS-8.3 — Add legacy planning import to PlanArtifact draft
+### WBS-8.3 — Document legacy import path but defer implementation
 
-**Goal:** Keep old planning artifacts useful.
+**Goal:** Preserve the future migration path without delaying the primary integration.
 
-**Scope:** Implement or document conversion from legacy `build-plan`/wishlist output into PlanArtifact draft with provenance.
+**Scope:** Document how legacy `build-plan`/wishlist output should eventually become a PlanArtifact draft with provenance.
 
 **Acceptance criteria:**
 
-- Legacy output can become draft PlanArtifact.
-- Provenance records import source.
-- Imported plan can be reviewed and accepted like any other draft.
+- Documentation describes future `import-build-plan` or equivalent flow.
+- Documentation states implementation is deferred until primary path is stable.
+- No primary path WBS item depends on legacy import implementation.
 
-**Verification:** Unit test for import conversion or documentation example if implementation is deferred.
+**Verification:** Documentation review.
 
-**Dependencies:** WBS-3.1, WBS-4.1.
+**Dependencies:** WBS-8.2.
 
-**Sizing:** one medium session.
+**Sizing:** one small session.
 
 ## WBS-9 — Reliability and Error Handling
 
@@ -968,6 +1213,7 @@ A task is too small if it only renames a label, edits one string, or adds one tr
 
 - Idea cannot show Plan this and Resume planning simultaneously.
 - Review-blocked plan cannot show Accept.
+- Warning-only review can show Accept.
 - Accepted plan cannot have mutable WBS for same version.
 - Finalized plan cannot reopen as draft in place.
 - Finalized task provenance resolves to existing WBS id.
@@ -982,7 +1228,7 @@ A task is too small if it only renames a label, edits one string, or adds one tr
 
 **Goal:** Avoid silent overwrites and confusing failures.
 
-**Scope:** Apply generation handling to Plan this, session updates, draft persistence, acceptance, and finalize persistence.
+**Scope:** Apply generation handling to `start-idea-planning`, `update-idea-planning-session`, draft persistence, acceptance, and finalize persistence.
 
 **Acceptance criteria:**
 
@@ -992,7 +1238,7 @@ A task is too small if it only renames a label, edits one string, or adds one tr
 
 **Verification:** Unit tests for stale generation on Plan this and accept/finalize if harness supports it.
 
-**Dependencies:** WBS-1.3, WBS-5.1, WBS-7.4.
+**Dependencies:** WBS-1.1, WBS-1.2, WBS-5.1, WBS-7.4.
 
 **Sizing:** one medium session.
 
@@ -1000,7 +1246,7 @@ A task is too small if it only renames a label, edits one string, or adds one tr
 
 **Goal:** Make failure states repairable by the operator.
 
-**Scope:** Normalize user-facing errors for missing idea, duplicate session, blocked acceptance, unaccepted finalize, invalid WBS dependency, and duplicate finalize.
+**Scope:** Normalize user-facing errors for missing idea, duplicate session, blocked acceptance, unaccepted finalize, invalid WBS dependency, unselected WBS dependency, and duplicate finalize.
 
 **Acceptance criteria:**
 
@@ -1024,7 +1270,7 @@ A task is too small if it only renames a label, edits one string, or adds one tr
 
 - Each major transition has inspectable metadata.
 - Plan/task provenance is sufficient for later drift detection.
-- Audit metadata does not leak raw prompt content unless intentionally stored.
+- Audit metadata does not leak raw chat transcript content.
 
 **Verification:** Unit/E2E test for metadata after golden path.
 
@@ -1038,8 +1284,8 @@ Use this order to avoid integration churn:
 
 1. WBS-0.1
 2. WBS-1.1
-3. WBS-2.1
-4. WBS-1.2
+3. WBS-1.2
+4. WBS-2.1
 5. WBS-1.3
 6. WBS-1.4
 7. WBS-2.2
@@ -1047,52 +1293,43 @@ Use this order to avoid integration churn:
 9. WBS-3.1
 10. WBS-3.2
 11. WBS-3.3
-12. WBS-4.1
-13. WBS-4.2
-14. WBS-4.3
-15. WBS-5.1
-16. WBS-5.2
-17. WBS-6.1
-18. WBS-6.2
-19. WBS-6.3
-20. WBS-6.4
-21. WBS-7.1
-22. WBS-7.2
-23. WBS-7.3
-24. WBS-7.4
-25. WBS-7.5
-26. WBS-8.1
-27. WBS-8.2
-28. WBS-8.3
-29. WBS-9.1
-30. WBS-9.2
-31. WBS-9.3
-32. WBS-9.4
+12. WBS-3.4
+13. WBS-4.1
+14. WBS-4.2
+15. WBS-4.3
+16. WBS-5.1
+17. WBS-5.2
+18. WBS-6.1
+19. WBS-6.2
+20. WBS-6.3
+21. WBS-6.4
+22. WBS-7.1
+23. WBS-7.2
+24. WBS-7.3
+25. WBS-7.4
+26. WBS-7.5
+27. WBS-8.1
+28. WBS-8.2
+29. WBS-8.3
+30. WBS-9.1
+31. WBS-9.2
+32. WBS-9.3
+33. WBS-9.4
 
-# Tasks That Were Intentionally Split
+# First Shippable Milestone
 
-The earlier plan had several tasks that were too large for one middle-tier coding session. These are now split:
+Milestone 1 should establish the button-to-session foundation before full PlanArtifact hardening:
 
-| Original Broad Area | Split Into |
-|---|---|
-| Make Plan this correct and idempotent | WBS-1.1, WBS-1.2, WBS-1.3, WBS-1.4 |
-| Make planner chat produce complete plan | WBS-2.1, WBS-2.2, WBS-2.3, WBS-3.1, WBS-3.3 |
-| PlanArtifact and review hardening | WBS-3.1, WBS-3.2, WBS-3.4, WBS-4.1, WBS-4.2, WBS-4.3 |
-| Dashboard lifecycle | WBS-6.1, WBS-6.2, WBS-6.3, WBS-6.4, WBS-7.5 |
-| Finalize to Task Engine | WBS-7.1, WBS-7.2, WBS-7.3, WBS-7.4 |
-| Reliability/error handling | WBS-9.1, WBS-9.2, WBS-9.3, WBS-9.4 |
+```text
+WBS-1.1 start-idea-planning command
+WBS-1.2 update-idea-planning-session command
+WBS-2.1 command-backed small prompt
+WBS-1.3 dashboard Plan this wiring
+WBS-1.4 Plan this idempotency
+WBS-6.1 derived lifecycle helper
+```
 
-# Tasks That Were Intentionally Combined
-
-Some tiny actions should not be standalone tasks:
-
-| Tiny Action | Combined Into |
-|---|---|
-| Rename one dashboard button | WBS-8.1 |
-| Add one prompt sentence | WBS-2.1 |
-| Add one review warning field | WBS-4.3 |
-| Add one provenance metadata key | WBS-7.1 or WBS-7.4 |
-| Add one dashboard assertion | WBS-6.2, WBS-6.3, or WBS-9.1 |
+Milestone 1 is successful when clicking Plan this starts or resumes exactly one durable planning session and the dashboard state is derived by one tested lifecycle helper.
 
 # Test Plan
 
@@ -1100,22 +1337,25 @@ Some tiny actions should not be standalone tasks:
 
 Add or extend unit tests for:
 
-- `buildPlannerChatPrompt` with idea-only input;
+- `start-idea-planning` missing idea, open idea, active session, repeated mutation id;
+- `update-idea-planning-session` valid transitions and mismatched session rejection;
+- small planner-chat prompt with idea-only input;
 - prompt with linked accepted plan;
 - prompt with active draft plan;
 - prompt with previous plan artifacts;
 - prompt with active session summary;
 - no raw CLI command leakage;
-- Plan this idempotency;
+- `deriveIdeaPlanningLifecycleState` precedence and state matrix;
 - PlanArtifact schema validation;
 - source idea provenance validation;
+- `linkedPlanArtifact` / `activeDraftPlanArtifact` promotion rules;
 - WBS row validation;
 - profile-aware review blockers;
-- review warning generation;
+- warning-only review acceptance;
 - accept gate behavior;
-- derived dashboard lifecycle helper;
-- WBS-to-task draft normalization;
+- one-WBS-row-to-one-task normalization;
 - dependency resolution;
+- subset finalize dependency block;
 - finalize idempotency;
 - lifecycle invariants.
 
@@ -1124,7 +1364,8 @@ Add or extend unit tests for:
 Add or extend dashboard tests for:
 
 - open idea shows Plan this;
-- Plan this uses canonical idea data;
+- Plan this calls `start-idea-planning`;
+- returned prompt opens/prefills Cursor chat;
 - double Plan this click is idempotent;
 - active session shows Resume planning;
 - draft plan shows Review;
@@ -1143,14 +1384,15 @@ Maintain a golden path:
 
 ```text
 create idea
-→ start idea planning
-→ generate planner-chat prompt
+→ start-idea-planning
+→ generate small planner-chat prompt
 → persist PlanArtifact draft with WBS
-→ mark session draft_ready
+→ update session to draft_ready
 → review PlanArtifact
-→ mark session approval_ready
+→ update session to approval_ready
 → accept reviewed PlanArtifact
-→ mark session completed
+→ promote activeDraftPlanArtifact to linkedPlanArtifact
+→ update session to completed
 → finalize dry-run
 → finalize persist
 → list created tasks
@@ -1166,8 +1408,10 @@ Maintain blocked paths:
 - review blockers;
 - accept before review;
 - accept blocked plan;
+- accept warning-only plan succeeds;
 - finalize unaccepted plan;
 - invalid WBS dependency;
+- selected WBS row depends on unselected WBS row;
 - duplicate finalize;
 - replan accepted idea and preserve lineage.
 
@@ -1175,30 +1419,38 @@ Maintain blocked paths:
 
 The implementation is done when:
 
-1. Clicking **Plan this** starts or resumes exactly one planning session for that idea.
-2. The generated prompt contains idea context, plan lineage, provenance instructions, and the complete session target.
-3. The Planning Agent can brainstorm naturally and knows the session is not complete until an accepted PlanArtifact with WBS exists.
-4. Draft persistence links a structured PlanArtifact back to the idea as an active draft.
-5. Replanning does not overwrite the current accepted plan before replacement acceptance.
-6. Review identifies blockers and warnings with actionable messages.
-7. The user explicitly accepts a reviewed plan version.
-8. Acceptance promotes the active draft to the linked accepted plan and completes the session.
-9. Finalize creates task drafts from accepted WBS rows only.
-10. WBS dependencies resolve correctly into task dependencies.
-11. Persisted tasks include plan and WBS provenance.
-12. The dashboard clearly shows the idea’s state from raw idea through finalized tasks.
-13. Legacy `build-plan` does not confuse the primary dashboard flow.
-14. Tests cover happy path, blocked path, idempotency, lineage, lifecycle invariants, dependency resolution, and finalize provenance.
+1. Clicking **Plan this** calls `start-idea-planning` and starts or resumes exactly one planning session for that idea.
+2. The returned prompt is small, command-backed, and contains idea context, plan lineage, provenance instructions, and the complete session target.
+3. `update-idea-planning-session` owns session transitions.
+4. The Planning Agent can brainstorm naturally and knows the session is not complete until an accepted PlanArtifact with WBS exists.
+5. Draft persistence links a structured PlanArtifact back to the idea as `activeDraftPlanArtifact`.
+6. Replanning does not overwrite `linkedPlanArtifact` before replacement acceptance.
+7. Review identifies blockers and warnings with actionable messages.
+8. Warnings do not block acceptance.
+9. The user explicitly accepts a reviewed plan version.
+10. Acceptance promotes `activeDraftPlanArtifact` to `linkedPlanArtifact` and completes the session.
+11. Finalize remains separate from approval.
+12. Finalize creates one task draft per accepted WBS row.
+13. Subset finalization blocks on unselected dependencies in v1.
+14. WBS dependencies resolve correctly into task dependencies.
+15. Persisted tasks include plan and WBS provenance.
+16. The dashboard uses `deriveIdeaPlanningLifecycleState` for all planning actions.
+17. The dashboard clearly shows the idea’s state from raw idea through finalized tasks.
+18. Legacy `build-plan` does not confuse the primary dashboard flow.
+19. Legacy import is documented/deferred and does not block the primary path.
+20. Tests cover happy path, blocked path, idempotency, lineage, lifecycle invariants, dependency resolution, and finalize provenance.
 
 # Final Target System
 
 ```text
 Idea = seed
+start-idea-planning = command-backed session start and small prompt generation
 Planner chat = discovery
+update-idea-planning-session = durable session state transitions
 PlanArtifact = approved design and WBS truth
 Finalize = compile accepted WBS into tasks
 Task Engine = execution truth
-Dashboard = control surface
+Dashboard = derived-state control surface
 ```
 
 Anything that does not support that model should either be demoted, hidden, migrated, or removed.
