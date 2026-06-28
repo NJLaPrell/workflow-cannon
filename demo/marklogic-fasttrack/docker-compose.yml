@@ -1,0 +1,77 @@
+# MarkLogic + FastTrack demo stack (Phase 139).
+# ml-setup is a one-shot init placeholder until T100739 replaces it with ./ml-setup build.
+# fasttrack serves a placeholder UI on :3000 until the React app and config land (T100741).
+
+name: marklogic-fasttrack
+
+services:
+  marklogic:
+    image: ${MARKLOGIC_IMAGE:-progressofficial/marklogic-db:11.3.0}
+    container_name: ml-fasttrack-marklogic
+    hostname: marklogic
+    ports:
+      - "${MARKLOGIC_PORT_MANAGE:-8001}:8001"
+      - "${MARKLOGIC_PORT_APPSERVICES:-8000}:8000"
+      - "${MARKLOGIC_PORT_REST:-8002}:8002"
+    environment:
+      MARKLOGIC_INIT: "true"
+      MARKLOGIC_ADMIN_USERNAME: ${MARKLOGIC_ADMIN_USERNAME}
+      MARKLOGIC_ADMIN_PASSWORD: ${MARKLOGIC_ADMIN_PASSWORD}
+      MARKLOGIC_WALLET_PASSWORD: ${MARKLOGIC_WALLET_PASSWORD:-${MARKLOGIC_ADMIN_PASSWORD}}
+      REALM: ${MARKLOGIC_REALM:-public}
+      LICENSE_KEY: ${MARKLOGIC_LICENSE_KEY:-}
+      LICENSEE: ${MARKLOGIC_LICENSEE:-}
+    volumes:
+      - marklogic-data:/var/opt/MarkLogic
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -fsS http://127.0.0.1:8001/ >/dev/null 2>&1 || exit 1",
+        ]
+      interval: 15s
+      timeout: 10s
+      retries: 20
+      start_period: 120s
+    restart: unless-stopped
+
+  ml-setup:
+    image: curlimages/curl:8.5.0
+    container_name: ml-fasttrack-ml-setup
+    environment:
+      MARKLOGIC_HOST: marklogic
+      MARKLOGIC_MANAGE_PORT: "8001"
+    command:
+      - /bin/sh
+      - -c
+      - |
+        set -eu
+        echo "ml-setup: waiting for MarkLogic admin UI at $${MARKLOGIC_HOST}:$${MARKLOGIC_MANAGE_PORT}..."
+        until curl -fsS "http://$${MARKLOGIC_HOST}:$${MARKLOGIC_MANAGE_PORT}/" >/dev/null 2>&1; do
+          sleep 5
+        done
+        echo "ml-setup: MarkLogic is reachable; database and REST setup lands in T100739."
+        exit 0
+    depends_on:
+      marklogic:
+        condition: service_healthy
+    restart: "no"
+
+  fasttrack:
+    image: ${FASTTRACK_IMAGE:-nginx:1.27-alpine}
+    container_name: ml-fasttrack-ui
+    ports:
+      - "${FASTTRACK_PORT:-3000}:80"
+    depends_on:
+      ml-setup:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:80/ >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+    restart: unless-stopped
+
+volumes:
+  marklogic-data:
