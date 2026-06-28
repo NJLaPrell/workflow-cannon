@@ -836,6 +836,58 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
     return root.querySelector(lazyQueueBucketSelector(category, phaseKey));
   }
 
+  function queueCategoryStatusFilter(category) {
+    if (category === 'ready') return 'ready';
+    if (category === 'proposed-improvement' || category === 'proposed-execution') return 'proposed';
+    if (category === 'blocked') return 'blocked';
+    if (category === 'transcript-churn') return 'research';
+    return 'ready';
+  }
+
+  function ensurePhaseStackInStatusSection(sectionBody) {
+    if (!sectionBody) return null;
+    var stack = sectionBody.querySelector('.phase-stack');
+    if (stack) return stack;
+    var mutedOnly = sectionBody.querySelector('p.muted');
+    var flatList = sectionBody.querySelector('.dash-row-list');
+    if (mutedOnly || flatList || sectionBody.childElementCount === 0) {
+      sectionBody.innerHTML = '<div class="phase-stack"></div>';
+      return sectionBody.querySelector('.phase-stack');
+    }
+    stack = document.createElement('div');
+    stack.className = 'phase-stack';
+    sectionBody.appendChild(stack);
+    return stack;
+  }
+
+  function insertQueueBucketShell(root, category, shellHtml) {
+    if (!root || typeof shellHtml !== 'string' || shellHtml.length === 0) return null;
+    var filter = queueCategoryStatusFilter(category);
+    var section = root.querySelector('details.status-section[data-wc-filter="' + filter.replace(/"/g, '\\"') + '"]');
+    if (!section) return null;
+    section.classList.remove('wc-section-empty');
+    if (filter === 'ready' && !section.hasAttribute('open')) {
+      section.setAttribute('open', '');
+    }
+    var sectionBody = section.querySelector('.status-section-body');
+    var stack = ensurePhaseStackInStatusSection(sectionBody);
+    if (!stack) return null;
+    var tmp = document.createElement('div');
+    tmp.innerHTML = shellHtml;
+    var details = tmp.querySelector('details.wc-lazy-queue-bucket');
+    if (!details) return null;
+    stack.appendChild(details);
+    return details;
+  }
+
+  function resolveTargetQueueBucket(root, category, phaseKey, msg) {
+    var bucket = findQueueBucket(category, phaseKey);
+    if (bucket) return bucket;
+    var shellHtml = typeof msg.toBucketShellHtml === 'string' ? msg.toBucketShellHtml : '';
+    if (shellHtml.length === 0) return null;
+    return insertQueueBucketShell(root, category, shellHtml);
+  }
+
   function removeQueueTaskRowById(taskId) {
     if (!taskId) return;
     var root = document.getElementById('root');
@@ -907,9 +959,10 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
         typeof msg.fromBucketTaskIds === 'string' ? msg.fromBucketTaskIds : ''
       );
     }
-    var toBucket = findQueueBucket(category, toPk);
+    var toBucket = resolveTargetQueueBucket(root, category, toPk, msg);
     if (!toBucket && typeof msg.toBucketCount === 'number' && msg.toBucketCount > 0) {
       vscode.postMessage({ type: 'queuePhasePatchFailed', reason: 'missing-target-bucket', taskId: taskId });
+      applyQueueFilters(root);
       return;
     }
     if (toBucket) {
@@ -920,8 +973,76 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
       );
       var body = toBucket.querySelector('.wc-lazy-bucket-body');
       if (body && body.getAttribute('data-wc-lazy-loaded') === '1' && rowHtml.length > 0) {
-        insertQueueRowsIntoBucketBody(body, rowHtml);
+        if (!body.querySelector('.dash-row-list .dash-row, .dash-row')) {
+          insertQueueRowsIntoBucketBody(body, rowHtml);
+        }
       }
+    }
+    applyQueueFilters(root);
+    vscode.postMessage({ type: 'queuePhasePatchApplied', taskId: taskId });
+  }
+
+  function applyQueueTaskCategoryMove(msg) {
+    var fromCategory = typeof msg.fromCategory === 'string' ? msg.fromCategory : '';
+    var toCategory = typeof msg.toCategory === 'string' ? msg.toCategory : '';
+    var taskId = typeof msg.taskId === 'string' ? msg.taskId.trim() : '';
+    var fromPk = typeof msg.fromPhaseKey === 'string' ? msg.fromPhaseKey : '';
+    var toPk = typeof msg.toPhaseKey === 'string' ? msg.toPhaseKey : '';
+    var rowHtml = typeof msg.taskRowHtml === 'string' ? msg.taskRowHtml : '';
+    var root = document.getElementById('root');
+    if (!root || !fromCategory || !toCategory || !taskId) {
+      vscode.postMessage({ type: 'queuePhasePatchFailed', reason: 'missing-args' });
+      return;
+    }
+    removeQueueTaskRowById(taskId);
+    var fromBucket = findQueueBucket(fromCategory, fromPk);
+    if (fromBucket) {
+      updateQueueBucketMeta(
+        fromBucket,
+        typeof msg.fromBucketCount === 'number' ? msg.fromBucketCount : null,
+        typeof msg.fromBucketTaskIds === 'string' ? msg.fromBucketTaskIds : ''
+      );
+    }
+    var toBucket = resolveTargetQueueBucket(root, toCategory, toPk, msg);
+    if (!toBucket && typeof msg.toBucketCount === 'number' && msg.toBucketCount > 0) {
+      vscode.postMessage({ type: 'queuePhasePatchFailed', reason: 'missing-target-bucket', taskId: taskId });
+      applyQueueFilters(root);
+      return;
+    }
+    if (toBucket) {
+      updateQueueBucketMeta(
+        toBucket,
+        typeof msg.toBucketCount === 'number' ? msg.toBucketCount : null,
+        typeof msg.toBucketTaskIds === 'string' ? msg.toBucketTaskIds : ''
+      );
+      var body = toBucket.querySelector('.wc-lazy-bucket-body');
+      if (body && body.getAttribute('data-wc-lazy-loaded') === '1' && rowHtml.length > 0) {
+        if (!body.querySelector('.dash-row-list .dash-row, .dash-row')) {
+          insertQueueRowsIntoBucketBody(body, rowHtml);
+        }
+      }
+    }
+    applyQueueFilters(root);
+    vscode.postMessage({ type: 'queuePhasePatchApplied', taskId: taskId });
+  }
+
+  function applyQueueTaskRemoval(msg) {
+    var category = typeof msg.category === 'string' ? msg.category : '';
+    var taskId = typeof msg.taskId === 'string' ? msg.taskId.trim() : '';
+    var phaseKey = typeof msg.phaseKey === 'string' ? msg.phaseKey : '';
+    var root = document.getElementById('root');
+    if (!root || !category || !taskId) {
+      vscode.postMessage({ type: 'queuePhasePatchFailed', reason: 'missing-args' });
+      return;
+    }
+    removeQueueTaskRowById(taskId);
+    var bucket = findQueueBucket(category, phaseKey);
+    if (bucket) {
+      updateQueueBucketMeta(
+        bucket,
+        typeof msg.bucketCount === 'number' ? msg.bucketCount : null,
+        typeof msg.bucketTaskIds === 'string' ? msg.bucketTaskIds : ''
+      );
     }
     applyQueueFilters(root);
     vscode.postMessage({ type: 'queuePhasePatchApplied', taskId: taskId });
@@ -1205,6 +1326,14 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
     }
     if (m && m.type === 'wcQueueTaskPhaseMove') {
       applyQueueTaskPhaseMove(m);
+      return;
+    }
+    if (m && m.type === 'wcQueueTaskCategoryMove') {
+      applyQueueTaskCategoryMove(m);
+      return;
+    }
+    if (m && m.type === 'wcQueueTaskRemoval') {
+      applyQueueTaskRemoval(m);
       return;
     }
     if (m && m.type === 'wcOpenQueueForPhase') {

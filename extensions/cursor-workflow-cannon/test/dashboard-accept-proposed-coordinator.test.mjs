@@ -49,5 +49,6 @@ test("accept-proposed uses snapshot progress not wcDrawerProgress", () => {
   assert.doesNotMatch(handlerBlock, /notifyAfterDrawerClosed/);
   assert.doesNotMatch(handlerBlock, /showInformationMessage/);
   assert.match(handlerBlock, /queueDrawerNotify/);
-  assert.match(handlerBlock, /queueDrawerKitStateChanged/);
+  assert.doesNotMatch(handlerBlock, /queueDrawerKitStateChanged/);
+  assert.doesNotMatch(handlerBlock, /this\.notifyKitStateChanged/);
 });

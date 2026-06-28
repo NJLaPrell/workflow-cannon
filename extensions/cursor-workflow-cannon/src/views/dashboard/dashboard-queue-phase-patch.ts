@@ -11,6 +11,7 @@ import {
   type DashboardQueueBucketCategory,
   renderQueueBucketRowsHtml
 } from "./dashboard-queue-bucket-lazy.js";
+import { buildLazyQueueBucketShellHtml } from "./dashboard-queue-bucket-shell.js";
 import {
   dashboardRowPhaseKey,
   lookupDashboardTaskPhaseKey,
@@ -42,6 +43,36 @@ export type QueuePhaseMovePatchPayload = {
   toBucketTaskIds: string;
   fromBucketMeta: string;
   toBucketMeta: string;
+  /** Insert when target `<details>` is missing (first task in a new phase bucket). */
+  toBucketShellHtml?: string;
+};
+
+export type QueueCategoryMovePatchPayload = {
+  type: "wcQueueTaskCategoryMove";
+  fromCategory: DashboardQueueBucketCategory;
+  toCategory: DashboardQueueBucketCategory;
+  taskId: string;
+  fromPhaseKey: string;
+  toPhaseKey: string;
+  taskRowHtml: string;
+  fromBucketCount: number;
+  toBucketCount: number;
+  fromBucketTaskIds: string;
+  toBucketTaskIds: string;
+  fromBucketMeta: string;
+  toBucketMeta: string;
+  /** Insert when target `<details>` is missing (first task in a new phase bucket). */
+  toBucketShellHtml?: string;
+};
+
+export type QueueTaskRemovalPatchPayload = {
+  type: "wcQueueTaskRemoval";
+  category: DashboardQueueBucketCategory;
+  taskId: string;
+  phaseKey: string;
+  bucketCount: number;
+  bucketTaskIds: string;
+  bucketMeta: string;
 };
 
 function normalizePhaseBucketKey(phaseKey: string | null | undefined): string | null {
@@ -83,6 +114,31 @@ export function resolveQueuePlacementFromTask(
     return { summaryField: "transcriptChurnResearchSummary", category: "transcript-churn" };
   }
   return null;
+}
+
+/** Proposed-row placement before accept → ready. */
+export function resolveProposedPlacementFromTask(
+  task: Record<string, unknown>,
+  categoryLabel?: string
+): QueuePhasePatchPlacement | null {
+  const label = (categoryLabel ?? "").trim().toLowerCase();
+  if (label.includes("improvement")) {
+    return { summaryField: "proposedImprovementsSummary", category: "proposed-improvement" };
+  }
+  const type = typeof task.type === "string" ? task.type.trim() : "";
+  const id = typeof task.id === "string" ? task.id.trim() : "";
+  if (type === "improvement" || id.startsWith("imp-")) {
+    return { summaryField: "proposedImprovementsSummary", category: "proposed-improvement" };
+  }
+  if (type.length > 0 || id.length > 0) {
+    return { summaryField: "proposedExecutionSummary", category: "proposed-execution" };
+  }
+  return null;
+}
+
+function adjustSummaryTopLevelCount(summary: Record<string, unknown>, delta: number): void {
+  const prior = typeof summary.count === "number" ? summary.count : 0;
+  summary.count = Math.max(0, prior + delta);
 }
 
 export function taskEntityToDashboardRow(task: Record<string, unknown>): Record<string, unknown> {
@@ -296,6 +352,18 @@ export function buildQueuePhaseMovePatchPayload(
   const fromSnap = bucketSnapshot(summaryData, placement, fromPk);
   const toSnap = bucketSnapshot(summaryData, placement, toPk);
 
+  const toBucketShellHtml =
+    toSnap.count > 0
+      ? buildLazyQueueBucketShellHtml({
+          category: placement.category,
+          phaseKey: toPk,
+          count: toSnap.count,
+          taskIds: toSnap.taskIds,
+          preloadRowHtml: taskRowHtml,
+          openByDefault: true
+        })
+      : undefined;
+
   return {
     type: "wcQueueTaskPhaseMove",
     category: placement.category,
@@ -318,7 +386,8 @@ export function buildQueuePhaseMovePatchPayload(
       phaseKeyForDom(toPk),
       String(toSnap.count),
       toSnap.taskIds.join(",")
-    )
+    ),
+    toBucketShellHtml
   };
 }
 
@@ -351,6 +420,322 @@ export async function postQueuePhaseMovePatch(
     return;
   }
   await webview.postMessage(payload);
+}
+
+export async function postQueueCategoryMovePatch(
+  webview: Webview | undefined,
+  payload: QueueCategoryMovePatchPayload
+): Promise<void> {
+  if (!webview) {
+    return;
+  }
+  await webview.postMessage(payload);
+}
+
+export async function postQueueTaskRemovalPatch(
+  webview: Webview | undefined,
+  payload: QueueTaskRemovalPatchPayload
+): Promise<void> {
+  if (!webview) {
+    return;
+  }
+  await webview.postMessage(payload);
+}
+
+export function mutateSummaryForCategoryMove(
+  summaryData: Record<string, unknown>,
+  fromPlacement: QueuePhasePatchPlacement,
+  toPlacement: QueuePhasePatchPlacement,
+  args: QueuePhaseMovePatchArgs
+): boolean {
+  const fromPk = normalizePhaseBucketKey(args.fromPhaseKey);
+  const toPk = normalizePhaseBucketKey(args.toPhaseKey);
+
+  const fromSummaryRaw = summaryData[fromPlacement.summaryField];
+  if (!fromSummaryRaw || typeof fromSummaryRaw !== "object") {
+    return false;
+  }
+  const fromSummary = fromSummaryRaw as Record<string, unknown>;
+  const fromBuckets: PhaseBucket[] = Array.isArray(fromSummary.phaseBuckets)
+    ? (fromSummary.phaseBuckets as PhaseBucket[]).map((b) => ({ ...b }))
+    : [];
+  const fromBucket = fromBuckets.find((b) => bucketPhaseKeyMatches(b, fromPk));
+  if (!fromBucket) {
+    return false;
+  }
+  removeTaskFromBucket(fromBucket, args.taskId);
+  fromSummary.phaseBuckets = fromBuckets;
+  summaryData[fromPlacement.summaryField] = fromSummary;
+  adjustSummaryTopLevelCount(fromSummary, -1);
+
+  const toSummaryRaw = summaryData[toPlacement.summaryField];
+  const toSummary =
+    toSummaryRaw && typeof toSummaryRaw === "object"
+      ? (toSummaryRaw as Record<string, unknown>)
+      : { count: 0, phaseBuckets: [] as PhaseBucket[] };
+  const toBuckets: PhaseBucket[] = Array.isArray(toSummary.phaseBuckets)
+    ? (toSummary.phaseBuckets as PhaseBucket[]).map((b) => ({ ...b }))
+    : [];
+  const readyTask: Record<string, unknown> = { ...args.task, status: "ready" };
+  if (toPk != null) {
+    readyTask.phaseKey = toPk;
+    readyTask.phase = `Phase ${toPk}`;
+  }
+  const taskRow = taskEntityToDashboardRow(readyTask);
+  const toBucket = ensureBucket(toBuckets, toPk);
+  addTaskToBucket(toBucket, args.taskId, taskRow);
+  toSummary.phaseBuckets = toBuckets;
+  adjustSummaryTopLevelCount(toSummary, 1);
+  summaryData[toPlacement.summaryField] = toSummary;
+  return true;
+}
+
+export function buildQueueCategoryMovePatchPayload(
+  summaryData: Record<string, unknown>,
+  fromPlacement: QueuePhasePatchPlacement,
+  toPlacement: QueuePhasePatchPlacement,
+  args: QueuePhaseMovePatchArgs
+): QueueCategoryMovePatchPayload | null {
+  const fromPk = normalizePhaseBucketKey(args.fromPhaseKey);
+  const toPk = normalizePhaseBucketKey(args.toPhaseKey);
+  const readyTask: Record<string, unknown> = { ...args.task, status: "ready" };
+  if (toPk != null) {
+    readyTask.phaseKey = toPk;
+    readyTask.phase = `Phase ${toPk}`;
+  }
+  const taskRowHtml = renderQueueBucketRowsHtml(toPlacement.category, [taskEntityToDashboardRow(readyTask)]);
+  const fromSnap = bucketSnapshot(summaryData, fromPlacement, fromPk);
+  const toSnap = bucketSnapshot(summaryData, toPlacement, toPk);
+
+  const toBucketShellHtml =
+    toSnap.count > 0
+      ? buildLazyQueueBucketShellHtml({
+          category: toPlacement.category,
+          phaseKey: toPk,
+          count: toSnap.count,
+          taskIds: toSnap.taskIds,
+          preloadRowHtml: taskRowHtml,
+          openByDefault: true
+        })
+      : undefined;
+
+  return {
+    type: "wcQueueTaskCategoryMove",
+    fromCategory: fromPlacement.category,
+    toCategory: toPlacement.category,
+    taskId: args.taskId.trim(),
+    fromPhaseKey: phaseKeyForDom(fromPk),
+    toPhaseKey: phaseKeyForDom(toPk),
+    taskRowHtml,
+    fromBucketCount: fromSnap.count,
+    toBucketCount: toSnap.count,
+    fromBucketTaskIds: fromSnap.taskIds.join(","),
+    toBucketTaskIds: toSnap.taskIds.join(","),
+    fromBucketMeta: queueBucketMetaKey(
+      fromPlacement.category,
+      phaseKeyForDom(fromPk),
+      String(fromSnap.count),
+      fromSnap.taskIds.join(",")
+    ),
+    toBucketMeta: queueBucketMetaKey(
+      toPlacement.category,
+      phaseKeyForDom(toPk),
+      String(toSnap.count),
+      toSnap.taskIds.join(",")
+    ),
+    toBucketShellHtml
+  };
+}
+
+export function applyQueueAcceptProposedPatchToSummaryCache(
+  summaryData: Record<string, unknown>,
+  fromPlacement: QueuePhasePatchPlacement,
+  toPlacement: QueuePhasePatchPlacement,
+  args: QueuePhaseMovePatchArgs
+): QueueCategoryMovePatchPayload | null {
+  if (!mutateSummaryForCategoryMove(summaryData, fromPlacement, toPlacement, args)) {
+    return null;
+  }
+  return buildQueueCategoryMovePatchPayload(summaryData, fromPlacement, toPlacement, args);
+}
+
+function findTaskRowInSummaryPhaseBuckets(
+  summary: unknown,
+  taskId: string
+): Record<string, unknown> | null {
+  const tid = taskId.trim().toUpperCase();
+  if (!tid.length || !summary || typeof summary !== "object") {
+    return null;
+  }
+  const buckets = (summary as { phaseBuckets?: unknown }).phaseBuckets;
+  if (!Array.isArray(buckets)) {
+    return null;
+  }
+  for (const raw of buckets) {
+    if (!raw || typeof raw !== "object") {
+      continue;
+    }
+    const bucket = raw as PhaseBucket;
+    if (Array.isArray(bucket.top)) {
+      for (const row of bucket.top) {
+        if (!row || typeof row !== "object") {
+          continue;
+        }
+        const id = String((row as { id?: unknown }).id ?? "")
+          .trim()
+          .toUpperCase();
+        if (id === tid) {
+          const matched = { ...(row as Record<string, unknown>) };
+          const bucketPhaseKey = bucket.phaseKey != null ? String(bucket.phaseKey).trim() : "";
+          if (dashboardRowPhaseKey(matched).length === 0 && bucketPhaseKey.length > 0) {
+            matched.phaseKey = bucketPhaseKey;
+          }
+          return matched;
+        }
+      }
+    }
+    if (Array.isArray(bucket.taskIds) && bucket.taskIds.some((id) => String(id).trim().toUpperCase() === tid)) {
+      const bucketPhaseKey = bucket.phaseKey != null ? String(bucket.phaseKey).trim() : "";
+      const fromTop = Array.isArray(bucket.top)
+        ? bucket.top.find(
+            (row) =>
+              row &&
+              typeof row === "object" &&
+              String((row as { id?: unknown }).id ?? "")
+                .trim()
+                .toUpperCase() === tid
+          )
+        : undefined;
+      if (fromTop && typeof fromTop === "object") {
+        const row = { ...(fromTop as Record<string, unknown>) };
+        if (dashboardRowPhaseKey(row).length === 0 && bucketPhaseKey.length > 0) {
+          row.phaseKey = bucketPhaseKey;
+        }
+        return row;
+      }
+      return {
+        id: taskId.trim(),
+        status: "proposed",
+        ...(bucketPhaseKey.length > 0 ? { phaseKey: bucketPhaseKey } : {})
+      };
+    }
+  }
+  return null;
+}
+
+/** Snapshot proposed-row placement from cached dashboard-summary before accept. */
+export function lookupProposedTaskSnapshot(
+  summaryData: Record<string, unknown>,
+  taskId: string,
+  categoryLabel?: string
+): {
+  placement: QueuePhasePatchPlacement;
+  phaseKey: string | null;
+  task: Record<string, unknown>;
+} | null {
+  const label = (categoryLabel ?? "").trim().toLowerCase();
+  const candidates: Array<{ summary: unknown; placement: QueuePhasePatchPlacement }> = [];
+  if (label.includes("improvement")) {
+    candidates.push({
+      summary: summaryData.proposedImprovementsSummary,
+      placement: { summaryField: "proposedImprovementsSummary", category: "proposed-improvement" }
+    });
+  } else if (label.includes("execution")) {
+    candidates.push({
+      summary: summaryData.proposedExecutionSummary,
+      placement: { summaryField: "proposedExecutionSummary", category: "proposed-execution" }
+    });
+  } else {
+    candidates.push(
+      {
+        summary: summaryData.proposedExecutionSummary,
+        placement: { summaryField: "proposedExecutionSummary", category: "proposed-execution" }
+      },
+      {
+        summary: summaryData.proposedImprovementsSummary,
+        placement: { summaryField: "proposedImprovementsSummary", category: "proposed-improvement" }
+      }
+    );
+  }
+  for (const c of candidates) {
+    const row = findTaskRowInSummaryPhaseBuckets(c.summary, taskId);
+    if (row) {
+      const pk = dashboardRowPhaseKey(row);
+      return {
+        placement: c.placement,
+        phaseKey: pk.length > 0 ? pk : null,
+        task: row
+      };
+    }
+  }
+  const fallback = { id: taskId.trim(), status: "proposed" };
+  const placement = resolveProposedPlacementFromTask(fallback, categoryLabel);
+  if (!placement) {
+    return null;
+  }
+  return { placement, phaseKey: null, task: fallback };
+}
+
+export function mutateSummaryForTaskRemoval(
+  summaryData: Record<string, unknown>,
+  placement: QueuePhasePatchPlacement,
+  taskId: string,
+  phaseKey: string | null
+): boolean {
+  const pk = normalizePhaseBucketKey(phaseKey);
+  const summaryRaw = summaryData[placement.summaryField];
+  if (!summaryRaw || typeof summaryRaw !== "object") {
+    return false;
+  }
+  const summary = summaryRaw as Record<string, unknown>;
+  const buckets: PhaseBucket[] = Array.isArray(summary.phaseBuckets)
+    ? (summary.phaseBuckets as PhaseBucket[]).map((b) => ({ ...b }))
+    : [];
+  const bucket = buckets.find((b) => bucketPhaseKeyMatches(b, pk));
+  if (!bucket) {
+    return false;
+  }
+  removeTaskFromBucket(bucket, taskId);
+  summary.phaseBuckets = buckets;
+  summaryData[placement.summaryField] = summary;
+  adjustSummaryTopLevelCount(summary, -1);
+  return true;
+}
+
+export function buildQueueTaskRemovalPatchPayload(
+  summaryData: Record<string, unknown>,
+  placement: QueuePhasePatchPlacement,
+  taskId: string,
+  phaseKey: string | null
+): QueueTaskRemovalPatchPayload | null {
+  const pk = normalizePhaseBucketKey(phaseKey);
+  const snap = bucketSnapshot(summaryData, placement, pk);
+  return {
+    type: "wcQueueTaskRemoval",
+    category: placement.category,
+    taskId: taskId.trim(),
+    phaseKey: phaseKeyForDom(pk),
+    bucketCount: snap.count,
+    bucketTaskIds: snap.taskIds.join(","),
+    bucketMeta: queueBucketMetaKey(
+      placement.category,
+      phaseKeyForDom(pk),
+      String(snap.count),
+      snap.taskIds.join(",")
+    )
+  };
+}
+
+export function applyQueueTaskRemovalPatchToSummaryCache(
+  summaryData: Record<string, unknown>,
+  placement: QueuePhasePatchPlacement,
+  taskId: string,
+  phaseKey: string | null
+): QueueTaskRemovalPatchPayload | null {
+  if (!mutateSummaryForTaskRemoval(summaryData, placement, taskId, phaseKey)) {
+    return null;
+  }
+  return buildQueueTaskRemovalPatchPayload(summaryData, placement, taskId, phaseKey);
 }
 
 export function applyQueuePhasePatchToSummaryCache(

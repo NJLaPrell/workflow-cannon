@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { buildDashboardPolicyApprovalForPath } from "./policy/dashboard-policy-path.js";
-import type { CommandClient } from "./runtime/command-client.js";
+import type { CommandClient, KitRunResult } from "./runtime/command-client.js";
 import { expectedPlanningGenerationArgs, ingestPlanningMetaFromData } from "./planning-generation-cache.js";
 
 /** Modal confirm + policy rationale, then `run-transition` with planning-generation args when required. */
@@ -11,14 +11,14 @@ export async function confirmAndRunTransition(
   action: string,
   /** Shown in the reject confirmation only, e.g. "this wishlist item". */
   rejectConfirmSubject?: string
-): Promise<void> {
+): Promise<KitRunResult | null> {
   const actionPhrase =
     action === "reject"
       ? `Decline and cancel ${rejectConfirmSubject ?? "this proposed task"} (reject → cancelled)`
       : `Apply transition '${action}'`;
   const ok = await vscode.window.showWarningMessage(`${actionPhrase} for ${taskId}?`, { modal: true }, "Apply");
   if (ok !== "Apply") {
-    return;
+    return null;
   }
   const policyApproval = buildDashboardPolicyApprovalForPath(
     { workflowId: "palette-run-transition", action, command: "run-transition" },
@@ -32,11 +32,12 @@ export async function confirmAndRunTransition(
   });
   if (!r.ok) {
     await vscode.window.showErrorMessage((r.message ?? JSON.stringify(r)).slice(0, 900));
-  } else {
-    ingestPlanningMetaFromData(r.data);
-    await vscode.window.showInformationMessage(r.message ?? "Transition OK");
-    onSuccess();
+    return r;
   }
+  ingestPlanningMetaFromData(r.data);
+  await vscode.window.showInformationMessage(r.message ?? "Transition OK");
+  onSuccess();
+  return r;
 }
 
 /** One shared rationale; sequential `accept` with refreshed `expectedPlanningGeneration` after each success. */
