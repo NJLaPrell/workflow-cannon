@@ -17,6 +17,10 @@ import { openPlanningStores } from "../../core/planning/index.js";
 import { inferTaskPhaseKey } from "../task-engine/phase-resolution.js";
 import { reviewPlanningExecutionDraftGaps } from "../task-engine/planning-execution-draft-review.js";
 import { runTaskRowMutationCommands } from "../task-engine/commands/task-row-mutation-commands.js";
+import { runUpsertPhaseCatalogEntry } from "../task-engine/phase-catalog-commands-runtime.js";
+import { readPhaseCatalogRows } from "../task-engine/persistence/phase-catalog-store.js";
+import { collectPhaseCatalogHintsFromTasks } from "../task-engine/persistence/phase-catalog-store.js";
+import { readKitWorkspaceStatusRow } from "../task-engine/persistence/workspace-status-store.js";
 import { buildTaskFromConversionPayload } from "../task-engine/mutation-utils.js";
 import type { TaskEntity, TaskStatus } from "../task-engine/types.js";
 import { attachPolicyMeta } from "../task-engine/attach-planning-response-meta.js";
@@ -60,6 +64,73 @@ function collectActivePhaseKeys(tasks: TaskEntity[]): string[] {
     }
   }
   return [...keys];
+}
+
+function collectOccupiedPhaseKeys(tasks: TaskEntity[]): string[] {
+  return collectPhaseCatalogHintsFromTasks(tasks);
+}
+
+function catalogShortDescriptionForFinalize(
+  loaded: PlanArtifactV1,
+  phaseKey: string,
+  proposalDescription: string
+): string {
+  const fromProposal = proposalDescription.trim();
+  if (fromProposal.length > 0) {
+    return fromProposal.slice(0, 240);
+  }
+  const match = loaded.phaseRecommendations.find((r) => r.phaseKey.trim() === phaseKey);
+  const fromRecommendation = match?.label?.trim();
+  if (fromRecommendation && fromRecommendation.length > 0) {
+    return fromRecommendation.slice(0, 240);
+  }
+  const title = loaded.identity.title.trim();
+  if (title.length > 0) {
+    return title.slice(0, 240);
+  }
+  return `Phase ${phaseKey}`;
+}
+
+async function ensurePhaseCatalogEntryForFinalize(args: {
+  ctx: ModuleLifecycleContext;
+  stores: Awaited<ReturnType<typeof openPlanningStores>>;
+  phaseKey: string;
+  shortDescription: string;
+  dryRun: boolean;
+  commandArgs: Record<string, unknown>;
+}): Promise<
+  | { ok: true; created: boolean; skipped: boolean; catalogResult?: ModuleCommandResult }
+  | { ok: false; result: ModuleCommandResult }
+> {
+  const db = args.stores.sqliteDual.getDatabase();
+  const existing = readPhaseCatalogRows(db).some((row) => row.phaseKey === args.phaseKey);
+  if (existing) {
+    return { ok: true, created: false, skipped: true };
+  }
+  if (args.dryRun) {
+    return { ok: true, created: true, skipped: false };
+  }
+  const clientMutationId =
+    typeof args.commandArgs.clientMutationId === "string"
+      ? `${args.commandArgs.clientMutationId}::phase-catalog`
+      : undefined;
+  const catalogResult = await runUpsertPhaseCatalogEntry(
+    args.ctx,
+    args.stores,
+    args.stores.taskStore,
+    {
+      phaseKey: args.phaseKey,
+      shortDescription: args.shortDescription,
+      expectedPlanningGeneration: args.commandArgs.expectedPlanningGeneration,
+      policyApproval: args.commandArgs.policyApproval,
+      clientMutationId,
+      actor: args.commandArgs.actor
+    }
+  );
+  if (!catalogResult.ok) {
+    return { ok: false, result: catalogResult };
+  }
+  return { ok: true, created: true, skipped: false, catalogResult };
 }
 
 function resolveApprovalTargetVersion(loaded: PlanArtifactV1): number {
@@ -232,13 +303,20 @@ export async function runFinalizePlanToPhase(
   const desiredStatus: "proposed" | "ready" =
     args.desiredStatus === "proposed" ? "proposed" : "ready";
 
+  const allTasks = stores.taskStore.getAllTasks();
+  const workspaceStatus = readKitWorkspaceStatusRow(stores.sqliteDual.getDatabase());
+  const workspaceNextPhaseKey =
+    typeof workspaceStatus?.nextKitPhase === "string" ? workspaceStatus.nextKitPhase.trim() : "";
+
   const phaseResolved = resolvePlanArtifactPhaseProposal({
     targetPhaseKey: typeof args.targetPhaseKey === "string" ? args.targetPhaseKey : undefined,
     targetPhase: typeof args.targetPhase === "string" ? args.targetPhase : undefined,
     phaseShortDescription:
       typeof args.phaseShortDescription === "string" ? args.phaseShortDescription : undefined,
     phaseRecommendations: loaded.phaseRecommendations,
-    activePhaseKeys: collectActivePhaseKeys(stores.taskStore.getAllTasks()),
+    activePhaseKeys: collectActivePhaseKeys(allTasks),
+    occupiedPhaseKeys: collectOccupiedPhaseKeys(allTasks),
+    workspaceNextPhaseKey: workspaceNextPhaseKey.length > 0 ? workspaceNextPhaseKey : undefined,
     allowPhaseKeyCollision: args.allowPhaseKeyCollision === true,
     strict: args.strict !== false
   });
@@ -375,7 +453,38 @@ export async function runFinalizePlanToPhase(
     };
   }
 
+  const catalogShortDescription = catalogShortDescriptionForFinalize(
+    loaded,
+    proposal.phaseKey,
+    proposal.description
+  );
+  const catalogEnsure = await ensurePhaseCatalogEntryForFinalize({
+    ctx,
+    stores,
+    phaseKey: proposal.phaseKey,
+    shortDescription: catalogShortDescription,
+    dryRun,
+    commandArgs: args
+  });
+  if (!catalogEnsure.ok) {
+    return catalogEnsure.result;
+  }
+
+  const phaseCatalogMeta = {
+    phaseKey: proposal.phaseKey,
+    shortDescription: catalogShortDescription,
+    created: catalogEnsure.created,
+    skippedExisting: catalogEnsure.skipped
+  };
+
   if (!dryRun) {
+    let expectedPlanningGeneration = args.expectedPlanningGeneration;
+    const catalogGen = (catalogEnsure.catalogResult?.data as Record<string, unknown> | undefined)
+      ?.planningGeneration;
+    if (typeof catalogGen === "number") {
+      expectedPlanningGeneration = catalogGen;
+    }
+
     const persist = await runTaskRowMutationCommands(
       {
         name: "persist-planning-execution-drafts",
@@ -386,7 +495,7 @@ export async function runFinalizePlanToPhase(
           targetPhaseKey: proposal.phaseKey,
           targetPhase: proposal.label,
           desiredStatus,
-          expectedPlanningGeneration: args.expectedPlanningGeneration,
+          expectedPlanningGeneration,
           policyApproval: args.policyApproval,
           clientMutationId: args.clientMutationId,
           actor: args.actor
@@ -451,11 +560,13 @@ export async function runFinalizePlanToPhase(
         dryRun: false,
         phaseKey: proposal.phaseKey,
         phaseProposal: proposal,
+        phaseResolutionSource: phaseResolved.source,
         createdTasks: persistData.createdTasks,
         count: persistData.count ?? built.tasks.length,
         replayed: persistData.replayed === true,
         storagePath: written.paths.artifactFileRelative(written.artifact.version),
         delegatedCode: persist.code,
+        phaseCatalog: phaseCatalogMeta,
         review: {
           passed: true,
           errorCount: 0,
@@ -499,7 +610,8 @@ export async function runFinalizePlanToPhase(
         reviewProfile: "ux-cae-pre-persist-v1",
         taskCount: taskPreview.length
       },
-      phaseResolutionSource: phaseResolved.source
+      phaseResolutionSource: phaseResolved.source,
+      phaseCatalog: phaseCatalogMeta
     }
   };
   attachPolicyMeta(

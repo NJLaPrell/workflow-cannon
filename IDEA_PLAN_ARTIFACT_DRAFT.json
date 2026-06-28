@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "planId": "idea-planning-system-plan",
-  "version": 3,
+  "version": 5,
   "planRef": "plan-artifact:idea-planning-system-plan",
   "status": "draft",
   "identity": {
@@ -255,7 +255,8 @@
         "Missing idea actionable error",
         "Active session returns resumed",
         "Open idea returns started and prompt",
-        "Includes linked/active draft/previous plan data"
+        "Includes linked/active draft/previous plan data",
+        "First-run open idea with no active session starts planning and returns compact prompt"
       ],
       "testingVerification": [
         "Unit tests for missing idea, open idea, active session, repeated mutation id",
@@ -283,7 +284,8 @@
           "Missing idea actionable error",
           "Active session returns resumed",
           "Open idea returns started and prompt",
-          "Includes linked/active draft/previous plan data"
+          "Includes linked/active draft/previous plan data",
+          "First-run open idea with no active session starts planning and returns compact prompt"
         ],
         "dependsOn": [
           "WBS-0.1"
@@ -1083,7 +1085,8 @@
         "Returns one lifecycle state",
         "Precedence finalized > accepted > review > active draft > session > idea",
         "Derived lifecycle state prevents impossible action combinations",
-        "Lifecycle state matrix unit tests cover precedence rules"
+        "Lifecycle state matrix unit tests cover precedence rules",
+        "Empty plan refs and fresh workspace with no data derive open lifecycle without errors"
       ],
       "testingVerification": [
         "Unit tests for state matrix and precedence conflicts",
@@ -1112,7 +1115,8 @@
           "Returns one lifecycle state",
           "Precedence finalized > accepted > review > active draft > session > idea",
           "Derived lifecycle state prevents impossible action combinations",
-          "Lifecycle state matrix unit tests cover precedence rules"
+          "Lifecycle state matrix unit tests cover precedence rules",
+          "Empty plan refs and fresh workspace with no data derive open lifecycle without errors"
         ],
         "dependsOn": [
           "WBS-1.2",
@@ -1135,12 +1139,11 @@
         "Use derived helper to show Plan this, Resume, Review, Accept, Finalize, View tasks, or View plan."
       ],
       "acceptanceCriteria": [
-        "Open shows Plan this",
+        "Open and first-run ideas show Plan this without Resume simultaneously",
         "Active planning session shows Resume planning dashboard action",
         "Blocked review state disables Accept action on dashboard",
         "Warning-only review state still allows Accept when strict is false",
-        "Accepted plan state shows Finalize action on dashboard",
-        "Finalized shows View tasks"
+        "Accepted plan shows Finalize and finalized plan shows View tasks only"
       ],
       "testingVerification": [
         "Dashboard tests for each state",
@@ -1164,12 +1167,11 @@
           "Use derived helper to show Plan this, Resume, Review, Accept, Finalize, View tasks, or View plan."
         ],
         "acceptanceCriteria": [
-          "Open shows Plan this",
+          "Open and first-run ideas show Plan this without Resume simultaneously",
           "Active planning session shows Resume planning dashboard action",
           "Blocked review state disables Accept action on dashboard",
           "Warning-only review state still allows Accept when strict is false",
-          "Accepted plan state shows Finalize action on dashboard",
-          "Finalized shows View tasks"
+          "Accepted plan shows Finalize and finalized plan shows View tasks only"
         ],
         "dependsOn": [
           "WBS-6.1"
@@ -1692,9 +1694,8 @@
         "No Plan this and Resume simultaneously",
         "Blocked review result cannot proceed to accept-plan-artifact",
         "Warning-only review result can proceed to accept with operator confirmation",
-        "Accepted plan WBS immutable",
-        "Finalized cannot reopen as draft",
-        "Task provenance resolves to WBS"
+        "Accepted plan WBS immutable and finalized cannot reopen as draft",
+        "Task provenance resolves to WBS row identifiers"
       ],
       "testingVerification": [
         "Unit tests for invariants",
@@ -1722,9 +1723,8 @@
           "No Plan this and Resume simultaneously",
           "Blocked review result cannot proceed to accept-plan-artifact",
           "Warning-only review result can proceed to accept with operator confirmation",
-          "Accepted plan WBS immutable",
-          "Finalized cannot reopen as draft",
-          "Task provenance resolves to WBS"
+          "Accepted plan WBS immutable and finalized cannot reopen as draft",
+          "Task provenance resolves to WBS row identifiers"
         ],
         "dependsOn": [
           "WBS-6.1",
@@ -1963,7 +1963,7 @@
   ],
   "provenance": {
     "createdAt": "2026-06-27T00:00:00.000-07:00",
-    "updatedAt": "2026-06-28T06:31:04.022Z",
+    "updatedAt": "2026-06-28T06:34:58.980Z",
     "createdBy": "operator",
     "source": "draft-plan-artifact",
     "sourceIdeaId": "idea-planning-system",

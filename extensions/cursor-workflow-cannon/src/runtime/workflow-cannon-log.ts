@@ -20,6 +20,20 @@ export function logWc(scope: string, message: string): void {
   output.appendLine(`${timestamp()} [${scope}] ${message}`);
 }
 
+/** Step timing for drawer submit / refresh pipelines (always logged). */
+export function logWcDrawerSubmitStep(
+  traceId: string,
+  step: string,
+  stepStartedAt: number,
+  detail?: string
+): number {
+  const now = Date.now();
+  const delta = now - stepStartedAt;
+  const suffix = detail && detail.length > 0 ? ` ${detail}` : "";
+  logWc("dashboard", `drawerSubmit trace id=${traceId} step=${step} +${delta}ms${suffix}`);
+  return now;
+}
+
 export function logWcKitRunStart(commandName: string, args: Record<string, unknown>): number {
   logWc("wk", formatKitRunStartLine(commandName, args));
   return Date.now();

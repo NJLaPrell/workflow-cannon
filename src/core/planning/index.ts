@@ -119,6 +119,7 @@ export {
   PLAN_ARTIFACT_PHASE_KEY_RE,
   countDescriptionWords,
   resolvePlanArtifactPhaseProposal,
+  resolveNextEmptyNumericPhaseKey,
   type PlanArtifactPhaseProposal,
   type PlanArtifactPhaseProposalFinding,
   type ResolvePlanArtifactPhaseProposalInput,

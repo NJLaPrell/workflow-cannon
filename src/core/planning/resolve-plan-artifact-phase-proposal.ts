@@ -29,6 +29,10 @@ export type ResolvePlanArtifactPhaseProposalInput = {
   phaseRecommendations: PlanArtifactPhaseRecommendation[];
   /** Phase keys with active execution work (e.g. ready / in_progress). */
   activePhaseKeys?: string[];
+  /** Phase keys with any non-archived task (used for auto-empty resolution). */
+  occupiedPhaseKeys?: string[];
+  /** Workspace kit `nextKitPhase` when set (roster operator intent). */
+  workspaceNextPhaseKey?: string;
   /** When true, an explicit key may reuse an active phase bucket. */
   allowPhaseKeyCollision?: boolean;
   /** Long descriptions are blockers when true; warnings when false. */
@@ -39,7 +43,7 @@ export type ResolvePlanArtifactPhaseProposalSuccess = {
   ok: true;
   proposal: PlanArtifactPhaseProposal;
   findings: PlanArtifactPhaseProposalFinding[];
-  source: "explicit" | "recommendation" | "auto";
+  source: "explicit" | "workspace-next" | "auto-empty" | "recommendation" | "auto";
 };
 
 export type ResolvePlanArtifactPhaseProposalFailure = {
@@ -85,21 +89,42 @@ function nextAutoPhaseKey(activePhaseKeys: string[], recommendationKeys: string[
   return String(max + 1);
 }
 
+/**
+ * Next numeric phase key strictly after the highest occupied ordinal that has zero tasks.
+ * Skips occupied keys when incrementing (e.g. gaps at 135–138 with work in 134/137/139 → 140).
+ */
+export function resolveNextEmptyNumericPhaseKey(
+  occupiedPhaseKeys: string[],
+  hintKeys: string[] = []
+): string {
+  const occupied = occupiedPhaseKeys.map((k) => k.trim()).filter((k) => k.length > 0);
+  const occupiedSet = new Set(occupied);
+  let maxOccupied = 0;
+  for (const key of occupied) {
+    const ord = parseLeadingPhaseOrdinal(key);
+    if (ord !== null && ord > maxOccupied) {
+      maxOccupied = ord;
+    }
+  }
+  for (const key of hintKeys) {
+    const ord = parseLeadingPhaseOrdinal(key);
+    if (ord !== null && ord > maxOccupied) {
+      maxOccupied = ord;
+    }
+  }
+  let candidate = maxOccupied + 1;
+  while (occupiedSet.has(String(candidate))) {
+    candidate += 1;
+  }
+  return String(candidate);
+}
+
 export function countDescriptionWords(description: string): number {
   const trimmed = description.trim();
   if (trimmed.length === 0) {
     return 0;
   }
   return trimmed.split(/\s+/).filter((w) => w.length > 0).length;
-}
-
-function pickPrimaryRecommendation(
-  recommendations: PlanArtifactPhaseRecommendation[]
-): PlanArtifactPhaseRecommendation | undefined {
-  if (recommendations.length === 0) {
-    return undefined;
-  }
-  return recommendations.find((r) => r.isPrimary === true) ?? recommendations[0];
 }
 
 function validateDescription(
@@ -179,26 +204,31 @@ export function resolvePlanArtifactPhaseProposal(
     const match = input.phaseRecommendations.find((r) => r.phaseKey.trim() === explicitKey);
     labelFromRecommendation = match?.label.trim();
   } else {
-    const primary = pickPrimaryRecommendation(input.phaseRecommendations);
-    if (primary) {
-      phaseKey = primary.phaseKey.trim();
-      source = "recommendation";
-      labelFromRecommendation = primary.label.trim();
-      if (!PLAN_ARTIFACT_PHASE_KEY_RE.test(phaseKey)) {
+    const workspaceNext = trimOptional(input.workspaceNextPhaseKey);
+    const occupiedKeys = (input.occupiedPhaseKeys ?? []).map((k) => k.trim()).filter((k) => k.length > 0);
+
+    if (workspaceNext) {
+      if (!PLAN_ARTIFACT_PHASE_KEY_RE.test(workspaceNext)) {
         const findings: PlanArtifactPhaseProposalFinding[] = [
           {
             code: "PLAN-PHASE-KEY-INVALID",
-            message: `phaseRecommendations primary key '${phaseKey}' is not a valid phase key`,
+            message: `workspace nextKitPhase '${workspaceNext}' is not a valid phase key`,
             severity: "blocker",
-            field: "phaseRecommendations"
+            field: "workspaceNextPhaseKey"
           },
           ...descriptionFindings
         ];
         return { ok: false, code: "plan-artifact-phase-proposal-blocked", findings };
       }
+      phaseKey = workspaceNext;
+      source = "workspace-next";
+      const match = input.phaseRecommendations.find((r) => r.phaseKey.trim() === workspaceNext);
+      labelFromRecommendation = match?.label.trim();
     } else {
-      phaseKey = nextAutoPhaseKey(activeKeys, recommendationKeys);
-      source = "auto";
+      phaseKey = resolveNextEmptyNumericPhaseKey(occupiedKeys, [...activeKeys, ...recommendationKeys]);
+      source = "auto-empty";
+      const match = input.phaseRecommendations.find((r) => r.phaseKey.trim() === phaseKey);
+      labelFromRecommendation = match?.label.trim();
     }
   }
 

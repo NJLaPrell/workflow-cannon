@@ -29,6 +29,10 @@ function readWorkflowCannonNodeSetting(): string | undefined {
   return vscode.workspace.getConfiguration("workflowCannon").get<string>("nodeExecutable")?.trim() || undefined;
 }
 
+function readKitRunDaemonEnabled(): boolean {
+  return vscode.workspace.getConfiguration("workflowCannon").get<boolean>("kitRunDaemon.enabled") !== false;
+}
+
 function readTaskStateSyncSettings(): { enabled: boolean; intervalMs: number } {
   const cfg = vscode.workspace.getConfiguration("workflowCannon");
   const enabled = cfg.get<boolean>("taskStateSync.enabled") !== false;
@@ -111,11 +115,15 @@ export function activate(context: vscode.ExtensionContext): void {
     ? new CommandClient(root, {
         extensionRoot: context.extensionUri.fsPath,
         resolveNodeExecutable: readWorkflowCannonNodeSetting,
+        kitRunDaemon: readKitRunDaemonEnabled(),
         ...kitRunTraceHooks(),
         activityEnvelopeProvider: () => agentActivitySync?.resolveEnvelope(),
         onDashboardActivityBoundary: () => agentActivitySync?.noteDashboardActivity()
       })
     : undefined;
+  if (client) {
+    context.subscriptions.push({ dispose: () => client.dispose() });
+  }
   if (client && root) {
     agentActivitySync = new AgentActivitySyncCoordinator(root, client, () => kitStateEmitter.fire());
     agentActivitySync.start();

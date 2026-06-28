@@ -57,6 +57,7 @@ import {
 import { runWorkspaceKitInitCommand } from "./cli/init-command.js";
 import { runRefreshContextCommand } from "./cli/refresh-context-command.js";
 import { runWorkspaceKitStartCommand } from "./cli/start-command.js";
+import { runKitRunDaemonMain } from "./cli/kit-run-daemon.js";
 import {
   WORKSPACE_KIT_RUNTIME_LAUNCHER_RELATIVE_PATH,
   WORKSPACE_KIT_RUNTIME_STAMP_RELATIVE_PATH,
@@ -657,6 +658,11 @@ export async function runCli(
     return EXIT_SUCCESS;
   }
 
+  if (command === "run-daemon") {
+    await runKitRunDaemonMain(cwd);
+    return EXIT_SUCCESS;
+  }
+
   if (command === "run") {
     return handleRunCommand(
       cwd,
@@ -674,7 +680,7 @@ export async function runCli(
 
   if (command !== "doctor") {
     writeError(
-      `Unknown command '${command}'. Supported: init, refresh-context, start, doctor, check, upgrade, drift-check, detach, run, config. Run workspace-kit --help for a guided overview.`
+      `Unknown command '${command}'. Supported: init, refresh-context, start, doctor, check, upgrade, drift-check, detach, run, run-daemon, config. Run workspace-kit --help for a guided overview.`
     );
     return EXIT_USAGE_ERROR;
   }

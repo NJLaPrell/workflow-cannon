@@ -830,6 +830,103 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
     }
   }
 
+  function findQueueBucket(category, phaseKey) {
+    var root = document.getElementById('root');
+    if (!root) return null;
+    return root.querySelector(lazyQueueBucketSelector(category, phaseKey));
+  }
+
+  function removeQueueTaskRowById(taskId) {
+    if (!taskId) return;
+    var root = document.getElementById('root');
+    if (!root) return;
+    var esc = String(taskId).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+    var btn = root.querySelector('[data-task-id="' + esc + '"]');
+    if (!btn) return;
+    var row = btn.closest('.dash-row');
+    if (row && row.parentNode) row.parentNode.removeChild(row);
+  }
+
+  function updateQueueBucketMeta(detailsEl, count, taskIdsCsv) {
+    if (!detailsEl) return;
+    if (typeof count === 'number' && count >= 0) {
+      detailsEl.setAttribute('data-wc-bucket-count', String(count));
+      var countEl = detailsEl.querySelector('.phase-bucket-summary-count');
+      if (countEl) countEl.textContent = '(' + String(count) + ')';
+    }
+    if (typeof taskIdsCsv === 'string') {
+      if (taskIdsCsv.length > 0) {
+        detailsEl.setAttribute('data-wc-bucket-task-ids', taskIdsCsv);
+      } else {
+        detailsEl.removeAttribute('data-wc-bucket-task-ids');
+      }
+    }
+  }
+
+  function insertQueueRowsIntoBucketBody(body, rowsHtml) {
+    if (!body || typeof rowsHtml !== 'string' || rowsHtml.length === 0) return;
+    var tmp = document.createElement('div');
+    tmp.innerHTML = rowsHtml;
+    var newList = tmp.querySelector('.dash-row-list');
+    var list = body.querySelector('.dash-row-list');
+    if (newList && list) {
+      while (newList.firstChild) {
+        list.appendChild(newList.firstChild);
+      }
+    } else if (newList) {
+      body.insertAdjacentHTML('beforeend', rowsHtml);
+    } else {
+      body.insertAdjacentHTML('beforeend', rowsHtml);
+    }
+    var muted = body.querySelector('p.muted');
+    if (muted && body.querySelector('.dash-row-list .dash-row')) {
+      muted.remove();
+    }
+    body.setAttribute('data-wc-lazy-loaded', '1');
+    var bucket = body.closest('details.wc-lazy-queue-bucket');
+    if (bucket) bucket.setAttribute('data-wc-lazy-loaded', '1');
+  }
+
+  function applyQueueTaskPhaseMove(msg) {
+    var category = typeof msg.category === 'string' ? msg.category : '';
+    var taskId = typeof msg.taskId === 'string' ? msg.taskId.trim() : '';
+    var fromPk = typeof msg.fromPhaseKey === 'string' ? msg.fromPhaseKey : '';
+    var toPk = typeof msg.toPhaseKey === 'string' ? msg.toPhaseKey : '';
+    var rowHtml = typeof msg.taskRowHtml === 'string' ? msg.taskRowHtml : '';
+    var root = document.getElementById('root');
+    if (!root || !category || !taskId) {
+      vscode.postMessage({ type: 'queuePhasePatchFailed', reason: 'missing-args' });
+      return;
+    }
+    removeQueueTaskRowById(taskId);
+    var fromBucket = findQueueBucket(category, fromPk);
+    if (fromBucket) {
+      updateQueueBucketMeta(
+        fromBucket,
+        typeof msg.fromBucketCount === 'number' ? msg.fromBucketCount : null,
+        typeof msg.fromBucketTaskIds === 'string' ? msg.fromBucketTaskIds : ''
+      );
+    }
+    var toBucket = findQueueBucket(category, toPk);
+    if (!toBucket && typeof msg.toBucketCount === 'number' && msg.toBucketCount > 0) {
+      vscode.postMessage({ type: 'queuePhasePatchFailed', reason: 'missing-target-bucket', taskId: taskId });
+      return;
+    }
+    if (toBucket) {
+      updateQueueBucketMeta(
+        toBucket,
+        typeof msg.toBucketCount === 'number' ? msg.toBucketCount : null,
+        typeof msg.toBucketTaskIds === 'string' ? msg.toBucketTaskIds : ''
+      );
+      var body = toBucket.querySelector('.wc-lazy-bucket-body');
+      if (body && body.getAttribute('data-wc-lazy-loaded') === '1' && rowHtml.length > 0) {
+        insertQueueRowsIntoBucketBody(body, rowHtml);
+      }
+    }
+    applyQueueFilters(root);
+    vscode.postMessage({ type: 'queuePhasePatchApplied', taskId: taskId });
+  }
+
   function applyLazyTerminalBucketHtml(terminalStatus, phaseKey, html) {
     applyQueueBucketRowsHtml(terminalStatus, phaseKey, html, false);
   }
@@ -1104,6 +1201,10 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
       var queueCat = typeof m.category === 'string' ? m.category : '';
       var queuePk = typeof m.phaseKey === 'string' ? m.phaseKey : '';
       applyQueueBucketRowsHtml(queueCat, queuePk, m.html, m.append === true);
+      return;
+    }
+    if (m && m.type === 'wcQueueTaskPhaseMove') {
+      applyQueueTaskPhaseMove(m);
       return;
     }
     if (m && m.type === 'wcOpenQueueForPhase') {

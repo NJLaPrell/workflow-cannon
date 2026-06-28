@@ -25,7 +25,7 @@ import {
 } from "../../playbook-chat-prompts.js";
 import { buildPhaseCompleteReleaseChatPrompt } from "../../phase-complete-release-prompt.js";
 import { confirmAndRunTransition } from "../../run-transition-with-approval.js";
-import { isWcTraceVerbose, logWc } from "../../runtime/workflow-cannon-log.js";
+import { isWcTraceVerbose, logWc, logWcDrawerSubmitStep } from "../../runtime/workflow-cannon-log.js";
 import { isKitRefreshRunAborted } from "../../runtime/kit-refresh-run-commands.js";
 import {
   DashboardRefreshController,
@@ -59,6 +59,14 @@ import {
   dashboardSummaryNeedsQueueRollupHydration,
   dashboardSummaryProjectionForSectionPatch
 } from "./dashboard-queue-fingerprint.js";
+import {
+  applyQueuePhasePatchToSummaryCache,
+  postQueuePhaseMovePatch,
+  queueContentFingerprintAfterPatch,
+  resolveFromPhaseKeyForTask,
+  resolveQueuePlacementFromTask,
+  type QueuePhaseMovePatchArgs
+} from "./dashboard-queue-phase-patch.js";
 import { DashboardDataStore } from "./dashboard-data-store.js";
 import { DashboardLoadTrace, isDashboardLoadTraceEnabled } from "./dashboard-load-trace.js";
 import { DashboardPollerCoordinator } from "./dashboard-pollers.js";
@@ -1065,6 +1073,13 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         if (category) {
           void this.loadQueueBucketRows(category, phaseKey, cursor);
         }
+      }
+      if (msg?.type === "queuePhasePatchFailed") {
+        logWc(
+          "dashboard",
+          `queue phase patch failed reason=${String((msg as { reason?: unknown }).reason ?? "")}`
+        );
+        this.refreshController.request({ reason: "queue-phase-patch-fallback", mode: "light" });
       }
       if (msg?.type === "loadLazyTerminalBucket") {
         const terminalRaw = (msg as { terminalStatus?: unknown }).terminalStatus;
@@ -2107,6 +2122,9 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       options?.projection ?? dashboardSummaryProjectionForSectionPatch(sectionsToPatch);
     const summarySource =
       options?.source ?? (options?.light === true ? "kit-state refresh" : "manual refresh");
+    const patchTraceId = `patch:${sectionsToPatch.join("+")}:${summaryProjection}`;
+    let patchStepAt = Date.now();
+    logWc("dashboard", `drawerSubmit trace id=${patchTraceId} step=patch-begin source=${summarySource}`);
     let raw: DashboardSummaryCommandSuccess | Record<string, unknown>;
     try {
       const summaryArgs = {
@@ -2127,6 +2145,12 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         : ((await this.runDashboardSummary(summaryArgs, summarySource)) as
             | DashboardSummaryCommandSuccess
             | Record<string, unknown>));
+      patchStepAt = logWcDrawerSubmitStep(
+        patchTraceId,
+        "dashboard-summary",
+        patchStepAt,
+        `ok=${String((raw as { ok?: boolean }).ok)} code=${String((raw as { code?: string }).code ?? "")}`
+      );
       if (isKitRefreshRunAborted(raw as Record<string, unknown>)) {
         logWc("dashboard", "patchDashboardSectionsFromSummary aborted (refresh paused or preempted)");
         return;
@@ -2191,6 +2215,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       }
     }
     if (sectionsToPatch.length === 0) {
+      logWcDrawerSubmitStep(patchTraceId, "patch-skipped", patchStepAt, "no sections after fingerprint");
       return;
     }
     const wizardPanel = raw.ok === true ? this.planningWizardPanel() : null;
@@ -2232,6 +2257,56 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     if (raw.ok === true && raw.data && typeof raw.data === "object" && sectionsToPatch.includes("overview")) {
       await this.postBannerPatch(raw.data as Record<string, unknown>);
     }
+    logWcDrawerSubmitStep(
+      patchTraceId,
+      "patch-done",
+      patchStepAt,
+      `sections=${sectionsToPatch.join(",")} htmlBytes≈${rootInner.length}`
+    );
+  }
+
+  private async tryApplyQueueTaskPhaseTargetedPatch(args: {
+    taskId: string;
+    task: Record<string, unknown> | undefined;
+    fromPhaseKey: string | null;
+    toPhaseKey: string | null;
+    traceId?: string;
+  }): Promise<boolean> {
+    const data = this.lastDashboardSummaryData;
+    const webview = this.view?.webview;
+    if (!data || !webview) {
+      return false;
+    }
+    if (!this.hydratedDashboardSections.has("queue")) {
+      return false;
+    }
+    if (!args.task || typeof args.task !== "object") {
+      return false;
+    }
+    const placement = resolveQueuePlacementFromTask(args.task);
+    if (!placement) {
+      return false;
+    }
+    const patchArgs: QueuePhaseMovePatchArgs = {
+      taskId: args.taskId,
+      task: args.task,
+      fromPhaseKey: args.fromPhaseKey,
+      toPhaseKey: args.toPhaseKey
+    };
+    const payload = applyQueuePhasePatchToSummaryCache(data, placement, patchArgs);
+    if (!payload) {
+      return false;
+    }
+    this.lastQueueContentFingerprint = queueContentFingerprintAfterPatch(data);
+    await postQueuePhaseMovePatch(webview, payload);
+    await this.postTaskEngineTabBadgesFromSummary(data);
+    if (args.traceId) {
+      logWc(
+        "dashboard",
+        `drawerSubmit trace id=${args.traceId} step=queue-patch-posted category=${placement.category}`
+      );
+    }
+    return true;
   }
 
   private async postTaskEngineTabBadgesFromSummary(summaryData: Record<string, unknown>): Promise<void> {
@@ -3884,6 +3959,10 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       }
       const taskId = session.taskId;
       if (validated.values.moveToBacklog === "true") {
+        const traceId = `assign-task-phase:${taskId}:backlog`;
+        let stepAt = Date.now();
+        logWc("dashboard", `drawerSubmit trace id=${traceId} step=begin moveToBacklog=true`);
+        const fromPhaseKey = resolveFromPhaseKeyForTask(this.lastDashboardSummaryData, taskId);
         // Avoid extra set/clear-agent-activity CLI processes here — they raced clear-task-phase
         // and dashboard-summary against the same SQLite file (full-table persist per save).
         const out = await this.client.run("clear-task-phase", {
@@ -3891,42 +3970,79 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
           clientMutationId: `dashboard-backlog-${taskId}-${Date.now()}`,
           ...expectedPlanningGenerationArgs()
         });
+        stepAt = logWcDrawerSubmitStep(
+          traceId,
+          "clear-task-phase",
+          stepAt,
+          `ok=${String(out.ok)} code=${String(out.code ?? "")}`
+        );
         if (!out.ok) {
           const detail = `${String(out.code ?? "")} ${String(out.message ?? "")}`.trim();
           await this.postDrawerValidationToWebview(`clear-task-phase failed: ${detail}`.slice(0, 900));
           return false;
         }
         ingestPlanningMetaFromData(out.data as Record<string, unknown> | undefined);
+        const clearedTask = (out.data as { task?: Record<string, unknown> } | undefined)?.task;
+        const patched = await this.tryApplyQueueTaskPhaseTargetedPatch({
+          taskId,
+          task: clearedTask,
+          fromPhaseKey,
+          toPhaseKey: null,
+          traceId
+        });
         this.closeDashboardDrawer();
-        this.notifyKitStateChanged();
+        stepAt = logWcDrawerSubmitStep(traceId, "drawer-closed", stepAt);
+        stepAt = logWcDrawerSubmitStep(
+          traceId,
+          patched ? "queue-patch-applied" : "refresh-deferred-to-coordinator",
+          stepAt
+        );
         this.queueDrawerNotify(`Moved ${taskId} to backlog (phase cleared)`);
-        return true;
+        logWcDrawerSubmitStep(traceId, "handler-done", stepAt);
+        return !patched;
       }
       const { phaseKey } = validated.values;
-      await this.client.recordActivity({
-        kind: "working_task",
-        taskId,
-        phaseKey,
-        command: "assign-task-phase",
-        details: { source: "dashboard-phase-button" }
-      });
+      const assignTraceId = `assign-task-phase:${taskId}:set`;
+      let stepAt = Date.now();
+      logWc("dashboard", `drawerSubmit trace id=${assignTraceId} step=begin phaseKey=${phaseKey}`);
+      const fromPhaseKey = resolveFromPhaseKeyForTask(this.lastDashboardSummaryData, taskId);
+      // Skip set/clear-agent-activity — two extra CLI spawns (~2s) with no queue UX benefit;
+      // same rationale as the backlog (clear-task-phase) path.
       const args: Record<string, unknown> = {
         taskId,
         phaseKey,
         ...expectedPlanningGenerationArgs()
       };
       const out = await this.client.run("assign-task-phase", args);
-      await this.client.clearActivity();
+      stepAt = logWcDrawerSubmitStep(
+        assignTraceId,
+        "assign-task-phase",
+        stepAt,
+        `ok=${String(out.ok)} code=${String(out.code ?? "")}`
+      );
       if (!out.ok) {
         const detail = `${String(out.code ?? "")} ${String(out.message ?? "")}`.trim();
         await this.postDrawerValidationToWebview(`Could not set phase: ${detail}`.slice(0, 900));
         return false;
       }
       ingestPlanningMetaFromData(out.data as Record<string, unknown> | undefined);
+      const assignedTask = (out.data as { task?: Record<string, unknown> } | undefined)?.task;
+      const patched = await this.tryApplyQueueTaskPhaseTargetedPatch({
+        taskId,
+        task: assignedTask,
+        fromPhaseKey,
+        toPhaseKey: phaseKey,
+        traceId: assignTraceId
+      });
       this.closeDashboardDrawer();
-      this.notifyKitStateChanged();
+      stepAt = logWcDrawerSubmitStep(
+        assignTraceId,
+        patched ? "queue-patch-applied" : "refresh-deferred-to-coordinator",
+        stepAt
+      );
       this.queueDrawerNotify(`Phase set for ${taskId} → ${phaseKey}`);
-      return true;
+      logWcDrawerSubmitStep(assignTraceId, "handler-done", stepAt);
+      return !patched;
     }
     if (session.kind === "add-phase-note") {
       const phaseKey = this.inferPhaseKeyForKitPhaseNoteFromDashboard();

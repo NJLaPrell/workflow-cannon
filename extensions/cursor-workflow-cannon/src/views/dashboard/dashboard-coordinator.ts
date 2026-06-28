@@ -8,6 +8,7 @@ import { isDrawerCancelIntent, isDrawerSubmitIntent } from "./drawer-intents.js"
 import type { DashboardRefreshController } from "./dashboard-refresh-controller.js";
 import type { DrawerSessionController, WcDrawerStateSnapshot } from "./drawer-session.js";
 import type { SideEffectBus } from "./dashboard-side-effects.js";
+import { logWc, logWcDrawerSubmitStep } from "../../runtime/workflow-cannon-log.js";
 
 export type { DashboardIntent, DrawerSubmitHandlerResult } from "./drawer-intents.js";
 
@@ -115,8 +116,17 @@ export class DashboardCoordinator {
 
   private async handleDrawerSubmitIntent(intent: DrawerSubmitIntent): Promise<void> {
     this.deps.resetDrawerSubmitPendingEffects();
+    const traceId = intent.sessionLabel.replace(/\s+/g, "-").slice(0, 64);
+    let stepAt = Date.now();
+    logWc("dashboard", `drawerSubmit trace id=${traceId} step=begin`);
     const result = await this.runDrawerMutation(intent.sessionLabel, () =>
       this.deps.onDrawerSubmit(intent.values)
+    );
+    stepAt = logWcDrawerSubmitStep(
+      traceId,
+      "handler-complete",
+      stepAt,
+      `refreshed=${String(result.refreshed)}`
     );
     this.deps.flushDrawerSubmitPendingEffects(this.deps.sideEffects);
     if (!this.deps.hasActiveDrawerSession()) {
@@ -124,7 +134,9 @@ export class DashboardCoordinator {
     }
     if (result.refreshed) {
       this.deps.sideEffects.scheduleRefresh("light", "drawer-submit");
+      stepAt = logWcDrawerSubmitStep(traceId, "refresh-scheduled", stepAt, "mode=light");
     }
+    logWcDrawerSubmitStep(traceId, "coordinator-done", stepAt);
   }
 
   private async handleDrawerCancelIntent(): Promise<void> {

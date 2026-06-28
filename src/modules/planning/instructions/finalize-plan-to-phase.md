@@ -33,8 +33,8 @@ pnpm exec wk run finalize-plan-to-phase '{"planId":"550e8400-e29b-41d4-a716-4466
 | `planId` | Yes | Load accepted plan from `.workspace-kit/planning/plan-artifacts/`. |
 | `version` | No | Artifact storage version; default latest. Must match `approvalRecord.approvedVersion` on accepted row. |
 | `dryRun` | No | Default **`true`** (agent-safe preview). **`false`** writes tasks and updates plan `status: finalized`. |
-| `targetPhaseKey` | No | Overrides WBS phase hints; command-level wins. |
-| `targetPhase` | No | Label; default `Phase <targetPhaseKey>`. |
+| `targetPhaseKey` | No | Overrides automatic phase resolution; when omitted, uses workspace **nextKitPhase**, else next numeric phase with zero tasks. |
+| `targetPhase` | No | Label; default `Phase <targetPhaseKey>` or recommendation label when auto-resolved. |
 | `desiredStatus` | No | `proposed` \| `ready`; default `ready`. |
 | `wbsFilter` | No | `wbsId[]` — finalize subset only. |
 | `expectedPlanningGeneration` | When policy `require` | Required when `dryRun: false`. Copy from `list-tasks` / `get-task`. |
@@ -52,10 +52,12 @@ pnpm exec wk run finalize-plan-to-phase '{"planId":"550e8400-e29b-41d4-a716-4466
 ## Internal steps (handler)
 
 1. Load plan; assert accepted + approval version pin.
-2. For each selected WBS row: `normalizeWbsItemToTaskDraft()` → task row shape.
-3. Call **`review-planning-execution-drafts`** (or equivalent) on `tasks[]`.
-4. **`dryRun: true`** — return `taskPreview`, embedded `review`, optional `taskGenerationPayloads`; no task writes.
-5. **`dryRun: false`** — call **`persist-planning-execution-drafts`** with `planRef`, `planningType` from `identity`, provenance, `clientMutationId`, `expectedPlanningGeneration`, and `policyApproval`; set plan `status: finalized` after successful task persistence.
+2. Resolve target phase: explicit argv → workspace `nextKitPhase` → next numeric phase with no tasks.
+3. Ensure `kit_phase_catalog` row exists for the resolved phase (upsert when missing).
+4. For each selected WBS row: `normalizeWbsItemToTaskDraft()` → task row shape.
+5. Call **`review-planning-execution-drafts`** (or equivalent) on `tasks[]`.
+6. **`dryRun: true`** — return `taskPreview`, embedded `review`, optional `taskGenerationPayloads`; no task writes.
+7. **`dryRun: false`** — call **`persist-planning-execution-drafts`** with `planRef`, `planningType` from `identity`, provenance, `clientMutationId`, `expectedPlanningGeneration`, and `policyApproval`; set plan `status: finalized` after successful task persistence.
 
 ## Response codes (normative)
 

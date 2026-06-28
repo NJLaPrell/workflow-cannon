@@ -10,6 +10,7 @@ import {
   kitRunLaneForCommand,
   kitRunTimeoutMsForCommand
 } from "./kit-refresh-run-commands.js";
+import { createDaemonAwareExecFn } from "./kit-run-daemon-client.js";
 
 export type KitRunResult = {
   ok: boolean;
@@ -99,6 +100,8 @@ type CommandClientOptions = {
   activityEnvelopeProvider?: () => CommandClientActivityEnvelope | undefined;
   /** Fired when dashboard code records a visible workflow boundary. */
   onDashboardActivityBoundary?: () => void;
+  /** When true (default), reuse a warm `workspace-kit run-daemon` child instead of per-run spawn. */
+  kitRunDaemon?: boolean;
 };
 
 export type RefreshPauseOwner = {
@@ -778,6 +781,8 @@ export class CommandClient {
   private laneDrainAgain = false;
   /** Kill hook for an in-flight refresh CLI child (preempted when a mutation starts). */
   private inFlightRefreshKill: (() => void) | null = null;
+  private readonly daemonKillInFlight: (() => void) | null = null;
+  private readonly disposeDaemon: (() => void) | null = null;
   private activeRunCommand: string | undefined;
 
   constructor(private readonly workspaceRoot: string, options?: CommandClientOptions) {
@@ -790,9 +795,28 @@ export class CommandClient {
     this.onKitRunNotice = options?.onKitRunNotice;
     this.activityEnvelopeProvider = options?.activityEnvelopeProvider;
     this.onDashboardActivityBoundary = options?.onDashboardActivityBoundary;
-    this.execFn =
-      options?.execFn ??
-      ((root, cliArgs) => this.execTracked(root, cliArgs));
+    if (options?.execFn) {
+      this.execFn = options.execFn;
+    } else if (options?.kitRunDaemon !== false) {
+      const pooled = createDaemonAwareExecFn({
+        workspaceRoot,
+        cliPathOverride: this.cliPathOverride,
+        extensionRoot: this.extensionRoot,
+        resolveNodeExecutable: this.resolveNodeExecutable,
+        onNotice: (message) => this.onKitRunNotice?.(message),
+        fallbackExec: (root, cliArgs) => this.execViaSpawn(root, cliArgs)
+      });
+      this.execFn = pooled.execFn;
+      this.daemonKillInFlight = pooled.killInFlight;
+      this.disposeDaemon = pooled.dispose;
+    } else {
+      this.execFn = (root, cliArgs) => this.execViaSpawn(root, cliArgs);
+    }
+  }
+
+  dispose(): void {
+    this.disposeDaemon?.();
+    this.clearRefreshPaused("client disposed");
   }
 
   /** Drop pending refresh work and abort an in-flight refresh CLI so mutations can run immediately. */
@@ -807,13 +831,14 @@ export class CommandClient {
       }
     }
     this.refreshSlots.clear();
+    this.daemonKillInFlight?.();
     if (this.inFlightRefreshKill) {
       this.inFlightRefreshKill();
       this.inFlightRefreshKill = null;
     }
   }
 
-  private execTracked(workspaceRoot: string, cliArgs: string[]): Promise<CommandClientExecResult> {
+  private execViaSpawn(workspaceRoot: string, cliArgs: string[]): Promise<CommandClientExecResult> {
     const commandName = this.activeRunCommand ?? cliArgs[1] ?? "";
     const timeoutMs = kitRunTimeoutMsForCommand(commandName);
     const tracked = execKitCancellable(

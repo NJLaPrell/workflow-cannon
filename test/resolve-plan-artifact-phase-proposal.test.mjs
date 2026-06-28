@@ -7,6 +7,7 @@ import { describe, it } from "node:test";
 import {
   countDescriptionWords,
   PLAN_ARTIFACT_PHASE_DESCRIPTION_MAX_WORDS,
+  resolveNextEmptyNumericPhaseKey,
   resolvePlanArtifactPhaseProposal
 } from "../dist/core/planning/resolve-plan-artifact-phase-proposal.js";
 
@@ -33,25 +34,42 @@ describe("resolvePlanArtifactPhaseProposal (T100469)", () => {
     assert.equal(result.findings.length, 0);
   });
 
-  it("auto-selects next integer phase key when no override", () => {
+  it("auto-selects next empty phase key when no override", () => {
     const result = resolvePlanArtifactPhaseProposal({
       phaseRecommendations: [],
-      activePhaseKeys: ["108", "110"]
+      occupiedPhaseKeys: ["108", "110", "112"]
     });
     assert.equal(result.ok, true);
-    assert.equal(result.source, "auto");
-    assert.equal(result.proposal.phaseKey, "111");
-    assert.equal(result.proposal.label, "Phase 111");
+    assert.equal(result.source, "auto-empty");
+    assert.equal(result.proposal.phaseKey, "113");
+    assert.equal(result.proposal.label, "Phase 113");
   });
 
-  it("uses primary phaseRecommendations when no explicit key", () => {
+  it("resolveNextEmptyNumericPhaseKey skips occupied ordinals", () => {
+    assert.equal(resolveNextEmptyNumericPhaseKey(["137", "139"], ["134"]), "140");
+  });
+
+  it("prefers workspace nextKitPhase over plan recommendations", () => {
     const result = resolvePlanArtifactPhaseProposal({
-      phaseRecommendations: RECOMMENDATIONS
+      phaseRecommendations: RECOMMENDATIONS,
+      workspaceNextPhaseKey: "139",
+      occupiedPhaseKeys: ["137", "139"],
+      activePhaseKeys: ["139"]
     });
     assert.equal(result.ok, true);
-    assert.equal(result.source, "recommendation");
-    assert.equal(result.proposal.phaseKey, "110");
-    assert.equal(result.proposal.label, "Phase 110");
+    assert.equal(result.source, "workspace-next");
+    assert.equal(result.proposal.phaseKey, "139");
+    assert.equal(result.proposal.label, "Phase 139");
+  });
+
+  it("uses auto-empty when workspace next is omitted", () => {
+    const result = resolvePlanArtifactPhaseProposal({
+      phaseRecommendations: RECOMMENDATIONS,
+      occupiedPhaseKeys: ["110", "111"]
+    });
+    assert.equal(result.ok, true);
+    assert.equal(result.source, "auto-empty");
+    assert.equal(result.proposal.phaseKey, "112");
   });
 
   it("blocks phase key collision unless allowPhaseKeyCollision", () => {

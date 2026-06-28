@@ -58,6 +58,11 @@
           "default": "",
           "markdownDescription": "Path to `node` for running workspace-kit. Leave empty to use `WORKSPACE_KIT_NODE`, Workflow Cannon's Node 22 runtime markers through nvm, common install paths, then `node` on `PATH`. The extension does not use the attached project's `.node-version` / `.nvmrc` unless you explicitly point this setting or `WORKSPACE_KIT_NODE` at that Node."
         },
+        "workflowCannon.kitRunDaemon.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Reuse a warm workspace-kit run-daemon process for dashboard CLI calls instead of spawning a new Node child per command."
+        },
         "workflowCannon.taskStateSync.enabled": {
           "type": "boolean",
           "default": true,
