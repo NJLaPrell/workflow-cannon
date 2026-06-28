@@ -73,6 +73,10 @@ import {
   type QueuePhaseMovePatchArgs,
   type QueuePhasePatchPlacement
 } from "./dashboard-queue-phase-patch.js";
+import {
+  applyQueueHumanGateResumePatchToSummaryCache,
+  postQueueHumanGateResumePatch
+} from "./dashboard-human-gate-patch.js";
 import { DashboardDataStore } from "./dashboard-data-store.js";
 import { DashboardLoadTrace, isDashboardLoadTraceEnabled } from "./dashboard-load-trace.js";
 import { DashboardPollerCoordinator } from "./dashboard-pollers.js";
@@ -1085,7 +1089,16 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
           "dashboard",
           `queue phase patch failed reason=${String((msg as { reason?: unknown }).reason ?? "")}`
         );
-        this.refreshController.request({ reason: "queue-phase-patch-fallback", mode: "light" });
+        if (this.lastDashboardSummaryData && this.hydratedDashboardSections.has("queue")) {
+          void this.patchDashboardSectionsFromSummary(["queue"], undefined, {
+            light: true,
+            projection: "queue",
+            cachedSummaryOnly: true,
+            source: "queue-phase-patch-fallback-cached"
+          });
+        } else {
+          this.refreshController.request({ reason: "queue-phase-patch-fallback", mode: "light" });
+        }
       }
       if (msg?.type === "loadLazyTerminalBucket") {
         const terminalRaw = (msg as { terminalStatus?: unknown }).terminalStatus;
@@ -1240,17 +1253,6 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         const laterRaw = msg?.laterDeliveredPhases;
         const laterDeliveredPhases =
           typeof laterRaw === "string" && laterRaw.trim().length > 0 ? laterRaw.trim() : undefined;
-        await this.client.recordActivity({
-          kind: "releasing",
-          command: "phase-complete-release",
-          phaseKey,
-          details: {
-            source: "dashboard-complete-release",
-            phasePhrase,
-            scope: scope ?? "bucket",
-            seededTaskCount: seededTaskIds.length
-          }
-        });
         await prefillCursorChat(
           buildPhaseCompleteReleaseChatPrompt(phasePhrase, {
             phaseKey,
@@ -2122,6 +2124,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       preserveOnSummaryFailure?: boolean;
       /** Trace source for dashboard-summary reads. */
       source?: string;
+      /** Render from `lastDashboardSummaryData` without a dashboard-summary CLI round-trip. */
+      cachedSummaryOnly?: boolean;
     }
   ): Promise<void> {
     const activeView = this.view;
@@ -2144,30 +2148,45 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     logWc("dashboard", `drawerSubmit trace id=${patchTraceId} step=patch-begin source=${summarySource}`);
     let raw: DashboardSummaryCommandSuccess | Record<string, unknown>;
     try {
-      const summaryArgs = {
-        projection: summaryProjection
-      };
-      if (options?.forcePaintLane === true) {
-        logWc(
-          "dashboard",
-          `dashboard-summary source=${summarySource} projection=${summaryProjection} lane=paint bootstrap=${String(!this.dashboardRootHydrated)} rootHydrated=${String(this.dashboardRootHydrated)}`
+      if (options?.cachedSummaryOnly === true) {
+        const cached = this.lastDashboardSummaryData;
+        if (!cached) {
+          logWc("dashboard", "patchDashboardSectionsFromSummary: cached summary missing");
+          return;
+        }
+        raw = { ok: true, data: cached, code: "dashboard-summary-cached" };
+        patchStepAt = logWcDrawerSubmitStep(
+          patchTraceId,
+          "dashboard-summary-cached",
+          patchStepAt,
+          `projection=${summaryProjection}`
+        );
+      } else {
+        const summaryArgs = {
+          projection: summaryProjection
+        };
+        if (options?.forcePaintLane === true) {
+          logWc(
+            "dashboard",
+            `dashboard-summary source=${summarySource} projection=${summaryProjection} lane=paint bootstrap=${String(!this.dashboardRootHydrated)} rootHydrated=${String(this.dashboardRootHydrated)}`
+          );
+        }
+        raw = (options?.forcePaintLane === true
+          ? ((await this.client.runForDashboardPaint(
+              "dashboard-summary",
+              summaryArgs,
+              { bootstrap: !this.dashboardRootHydrated }
+            )) as DashboardSummaryCommandSuccess | Record<string, unknown>)
+          : ((await this.runDashboardSummary(summaryArgs, summarySource)) as
+              | DashboardSummaryCommandSuccess
+              | Record<string, unknown>));
+        patchStepAt = logWcDrawerSubmitStep(
+          patchTraceId,
+          "dashboard-summary",
+          patchStepAt,
+          `ok=${String((raw as { ok?: boolean }).ok)} code=${String((raw as { code?: string }).code ?? "")}`
         );
       }
-      raw = (options?.forcePaintLane === true
-        ? ((await this.client.runForDashboardPaint(
-            "dashboard-summary",
-            summaryArgs,
-            { bootstrap: !this.dashboardRootHydrated }
-          )) as DashboardSummaryCommandSuccess | Record<string, unknown>)
-        : ((await this.runDashboardSummary(summaryArgs, summarySource)) as
-            | DashboardSummaryCommandSuccess
-            | Record<string, unknown>));
-      patchStepAt = logWcDrawerSubmitStep(
-        patchTraceId,
-        "dashboard-summary",
-        patchStepAt,
-        `ok=${String((raw as { ok?: boolean }).ok)} code=${String((raw as { code?: string }).code ?? "")}`
-      );
       if (isKitRefreshRunAborted(raw as Record<string, unknown>)) {
         logWc("dashboard", "patchDashboardSectionsFromSummary aborted (refresh paused or preempted)");
         return;
@@ -2203,9 +2222,11 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       const summaryData = raw.data as Record<string, unknown>;
       const prior = this.lastDashboardSummaryData ?? {};
       const ingestProjection = summaryProjection === "full" ? "overview" : summaryProjection;
-      this.lastDashboardSummaryData = mergeSlicePayloadIntoSummary(prior, ingestProjection, summaryData);
-      ingestPlanningMetaFromData(summaryData);
-      this.ingestDashboardSummaryIntoStore(summaryData, ingestProjection);
+      if (options?.cachedSummaryOnly !== true) {
+        this.lastDashboardSummaryData = mergeSlicePayloadIntoSummary(prior, ingestProjection, summaryData);
+        ingestPlanningMetaFromData(summaryData);
+        this.ingestDashboardSummaryIntoStore(summaryData, ingestProjection);
+      }
       const contentFp = computeQueueContentFingerprint(summaryData);
       if (
         options?.light === true &&
@@ -2380,27 +2401,45 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     if (!data || !webview || !this.hydratedDashboardSections.has("queue")) {
       return false;
     }
-    if (args.action !== "reject") {
-      return false;
+    if (args.action === "reject") {
+      const snap = lookupProposedTaskSnapshot(data, args.taskId);
+      if (!snap) {
+        return false;
+      }
+      const payload = applyQueueTaskRemovalPatchToSummaryCache(
+        data,
+        snap.placement,
+        args.taskId,
+        snap.phaseKey
+      );
+      if (!payload) {
+        return false;
+      }
+      this.lastQueueContentFingerprint = queueContentFingerprintAfterPatch(data);
+      await postQueueTaskRemovalPatch(webview, payload);
+      await this.postTaskEngineTabBadgesFromSummary(data);
+      logWc("dashboard", `queue transition patch posted action=${args.action} taskId=${args.taskId}`);
+      return true;
     }
-    const snap = lookupProposedTaskSnapshot(data, args.taskId);
-    if (!snap) {
-      return false;
+    if (args.action === "resume_ready" || args.action === "resume_work") {
+      const payload = applyQueueHumanGateResumePatchToSummaryCache(
+        data,
+        args.taskId,
+        args.action
+      );
+      if (!payload) {
+        return false;
+      }
+      this.lastQueueContentFingerprint = queueContentFingerprintAfterPatch(data);
+      await postQueueHumanGateResumePatch(webview, payload);
+      await this.postTaskEngineTabBadgesFromSummary(data);
+      logWc(
+        "dashboard",
+        `queue human-gate patch posted action=${args.action} taskId=${args.taskId} humanGateCount=${String(payload.humanGateCount)}`
+      );
+      return true;
     }
-    const payload = applyQueueTaskRemovalPatchToSummaryCache(
-      data,
-      snap.placement,
-      args.taskId,
-      snap.phaseKey
-    );
-    if (!payload) {
-      return false;
-    }
-    this.lastQueueContentFingerprint = queueContentFingerprintAfterPatch(data);
-    await postQueueTaskRemovalPatch(webview, payload);
-    await this.postTaskEngineTabBadgesFromSummary(data);
-    logWc("dashboard", `queue transition patch posted action=${args.action} taskId=${args.taskId}`);
-    return true;
+    return false;
   }
 
   private async postTaskEngineTabBadgesFromSummary(summaryData: Record<string, unknown>): Promise<void> {
@@ -2414,10 +2453,14 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     const blockedSummary = summaryData.blockedSummary as Record<string, unknown> | undefined;
     const blockedCount =
       typeof blockedSummary?.count === "number" ? (blockedSummary.count as number) : 0;
+    const humanGatesSummary = summaryData.humanGatesSummary as Record<string, unknown> | undefined;
+    const humanGateCount =
+      typeof humanGatesSummary?.count === "number" ? (humanGatesSummary.count as number) : 0;
     await webview.postMessage({
       type: "wcUpdateTabBadges",
       readyCount: readyMerged.count,
-      blockedCount
+      blockedCount,
+      humanGateCount
     });
   }
 
@@ -3152,12 +3195,6 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         return;
       }
 
-      await this.client.recordActivity({
-        kind: "releasing",
-        command: "mark-phase-complete",
-        phaseKey: `release/phase-${targetKey}`,
-        details: { source: "dashboard-mark-phase-complete", previousCurrentKitPhase: targetKey }
-      });
       ingestPlanningMetaFromData(out.data as Record<string, unknown> | undefined);
     } finally {
       this.endDashboardMutationRefreshHold();
@@ -3188,19 +3225,11 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       return this.client.run("upsert-phase-catalog-entry", args);
     };
 
-    await this.client.recordActivity({
-      kind: "validating",
-      phaseKey,
-      command: "upsert-phase-catalog-entry",
-      details: { source: "dashboard-phase-roster-deliverables" }
-    });
-
     let out = await runOnce();
     if (out.ok !== true && out.code === "planning-generation-mismatch") {
       await this.ingestPlanningGenFromDashboard();
       out = await runOnce();
     }
-    await this.client.clearActivity();
 
     if (out.ok !== true) {
       await vscode.window.showErrorMessage(
