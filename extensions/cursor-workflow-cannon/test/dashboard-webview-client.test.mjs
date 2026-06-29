@@ -8,6 +8,14 @@ import { buildDashboardWebviewBootstrapScript } from "../dist/views/dashboard/da
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+test("buildDashboardWebviewBootstrapScript is valid JavaScript", () => {
+  const script = buildDashboardWebviewBootstrapScript(JSON.stringify("(function(){})();"));
+  assert.doesNotThrow(() => {
+    new Function(script);
+  });
+  assert.match(script, /\.replace\(\/\\\\\/g, '\\\\\\\\'\)/);
+});
+
 test("buildDashboardWebviewBootstrapScript returns drawer + refresh client", () => {
   const script = buildDashboardWebviewBootstrapScript(JSON.stringify("(function(){})();"));
   assert.doesNotMatch(script, /drawerSubmitInFlight/);

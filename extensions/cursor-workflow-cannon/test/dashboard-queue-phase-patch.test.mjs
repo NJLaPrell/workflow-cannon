@@ -132,6 +132,21 @@ test("phase move into new phase bucket includes toBucketShellHtml", () => {
   assert.match(payload.toBucketShellHtml, /data-wc-lazy-loaded="1"/);
 });
 
+test("Move to Backlog drawer uses generation retry and unique clientMutationId", () => {
+  const src = fs.readFileSync(
+    path.join(__dirname, "../src/views/dashboard/DashboardViewProvider.ts"),
+    "utf8"
+  );
+  const block = src.slice(
+    src.indexOf('validated.values.moveToBacklog === "true"'),
+    src.indexOf("const assignTraceId = `assign-task-phase:${taskId}:set`")
+  );
+  assert.match(block, /runMutationWithGenerationRetry\("clear-task-phase"/);
+  assert.match(block, /dashboardDrawerMutationId\("dashboard-backlog"/);
+  assert.match(block, /recoverClearTaskPhaseAfterDuplicateIdempotency/);
+  assert.doesNotMatch(block, /client\.run\("clear-task-phase"/);
+});
+
 test("register-catalog drawer skips agent-activity CLI", () => {
   const src = fs.readFileSync(
     path.join(__dirname, "../src/views/dashboard/DashboardViewProvider.ts"),

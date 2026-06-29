@@ -973,7 +973,7 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
     if (!taskId) return;
     var root = document.getElementById('root');
     if (!root) return;
-    var esc = String(taskId).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+    var esc = String(taskId).replace(/\\\\/g, '\\\\\\\\').replace(/"/g, '\\\\"');
     var row = root.querySelector('.dash-human-gate-row [data-task-id="' + esc + '"]');
     if (!row) return;
     var gateRow = row.closest('.dash-human-gate-row');
@@ -1049,7 +1049,7 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
     if (!taskId) return;
     var root = document.getElementById('root');
     if (!root) return;
-    var esc = String(taskId).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+    var esc = String(taskId).replace(/\\\\/g, '\\\\\\\\').replace(/"/g, '\\\\"');
     var btn = root.querySelector('[data-task-id="' + esc + '"]');
     if (!btn) return;
     var row = btn.closest('.dash-row');
@@ -1678,6 +1678,8 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
       if (hostSnapshot && hostSnapshot.drawer && hostSnapshot.drawer.busy) return;
       if (hostSnapshot && hostSnapshot.interaction && hostSnapshot.interaction.mutationActive) return;
       if (t.disabled || t.getAttribute('data-wc-drawer-submitting') === '1') return;
+      t.setAttribute('data-wc-drawer-submitting', '1');
+      t.disabled = true;
       var vals = {};
       dh.querySelectorAll('[data-wc-drawer-field]').forEach(function(el) {
         var id = el.getAttribute('data-wc-drawer-field');

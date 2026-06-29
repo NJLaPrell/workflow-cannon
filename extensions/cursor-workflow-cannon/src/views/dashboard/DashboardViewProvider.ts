@@ -3647,16 +3647,62 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   }
 
   private async readTaskStatus(taskId: string): Promise<string | null> {
+    const task = await this.readTaskEntity(taskId);
+    if (!task) {
+      return null;
+    }
+    const status = task.status;
+    return typeof status === "string" && status.trim().length > 0 ? status.trim() : null;
+  }
+
+  private async readTaskEntity(taskId: string): Promise<Record<string, unknown> | null> {
     const r = await this.client.run("get-task", { taskId });
     if (!r.ok || !r.data || typeof r.data !== "object") {
       return null;
     }
     const task = (r.data as Record<string, unknown>).task;
-    if (!task || typeof task !== "object") {
+    return task && typeof task === "object" ? (task as Record<string, unknown>) : null;
+  }
+
+  private dashboardDrawerMutationId(prefix: string, taskId: string): string {
+    return `${prefix}-${taskId}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+  }
+
+  private isDuplicateCanonicalIdempotencyFailure(out: KitRunResult): boolean {
+    if (out.ok) {
+      return false;
+    }
+    if (String(out.code ?? "") !== "task-state-canonical-publish-failed") {
+      return false;
+    }
+    const msg = String(out.message ?? "");
+    if (msg.includes("duplicate-idempotency-key")) {
+      return true;
+    }
+    const data = out.data as Record<string, unknown> | undefined;
+    const admission = data?.admissionCode;
+    return admission === "duplicate-idempotency-key";
+  }
+
+  /** First clear-task-phase publish may succeed while a parallel retry still sees duplicate-idempotency-key. */
+  private async recoverClearTaskPhaseAfterDuplicateIdempotency(
+    taskId: string
+  ): Promise<KitRunResult | null> {
+    const task = await this.readTaskEntity(taskId);
+    if (!task) {
       return null;
     }
-    const status = (task as Record<string, unknown>).status;
-    return typeof status === "string" && status.trim().length > 0 ? status.trim() : null;
+    const pk = task.phaseKey != null ? String(task.phaseKey).trim() : "";
+    const phase = task.phase != null ? String(task.phase).trim() : "";
+    if (pk.length > 0 || phase.length > 0) {
+      return null;
+    }
+    return {
+      ok: true,
+      code: "task-phase-cleared",
+      message: `Cleared phase fields on task '${taskId}' (recovered after duplicate idempotency)`,
+      data: { task }
+    };
   }
 
   /**
@@ -4115,11 +4161,16 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         const fromPhaseKey = resolveFromPhaseKeyForTask(this.lastDashboardSummaryData, taskId);
         // Avoid extra set/clear-agent-activity CLI processes here — they raced clear-task-phase
         // and dashboard-summary against the same SQLite file (full-table persist per save).
-        const out = await this.client.run("clear-task-phase", {
+        let out = await this.runMutationWithGenerationRetry("clear-task-phase", {
           taskId,
-          clientMutationId: `dashboard-backlog-${taskId}-${Date.now()}`,
-          ...expectedPlanningGenerationArgs()
+          clientMutationId: this.dashboardDrawerMutationId("dashboard-backlog", taskId)
         });
+        if (!out.ok && this.isDuplicateCanonicalIdempotencyFailure(out)) {
+          const recovered = await this.recoverClearTaskPhaseAfterDuplicateIdempotency(taskId);
+          if (recovered) {
+            out = recovered;
+          }
+        }
         stepAt = logWcDrawerSubmitStep(
           traceId,
           "clear-task-phase",
@@ -4160,10 +4211,9 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       // same rationale as the backlog (clear-task-phase) path.
       const args: Record<string, unknown> = {
         taskId,
-        phaseKey,
-        ...expectedPlanningGenerationArgs()
+        phaseKey
       };
-      const out = await this.client.run("assign-task-phase", args);
+      const out = await this.runMutationWithGenerationRetry("assign-task-phase", args);
       stepAt = logWcDrawerSubmitStep(
         assignTraceId,
         "assign-task-phase",
