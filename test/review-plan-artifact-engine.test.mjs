@@ -20,13 +20,14 @@ function loadFixture(name) {
 }
 
 describe("reviewPlanArtifact (T100460)", () => {
-  it("resolves profile from planningType when omitted", () => {
+  it("defaults unspecified profile to minimal", () => {
     const minimal = loadFixture("plan-artifact-minimal.valid.v1.json");
-    assert.equal(resolvePlanArtifactReviewProfile(minimal), "refactor");
-    assert.equal(resolvePlanArtifactReviewProfile(minimal, "minimal"), "minimal");
+    assert.equal(resolvePlanArtifactReviewProfile(minimal), "minimal");
+    assert.equal(resolvePlanArtifactReviewProfile(minimal, "refactor"), "refactor");
 
     const full = loadFixture("plan-artifact-full-feature.valid.v1.json");
-    assert.equal(resolvePlanArtifactReviewProfile(full), "full-feature");
+    assert.equal(resolvePlanArtifactReviewProfile(full), "minimal");
+    assert.equal(resolvePlanArtifactReviewProfile(full, "full-feature"), "full-feature");
   });
 
   it("passes minimal fixture under minimal profile", () => {
@@ -35,7 +36,7 @@ describe("reviewPlanArtifact (T100460)", () => {
     assert.equal(result.passed, true);
     assert.equal(result.blockers.length, 0);
     assert.equal(result.profile, "minimal");
-    assert.ok(result.coverageMap.goals.uncovered.length === 0);
+    assert.equal(result.coverageMap.slices.architecture, "not-applicable");
   });
 
   it("passes full-feature fixture under full-feature profile", () => {
@@ -51,7 +52,7 @@ describe("reviewPlanArtifact (T100460)", () => {
   it("RUBRIC-COV-GOAL when goal has no WBS mapping", () => {
     const artifact = loadFixture("plan-artifact-minimal.valid.v1.json");
     artifact.wbs[0].goalMapping = ["Unrelated goal"];
-    const result = reviewPlanArtifact(artifact, { profile: "minimal" });
+    const result = reviewPlanArtifact(artifact, { profile: "refactor" });
     assert.equal(result.passed, false);
     assert.ok(result.blockers.some((b) => b.code === "RUBRIC-COV-GOAL"));
     assert.ok(result.coverageMap.goals.uncovered.length > 0);
@@ -61,7 +62,7 @@ describe("reviewPlanArtifact (T100460)", () => {
     const artifact = loadFixture("plan-artifact-minimal.valid.v1.json");
     const dup = structuredClone(artifact.wbs[0]);
     artifact.wbs.push(dup);
-    const result = reviewPlanArtifact(artifact, { profile: "minimal" });
+    const result = reviewPlanArtifact(artifact, { profile: "refactor" });
     assert.equal(result.passed, false);
     assert.ok(result.blockers.some((b) => b.code === "RUBRIC-WBS-DUP-ID"));
   });
@@ -69,7 +70,7 @@ describe("reviewPlanArtifact (T100460)", () => {
   it("RUBRIC-WBS-VAGUE-AC warning on weak acceptance criteria", () => {
     const artifact = loadFixture("plan-artifact-minimal.valid.v1.json");
     artifact.wbs[0].acceptanceCriteria = ["done"];
-    const result = reviewPlanArtifact(artifact, { profile: "minimal" });
+    const result = reviewPlanArtifact(artifact, { profile: "refactor" });
     assert.ok(result.warnings.some((w) => w.code === "RUBRIC-WBS-VAGUE-AC"));
     assert.ok(result.sizingFindings.some((w) => w.code === "RUBRIC-WBS-VAGUE-AC"));
   });
