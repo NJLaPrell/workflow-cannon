@@ -90,6 +90,7 @@ export {
 export {
   PLAN_ARTIFACT_MODULE_ID_PREFIX,
   PLAN_ARTIFACT_ROOT_REL,
+  applyLatestReviewToPlanArtifactIndex,
   getPlanArtifactStoragePaths,
   listPlanArtifactSummaries,
   planArtifactModuleId,
@@ -138,3 +139,11 @@ export {
   type ReviewPlanArtifactOptions,
   type ReviewPlanArtifactResult
 } from "./review-plan-artifact.js";
+export {
+  buildPlanArtifactCoverageSummary,
+  buildPlanArtifactReviewRecord,
+  formatPlanArtifactReviewSummary,
+  parsePlanArtifactReviewRecord,
+  type PlanArtifactCoverageSummaryV1,
+  type PlanArtifactReviewRecordV1
+} from "./plan-artifact-review-record.js";

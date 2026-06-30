@@ -10,6 +10,10 @@ import {
   type PlanArtifactStatus,
   type PlanArtifactV1
 } from "./plan-artifact-v1.js";
+import {
+  parsePlanArtifactReviewRecord,
+  type PlanArtifactReviewRecordV1
+} from "./plan-artifact-review-record.js";
 
 /**
  * Canonical PlanArtifact JSON files (gitignored workspace data):
@@ -36,6 +40,8 @@ export type PlanArtifactIndexStateV1 = {
   updatedAt: string;
   wbsRowCount: number;
   openQuestionCount: number;
+  /** Last recorded rubric review for dashboard lifecycle (set when `recordReview: true`). */
+  latestReview?: PlanArtifactReviewRecordV1;
 };
 
 export type PlanArtifactStoragePaths = {
@@ -109,7 +115,42 @@ function parseIndex(raw: unknown): PlanArtifactIndexStateV1 | null {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
   const row = raw as PlanArtifactIndexStateV1;
   if (row.schemaVersion !== 1 || typeof row.planId !== "string") return null;
+  if (row.latestReview !== undefined) {
+    const parsed = parsePlanArtifactReviewRecord(row.latestReview);
+    if (!parsed) {
+      return null;
+    }
+    return { ...row, latestReview: parsed };
+  }
   return row;
+}
+
+function readIndexFromDatabase(db: Database.Database, moduleId: string): PlanArtifactIndexStateV1 | null {
+  const row = db
+    .prepare("SELECT state_json FROM workspace_module_state WHERE module_id = ?")
+    .get(moduleId) as { state_json: string } | undefined;
+  if (!row?.state_json) {
+    return null;
+  }
+  try {
+    return parseIndex(JSON.parse(row.state_json) as unknown);
+  } catch {
+    return null;
+  }
+}
+
+/** Attach or replace `latestReview` on an existing plan index row (after artifact version write). */
+export function applyLatestReviewToPlanArtifactIndex(
+  db: Database.Database,
+  planId: string,
+  latestReview: PlanArtifactReviewRecordV1
+): void {
+  const paths = getPlanArtifactStoragePaths("", planId);
+  const existing = readIndexFromDatabase(db, paths.moduleId);
+  if (!existing) {
+    return;
+  }
+  upsertPlanArtifactIndexOnDatabase(db, paths.moduleId, { ...existing, latestReview });
 }
 
 function listVersionFiles(planDirAbsolute: string): number[] {
