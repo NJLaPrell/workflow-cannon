@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import type Database from "better-sqlite3";
 import type { ModuleCommandResult, ModuleLifecycleContext } from "../../contracts/module-contract.js";
 import { openPlanningStores } from "../../core/planning/index.js";
@@ -233,6 +234,7 @@ export async function runStartIdeaPlanning(
         ideaId: idea.id,
         title: idea.title,
         note: idea.note,
+        planningSessionId: existingSession.sessionId,
         ...lineage
       });
     let updatedIdea = idea;
@@ -275,10 +277,12 @@ export async function runStartIdeaPlanning(
     );
   }
 
+  const sessionId = `pcs-${crypto.randomUUID()}`;
   const prompt = buildIdeaPlanningPrompt({
     ideaId: idea.id,
     title: idea.title,
     note: idea.note,
+    planningSessionId: sessionId,
     ...lineage
   });
 
@@ -290,7 +294,13 @@ export async function runStartIdeaPlanning(
     }
     persistPlanningChatSession(
       db,
-      { ideaId: updatedIdea.id, title: updatedIdea.title, note: updatedIdea.note, resumePrompt: prompt },
+      {
+        ideaId: updatedIdea.id,
+        title: updatedIdea.title,
+        note: updatedIdea.note,
+        resumePrompt: prompt,
+        sessionId
+      },
       nowIso
     );
   })();

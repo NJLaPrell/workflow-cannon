@@ -58,7 +58,7 @@ function parseSession(raw: string | null | undefined): PlanningChatSessionRecord
 
 export function persistPlanningChatSession(
   db: Sqlite.Database,
-  input: { ideaId: string; title: string; note?: string; resumePrompt?: string },
+  input: { ideaId: string; title: string; note?: string; resumePrompt?: string; sessionId?: string },
   nowIso: string
 ): PlanningChatSessionRecord {
   const moduleId = moduleIdForIdea(input.ideaId);
@@ -66,9 +66,12 @@ export function persistPlanningChatSession(
     .prepare("SELECT state_json FROM workspace_module_state WHERE module_id = ?")
     .get(moduleId) as { state_json: string } | undefined;
   const existing = parseSession(prior?.state_json);
+  const requestedSessionId = input.sessionId?.trim();
   const record: PlanningChatSessionRecord = {
     schemaVersion: 1,
-    sessionId: existing?.sessionId ?? `pcs-${crypto.randomUUID()}`,
+    sessionId:
+      existing?.sessionId ??
+      (requestedSessionId && requestedSessionId.length > 0 ? requestedSessionId : `pcs-${crypto.randomUUID()}`),
     ideaId: input.ideaId,
     title: input.title,
     ...(input.note ? { note: input.note } : {}),
