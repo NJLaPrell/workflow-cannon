@@ -83,78 +83,72 @@
     {
       "file": "src/modules/task-engine/dashboard/build-dashboard-base.ts",
       "line": "9",
-      "importLine": "import { listIdeas } from \"../../ideas/idea-store.js\";",
-      "rationale": "Dashboard base builder extracted from task-engine-dashboard-on-command; same ideas aggregation."
-    },
-    {
-      "file": "src/modules/task-engine/dashboard/build-dashboard-base.ts",
-      "line": "10",
       "importLine": "import { summarizeCheckpointsForDashboard } from \"../../checkpoints/checkpoint-store.js\";",
       "rationale": "Dashboard base builder extracted from task-engine-dashboard-on-command; same checkpoint rollup."
     },
     {
       "file": "src/modules/task-engine/dashboard/build-dashboard-base.ts",
-      "line": "11",
+      "line": "10",
       "importLine": "import { summarizeSubagentsForDashboard } from \"../../subagents/subagent-store.js\";",
       "rationale": "Dashboard base builder extracted from task-engine-dashboard-on-command; same subagent rollup."
     },
     {
       "file": "src/modules/task-engine/dashboard/build-dashboard-base.ts",
-      "line": "12",
+      "line": "11",
       "importLine": "import { summarizeTeamAssignmentsForDashboard } from \"../../team-execution/assignment-store.js\";",
       "rationale": "Dashboard base builder extracted from task-engine-dashboard-on-command; same team rollup."
     },
     {
       "file": "src/modules/task-engine/dashboard/build-dashboard-base.ts",
-      "line": "26",
+      "line": "25",
       "importLine": "import { dashboardOnboardingTemperamentLabel } from \"../../agent-behavior/onboarding-temperament-label.js\";",
       "rationale": "Dashboard base builder extracted from task-engine-dashboard-on-command; guidance label."
     },
     {
       "file": "src/modules/task-engine/dashboard/build-dashboard-base.ts",
-      "line": "27",
+      "line": "26",
       "importLine": "import { loadBehaviorWorkspaceState } from \"../../agent-behavior/persistence.js\";",
       "rationale": "Dashboard base builder extracted from task-engine-dashboard-on-command; behavior state."
     },
     {
       "file": "src/modules/task-engine/dashboard/build-dashboard-base.ts",
-      "line": "28",
+      "line": "27",
       "importLine": "import { BehaviorProfileStore } from \"../../agent-behavior/store.js\";",
       "rationale": "Dashboard base builder extracted from task-engine-dashboard-on-command; behavior profile."
     },
     {
       "file": "src/modules/task-engine/dashboard/focused-slice-builders.ts",
-      "line": "40",
+      "line": "41",
       "importLine": "import { loadBehaviorWorkspaceState } from \"../../agent-behavior/persistence.js\";",
       "rationale": "Dashboard slice needs behavior workspace state; allowlist pending façade."
     },
     {
       "file": "src/modules/task-engine/dashboard/focused-slice-builders.ts",
-      "line": "41",
+      "line": "42",
       "importLine": "import { BehaviorProfileStore } from \"../../agent-behavior/store.js\";",
       "rationale": "Dashboard slice needs behavior profile store; allowlist pending façade."
     },
     {
       "file": "src/modules/task-engine/dashboard/focused-slice-builders.ts",
-      "line": "42",
+      "line": "43",
       "importLine": "import { dashboardOnboardingTemperamentLabel } from \"../../agent-behavior/onboarding-temperament-label.js\";",
       "rationale": "Dashboard slice uses onboarding label; allowlist pending façade."
     },
     {
       "file": "src/modules/task-engine/dashboard/focused-slice-builders.ts",
-      "line": "74",
+      "line": "72",
       "importLine": "import { summarizeCheckpointsForDashboard } from \"../../checkpoints/checkpoint-store.js\";",
       "rationale": "Dashboard slice needs checkpoint summary; allowlist pending façade."
     },
     {
       "file": "src/modules/task-engine/dashboard/focused-slice-builders.ts",
-      "line": "75",
+      "line": "73",
       "importLine": "import { summarizeSubagentsForDashboard } from \"../../subagents/subagent-store.js\";",
       "rationale": "Dashboard slice needs subagent summary; allowlist pending façade."
     },
     {
       "file": "src/modules/task-engine/dashboard/focused-slice-builders.ts",
-      "line": "76",
+      "line": "74",
       "importLine": "import { summarizeTeamAssignmentsForDashboard } from \"../../team-execution/assignment-store.js\";",
       "rationale": "Dashboard slice needs team assignment summary; allowlist pending façade."
     }
