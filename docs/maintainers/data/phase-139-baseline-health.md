@@ -3,26 +3,26 @@
 **Task:** T100743  
 **Branch:** `feature/T100743-run-baseline-health-checks-and-identify-planner-`  
 **Base:** `release/phase-139`  
-**Captured:** 2026-06-28 (worker: `worker-t100743`)
+**Captured:** 2026-06-30 (worker: `worker-t100743`)  
+**Prior capture:** 2026-06-28 (commit `de770f0b`; refreshed after phase closeout merge `a458db2f`)
 
 ## Summary
 
 | Command | Exit code | Result |
 | --- | ---: | --- |
-| `pnpm exec wk doctor` | 0 | **Failed validation** (see findings below) |
+| `node dist/cli.js doctor` | 0 | **Pass** — all contract checks green |
 | `pnpm run build` | 0 | **Pass** (`tsc -p tsconfig.json`) |
-| `pnpm run test` | 0 | **Pass** — 1719 tests, 0 failures (~497s) |
+| `pnpm run test` | 123 | **1 failure** — 1722 tests, 1721 pass (~167s) |
 
-## `pnpm exec wk doctor` findings
+## `node dist/cli.js doctor`
 
-Doctor printed validation failures (process still exited 0):
+Doctor passed with no validation failures. Notable informational items only:
 
-1. **`.workspace-kit/tasks/workspace-kit.db`** — `task-state-projection-event-log-admission-failed`: `task.transitioned` references unknown task `T100517`. Remediation: `pnpm exec wk run rebuild-task-state-cache` with policy approval.
-2. **`.workspace-kit/tasks/task-state-events.jsonl`** — `shadow-admission-failed`: same unknown task `T100517` in shadow log.
-3. **`workflow-cannon/task-state`** — `task-state-snapshot-tail-large`: snapshot tail is 129 events (throughSequence=1956, head=2085); cut a fresh snapshot before hydrate-heavy operations.
-4. **`workflow-cannon/task-state`** — `phase-projection-local-exceeds-remote`: SQLite phase 139 has 35 sqlite-only delivery tasks not present on git canonical replay (includes `T100738`–`T100744`, etc.). Publish `task.created` events via git-canonical paths before closeout.
+- `docs/maintainers/data/workspace-kit-status.db-export.yaml` may be stale vs planning SQLite (regenerate via `export-workspace-status` when needed).
+- Planning generation policy: `require` (pass `expectedPlanningGeneration` on mutating commands).
+- Active canonical backend: `git-event-log`.
 
-**Impact for Phase 139:** Local task-store drift is pre-existing; does not block build/test green. Closeout should address canonical publish and snapshot tail before hydrate-heavy ops.
+**Delta from 2026-06-28 capture:** prior run reported task-state projection/shadow admission issues (`T100517`), snapshot tail size, and phase-139 sqlite-only vs git canonical drift. Those findings are absent in this refresh; closeout and subsequent task-store activity likely remediated local drift.
 
 ## `pnpm run build`
 
@@ -31,14 +31,20 @@ Clean TypeScript compile; no errors or warnings reported.
 ## `pnpm run test`
 
 ```
-# tests 1719
+# tests 1722
 # suites 67
-# pass 1719
-# fail 0
-# duration_ms ~496993
+# pass 1721
+# fail 1
+# duration_ms ~166862
 ```
 
-No failing tests at baseline. No planner-specific regressions observed in this run.
+### Failure detail
+
+| File | Error |
+| --- | --- |
+| `test/bench/dashboard-perf.test.mjs` | Spawns `node scripts/benchmark-dashboard.ts` → `ERR_UNKNOWN_FILE_EXTENSION` (`.ts` not loadable without ts runner) |
+
+All planner/plan-artifact integration tests in the enumerated surface passed in this run. The sole failure is the dashboard perf bench harness, not planner command logic.
 
 ---
 
@@ -102,14 +108,14 @@ Strategy reference: [`PLANNER_TEST_STRATEGY.md`](../../../PLANNER_TEST_STRATEGY.
 | `extensions/cursor-workflow-cannon/test/dashboard-plan-artifact-accept.test.mjs` | Extension — accept action + policy |
 | `extensions/cursor-workflow-cannon/test/playbook-chat-prompts.test.mjs` | Extension — planner chat prompts |
 
-### Extension — general dashboard tests (68 files)
+### Extension — general dashboard tests (59 files under `test/dashboard-*.test.mjs` and `extensions/cursor-workflow-cannon/test/dashboard-*.test.mjs`)
 
-Full dashboard test surface spans `test/dashboard-*.test.mjs` (repo root) and `extensions/cursor-workflow-cannon/test/dashboard-*.test.mjs` (extension package). Key clusters:
+Key clusters:
 
 - **Service / data layer:** `test/dashboard-service-*.test.mjs`, `test/dashboard-data-source-config.test.mjs`, `test/dashboard-snapshot-store.test.mjs`
 - **Phase / queue projection:** `test/dashboard-phase-buckets.test.mjs`, `test/dashboard-task-state-projection-summary.test.mjs`, `test/build-dashboard-*.test.mjs`
 - **Extension UI / coordinator:** `extensions/cursor-workflow-cannon/test/dashboard-coordinator*.test.mjs`, `dashboard-queue-*.test.mjs`, `dashboard-lazy-*.test.mjs`, `render-dashboard.test.mjs`
-- **Perf / bench:** `test/bench/dashboard-perf.test.mjs`, `extensions/cursor-workflow-cannon/test/dashboard-queue-perf-contract.test.mjs`
+- **Perf / bench:** `test/bench/dashboard-perf.test.mjs` (currently failing — see above), `extensions/cursor-workflow-cannon/test/dashboard-queue-perf-contract.test.mjs`
 
 See `PLANNER_TEST_STRATEGY.md` §7 for planned extension patterns (`render-dashboard-plan-artifact.test.mjs` listed as future; not yet present).
 
@@ -119,8 +125,7 @@ See `PLANNER_TEST_STRATEGY.md` §7 for planned extension patterns (`render-dashb
 
 | Blocker | Severity | Owner action |
 | --- | --- | --- |
-| Task-state event log references unknown `T100517` | Medium | `rebuild-task-state-cache` when operator approves |
-| Phase 139 sqlite-only tasks vs git canonical | Medium | Publish `task.created` events before phase closeout |
-| Snapshot tail large (129 events) | Low | `task-state-snapshot` before hydrate-heavy ops |
+| `test/bench/dashboard-perf.test.mjs` bench harness cannot run `.ts` directly | Low | Fix bench runner or exclude from default `pnpm run test` if intentional |
+| Stale workspace-kit-status YAML export | Info | `export-workspace-status` when maintainer snapshot needed |
 
-None of the above blocked T100743 deliverable (build + test green; findings recorded).
+None of the above blocks T100743 acceptance (baseline recorded; planner test surface enumerated with paths).
