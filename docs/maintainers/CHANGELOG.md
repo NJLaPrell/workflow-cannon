@@ -8,6 +8,30 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [1.0.2] - 2026-06-30
+
+Patch — **Phase 139 Idea planning system** (end-to-end idea → plan → review → finalize → task drafts, with dashboard lifecycle UI and canonical session commands).
+
+### Added
+
+- **`start-idea-planning`** and **`update-idea-planning-session`** commands — bootstrap/resume planning chat sessions, enforce allowed transitions, and persist `draft_ready` / `completed` lifecycle state.
+- Planning Agent contract and planner-chat playbook updates with locked decisions for idea-originated planning.
+- Dashboard **Plan this** wiring to `start-idea-planning` with idempotency checks and lifecycle row actions (plan card, WBS preview, finalize preview).
+- PlanArtifact draft linking as `activeDraftPlanArtifact`, version immutability, accept/review gates, and acceptance promotion to `linkedPlanArtifact`.
+- Finalize pipeline — WBS → task drafts with two-pass dependency resolution and idempotent persist.
+- Generation retry, error normalization, audit trail, and invariant tests for the planning path.
+- SQLite schema v39 — human-gate task statuses (`awaiting_review`, `awaiting_policy_approval`, `awaiting_external_decision`).
+- Phase 139 baseline health report at `docs/maintainers/data/phase-139-baseline-health.md`.
+
+### Changed
+
+- Legacy planning path demoted in favor of the idea-planning command surface.
+- Canonical task-state event applier now **replaces** `metadata` on whole-map `task.updated` events (fixes stale `deliveryEvidence` after waiver-only updates).
+
+### Fixed
+
+- Task-state projection hydration no longer retains removed metadata keys when operators clear delivery evidence in favor of a delivery waiver.
+
 ## [1.0.1] - 2026-06-24
 
 ## [1.0.0] - 2026-06-23

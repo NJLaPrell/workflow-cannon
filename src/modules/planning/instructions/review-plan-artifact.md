@@ -30,9 +30,11 @@ pnpm exec wk run review-plan-artifact '{"planId":"<uuid>","recordReview":true,"e
 | `planId` | Yes* | Load stored artifact from `.workspace-kit/planning/plan-artifacts/`. |
 | `version` | No | Default latest on disk / index. |
 | `artifact` | Yes* | Inline PlanArtifact v1 instead of load (*one of `planId` or `artifact`*). |
-| `profile` | No | `minimal` \| `refactor` \| `full-feature` \| `sprint-phase`; default from `identity.planningType`. |
+| `profile` | No | `minimal` \| `refactor` \| `full-feature` \| `sprint-phase`; default `minimal` when omitted. |
 | `waivers` | No | `{ code, rationale }[]` per **PLANNER_REVIEW_RUBRIC.md** §5.2 (slice coverage codes). |
-| `recordReview` | No | Default `false`. `true` writes `status: reviewed` as next artifact version (Tier B). |
+| `recordReview` | No | Default `false`. `true` writes `status: reviewed` as next artifact version, persists `latestReview` on the plan index, and may update the planning session (Tier B). |
+| `ideaId` | No | Optional explicit idea id when promoting session state after `recordReview`. |
+| `sessionId` | No | Optional explicit session id; must match the active planning session when set. |
 | `expectedPlanningGeneration` | When policy `require` | Required when `recordReview: true`. |
 | `policyApproval` | When `recordReview: true` | `{ "confirmed": true, "rationale": "…" }` on argv. |
 | `actor` | No | Actor for mutation metadata when `recordReview: true`. |
@@ -59,6 +61,12 @@ pnpm exec wk run review-plan-artifact '{"planId":"<uuid>","recordReview":true,"e
 | `coverageMap` | Goals/stories ↔ WBS coverage. |
 | `sizingFindings` | Per-WBS sizing issues. |
 | `openQuestionCount` | Integer. |
+| `blockerCount` | Integer — dashboard-friendly blocker count. |
+| `warningCount` | Integer — dashboard-friendly warning count. |
+| `wbsCount` | Integer — WBS row count on the reviewed artifact. |
+| `coverageSummary` | Redacted goal/story/slice coverage counts. |
+| `reviewRecord` | Stable review record shape (`schemaVersion: 1`). |
+| `planningChatSession` | Present when `recordReview: true` and idea/session context promotes session to `needs_revision` or `approval_ready`. |
 
 ## Fixtures
 

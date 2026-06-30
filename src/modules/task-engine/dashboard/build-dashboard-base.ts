@@ -6,7 +6,6 @@ import type {
   DashboardTaskCheckpointsSummary,
   DashboardTeamExecutionSummary
 } from "../../../contracts/dashboard-summary-run.js";
-import { listIdeas } from "../../ideas/idea-store.js";
 import { summarizeCheckpointsForDashboard } from "../../checkpoints/checkpoint-store.js";
 import { summarizeSubagentsForDashboard } from "../../subagents/subagent-store.js";
 import { summarizeTeamAssignmentsForDashboard } from "../../team-execution/assignment-store.js";
@@ -22,11 +21,10 @@ import {
 import { buildDashboardDependencyOverview } from "./dashboard-dependency-overview.js";
 import { buildDashboardPhaseBucketsForTasks } from "./dashboard-phase-buckets.js";
 import { readBuildPlanSession, toDashboardPlanningSession } from "../../../core/planning/build-plan-session-file.js";
-import { listPlanArtifactSummaries } from "../../../core/planning/plan-artifact-storage.js";
+import { listPlanArtifactSummaries, readLatestPlanArtifact } from "../../../core/planning/plan-artifact-storage.js";
 import { dashboardOnboardingTemperamentLabel } from "../../agent-behavior/onboarding-temperament-label.js";
 import { loadBehaviorWorkspaceState } from "../../agent-behavior/persistence.js";
 import { BehaviorProfileStore } from "../../agent-behavior/store.js";
-import { listPlanningChatSessions } from "../../ideas/planning-chat-session.js";
 import {
   findWishlistIntakeTaskByLegacyOrTaskId,
   isWishlistIntakeTask,
@@ -76,6 +74,7 @@ import { buildDashboardAgentActivitySummary } from "./build-dashboard-agent-acti
 import { summarizeAgentRegistrySessions } from "../agent-registry-session-summary.js";
 import type { DashboardSummaryTracer } from "./dashboard-summary-trace.js";
 import { TASK_ENGINE_TASKS_TABLE } from "../../../core/state/kit-sqlite/planning-sqlite-kernel.js";
+import { buildDashboardIdeasSummary } from "./build-dashboard-ideas-summary.js";
 
 /** Parse optional `dashboard-summary` argv for wishlist table paging (extension + CLI). */
 export function parseDashboardWishlistPaging(args?: Record<string, unknown>): {
@@ -125,78 +124,56 @@ function buildDashboardPlanArtifactSummary(ctx: ModuleLifecycleContext): Dashboa
   if (summaries.length === 0) {
     return null;
   }
-  const rows = summaries.slice(0, 5).map((summary) => ({
-    planId: summary.planId,
-    planRef: summary.planRef,
-    version: summary.currentVersion,
-    status: summary.status,
-    title: summary.title,
-    planningType: summary.planningType,
-    updatedAt: summary.updatedAt,
-    wbsRowCount: summary.wbsRowCount,
-    openQuestionCount: summary.openQuestionCount
-  }));
+  const rows = summaries.slice(0, 5).map((summary) => {
+    const latestArtifact = readLatestPlanArtifact(ctx.workspacePath, summary.planId);
+    const latestReview =
+      summary.latestReview &&
+      summary.latestReview.planRef === summary.planRef &&
+      summary.latestReview.reviewedVersion === summary.currentVersion
+        ? summary.latestReview
+        : undefined;
+    const phaseRecommendations = Array.isArray(latestArtifact?.phaseRecommendations)
+      ? latestArtifact.phaseRecommendations
+      : [];
+    const primaryPhase = phaseRecommendations.find((row) => row?.isPrimary === true) ?? phaseRecommendations[0];
+    const phaseRecommendation = primaryPhase
+      ? [primaryPhase.label?.trim(), primaryPhase.phaseKey?.trim()].filter((value) => !!value).join(" · ")
+      : "";
+    const sourceIdeaId =
+      typeof latestArtifact?.provenance?.sourceIdeaId === "string" ? latestArtifact.provenance.sourceIdeaId.trim() : "";
+    const blockerCount = latestReview?.blockerCount ?? 0;
+    const warningCount = latestReview?.warningCount ?? 0;
+    const lifecycleStatus =
+      summary.status === "reviewed"
+        ? blockerCount > 0 || latestReview?.passed === false
+          ? "needs_revision"
+          : "approval_ready"
+        : summary.status;
+    return {
+      planId: summary.planId,
+      planRef: summary.planRef,
+      version: summary.currentVersion,
+      status: summary.status,
+      lifecycleStatus,
+      title: summary.title,
+      planningType: summary.planningType,
+      updatedAt: summary.updatedAt,
+      wbsRowCount: summary.wbsRowCount,
+      openQuestionCount: summary.openQuestionCount,
+      blockerCount,
+      warningCount,
+      ...(latestReview?.profile ? { profile: latestReview.profile } : {}),
+      ...(latestReview?.reviewSummary ? { reviewSummary: latestReview.reviewSummary } : {}),
+      ...(phaseRecommendation.length > 0 ? { phaseRecommendation } : {}),
+      ...(sourceIdeaId.length > 0 ? { sourceIdeaId } : {})
+    };
+  });
   return {
     schemaVersion: 1,
     count: summaries.length,
     current: rows[0]!,
     recent: rows
   };
-}
-
-function buildDashboardIdeasSummary(
-  sqliteDual: SqliteDualPlanningStore | undefined,
-  needsQueueRollups: boolean
-): DashboardSummaryData["ideas"] {
-  if (!needsQueueRollups || !sqliteDual) {
-    return {
-      schemaVersion: 1,
-      available: false,
-      totalCount: 0,
-      openCount: 0,
-      planningCount: 0,
-      plannedCount: 0,
-      top: []
-    };
-  }
-  try {
-    const ideas = listIdeas(sqliteDual.getDatabase());
-    const sessions = new Map(listPlanningChatSessions(sqliteDual.getDatabase()).map((session) => [session.ideaId, session]));
-    return {
-      schemaVersion: 1,
-      available: true,
-      totalCount: ideas.length,
-      openCount: ideas.filter((idea) => idea.status === "open").length,
-      planningCount: ideas.filter((idea) => idea.status === "planning").length,
-      plannedCount: ideas.filter((idea) => idea.status === "planned").length,
-      top: ideas.slice(0, 15).map((idea) => {
-        const session = sessions.get(idea.id);
-        if (!session) {
-          return idea;
-        }
-        return {
-          ...idea,
-          planningChatSession: {
-            schemaVersion: 1,
-            ideaId: session.ideaId,
-            status: session.status,
-            updatedAt: session.updatedAt,
-            ...(session.resumePrompt ? { resumePrompt: session.resumePrompt } : {})
-          }
-        };
-      })
-    };
-  } catch {
-    return {
-      schemaVersion: 1,
-      available: false,
-      totalCount: 0,
-      openCount: 0,
-      planningCount: 0,
-      plannedCount: 0,
-      top: []
-    };
-  }
 }
 
 const emptyDependencyOverviewStub = (activeTaskCount: number): DashboardSummaryData["dependencyOverview"] => ({
@@ -318,7 +295,7 @@ export async function buildDashboardBase(
   let wishlistPageSize = 10;
   let wishlistTotalPages = 0;
   let wishlistOpenTop: DashboardSummaryData["wishlist"]["openTop"] = [];
-  let ideas = buildDashboardIdeasSummary(undefined, false);
+  let ideas = buildDashboardIdeasSummary(ctx, undefined, false);
 
   const buildWishlistAndIdeas = () => {
     if (needsQueueRollups && includeWishlist) {
@@ -342,7 +319,7 @@ export async function buildDashboardBase(
         };
       });
     }
-    ideas = buildDashboardIdeasSummary(sqliteDual, needsQueueRollups);
+    ideas = buildDashboardIdeasSummary(ctx, sqliteDual, needsQueueRollups);
   };
   if (tracer) {
     tracer.span("wishlist/ideas", buildWishlistAndIdeas);

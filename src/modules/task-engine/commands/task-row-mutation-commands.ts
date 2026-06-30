@@ -635,6 +635,8 @@ export async function runTaskRowMutationCommands(
         phase: t.phase,
         phaseKey: t.phaseKey ?? null,
         approach: t.approach,
+        summary: t.summary ?? null,
+        description: t.description ?? null,
         technicalScope: t.technicalScope ?? [],
         acceptanceCriteria: t.acceptanceCriteria ?? [],
         dependsOn: t.dependsOn ?? [],

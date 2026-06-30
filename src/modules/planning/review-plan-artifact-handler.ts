@@ -7,12 +7,20 @@ import {
 } from "../../core/planning/review-plan-artifact.js";
 import type { PlanArtifactReviewProfile, PlanArtifactV1 } from "../../core/planning/plan-artifact-v1.js";
 import {
+  buildPlanArtifactReviewRecord,
+  formatPlanArtifactReviewSummary
+} from "../../core/planning/plan-artifact-review-record.js";
+import {
+  applyLatestReviewToPlanArtifactIndex,
   readLatestPlanArtifact,
+  readPlanArtifactIndex,
   readPlanArtifactVersion,
   writeNextPlanArtifactVersion
 } from "../../core/planning/plan-artifact-storage.js";
 import { validatePlanArtifactDraftInput } from "../../core/planning/validate-plan-artifact.js";
 import { openPlanningStores } from "../../core/planning/index.js";
+import { promotePlanningSessionAfterReview } from "../ideas/planning-session-after-review.js";
+import { toPlanningChatSessionResponse } from "../ideas/planning-chat-session.js";
 import { planningGenPolicyGate } from "../task-engine/planning-generation-gate.js";
 import { attachPolicyMeta } from "../task-engine/attach-planning-response-meta.js";
 import { TaskEngineError } from "../task-engine/transitions.js";
@@ -60,22 +68,26 @@ function parseVersion(raw: unknown): number | undefined {
   return undefined;
 }
 
-function formatReviewSummary(result: ReviewPlanArtifactResult): string {
-  const blockers = result.blockers.length;
-  const warnings = result.warnings.length;
-  if (blockers === 0 && warnings === 0) {
-    return "0 blockers, 0 warnings";
-  }
-  if (blockers === 0) {
-    return `0 blockers, ${warnings} warning(s)`;
-  }
-  return `${blockers} blocker(s), ${warnings} warning(s)`;
+function cleanIdeaId(raw: unknown): string | undefined {
+  return typeof raw === "string" && raw.trim().length > 0 ? raw.trim() : undefined;
+}
+
+function cleanSessionId(raw: unknown): string | undefined {
+  return typeof raw === "string" && raw.trim().length > 0 ? raw.trim() : undefined;
 }
 
 function reviewDataPayload(
   result: ReviewPlanArtifactResult,
+  artifact: PlanArtifactV1,
   extras: Record<string, unknown> = {}
 ): Record<string, unknown> {
+  const reviewSummary = formatPlanArtifactReviewSummary(result);
+  const reviewRecord = buildPlanArtifactReviewRecord({
+    artifact,
+    result,
+    reviewedAt: new Date().toISOString(),
+    reviewSummary
+  });
   return {
     schemaVersion: 1,
     responseSchemaVersion: 1,
@@ -86,20 +98,26 @@ function reviewDataPayload(
     coverageMap: result.coverageMap,
     sizingFindings: result.sizingFindings,
     openQuestionCount: result.openQuestionCount,
-    reviewSummary: formatReviewSummary(result),
+    blockerCount: reviewRecord.blockerCount,
+    warningCount: reviewRecord.warningCount,
+    wbsCount: reviewRecord.wbsCount,
+    coverageSummary: reviewRecord.coverageSummary,
+    reviewSummary,
+    reviewRecord,
     ...extras
   };
 }
 
 function reviewSuccessResult(
   result: ReviewPlanArtifactResult,
+  artifact: PlanArtifactV1,
   extras: Record<string, unknown> = {}
 ): ModuleCommandResult {
   return {
     ok: true,
     code: result.passed ? "plan-artifact-review-complete" : "plan-artifact-review-blocked",
     message: result.passed ? "PlanArtifact review passed" : "PlanArtifact review has blockers",
-    data: reviewDataPayload(result, extras)
+    data: reviewDataPayload(result, artifact, extras)
   };
 }
 
@@ -116,9 +134,11 @@ async function resolveArtifact(
   const planIdRaw = typeof args.planId === "string" ? args.planId.trim() : "";
 
   if (hasArtifact) {
+    const ideaId = cleanIdeaId(args.ideaId);
     const validation = validatePlanArtifactDraftInput(artifactRaw, {
       workspaceRoot: ctx.workspacePath,
       planId: planIdRaw || undefined,
+      ideaId,
       actor: typeof args.actor === "string" ? args.actor : undefined
     });
     if (!validation.ok) {
@@ -195,7 +215,7 @@ export async function runReviewPlanArtifact(
   const review = reviewPlanArtifact(resolved.artifact, { profile, waivers });
 
   if (!recordReview) {
-    return reviewSuccessResult(review, {
+    return reviewSuccessResult(review, resolved.artifact, {
       planId: resolved.planId,
       version: resolved.artifact.version,
       planRef: resolved.artifact.planRef,
@@ -225,6 +245,7 @@ export async function runReviewPlanArtifact(
   };
 
   let written;
+  let planningChatSession: ReturnType<typeof toPlanningChatSessionResponse> | undefined;
   try {
     stores.sqliteDual.withTransaction(() => {
       const sqliteDb = stores.sqliteDual.getDatabase();
@@ -232,6 +253,25 @@ export async function runReviewPlanArtifact(
         effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined,
         sqliteDb
       });
+      const reviewRecord = buildPlanArtifactReviewRecord({
+        artifact: written!.artifact,
+        result: review,
+        reviewedAt: now
+      });
+      applyLatestReviewToPlanArtifactIndex(sqliteDb, written!.artifact.planId, reviewRecord);
+      const promoted = promotePlanningSessionAfterReview(
+        sqliteDb,
+        written!.artifact,
+        reviewRecord,
+        now,
+        {
+          ideaId: cleanIdeaId(args.ideaId),
+          sessionId: cleanSessionId(args.sessionId)
+        }
+      );
+      if (promoted) {
+        planningChatSession = toPlanningChatSessionResponse(promoted);
+      }
     }, planningConcurrencySaveOpts(args));
   } catch (err) {
     if (err instanceof TaskEngineError) {
@@ -245,13 +285,20 @@ export async function runReviewPlanArtifact(
   }
 
   const storagePath = written!.paths.artifactFileRelative(written!.artifact.version);
-  const result = reviewSuccessResult(review, {
+  const index = readPlanArtifactIndex(
+    ctx.workspacePath,
+    written!.artifact.planId,
+    ctx.effectiveConfig as Record<string, unknown> | undefined
+  );
+  const result = reviewSuccessResult(review, written!.artifact, {
     planId: written!.artifact.planId,
     version: written!.artifact.version,
     planRef: written!.artifact.planRef,
     status: written!.artifact.status,
     storagePath,
-    recordReview: true
+    recordReview: true,
+    ...(index?.latestReview ? { persistedReview: index.latestReview } : {}),
+    ...(planningChatSession ? { planningChatSession } : {})
   });
   attachPolicyMeta(
     result.data as Record<string, unknown>,

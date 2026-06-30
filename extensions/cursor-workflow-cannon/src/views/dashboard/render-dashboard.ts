@@ -28,6 +28,7 @@ import type {
   DashboardAgentActivitySummary,
   DashboardAgentStatusKind
 } from "@workflow-cannon/workspace-kit/contracts/dashboard-summary-run";
+import { deriveIdeaPlanningLifecycleState } from "@workflow-cannon/workspace-kit/modules";
 import type { DashboardSectionId } from "./dashboard-section-registry.js";
 import { lookupDashboardSection } from "./dashboard-section-registry.js";
 import { renderDashboardReadModeBadgeHtml, renderDashboardSectionPlaceholder } from "./render-dashboard-shell.js";
@@ -2341,6 +2342,127 @@ function renderWishlistOpenList(items: unknown): string {
   );
 }
 
+function ideaPlanButton(
+  label: string,
+  action: string,
+  extraAttrs = "",
+  options?: { secondary?: boolean; disabled?: boolean; title?: string }
+): string {
+  const klass = options?.secondary ? "wc-btn wc-btn-sm wc-btn-secondary" : "wc-btn wc-btn-sm wc-btn-primary";
+  const titleAttr = options?.title ? ` title="${escapeHtmlAttr(options.title)}"` : "";
+  const disabledAttr = options?.disabled ? " disabled" : "";
+  return (
+    `<button type="button" class="${klass}" data-wc-action="${escapeHtmlAttr(action)}"${extraAttrs}${titleAttr}${disabledAttr}>` +
+    escapeHtml(label) +
+    "</button>"
+  );
+}
+
+function planActionAttrs(summary: Record<string, unknown> | null): string {
+  if (!summary) {
+    return "";
+  }
+  const planId = typeof summary.planId === "string" ? summary.planId.trim() : "";
+  const planRef = typeof summary.planRef === "string" ? summary.planRef.trim() : "";
+  const version =
+    typeof summary.version === "number"
+      ? summary.version
+      : typeof summary.version === "string" && /^\d+$/.test(summary.version.trim())
+        ? Number(summary.version.trim())
+        : NaN;
+  if (!planId || !Number.isFinite(version) || version <= 0) {
+    return "";
+  }
+  return (
+    ` data-plan-id="${escapeHtmlAttr(planId)}"` +
+    ` data-plan-ref="${escapeHtmlAttr(planRef)}"` +
+    ` data-plan-version="${escapeHtmlAttr(String(Math.floor(version)))}"`
+  );
+}
+
+function planArtifactLike(summary: Record<string, unknown> | null): { planRef?: string; status?: string } | undefined {
+  if (!summary) {
+    return undefined;
+  }
+  const planRef = typeof summary.planRef === "string" ? summary.planRef.trim() : "";
+  const status = typeof summary.status === "string" ? summary.status.trim() : "";
+  if (!planRef && !status) {
+    return undefined;
+  }
+  return {
+    ...(planRef ? { planRef } : {}),
+    ...(status ? { status } : {})
+  };
+}
+
+function renderIdeaLifecycleActions(args: {
+  ideaId: string;
+  lifecycleState: string;
+  hasPlanningChatSession: boolean;
+  activeDraftPlanArtifactSummary: Record<string, unknown> | null;
+  linkedPlanArtifactSummary: Record<string, unknown> | null;
+}): string {
+  const viewPlanTarget = args.activeDraftPlanArtifactSummary ?? args.linkedPlanArtifactSummary;
+  const resumeButton = ideaPlanButton(
+    args.hasPlanningChatSession || args.lifecycleState === "needs_revision" ? "Resume planning" : "Plan this",
+    "idea-plan"
+  );
+  switch (args.lifecycleState) {
+    case "planning":
+      return resumeButton;
+    case "draft_ready":
+      return (
+        ideaPlanButton("Review", "plan-artifact-review", planActionAttrs(args.activeDraftPlanArtifactSummary)) +
+        ideaPlanButton("View plan", "idea-view-plan", planActionAttrs(viewPlanTarget), { secondary: true })
+      );
+    case "needs_revision":
+      return (
+        resumeButton +
+        ideaPlanButton("Accept", "plan-artifact-accept", planActionAttrs(args.activeDraftPlanArtifactSummary), {
+          secondary: true,
+          disabled: true,
+          title: "Resolve review blockers before accepting this plan."
+        }) +
+        ideaPlanButton("View plan", "idea-view-plan", planActionAttrs(viewPlanTarget), { secondary: true })
+      );
+    case "approval_ready":
+      return (
+        ideaPlanButton("Accept", "plan-artifact-accept", planActionAttrs(args.activeDraftPlanArtifactSummary)) +
+        ideaPlanButton("View plan", "idea-view-plan", planActionAttrs(viewPlanTarget), { secondary: true })
+      );
+    case "accepted":
+      return (
+        ideaPlanButton("Finalize", "plan-artifact-finalize", planActionAttrs(args.linkedPlanArtifactSummary)) +
+        ideaPlanButton("View plan", "idea-view-plan", planActionAttrs(viewPlanTarget), { secondary: true })
+      );
+    case "finalized": {
+      const phaseKey =
+        args.linkedPlanArtifactSummary && typeof args.linkedPlanArtifactSummary.phaseKey === "string"
+          ? args.linkedPlanArtifactSummary.phaseKey.trim()
+          : "";
+      const viewTasksButton = phaseKey
+        ? ideaPlanButton(
+            "View tasks",
+            "open-queue-for-phase",
+            ` data-wc-phase-key="${escapeHtmlAttr(phaseKey)}"`
+          )
+        : ideaPlanButton("View tasks", "open-queue-for-phase", "", {
+            disabled: true,
+            title: "Phase key unavailable for this finalized plan."
+          });
+      return (
+        viewTasksButton +
+        ideaPlanButton("View plan", "idea-view-plan", planActionAttrs(viewPlanTarget), { secondary: true })
+      );
+    }
+    case "superseded":
+      return ideaPlanButton("View plan", "idea-view-plan", planActionAttrs(viewPlanTarget), { secondary: true });
+    case "open":
+    default:
+      return ideaPlanButton("Plan this", "idea-plan");
+  }
+}
+
 function renderDashboardIdeasSectionInnerHtml(rawIdeas: unknown): string {
   const ideas = rawIdeas && typeof rawIdeas === "object" ? (rawIdeas as Record<string, unknown>) : {};
   const available = ideas.available === true;
@@ -2363,6 +2485,28 @@ function renderDashboardIdeasSectionInnerHtml(rawIdeas: unknown): string {
         ? (row.planningChatSession as Record<string, unknown>)
         : null;
       const hasPlanningChatSession = planningChatSession?.status === "active" && planningChatSession.ideaId === id;
+      const activeDraftPlanArtifactSummary =
+        row.activeDraftPlanArtifactSummary && typeof row.activeDraftPlanArtifactSummary === "object"
+          ? (row.activeDraftPlanArtifactSummary as Record<string, unknown>)
+          : null;
+      const linkedPlanArtifactSummary =
+        row.linkedPlanArtifactSummary && typeof row.linkedPlanArtifactSummary === "object"
+          ? (row.linkedPlanArtifactSummary as Record<string, unknown>)
+          : null;
+      const lifecycleState = deriveIdeaPlanningLifecycleState({
+        idea: row,
+        planningChatSession,
+        linkedPlanArtifact: planArtifactLike(linkedPlanArtifactSummary)
+          ?? (typeof row.linkedPlanArtifact === "string" ? row.linkedPlanArtifact : undefined),
+        activeDraftPlanArtifact: planArtifactLike(activeDraftPlanArtifactSummary),
+        latestReview:
+          activeDraftPlanArtifactSummary?.latestReview &&
+          typeof activeDraftPlanArtifactSummary.latestReview === "object"
+            ? (activeDraftPlanArtifactSummary.latestReview as Record<string, unknown>)
+            : linkedPlanArtifactSummary?.latestReview && typeof linkedPlanArtifactSummary.latestReview === "object"
+              ? (linkedPlanArtifactSummary.latestReview as Record<string, unknown>)
+              : undefined
+      });
       const displayNote = note.length > 160 ? note.slice(0, 157).trimEnd() + "..." : note;
       const idAttr = escapeHtmlAttr(id);
       const titleAttr = escapeHtmlAttr(title);
@@ -2370,6 +2514,13 @@ function renderDashboardIdeasSectionInnerHtml(rawIdeas: unknown): string {
       if (!title) {
         return "";
       }
+      const lifecycleActions = renderIdeaLifecycleActions({
+        ideaId: id,
+        lifecycleState,
+        hasPlanningChatSession,
+        activeDraftPlanArtifactSummary,
+        linkedPlanArtifactSummary
+      });
       return (
         '<div class="wc-ideas-row" draggable="true" data-wc-idea-id="' +
         idAttr +
@@ -2390,9 +2541,7 @@ function renderDashboardIdeasSectionInnerHtml(rawIdeas: unknown): string {
         escapeHtml(status) +
         "</span>" +
         '<span class="wc-ideas-row-actions">' +
-        '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="idea-plan">' +
-        (hasPlanningChatSession ? "Resume planning &rarr;" : "Plan this") +
-        "</button>" +
+        lifecycleActions +
         '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="idea-edit">Edit</button>' +
         '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="idea-delete">Delete</button>' +
         "</span>" +
@@ -3450,7 +3599,8 @@ export function renderPlanningInterviewWizardPanel(panel: PlanningInterviewWizar
       )
       .join("");
     return (
-      '<div class="dash-planning-wizard" aria-label="Guided planning interview">' +
+      '<div class="dash-planning-wizard" aria-label="Legacy planning interview">' +
+      '<p class="muted"><b>Legacy preview.</b> Use <b>Plan this</b> from Ideas for the primary PlanArtifact flow.</p>' +
       '<div class="dash-planning-wizard-picker-row">' +
       '<label class="dash-planning-wizard-label dash-planning-wizard-label-inline" for="wc-planning-type">Planning Type</label>' +
       '<select id="wc-planning-type" class="dash-planning-wizard-select">' +
@@ -3467,8 +3617,8 @@ export function renderPlanningInterviewWizardPanel(panel: PlanningInterviewWizar
         ? "<p><b>Examples:</b> " + escapeHtml(panel.examples.join(" · ")) + "</p>"
         : "";
     return (
-      '<div class="dash-planning-wizard" aria-label="Planning question">' +
-      "<p><b>Question</b> · " +
+      '<div class="dash-planning-wizard" aria-label="Legacy planning question">' +
+      "<p><b>Legacy interview</b> · " +
       escapeHtml(panel.planningType) +
       " · " +
       escapeHtml(panel.progressHint) +
@@ -3499,8 +3649,8 @@ export function renderPlanningInterviewWizardPanel(panel: PlanningInterviewWizar
             ? '<p class="muted">Wishlist item created. Refresh the dashboard to see it.</p>'
             : "";
     return (
-      '<div class="dash-planning-wizard ok" aria-label="Planning interview complete">' +
-      "<p><b>Interview complete</b> · " +
+      '<div class="dash-planning-wizard ok" aria-label="Legacy planning interview complete">' +
+      "<p><b>Legacy interview complete</b> · " +
       escapeHtml(panel.planningType) +
       " · <code>" +
       escapeHtml(panel.code) +
@@ -3514,8 +3664,8 @@ export function renderPlanningInterviewWizardPanel(panel: PlanningInterviewWizar
     );
   }
   return (
-    '<div class="dash-planning-wizard bad" aria-label="Planning interview error">' +
-    "<p><b>Interview error</b></p>" +
+    '<div class="dash-planning-wizard bad" aria-label="Legacy planning interview error">' +
+    "<p><b>Legacy interview error</b></p>" +
     "<p>" +
     escapeHtml(panel.message) +
     "</p>" +
@@ -3553,7 +3703,6 @@ function renderPlanArtifactDraftPanel(planArtifact: unknown): string {
   const planRef = String(row.planRef ?? "").trim();
   const planId = String(row.planId ?? "").trim();
   const statusRaw = String(row.status ?? "").trim();
-  const statusDisp = statusRaw.length > 0 ? humanizePlanningToken(statusRaw) : "Draft";
   const planningTypeRaw = String(row.planningType ?? "").trim();
   const planningType = planningTypeRaw.length > 0 ? humanizePlanningToken(planningTypeRaw) : "Planning";
   const version = typeof row.version === "number" ? row.version : Number(row.version ?? 0);
@@ -3561,9 +3710,26 @@ function renderPlanArtifactDraftPanel(planArtifact: unknown): string {
   const wbsRows = typeof row.wbsRowCount === "number" ? row.wbsRowCount : Number(row.wbsRowCount ?? 0);
   const openQuestions =
     typeof row.openQuestionCount === "number" ? row.openQuestionCount : Number(row.openQuestionCount ?? 0);
+  const blockerCount = typeof row.blockerCount === "number" ? row.blockerCount : Number(row.blockerCount ?? 0);
+  const warningCount = typeof row.warningCount === "number" ? row.warningCount : Number(row.warningCount ?? 0);
+  const lifecycleStatusRaw = String(row.lifecycleStatus ?? "").trim().toLowerCase();
+  const effectiveStatusRaw =
+    lifecycleStatusRaw.length > 0
+      ? lifecycleStatusRaw
+      : statusRaw === "reviewed"
+        ? blockerCount > 0
+          ? "needs_revision"
+          : "approval_ready"
+        : statusRaw;
+  const statusDisp = effectiveStatusRaw.length > 0 ? humanizePlanningToken(effectiveStatusRaw) : "Draft";
+  const profileRaw = String(row.profile ?? "").trim();
+  const profileText = profileRaw.length > 0 ? humanizePlanningToken(profileRaw) : "—";
+  const phaseRecommendation = String(row.phaseRecommendation ?? "").trim();
+  const phaseRecommendationText = phaseRecommendation.length > 0 ? phaseRecommendation : "—";
+  const sourceIdeaId = String(row.sourceIdeaId ?? "").trim();
+  const reviewSummaryText = String(row.reviewSummary ?? "").trim();
   const updatedAt = String(row.updatedAt ?? "").trim();
   const updatedText = updatedAt.length > 0 ? formatPlanningUpdatedAt(updatedAt) : "—";
-  const heading = statusRaw === "draft" ? "Plan Draft" : "Plan Artifact";
   const refLabel = planRef.length > 0 ? planRef : planId;
   const reviewFindings = Array.isArray(row.reviewFindings)
     ? row.reviewFindings
@@ -3602,7 +3768,33 @@ function renderPlanArtifactDraftPanel(planArtifact: unknown): string {
           .join("") +
         "</div>" +
         "</div>"
-      : statusRaw === "reviewed" || statusRaw === "accepted" || statusRaw === "finalized"
+      : blockerCount > 0 || warningCount > 0 || reviewSummaryText.length > 0
+        ? '<div class="wc-plan-review" aria-label="Plan review summary">' +
+          '<p class="wc-plan-subtitle"><b>Review Summary</b></p>' +
+          '<div class="wc-plan-review-list" role="list">' +
+          '<div class="wc-plan-review-row" role="listitem">' +
+          '<span class="wc-plan-review-severity">' +
+          escapeHtml(String(Number.isFinite(blockerCount) ? blockerCount : 0)) +
+          "</span>" +
+          '<span class="wc-plan-review-message">blocker(s)</span>' +
+          "</div>" +
+          '<div class="wc-plan-review-row" role="listitem">' +
+          '<span class="wc-plan-review-severity">' +
+          escapeHtml(String(Number.isFinite(warningCount) ? warningCount : 0)) +
+          "</span>" +
+          '<span class="wc-plan-review-message">warning(s)</span>' +
+          "</div>" +
+          (reviewSummaryText.length > 0
+            ? '<div class="wc-plan-review-row" role="listitem">' +
+              '<span class="wc-plan-review-severity">Summary</span>' +
+              '<span class="wc-plan-review-message">' +
+              escapeHtml(reviewSummaryText) +
+              "</span>" +
+              "</div>"
+            : "") +
+          "</div>" +
+          "</div>"
+        : effectiveStatusRaw === "approval_ready" || effectiveStatusRaw === "accepted" || effectiveStatusRaw === "finalized"
         ? '<p class="wc-plan-review-pass"><b>Review Passed</b></p>'
         : "";
   const wbsHtml =
@@ -3637,20 +3829,20 @@ function renderPlanArtifactDraftPanel(planArtifact: unknown): string {
     const findingRow = finding && typeof finding === "object" ? (finding as Record<string, unknown>) : {};
     const severity = String(findingRow.severity ?? findingRow.level ?? "").trim().toLowerCase();
     return severity === "blocker" || severity === "error";
-  });
+  }) || blockerCount > 0;
   const canAccept =
     planId.length > 0 &&
     planRef.length > 0 &&
     Number.isFinite(version) &&
     version > 0 &&
-    statusRaw === "reviewed" &&
+    effectiveStatusRaw === "approval_ready" &&
     !hasBlockingReviewFinding &&
     Number.isFinite(openQuestions) &&
     openQuestions === 0;
   const acceptDisabledReason =
-    statusRaw !== "reviewed"
+    effectiveStatusRaw === "draft"
       ? "Review must pass before accepting this plan."
-      : hasBlockingReviewFinding
+      : effectiveStatusRaw === "needs_revision" || hasBlockingReviewFinding
         ? "Review blockers must be resolved before accepting this plan."
         : Number.isFinite(openQuestions) && openQuestions > 0
           ? "Open questions must be resolved or deferred before accepting this plan."
@@ -3658,7 +3850,7 @@ function renderPlanArtifactDraftPanel(planArtifact: unknown): string {
             ? "Plan identity is incomplete."
             : "Accept this reviewed plan.";
   const reviewActionHtml =
-    statusRaw === "draft"
+    effectiveStatusRaw === "draft"
       ? '<div class="wc-plan-artifact-actions">' +
         '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="plan-artifact-review" data-plan-id="' +
         escapeHtmlAttr(planId) +
@@ -3669,8 +3861,16 @@ function renderPlanArtifactDraftPanel(planArtifact: unknown): string {
         ">Review</button>" +
         "</div>"
       : "";
+  const resumeActionHtml =
+    effectiveStatusRaw === "needs_revision" && sourceIdeaId.length > 0
+      ? '<div class="wc-plan-artifact-actions">' +
+        '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="plan-artifact-resume" data-idea-id="' +
+        escapeHtmlAttr(sourceIdeaId) +
+        '" title="Resume planning for this current plan">Resume planning &rarr;</button>' +
+        "</div>"
+      : "";
   const acceptActionHtml =
-    statusRaw === "accepted" || statusRaw === "finalized"
+    effectiveStatusRaw === "accepted" || effectiveStatusRaw === "finalized"
       ? ""
       : '<div class="wc-plan-artifact-actions">' +
         '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="plan-artifact-accept" data-plan-id="' +
@@ -3686,7 +3886,7 @@ function renderPlanArtifactDraftPanel(planArtifact: unknown): string {
         ">Accept</button>" +
         "</div>";
   const finalizeActionHtml =
-    statusRaw === "accepted"
+    effectiveStatusRaw === "accepted"
       ? '<div class="wc-plan-artifact-actions">' +
         '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="plan-artifact-finalize" data-plan-id="' +
         escapeHtmlAttr(planId) +
@@ -3700,7 +3900,7 @@ function renderPlanArtifactDraftPanel(planArtifact: unknown): string {
     '<div class="wc-plan-artifact-head">' +
     '<div class="wc-plan-artifact-main">' +
     '<p class="wc-plan-artifact-title"><b>' +
-    escapeHtml(heading) +
+    "Current Plan" +
     "</b> · " +
     escapeHtml(title) +
     "</p>" +
@@ -3720,8 +3920,22 @@ function renderPlanArtifactDraftPanel(planArtifact: unknown): string {
     escapeHtml(String(Number.isFinite(wbsRows) ? wbsRows : 0)) +
     "</b> WBS rows</span>" +
     '<span class="wc-plan-artifact-stat" role="listitem"><b>' +
+    escapeHtml(String(Number.isFinite(blockerCount) ? blockerCount : 0)) +
+    "</b> blockers</span>" +
+    '<span class="wc-plan-artifact-stat" role="listitem"><b>' +
+    escapeHtml(String(Number.isFinite(warningCount) ? warningCount : 0)) +
+    "</b> warnings</span>" +
+    '<span class="wc-plan-artifact-stat" role="listitem"><b>' +
     escapeHtml(String(Number.isFinite(openQuestions) ? openQuestions : 0)) +
     "</b> open questions</span>" +
+    "</div>" +
+    '<div class="wc-plan-artifact-stats" role="list">' +
+    '<span class="wc-plan-artifact-stat" role="listitem"><span class="wc-plan-artifact-label">Profile</span> ' +
+    escapeHtml(profileText) +
+    "</span>" +
+    '<span class="wc-plan-artifact-stat" role="listitem"><span class="wc-plan-artifact-label">Phase</span> ' +
+    escapeHtml(phaseRecommendationText) +
+    "</span>" +
     '<span class="wc-plan-artifact-stat" role="listitem"><span class="wc-plan-artifact-label">Updated</span> ' +
     escapeHtml(updatedText) +
     "</span>" +
@@ -3729,6 +3943,7 @@ function renderPlanArtifactDraftPanel(planArtifact: unknown): string {
     reviewHtml +
     wbsHtml +
     reviewActionHtml +
+    resumeActionHtml +
     acceptActionHtml +
     finalizeActionHtml +
     "</section>"

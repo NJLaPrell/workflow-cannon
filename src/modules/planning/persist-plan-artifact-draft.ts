@@ -3,6 +3,7 @@ import type { ModuleCommandResult } from "../../contracts/module-contract.js";
 import { persistModuleStateRow } from "../../core/state/module-state-sidecar-migration.js";
 import { UnifiedStateDb } from "../../core/state/unified-state-db.js";
 import type { PlanArtifactV1 } from "../../core/planning/plan-artifact-v1.js";
+import { findImmutablePlanArtifactVersion } from "../../core/planning/plan-artifact-immutability.js";
 import {
   getPlanArtifactStoragePaths,
   readPlanArtifactVersion,
@@ -10,6 +11,9 @@ import {
   writeNextPlanArtifactVersion,
   type PlanArtifactStoragePaths
 } from "../../core/planning/plan-artifact-storage.js";
+import { linkActiveDraftPlanArtifactFromPersistedDraft } from "../ideas/idea-planning-metadata.js";
+import { promotePlanningSessionToDraftReadyAfterDraftPersist } from "../ideas/planning-session-draft-ready.js";
+import { toPlanningChatSessionResponse } from "../ideas/planning-chat-session.js";
 import { planningSqliteDatabaseRelativePath } from "../task-engine/planning-config.js";
 import { digestPayload, stableStringify } from "../task-engine/mutation-utils.js";
 
@@ -155,7 +159,7 @@ function writeIdempotencyRecord(
 
 export type PlanArtifactDraftPersistPrelude =
   | { kind: "replay"; artifact: PlanArtifactV1; storagePath: string; paths: PlanArtifactStoragePaths }
-  | { kind: "conflict"; code: "plan-artifact-version-conflict" | "idempotency-key-conflict"; message: string }
+  | { kind: "conflict"; code: "plan-artifact-version-conflict" | "plan-artifact-version-immutable" | "idempotency-key-conflict"; message: string; data?: Record<string, unknown> }
   | { kind: "commit"; targetVersion: number; digest: string };
 
 export function preludePlanArtifactDraftPersist(args: {
@@ -196,12 +200,14 @@ export function preludePlanArtifactDraftPersist(args: {
   }
 
   const suppliedVersion = userSuppliedPlanArtifactVersion(artifactRaw);
-  if (suppliedVersion !== undefined && suppliedVersion !== targetVersion) {
-    return {
-      kind: "conflict",
-      code: "plan-artifact-version-conflict",
-      message: `artifact.version ${suppliedVersion} does not match next version ${targetVersion} for plan ${artifact.planId}`
-    };
+  if (suppliedVersion !== undefined) {
+    const immutable = findImmutablePlanArtifactVersion(workspacePath, artifact.planId, suppliedVersion);
+    if (immutable) {
+      return { kind: "conflict", code: immutable.code, message: immutable.message, data: { schemaVersion: 1, responseSchemaVersion: 1, planId: immutable.planId, version: immutable.version, status: immutable.status } };
+    }
+    if (suppliedVersion !== targetVersion) {
+      return { kind: "conflict", code: "plan-artifact-version-conflict", message: `artifact.version ${suppliedVersion} does not match next version ${targetVersion} for plan ${artifact.planId}` };
+    }
   }
 
   const digest = planArtifactDraftPersistDigest(artifact, targetVersion);
@@ -212,6 +218,7 @@ export type CommitPlanArtifactDraftPersistResult = {
   artifact: PlanArtifactV1;
   paths: PlanArtifactStoragePaths;
   storagePath: string;
+  planningChatSession?: ReturnType<typeof toPlanningChatSessionResponse>;
 };
 
 /** Write artifact file + index; record idempotency when `clientMutationId` is set. */
@@ -230,6 +237,13 @@ export function commitPlanArtifactDraftPersist(args: {
     sqliteDb
   });
   const storagePath = paths.artifactFileRelative(written.version);
+  let planningChatSession: ReturnType<typeof toPlanningChatSessionResponse> | undefined;
+  if (sqliteDb) {
+    const nowIso = new Date().toISOString();
+    linkActiveDraftPlanArtifactFromPersistedDraft(sqliteDb, written, nowIso);
+    const promoted = promotePlanningSessionToDraftReadyAfterDraftPersist(sqliteDb, written, nowIso);
+    if (promoted) planningChatSession = toPlanningChatSessionResponse(promoted);
+  }
   if (clientMutationId) {
     writeIdempotencyRecord(
       workspacePath,
@@ -246,7 +260,12 @@ export function commitPlanArtifactDraftPersist(args: {
       sqliteDb
     );
   }
-  return { artifact: written, paths, storagePath };
+  return {
+    artifact: written,
+    paths,
+    storagePath,
+    ...(planningChatSession ? { planningChatSession } : {})
+  };
 }
 
 export function planArtifactDraftPersistSuccessResult(args: {
@@ -254,6 +273,7 @@ export function planArtifactDraftPersistSuccessResult(args: {
   artifact: PlanArtifactV1;
   storagePath: string;
   replayed: boolean;
+  planningChatSession?: ReturnType<typeof toPlanningChatSessionResponse>;
 }): ModuleCommandResult {
   return {
     ok: true,
@@ -267,7 +287,8 @@ export function planArtifactDraftPersistSuccessResult(args: {
       planRef: args.artifact.planRef,
       status: args.artifact.status,
       storagePath: args.storagePath,
-      replayed: args.replayed
+      replayed: args.replayed,
+      ...(args.planningChatSession ? { planningChatSession: args.planningChatSession } : {})
     }
   };
 }

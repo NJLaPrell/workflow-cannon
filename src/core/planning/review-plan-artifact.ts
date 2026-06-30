@@ -62,8 +62,12 @@ const PLANNING_TYPES = new Set([
 const VAGUE_AC_RE = /^(done|complete|works)$/i;
 const VERIFY_KEYWORD_RE = /\b(test|verify|check|ci|extension|e2e)\b/i;
 const UI_SYSTEM_RE = /\b(dashboard|extension|webview|ui)\b/i;
-const ROLLOUT_SIGNAL_RE = /\b(production|prod|release|deploy|migration|rollout)\b/i;
-const ROLLOUT_WBS_RE = /\b(rollout|migration|deploy|release|docs)\b/i;
+const ROLLOUT_SIGNAL_RE = /\b(production|prod|release|deploy|migration|rollout|rollback)\b/i;
+const ROLLOUT_WBS_RE = /\b(rollout|rollback|migration|deploy|release|docs)\b/i;
+const BEHAVIOR_CHANGE_RE =
+  /\b(behavior|breaking|compatib|migration|schema|api.change|contract|runtime)\b/i;
+const PERSISTENCE_TASK_GEN_RE =
+  /\b(persistence|sqlite|workspace-kit\.db|create-task|persist-planning|finalize-plan|task.store|task.generation|migrate-task|generatedTaskPayload)\b/i;
 
 function blocker(
   code: string,
@@ -94,22 +98,27 @@ function nonEmptyStringArray(value: unknown): value is string[] {
 }
 
 export function resolvePlanArtifactReviewProfile(
-  artifact: PlanArtifactV1,
+  _artifact: PlanArtifactV1,
   explicit?: PlanArtifactReviewProfile
 ): PlanArtifactReviewProfile {
   if (explicit) {
     return explicit;
   }
-  switch (artifact.identity.planningType) {
-    case "new-feature":
-      return "full-feature";
-    case "change":
-      return "refactor";
-    case "sprint-phase":
-      return "sprint-phase";
-    default:
-      return "minimal";
+  return "minimal";
+}
+
+/** Critical open questions use a stable prefix from idea-planning artifact composition. */
+export function isCriticalOpenQuestion(question: string): boolean {
+  const q = question.trim();
+  if (q.length === 0) {
+    return false;
   }
+  const lower = q.toLowerCase();
+  return (
+    lower.startsWith("unresolved critical question:") ||
+    lower.startsWith("[critical]") ||
+    lower.startsWith("critical:")
+  );
 }
 
 function waivedCodes(waivers: PlanArtifactReviewWaiver[] | undefined): Set<string> {
@@ -152,6 +161,56 @@ function uiInScope(artifact: PlanArtifactV1): boolean {
   return (artifact.technicalImpact.systemsTouched ?? []).some((s) => UI_SYSTEM_RE.test(s));
 }
 
+function planTextHaystack(artifact: PlanArtifactV1): string {
+  return [
+    ...artifact.goals,
+    ...(artifact.technicalImpact.systemsTouched ?? []),
+    ...artifact.implementationGuidance,
+    ...artifact.wbs.flatMap((row) => [
+      row.title,
+      row.approach,
+      ...row.technicalScope,
+      ...row.testingVerification
+    ])
+  ]
+    .join(" ")
+    .toLowerCase();
+}
+
+function behaviorChangeInScope(artifact: PlanArtifactV1): boolean {
+  if (artifact.identity.planningType === "change") {
+    return true;
+  }
+  return BEHAVIOR_CHANGE_RE.test(planTextHaystack(artifact));
+}
+
+function hasMigrationOrCompatibilityNotes(artifact: PlanArtifactV1): boolean {
+  return (
+    nonEmptyString(artifact.technicalImpact.migrationImpact) ||
+    nonEmptyString(artifact.technicalImpact.compatibilityNotes)
+  );
+}
+
+function persistenceOrTaskGenChangeInScope(artifact: PlanArtifactV1): boolean {
+  return PERSISTENCE_TASK_GEN_RE.test(planTextHaystack(artifact));
+}
+
+function hasRolloutOrRollbackCoverage(artifact: PlanArtifactV1): boolean {
+  if (nonEmptyString(artifact.technicalImpact.migrationImpact)) {
+    return true;
+  }
+  if (artifact.implementationGuidance.some((g) => ROLLOUT_WBS_RE.test(g))) {
+    return true;
+  }
+  return artifact.wbs.some(
+    (row) =>
+      ROLLOUT_WBS_RE.test(row.title) ||
+      row.technicalScope.some((s) => ROLLOUT_WBS_RE.test(s)) ||
+      row.testingVerification.some((s) => ROLLOUT_WBS_RE.test(s)) ||
+      ROLLOUT_WBS_RE.test(row.approach)
+  );
+}
+
 function testingSliceCovered(artifact: PlanArtifactV1): boolean {
   const layers = artifact.testingStrategy.layers.map((l) => l.toLowerCase());
   if (layers.length === 0) {
@@ -167,21 +226,95 @@ function testingSliceCovered(artifact: PlanArtifactV1): boolean {
 
 function rolloutSliceCovered(artifact: PlanArtifactV1): boolean {
   const systems = artifact.technicalImpact.systemsTouched.join(" ").toLowerCase();
-  const needsRollout = ROLLOUT_SIGNAL_RE.test(systems) || ROLLOUT_SIGNAL_RE.test(artifact.goals.join(" "));
+  const needsRollout =
+    ROLLOUT_SIGNAL_RE.test(systems) ||
+    ROLLOUT_SIGNAL_RE.test(artifact.goals.join(" ")) ||
+    persistenceOrTaskGenChangeInScope(artifact);
   if (!needsRollout) {
     return true;
   }
-  if (
-    artifact.wbs.some(
-      (row) =>
-        ROLLOUT_WBS_RE.test(row.title) ||
-        row.technicalScope.some((s) => ROLLOUT_WBS_RE.test(s)) ||
-        row.testingVerification.some((s) => ROLLOUT_WBS_RE.test(s))
-    )
-  ) {
-    return true;
+  return hasRolloutOrRollbackCoverage(artifact);
+}
+
+function buildMinimalCoverageMap(artifact: PlanArtifactV1): PlanArtifactCoverageMap {
+  return {
+    goals: { covered: [...(artifact.goals ?? [])], uncovered: [] },
+    userStories: { covered: [], uncovered: [] },
+    slices: {
+      architecture: "not-applicable",
+      uiUx: "not-applicable",
+      testing: "not-applicable",
+      rolloutDocsMigration: "not-applicable"
+    }
+  };
+}
+
+/**
+ * Minimal profile blockers per IDEA_PLAN §9 — core completeness only.
+ */
+function reviewMinimalBlockers(
+  artifact: PlanArtifactV1,
+  blockers: PlanArtifactReviewFinding[],
+  warnings: PlanArtifactReviewFinding[]
+): void {
+  if (!nonEmptyStringArray(artifact.goals)) {
+    blockers.push(blocker("RUBRIC-MIN-GOALS", "goals must be a non-empty array", { path: "goals" }));
   }
-  return artifact.implementationGuidance.some((g) => ROLLOUT_WBS_RE.test(g));
+
+  if (!Array.isArray(artifact.wbs) || artifact.wbs.length === 0) {
+    blockers.push(blocker("RUBRIC-MIN-WBS", "wbs must contain at least one row", { path: "wbs" }));
+    return;
+  }
+
+  for (let i = 0; i < artifact.wbs.length; i += 1) {
+    const row = artifact.wbs[i];
+    const basePath = `wbs[${i}]`;
+
+    if (!nonEmptyStringArray(row.acceptanceCriteria)) {
+      blockers.push(
+        blocker("RUBRIC-MIN-WBS-AC", "WBS row lacks acceptance criteria", {
+          path: `${basePath}.acceptanceCriteria`,
+          wbsId: row.wbsId
+        })
+      );
+    }
+
+    if (!nonEmptyStringArray(row.testingVerification)) {
+      blockers.push(
+        blocker("RUBRIC-MIN-WBS-VERIFY", "WBS row lacks testing verification", {
+          path: `${basePath}.testingVerification`,
+          wbsId: row.wbsId
+        })
+      );
+    }
+  }
+
+  if (!Array.isArray(artifact.openQuestions)) {
+    blockers.push(
+      blocker("RUBRIC-MIN-OQ-MISSING", "openQuestions field is required", { path: "openQuestions" })
+    );
+    return;
+  }
+
+  for (let i = 0; i < artifact.openQuestions.length; i += 1) {
+    const question = artifact.openQuestions[i];
+    if (isCriticalOpenQuestion(question)) {
+      blockers.push(
+        blocker("RUBRIC-MIN-OQ-CRITICAL", `Unresolved critical open question: ${question}`, {
+          path: `openQuestions[${i}]`
+        })
+      );
+    }
+  }
+
+  const nonCriticalCount = artifact.openQuestions.filter((q) => !isCriticalOpenQuestion(q)).length;
+  if (nonCriticalCount > 0) {
+    warnings.push(
+      warning("RUBRIC-OQ-UNRESOLVED", `${nonCriticalCount} non-critical open question(s) remain`, {
+        path: "openQuestions"
+      })
+    );
+  }
 }
 
 function reviewCoreSections(
@@ -317,12 +450,69 @@ function reviewCoreSections(
   }
 }
 
+function reviewGeneratedTaskPayload(
+  row: PlanArtifactWbsItem,
+  basePath: string,
+  blockers: PlanArtifactReviewFinding[]
+): void {
+  const payload = row.generatedTaskPayload;
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    blockers.push(
+      blocker("RUBRIC-WBS-PAYLOAD-INVALID", "generatedTaskPayload missing or invalid", {
+        path: `${basePath}.generatedTaskPayload`,
+        wbsId: row.wbsId
+      })
+    );
+    return;
+  }
+  const issues: string[] = [];
+  if (!nonEmptyString(payload.title)) {
+    issues.push("title");
+  }
+  if (!nonEmptyString(payload.approach)) {
+    issues.push("approach");
+  }
+  if (!nonEmptyStringArray(payload.technicalScope)) {
+    issues.push("technicalScope");
+  }
+  if (!nonEmptyStringArray(payload.acceptanceCriteria)) {
+    issues.push("acceptanceCriteria");
+  }
+  if (issues.length > 0) {
+    blockers.push(
+      blocker(
+        "RUBRIC-WBS-PAYLOAD-INVALID",
+        `generatedTaskPayload missing or empty: ${issues.join(", ")}`,
+        { path: `${basePath}.generatedTaskPayload`, wbsId: row.wbsId }
+      )
+    );
+  }
+}
+
 function reviewProfileSections(
   artifact: PlanArtifactV1,
   profile: PlanArtifactReviewProfile,
   blockers: PlanArtifactReviewFinding[]
 ): void {
   if (profile === "refactor" || profile === "full-feature") {
+    if (!nonEmptyStringArray(artifact.technicalImpact?.systemsTouched)) {
+      blockers.push(
+        blocker(
+          "RUBRIC-PROFILE-SYSTEMS",
+          "technicalImpact.systemsTouched must identify affected systems for this profile",
+          { path: "technicalImpact.systemsTouched" }
+        )
+      );
+    }
+    if (behaviorChangeInScope(artifact) && !hasMigrationOrCompatibilityNotes(artifact)) {
+      blockers.push(
+        blocker(
+          "RUBRIC-PROFILE-MIGRATION",
+          "migrationImpact or compatibilityNotes required when plan changes behavior",
+          { path: "technicalImpact.migrationImpact" }
+        )
+      );
+    }
     if (!nonEmptyString(artifact.architecture?.overview)) {
       blockers.push(
         blocker("RUBRIC-PROFILE-ARCH", "architecture.overview is required for this profile", {
@@ -346,6 +536,24 @@ function reviewProfileSections(
         })
       );
     }
+    if (persistenceOrTaskGenChangeInScope(artifact) && !hasRolloutOrRollbackCoverage(artifact)) {
+      blockers.push(
+        blocker(
+          "RUBRIC-PROFILE-ROLLOUT",
+          "rollout or rollback notes required when persistence, commands, or task generation change",
+          { path: "implementationGuidance" }
+        )
+      );
+    }
+  }
+  if (profile === "refactor" && !testingSliceCovered(artifact)) {
+    blockers.push(
+      blocker(
+        "RUBRIC-PROFILE-TEST",
+        "testingStrategy layers must be reflected in WBS testingVerification for refactor profile",
+        { path: "testingStrategy.layers" }
+      )
+    );
   }
   if (profile === "sprint-phase" && artifact.phaseRecommendations.length < 2) {
     blockers.push(
@@ -378,16 +586,29 @@ function reviewWbsRows(
 
     const shape = validatePlanArtifactWbsItemShape(row);
     if (!shape.ok) {
-      blockers.push(
-        blocker("RUBRIC-WBS-MISSING-FIELD", shape.findings[0]?.message ?? "WBS row invalid", {
-          path: basePath,
-          wbsId: row.wbsId
-        })
+      const payloadFinding = shape.findings.find((f) =>
+        f.field?.startsWith("generatedTaskPayload")
       );
+      if (payloadFinding) {
+        blockers.push(
+          blocker("RUBRIC-WBS-PAYLOAD-INVALID", payloadFinding.message, {
+            path: `${basePath}.generatedTaskPayload`,
+            wbsId: row.wbsId
+          })
+        );
+      } else {
+        blockers.push(
+          blocker("RUBRIC-WBS-MISSING-FIELD", shape.findings[0]?.message ?? "WBS row invalid", {
+            path: basePath,
+            wbsId: row.wbsId
+          })
+        );
+      }
       continue;
     }
 
     const item = shape.item;
+    reviewGeneratedTaskPayload(item, basePath, blockers);
     if (
       item.technicalScope.length === 0 ||
       item.acceptanceCriteria.length === 0 ||
@@ -581,6 +802,19 @@ export function reviewPlanArtifact(
   const profile = resolvePlanArtifactReviewProfile(artifact, options.profile);
   const blockers: PlanArtifactReviewFinding[] = [];
   const warnings: PlanArtifactReviewFinding[] = [];
+
+  if (profile === "minimal") {
+    reviewMinimalBlockers(artifact, blockers, warnings);
+    return {
+      passed: blockers.length === 0,
+      profile,
+      blockers,
+      warnings,
+      coverageMap: buildMinimalCoverageMap(artifact),
+      sizingFindings: [],
+      openQuestionCount: Array.isArray(artifact.openQuestions) ? artifact.openQuestions.length : 0
+    };
+  }
 
   reviewCoreSections(artifact, { blockers, warnings });
   reviewProfileSections(artifact, profile, blockers);

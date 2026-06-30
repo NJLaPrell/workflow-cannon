@@ -3,11 +3,9 @@
   "code": "run-args-schema",
   "command": "view-isolated-proposal-diff",
   "schema": {
-    "type": "object",
-    "additionalProperties": true,
-    "description": "Permissive fallback args schema for 'view-isolated-proposal-diff'. Use instructionPath for command-specific field guidance until a stricter schema is added."
+    "type": "object"
   },
-  "schemaSource": "manifest-permissive-fallback",
+  "schemaSource": "pilot-run-args-snapshot",
   "sampleArgs": {},
   "examples": [
     {
@@ -38,5 +36,5 @@
     "listCommands": "pnpm exec wk run --list-commands",
     "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
   },
-  "invocationId": "b1cca2b8-de20-4bb3-b933-9a535b78f992"
+  "invocationId": "92d61b07-aae1-4906-b68b-73d47f26d084"
 }

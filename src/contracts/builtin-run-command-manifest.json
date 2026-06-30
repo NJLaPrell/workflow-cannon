@@ -1444,7 +1444,7 @@
   },
   {
     "moduleId": "planning",
-    "name": "execute-plan-artifact",
+    "name": "get-plan-artifact", "file": "get-plan-artifact.md", "description": "Read PlanArtifact version history and lineage.", "defaultResponseTemplateId": "default", "policySensitivity": "non-sensitive" }, { "moduleId": "planning", "name": "execute-plan-artifact",
     "file": "execute-plan-artifact.md",
     "description": "Link a task to an accepted or finalized PlanArtifact before execute paths (run-transition start).",
     "policyOperationId": "planning.execute-plan-artifact",
@@ -1644,6 +1644,24 @@
     "name": "reorder-ideas",
     "file": "reorder-ideas.md",
     "description": "Replace the sort order for all lightweight operator ideas.",
+    "policyOperationId": "ideas.persist",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "ideas",
+    "name": "start-idea-planning",
+    "file": "start-idea-planning.md",
+    "description": "Start or resume a durable planner-chat session for an idea with compact prompt generation.",
+    "policyOperationId": "ideas.persist",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "ideas",
+    "name": "update-idea-planning-session",
+    "file": "update-idea-planning-session.md",
+    "description": "Update durable planning session state with idea/session validation and dashboard-ready output.",
     "policyOperationId": "ideas.persist",
     "defaultResponseTemplateId": "default",
     "policySensitivity": "sensitive"

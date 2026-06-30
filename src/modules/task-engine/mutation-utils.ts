@@ -196,6 +196,8 @@ export function buildTaskFromConversionPayload(
       ? (row.priority as TaskPriority)
       : undefined;
   const approach = typeof row.approach === "string" ? row.approach.trim() : "";
+  const summary = typeof row.summary === "string" ? row.summary.trim() : "";
+  const description = typeof row.description === "string" ? row.description.trim() : "";
   if (!approach) {
     return { ok: false, message: `Task '${id}' requires 'approach'` };
   }
@@ -226,6 +228,12 @@ export function buildTaskFromConversionPayload(
     technicalScope,
     acceptanceCriteria
   };
+  if (summary) {
+    task.summary = summary;
+  }
+  if (description) {
+    task.description = description;
+  }
   if (row.metadata && typeof row.metadata === "object" && !Array.isArray(row.metadata)) {
     task.metadata = { ...(row.metadata as Record<string, unknown>) };
   }

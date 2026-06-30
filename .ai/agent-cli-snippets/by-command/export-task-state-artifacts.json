@@ -3,11 +3,9 @@
   "code": "run-args-schema",
   "command": "export-task-state-artifacts",
   "schema": {
-    "type": "object",
-    "additionalProperties": true,
-    "description": "Permissive fallback args schema for 'export-task-state-artifacts'. Use instructionPath for command-specific field guidance until a stricter schema is added."
+    "type": "object"
   },
-  "schemaSource": "manifest-permissive-fallback",
+  "schemaSource": "pilot-run-args-snapshot",
   "sampleArgs": {},
   "examples": [
     {
@@ -38,5 +36,5 @@
     "listCommands": "pnpm exec wk run --list-commands",
     "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
   },
-  "invocationId": "69ec6be0-f9a7-4d3b-ba6a-0161e45749b3"
+  "invocationId": "ac35fcfb-0cb6-4a6f-bf99-643b6a95b45e"
 }

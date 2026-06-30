@@ -63,7 +63,7 @@ test("PlanArtifact dashboard happy path stays UI-driven without raw CLI prompts"
   const draftHtml = renderDashboardRootInnerHtml(summaryWithPlan("draft"));
   assert.match(draftHtml, /data-wc-action="plan-artifact-review"/);
   assert.match(draftHtml, />Review<\/button>/);
-  assert.match(draftHtml, />Resume planning &rarr;<\/button>/);
+  assert.match(draftHtml, />Resume planning<\/button>/);
   assert.doesNotMatch(draftHtml, RAW_CLI_INVOCATION);
 
   const reviewedHtml = renderDashboardRootInnerHtml(summaryWithPlan("reviewed"));
@@ -110,7 +110,7 @@ test("PlanArtifact rejection blocks accept while preserving planning resume", ()
   assert.match(html, /Review blockers must be resolved before accepting this plan\./);
   assert.match(html, /data-wc-action="plan-artifact-accept"[^>]* disabled/);
   assert.doesNotMatch(html, /data-wc-action="plan-artifact-finalize"/);
-  assert.match(html, />Resume planning &rarr;<\/button>/);
+  assert.match(html, />Resume planning<\/button>/);
   assert.doesNotMatch(html, RAW_CLI_INVOCATION);
 });
 

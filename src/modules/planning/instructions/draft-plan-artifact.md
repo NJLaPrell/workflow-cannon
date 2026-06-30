@@ -43,6 +43,7 @@ pnpm exec wk run draft-plan-artifact '{"persist":true,"artifact":{...},"expected
 | `plan-artifact-draft-idempotent-replay` | true | Same `clientMutationId` + matching digest. |
 | `plan-artifact-schema-invalid` | false | JSON Schema / shape errors; `data.errors[]`. |
 | `plan-artifact-version-conflict` | false | Supplied `version` ≠ `latest + 1`. |
+| `plan-artifact-version-immutable` | false | Supplied `version` is accepted/finalized/superseded and cannot be overwritten. |
 | `planning-generation-mismatch` | false | Stale `expectedPlanningGeneration`. |
 | `policy-denied` | false | Missing/invalid `policyApproval` on persist. |
 

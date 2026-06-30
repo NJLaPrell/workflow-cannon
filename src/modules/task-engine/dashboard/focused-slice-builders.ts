@@ -16,6 +16,7 @@ import type {
 import type { TaskStore } from "../persistence/store.js";
 import type { SqliteDualPlanningStore } from "../persistence/sqlite-dual-planning.js";
 import type { TaskEntity } from "../types.js";
+import { listPlanArtifactSummaries, readLatestPlanArtifact } from "../../../core/planning/plan-artifact-storage.js";
 
 import {
   buildDashboardSystemStatus,
@@ -55,10 +56,7 @@ import {
   findWishlistIntakeTaskByLegacyOrTaskId,
   isWishlistIntakeTask
 } from "../wishlist-intake.js";
-import { listIdeas } from "../../ideas/idea-store.js";
-import { listPlanningChatSessions } from "../../ideas/planning-chat-session.js";
 import { readBuildPlanSession, toDashboardPlanningSession } from "../../../core/planning/build-plan-session-file.js";
-import { listPlanArtifactSummaries } from "../../../core/planning/plan-artifact-storage.js";
 import { getPlanningGenerationPolicy } from "../planning-config.js";
 import {
   decodeListTasksCursor,
@@ -86,6 +84,7 @@ import {
   buildDashboardOverview
 } from "./build-dashboard-base.js";
 import type { DashboardSummaryTracer } from "./dashboard-summary-trace.js";
+import { buildDashboardIdeasSummary } from "./build-dashboard-ideas-summary.js";
 
 function getTerminalCount(
   status: "completed" | "cancelled",
@@ -108,62 +107,6 @@ function getTerminalCount(
   return tasks.filter((t) => t.status === status).length;
 }
 
-function buildDashboardIdeasSummary(
-  sqliteDual: SqliteDualPlanningStore | undefined,
-  needsQueueRollups: boolean
-): DashboardSummaryData["ideas"] {
-  if (!needsQueueRollups || !sqliteDual) {
-    return {
-      schemaVersion: 1,
-      available: false,
-      totalCount: 0,
-      openCount: 0,
-      planningCount: 0,
-      plannedCount: 0,
-      top: []
-    };
-  }
-  try {
-    const db = sqliteDual.getDatabase();
-    const ideas = listIdeas(db);
-    const sessions = new Map(listPlanningChatSessions(db).map((session) => [session.ideaId, session]));
-    return {
-      schemaVersion: 1,
-      available: true,
-      totalCount: ideas.length,
-      openCount: ideas.filter((idea) => idea.status === "open").length,
-      planningCount: ideas.filter((idea) => idea.status === "planning").length,
-      plannedCount: ideas.filter((idea) => idea.status === "planned").length,
-      top: ideas.slice(0, 15).map((idea) => {
-        const session = sessions.get(idea.id);
-        if (!session) {
-          return idea;
-        }
-        return {
-          ...idea,
-          planningChatSession: {
-            schemaVersion: 1,
-            ideaId: session.ideaId,
-            status: session.status,
-            updatedAt: session.updatedAt,
-            ...(session.resumePrompt ? { resumePrompt: session.resumePrompt } : {})
-          }
-        };
-      })
-    };
-  } catch {
-    return {
-      schemaVersion: 1,
-      available: false,
-      totalCount: 0,
-      openCount: 0,
-      planningCount: 0,
-      plannedCount: 0,
-      top: []
-    };
-  }
-}
-
 function buildDashboardPlanArtifactSummary(ctx: ModuleLifecycleContext): DashboardSummaryData["planArtifact"] {
   const summaries = listPlanArtifactSummaries(
     ctx.workspacePath,
@@ -172,17 +115,50 @@ function buildDashboardPlanArtifactSummary(ctx: ModuleLifecycleContext): Dashboa
   if (summaries.length === 0) {
     return null;
   }
-  const rows = summaries.slice(0, 5).map((summary) => ({
-    planId: summary.planId,
-    planRef: summary.planRef,
-    version: summary.currentVersion,
-    status: summary.status,
-    title: summary.title,
-    planningType: summary.planningType,
-    updatedAt: summary.updatedAt,
-    wbsRowCount: summary.wbsRowCount,
-    openQuestionCount: summary.openQuestionCount
-  }));
+  const rows = summaries.slice(0, 5).map((summary) => {
+    const latestArtifact = readLatestPlanArtifact(ctx.workspacePath, summary.planId);
+    const latestReview =
+      summary.latestReview &&
+      summary.latestReview.planRef === summary.planRef &&
+      summary.latestReview.reviewedVersion === summary.currentVersion
+        ? summary.latestReview
+        : undefined;
+    const phaseRecommendations = Array.isArray(latestArtifact?.phaseRecommendations)
+      ? latestArtifact.phaseRecommendations
+      : [];
+    const primaryPhase = phaseRecommendations.find((row) => row?.isPrimary === true) ?? phaseRecommendations[0];
+    const phaseRecommendation = primaryPhase
+      ? [primaryPhase.label?.trim(), primaryPhase.phaseKey?.trim()].filter((value) => !!value).join(" · ")
+      : "";
+    const sourceIdeaId =
+      typeof latestArtifact?.provenance?.sourceIdeaId === "string" ? latestArtifact.provenance.sourceIdeaId.trim() : "";
+    const blockerCount = latestReview?.blockerCount ?? 0;
+    const warningCount = latestReview?.warningCount ?? 0;
+    const lifecycleStatus =
+      summary.status === "reviewed"
+        ? blockerCount > 0 || latestReview?.passed === false
+          ? "needs_revision"
+          : "approval_ready"
+        : summary.status;
+    return {
+      planId: summary.planId,
+      planRef: summary.planRef,
+      version: summary.currentVersion,
+      status: summary.status,
+      lifecycleStatus,
+      title: summary.title,
+      planningType: summary.planningType,
+      updatedAt: summary.updatedAt,
+      wbsRowCount: summary.wbsRowCount,
+      openQuestionCount: summary.openQuestionCount,
+      blockerCount,
+      warningCount,
+      ...(latestReview?.profile ? { profile: latestReview.profile } : {}),
+      ...(latestReview?.reviewSummary ? { reviewSummary: latestReview.reviewSummary } : {}),
+      ...(phaseRecommendation.length > 0 ? { phaseRecommendation } : {}),
+      ...(sourceIdeaId.length > 0 ? { sourceIdeaId } : {})
+    };
+  });
   return {
     schemaVersion: 1,
     count: summaries.length,
@@ -316,7 +292,7 @@ export async function buildDashboardQueueSlice(
     });
   }
 
-  const ideas = buildDashboardIdeasSummary(sqliteDual, true);
+  const ideas = buildDashboardIdeasSummary(ctx, sqliteDual, true);
 
   const slimListRow = (t: (typeof tasks)[0]) => projectDashboardTaskRow(t, enrich, { includePriority: false });
   const blockedTasks = tasks

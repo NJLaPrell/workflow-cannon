@@ -2,7 +2,7 @@ import { execSync } from 'node:child_process';
 import assert from 'node:assert';
 
 // Run the benchmark script and capture output
-const output = execSync('node scripts/benchmark-dashboard.ts', {
+const output = execSync('node --experimental-strip-types scripts/benchmark-dashboard.ts', {
   encoding: 'utf8',
   env: { ...process.env, WORKSPACE_KIT_CLI_PERF_TRACE: '1' }
 });

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "sourceSchemaPackageVersion": "1.0.1",
+  "sourceSchemaPackageVersion": "1.0.2",
   "pilotCommands": [
     "accept-improvement",
     "add-dependency",
@@ -8,6 +8,7 @@
     "agent-bootstrap",
     "agent-mutation-plan",
     "agent-session-snapshot",
+    "apply-isolated-proposal",
     "apply-task-batch",
     "apply-task-mutation-intent",
     "apply-task-state-events",
@@ -26,6 +27,7 @@
     "complete-task",
     "completion-preflight",
     "convert-phase-note-to-task",
+    "create-isolated-proposal",
     "create-task",
     "create-task-from-plan",
     "create-task-mutation-intent",
@@ -46,10 +48,13 @@
     "demote-task",
     "derive-publish-artifacts",
     "derive-validations",
+    "discard-isolated-proposal",
     "dismiss-phase-note",
     "explain-task-engine-model",
     "export-feature-taxonomy-json",
+    "export-task-state-artifacts",
     "export-workspace-status",
+    "generate-release-notes",
     "get-blocked-summary",
     "get-dependency-graph",
     "get-kit-persistence-map",
@@ -70,12 +75,15 @@
     "install-git-hooks",
     "list-components",
     "list-features",
+    "list-isolated-proposals",
     "list-module-states",
     "list-phase-catalog",
     "list-phase-notes",
+    "list-remote-runs",
     "list-task-mutation-intents",
     "list-tasks",
     "migrate-task-persistence",
+    "open-isolated-proposal-pr",
     "pause-task",
     "persist-planning-execution-drafts",
     "phase-closeout-readiness",
@@ -94,6 +102,8 @@
     "queue-health",
     "rebuild-task-state-cache",
     "recommend-validation",
+    "record-isolated-proposal-validation",
+    "recover-isolated-proposal",
     "reject-improvement",
     "reject-task-mutation-intent",
     "release-closeout-result",
@@ -137,6 +147,7 @@
     "update-workspace-phase-snapshot",
     "update-workspace-status",
     "upsert-phase-catalog-entry",
+    "view-isolated-proposal-diff",
     "wait-for-pr-checks",
     "workspace-coordination-status",
     "workspace-edit-status",
@@ -258,6 +269,9 @@
     "agent-session-snapshot": {
       "type": "object",
       "additionalProperties": false
+    },
+    "apply-isolated-proposal": {
+      "type": "object"
     },
     "apply-task-batch": {
       "type": "object",
@@ -638,6 +652,9 @@
     "convert-phase-note-to-task": {
       "type": "object"
     },
+    "create-isolated-proposal": {
+      "type": "object"
+    },
     "create-task": {
       "type": "object",
       "required": [
@@ -895,6 +912,9 @@
     "derive-validations": {
       "type": "object"
     },
+    "discard-isolated-proposal": {
+      "type": "object"
+    },
     "dismiss-phase-note": {
       "type": "object"
     },
@@ -905,6 +925,9 @@
     "export-feature-taxonomy-json": {
       "type": "object"
     },
+    "export-task-state-artifacts": {
+      "type": "object"
+    },
     "export-workspace-status": {
       "type": "object",
       "properties": {
@@ -913,6 +936,9 @@
         }
       },
       "additionalProperties": true
+    },
+    "generate-release-notes": {
+      "type": "object"
     },
     "get-blocked-summary": {
       "type": "object"
@@ -1091,6 +1117,9 @@
       },
       "additionalProperties": false
     },
+    "list-isolated-proposals": {
+      "type": "object"
+    },
     "list-module-states": {
       "type": "object",
       "additionalProperties": true
@@ -1099,6 +1128,9 @@
       "type": "object"
     },
     "list-phase-notes": {
+      "type": "object"
+    },
+    "list-remote-runs": {
       "type": "object"
     },
     "list-task-mutation-intents": {
@@ -1232,6 +1264,9 @@
     "migrate-task-persistence": {
       "type": "object",
       "additionalProperties": true
+    },
+    "open-isolated-proposal-pr": {
+      "type": "object"
     },
     "pause-task": {
       "type": "object",
@@ -1449,6 +1484,12 @@
         }
       },
       "additionalProperties": false
+    },
+    "record-isolated-proposal-validation": {
+      "type": "object"
+    },
+    "recover-isolated-proposal": {
+      "type": "object"
     },
     "reject-improvement": {
       "type": "object",
@@ -2345,6 +2386,9 @@
       "additionalProperties": true
     },
     "upsert-phase-catalog-entry": {
+      "type": "object"
+    },
+    "view-isolated-proposal-diff": {
       "type": "object"
     },
     "wait-for-pr-checks": {

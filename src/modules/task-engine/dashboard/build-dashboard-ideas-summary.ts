@@ -1,0 +1,179 @@
+import type { ModuleLifecycleContext } from "../../../contracts/module-contract.js";
+import type {
+  DashboardIdeaPlanArtifactSummary,
+  DashboardIdeaRow,
+  DashboardIdeasSummary
+} from "../../../contracts/dashboard-summary-run.js";
+import { readLatestPlanArtifact, readPlanArtifactIndex } from "../../../core/planning/plan-artifact-storage.js";
+import { readActiveDraftPlanArtifact } from "../../ideas/idea-planning-metadata.js";
+import { listIdeas } from "../../ideas/idea-store.js";
+import { listPlanningChatSessions } from "../../ideas/planning-chat-session.js";
+import { parsePlanIdFromPlanArtifactRef } from "../plan-artifact-execute-policy.js";
+import type { SqliteDualPlanningStore } from "../persistence/sqlite-dual-planning.js";
+
+function emptyIdeasSummary(): DashboardIdeasSummary {
+  return {
+    schemaVersion: 1,
+    available: false,
+    totalCount: 0,
+    openCount: 0,
+    planningCount: 0,
+    plannedCount: 0,
+    top: []
+  };
+}
+
+function normalizePhaseKey(latestArtifact: unknown): string | undefined {
+  if (!latestArtifact || typeof latestArtifact !== "object") {
+    return undefined;
+  }
+  const phaseRecommendations = Array.isArray((latestArtifact as { phaseRecommendations?: unknown[] }).phaseRecommendations)
+    ? ((latestArtifact as { phaseRecommendations: unknown[] }).phaseRecommendations as Array<Record<string, unknown>>)
+    : [];
+  const primary =
+    phaseRecommendations.find((row) => row?.isPrimary === true) ??
+    phaseRecommendations.find((row) => typeof row?.phaseKey === "string" && row.phaseKey.trim().length > 0);
+  const phaseKey = typeof primary?.phaseKey === "string" ? primary.phaseKey.trim() : "";
+  return phaseKey.length > 0 ? phaseKey : undefined;
+}
+
+function buildIdeaPlanArtifactSummary(
+  ctx: ModuleLifecycleContext,
+  planRef: string | undefined,
+  cache: Map<string, DashboardIdeaPlanArtifactSummary | null>
+): DashboardIdeaPlanArtifactSummary | undefined {
+  const normalizedRef = typeof planRef === "string" ? planRef.trim() : "";
+  if (normalizedRef.length === 0) {
+    return undefined;
+  }
+  if (cache.has(normalizedRef)) {
+    return cache.get(normalizedRef) ?? undefined;
+  }
+  const planId = parsePlanIdFromPlanArtifactRef(normalizedRef);
+  if (!planId) {
+    cache.set(normalizedRef, null);
+    return undefined;
+  }
+  const index = readPlanArtifactIndex(
+    ctx.workspacePath,
+    planId,
+    ctx.effectiveConfig as Record<string, unknown> | undefined
+  );
+  if (!index || index.planRef !== normalizedRef) {
+    cache.set(normalizedRef, null);
+    return undefined;
+  }
+  const latestArtifact = readLatestPlanArtifact(ctx.workspacePath, planId);
+  const latestReview =
+    index.latestReview &&
+    index.latestReview.planRef === index.planRef &&
+    index.latestReview.reviewedVersion === index.currentVersion
+      ? {
+          planRef: index.latestReview.planRef,
+          passed: index.latestReview.passed,
+          blockerCount: index.latestReview.blockerCount,
+          warningCount: index.latestReview.warningCount,
+          openQuestionCount: index.latestReview.openQuestionCount
+        }
+      : undefined;
+  const phaseKey = normalizePhaseKey(latestArtifact);
+  const summary: DashboardIdeaPlanArtifactSummary = {
+    planId,
+    planRef: index.planRef,
+    status: index.status,
+    version: index.currentVersion,
+    ...(latestReview ? { latestReview } : {}),
+    ...(phaseKey ? { phaseKey } : {})
+  };
+  cache.set(normalizedRef, summary);
+  return summary;
+}
+
+function buildDashboardIdeaRow(
+  ctx: ModuleLifecycleContext,
+  row: Record<string, unknown>,
+  cache: Map<string, DashboardIdeaPlanArtifactSummary | null>
+): DashboardIdeaRow {
+  const idea = row as DashboardIdeaRow;
+  const planningChatSession =
+    row.planningChatSession && typeof row.planningChatSession === "object"
+      ? (row.planningChatSession as DashboardIdeaRow["planningChatSession"])
+      : undefined;
+  const activeDraftPlanRef =
+    buildIdeaPlanArtifactSummary(
+      ctx,
+      typeof row.activeDraftPlanArtifact === "string" ? row.activeDraftPlanArtifact : undefined,
+      cache
+    ) ??
+    buildIdeaPlanArtifactSummary(
+      ctx,
+      planningChatSession && planningChatSession.status !== "completed" ? planningChatSession.currentPlanRef : undefined,
+      cache
+    );
+  const linkedPlanSummary =
+    buildIdeaPlanArtifactSummary(
+      ctx,
+      typeof row.linkedPlanArtifact === "string" ? row.linkedPlanArtifact : undefined,
+      cache
+    ) ??
+    buildIdeaPlanArtifactSummary(
+      ctx,
+      planningChatSession?.status === "completed" ? planningChatSession.currentPlanRef : undefined,
+      cache
+    );
+  return {
+    ...idea,
+    ...(activeDraftPlanRef ? { activeDraftPlanArtifactSummary: activeDraftPlanRef } : {}),
+    ...(linkedPlanSummary ? { linkedPlanArtifactSummary: linkedPlanSummary } : {})
+  };
+}
+
+export function buildDashboardIdeasSummary(
+  ctx: ModuleLifecycleContext,
+  sqliteDual: SqliteDualPlanningStore | undefined,
+  needsQueueRollups: boolean
+): DashboardIdeasSummary {
+  if (!needsQueueRollups || !sqliteDual) {
+    return emptyIdeasSummary();
+  }
+  try {
+    const db = sqliteDual.getDatabase();
+    const ideas = listIdeas(db);
+    const sessions = new Map(listPlanningChatSessions(db).map((session) => [session.ideaId, session]));
+    const planSummaryCache = new Map<string, DashboardIdeaPlanArtifactSummary | null>();
+    return {
+      schemaVersion: 1,
+      available: true,
+      totalCount: ideas.length,
+      openCount: ideas.filter((idea) => idea.status === "open").length,
+      planningCount: ideas.filter((idea) => idea.status === "planning").length,
+      plannedCount: ideas.filter((idea) => idea.status === "planned").length,
+      top: ideas.slice(0, 15).map((idea) => {
+        const session = sessions.get(idea.id);
+        const activeDraftPlanArtifact = readActiveDraftPlanArtifact(db, idea.id);
+        const base: Record<string, unknown> = {
+          ...idea,
+          ...(activeDraftPlanArtifact ? { activeDraftPlanArtifact } : {})
+        };
+        if (session) {
+          base.planningChatSession = {
+            schemaVersion: 1,
+            ideaId: session.ideaId,
+            status: session.status,
+            updatedAt: session.updatedAt,
+            ...(session.resumePrompt ? { resumePrompt: session.resumePrompt } : {}),
+            ...(session.summary ? { summary: session.summary } : {}),
+            ...(session.currentPlanRef ? { currentPlanRef: session.currentPlanRef } : {}),
+            ...(typeof session.currentPlanVersion === "number"
+              ? { currentPlanVersion: session.currentPlanVersion }
+              : {}),
+            ...(session.completedAt ? { completedAt: session.completedAt } : {})
+          };
+        }
+        return buildDashboardIdeaRow(ctx, base, planSummaryCache);
+      })
+    };
+  } catch {
+    return emptyIdeasSummary();
+  }
+}

@@ -90,6 +90,7 @@ export {
 export {
   PLAN_ARTIFACT_MODULE_ID_PREFIX,
   PLAN_ARTIFACT_ROOT_REL,
+  applyLatestReviewToPlanArtifactIndex,
   getPlanArtifactStoragePaths,
   listPlanArtifactSummaries,
   planArtifactModuleId,
@@ -102,9 +103,15 @@ export {
   type PlanArtifactIndexStateV1,
   type PlanArtifactStoragePaths
 } from "./plan-artifact-storage.js";
+export {
+  IMMUTABLE_PLAN_ARTIFACT_STATUSES, PlanArtifactVersionImmutableError, assertPlanArtifactVersionWritable,
+  findImmutablePlanArtifactVersion, isPlanArtifactStatusImmutable, listPlanArtifactVersionSummaries,
+  summarizePlanArtifactLineage, type PlanArtifactLineageSummary, type PlanArtifactVersionSummary
+} from "./plan-artifact-immutability.js";
 export { renderPlanArtifactMarkdown } from "./render-plan-artifact-markdown.js";
 export {
   formatPlanArtifactInstancePath,
+  isIdeaOriginatedPlanArtifactDraft,
   normalizePlanArtifactDraft,
   validatePlanArtifactDocument,
   validatePlanArtifactDraftInput,
@@ -126,6 +133,7 @@ export {
   type ResolvePlanArtifactPhaseProposalResult
 } from "./resolve-plan-artifact-phase-proposal.js";
 export {
+  isCriticalOpenQuestion,
   resolvePlanArtifactReviewProfile,
   reviewPlanArtifact,
   type PlanArtifactCoverageMap,
@@ -136,3 +144,11 @@ export {
   type ReviewPlanArtifactOptions,
   type ReviewPlanArtifactResult
 } from "./review-plan-artifact.js";
+export {
+  buildPlanArtifactCoverageSummary,
+  buildPlanArtifactReviewRecord,
+  formatPlanArtifactReviewSummary,
+  parsePlanArtifactReviewRecord,
+  type PlanArtifactCoverageSummaryV1,
+  type PlanArtifactReviewRecordV1
+} from "./plan-artifact-review-record.js";

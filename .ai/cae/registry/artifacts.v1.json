@@ -36,6 +36,14 @@
     },
     {
       "schemaVersion": 1,
+      "artifactId": "cae.agent.planning-agent",
+      "artifactType": "policy-doc",
+      "ref": { "path": ".ai/prompts/planning-agent.md" },
+      "title": "Planning Agent role contract",
+      "tags": ["cae", "agent", "ideas", "plan-artifact", "planner-chat"]
+    },
+    {
+      "schemaVersion": 1,
       "artifactId": "cae.playbook.phase-closeout",
       "artifactType": "playbook",
       "ref": { "path": ".ai/playbooks/phase-closeout-and-release.md" },

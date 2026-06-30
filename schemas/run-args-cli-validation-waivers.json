@@ -34,8 +34,10 @@
     "retire-subagent",
     "review-item",
     "spawn-subagent",
+    "start-idea-planning",
     "submit-assignment-handoff",
     "update-idea",
+    "update-idea-planning-session",
     "cae-satisfy-ack",
     "cae-import-json-registry",
     "cae-record-shadow-feedback"

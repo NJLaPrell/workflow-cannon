@@ -4,7 +4,7 @@ agentCapsule|v=1|command=persist-planning-execution-drafts|module=task-engine|sc
 
 # persist-planning-execution-drafts
 
-Materialize multiple execution tasks in **one** SQLite transaction. Each row in `tasks` uses the same shape as **`convert-wishlist`** `tasks[]` (see **`buildTaskFromConversionPayload`**): `id` (`T###`), `title`, `phase`, `approach`, non-empty `technicalScope`, non-empty `acceptanceCriteria`, optional `type`, `priority`, `dependsOn`, `unblocks`, `phaseKey`, and `status` (`proposed` or `ready`).
+Materialize multiple execution tasks in **one** SQLite transaction. Each row in `tasks` uses the same shape as **`convert-wishlist`** `tasks[]` (see **`buildTaskFromConversionPayload`**): `id` (`T###`), `title`, `phase`, `approach`, non-empty `technicalScope`, non-empty `acceptanceCriteria`, optional `summary`, `description`, `type`, `priority`, `dependsOn`, `unblocks`, `phaseKey`, and `status` (`proposed` or `ready`).
 
 Typical flow: `build-plan` with `outputMode:"tasks"`, `finalize:true`, and `executionTaskDrafts` → response code `planning-multi-task-decomposition-preview` → **`review-planning-execution-drafts`** for UX/CAE batches → this command with `tasks` copied from `data.taskOutputs` (and **`expectedPlanningGeneration`** when `tasks.planningGenerationPolicy` is `require`).
 

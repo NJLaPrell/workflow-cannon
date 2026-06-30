@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import path from "node:path";
 import type { DashboardSummaryCommandSuccess } from "@workflow-cannon/workspace-kit/contracts/dashboard-summary-run";
 import { prefillCursorChat, resolveEditorIntegrationState } from "../../cursor-chat-prefill.js";
 import { resolveMcpHostStatus } from "../../mcp/resolve-mcp-host-status.js";
@@ -8,7 +9,6 @@ import {
   ingestPlanningGenerationFromMismatch,
   ingestPlanningMetaFromData
 } from "../../planning-generation-cache.js";
-import { buildPlannerChatPrompt } from "../../planner-chat-prompt.js";
 import {
   GENERATE_FEATURES_SLASH_TEXT,
   buildGenerateFeaturesPrompt,
@@ -492,6 +492,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   private readonly originalRun: CommandClient["run"];
   private readonly originalRunForPaint: CommandClient["runForDashboardPaint"];
   private inFlightStatusHydration: Promise<KitRunResult> | null = null;
+  private readonly inFlightIdeaPlan = new Map<string, Promise<void>>();
 
   constructor(
     private readonly extensionUri: vscode.Uri,
@@ -1571,6 +1572,14 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
           await this.onFinalizePlanArtifact(planId, Math.floor(version));
         }
       }
+      if (msg?.type === "viewPlanArtifact") {
+        const planId = typeof msg.planId === "string" ? msg.planId.trim() : "";
+        const versionRaw = typeof msg.version === "string" ? msg.version.trim() : "";
+        const version = Number(versionRaw);
+        if (planId && Number.isFinite(version) && version > 0) {
+          await this.onViewPlanArtifact(planId, Math.floor(version));
+        }
+      }
       if (msg?.type === "openTaskDetail") {
         const tid = typeof msg.taskId === "string" ? msg.taskId.trim() : "";
         if (tid.length > 0) {
@@ -2612,7 +2621,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     if (code === "planning-wishlist-ready") {
       void vscode.window.showInformationMessage(
-        "Planning interview finished. No wishlist row was written yet — use build-plan finalize with createWishlist from the CLI or chat when you want it persisted."
+        "Legacy planning interview finished. No wishlist row was written yet — prefer Ideas > Plan this / PlanArtifact for the primary flow, and treat build-plan persistence as a compatibility path."
       );
       return;
     }
@@ -3495,6 +3504,22 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   }
 
   private async onPrefillIdeaPlanningChat(ideaId: string, title: string, note: string): Promise<void> {
+    const existing = this.inFlightIdeaPlan.get(ideaId);
+    if (existing) {
+      return existing;
+    }
+    const work = this.runPrefillIdeaPlanningChat(ideaId, title, note);
+    this.inFlightIdeaPlan.set(ideaId, work);
+    try {
+      await work;
+    } finally {
+      if (this.inFlightIdeaPlan.get(ideaId) === work) {
+        this.inFlightIdeaPlan.delete(ideaId);
+      }
+    }
+  }
+
+  private async runPrefillIdeaPlanningChat(ideaId: string, _title: string, _note: string): Promise<void> {
     if (ideaId.length === 0) {
       await this.view?.webview.postMessage({
         type: "wcIdeaMutationResult",
@@ -3505,34 +3530,55 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       });
       return;
     }
-    const prompt = buildPlannerChatPrompt({ ideaId, title, note });
-    const out = await this.client.run("update-idea", {
+    const out = await this.runMutationWithGenerationRetry("start-idea-planning", {
       ideaId,
-      status: "planning",
-      planningChatPrompt: prompt,
+      clientMutationId: this.dashboardIdeaPlanMutationId(ideaId),
       policyApproval: dashboardPolicyApproval(
-        { workflowId: "ideas", action: "plan", command: "update-idea" },
+        { workflowId: "ideas", action: "plan", command: "start-idea-planning" },
         {}
       )
     });
     if (!out.ok) {
-      const message = (out.message ?? String(out.code ?? "update-idea failed")).slice(0, 900);
+      const message = this.formatStartIdeaPlanningError(out);
       await this.view?.webview.postMessage({ type: "wcIdeaMutationResult", operation: "plan", ideaId, ok: false, message });
       return;
     }
-    ingestPlanningMetaFromData(out.data as Record<string, unknown> | undefined);
+    const data = out.data && typeof out.data === "object" ? (out.data as Record<string, unknown>) : {};
+    const prompt = typeof data.planningChatPrompt === "string" ? data.planningChatPrompt.trim() : "";
+    if (prompt.length === 0) {
+      await this.view?.webview.postMessage({
+        type: "wcIdeaMutationResult",
+        operation: "plan",
+        ideaId,
+        ok: false,
+        message: "start-idea-planning succeeded but returned no planningChatPrompt. Refresh and try again."
+      });
+      return;
+    }
+    ingestPlanningMetaFromData(data);
     await this.applyDashboardMutationInvalidation("ideas");
 
     const prefill = await prefillCursorChat(prompt, { newChat: true });
+    const resumed = data.mode === "resumed";
     const message = prefill.opened
-      ? prefill.route === "vscode-chat-command"
-        ? "Planning prompt opened in chat."
-        : "Planning prompt opened."
+      ? resumed
+        ? prefill.route === "vscode-chat-command"
+          ? "Planning session resumed in chat."
+          : "Planning session resumed."
+        : prefill.route === "vscode-chat-command"
+          ? "Planning prompt opened in chat."
+          : "Planning prompt opened."
       : prefill.openedDraft
-        ? "Planning prompt opened in an editor and copied to clipboard."
-      : prefill.copiedToClipboard
-        ? "Planning prompt copied to clipboard. Paste it into chat."
-        : "Planning prompt prepared.";
+        ? resumed
+          ? "Planning session resumed in an editor and copied to clipboard."
+          : "Planning prompt opened in an editor and copied to clipboard."
+        : prefill.copiedToClipboard
+          ? resumed
+            ? "Planning session prompt copied to clipboard. Paste it into chat."
+            : "Planning prompt copied to clipboard. Paste it into chat."
+          : resumed
+            ? "Planning session prepared."
+            : "Planning prompt prepared.";
     await this.view?.webview.postMessage({
       type: "wcIdeaMutationResult",
       operation: "plan",
@@ -3687,6 +3733,25 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     return `${prefix}-${taskId}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
   }
 
+  private dashboardIdeaPlanMutationId(ideaId: string): string {
+    return `dashboard-idea-plan-${ideaId}`;
+  }
+
+  private formatStartIdeaPlanningError(out: KitRunResult): string {
+    const code = String(out.code ?? "start-idea-planning-failed");
+    const base = (out.message ?? code).slice(0, 900);
+    if (code === "idea-not-found") {
+      return `${base} Refresh the dashboard or create the idea again.`;
+    }
+    if (code === "invalid-args") {
+      return `${base} Verify the idea id from list-ideas.`;
+    }
+    if (code === "planning-generation-mismatch") {
+      return `${base} Refresh the dashboard and try again.`;
+    }
+    return base;
+  }
+
   private isDuplicateCanonicalIdempotencyFailure(out: KitRunResult): boolean {
     if (out.ok) {
       return false;
@@ -3784,7 +3849,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     await this.ingestPlanningGenFromDashboard();
     const approvedBy =
       process.env.GIT_AUTHOR_EMAIL || process.env.USER || process.env.USERNAME || "dashboard-operator";
-    const r = await this.client.run("accept-plan-artifact", {
+    const r = await this.runMutationWithGenerationRetry("accept-plan-artifact", {
       planId,
       approvalRecord: {
         schemaVersion: 1,
@@ -3797,8 +3862,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       policyApproval: dashboardPolicyApproval(
         { workflowId: "plan-artifact", action: "accept", command: "accept-plan-artifact" },
         { humanRationale: "Accept reviewed PlanArtifact from Dashboard", phaseKey: null, taskId: null }
-      ),
-      ...expectedPlanningGenerationArgs()
+      )
     });
     if (!r.ok) {
       await vscode.window.showErrorMessage(
@@ -3817,15 +3881,14 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
 
   private async onReviewPlanArtifact(planId: string, version: number): Promise<void> {
     await this.ingestPlanningGenFromDashboard();
-    const r = await this.client.run("review-plan-artifact", {
+    const r = await this.runMutationWithGenerationRetry("review-plan-artifact", {
       planId,
       version,
       recordReview: true,
       policyApproval: dashboardPolicyApproval(
         { workflowId: "plan-artifact", action: "review", command: "review-plan-artifact" },
         { humanRationale: "Record PlanArtifact review from Dashboard", phaseKey: null, taskId: null }
-      ),
-      ...expectedPlanningGenerationArgs()
+      )
     });
     if (!r.ok) {
       await vscode.window.showErrorMessage(
@@ -3856,10 +3919,9 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       planId,
       version,
       desiredStatus: "ready",
-      ...phaseArgs,
-      ...expectedPlanningGenerationArgs()
+      ...phaseArgs
     };
-    const preview = await this.client.run("finalize-plan-to-phase", {
+    const preview = await this.runMutationWithGenerationRetry("finalize-plan-to-phase", {
       ...commonArgs,
       dryRun: true
     });
@@ -3869,7 +3931,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       );
       return;
     }
-    const r = await this.client.run("finalize-plan-to-phase", {
+    ingestPlanningMetaFromData(preview.data as Record<string, unknown> | undefined);
+    const r = await this.runMutationWithGenerationRetry("finalize-plan-to-phase", {
       ...commonArgs,
       dryRun: false,
       policyApproval: dashboardPolicyApproval(
@@ -3898,6 +3961,30 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     if (phaseKey.length > 0) {
       await this.view?.webview.postMessage({ type: "wcOpenQueueForPhase", phaseKey });
     }
+  }
+
+  private async onViewPlanArtifact(planId: string, version: number): Promise<void> {
+    const r = await this.client.run("get-plan-artifact", {
+      planId,
+      version,
+      includeArtifact: false
+    });
+    if (!r.ok) {
+      await vscode.window.showErrorMessage(
+        `Plan view failed: ${(r.message ?? r.code ?? JSON.stringify(r)).slice(0, 520)}`
+      );
+      return;
+    }
+    const data = r.data && typeof r.data === "object" ? (r.data as Record<string, unknown>) : {};
+    const storagePath = typeof data.storagePath === "string" ? data.storagePath.trim() : "";
+    if (!storagePath) {
+      await vscode.window.showErrorMessage(`Plan ${planId} version ${version} did not return a storage path.`);
+      return;
+    }
+    const doc = await vscode.workspace.openTextDocument(
+      vscode.Uri.file(path.resolve(this.client.getWorkspaceRoot(), storagePath))
+    );
+    await vscode.window.showTextDocument(doc, { preview: false });
   }
 
   /**

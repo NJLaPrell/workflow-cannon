@@ -48,12 +48,40 @@ export type DashboardIdeaRow = {
   previousPlanArtifacts: string[];
   createdAt: string;
   updatedAt: string;
+  activeDraftPlanArtifactSummary?: DashboardIdeaPlanArtifactSummary;
+  linkedPlanArtifactSummary?: DashboardIdeaPlanArtifactSummary;
   planningChatSession?: {
     schemaVersion: 1;
     ideaId: string;
-    status: "active";
+    status:
+      | "active"
+      | "draft_ready"
+      | "needs_revision"
+      | "approval_ready"
+      | "completed"
+      | "abandoned"
+      | "superseded";
     updatedAt: string;
     resumePrompt?: string;
+    summary?: string;
+    currentPlanRef?: string;
+    currentPlanVersion?: number;
+    completedAt?: string;
+  };
+};
+
+export type DashboardIdeaPlanArtifactSummary = {
+  planId: string;
+  planRef: string;
+  status: string;
+  version: number;
+  phaseKey?: string;
+  latestReview?: {
+    planRef: string;
+    passed: boolean | null;
+    blockerCount: number | null;
+    warningCount: number | null;
+    openQuestionCount: number | null;
   };
 };
 
@@ -347,11 +375,18 @@ export type DashboardPlanArtifactRow = {
   planRef: string;
   version: number;
   status: string;
+  lifecycleStatus?: string;
   title: string;
   planningType: string;
   updatedAt: string;
   wbsRowCount: number;
   openQuestionCount: number;
+  blockerCount?: number;
+  warningCount?: number;
+  profile?: string;
+  reviewSummary?: string;
+  phaseRecommendation?: string;
+  sourceIdeaId?: string;
 };
 
 /**
