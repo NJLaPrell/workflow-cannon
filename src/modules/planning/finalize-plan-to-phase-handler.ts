@@ -140,23 +140,22 @@ function resolveApprovalTargetVersion(loaded: PlanArtifactV1): number {
   return loaded.version;
 }
 
-function buildFinalizeTasks(
+function prepareFinalizeDrafts(
   drafts: PlanningExecutionTaskDraft[],
-  wbsRows: PlanArtifactWbsItem[],
-  existing: TaskEntity[],
-  phaseKey: string,
-  phaseLabel: string,
-  desiredStatus: "proposed" | "ready"
-): { ok: true; tasks: TaskEntity[] } | { ok: false; message: string } {
-  const now = new Date().toISOString();
+  selectedWbsRows: PlanArtifactWbsItem[],
+  allWbsRows: PlanArtifactWbsItem[],
+  existing: TaskEntity[]
+): { ok: true; drafts: PlanningExecutionTaskDraft[] } | { ok: false; message: string; findings: Array<Record<string, unknown>> } {
   let allocBase = [...existing];
   const assignedIds = new Map<string, string>();
+  const assignedTaskIds = new Set<string>();
   const rowsWithIds = drafts.map((draft, index) => {
     const id = draft.id ?? allocateNextTaskNumericId(allocBase);
-    const wbsId = wbsRows[index]?.wbsId;
+    const wbsId = selectedWbsRows[index]?.wbsId;
     if (wbsId) {
       assignedIds.set(wbsId, id);
     }
+    assignedTaskIds.add(id);
     const row = { ...draft, id };
     allocBase = [
       ...allocBase,
@@ -164,11 +163,11 @@ function buildFinalizeTasks(
         id,
         title: draft.title,
         type: draft.type ?? "workspace-kit",
-        status: desiredStatus,
-        createdAt: now,
-        updatedAt: now,
-        phase: phaseLabel,
-        phaseKey,
+        status: draft.status ?? "proposed",
+        createdAt: "",
+        updatedAt: "",
+        phase: draft.phase,
+        phaseKey: draft.phaseKey,
         approach: draft.approach,
         technicalScope: draft.technicalScope,
         acceptanceCriteria: draft.acceptanceCriteria
@@ -177,11 +176,78 @@ function buildFinalizeTasks(
     return row;
   });
 
+  const allWbsIds = new Set(allWbsRows.map((row) => row.wbsId));
+  const existingTaskIds = new Set(existing.map((task) => task.id));
+  const findings: Array<Record<string, unknown>> = [];
+  const resolvedDrafts = rowsWithIds.map((draft, index) => {
+    const wbsRow = selectedWbsRows[index];
+    const resolvedDependsOn: string[] = [];
+    for (const dep of draft.dependsOn ?? []) {
+      const dependency = dep.trim();
+      if (!dependency) {
+        continue;
+      }
+      const selectedDraftId = assignedIds.get(dependency);
+      if (selectedDraftId) {
+        resolvedDependsOn.push(selectedDraftId);
+        continue;
+      }
+      if (assignedTaskIds.has(dependency)) {
+        resolvedDependsOn.push(dependency);
+        continue;
+      }
+      if (allWbsIds.has(dependency)) {
+        findings.push({
+          code: "wbs-dependency-unselected",
+          severity: "error",
+          wbsId: wbsRow?.wbsId,
+          dependency,
+          field: "dependsOn",
+          message: `Selected WBS row '${wbsRow?.wbsId ?? "unknown"}' depends on unselected WBS row '${dependency}'`
+        });
+        continue;
+      }
+      if (existingTaskIds.has(dependency)) {
+        resolvedDependsOn.push(dependency);
+        continue;
+      }
+      findings.push({
+        code: "wbs-dependency-invalid",
+        severity: "error",
+        wbsId: wbsRow?.wbsId,
+        dependency,
+        field: "dependsOn",
+        message: `Selected WBS row '${wbsRow?.wbsId ?? "unknown"}' has invalid dependency '${dependency}' (expected selected WBS row or existing task id)`
+      });
+    }
+    return {
+      ...draft,
+      dependsOn: resolvedDependsOn.length > 0 ? resolvedDependsOn : undefined
+    };
+  });
+
+  if (findings.length > 0) {
+    return {
+      ok: false,
+      message: "Finalize blocked: dependency resolution failed",
+      findings
+    };
+  }
+
+  return { ok: true, drafts: resolvedDrafts };
+}
+
+function buildFinalizeTasks(
+  drafts: PlanningExecutionTaskDraft[],
+  phaseKey: string,
+  phaseLabel: string,
+  desiredStatus: "proposed" | "ready"
+): { ok: true; tasks: TaskEntity[] } | { ok: false; message: string } {
+  const now = new Date().toISOString();
   const built: TaskEntity[] = [];
-  for (const draft of rowsWithIds) {
+  for (const draft of drafts) {
     const row: Record<string, unknown> = {
       ...draft,
-      dependsOn: draft.dependsOn?.map((dep) => assignedIds.get(dep) ?? dep),
       phase: phaseLabel,
       phaseKey,
       status: desiredStatus
@@ -410,10 +476,29 @@ export async function runFinalizePlanToPhase(
     desiredStatus
   );
 
-  const built = buildFinalizeTasks(
+  const preparedDrafts = prepareFinalizeDrafts(
     taskPreview,
     wbsRows,
-    stores.taskStore.getAllTasks(),
+    loaded.wbs,
+    stores.taskStore.getAllTasks()
+  );
+  if (!preparedDrafts.ok) {
+    return {
+      ok: false,
+      code: "plan-artifact-finalize-review-failed",
+      message: preparedDrafts.message,
+      data: {
+        schemaVersion: 1,
+        responseSchemaVersion: 1,
+        planId,
+        version: loaded.version,
+        wbsFindings: preparedDrafts.findings
+      }
+    };
+  }
+
+  const built = buildFinalizeTasks(
+    preparedDrafts.drafts,
     proposal.phaseKey,
     proposal.label,
     desiredStatus
@@ -602,8 +687,8 @@ export async function runFinalizePlanToPhase(
       dryRun: true,
       phaseKey: proposal.phaseKey,
       phaseProposal: proposal,
-      taskPreview,
-      taskGenerationPayloads: taskPreview,
+      taskPreview: preparedDrafts.drafts,
+      taskGenerationPayloads: preparedDrafts.drafts,
       review: {
         passed: true,
         errorCount: 0,
