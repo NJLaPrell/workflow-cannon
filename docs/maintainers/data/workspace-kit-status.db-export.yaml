@@ -2,18 +2,19 @@
 kit_export_envelope:
   schema_version: 1
   authoritative: false
-  generated_at: "2026-06-28T06:47:00.774Z"
-  source_sequence: 43
+  generated_at: "2026-06-30T20:04:45.056Z"
+  source_sequence: 44
   source_kind: "kit_workspace_status"
   role: "sqlite-projection-export"
 schema_version: 1
-current_kit_phase: "139"
-next_kit_phase: "139"
-last_updated: "2026-06-28T06:46:41.556Z"
-active_focus: "Phase 139 — delivery in progress"
+current_kit_phase: "140"
+next_kit_phase: "140"
+last_updated: "2026-06-30T20:04:38.187Z"
+active_focus: "Phase 140 — kickoff"
 blockers: []
 pending_decisions: []
 next_agent_actions:
-  - "Open Queue tab and pick up ready work for this phase"
-# workspace_revision: 43
-# updated_at: "2026-06-28T06:46:43.152Z"
+  - "Run phase-kickoff-readiness for Phase 140"
+  - "Plan Phase 140 scope in ROADMAP / task engine"
+# workspace_revision: 44
+# updated_at: "2026-06-30T20:04:40.088Z"
