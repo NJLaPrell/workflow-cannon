@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import path from "node:path";
 import type { DashboardSummaryCommandSuccess } from "@workflow-cannon/workspace-kit/contracts/dashboard-summary-run";
 import { prefillCursorChat, resolveEditorIntegrationState } from "../../cursor-chat-prefill.js";
 import { resolveMcpHostStatus } from "../../mcp/resolve-mcp-host-status.js";
@@ -1569,6 +1570,14 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         const version = Number(versionRaw);
         if (planId && Number.isFinite(version) && version > 0) {
           await this.onFinalizePlanArtifact(planId, Math.floor(version));
+        }
+      }
+      if (msg?.type === "viewPlanArtifact") {
+        const planId = typeof msg.planId === "string" ? msg.planId.trim() : "";
+        const versionRaw = typeof msg.version === "string" ? msg.version.trim() : "";
+        const version = Number(versionRaw);
+        if (planId && Number.isFinite(version) && version > 0) {
+          await this.onViewPlanArtifact(planId, Math.floor(version));
         }
       }
       if (msg?.type === "openTaskDetail") {
@@ -3954,6 +3963,30 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     if (phaseKey.length > 0) {
       await this.view?.webview.postMessage({ type: "wcOpenQueueForPhase", phaseKey });
     }
+  }
+
+  private async onViewPlanArtifact(planId: string, version: number): Promise<void> {
+    const r = await this.client.run("get-plan-artifact", {
+      planId,
+      version,
+      includeArtifact: false
+    });
+    if (!r.ok) {
+      await vscode.window.showErrorMessage(
+        `Plan view failed: ${(r.message ?? r.code ?? JSON.stringify(r)).slice(0, 520)}`
+      );
+      return;
+    }
+    const data = r.data && typeof r.data === "object" ? (r.data as Record<string, unknown>) : {};
+    const storagePath = typeof data.storagePath === "string" ? data.storagePath.trim() : "";
+    if (!storagePath) {
+      await vscode.window.showErrorMessage(`Plan ${planId} version ${version} did not return a storage path.`);
+      return;
+    }
+    const doc = await vscode.workspace.openTextDocument(
+      vscode.Uri.file(path.resolve(this.client.getWorkspaceRoot(), storagePath))
+    );
+    await vscode.window.showTextDocument(doc, { preview: false });
   }
 
   /**

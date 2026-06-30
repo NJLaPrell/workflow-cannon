@@ -28,6 +28,7 @@ import type {
   DashboardAgentActivitySummary,
   DashboardAgentStatusKind
 } from "@workflow-cannon/workspace-kit/contracts/dashboard-summary-run";
+import { deriveIdeaPlanningLifecycleState } from "@workflow-cannon/workspace-kit/modules";
 import type { DashboardSectionId } from "./dashboard-section-registry.js";
 import { lookupDashboardSection } from "./dashboard-section-registry.js";
 import { renderDashboardReadModeBadgeHtml, renderDashboardSectionPlaceholder } from "./render-dashboard-shell.js";
@@ -2341,6 +2342,127 @@ function renderWishlistOpenList(items: unknown): string {
   );
 }
 
+function ideaPlanButton(
+  label: string,
+  action: string,
+  extraAttrs = "",
+  options?: { secondary?: boolean; disabled?: boolean; title?: string }
+): string {
+  const klass = options?.secondary ? "wc-btn wc-btn-sm wc-btn-secondary" : "wc-btn wc-btn-sm wc-btn-primary";
+  const titleAttr = options?.title ? ` title="${escapeHtmlAttr(options.title)}"` : "";
+  const disabledAttr = options?.disabled ? " disabled" : "";
+  return (
+    `<button type="button" class="${klass}" data-wc-action="${escapeHtmlAttr(action)}"${extraAttrs}${titleAttr}${disabledAttr}>` +
+    escapeHtml(label) +
+    "</button>"
+  );
+}
+
+function planActionAttrs(summary: Record<string, unknown> | null): string {
+  if (!summary) {
+    return "";
+  }
+  const planId = typeof summary.planId === "string" ? summary.planId.trim() : "";
+  const planRef = typeof summary.planRef === "string" ? summary.planRef.trim() : "";
+  const version =
+    typeof summary.version === "number"
+      ? summary.version
+      : typeof summary.version === "string" && /^\d+$/.test(summary.version.trim())
+        ? Number(summary.version.trim())
+        : NaN;
+  if (!planId || !Number.isFinite(version) || version <= 0) {
+    return "";
+  }
+  return (
+    ` data-plan-id="${escapeHtmlAttr(planId)}"` +
+    ` data-plan-ref="${escapeHtmlAttr(planRef)}"` +
+    ` data-plan-version="${escapeHtmlAttr(String(Math.floor(version)))}"`
+  );
+}
+
+function planArtifactLike(summary: Record<string, unknown> | null): { planRef?: string; status?: string } | undefined {
+  if (!summary) {
+    return undefined;
+  }
+  const planRef = typeof summary.planRef === "string" ? summary.planRef.trim() : "";
+  const status = typeof summary.status === "string" ? summary.status.trim() : "";
+  if (!planRef && !status) {
+    return undefined;
+  }
+  return {
+    ...(planRef ? { planRef } : {}),
+    ...(status ? { status } : {})
+  };
+}
+
+function renderIdeaLifecycleActions(args: {
+  ideaId: string;
+  lifecycleState: string;
+  hasPlanningChatSession: boolean;
+  activeDraftPlanArtifactSummary: Record<string, unknown> | null;
+  linkedPlanArtifactSummary: Record<string, unknown> | null;
+}): string {
+  const viewPlanTarget = args.activeDraftPlanArtifactSummary ?? args.linkedPlanArtifactSummary;
+  const resumeButton = ideaPlanButton(
+    args.hasPlanningChatSession || args.lifecycleState === "needs_revision" ? "Resume planning" : "Plan this",
+    "idea-plan"
+  );
+  switch (args.lifecycleState) {
+    case "planning":
+      return resumeButton;
+    case "draft_ready":
+      return (
+        ideaPlanButton("Review", "plan-artifact-review", planActionAttrs(args.activeDraftPlanArtifactSummary)) +
+        ideaPlanButton("View plan", "idea-view-plan", planActionAttrs(viewPlanTarget), { secondary: true })
+      );
+    case "needs_revision":
+      return (
+        resumeButton +
+        ideaPlanButton("Accept", "plan-artifact-accept", planActionAttrs(args.activeDraftPlanArtifactSummary), {
+          secondary: true,
+          disabled: true,
+          title: "Resolve review blockers before accepting this plan."
+        }) +
+        ideaPlanButton("View plan", "idea-view-plan", planActionAttrs(viewPlanTarget), { secondary: true })
+      );
+    case "approval_ready":
+      return (
+        ideaPlanButton("Accept", "plan-artifact-accept", planActionAttrs(args.activeDraftPlanArtifactSummary)) +
+        ideaPlanButton("View plan", "idea-view-plan", planActionAttrs(viewPlanTarget), { secondary: true })
+      );
+    case "accepted":
+      return (
+        ideaPlanButton("Finalize", "plan-artifact-finalize", planActionAttrs(args.linkedPlanArtifactSummary)) +
+        ideaPlanButton("View plan", "idea-view-plan", planActionAttrs(viewPlanTarget), { secondary: true })
+      );
+    case "finalized": {
+      const phaseKey =
+        args.linkedPlanArtifactSummary && typeof args.linkedPlanArtifactSummary.phaseKey === "string"
+          ? args.linkedPlanArtifactSummary.phaseKey.trim()
+          : "";
+      const viewTasksButton = phaseKey
+        ? ideaPlanButton(
+            "View tasks",
+            "open-queue-for-phase",
+            ` data-wc-phase-key="${escapeHtmlAttr(phaseKey)}"`
+          )
+        : ideaPlanButton("View tasks", "open-queue-for-phase", "", {
+            disabled: true,
+            title: "Phase key unavailable for this finalized plan."
+          });
+      return (
+        viewTasksButton +
+        ideaPlanButton("View plan", "idea-view-plan", planActionAttrs(viewPlanTarget), { secondary: true })
+      );
+    }
+    case "superseded":
+      return ideaPlanButton("View plan", "idea-view-plan", planActionAttrs(viewPlanTarget), { secondary: true });
+    case "open":
+    default:
+      return ideaPlanButton("Plan this", "idea-plan");
+  }
+}
+
 function renderDashboardIdeasSectionInnerHtml(rawIdeas: unknown): string {
   const ideas = rawIdeas && typeof rawIdeas === "object" ? (rawIdeas as Record<string, unknown>) : {};
   const available = ideas.available === true;
@@ -2363,6 +2485,28 @@ function renderDashboardIdeasSectionInnerHtml(rawIdeas: unknown): string {
         ? (row.planningChatSession as Record<string, unknown>)
         : null;
       const hasPlanningChatSession = planningChatSession?.status === "active" && planningChatSession.ideaId === id;
+      const activeDraftPlanArtifactSummary =
+        row.activeDraftPlanArtifactSummary && typeof row.activeDraftPlanArtifactSummary === "object"
+          ? (row.activeDraftPlanArtifactSummary as Record<string, unknown>)
+          : null;
+      const linkedPlanArtifactSummary =
+        row.linkedPlanArtifactSummary && typeof row.linkedPlanArtifactSummary === "object"
+          ? (row.linkedPlanArtifactSummary as Record<string, unknown>)
+          : null;
+      const lifecycleState = deriveIdeaPlanningLifecycleState({
+        idea: row,
+        planningChatSession,
+        linkedPlanArtifact: planArtifactLike(linkedPlanArtifactSummary)
+          ?? (typeof row.linkedPlanArtifact === "string" ? row.linkedPlanArtifact : undefined),
+        activeDraftPlanArtifact: planArtifactLike(activeDraftPlanArtifactSummary),
+        latestReview:
+          activeDraftPlanArtifactSummary?.latestReview &&
+          typeof activeDraftPlanArtifactSummary.latestReview === "object"
+            ? (activeDraftPlanArtifactSummary.latestReview as Record<string, unknown>)
+            : linkedPlanArtifactSummary?.latestReview && typeof linkedPlanArtifactSummary.latestReview === "object"
+              ? (linkedPlanArtifactSummary.latestReview as Record<string, unknown>)
+              : undefined
+      });
       const displayNote = note.length > 160 ? note.slice(0, 157).trimEnd() + "..." : note;
       const idAttr = escapeHtmlAttr(id);
       const titleAttr = escapeHtmlAttr(title);
@@ -2370,6 +2514,13 @@ function renderDashboardIdeasSectionInnerHtml(rawIdeas: unknown): string {
       if (!title) {
         return "";
       }
+      const lifecycleActions = renderIdeaLifecycleActions({
+        ideaId: id,
+        lifecycleState,
+        hasPlanningChatSession,
+        activeDraftPlanArtifactSummary,
+        linkedPlanArtifactSummary
+      });
       return (
         '<div class="wc-ideas-row" draggable="true" data-wc-idea-id="' +
         idAttr +
@@ -2390,9 +2541,7 @@ function renderDashboardIdeasSectionInnerHtml(rawIdeas: unknown): string {
         escapeHtml(status) +
         "</span>" +
         '<span class="wc-ideas-row-actions">' +
-        '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="idea-plan">' +
-        (hasPlanningChatSession ? "Resume planning &rarr;" : "Plan this") +
-        "</button>" +
+        lifecycleActions +
         '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="idea-edit">Edit</button>' +
         '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="idea-delete">Delete</button>' +
         "</span>" +

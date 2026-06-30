@@ -48,6 +48,8 @@ export type DashboardIdeaRow = {
   previousPlanArtifacts: string[];
   createdAt: string;
   updatedAt: string;
+  activeDraftPlanArtifactSummary?: DashboardIdeaPlanArtifactSummary;
+  linkedPlanArtifactSummary?: DashboardIdeaPlanArtifactSummary;
   planningChatSession?: {
     schemaVersion: 1;
     ideaId: string;
@@ -65,6 +67,21 @@ export type DashboardIdeaRow = {
     currentPlanRef?: string;
     currentPlanVersion?: number;
     completedAt?: string;
+  };
+};
+
+export type DashboardIdeaPlanArtifactSummary = {
+  planId: string;
+  planRef: string;
+  status: string;
+  version: number;
+  phaseKey?: string;
+  latestReview?: {
+    planRef: string;
+    passed: boolean | null;
+    blockerCount: number | null;
+    warningCount: number | null;
+    openQuestionCount: number | null;
   };
 };
 

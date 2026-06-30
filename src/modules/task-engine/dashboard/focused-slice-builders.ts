@@ -56,8 +56,6 @@ import {
   findWishlistIntakeTaskByLegacyOrTaskId,
   isWishlistIntakeTask
 } from "../wishlist-intake.js";
-import { listIdeas } from "../../ideas/idea-store.js";
-import { listPlanningChatSessions } from "../../ideas/planning-chat-session.js";
 import { readBuildPlanSession, toDashboardPlanningSession } from "../../../core/planning/build-plan-session-file.js";
 import { getPlanningGenerationPolicy } from "../planning-config.js";
 import {
@@ -86,6 +84,7 @@ import {
   buildDashboardOverview
 } from "./build-dashboard-base.js";
 import type { DashboardSummaryTracer } from "./dashboard-summary-trace.js";
+import { buildDashboardIdeasSummary } from "./build-dashboard-ideas-summary.js";
 
 function getTerminalCount(
   status: "completed" | "cancelled",
@@ -106,68 +105,6 @@ function getTerminalCount(
     }
   }
   return tasks.filter((t) => t.status === status).length;
-}
-
-function buildDashboardIdeasSummary(
-  sqliteDual: SqliteDualPlanningStore | undefined,
-  needsQueueRollups: boolean
-): DashboardSummaryData["ideas"] {
-  if (!needsQueueRollups || !sqliteDual) {
-    return {
-      schemaVersion: 1,
-      available: false,
-      totalCount: 0,
-      openCount: 0,
-      planningCount: 0,
-      plannedCount: 0,
-      top: []
-    };
-  }
-  try {
-    const db = sqliteDual.getDatabase();
-    const ideas = listIdeas(db);
-    const sessions = new Map(listPlanningChatSessions(db).map((session) => [session.ideaId, session]));
-    return {
-      schemaVersion: 1,
-      available: true,
-      totalCount: ideas.length,
-      openCount: ideas.filter((idea) => idea.status === "open").length,
-      planningCount: ideas.filter((idea) => idea.status === "planning").length,
-      plannedCount: ideas.filter((idea) => idea.status === "planned").length,
-      top: ideas.slice(0, 15).map((idea) => {
-        const session = sessions.get(idea.id);
-        if (!session) {
-          return idea;
-        }
-        return {
-          ...idea,
-          planningChatSession: {
-            schemaVersion: 1,
-            ideaId: session.ideaId,
-            status: session.status,
-            updatedAt: session.updatedAt,
-            ...(session.resumePrompt ? { resumePrompt: session.resumePrompt } : {}),
-            ...(session.summary ? { summary: session.summary } : {}),
-            ...(session.currentPlanRef ? { currentPlanRef: session.currentPlanRef } : {}),
-            ...(typeof session.currentPlanVersion === "number"
-              ? { currentPlanVersion: session.currentPlanVersion }
-              : {}),
-            ...(session.completedAt ? { completedAt: session.completedAt } : {})
-          }
-        };
-      })
-    };
-  } catch {
-    return {
-      schemaVersion: 1,
-      available: false,
-      totalCount: 0,
-      openCount: 0,
-      planningCount: 0,
-      plannedCount: 0,
-      top: []
-    };
-  }
 }
 
 function buildDashboardPlanArtifactSummary(ctx: ModuleLifecycleContext): DashboardSummaryData["planArtifact"] {
@@ -355,7 +292,7 @@ export async function buildDashboardQueueSlice(
     });
   }
 
-  const ideas = buildDashboardIdeasSummary(sqliteDual, true);
+  const ideas = buildDashboardIdeasSummary(ctx, sqliteDual, true);
 
   const slimListRow = (t: (typeof tasks)[0]) => projectDashboardTaskRow(t, enrich, { includePriority: false });
   const blockedTasks = tasks
