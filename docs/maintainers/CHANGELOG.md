@@ -10,11 +10,10 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [1.0.2] - 2026-06-30
 
-Patch — **Phase 139 MarkLogic + FastTrack demo and baseline health** (docker-compose demo scaffold and maintainer baseline health report).
+Patch — **Phase 139 baseline health** (maintainer baseline health report for idea-planning work).
 
 ### Added
 
-- MarkLogic + FastTrack docker-compose demo skeleton under `demo/marklogic-fasttrack/` — MarkLogic Server, one-shot `ml-setup` placeholder, and FastTrack UI placeholder with `.env.example`, quick-start README, and reset/rollback notes (T100738).
 - Phase 139 baseline health report at `docs/maintainers/data/phase-139-baseline-health.md` — build/test green evidence, `wk doctor` findings, and planner/PlanArtifact test surface inventory (T100743).
 
 ## [1.0.1] - 2026-06-24
