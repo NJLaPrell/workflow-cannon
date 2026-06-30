@@ -46,6 +46,12 @@ export {
 export { approvalsModule } from "./approvals/index.js";
 export { documentationModule } from "./documentation/index.js";
 export { ideasModule } from "./ideas/index.js";
+export {
+  deriveIdeaPlanningLifecycleState,
+  type DeriveIdeaPlanningLifecycleStateInput,
+  type IdeaPlanningLifecycleState,
+  type PlanFinalizeSummary
+} from "./ideas/derive-idea-planning-lifecycle-state.js";
 export type {
   DocumentationConflict,
   DocumentationGenerateOptions,
