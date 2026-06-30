@@ -10,6 +10,7 @@ import {
   writeNextPlanArtifactVersion,
   type PlanArtifactStoragePaths
 } from "../../core/planning/plan-artifact-storage.js";
+import { linkActiveDraftPlanArtifactFromPersistedDraft } from "../ideas/idea-planning-metadata.js";
 import { planningSqliteDatabaseRelativePath } from "../task-engine/planning-config.js";
 import { digestPayload, stableStringify } from "../task-engine/mutation-utils.js";
 
@@ -230,6 +231,9 @@ export function commitPlanArtifactDraftPersist(args: {
     sqliteDb
   });
   const storagePath = paths.artifactFileRelative(written.version);
+  if (sqliteDb) {
+    linkActiveDraftPlanArtifactFromPersistedDraft(sqliteDb, written, new Date().toISOString());
+  }
   if (clientMutationId) {
     writeIdempotencyRecord(
       workspacePath,
