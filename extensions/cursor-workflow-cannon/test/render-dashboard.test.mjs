@@ -2933,10 +2933,12 @@ test("renderPlanningInterviewWizardPanel picker wires start control and planning
   const html = renderPlanningInterviewWizardPanel({ kind: "picker" });
   assert.match(html, /id="wc-planning-type"/);
   assert.match(html, /Planning Type/);
+  assert.match(html, /Legacy preview\./);
+  assert.match(html, /Plan this/);
   assert.match(html, /dash-planning-wizard-picker-row/);
   assert.match(html, /data-wc-action="planning-wizard-start"/);
   assert.match(html, /value="change"/);
-  assert.doesNotMatch(html, /Guided interview/);
+  assert.match(html, /Legacy planning interview/);
   assert.doesNotMatch(html, /Answers run through/);
 });
 

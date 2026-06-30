@@ -570,7 +570,7 @@ export const planningModule: WorkflowModule = {
               ok: false,
               code: "planning-multi-task-persist-delegated",
               message:
-                "When executionTaskDrafts is set, build-plan does not persist tasks (persistTasks must be false); materialize drafts with workspace-kit run persist-planning-execution-drafts (include expectedPlanningGeneration when policy requires it)."
+                "When executionTaskDrafts is set, build-plan stays in legacy preview mode and does not persist tasks (persistTasks must be false); materialize drafts with workspace-kit run persist-planning-execution-drafts (include expectedPlanningGeneration when policy requires it)."
             };
           }
           await clearBuildPlanSessionWithPlanningSync(ctx, { commandName: "build-plan" });
@@ -578,7 +578,7 @@ export const planningModule: WorkflowModule = {
           return {
             ok: true,
             code: "planning-multi-task-decomposition-preview",
-            message: `Planning finalize produced ${built.tasks.length} convert-wishlist-compatible execution task draft(s) (preview only)`,
+            message: `Legacy build-plan finalize preview produced ${built.tasks.length} convert-wishlist-compatible execution task draft(s) (preview only)`,
             data: {
               responseSchemaVersion: 1,
               planningType,
@@ -706,8 +706,8 @@ export const planningModule: WorkflowModule = {
           ok: true,
           code: persistTasks ? "planning-task-output-created" : "planning-task-output-preview",
           message: persistTasks
-            ? `Planning task output persisted as '${task.id}'`
-            : "Planning task output prepared (preview only; set persistTasks=true to write)",
+            ? `Legacy build-plan task output persisted as '${task.id}'`
+            : "Legacy build-plan task output prepared (preview only; prefer PlanArtifact draft/finalize for the primary flow)",
           data: {
             responseSchemaVersion: 1,
             planningType,
