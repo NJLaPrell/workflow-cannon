@@ -10,8 +10,11 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
 
-import { planningModule } from "../dist/index.js";
+import { ideasModule, planningModule } from "../dist/index.js";
 import { readLatestPlanArtifact } from "../dist/core/planning/plan-artifact-storage.js";
+import { readActiveDraftPlanArtifact } from "../dist/modules/ideas/idea-planning-metadata.js";
+import { getPlanningChatSession } from "../dist/modules/ideas/planning-chat-session.js";
+import { SqliteDualPlanningStore } from "../dist/modules/task-engine/persistence/sqlite-dual-planning.js";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const fixturesDir = path.join(repoRoot, "fixtures", "planning");
@@ -46,6 +49,45 @@ async function tmpWorkspace() {
   const workspace = await mkdtemp(path.join(os.tmpdir(), "wk-plan-accept-"));
   await mkdir(path.join(workspace, ".workspace-kit", "tasks"), { recursive: true });
   return workspace;
+}
+
+function planningDb(workspace) {
+  const dual = new SqliteDualPlanningStore(workspace, ".workspace-kit/tasks/workspace-kit.db");
+  dual.loadFromDisk();
+  return dual.getDatabase();
+}
+
+async function createIdea(workspace, args = {}) {
+  const created = await ideasModule.onCommand(
+    {
+      name: "create-idea",
+      args: { title: "Accept test idea", policyApproval: { confirmed: true, rationale: "plan accept test create idea" }, ...args }
+    },
+    { runtimeVersion: "0.1", workspacePath: workspace, effectiveConfig: SQLITE_CFG }
+  );
+  assert.equal(created.ok, true, created.message);
+  return created.data.idea;
+}
+
+async function startPlanning(workspace, ideaId) {
+  const started = await ideasModule.onCommand(
+    {
+      name: "start-idea-planning",
+      args: { ideaId, policyApproval: { confirmed: true, rationale: "plan accept test start idea planning" } }
+    },
+    { runtimeVersion: "0.1", workspacePath: workspace, effectiveConfig: SQLITE_CFG }
+  );
+  assert.equal(started.ok, true, started.message);
+  return started.data;
+}
+
+async function getIdea(workspace, ideaId) {
+  const result = await ideasModule.onCommand(
+    { name: "get-idea", args: { ideaId } },
+    { runtimeVersion: "0.1", workspacePath: workspace, effectiveConfig: SQLITE_CFG }
+  );
+  assert.equal(result.ok, true, result.message);
+  return result.data.idea;
 }
 
 async function draftPersist(workspace, artifact) {
@@ -240,5 +282,104 @@ describe("accept-plan-artifact command (T100466)", () => {
     assert.equal(accept.ok, true);
     assert.equal(accept.code, "plan-artifact-accepted");
     assert.ok(accept.data.approvalRecord.openQuestionsAccepted?.length > 0);
+  });
+
+  it("promotes accepted draft to linked plan, clears active draft, and completes session (T100759)", async () => {
+    const workspace = await tmpWorkspace();
+    const idea = await createIdea(workspace, { title: "Acceptance lifecycle idea", status: "planning" });
+    const planning = await startPlanning(workspace, idea.id);
+    const sessionId = planning.planningChatSession.sessionId;
+    const artifact = freshArtifact(loadFixture("plan-artifact-full-feature.valid.v1.json"));
+    artifact.openQuestions = [];
+    artifact.provenance = {
+      ...artifact.provenance,
+      sourceIdeaId: idea.id,
+      chatSessionRef: sessionId
+    };
+    const draft = await draftPersist(workspace, artifact);
+    const review = await recordReview(workspace, draft.data.planId, draft.data.planningGeneration ?? 0);
+
+    const accept = await planningModule.onCommand(
+      {
+        name: "accept-plan-artifact",
+        args: {
+          planId: draft.data.planId,
+          approvalRecord: approvalFor(artifact, review.data.version),
+          expectedPlanningGeneration: review.data.planningGeneration ?? 0,
+          policyApproval: { confirmed: true, rationale: "accept lifecycle test plan" }
+        }
+      },
+      { runtimeVersion: "0.1", workspacePath: workspace, effectiveConfig: SQLITE_CFG }
+    );
+
+    assert.equal(accept.ok, true, accept.message);
+    assert.equal(accept.data.idea.status, "planned");
+    assert.equal(accept.data.idea.linkedPlanArtifact, draft.data.planRef);
+    assert.deepEqual(accept.data.idea.previousPlanArtifacts, []);
+    assert.equal(accept.data.planningChatSession.status, "completed");
+    assert.equal(accept.data.planningChatSession.currentPlanRef, draft.data.planRef);
+    assert.equal(accept.data.planningChatSession.currentPlanVersion, accept.data.version);
+    assert.ok(typeof accept.data.planningChatSession.completedAt === "string");
+
+    const storedIdea = await getIdea(workspace, idea.id);
+    assert.equal(storedIdea.status, "planned");
+    assert.equal(storedIdea.linkedPlanArtifact, draft.data.planRef);
+    assert.deepEqual(storedIdea.previousPlanArtifacts, []);
+    assert.equal(readActiveDraftPlanArtifact(planningDb(workspace), idea.id), undefined);
+    const storedSession = getPlanningChatSession(planningDb(workspace), idea.id);
+    assert.equal(storedSession?.status, "completed");
+    assert.equal(storedSession?.currentPlanRef, draft.data.planRef);
+    assert.equal(storedSession?.currentPlanVersion, accept.data.version);
+    assert.ok(typeof storedSession?.completedAt === "string");
+  });
+
+  it("preserves prior refs when a replanned draft becomes the linked plan (T100759)", async () => {
+    const workspace = await tmpWorkspace();
+    const idea = await createIdea(workspace, {
+      title: "Replan acceptance idea",
+      status: "planning",
+      linkedPlanArtifact: "plan-artifact:accepted-plan",
+      previousPlanArtifacts: ["plan-artifact:older-plan"]
+    });
+    const planning = await startPlanning(workspace, idea.id);
+    const sessionId = planning.planningChatSession.sessionId;
+    const artifact = freshArtifact(loadFixture("plan-artifact-full-feature.valid.v1.json"));
+    artifact.openQuestions = [];
+    artifact.provenance = {
+      ...artifact.provenance,
+      sourceIdeaId: idea.id,
+      chatSessionRef: sessionId
+    };
+    const draft = await draftPersist(workspace, artifact);
+    const review = await recordReview(workspace, draft.data.planId, draft.data.planningGeneration ?? 0);
+
+    const accept = await planningModule.onCommand(
+      {
+        name: "accept-plan-artifact",
+        args: {
+          planId: draft.data.planId,
+          approvalRecord: approvalFor(artifact, review.data.version),
+          expectedPlanningGeneration: review.data.planningGeneration ?? 0,
+          policyApproval: { confirmed: true, rationale: "accept replanned lifecycle test plan" }
+        }
+      },
+      { runtimeVersion: "0.1", workspacePath: workspace, effectiveConfig: SQLITE_CFG }
+    );
+
+    assert.equal(accept.ok, true, accept.message);
+    assert.equal(accept.data.idea.linkedPlanArtifact, draft.data.planRef);
+    assert.deepEqual(accept.data.idea.previousPlanArtifacts, [
+      "plan-artifact:older-plan",
+      "plan-artifact:accepted-plan"
+    ]);
+
+    const storedIdea = await getIdea(workspace, idea.id);
+    assert.equal(storedIdea.linkedPlanArtifact, draft.data.planRef);
+    assert.deepEqual(storedIdea.previousPlanArtifacts, [
+      "plan-artifact:older-plan",
+      "plan-artifact:accepted-plan"
+    ]);
+    assert.equal(readActiveDraftPlanArtifact(planningDb(workspace), idea.id), undefined);
+    assert.equal(getPlanningChatSession(planningDb(workspace), idea.id)?.status, "completed");
   });
 });

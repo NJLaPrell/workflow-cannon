@@ -1,6 +1,6 @@
 import type Sqlite from "better-sqlite3";
 import type { PlanArtifactV1 } from "../../core/planning/plan-artifact-v1.js";
-import { getIdea, isIdeaId } from "./idea-store.js";
+import { getIdea, isIdeaId, updateIdea, type IdeaRecord } from "./idea-store.js";
 
 const ACTIVE_DRAFT_MODULE_PREFIX = "ideas-active-draft-plan:";
 
@@ -31,6 +31,12 @@ function parseActiveDraft(raw: string | null | undefined): IdeaActiveDraftPlanSt
   } catch {
     return null;
   }
+}
+
+function cleanStringArray(raw: unknown): string[] {
+  return Array.isArray(raw)
+    ? raw.filter((value): value is string => typeof value === "string" && value.trim().length > 0).map((value) => value.trim())
+    : [];
 }
 
 export function readActiveDraftPlanArtifact(db: Sqlite.Database, ideaId: string): string | undefined {
@@ -64,6 +70,12 @@ export function writeActiveDraftPlanArtifact(
   ).run(moduleId, 1, JSON.stringify(record), nowIso);
 }
 
+export function clearActiveDraftPlanArtifact(db: Sqlite.Database, ideaId: string): boolean {
+  const moduleId = moduleIdForIdea(ideaId);
+  const result = db.prepare("DELETE FROM workspace_module_state WHERE module_id = ?").run(moduleId);
+  return result.changes > 0;
+}
+
 /** Link a persisted draft to its source idea without mutating accepted `linkedPlanArtifact`. */
 export function linkActiveDraftPlanArtifactFromPersistedDraft(
   db: Sqlite.Database,
@@ -84,4 +96,50 @@ export function linkActiveDraftPlanArtifactFromPersistedDraft(
   }
   writeActiveDraftPlanArtifact(db, ideaId, planRef, nowIso);
   return { linked: true, ideaId, planRef };
+}
+
+/** Promote the accepted draft into the idea row and retire the active-draft pointer. */
+export function promoteAcceptedPlanArtifactFromAcceptedDraft(
+  db: Sqlite.Database,
+  artifact: PlanArtifactV1,
+  nowIso: string
+): { promoted: boolean; idea?: IdeaRecord; ideaId?: string; planRef?: string } {
+  const ideaId = typeof artifact.provenance?.sourceIdeaId === "string" ? artifact.provenance.sourceIdeaId.trim() : "";
+  if (!ideaId || !isIdeaId(ideaId)) {
+    return { promoted: false };
+  }
+  const idea = getIdea(db, ideaId);
+  if (!idea) {
+    return { promoted: false };
+  }
+  const planRef = artifact.planRef.trim();
+  if (!planRef) {
+    return { promoted: false };
+  }
+
+  const activeDraftPlanRef = readActiveDraftPlanArtifact(db, ideaId);
+  const previousPlanArtifacts = new Set([
+    ...idea.previousPlanArtifacts,
+    ...cleanStringArray(artifact.provenance?.previousPlanArtifacts)
+  ]);
+  if (idea.linkedPlanArtifact && idea.linkedPlanArtifact !== planRef) {
+    previousPlanArtifacts.add(idea.linkedPlanArtifact);
+  }
+  if (activeDraftPlanRef && activeDraftPlanRef !== planRef) {
+    previousPlanArtifacts.add(activeDraftPlanRef);
+  }
+  previousPlanArtifacts.delete(planRef);
+
+  const updatedIdea = updateIdea(
+    db,
+    ideaId,
+    {
+      status: "planned",
+      linkedPlanArtifact: planRef,
+      previousPlanArtifacts: [...previousPlanArtifacts]
+    },
+    nowIso
+  );
+  clearActiveDraftPlanArtifact(db, ideaId);
+  return updatedIdea ? { promoted: true, idea: updatedIdea, ideaId, planRef } : { promoted: false };
 }
