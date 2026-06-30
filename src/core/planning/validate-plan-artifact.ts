@@ -14,6 +14,7 @@ import {
   type PlanArtifactProvenanceSource,
   type PlanArtifactV1
 } from "./plan-artifact-v1.js";
+import { readLatestPlanArtifact } from "./plan-artifact-storage.js";
 import { validatePlanArtifactWbsItemShape } from "./normalize-wbs-to-task-draft.js";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- ajv/dist/2020 default export shape varies by bundler
@@ -43,6 +44,8 @@ export type ValidatePlanArtifactResult = ValidatePlanArtifactSuccess | ValidateP
 export type NormalizePlanArtifactDraftOptions = {
   planId?: string;
   importSource?: PlanArtifactProvenanceSource;
+  /** When set, draft is treated as idea-originated (planner-chat / Ideas row). */
+  ideaId?: string;
   actor?: string;
   now?: string;
 };
@@ -116,8 +119,105 @@ function cloneJson<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
 
+function nonEmptyString(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function cleanStringArray(values: unknown): string[] {
+  if (!Array.isArray(values)) {
+    return [];
+  }
+  return values
+    .filter((value): value is string => typeof value === "string")
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0);
+}
+
 function expectedPlanRef(planId: string): string {
   return `plan-artifact:${planId}`;
+}
+
+const IDEA_PLANNING_CHAT_SESSION_PREFIX = "pcs-";
+
+function isImportProvenanceSource(source: unknown): boolean {
+  return source === "import-build-plan" || source === "import-wishlist";
+}
+
+/**
+ * True when the draft argv or provenance signals planner-chat / Ideas-row origin.
+ */
+export function isIdeaOriginatedPlanArtifactDraft(
+  doc: Record<string, unknown>,
+  options: Pick<NormalizePlanArtifactDraftOptions, "ideaId" | "importSource"> = {}
+): boolean {
+  if (options.importSource && isImportProvenanceSource(options.importSource)) {
+    return false;
+  }
+  if (nonEmptyString(options.ideaId)) {
+    return true;
+  }
+  const provenance = asRecord(doc.provenance);
+  if (!provenance) {
+    return false;
+  }
+  if (isImportProvenanceSource(provenance.source)) {
+    return false;
+  }
+  const chatSessionRef = nonEmptyString(provenance.chatSessionRef) ? provenance.chatSessionRef.trim() : "";
+  if (chatSessionRef.startsWith(IDEA_PLANNING_CHAT_SESSION_PREFIX)) {
+    return true;
+  }
+  return cleanStringArray(provenance.previousPlanArtifacts).length > 0;
+}
+
+function validateIdeaOriginatedProvenance(
+  doc: Record<string, unknown>,
+  options: Pick<NormalizePlanArtifactDraftOptions, "ideaId" | "importSource">
+): PlanArtifactValidationError[] {
+  if (!isIdeaOriginatedPlanArtifactDraft(doc, options)) {
+    return [];
+  }
+  const provenance = asRecord(doc.provenance);
+  if (!provenance || !nonEmptyString(provenance.sourceIdeaId)) {
+    return [
+      {
+        path: "provenance.sourceIdeaId",
+        message: "sourceIdeaId is required for idea-originated PlanArtifact drafts",
+        keyword: "ideaProvenanceRequired"
+      }
+    ];
+  }
+  return [];
+}
+
+/** Carry forward idea lineage from the latest stored version when updating an existing plan. */
+function mergeStoredPlanArtifactProvenance(
+  doc: Record<string, unknown>,
+  workspaceRoot?: string
+): void {
+  if (!workspaceRoot) {
+    return;
+  }
+  const planId = nonEmptyString(doc.planId) ? doc.planId.trim() : "";
+  if (!planId) {
+    return;
+  }
+  const stored = readLatestPlanArtifact(workspaceRoot, planId);
+  if (!stored?.provenance) {
+    return;
+  }
+  const provenance = asRecord(doc.provenance) ?? {};
+  if (!nonEmptyString(provenance.sourceIdeaId) && nonEmptyString(stored.provenance.sourceIdeaId)) {
+    provenance.sourceIdeaId = stored.provenance.sourceIdeaId;
+  }
+  const incomingPrevious = cleanStringArray(provenance.previousPlanArtifacts);
+  const storedPrevious = cleanStringArray(stored.provenance.previousPlanArtifacts);
+  if (incomingPrevious.length === 0 && storedPrevious.length > 0) {
+    provenance.previousPlanArtifacts = [...storedPrevious];
+  } else if (incomingPrevious.length > 0 && storedPrevious.length > 0) {
+    provenance.previousPlanArtifacts = [...new Set([...storedPrevious, ...incomingPrevious])];
+  }
+  doc.provenance = provenance;
 }
 
 /**
@@ -167,6 +267,12 @@ export function normalizePlanArtifactDraft(
   provenance.updatedAt = typeof provenance.updatedAt === "string" ? provenance.updatedAt : now;
   provenance.createdBy = typeof provenance.createdBy === "string" ? provenance.createdBy : actor;
   provenance.source = source;
+  const previousPlanArtifacts = cleanStringArray(provenance.previousPlanArtifacts);
+  if (previousPlanArtifacts.length > 0) {
+    provenance.previousPlanArtifacts = previousPlanArtifacts;
+  } else {
+    delete provenance.previousPlanArtifacts;
+  }
   doc.provenance = provenance;
 
   if (!Array.isArray(doc.nonGoals)) {
@@ -231,7 +337,11 @@ function validateWbsShapeRows(doc: Record<string, unknown>): PlanArtifactValidat
  */
 export function validatePlanArtifactDocument(
   doc: unknown,
-  options: { workspaceRoot?: string } = {}
+  options: {
+    workspaceRoot?: string;
+    ideaId?: string;
+    importSource?: PlanArtifactProvenanceSource;
+  } = {}
 ): ValidatePlanArtifactResult {
   const workspaceRoot = resolvePlanArtifactSchemaRoot(options.workspaceRoot);
   const validate = loadPlanArtifactValidator(workspaceRoot);
@@ -246,6 +356,12 @@ export function validatePlanArtifactDocument(
   }
 
   const errors: PlanArtifactValidationError[] = [...validatePlanRefConsistency(record)];
+  errors.push(
+    ...validateIdeaOriginatedProvenance(record, {
+      ideaId: options.ideaId,
+      importSource: options.importSource
+    })
+  );
   const schemaOk = validate(record);
   if (!schemaOk) {
     errors.push(...ajvErrorsToPlanArtifactErrors(validate.errors));
@@ -267,5 +383,10 @@ export function validatePlanArtifactDraftInput(
   options: NormalizePlanArtifactDraftOptions & { workspaceRoot?: string } = {}
 ): ValidatePlanArtifactResult {
   const normalized = normalizePlanArtifactDraft(raw, options);
-  return validatePlanArtifactDocument(normalized, { workspaceRoot: options.workspaceRoot });
+  mergeStoredPlanArtifactProvenance(normalized, options.workspaceRoot);
+  return validatePlanArtifactDocument(normalized, {
+    workspaceRoot: options.workspaceRoot,
+    ideaId: options.ideaId,
+    importSource: options.importSource
+  });
 }

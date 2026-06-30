@@ -81,6 +81,64 @@ describe("draft-plan-artifact fixtures (T100458)", () => {
     assert.ok((latest?.wbs.length ?? 0) > 0);
   });
 
+  it("rejects idea-originated draft missing sourceIdeaId", async () => {
+    const workspace = await tmpWorkspace();
+    const artifact = freshDraftArtifact(loadFixture("plan-artifact-minimal.valid.v1.json"));
+    artifact.provenance = {
+      ...artifact.provenance,
+      chatSessionRef: "pcs-missing-source"
+    };
+    delete artifact.provenance.sourceIdeaId;
+
+    const result = await planningModule.onCommand(
+      { name: "draft-plan-artifact", args: persistArgs(artifact) },
+      { runtimeVersion: "0.1", workspacePath: workspace, effectiveConfig: SQLITE_CFG }
+    );
+
+    assert.equal(result.ok, false);
+    assert.equal(result.code, "plan-artifact-schema-invalid");
+    assert.ok(
+      result.data.errors?.some((error) => error.path === "provenance.sourceIdeaId")
+    );
+  });
+
+  it("preserves previous plan refs across draft version updates", async () => {
+    const workspace = await tmpWorkspace();
+    const artifact = freshDraftArtifact(loadFixture("plan-artifact-minimal.valid.v1.json"));
+    artifact.provenance = {
+      ...artifact.provenance,
+      chatSessionRef: "pcs-lineage-test",
+      sourceIdeaId: "I100751",
+      previousPlanArtifacts: ["plan-artifact:older-1"]
+    };
+
+    const first = await planningModule.onCommand(
+      { name: "draft-plan-artifact", args: persistArgs(artifact) },
+      { runtimeVersion: "0.1", workspacePath: workspace, effectiveConfig: SQLITE_CFG }
+    );
+    assert.equal(first.ok, true);
+
+    const secondBody = structuredClone(artifact);
+    delete secondBody.version;
+    delete secondBody.provenance.previousPlanArtifacts;
+    secondBody.identity = {
+      ...secondBody.identity,
+      summary: "Second version after edit"
+    };
+
+    const second = await planningModule.onCommand(
+      {
+        name: "draft-plan-artifact",
+        args: persistArgs(secondBody, { expectedPlanningGeneration: first.data.planningGeneration })
+      },
+      { runtimeVersion: "0.1", workspacePath: workspace, effectiveConfig: SQLITE_CFG }
+    );
+    assert.equal(second.ok, true);
+    const latest = readLatestPlanArtifact(workspace, artifact.planId);
+    assert.equal(latest?.provenance.sourceIdeaId, "I100751");
+    assert.deepEqual(latest?.provenance.previousPlanArtifacts, ["plan-artifact:older-1"]);
+  });
+
   it("round-trips idea provenance fields", async () => {
     const workspace = await tmpWorkspace();
     const artifact = freshDraftArtifact(loadFixture("plan-artifact-minimal.valid.v1.json"));

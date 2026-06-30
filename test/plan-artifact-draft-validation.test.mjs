@@ -6,6 +6,7 @@ import { describe, it } from "node:test";
 
 import { planningModule } from "../dist/index.js";
 import {
+  isIdeaOriginatedPlanArtifactDraft,
   normalizePlanArtifactDraft,
   validatePlanArtifactDocument,
   validatePlanArtifactDraftInput
@@ -84,6 +85,80 @@ describe("validate-plan-artifact (T100456)", () => {
     assert.equal(normalized.planRef, `plan-artifact:${normalized.planId}`);
     const validated = validatePlanArtifactDocument(normalized, { workspaceRoot: root });
     assert.equal(validated.ok, true);
+  });
+});
+
+describe("idea-originated draft provenance (T100751)", () => {
+  it("detects idea-originated drafts from planning chat session ref", () => {
+    const doc = {
+      provenance: { chatSessionRef: "pcs-abc-123" }
+    };
+    assert.equal(isIdeaOriginatedPlanArtifactDraft(doc), true);
+  });
+
+  it("detects idea-originated drafts from previous plan refs", () => {
+    const doc = {
+      provenance: { previousPlanArtifacts: ["plan-artifact:older-1"] }
+    };
+    assert.equal(isIdeaOriginatedPlanArtifactDraft(doc), true);
+  });
+
+  it("does not treat import-build-plan drafts as idea-originated", () => {
+    const doc = {
+      provenance: {
+        source: "import-build-plan",
+        previousPlanArtifacts: ["plan-artifact:older-1"]
+      }
+    };
+    assert.equal(
+      isIdeaOriginatedPlanArtifactDraft(doc, { importSource: "import-build-plan" }),
+      false
+    );
+  });
+
+  it("rejects idea-originated draft without sourceIdeaId", () => {
+    const raw = loadFixture("plan-artifact-minimal.valid.v1.json");
+    raw.provenance = {
+      ...raw.provenance,
+      chatSessionRef: "pcs-test-session"
+    };
+    delete raw.provenance.sourceIdeaId;
+
+    const result = validatePlanArtifactDraftInput(raw, { workspaceRoot: root });
+    assert.equal(result.ok, false);
+    assert.equal(result.code, "plan-artifact-schema-invalid");
+    assert.ok(
+      result.errors.some(
+        (error) =>
+          error.path === "provenance.sourceIdeaId" &&
+          error.message.includes("sourceIdeaId is required")
+      )
+    );
+  });
+
+  it("accepts idea-originated draft with sourceIdeaId and previous plan refs", () => {
+    const raw = loadFixture("plan-artifact-minimal.valid.v1.json");
+    raw.provenance = {
+      ...raw.provenance,
+      chatSessionRef: "pcs-test-session",
+      sourceIdeaId: "I100751",
+      previousPlanArtifacts: ["plan-artifact:older-1"]
+    };
+
+    const result = validatePlanArtifactDraftInput(raw, { workspaceRoot: root });
+    assert.equal(result.ok, true);
+    assert.equal(result.artifact.provenance.sourceIdeaId, "I100751");
+    assert.deepEqual(result.artifact.provenance.previousPlanArtifacts, ["plan-artifact:older-1"]);
+  });
+
+  it("allows non-idea drafts without sourceIdeaId", () => {
+    const raw = loadFixture("plan-artifact-minimal.valid.v1.json");
+    delete raw.provenance.sourceIdeaId;
+    delete raw.provenance.chatSessionRef;
+    delete raw.provenance.previousPlanArtifacts;
+
+    const result = validatePlanArtifactDraftInput(raw, { workspaceRoot: root });
+    assert.equal(result.ok, true);
   });
 });
 
