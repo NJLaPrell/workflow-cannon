@@ -236,7 +236,8 @@ export const planningModule: WorkflowModule = {
           code: "plan-artifact-draft-persisted",
           artifact: committed!.artifact,
           storagePath: committed!.storagePath,
-          replayed: false
+          replayed: false,
+          ...(committed!.planningChatSession ? { planningChatSession: committed!.planningChatSession } : {})
         });
         attachPolicyMeta(
           persisted.data as Record<string, unknown>,
