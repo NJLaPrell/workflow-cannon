@@ -67,6 +67,24 @@ async function draftPersist(workspace, artifact, extra = {}) {
   return result;
 }
 
+async function recordReview(workspace, planId, planningGeneration, extra = {}) {
+  const result = await planningModule.onCommand(
+    {
+      name: "review-plan-artifact",
+      args: {
+        planId,
+        recordReview: true,
+        expectedPlanningGeneration: planningGeneration,
+        policyApproval: { confirmed: true, rationale: "plan-artifact-accept-guardrails.test.mjs review" },
+        ...extra
+      }
+    },
+    { runtimeVersion: "0.1", workspacePath: workspace, effectiveConfig: SQLITE_CFG }
+  );
+  assert.equal(result.ok, true, result.message);
+  return result;
+}
+
 async function acceptPlan(workspace, args, planningGeneration = 0) {
   return planningModule.onCommand(
     {
@@ -152,9 +170,10 @@ describe("accept-plan-artifact guardrails (T100467)", () => {
     const artifact = freshArtifact(loadFixture("plan-artifact-full-feature.valid.v1.json"));
     artifact.openQuestions = [];
     const draft = await draftPersist(workspace, artifact);
-    const record = approvalFor(artifact, 1);
+    const review = await recordReview(workspace, draft.data.planId, draft.data.planningGeneration ?? 0);
+    const record = approvalFor(artifact, review.data.version);
     const clientMutationId = `accept-${crypto.randomUUID()}`;
-    let gen = draft.data.planningGeneration ?? 0;
+    let gen = review.data.planningGeneration ?? 0;
 
     const first = await acceptPlan(
       workspace,
@@ -181,14 +200,15 @@ describe("accept-plan-artifact guardrails (T100467)", () => {
     const artifact = freshArtifact(loadFixture("plan-artifact-full-feature.valid.v1.json"));
     artifact.openQuestions = [];
     const draft = await draftPersist(workspace, artifact);
+    const review = await recordReview(workspace, draft.data.planId, draft.data.planningGeneration ?? 0);
     const clientMutationId = `accept-conflict-${crypto.randomUUID()}`;
-    let gen = draft.data.planningGeneration ?? 0;
+    let gen = review.data.planningGeneration ?? 0;
 
     const first = await acceptPlan(
       workspace,
       {
         planId: draft.data.planId,
-        approvalRecord: approvalFor(artifact, 1),
+        approvalRecord: approvalFor(artifact, review.data.version),
         clientMutationId
       },
       gen
@@ -200,7 +220,7 @@ describe("accept-plan-artifact guardrails (T100467)", () => {
       workspace,
       {
         planId: draft.data.planId,
-        approvalRecord: approvalFor(artifact, 1, { approvedBy: "someone-else@example.com" }),
+        approvalRecord: approvalFor(artifact, review.data.version, { approvedBy: "someone-else@example.com" }),
         clientMutationId
       },
       gen
@@ -214,16 +234,17 @@ describe("accept-plan-artifact guardrails (T100467)", () => {
     const artifact = freshArtifact(loadFixture("plan-artifact-full-feature.valid.v1.json"));
     artifact.openQuestions = [];
     const draft = await draftPersist(workspace, artifact);
-    const record = approvalFor(artifact, 1);
-    let gen = draft.data.planningGeneration ?? 0;
+    const review = await recordReview(workspace, draft.data.planId, draft.data.planningGeneration ?? 0);
+    const record = approvalFor(artifact, review.data.version);
+    let gen = review.data.planningGeneration ?? 0;
 
     const first = await acceptPlan(
       workspace,
-      { planId: draft.data.planId, strict: false, approvalRecord: record },
+      { planId: draft.data.planId, approvalRecord: record },
       gen
     );
     assert.equal(first.code, "plan-artifact-accepted");
-    assert.equal(first.data.version, 2);
+    assert.equal(first.data.version, review.data.version + 1);
     gen = first.data.planningGeneration ?? gen + 1;
 
     const latest = readLatestPlanArtifact(workspace, draft.data.planId);
@@ -232,7 +253,6 @@ describe("accept-plan-artifact guardrails (T100467)", () => {
       workspace,
       {
         planId: draft.data.planId,
-        strict: false,
         approvalRecord: approvalFor(artifact, latest.approvalRecord.approvedVersion, {
           approvedAt: latest.approvalRecord.approvedAt,
           approvedBy: latest.approvalRecord.approvedBy,
@@ -248,30 +268,29 @@ describe("accept-plan-artifact guardrails (T100467)", () => {
     );
     assert.equal(replay.ok, true);
     assert.equal(replay.code, "plan-artifact-accept-idempotent-replay");
-    assert.equal(replay.data.version, 2);
+    assert.equal(replay.data.version, first.data.version);
 
     const stillLatest = readLatestPlanArtifact(workspace, draft.data.planId);
-    assert.equal(stillLatest?.version, 2);
+    assert.equal(stillLatest?.version, first.data.version);
   });
 
-  it("B3: strict false allows accept when only warnings (no blockers)", async () => {
+  it("B3: warning-only reviewed plans can be accepted", async () => {
     const workspace = await tmpWorkspace();
     const artifact = freshArtifact(loadFixture("plan-artifact-review-warnings.v1.json"));
     const draft = await draftPersist(workspace, artifact);
-    const record = approvalFor(artifact, 1);
-    record.openQuestionsAccepted = [
-      "Use strict accept on warnings?",
-      "Defer dashboard polish to phase 111?"
-    ];
+    const review = await recordReview(workspace, draft.data.planId, draft.data.planningGeneration ?? 0, {
+      profile: "minimal"
+    });
+    const record = approvalFor(artifact, review.data.version);
+    record.openQuestionsAccepted = structuredClone(artifact.openQuestions);
 
     const accept = await acceptPlan(
       workspace,
       {
         planId: draft.data.planId,
-        strict: false,
         approvalRecord: record
       },
-      draft.data.planningGeneration ?? 0
+      review.data.planningGeneration ?? 0
     );
 
     assert.equal(accept.ok, true);

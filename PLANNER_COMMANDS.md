@@ -171,17 +171,17 @@ pnpm exec wk run review-plan-artifact '{"planId":"550e8400-e29b-41d4-a716-446655
 
 ### 4.1 Purpose
 
-Record explicit operator acceptance; pin `approvedVersion`. Refuses when review blockers exist unless `strict: false` and only warnings remain (configurable; default **block on any blocker**).
+Record explicit operator acceptance; pin `approvedVersion`. Acceptance requires the latest version to be the latest recorded reviewed version, review blockers always refuse acceptance, and warning-only reviewed plans remain acceptable.
 
 ### 4.2 Arguments
 
 | Field | Required | Description |
 | --- | --- | --- |
 | `planId` | Yes | |
-| `version` | No | Version to accept; default latest. Must match `approvalRecord.approvedVersion` written. |
+| `version` | No | Version to accept; default latest. Must match `approvalRecord.approvedVersion` written and the latest reviewed version. |
 | `approvalRecord` | Yes | `{ "confirmed": true, … }` per PLANNER_SCHEMA §2.14; `planRef` required. |
-| `strict` | No | Default `true` — fail if last review had blockers. |
-| `openQuestionsAccepted` | No | Copied into `approvalRecord` when deferring OQs. |
+| `strict` | No | Retained for argv compatibility; reviewed blockers still block acceptance. |
+| `openQuestionsAccepted` | No | Copied into `approvalRecord` when deferring OQs. Every remaining open question must be resolved or explicitly listed here. |
 | `expectedPlanningGeneration` | When policy `require` | |
 | `policyApproval` | Yes | Human acceptance of mutation. |
 
@@ -191,7 +191,7 @@ Record explicit operator acceptance; pin `approvedVersion`. Refuses when review 
 | --- | --- | --- |
 | `plan-artifact-accepted` | true | `status` → `accepted`. |
 | `plan-artifact-accept-idempotent-replay` | true | Already accepted same version. |
-| `plan-artifact-accept-blocked` | false | Review blockers or non-empty `openQuestions` without `openQuestionsAccepted`. |
+| `plan-artifact-accept-blocked` | false | Latest version is not reviewed, reviewed version has blockers, or open questions are not fully resolved/deferred. |
 | `plan-artifact-version-mismatch` | false | `version` ≠ latest. |
 | `plan-artifact-not-found` | false | |
 
