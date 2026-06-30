@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import type Sqlite from "better-sqlite3";
 
 const MODULE_ID_PREFIX = "planning-chat-session:";
@@ -5,6 +6,7 @@ const STATE_SCHEMA_VERSION = 1;
 
 export type PlanningChatSessionRecord = {
   schemaVersion: 1;
+  sessionId: string;
   ideaId: string;
   title: string;
   note?: string;
@@ -12,6 +14,14 @@ export type PlanningChatSessionRecord = {
   resumePrompt?: string;
   createdAt: string;
   updatedAt: string;
+};
+
+export type PlanningChatSessionResponse = {
+  sessionId: string;
+  status: "active";
+  startedAt: string;
+  updatedAt: string;
+  resumePrompt?: string;
 };
 
 function moduleIdForIdea(ideaId: string): string {
@@ -34,6 +44,12 @@ function parseSession(raw: string | null | undefined): PlanningChatSessionRecord
     if (record.status !== "active" || typeof record.createdAt !== "string" || typeof record.updatedAt !== "string") {
       return null;
     }
+    if (typeof record.sessionId !== "string" || !record.sessionId.trim()) {
+      return {
+        ...(record as PlanningChatSessionRecord),
+        sessionId: `pcs-${record.ideaId}`
+      };
+    }
     return record as PlanningChatSessionRecord;
   } catch {
     return null;
@@ -52,6 +68,7 @@ export function persistPlanningChatSession(
   const existing = parseSession(prior?.state_json);
   const record: PlanningChatSessionRecord = {
     schemaVersion: 1,
+    sessionId: existing?.sessionId ?? `pcs-${crypto.randomUUID()}`,
     ideaId: input.ideaId,
     title: input.title,
     ...(input.note ? { note: input.note } : {}),
@@ -69,6 +86,24 @@ export function persistPlanningChatSession(
        updated_at=excluded.updated_at`
   ).run(moduleId, STATE_SCHEMA_VERSION, JSON.stringify(record), nowIso);
   return record;
+}
+
+export function getPlanningChatSession(db: Sqlite.Database, ideaId: string): PlanningChatSessionRecord | null {
+  const moduleId = moduleIdForIdea(ideaId);
+  const prior = db
+    .prepare("SELECT state_json FROM workspace_module_state WHERE module_id = ?")
+    .get(moduleId) as { state_json: string } | undefined;
+  return parseSession(prior?.state_json);
+}
+
+export function toPlanningChatSessionResponse(session: PlanningChatSessionRecord): PlanningChatSessionResponse {
+  return {
+    sessionId: session.sessionId,
+    status: session.status,
+    startedAt: session.createdAt,
+    updatedAt: session.updatedAt,
+    ...(session.resumePrompt ? { resumePrompt: session.resumePrompt } : {})
+  };
 }
 
 export function listPlanningChatSessions(db: Sqlite.Database): PlanningChatSessionRecord[] {

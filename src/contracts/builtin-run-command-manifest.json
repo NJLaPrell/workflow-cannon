@@ -1640,6 +1640,15 @@
     "policySensitivity": "sensitive"
   },
   {
+    "moduleId": "ideas",
+    "name": "start-idea-planning",
+    "file": "start-idea-planning.md",
+    "description": "Start or resume a durable planner-chat session for an idea with compact prompt generation.",
+    "policyOperationId": "ideas.persist",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
     "moduleId": "team-execution",
     "name": "list-assignments",
     "file": "list-assignments.md",

@@ -26,6 +26,9 @@
       "includePhaseFocus": {
         "type": "boolean"
       },
+      "includePhaseKickoff": {
+        "type": "boolean"
+      },
       "phaseKey": {
         "type": "string"
       },
@@ -77,5 +80,5 @@
     "listCommands": "pnpm exec wk run --list-commands",
     "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
   },
-  "invocationId": "b0c083d9-5285-4452-85aa-04a02cec97f3"
+  "invocationId": "f14fb4a5-8d03-4d42-bdd9-71770c6256e1"
 }

@@ -180,6 +180,7 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
     "set-agent-activity",
     "set-agent-guidance",
     "set-current-phase",
+    "start-idea-planning",
     "start-task",
     "supersede-phase-note",
     "sync-effective-behavior-cursor-rule",
