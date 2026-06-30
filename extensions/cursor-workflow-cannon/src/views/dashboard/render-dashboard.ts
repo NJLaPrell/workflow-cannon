@@ -3553,7 +3553,6 @@ function renderPlanArtifactDraftPanel(planArtifact: unknown): string {
   const planRef = String(row.planRef ?? "").trim();
   const planId = String(row.planId ?? "").trim();
   const statusRaw = String(row.status ?? "").trim();
-  const statusDisp = statusRaw.length > 0 ? humanizePlanningToken(statusRaw) : "Draft";
   const planningTypeRaw = String(row.planningType ?? "").trim();
   const planningType = planningTypeRaw.length > 0 ? humanizePlanningToken(planningTypeRaw) : "Planning";
   const version = typeof row.version === "number" ? row.version : Number(row.version ?? 0);
@@ -3561,9 +3560,26 @@ function renderPlanArtifactDraftPanel(planArtifact: unknown): string {
   const wbsRows = typeof row.wbsRowCount === "number" ? row.wbsRowCount : Number(row.wbsRowCount ?? 0);
   const openQuestions =
     typeof row.openQuestionCount === "number" ? row.openQuestionCount : Number(row.openQuestionCount ?? 0);
+  const blockerCount = typeof row.blockerCount === "number" ? row.blockerCount : Number(row.blockerCount ?? 0);
+  const warningCount = typeof row.warningCount === "number" ? row.warningCount : Number(row.warningCount ?? 0);
+  const lifecycleStatusRaw = String(row.lifecycleStatus ?? "").trim().toLowerCase();
+  const effectiveStatusRaw =
+    lifecycleStatusRaw.length > 0
+      ? lifecycleStatusRaw
+      : statusRaw === "reviewed"
+        ? blockerCount > 0
+          ? "needs_revision"
+          : "approval_ready"
+        : statusRaw;
+  const statusDisp = effectiveStatusRaw.length > 0 ? humanizePlanningToken(effectiveStatusRaw) : "Draft";
+  const profileRaw = String(row.profile ?? "").trim();
+  const profileText = profileRaw.length > 0 ? humanizePlanningToken(profileRaw) : "—";
+  const phaseRecommendation = String(row.phaseRecommendation ?? "").trim();
+  const phaseRecommendationText = phaseRecommendation.length > 0 ? phaseRecommendation : "—";
+  const sourceIdeaId = String(row.sourceIdeaId ?? "").trim();
+  const reviewSummaryText = String(row.reviewSummary ?? "").trim();
   const updatedAt = String(row.updatedAt ?? "").trim();
   const updatedText = updatedAt.length > 0 ? formatPlanningUpdatedAt(updatedAt) : "—";
-  const heading = statusRaw === "draft" ? "Plan Draft" : "Plan Artifact";
   const refLabel = planRef.length > 0 ? planRef : planId;
   const reviewFindings = Array.isArray(row.reviewFindings)
     ? row.reviewFindings
@@ -3602,7 +3618,33 @@ function renderPlanArtifactDraftPanel(planArtifact: unknown): string {
           .join("") +
         "</div>" +
         "</div>"
-      : statusRaw === "reviewed" || statusRaw === "accepted" || statusRaw === "finalized"
+      : blockerCount > 0 || warningCount > 0 || reviewSummaryText.length > 0
+        ? '<div class="wc-plan-review" aria-label="Plan review summary">' +
+          '<p class="wc-plan-subtitle"><b>Review Summary</b></p>' +
+          '<div class="wc-plan-review-list" role="list">' +
+          '<div class="wc-plan-review-row" role="listitem">' +
+          '<span class="wc-plan-review-severity">' +
+          escapeHtml(String(Number.isFinite(blockerCount) ? blockerCount : 0)) +
+          "</span>" +
+          '<span class="wc-plan-review-message">blocker(s)</span>' +
+          "</div>" +
+          '<div class="wc-plan-review-row" role="listitem">' +
+          '<span class="wc-plan-review-severity">' +
+          escapeHtml(String(Number.isFinite(warningCount) ? warningCount : 0)) +
+          "</span>" +
+          '<span class="wc-plan-review-message">warning(s)</span>' +
+          "</div>" +
+          (reviewSummaryText.length > 0
+            ? '<div class="wc-plan-review-row" role="listitem">' +
+              '<span class="wc-plan-review-severity">Summary</span>' +
+              '<span class="wc-plan-review-message">' +
+              escapeHtml(reviewSummaryText) +
+              "</span>" +
+              "</div>"
+            : "") +
+          "</div>" +
+          "</div>"
+        : effectiveStatusRaw === "approval_ready" || effectiveStatusRaw === "accepted" || effectiveStatusRaw === "finalized"
         ? '<p class="wc-plan-review-pass"><b>Review Passed</b></p>'
         : "";
   const wbsHtml =
@@ -3637,20 +3679,20 @@ function renderPlanArtifactDraftPanel(planArtifact: unknown): string {
     const findingRow = finding && typeof finding === "object" ? (finding as Record<string, unknown>) : {};
     const severity = String(findingRow.severity ?? findingRow.level ?? "").trim().toLowerCase();
     return severity === "blocker" || severity === "error";
-  });
+  }) || blockerCount > 0;
   const canAccept =
     planId.length > 0 &&
     planRef.length > 0 &&
     Number.isFinite(version) &&
     version > 0 &&
-    statusRaw === "reviewed" &&
+    effectiveStatusRaw === "approval_ready" &&
     !hasBlockingReviewFinding &&
     Number.isFinite(openQuestions) &&
     openQuestions === 0;
   const acceptDisabledReason =
-    statusRaw !== "reviewed"
+    effectiveStatusRaw === "draft"
       ? "Review must pass before accepting this plan."
-      : hasBlockingReviewFinding
+      : effectiveStatusRaw === "needs_revision" || hasBlockingReviewFinding
         ? "Review blockers must be resolved before accepting this plan."
         : Number.isFinite(openQuestions) && openQuestions > 0
           ? "Open questions must be resolved or deferred before accepting this plan."
@@ -3658,7 +3700,7 @@ function renderPlanArtifactDraftPanel(planArtifact: unknown): string {
             ? "Plan identity is incomplete."
             : "Accept this reviewed plan.";
   const reviewActionHtml =
-    statusRaw === "draft"
+    effectiveStatusRaw === "draft"
       ? '<div class="wc-plan-artifact-actions">' +
         '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="plan-artifact-review" data-plan-id="' +
         escapeHtmlAttr(planId) +
@@ -3669,8 +3711,16 @@ function renderPlanArtifactDraftPanel(planArtifact: unknown): string {
         ">Review</button>" +
         "</div>"
       : "";
+  const resumeActionHtml =
+    effectiveStatusRaw === "needs_revision" && sourceIdeaId.length > 0
+      ? '<div class="wc-plan-artifact-actions">' +
+        '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="plan-artifact-resume" data-idea-id="' +
+        escapeHtmlAttr(sourceIdeaId) +
+        '" title="Resume planning for this current plan">Resume planning &rarr;</button>' +
+        "</div>"
+      : "";
   const acceptActionHtml =
-    statusRaw === "accepted" || statusRaw === "finalized"
+    effectiveStatusRaw === "accepted" || effectiveStatusRaw === "finalized"
       ? ""
       : '<div class="wc-plan-artifact-actions">' +
         '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="plan-artifact-accept" data-plan-id="' +
@@ -3686,7 +3736,7 @@ function renderPlanArtifactDraftPanel(planArtifact: unknown): string {
         ">Accept</button>" +
         "</div>";
   const finalizeActionHtml =
-    statusRaw === "accepted"
+    effectiveStatusRaw === "accepted"
       ? '<div class="wc-plan-artifact-actions">' +
         '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="plan-artifact-finalize" data-plan-id="' +
         escapeHtmlAttr(planId) +
@@ -3700,7 +3750,7 @@ function renderPlanArtifactDraftPanel(planArtifact: unknown): string {
     '<div class="wc-plan-artifact-head">' +
     '<div class="wc-plan-artifact-main">' +
     '<p class="wc-plan-artifact-title"><b>' +
-    escapeHtml(heading) +
+    "Current Plan" +
     "</b> · " +
     escapeHtml(title) +
     "</p>" +
@@ -3720,8 +3770,22 @@ function renderPlanArtifactDraftPanel(planArtifact: unknown): string {
     escapeHtml(String(Number.isFinite(wbsRows) ? wbsRows : 0)) +
     "</b> WBS rows</span>" +
     '<span class="wc-plan-artifact-stat" role="listitem"><b>' +
+    escapeHtml(String(Number.isFinite(blockerCount) ? blockerCount : 0)) +
+    "</b> blockers</span>" +
+    '<span class="wc-plan-artifact-stat" role="listitem"><b>' +
+    escapeHtml(String(Number.isFinite(warningCount) ? warningCount : 0)) +
+    "</b> warnings</span>" +
+    '<span class="wc-plan-artifact-stat" role="listitem"><b>' +
     escapeHtml(String(Number.isFinite(openQuestions) ? openQuestions : 0)) +
     "</b> open questions</span>" +
+    "</div>" +
+    '<div class="wc-plan-artifact-stats" role="list">' +
+    '<span class="wc-plan-artifact-stat" role="listitem"><span class="wc-plan-artifact-label">Profile</span> ' +
+    escapeHtml(profileText) +
+    "</span>" +
+    '<span class="wc-plan-artifact-stat" role="listitem"><span class="wc-plan-artifact-label">Phase</span> ' +
+    escapeHtml(phaseRecommendationText) +
+    "</span>" +
     '<span class="wc-plan-artifact-stat" role="listitem"><span class="wc-plan-artifact-label">Updated</span> ' +
     escapeHtml(updatedText) +
     "</span>" +
@@ -3729,6 +3793,7 @@ function renderPlanArtifactDraftPanel(planArtifact: unknown): string {
     reviewHtml +
     wbsHtml +
     reviewActionHtml +
+    resumeActionHtml +
     acceptActionHtml +
     finalizeActionHtml +
     "</section>"

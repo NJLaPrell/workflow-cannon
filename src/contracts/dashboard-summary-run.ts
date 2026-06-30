@@ -358,11 +358,18 @@ export type DashboardPlanArtifactRow = {
   planRef: string;
   version: number;
   status: string;
+  lifecycleStatus?: string;
   title: string;
   planningType: string;
   updatedAt: string;
   wbsRowCount: number;
   openQuestionCount: number;
+  blockerCount?: number;
+  warningCount?: number;
+  profile?: string;
+  reviewSummary?: string;
+  phaseRecommendation?: string;
+  sourceIdeaId?: string;
 };
 
 /**
