@@ -16,6 +16,7 @@ import type {
 import type { TaskStore } from "../persistence/store.js";
 import type { SqliteDualPlanningStore } from "../persistence/sqlite-dual-planning.js";
 import type { TaskEntity } from "../types.js";
+import { listPlanArtifactSummaries, readLatestPlanArtifact } from "../../../core/planning/plan-artifact-storage.js";
 
 import {
   buildDashboardSystemStatus,
@@ -58,7 +59,6 @@ import {
 import { listIdeas } from "../../ideas/idea-store.js";
 import { listPlanningChatSessions } from "../../ideas/planning-chat-session.js";
 import { readBuildPlanSession, toDashboardPlanningSession } from "../../../core/planning/build-plan-session-file.js";
-import { listPlanArtifactSummaries } from "../../../core/planning/plan-artifact-storage.js";
 import { getPlanningGenerationPolicy } from "../planning-config.js";
 import {
   decodeListTasksCursor,
@@ -178,17 +178,50 @@ function buildDashboardPlanArtifactSummary(ctx: ModuleLifecycleContext): Dashboa
   if (summaries.length === 0) {
     return null;
   }
-  const rows = summaries.slice(0, 5).map((summary) => ({
-    planId: summary.planId,
-    planRef: summary.planRef,
-    version: summary.currentVersion,
-    status: summary.status,
-    title: summary.title,
-    planningType: summary.planningType,
-    updatedAt: summary.updatedAt,
-    wbsRowCount: summary.wbsRowCount,
-    openQuestionCount: summary.openQuestionCount
-  }));
+  const rows = summaries.slice(0, 5).map((summary) => {
+    const latestArtifact = readLatestPlanArtifact(ctx.workspacePath, summary.planId);
+    const latestReview =
+      summary.latestReview &&
+      summary.latestReview.planRef === summary.planRef &&
+      summary.latestReview.reviewedVersion === summary.currentVersion
+        ? summary.latestReview
+        : undefined;
+    const phaseRecommendations = Array.isArray(latestArtifact?.phaseRecommendations)
+      ? latestArtifact.phaseRecommendations
+      : [];
+    const primaryPhase = phaseRecommendations.find((row) => row?.isPrimary === true) ?? phaseRecommendations[0];
+    const phaseRecommendation = primaryPhase
+      ? [primaryPhase.label?.trim(), primaryPhase.phaseKey?.trim()].filter((value) => !!value).join(" · ")
+      : "";
+    const sourceIdeaId =
+      typeof latestArtifact?.provenance?.sourceIdeaId === "string" ? latestArtifact.provenance.sourceIdeaId.trim() : "";
+    const blockerCount = latestReview?.blockerCount ?? 0;
+    const warningCount = latestReview?.warningCount ?? 0;
+    const lifecycleStatus =
+      summary.status === "reviewed"
+        ? blockerCount > 0 || latestReview?.passed === false
+          ? "needs_revision"
+          : "approval_ready"
+        : summary.status;
+    return {
+      planId: summary.planId,
+      planRef: summary.planRef,
+      version: summary.currentVersion,
+      status: summary.status,
+      lifecycleStatus,
+      title: summary.title,
+      planningType: summary.planningType,
+      updatedAt: summary.updatedAt,
+      wbsRowCount: summary.wbsRowCount,
+      openQuestionCount: summary.openQuestionCount,
+      blockerCount,
+      warningCount,
+      ...(latestReview?.profile ? { profile: latestReview.profile } : {}),
+      ...(latestReview?.reviewSummary ? { reviewSummary: latestReview.reviewSummary } : {}),
+      ...(phaseRecommendation.length > 0 ? { phaseRecommendation } : {}),
+      ...(sourceIdeaId.length > 0 ? { sourceIdeaId } : {})
+    };
+  });
   return {
     schemaVersion: 1,
     count: summaries.length,

@@ -418,7 +418,11 @@ test("renderDashboardRootInnerHtml renders PlanArtifact draft panel", () => {
           planningType: "new-feature",
           updatedAt: "2026-05-27T17:00:00.000Z",
           wbsRowCount: 4,
+          blockerCount: 0,
+          warningCount: 1,
           openQuestionCount: 2,
+          profile: "full-feature",
+          phaseRecommendation: "Phase 110",
           reviewFindings: [
             { severity: "warning", message: "Acceptance criteria need verification detail", path: "wbs[1]" }
           ],
@@ -438,15 +442,19 @@ test("renderDashboardRootInnerHtml renders PlanArtifact draft panel", () => {
   const taskEnginePanelIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="task-engine"');
   const planningPanel = html.slice(planningPanelIdx, taskEnginePanelIdx);
   assert.match(planningPanel, /wc-plan-artifact/);
-  assert.match(planningPanel, /Plan Draft/);
+  assert.match(planningPanel, /Current Plan/);
 
   assert.match(html, /wc-plan-artifact/);
-  assert.match(html, /Plan Draft/);
+  assert.match(html, /Current Plan/);
   assert.match(html, /Dashboard lifecycle/);
   assert.match(html, /New Feature/);
   assert.match(html, /PLANNER_TASKS.md/);
   assert.match(html, /<b>4<\/b> WBS rows/);
+  assert.match(html, /<b>0<\/b> blockers/);
+  assert.match(html, /<b>1<\/b> warnings/);
   assert.match(html, /<b>2<\/b> open questions/);
+  assert.match(html, /Profile<\/span> Full Feature/);
+  assert.match(html, /Phase<\/span> Phase 110/);
   assert.match(html, /Draft/);
   assert.match(html, /Review Findings/);
   assert.match(html, /Acceptance criteria need verification detail/);
@@ -497,6 +505,7 @@ test("renderDashboardRootInnerHtml enables PlanArtifact accept after review pass
   assert.match(html, /data-plan-version="3"/);
   const button = html.match(/<button[^>]+data-wc-action="plan-artifact-accept"[^>]*>/)?.[0] ?? "";
   assert.doesNotMatch(button, /disabled/);
+  assert.match(html, /Approval Ready/);
 });
 
 test("renderDashboardRootInnerHtml shows PlanArtifact finalize after accept", () => {
@@ -599,6 +608,51 @@ test("renderDashboardRootInnerHtml blocks PlanArtifact accept with blockers or o
   const openQuestionsButton = openQuestionsHtml.match(/<button[^>]+data-wc-action="plan-artifact-accept"[^>]*>/)?.[0] ?? "";
   assert.match(openQuestionsButton, /disabled/);
   assert.match(openQuestionsHtml, /Open questions must be resolved or deferred before accepting this plan/);
+});
+
+test("renderDashboardRootInnerHtml shows resume action for needs-revision current plans", () => {
+  const html = renderDashboardRootInnerHtml({
+    ok: true,
+    data: {
+      workspaceStatus: { activeFocus: "Planning" },
+      stateSummary: { proposed: 0, ready: 0, in_progress: 0, completed: 0, total: 0 },
+      planningSession: null,
+      planArtifact: {
+        count: 1,
+        current: {
+          planId: "plan-needs-revision",
+          planRef: "plan-artifact:plan-needs-revision",
+          title: "Needs revision plan",
+          status: "reviewed",
+          lifecycleStatus: "needs_revision",
+          planningType: "change",
+          version: 8,
+          updatedAt: "2026-05-27T17:00:00.000Z",
+          wbsRowCount: 3,
+          blockerCount: 2,
+          warningCount: 1,
+          openQuestionCount: 0,
+          profile: "minimal",
+          phaseRecommendation: "Phase 139",
+          sourceIdeaId: "I-plan-99",
+          reviewSummary: "2 blocker(s), 1 warning(s)"
+        },
+        recent: []
+      },
+      readyExecutionSummary: { count: 0, top: [] },
+      readyImprovementsSummary: { count: 0, top: [] },
+      proposedExecutionSummary: { count: 0, top: [] },
+      proposedImprovementsSummary: { count: 0, top: [] },
+      transcriptChurnResearchSummary: { count: 0, top: [] },
+      wishlistSummary: { count: 0, top: [] }
+    }
+  });
+  assert.match(html, /Needs Revision/);
+  assert.match(html, /Review Summary/);
+  assert.match(html, /2 blocker\(s\), 1 warning\(s\)/);
+  assert.match(html, /data-wc-action="plan-artifact-resume"/);
+  assert.match(html, /data-idea-id="I-plan-99"/);
+  assert.match(html, />Resume planning &rarr;<\/button>/);
 });
 
 test("renderDashboardRootInnerHtml hides PlanArtifact lifecycle actions after finalize", () => {
