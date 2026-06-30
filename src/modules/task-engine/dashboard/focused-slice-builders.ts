@@ -146,7 +146,13 @@ function buildDashboardIdeasSummary(
             ideaId: session.ideaId,
             status: session.status,
             updatedAt: session.updatedAt,
-            ...(session.resumePrompt ? { resumePrompt: session.resumePrompt } : {})
+            ...(session.resumePrompt ? { resumePrompt: session.resumePrompt } : {}),
+            ...(session.summary ? { summary: session.summary } : {}),
+            ...(session.currentPlanRef ? { currentPlanRef: session.currentPlanRef } : {}),
+            ...(typeof session.currentPlanVersion === "number"
+              ? { currentPlanVersion: session.currentPlanVersion }
+              : {}),
+            ...(session.completedAt ? { completedAt: session.completedAt } : {})
           }
         };
       })

@@ -11,6 +11,8 @@ import {
   type PlanArtifactStoragePaths
 } from "../../core/planning/plan-artifact-storage.js";
 import { linkActiveDraftPlanArtifactFromPersistedDraft } from "../ideas/idea-planning-metadata.js";
+import { promotePlanningSessionToDraftReadyAfterDraftPersist } from "../ideas/planning-session-draft-ready.js";
+import { toPlanningChatSessionResponse } from "../ideas/planning-chat-session.js";
 import { planningSqliteDatabaseRelativePath } from "../task-engine/planning-config.js";
 import { digestPayload, stableStringify } from "../task-engine/mutation-utils.js";
 
@@ -213,6 +215,7 @@ export type CommitPlanArtifactDraftPersistResult = {
   artifact: PlanArtifactV1;
   paths: PlanArtifactStoragePaths;
   storagePath: string;
+  planningChatSession?: ReturnType<typeof toPlanningChatSessionResponse>;
 };
 
 /** Write artifact file + index; record idempotency when `clientMutationId` is set. */
@@ -231,8 +234,12 @@ export function commitPlanArtifactDraftPersist(args: {
     sqliteDb
   });
   const storagePath = paths.artifactFileRelative(written.version);
+  let planningChatSession: ReturnType<typeof toPlanningChatSessionResponse> | undefined;
   if (sqliteDb) {
-    linkActiveDraftPlanArtifactFromPersistedDraft(sqliteDb, written, new Date().toISOString());
+    const nowIso = new Date().toISOString();
+    linkActiveDraftPlanArtifactFromPersistedDraft(sqliteDb, written, nowIso);
+    const promoted = promotePlanningSessionToDraftReadyAfterDraftPersist(sqliteDb, written, nowIso);
+    if (promoted) planningChatSession = toPlanningChatSessionResponse(promoted);
   }
   if (clientMutationId) {
     writeIdempotencyRecord(
@@ -250,7 +257,12 @@ export function commitPlanArtifactDraftPersist(args: {
       sqliteDb
     );
   }
-  return { artifact: written, paths, storagePath };
+  return {
+    artifact: written,
+    paths,
+    storagePath,
+    ...(planningChatSession ? { planningChatSession } : {})
+  };
 }
 
 export function planArtifactDraftPersistSuccessResult(args: {
@@ -258,6 +270,7 @@ export function planArtifactDraftPersistSuccessResult(args: {
   artifact: PlanArtifactV1;
   storagePath: string;
   replayed: boolean;
+  planningChatSession?: ReturnType<typeof toPlanningChatSessionResponse>;
 }): ModuleCommandResult {
   return {
     ok: true,
@@ -271,7 +284,8 @@ export function planArtifactDraftPersistSuccessResult(args: {
       planRef: args.artifact.planRef,
       status: args.artifact.status,
       storagePath: args.storagePath,
-      replayed: args.replayed
+      replayed: args.replayed,
+      ...(args.planningChatSession ? { planningChatSession: args.planningChatSession } : {})
     }
   };
 }
