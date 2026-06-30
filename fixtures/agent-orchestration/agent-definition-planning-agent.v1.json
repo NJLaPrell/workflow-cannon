@@ -1,0 +1,49 @@
+{
+  "agentDefinitionId": "planning-agent",
+  "displayName": "Planning Agent",
+  "description": "Guides Ideas-to-plan brainstorming via planner-chat until an accepted PlanArtifact with WBS exists.",
+  "role": "manual",
+  "hostCompatibility": ["cursor", "vscode", "cli", "manual"],
+  "requiredCapabilities": [
+    "read_context",
+    "report_activity"
+  ],
+  "optionalCapabilities": ["run_allowed_commands"],
+  "allowedCommands": [
+    "start-idea-planning",
+    "update-idea-planning-session",
+    "get-idea",
+    "update-idea",
+    "list-ideas",
+    "draft-plan-artifact",
+    "review-plan-artifact",
+    "accept-plan-artifact",
+    "finalize-plan-to-phase",
+    "set-agent-activity",
+    "clear-agent-activity"
+  ],
+  "accessProfileId": "planning_agent_access_v1",
+  "contextProfileId": "planning_agent_context_v1",
+  "modelProfileId": "high_reasoning_or_balanced_v1",
+  "handoffContractId": "planning_session_handoff_v1",
+  "activityContractId": "agent_activity_v1",
+  "metadata": {
+    "playbookId": "planner-chat",
+    "promptPath": ".ai/prompts/planning-agent.md",
+    "playbookPath": ".ai/playbooks/planner-chat.md",
+    "doneState": "accepted PlanArtifact with complete WBS",
+    "sessionCommands": [
+      "start-idea-planning",
+      "update-idea-planning-session"
+    ],
+    "schemaRefs": [
+      "PLANNER_SCHEMA.md",
+      "PLANNER_COMMANDS.md"
+    ],
+    "policyRefs": [
+      ".ai/POLICY-APPROVAL.md"
+    ]
+  },
+  "retired": false,
+  "version": 1
+}
