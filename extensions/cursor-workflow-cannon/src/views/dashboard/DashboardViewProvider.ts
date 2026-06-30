@@ -574,6 +574,9 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
           reason: "drawer/coordinator mutation complete"
         });
         this.readPath?.resume();
+        if (dashboardSummaryNeedsQueueRollupHydration(this.lastDashboardSummaryData)) {
+          void this.ensureQueueRollupsHydrated(this.refreshController.currentGeneration());
+        }
       },
       log: (message) => {
         if (isWcTraceVerbose()) {
@@ -947,6 +950,10 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       return;
     }
     if (this.activeDashboardTab === "overview" && this.hydratedDashboardSections.has("overview")) {
+      if (dashboardSummaryNeedsQueueRollupHydration(this.lastDashboardSummaryData)) {
+        await this.ensureQueueRollupsHydrated(updateSequence);
+        return;
+      }
       await this.patchDashboardSectionsFromSummary(
         this.hydratedDashboardSections.has("queue") ? ["overview", "queue"] : ["overview"],
         updateSequence,
@@ -1090,12 +1097,16 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
           `queue phase patch failed reason=${String((msg as { reason?: unknown }).reason ?? "")}`
         );
         if (this.lastDashboardSummaryData && this.hydratedDashboardSections.has("queue")) {
-          void this.patchDashboardSectionsFromSummary(["queue"], undefined, {
-            light: true,
-            projection: "queue",
-            cachedSummaryOnly: true,
-            source: "queue-phase-patch-fallback-cached"
-          });
+          if (dashboardSummaryNeedsQueueRollupHydration(this.lastDashboardSummaryData)) {
+            this.refreshController.request({ reason: "queue-phase-patch-fallback", mode: "light" });
+          } else {
+            void this.patchDashboardSectionsFromSummary(["queue"], undefined, {
+              light: true,
+              projection: "queue",
+              cachedSummaryOnly: true,
+              source: "queue-phase-patch-fallback-cached"
+            });
+          }
         } else {
           this.refreshController.request({ reason: "queue-phase-patch-fallback", mode: "light" });
         }
@@ -1710,7 +1721,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       webview.html = this.buildHtml(webview, rootInner);
       logWc("dashboard", "startup diagnostic direct render applied");
       this.markDashboardRootHydrated();
-      logWc("dashboard", "startup deferred secondary hydration: queue/status/full not launched");
+      void this.ensureQueueRollupsHydrated(this.refreshController.currentGeneration());
+      logWc("dashboard", "startup queue rollup hydration scheduled");
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       logWc("dashboard", `startup diagnostic direct render failed: ${message}`);
@@ -1756,7 +1768,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     for (const sectionId of this.sectionsForTabActivation(tabId)) {
       await this.hydrateDashboardSection(sectionId);
     }
-    if (tabId === "task-engine") {
+    if (tabId === "task-engine" || tabId === "overview") {
       await this.ensureQueueRollupsHydrated(this.refreshController.currentGeneration());
     } else if (tabId === "status" && this.staleDashboardSections.has("status")) {
       await this.ensureStatusHydrated(this.refreshController.currentGeneration());
@@ -2152,6 +2164,13 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         const cached = this.lastDashboardSummaryData;
         if (!cached) {
           logWc("dashboard", "patchDashboardSectionsFromSummary: cached summary missing");
+          return;
+        }
+        if (dashboardSummaryNeedsQueueRollupHydration(cached)) {
+          logWc(
+            "dashboard",
+            "patchDashboardSectionsFromSummary: cached summary still on overview stub; skipping cache-only patch"
+          );
           return;
         }
         raw = { ok: true, data: cached, code: "dashboard-summary-cached" };
@@ -3676,7 +3695,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       return false;
     }
     const msg = String(out.message ?? "");
-    if (msg.includes("duplicate-idempotency-key")) {
+    if (msg.includes("duplicate-idempotency-key") || msg.includes("already used by event")) {
       return true;
     }
     const data = out.data as Record<string, unknown> | undefined;
@@ -4161,14 +4180,26 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         const fromPhaseKey = resolveFromPhaseKeyForTask(this.lastDashboardSummaryData, taskId);
         // Avoid extra set/clear-agent-activity CLI processes here — they raced clear-task-phase
         // and dashboard-summary against the same SQLite file (full-table persist per save).
+        const mutationId = this.dashboardDrawerMutationId("dashboard-backlog", taskId);
         let out = await this.runMutationWithGenerationRetry("clear-task-phase", {
           taskId,
-          clientMutationId: this.dashboardDrawerMutationId("dashboard-backlog", taskId)
+          clientMutationId: mutationId
         });
         if (!out.ok && this.isDuplicateCanonicalIdempotencyFailure(out)) {
-          const recovered = await this.recoverClearTaskPhaseAfterDuplicateIdempotency(taskId);
-          if (recovered) {
-            out = recovered;
+          const msg = String(out.message ?? "");
+          const idMatch = msg.match(/clientMutationId '([^']+)'/);
+          const conflictingId = idMatch?.[1];
+          if (conflictingId && conflictingId === mutationId) {
+            out = await this.runMutationWithGenerationRetry("clear-task-phase", {
+              taskId,
+              clientMutationId: this.dashboardDrawerMutationId("dashboard-backlog-retry", taskId)
+            });
+          }
+          if (!out.ok && this.isDuplicateCanonicalIdempotencyFailure(out)) {
+            const recovered = await this.recoverClearTaskPhaseAfterDuplicateIdempotency(taskId);
+            if (recovered) {
+              out = recovered;
+            }
           }
         }
         stepAt = logWcDrawerSubmitStep(

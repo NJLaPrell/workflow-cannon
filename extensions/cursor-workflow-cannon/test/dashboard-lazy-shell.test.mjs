@@ -94,7 +94,7 @@ test("DashboardViewProvider paints shell before pushUpdate (T100395)", () => {
   assert.ok(shellIdx >= 0 && paintIdx >= 0 && shellIdx < paintIdx, "shell must render before startup direct paint");
 });
 
-test("DashboardViewProvider startup first paint uses overview and defers queue/status hydration", () => {
+test("DashboardViewProvider startup first paint uses overview then schedules queue rollup hydration", () => {
   const providerPath = path.join(srcDir, "DashboardViewProvider.ts");
   const src = fs.readFileSync(providerPath, "utf8");
   const startupBlock = src.slice(
@@ -103,8 +103,8 @@ test("DashboardViewProvider startup first paint uses overview and defers queue/s
   );
   assert.match(startupBlock, /projection:\s*"overview"/);
   assert.doesNotMatch(startupBlock, /projection:\s*"full"/);
-  assert.match(startupBlock, /startup deferred secondary hydration: queue\/status\/full not launched/);
-  assert.doesNotMatch(startupBlock, /ensureQueueRollupsHydrated\(/);
+  assert.match(startupBlock, /ensureQueueRollupsHydrated\(/);
+  assert.match(startupBlock, /startup queue rollup hydration scheduled/);
   assert.doesNotMatch(startupBlock, /ensureStatusHydrated\(/);
 });
 

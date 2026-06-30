@@ -56,6 +56,38 @@ function payloadTaskId(event: CanonicalStateEventV1): string | undefined {
   return undefined;
 }
 
+function canonicalEventPayloadFingerprint(event: CanonicalStateEventV1): string {
+  return JSON.stringify({ kind: event.kind, payload: event.payload });
+}
+
+/** True when two events share an idempotency key and would apply the same mutation. */
+export function canonicalEventsAreIdempotentDuplicates(
+  prior: CanonicalStateEventV1,
+  next: CanonicalStateEventV1
+): boolean {
+  const key = next.clientMutationId?.trim();
+  if (!key || prior.clientMutationId?.trim() !== key) {
+    return false;
+  }
+  if (prior.eventId === next.eventId) {
+    return true;
+  }
+  return canonicalEventPayloadFingerprint(prior) === canonicalEventPayloadFingerprint(next);
+}
+
+function findPriorEventWithClientMutationId(
+  key: string,
+  priorEvents: CanonicalStateEventV1[]
+): CanonicalStateEventV1 | undefined {
+  for (let idx = priorEvents.length - 1; idx >= 0; idx -= 1) {
+    const prior = priorEvents[idx];
+    if (prior.clientMutationId?.trim() === key) {
+      return prior;
+    }
+  }
+  return undefined;
+}
+
 function checkIdempotency(
   event: CanonicalStateEventV1,
   priorEvents: CanonicalStateEventV1[]
@@ -64,19 +96,14 @@ function checkIdempotency(
   if (!key) {
     return null;
   }
-  for (const prior of priorEvents) {
-    if (prior.clientMutationId?.trim() !== key) {
-      continue;
-    }
-    if (prior.eventId === event.eventId) {
-      continue;
-    }
-    return {
-      code: "duplicate-idempotency-key",
-      message: `clientMutationId '${key}' already used by event ${prior.eventId}`
-    };
+  const prior = findPriorEventWithClientMutationId(key, priorEvents);
+  if (!prior || prior.eventId === event.eventId) {
+    return null;
   }
-  return null;
+  return {
+    code: "duplicate-idempotency-key",
+    message: `clientMutationId '${key}' already used by event ${prior.eventId}`
+  };
 }
 
 function cloneTaskProjection(projection: TaskStateProjectionV1): TaskStateProjectionV1 {
@@ -468,6 +495,17 @@ export function admitCanonicalStateEventStream(
       checkpointTaskProjection: options?.checkpointTaskProjection
     });
     if (!result.ok) {
+      if (result.error.code === "duplicate-idempotency-key" && isRecord(input)) {
+        const key =
+          typeof input.clientMutationId === "string" ? input.clientMutationId.trim() : "";
+        const prior = key ? findPriorEventWithClientMutationId(key, admitted) : undefined;
+        if (
+          prior &&
+          canonicalEventsAreIdempotentDuplicates(prior, input as CanonicalStateEventV1)
+        ) {
+          continue;
+        }
+      }
       return result;
     }
     admitted.push(result.event);

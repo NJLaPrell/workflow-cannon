@@ -14,14 +14,33 @@ const webviewSrc = readFileSync(
   "utf8"
 );
 
-test("queuePhasePatchFailed prefers cached queue section patch over light refresh", () => {
+test("queuePhasePatchFailed prefers cached queue section patch over light refresh when rollups hydrated", () => {
   const block = providerSrc.slice(
     providerSrc.indexOf('msg?.type === "queuePhasePatchFailed"'),
     providerSrc.indexOf('msg?.type === "loadLazyTerminalBucket"')
   );
+  assert.match(block, /dashboardSummaryNeedsQueueRollupHydration/);
   assert.match(block, /cachedSummaryOnly:\s*true/);
   assert.match(block, /patchDashboardSectionsFromSummary\(\["queue"\]/);
   assert.match(block, /refreshController\.request/);
+});
+
+test("patchDashboardSectionsFromSummary skips cachedSummaryOnly when still on overview stub", () => {
+  const block = providerSrc.slice(
+    providerSrc.indexOf("if (options?.cachedSummaryOnly === true)"),
+    providerSrc.indexOf('raw = { ok: true, data: cached, code: "dashboard-summary-cached" }')
+  );
+  assert.match(block, /dashboardSummaryNeedsQueueRollupHydration\(cached\)/);
+  assert.match(block, /skipping cache-only patch/);
+});
+
+test("kit-state refresh on overview upgrades queue rollups before patching", () => {
+  const block = providerSrc.slice(
+    providerSrc.indexOf('if (this.activeDashboardTab === "overview"'),
+    providerSrc.indexOf('if (this.activeDashboardTab === "planning")')
+  );
+  assert.match(block, /dashboardSummaryNeedsQueueRollupHydration/);
+  assert.match(block, /ensureQueueRollupsHydrated/);
 });
 
 test("postTaskEngineTabBadgesFromSummary includes humanGateCount", () => {

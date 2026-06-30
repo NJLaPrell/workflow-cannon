@@ -39,7 +39,7 @@ test("DashboardViewProvider hydrates deferred sections on tab activation", () =>
   assert.match(src, /deferredSections/);
   assert.match(src, /dashboardTabActivated/);
   assert.match(src, /ensureQueueRollupsHydrated/);
-  assert.match(src, /tabId === "task-engine"/);
+  assert.match(src, /tabId === "task-engine" \|\| tabId === "overview"/);
   assert.match(src, /scheduleKitStateChangedRefresh/);
   assert.match(src, /kitStateRefreshInFlight/);
   assert.match(src, /lastKitStateRefreshAt/);
