@@ -222,6 +222,8 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
     if (!row) return;
     var ideaId = (row.getAttribute('data-wc-idea-id') || '').trim();
     if (!ideaId) return;
+    var planBtn = row.querySelector('[data-wc-action="idea-plan"]');
+    if (planBtn && planBtn.disabled) return;
     setIdeaRowBusy(row, true, 'Opening...');
     vscode.postMessage({type:'prefillIdeaPlanningChat',ideaId:ideaId,title:row.getAttribute('data-wc-idea-title')||'',note:row.getAttribute('data-wc-idea-note')||''});
   }
