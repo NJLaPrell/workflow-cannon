@@ -2,12 +2,10 @@ import type Database from "better-sqlite3";
 import type { ModuleCommandResult } from "../../contracts/module-contract.js";
 import type { ModuleLifecycleContext } from "../../contracts/module-contract.js";
 import type { PlanArtifactApprovalRecord, PlanArtifactV1 } from "../../core/planning/plan-artifact-v1.js";
-import {
-  resolvePlanArtifactReviewProfile,
-  reviewPlanArtifact
-} from "../../core/planning/review-plan-artifact.js";
+import type { PlanArtifactReviewRecordV1 } from "../../core/planning/plan-artifact-review-record.js";
 import {
   getPlanArtifactStoragePaths,
+  readPlanArtifactIndex,
   readPlanArtifactVersion,
   resolveLatestPlanArtifactVersion,
   writeNextPlanArtifactVersion
@@ -232,6 +230,91 @@ function mergeOpenQuestionsAccepted(
   return { ...record, openQuestionsAccepted: [...new Set(merged)] };
 }
 
+function normalizeOpenQuestionList(values: string[] | undefined): string[] {
+  return (values ?? []).map((value) => value.trim()).filter((value) => value.length > 0);
+}
+
+function acceptBlockedResult(
+  planId: string,
+  version: number,
+  message: string,
+  extraData: Record<string, unknown> = {}
+): ModuleCommandResult {
+  return {
+    ok: false,
+    code: "plan-artifact-accept-blocked",
+    message,
+    data: {
+      schemaVersion: 1,
+      responseSchemaVersion: 1,
+      planId,
+      version,
+      passed: false,
+      ...extraData
+    }
+  };
+}
+
+function resolveReviewedVersionGate(args: {
+  workspacePath: string;
+  planId: string;
+  loaded: PlanArtifactV1;
+  effectiveConfig?: Record<string, unknown>;
+}): { ok: true; reviewRecord: PlanArtifactReviewRecordV1 } | { ok: false; result: ModuleCommandResult } {
+  const { workspacePath, planId, loaded, effectiveConfig } = args;
+  if (loaded.status !== "reviewed") {
+    return {
+      ok: false,
+      result: acceptBlockedResult(
+        planId,
+        loaded.version,
+        "Accept blocked: latest version must be reviewed before acceptance",
+        { status: loaded.status }
+      )
+    };
+  }
+
+  const reviewRecord = readPlanArtifactIndex(workspacePath, planId, effectiveConfig)?.latestReview;
+  if (!reviewRecord) {
+    return {
+      ok: false,
+      result: acceptBlockedResult(
+        planId,
+        loaded.version,
+        "Accept blocked: latest reviewed version is missing persisted review metadata"
+      )
+    };
+  }
+
+  if (reviewRecord.planRef !== loaded.planRef || reviewRecord.reviewedVersion !== loaded.version) {
+    return {
+      ok: false,
+      result: acceptBlockedResult(
+        planId,
+        loaded.version,
+        "Accept blocked: current version does not match the latest reviewed version",
+        {
+          reviewedVersion: reviewRecord.reviewedVersion,
+          currentVersion: loaded.version
+        }
+      )
+    };
+  }
+
+  if (!reviewRecord.passed || reviewRecord.blockerCount > 0) {
+    return {
+      ok: false,
+      result: acceptBlockedResult(planId, loaded.version, "Accept blocked: reviewed version has blockers", {
+        blockerCount: reviewRecord.blockerCount,
+        warningCount: reviewRecord.warningCount,
+        reviewSummary: reviewRecord.reviewSummary
+      })
+    };
+  }
+
+  return { ok: true, reviewRecord };
+}
+
 export async function runAcceptPlanArtifact(
   args: Record<string, unknown>,
   ctx: ModuleLifecycleContext,
@@ -253,7 +336,6 @@ export async function runAcceptPlanArtifact(
   }
 
   const approvalRecord = mergeOpenQuestionsAccepted(approvalInput, args.openQuestionsAccepted);
-  const strict = args.strict !== false;
   const requestedVersion = parseVersion(args.version);
   const clientMutationId = readIdempotencyValue(args);
 
@@ -378,61 +460,36 @@ export async function runAcceptPlanArtifact(
     });
   }
 
-  if (strict) {
-    const review = reviewPlanArtifact(loaded, {
-      profile: resolvePlanArtifactReviewProfile(loaded)
-    });
-    if (review.blockers.length > 0) {
-      return {
-        ok: false,
-        code: "plan-artifact-accept-blocked",
-        message: "Accept blocked: review has blockers",
-        data: {
-          schemaVersion: 1,
-          responseSchemaVersion: 1,
-          planId,
-          version: loaded.version,
-          passed: false,
-          blockers: review.blockers,
-          warnings: review.warnings
-        }
-      };
-    }
+  const reviewedVersionGate = resolveReviewedVersionGate({
+    workspacePath: ctx.workspacePath,
+    planId,
+    loaded,
+    effectiveConfig
+  });
+  if (!reviewedVersionGate.ok) {
+    return reviewedVersionGate.result;
   }
 
-  if (loaded.openQuestions.length > 0) {
-    const accepted = approvalRecord.openQuestionsAccepted ?? [];
-    if (accepted.length === 0) {
-      return {
-        ok: false,
-        code: "plan-artifact-accept-blocked",
-        message: "Accept blocked: open questions remain without openQuestionsAccepted",
-        data: {
-          schemaVersion: 1,
-          responseSchemaVersion: 1,
-          planId,
-          version: loaded.version,
-          openQuestionCount: loaded.openQuestions.length
+  const openQuestions = normalizeOpenQuestionList(loaded.openQuestions);
+  if (openQuestions.length > 0) {
+    const accepted = new Set(normalizeOpenQuestionList(approvalRecord.openQuestionsAccepted));
+    const missing = openQuestions.filter((question) => !accepted.has(question));
+    if (missing.length > 0) {
+      return acceptBlockedResult(
+        planId,
+        loaded.version,
+        "Accept blocked: open questions remain unresolved or undeferred",
+        {
+          openQuestionCount: openQuestions.length,
+          acceptedOpenQuestionCount: accepted.size,
+          missingOpenQuestionsAccepted: missing
         }
-      };
+      );
     }
   }
 
   const now = new Date().toISOString();
-  const reviewSummary =
-    approvalRecord.reviewSummary ??
-    (() => {
-      const review = reviewPlanArtifact(loaded, { profile: resolvePlanArtifactReviewProfile(loaded) });
-      const blockers = review.blockers.length;
-      const warnings = review.warnings.length;
-      if (blockers === 0 && warnings === 0) {
-        return "0 blockers, 0 warnings";
-      }
-      if (blockers === 0) {
-        return `0 blockers, ${warnings} warning(s)`;
-      }
-      return `${blockers} blocker(s), ${warnings} warning(s)`;
-    })();
+  const reviewSummary = approvalRecord.reviewSummary ?? reviewedVersionGate.reviewRecord.reviewSummary;
 
   const approvalPersisted: PlanArtifactApprovalRecord = {
     schemaVersion: 1,

@@ -65,8 +65,56 @@ async function draftPersist(workspace, artifact) {
   return result;
 }
 
+async function recordReview(workspace, planId, planningGeneration, extra = {}) {
+  const result = await planningModule.onCommand(
+    {
+      name: "review-plan-artifact",
+      args: {
+        planId,
+        recordReview: true,
+        expectedPlanningGeneration: planningGeneration,
+        policyApproval: { confirmed: true, rationale: "plan-artifact-accept.test.mjs review setup" },
+        ...extra
+      }
+    },
+    { runtimeVersion: "0.1", workspacePath: workspace, effectiveConfig: SQLITE_CFG }
+  );
+  assert.equal(result.ok, true, result.message);
+  return result;
+}
+
 describe("accept-plan-artifact command (T100466)", () => {
-  it("accepts full-feature plan after draft persist", async () => {
+  it("accepts latest reviewed plan after review is recorded", async () => {
+    const workspace = await tmpWorkspace();
+    const artifact = freshArtifact(loadFixture("plan-artifact-full-feature.valid.v1.json"));
+    artifact.openQuestions = [];
+    const draft = await draftPersist(workspace, artifact);
+    const review = await recordReview(workspace, draft.data.planId, draft.data.planningGeneration ?? 0);
+
+    const accept = await planningModule.onCommand(
+      {
+        name: "accept-plan-artifact",
+        args: {
+          planId: draft.data.planId,
+          approvalRecord: approvalFor(artifact, review.data.version),
+          expectedPlanningGeneration: review.data.planningGeneration ?? 0,
+          policyApproval: { confirmed: true, rationale: "accept full-feature plan" }
+        }
+      },
+      { runtimeVersion: "0.1", workspacePath: workspace, effectiveConfig: SQLITE_CFG }
+    );
+    assert.equal(accept.ok, true);
+    assert.equal(accept.code, "plan-artifact-accepted");
+    assert.equal(accept.data.status, "accepted");
+    assert.equal(accept.data.approvalRecord.approvedVersion, review.data.version);
+    assert.equal(accept.data.version, review.data.version + 1);
+
+    const latest = readLatestPlanArtifact(workspace, draft.data.planId);
+    assert.equal(latest?.status, "accepted");
+    assert.equal(latest?.approvalRecord?.approvedVersion, review.data.version);
+  });
+
+  it("blocks accept when the latest version was never reviewed", async () => {
     const workspace = await tmpWorkspace();
     const artifact = freshArtifact(loadFixture("plan-artifact-full-feature.valid.v1.json"));
     artifact.openQuestions = [];
@@ -79,49 +127,24 @@ describe("accept-plan-artifact command (T100466)", () => {
           planId: draft.data.planId,
           approvalRecord: approvalFor(artifact, 1),
           expectedPlanningGeneration: draft.data.planningGeneration ?? 0,
-          policyApproval: { confirmed: true, rationale: "accept full-feature plan" }
-        }
-      },
-      { runtimeVersion: "0.1", workspacePath: workspace, effectiveConfig: SQLITE_CFG }
-    );
-    assert.equal(accept.ok, true);
-    assert.equal(accept.code, "plan-artifact-accepted");
-    assert.equal(accept.data.status, "accepted");
-    assert.equal(accept.data.approvalRecord.approvedVersion, 1);
-    assert.equal(accept.data.version, 2);
-
-    const latest = readLatestPlanArtifact(workspace, draft.data.planId);
-    assert.equal(latest?.status, "accepted");
-    assert.equal(latest?.approvalRecord?.approvedVersion, 1);
-  });
-
-  it("plan-artifact-accept-blocked when strict and review has blockers", async () => {
-    const workspace = await tmpWorkspace();
-    const artifact = freshArtifact(loadFixture("plan-artifact-review-blockers.v1.json"));
-    const draft = await draftPersist(workspace, artifact);
-
-    const accept = await planningModule.onCommand(
-      {
-        name: "accept-plan-artifact",
-        args: {
-          planId: draft.data.planId,
-          strict: true,
-          approvalRecord: approvalFor(artifact, 1),
-          expectedPlanningGeneration: draft.data.planningGeneration ?? 0,
-          policyApproval: { confirmed: true, rationale: "should block" }
+          policyApproval: { confirmed: true, rationale: "should require review" }
         }
       },
       { runtimeVersion: "0.1", workspacePath: workspace, effectiveConfig: SQLITE_CFG }
     );
     assert.equal(accept.ok, false);
     assert.equal(accept.code, "plan-artifact-accept-blocked");
-    assert.ok(accept.data.blockers?.length > 0);
+    assert.match(accept.message, /must be reviewed/i);
   });
 
-  it("blocks accept when open questions lack openQuestionsAccepted", async () => {
+  it("plan-artifact-accept-blocked when the reviewed version has blockers", async () => {
     const workspace = await tmpWorkspace();
-    const artifact = freshArtifact(loadFixture("plan-artifact-review-warnings.v1.json"));
+    const artifact = freshArtifact(loadFixture("plan-artifact-review-blockers.v1.json"));
     const draft = await draftPersist(workspace, artifact);
+    const review = await recordReview(workspace, draft.data.planId, draft.data.planningGeneration ?? 0, {
+      profile: "full-feature"
+    });
+    assert.equal(review.code, "plan-artifact-review-blocked");
 
     const accept = await planningModule.onCommand(
       {
@@ -129,8 +152,33 @@ describe("accept-plan-artifact command (T100466)", () => {
         args: {
           planId: draft.data.planId,
           strict: false,
-          approvalRecord: approvalFor(artifact, 1),
-          expectedPlanningGeneration: draft.data.planningGeneration ?? 0,
+          approvalRecord: approvalFor(artifact, review.data.version),
+          expectedPlanningGeneration: review.data.planningGeneration ?? 0,
+          policyApproval: { confirmed: true, rationale: "should block" }
+        }
+      },
+      { runtimeVersion: "0.1", workspacePath: workspace, effectiveConfig: SQLITE_CFG }
+    );
+    assert.equal(accept.ok, false);
+    assert.equal(accept.code, "plan-artifact-accept-blocked");
+    assert.ok((accept.data.blockerCount ?? 0) > 0);
+  });
+
+  it("blocks accept when open questions lack openQuestionsAccepted", async () => {
+    const workspace = await tmpWorkspace();
+    const artifact = freshArtifact(loadFixture("plan-artifact-review-warnings.v1.json"));
+    const draft = await draftPersist(workspace, artifact);
+    const review = await recordReview(workspace, draft.data.planId, draft.data.planningGeneration ?? 0, {
+      profile: "minimal"
+    });
+
+    const accept = await planningModule.onCommand(
+      {
+        name: "accept-plan-artifact",
+        args: {
+          planId: draft.data.planId,
+          approvalRecord: approvalFor(artifact, review.data.version),
+          expectedPlanningGeneration: review.data.planningGeneration ?? 0,
           policyApproval: { confirmed: true, rationale: "missing OQ acceptance" }
         }
       },
@@ -140,11 +188,14 @@ describe("accept-plan-artifact command (T100466)", () => {
     assert.equal(accept.code, "plan-artifact-accept-blocked");
   });
 
-  it("accepts with openQuestionsAccepted", async () => {
+  it("blocks accept when not all reviewed open questions are deferred", async () => {
     const workspace = await tmpWorkspace();
     const artifact = freshArtifact(loadFixture("plan-artifact-review-warnings.v1.json"));
     const draft = await draftPersist(workspace, artifact);
-    const record = approvalFor(artifact, 1);
+    const review = await recordReview(workspace, draft.data.planId, draft.data.planningGeneration ?? 0, {
+      profile: "minimal"
+    });
+    const record = approvalFor(artifact, review.data.version);
     record.openQuestionsAccepted = ["Use strict accept on warnings?"];
 
     const accept = await planningModule.onCommand(
@@ -152,9 +203,35 @@ describe("accept-plan-artifact command (T100466)", () => {
         name: "accept-plan-artifact",
         args: {
           planId: draft.data.planId,
-          strict: false,
           approvalRecord: record,
-          expectedPlanningGeneration: draft.data.planningGeneration ?? 0,
+          expectedPlanningGeneration: review.data.planningGeneration ?? 0,
+          policyApproval: { confirmed: true, rationale: "partial OQ deferral should block" }
+        }
+      },
+      { runtimeVersion: "0.1", workspacePath: workspace, effectiveConfig: SQLITE_CFG }
+    );
+    assert.equal(accept.ok, false);
+    assert.equal(accept.code, "plan-artifact-accept-blocked");
+    assert.deepEqual(accept.data.missingOpenQuestionsAccepted, ["Defer dashboard polish to phase 111?"]);
+  });
+
+  it("accepts warning-only reviewed plans with openQuestionsAccepted", async () => {
+    const workspace = await tmpWorkspace();
+    const artifact = freshArtifact(loadFixture("plan-artifact-review-warnings.v1.json"));
+    const draft = await draftPersist(workspace, artifact);
+    const review = await recordReview(workspace, draft.data.planId, draft.data.planningGeneration ?? 0, {
+      profile: "minimal"
+    });
+    const record = approvalFor(artifact, review.data.version);
+    record.openQuestionsAccepted = structuredClone(artifact.openQuestions);
+
+    const accept = await planningModule.onCommand(
+      {
+        name: "accept-plan-artifact",
+        args: {
+          planId: draft.data.planId,
+          approvalRecord: record,
+          expectedPlanningGeneration: review.data.planningGeneration ?? 0,
           policyApproval: { confirmed: true, rationale: "accept with OQ deferral" }
         }
       },
