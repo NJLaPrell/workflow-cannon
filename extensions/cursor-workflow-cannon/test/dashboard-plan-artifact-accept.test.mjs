@@ -28,10 +28,18 @@ test("PlanArtifact accept host action calls accept-plan-artifact with policy app
     providerSrc.indexOf('if (msg?.type === "openTaskDetail")')
   );
   assert.match(block, /onAcceptPlanArtifact/);
-  assert.match(providerSrc, /this\.client\.run\("accept-plan-artifact"/);
+  assert.match(providerSrc, /runMutationWithGenerationRetry\("accept-plan-artifact"/);
   assert.match(providerSrc, /workflowId: "plan-artifact"/);
   assert.match(providerSrc, /command: "accept-plan-artifact"/);
-  assert.match(providerSrc, /expectedPlanningGenerationArgs/);
+});
+
+test("PlanArtifact review host action also retries once on stale planning generation", () => {
+  const block = providerSrc.slice(
+    providerSrc.indexOf('if (msg?.type === "reviewPlanArtifact")'),
+    providerSrc.indexOf('if (msg?.type === "finalizePlanArtifact")')
+  );
+  assert.match(block, /onReviewPlanArtifact/);
+  assert.match(providerSrc, /runMutationWithGenerationRetry\("review-plan-artifact"/);
 });
 
 test("PlanArtifact finalize previews then persists and opens the phase queue", () => {
@@ -43,8 +51,9 @@ test("PlanArtifact finalize previews then persists and opens the phase queue", (
     providerSrc.indexOf('if (msg?.type === "openTaskDetail")')
   );
   assert.match(block, /onFinalizePlanArtifact/);
-  assert.match(providerSrc, /this\.client\.run\("finalize-plan-to-phase", \{[\s\S]*dryRun: true/);
-  assert.match(providerSrc, /this\.client\.run\("finalize-plan-to-phase", \{[\s\S]*dryRun: false/);
+  assert.match(providerSrc, /runMutationWithGenerationRetry\("finalize-plan-to-phase", \{[\s\S]*dryRun: true/);
+  assert.match(providerSrc, /runMutationWithGenerationRetry\("finalize-plan-to-phase", \{[\s\S]*dryRun: false/);
+  assert.match(providerSrc, /ingestPlanningMetaFromData\(preview\.data/);
   assert.match(providerSrc, /workflowId: "plan-artifact"/);
   assert.match(providerSrc, /action: "finalize"/);
   assert.match(providerSrc, /wcOpenQueueForPhase/);
