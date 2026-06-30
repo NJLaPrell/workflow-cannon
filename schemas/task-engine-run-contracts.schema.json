@@ -87,6 +87,7 @@
         "get-task",
         "get-task-history",
         "get-task-summary",
+        "generate-release-notes",
         "get-workspace-status",
         "harvest-delivery-evidence",
         "heartbeat-workspace-edit-lease",
@@ -329,6 +330,9 @@
         },
         "get-workspace-status": {
           "$ref": "#/$defs/contractGetWorkspaceStatus"
+        },
+        "generate-release-notes": {
+          "$ref": "#/$defs/contractBase"
         },
         "heartbeat-workspace-edit-lease": {
           "$ref": "#/$defs/contractBase"

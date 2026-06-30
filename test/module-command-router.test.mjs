@@ -102,6 +102,7 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
     "export-workspace-status",
     "finalize-plan-to-phase",
     "generate-document",
+    "generate-release-notes",
     "get-behavior-profile",
     "get-blocked-summary",
     "get-dependency-graph",

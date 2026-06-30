@@ -17,6 +17,7 @@
     "dashboard-terminal-tasks",
     "dashboard-terminal-tasks-page",
     "export-workspace-status",
+    "generate-release-notes",
     "get-blocked-summary",
     "get-dependency-graph",
     "get-kit-persistence-map",
