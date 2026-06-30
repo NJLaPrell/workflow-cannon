@@ -127,7 +127,11 @@ function applyTransitioned(
   return null;
 }
 
-function mergeTaskUpdate(task: TaskEntity, values: TaskUpdatedPayloadV1["values"]): void {
+function mergeTaskUpdate(
+  task: TaskEntity,
+  values: TaskUpdatedPayloadV1["values"],
+  changedFields: readonly string[]
+): void {
   if (!values) {
     return;
   }
@@ -140,7 +144,10 @@ function mergeTaskUpdate(task: TaskEntity, values: TaskUpdatedPayloadV1["values"
   }
   Object.assign(task, scalar);
   if (metadata && typeof metadata === "object" && !Array.isArray(metadata)) {
-    task.metadata = { ...(task.metadata ?? {}), ...metadata };
+    // Whole-metadata updates replace the map; partial dotted paths still merge.
+    task.metadata = changedFields.includes("metadata")
+      ? { ...metadata }
+      : { ...(task.metadata ?? {}), ...metadata };
   }
 }
 
@@ -157,7 +164,7 @@ function applyUpdated(
       eventId: event.eventId
     };
   }
-  mergeTaskUpdate(task, payload.values);
+  mergeTaskUpdate(task, payload.values, payload.changedFields);
   task.updatedAt = event.recordedAt;
   bumpTaskVersion(projection, payload.taskId, event);
   const mutation: TaskMutationEvidence = {

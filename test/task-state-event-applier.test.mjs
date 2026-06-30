@@ -90,3 +90,54 @@ test("transitioned without prior create fails task-not-found", () => {
   assert.equal(result.ok, false);
   assert.equal(result.error.code, "task-not-found");
 });
+
+test("task.updated with changedFields metadata replaces metadata map", () => {
+  const [created] = loadValidatedEvents("golden-task-created.v1.json");
+  let projection = createEmptyTaskStateProjection();
+  const createdResult = applyTaskStateEvent(projection, created, { enforceSequence: false });
+  assert.equal(createdResult.ok, true);
+  projection = createdResult.projection;
+
+  const addEvidence = {
+    ...created,
+    sequence: 2,
+    eventId: "evt-add-evidence",
+    kind: "task.updated",
+    payload: {
+      taskId: created.payload.taskId,
+      changedFields: ["metadata"],
+      values: {
+        metadata: {
+          deliveryEvidence: { schemaVersion: 2, mode: "github-pr" },
+          planRef: "plan-artifact:demo"
+        }
+      }
+    }
+  };
+  const addResult = applyTaskStateEvent(projection, addEvidence, { enforceSequence: false });
+  assert.equal(addResult.ok, true);
+  projection = addResult.projection;
+  assert.ok(projection.tasksById[created.payload.taskId].metadata?.deliveryEvidence);
+
+  const replaceMetadata = {
+    ...addEvidence,
+    sequence: 3,
+    eventId: "evt-replace-metadata",
+    payload: {
+      taskId: created.payload.taskId,
+      changedFields: ["metadata"],
+      values: {
+        metadata: {
+          deliveryWaiver: { schemaVersion: 1, actor: "maintainer@example.com" },
+          planRef: "plan-artifact:demo"
+        }
+      }
+    }
+  };
+  const replaceResult = applyTaskStateEvent(projection, replaceMetadata, { enforceSequence: false });
+  assert.equal(replaceResult.ok, true);
+  const metadata = replaceResult.projection.tasksById[created.payload.taskId].metadata ?? {};
+  assert.equal(metadata.deliveryEvidence, undefined);
+  assert.ok(metadata.deliveryWaiver);
+  assert.equal(metadata.planRef, "plan-artifact:demo");
+});
