@@ -60,7 +60,8 @@ test("buildIdeaPlanningPrompt includes lineage and playbook pointers", () => {
     note: "Keep it small.",
     linkedPlanArtifact: "plan-artifact:accepted-plan",
     activeDraftPlanArtifact: "plan-artifact:draft-plan",
-    previousPlanArtifacts: ["plan-artifact:old-plan"]
+    previousPlanArtifacts: ["plan-artifact:old-plan"],
+    planningSessionId: "pcs-fixture-1"
   });
   assert.match(prompt, /I001/);
   assert.match(prompt, /Try planner chat/);
@@ -68,6 +69,7 @@ test("buildIdeaPlanningPrompt includes lineage and playbook pointers", () => {
   assert.match(prompt, /draft-plan/);
   assert.match(prompt, /old-plan/);
   assert.match(prompt, /planner-chat/);
+  assert.match(prompt, /pcs-fixture-1/);
   assert.doesNotMatch(prompt, /pnpm exec wk run/);
 });
 
@@ -92,6 +94,8 @@ test("start-idea-planning starts open idea and returns compact prompt", async ()
   assert.equal(out.data.status, "planning");
   assert.equal(typeof out.data.planningChatPrompt, "string");
   assert.match(out.data.planningChatPrompt, /Open spark/);
+  assert.match(out.data.planningChatPrompt, /Planning session:/);
+  assert.match(out.data.planningChatPrompt, new RegExp(out.data.planningChatSession.sessionId));
   assert.equal(out.data.planningChatSession.status, "active");
   assert.equal(typeof out.data.planningChatSession.sessionId, "string");
   assert.deepEqual(out.data.previousPlanArtifacts, []);
