@@ -20,10 +20,10 @@
     "contentFilePattern": "snapshots/{snapshotId}.json"
   },
   "head": {
-    "latestSequence": 2116,
-    "latestEventId": "evt-9ee21080-f3d3-4c4a-af6b-a1379d09ad33",
+    "latestSequence": 2117,
+    "latestEventId": "evt-5db828be-c91e-40b3-b149-51922dd8b54b",
     "latestSegmentPath": "task-state/events/0000000000.jsonl",
     "latestSnapshotId": "snap-2026-06-24T00-31-10-504Z"
   },
-  "manifestDigest": "8ad33969d298e40d70329207306bd9694c9311d84d117b2008af8eb5bd1a3514"
+  "manifestDigest": "8eee71f623a3e836d035cb4070b1f88e9ed806457b208e15da1dba8fd5ab73e5"
 }
