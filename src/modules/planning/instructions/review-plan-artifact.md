@@ -30,7 +30,7 @@ pnpm exec wk run review-plan-artifact '{"planId":"<uuid>","recordReview":true,"e
 | `planId` | Yes* | Load stored artifact from `.workspace-kit/planning/plan-artifacts/`. |
 | `version` | No | Default latest on disk / index. |
 | `artifact` | Yes* | Inline PlanArtifact v1 instead of load (*one of `planId` or `artifact`*). |
-| `profile` | No | `minimal` \| `refactor` \| `full-feature` \| `sprint-phase`; default from `identity.planningType`. |
+| `profile` | No | `minimal` \| `refactor` \| `full-feature` \| `sprint-phase`; default `minimal` when omitted. |
 | `waivers` | No | `{ code, rationale }[]` per **PLANNER_REVIEW_RUBRIC.md** §5.2 (slice coverage codes). |
 | `recordReview` | No | Default `false`. `true` writes `status: reviewed` as next artifact version (Tier B). |
 | `expectedPlanningGeneration` | When policy `require` | Required when `recordReview: true`. |

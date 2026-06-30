@@ -26,7 +26,7 @@ describe("review-plan-artifact coverage map (T100462)", () => {
 
   it("uncovered objectives produce RUBRIC-COV-GOAL blockers and coverageMap entries", () => {
     const artifact = loadFixture("plan-artifact-review-blockers.v1.json");
-    const result = reviewPlanArtifact(artifact, { profile: "minimal" });
+    const result = reviewPlanArtifact(artifact, { profile: "refactor" });
 
     assert.equal(result.passed, false);
     assert.ok(result.blockers.some((b) => b.code === "RUBRIC-COV-GOAL"));
@@ -42,7 +42,7 @@ describe("review-plan-artifact coverage map (T100462)", () => {
 
   it("returns full coverageMap shape with slice statuses", () => {
     const artifact = loadFixture("plan-artifact-minimal.valid.v1.json");
-    const result = reviewPlanArtifact(artifact, { profile: "minimal" });
+    const result = reviewPlanArtifact(artifact, { profile: "refactor" });
 
     assert.equal(typeof result.coverageMap, "object");
     assert.ok(Array.isArray(result.coverageMap.goals.covered));
@@ -129,7 +129,7 @@ describe("review-plan-artifact coverage map (T100462)", () => {
   it("does not waive RUBRIC-COV-GOAL — uncovered goals remain blockers", () => {
     const artifact = loadFixture("plan-artifact-review-blockers.v1.json");
     const result = reviewPlanArtifact(artifact, {
-      profile: "minimal",
+      profile: "refactor",
       waivers: [{ code: "RUBRIC-COV-GOAL", rationale: "should not apply to goals" }]
     });
     assert.ok(result.blockers.some((b) => b.code === "RUBRIC-COV-GOAL"));

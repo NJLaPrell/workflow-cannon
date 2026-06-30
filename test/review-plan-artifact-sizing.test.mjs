@@ -34,7 +34,7 @@ describe("review-plan-artifact sizing (T100461)", () => {
 
   it("RUBRIC-WBS-LOW-SIZING-OVERSIZE on wbs-oversized-row fixture", () => {
     const artifact = loadFixture("wbs-oversized-row.v1.json");
-    const result = reviewPlanArtifact(artifact, { profile: "minimal" });
+    const result = reviewPlanArtifact(artifact, { profile: "refactor" });
     assert.equal(result.passed, false);
     assert.ok(
       result.blockers.some((b) => b.code === "RUBRIC-WBS-LOW-SIZING-OVERSIZE"),
@@ -45,7 +45,7 @@ describe("review-plan-artifact sizing (T100461)", () => {
 
   it("RUBRIC-WBS-MEDIUM-LARGE warning on wbs-medium-large-row fixture", () => {
     const artifact = loadFixture("wbs-medium-large-row.v1.json");
-    const result = reviewPlanArtifact(artifact, { profile: "minimal" });
+    const result = reviewPlanArtifact(artifact, { profile: "refactor" });
     assert.ok(
       result.warnings.some((w) => w.code === "RUBRIC-WBS-MEDIUM-LARGE"),
       JSON.stringify(result.warnings, null, 2)
@@ -55,7 +55,7 @@ describe("review-plan-artifact sizing (T100461)", () => {
 
   it("RUBRIC-WBS-VAGUE-AC and RUBRIC-WBS-VAGUE-DONE on wbs-vague-ac fixture", () => {
     const artifact = loadFixture("wbs-vague-ac.v1.json");
-    const result = reviewPlanArtifact(artifact, { profile: "minimal" });
+    const result = reviewPlanArtifact(artifact, { profile: "refactor" });
     assert.ok(result.warnings.some((w) => w.code === "RUBRIC-WBS-VAGUE-AC"));
     assert.ok(result.warnings.some((w) => w.code === "RUBRIC-WBS-VAGUE-DONE"));
     assert.ok(result.sizingFindings.some((f) => f.code === "RUBRIC-WBS-VAGUE-AC"));

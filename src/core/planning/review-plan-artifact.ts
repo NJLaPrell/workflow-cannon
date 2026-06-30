@@ -94,22 +94,27 @@ function nonEmptyStringArray(value: unknown): value is string[] {
 }
 
 export function resolvePlanArtifactReviewProfile(
-  artifact: PlanArtifactV1,
+  _artifact: PlanArtifactV1,
   explicit?: PlanArtifactReviewProfile
 ): PlanArtifactReviewProfile {
   if (explicit) {
     return explicit;
   }
-  switch (artifact.identity.planningType) {
-    case "new-feature":
-      return "full-feature";
-    case "change":
-      return "refactor";
-    case "sprint-phase":
-      return "sprint-phase";
-    default:
-      return "minimal";
+  return "minimal";
+}
+
+/** Critical open questions use a stable prefix from idea-planning artifact composition. */
+export function isCriticalOpenQuestion(question: string): boolean {
+  const q = question.trim();
+  if (q.length === 0) {
+    return false;
   }
+  const lower = q.toLowerCase();
+  return (
+    lower.startsWith("unresolved critical question:") ||
+    lower.startsWith("[critical]") ||
+    lower.startsWith("critical:")
+  );
 }
 
 function waivedCodes(waivers: PlanArtifactReviewWaiver[] | undefined): Set<string> {
@@ -182,6 +187,87 @@ function rolloutSliceCovered(artifact: PlanArtifactV1): boolean {
     return true;
   }
   return artifact.implementationGuidance.some((g) => ROLLOUT_WBS_RE.test(g));
+}
+
+function buildMinimalCoverageMap(artifact: PlanArtifactV1): PlanArtifactCoverageMap {
+  return {
+    goals: { covered: [...(artifact.goals ?? [])], uncovered: [] },
+    userStories: { covered: [], uncovered: [] },
+    slices: {
+      architecture: "not-applicable",
+      uiUx: "not-applicable",
+      testing: "not-applicable",
+      rolloutDocsMigration: "not-applicable"
+    }
+  };
+}
+
+/**
+ * Minimal profile blockers per IDEA_PLAN §9 — core completeness only.
+ */
+function reviewMinimalBlockers(
+  artifact: PlanArtifactV1,
+  blockers: PlanArtifactReviewFinding[],
+  warnings: PlanArtifactReviewFinding[]
+): void {
+  if (!nonEmptyStringArray(artifact.goals)) {
+    blockers.push(blocker("RUBRIC-MIN-GOALS", "goals must be a non-empty array", { path: "goals" }));
+  }
+
+  if (!Array.isArray(artifact.wbs) || artifact.wbs.length === 0) {
+    blockers.push(blocker("RUBRIC-MIN-WBS", "wbs must contain at least one row", { path: "wbs" }));
+    return;
+  }
+
+  for (let i = 0; i < artifact.wbs.length; i += 1) {
+    const row = artifact.wbs[i];
+    const basePath = `wbs[${i}]`;
+
+    if (!nonEmptyStringArray(row.acceptanceCriteria)) {
+      blockers.push(
+        blocker("RUBRIC-MIN-WBS-AC", "WBS row lacks acceptance criteria", {
+          path: `${basePath}.acceptanceCriteria`,
+          wbsId: row.wbsId
+        })
+      );
+    }
+
+    if (!nonEmptyStringArray(row.testingVerification)) {
+      blockers.push(
+        blocker("RUBRIC-MIN-WBS-VERIFY", "WBS row lacks testing verification", {
+          path: `${basePath}.testingVerification`,
+          wbsId: row.wbsId
+        })
+      );
+    }
+  }
+
+  if (!Array.isArray(artifact.openQuestions)) {
+    blockers.push(
+      blocker("RUBRIC-MIN-OQ-MISSING", "openQuestions field is required", { path: "openQuestions" })
+    );
+    return;
+  }
+
+  for (let i = 0; i < artifact.openQuestions.length; i += 1) {
+    const question = artifact.openQuestions[i];
+    if (isCriticalOpenQuestion(question)) {
+      blockers.push(
+        blocker("RUBRIC-MIN-OQ-CRITICAL", `Unresolved critical open question: ${question}`, {
+          path: `openQuestions[${i}]`
+        })
+      );
+    }
+  }
+
+  const nonCriticalCount = artifact.openQuestions.filter((q) => !isCriticalOpenQuestion(q)).length;
+  if (nonCriticalCount > 0) {
+    warnings.push(
+      warning("RUBRIC-OQ-UNRESOLVED", `${nonCriticalCount} non-critical open question(s) remain`, {
+        path: "openQuestions"
+      })
+    );
+  }
 }
 
 function reviewCoreSections(
@@ -581,6 +667,19 @@ export function reviewPlanArtifact(
   const profile = resolvePlanArtifactReviewProfile(artifact, options.profile);
   const blockers: PlanArtifactReviewFinding[] = [];
   const warnings: PlanArtifactReviewFinding[] = [];
+
+  if (profile === "minimal") {
+    reviewMinimalBlockers(artifact, blockers, warnings);
+    return {
+      passed: blockers.length === 0,
+      profile,
+      blockers,
+      warnings,
+      coverageMap: buildMinimalCoverageMap(artifact),
+      sizingFindings: [],
+      openQuestionCount: Array.isArray(artifact.openQuestions) ? artifact.openQuestions.length : 0
+    };
+  }
 
   reviewCoreSections(artifact, { blockers, warnings });
   reviewProfileSections(artifact, profile, blockers);

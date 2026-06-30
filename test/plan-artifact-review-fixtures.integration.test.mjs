@@ -47,7 +47,7 @@ const REVIEW_FIXTURE_MATRIX = [
   {
     category: "coverage-gap",
     fixture: "plan-artifact-review-blockers.v1.json",
-    profile: "minimal",
+    profile: "refactor",
     expectCode: "plan-artifact-review-blocked",
     expectPassed: false,
     blockerCodes: ["RUBRIC-COV-GOAL", "RUBRIC-COV-TEST"]
@@ -148,13 +148,13 @@ describe("review-plan-artifact fixture matrix (T100464)", () => {
 
   it("coverage-gap fixture coverageMap snapshot", () => {
     const artifact = loadFixture("plan-artifact-review-blockers.v1.json");
-    const result = reviewPlanArtifact(artifact, { profile: "minimal" });
+    const result = reviewPlanArtifact(artifact, { profile: "refactor" });
     assert.deepEqual(result.coverageMap.goals, {
       covered: ["Goal alpha is mapped in WBS goalMapping"],
       uncovered: ["Goal beta has no WBS mapping and should block review"]
     });
     assert.equal(result.coverageMap.slices.testing, "missing");
-    assert.equal(result.coverageMap.slices.architecture, "not-applicable");
+    assert.equal(result.coverageMap.slices.architecture, "missing");
   });
 });
 

@@ -127,6 +127,7 @@ export {
   type ResolvePlanArtifactPhaseProposalResult
 } from "./resolve-plan-artifact-phase-proposal.js";
 export {
+  isCriticalOpenQuestion,
   resolvePlanArtifactReviewProfile,
   reviewPlanArtifact,
   type PlanArtifactCoverageMap,

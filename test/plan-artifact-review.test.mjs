@@ -103,7 +103,7 @@ describe("review-plan-artifact command (T100463)", () => {
     const result = await planningModule.onCommand(
       {
         name: "review-plan-artifact",
-        args: { artifact, profile: "minimal" }
+        args: { artifact, profile: "refactor" }
       },
       { runtimeVersion: "0.1", workspacePath: workspace, effectiveConfig: SQLITE_CFG }
     );
