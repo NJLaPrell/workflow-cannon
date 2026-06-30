@@ -5,6 +5,7 @@ const STATE_SCHEMA_VERSION = 1;
 
 export type PlanningChatSessionRecord = {
   schemaVersion: 1;
+  sessionId: string;
   ideaId: string;
   title: string;
   note?: string;
@@ -13,6 +14,10 @@ export type PlanningChatSessionRecord = {
   createdAt: string;
   updatedAt: string;
 };
+
+export function planningChatSessionId(ideaId: string): string {
+  return `pcs-${ideaId}`;
+}
 
 function moduleIdForIdea(ideaId: string): string {
   return `${MODULE_ID_PREFIX}${ideaId}`;
@@ -34,10 +39,41 @@ function parseSession(raw: string | null | undefined): PlanningChatSessionRecord
     if (record.status !== "active" || typeof record.createdAt !== "string" || typeof record.updatedAt !== "string") {
       return null;
     }
-    return record as PlanningChatSessionRecord;
+    const sessionId =
+      typeof record.sessionId === "string" && record.sessionId.trim()
+        ? record.sessionId.trim()
+        : planningChatSessionId(record.ideaId);
+    return { ...(record as PlanningChatSessionRecord), sessionId };
   } catch {
     return null;
   }
+}
+
+export function getPlanningChatSession(db: Sqlite.Database, ideaId: string): PlanningChatSessionRecord | null {
+  const moduleId = moduleIdForIdea(ideaId);
+  const prior = db
+    .prepare("SELECT state_json FROM workspace_module_state WHERE module_id = ?")
+    .get(moduleId) as { state_json: string } | undefined;
+  return parseSession(prior?.state_json);
+}
+
+export function toPlanningChatSessionView(
+  session: PlanningChatSessionRecord,
+  resumePrompt: string
+): {
+  sessionId: string;
+  status: "active";
+  startedAt: string;
+  updatedAt: string;
+  resumePrompt: string;
+} {
+  return {
+    sessionId: session.sessionId,
+    status: "active",
+    startedAt: session.createdAt,
+    updatedAt: session.updatedAt,
+    resumePrompt
+  };
 }
 
 export function persistPlanningChatSession(
@@ -52,6 +88,7 @@ export function persistPlanningChatSession(
   const existing = parseSession(prior?.state_json);
   const record: PlanningChatSessionRecord = {
     schemaVersion: 1,
+    sessionId: existing?.sessionId ?? planningChatSessionId(input.ideaId),
     ideaId: input.ideaId,
     title: input.title,
     ...(input.note ? { note: input.note } : {}),

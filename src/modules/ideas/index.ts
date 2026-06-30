@@ -27,6 +27,7 @@ import {
 } from "./idea-store.js";
 import { publishIdeasPlanningEvents } from "./ideas-planning-events-runtime.js";
 import { persistPlanningChatSession } from "./planning-chat-session.js";
+import { runStartIdeaPlanning } from "./start-idea-planning.js";
 
 function attachPlanningMeta(
   data: Record<string, unknown>,
@@ -414,6 +415,22 @@ export const ideasModule: WorkflowModule = {
       const data: Record<string, unknown> = { responseSchemaVersion: 1, idea, deleted: true };
       attachPlanningMeta(data, ctx, planningGeneration);
       return { ok: true, code: "idea-deleted", message: `Idea ${idea.id} deleted`, data };
+    }
+
+    if (command.name === "start-idea-planning") {
+      const result = await runStartIdeaPlanning({
+        db,
+        args,
+        ctx,
+        store,
+        planning,
+        gitCanonical,
+        policyApproval
+      });
+      if (result.ok && result.data && typeof result.data === "object") {
+        attachPlanningMeta(result.data as Record<string, unknown>, ctx, planningGeneration);
+      }
+      return result;
     }
 
     if (command.name === "reorder-ideas") {
