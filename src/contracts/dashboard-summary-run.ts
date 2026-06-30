@@ -51,9 +51,20 @@ export type DashboardIdeaRow = {
   planningChatSession?: {
     schemaVersion: 1;
     ideaId: string;
-    status: "active";
+    status:
+      | "active"
+      | "draft_ready"
+      | "needs_revision"
+      | "approval_ready"
+      | "completed"
+      | "abandoned"
+      | "superseded";
     updatedAt: string;
     resumePrompt?: string;
+    summary?: string;
+    currentPlanRef?: string;
+    currentPlanVersion?: number;
+    completedAt?: string;
   };
 };
 
