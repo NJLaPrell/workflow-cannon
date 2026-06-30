@@ -39,6 +39,7 @@ import {
 } from "./build-plan-output-helpers.js";
 import { clearBuildPlanSessionWithPlanningSync } from "./build-plan-session-persist.js";
 import { buildTasksFromExecutionDrafts, nextTaskId } from "./build-plan-execution-drafts.js";
+import { PlanArtifactVersionImmutableError } from "../../core/planning/plan-artifact-immutability.js";
 import { validatePlanArtifactDraftInput } from "../../core/planning/validate-plan-artifact.js";
 import {
   commitPlanArtifactDraftPersist,
@@ -48,6 +49,7 @@ import {
 import { runReviewPlanArtifact } from "./review-plan-artifact-handler.js";
 import { runAcceptPlanArtifact } from "./accept-plan-artifact-handler.js";
 import { runFinalizePlanToPhase } from "./finalize-plan-to-phase-handler.js";
+import { runGetPlanArtifact } from "./get-plan-artifact-handler.js";
 import { runExecutePlanArtifact } from "./execute-plan-artifact-handler.js";
 import { attachPolicyMeta } from "../task-engine/attach-planning-response-meta.js";
 import { planningGenPolicyGate } from "../task-engine/planning-generation-gate.js";
@@ -135,6 +137,10 @@ export const planningModule: WorkflowModule = {
       return runExecutePlanArtifact((command.args ?? {}) as Record<string, unknown>, ctx, EXECUTE_PLAN_ARTIFACT_INSTRUCTION);
     }
 
+    if (command.name === "get-plan-artifact") {
+      return runGetPlanArtifact((command.args ?? {}) as Record<string, unknown>, ctx);
+    }
+
     if (command.name === "draft-plan-artifact") {
       const args = command.args ?? {};
       const artifactRaw = args.artifact;
@@ -193,7 +199,7 @@ export const planningModule: WorkflowModule = {
           sqliteDb
         });
         if (prelude.kind === "conflict") {
-          return { ok: false, code: prelude.code, message: prelude.message };
+          return { ok: false, code: prelude.code, message: prelude.message, ...(prelude.data ? { data: prelude.data } : {}) };
         }
         if (prelude.kind === "replay") {
           const replay = planArtifactDraftPersistSuccessResult({
@@ -230,6 +236,7 @@ export const planningModule: WorkflowModule = {
                 : undefined;
             return { ok: false, code: err.code, message: err.message, data };
           }
+          if (err instanceof PlanArtifactVersionImmutableError) { return { ok: false, code: err.code, message: err.message, data: { schemaVersion: 1, responseSchemaVersion: 1, planId: err.planId, version: err.version, status: err.status } }; }
           throw err;
         }
         const persisted = planArtifactDraftPersistSuccessResult({

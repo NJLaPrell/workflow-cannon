@@ -3,6 +3,7 @@ import type { ModuleCommandResult } from "../../contracts/module-contract.js";
 import { persistModuleStateRow } from "../../core/state/module-state-sidecar-migration.js";
 import { UnifiedStateDb } from "../../core/state/unified-state-db.js";
 import type { PlanArtifactV1 } from "../../core/planning/plan-artifact-v1.js";
+import { findImmutablePlanArtifactVersion } from "../../core/planning/plan-artifact-immutability.js";
 import {
   getPlanArtifactStoragePaths,
   readPlanArtifactVersion,
@@ -158,7 +159,7 @@ function writeIdempotencyRecord(
 
 export type PlanArtifactDraftPersistPrelude =
   | { kind: "replay"; artifact: PlanArtifactV1; storagePath: string; paths: PlanArtifactStoragePaths }
-  | { kind: "conflict"; code: "plan-artifact-version-conflict" | "idempotency-key-conflict"; message: string }
+  | { kind: "conflict"; code: "plan-artifact-version-conflict" | "plan-artifact-version-immutable" | "idempotency-key-conflict"; message: string; data?: Record<string, unknown> }
   | { kind: "commit"; targetVersion: number; digest: string };
 
 export function preludePlanArtifactDraftPersist(args: {
@@ -199,12 +200,14 @@ export function preludePlanArtifactDraftPersist(args: {
   }
 
   const suppliedVersion = userSuppliedPlanArtifactVersion(artifactRaw);
-  if (suppliedVersion !== undefined && suppliedVersion !== targetVersion) {
-    return {
-      kind: "conflict",
-      code: "plan-artifact-version-conflict",
-      message: `artifact.version ${suppliedVersion} does not match next version ${targetVersion} for plan ${artifact.planId}`
-    };
+  if (suppliedVersion !== undefined) {
+    const immutable = findImmutablePlanArtifactVersion(workspacePath, artifact.planId, suppliedVersion);
+    if (immutable) {
+      return { kind: "conflict", code: immutable.code, message: immutable.message, data: { schemaVersion: 1, responseSchemaVersion: 1, planId: immutable.planId, version: immutable.version, status: immutable.status } };
+    }
+    if (suppliedVersion !== targetVersion) {
+      return { kind: "conflict", code: "plan-artifact-version-conflict", message: `artifact.version ${suppliedVersion} does not match next version ${targetVersion} for plan ${artifact.planId}` };
+    }
   }
 
   const digest = planArtifactDraftPersistDigest(artifact, targetVersion);
