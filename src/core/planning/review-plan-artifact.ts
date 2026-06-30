@@ -62,8 +62,12 @@ const PLANNING_TYPES = new Set([
 const VAGUE_AC_RE = /^(done|complete|works)$/i;
 const VERIFY_KEYWORD_RE = /\b(test|verify|check|ci|extension|e2e)\b/i;
 const UI_SYSTEM_RE = /\b(dashboard|extension|webview|ui)\b/i;
-const ROLLOUT_SIGNAL_RE = /\b(production|prod|release|deploy|migration|rollout)\b/i;
-const ROLLOUT_WBS_RE = /\b(rollout|migration|deploy|release|docs)\b/i;
+const ROLLOUT_SIGNAL_RE = /\b(production|prod|release|deploy|migration|rollout|rollback)\b/i;
+const ROLLOUT_WBS_RE = /\b(rollout|rollback|migration|deploy|release|docs)\b/i;
+const BEHAVIOR_CHANGE_RE =
+  /\b(behavior|breaking|compatib|migration|schema|api.change|contract|runtime)\b/i;
+const PERSISTENCE_TASK_GEN_RE =
+  /\b(persistence|sqlite|workspace-kit\.db|create-task|persist-planning|finalize-plan|task.store|task.generation|migrate-task|generatedTaskPayload)\b/i;
 
 function blocker(
   code: string,
@@ -157,6 +161,56 @@ function uiInScope(artifact: PlanArtifactV1): boolean {
   return (artifact.technicalImpact.systemsTouched ?? []).some((s) => UI_SYSTEM_RE.test(s));
 }
 
+function planTextHaystack(artifact: PlanArtifactV1): string {
+  return [
+    ...artifact.goals,
+    ...(artifact.technicalImpact.systemsTouched ?? []),
+    ...artifact.implementationGuidance,
+    ...artifact.wbs.flatMap((row) => [
+      row.title,
+      row.approach,
+      ...row.technicalScope,
+      ...row.testingVerification
+    ])
+  ]
+    .join(" ")
+    .toLowerCase();
+}
+
+function behaviorChangeInScope(artifact: PlanArtifactV1): boolean {
+  if (artifact.identity.planningType === "change") {
+    return true;
+  }
+  return BEHAVIOR_CHANGE_RE.test(planTextHaystack(artifact));
+}
+
+function hasMigrationOrCompatibilityNotes(artifact: PlanArtifactV1): boolean {
+  return (
+    nonEmptyString(artifact.technicalImpact.migrationImpact) ||
+    nonEmptyString(artifact.technicalImpact.compatibilityNotes)
+  );
+}
+
+function persistenceOrTaskGenChangeInScope(artifact: PlanArtifactV1): boolean {
+  return PERSISTENCE_TASK_GEN_RE.test(planTextHaystack(artifact));
+}
+
+function hasRolloutOrRollbackCoverage(artifact: PlanArtifactV1): boolean {
+  if (nonEmptyString(artifact.technicalImpact.migrationImpact)) {
+    return true;
+  }
+  if (artifact.implementationGuidance.some((g) => ROLLOUT_WBS_RE.test(g))) {
+    return true;
+  }
+  return artifact.wbs.some(
+    (row) =>
+      ROLLOUT_WBS_RE.test(row.title) ||
+      row.technicalScope.some((s) => ROLLOUT_WBS_RE.test(s)) ||
+      row.testingVerification.some((s) => ROLLOUT_WBS_RE.test(s)) ||
+      ROLLOUT_WBS_RE.test(row.approach)
+  );
+}
+
 function testingSliceCovered(artifact: PlanArtifactV1): boolean {
   const layers = artifact.testingStrategy.layers.map((l) => l.toLowerCase());
   if (layers.length === 0) {
@@ -172,21 +226,14 @@ function testingSliceCovered(artifact: PlanArtifactV1): boolean {
 
 function rolloutSliceCovered(artifact: PlanArtifactV1): boolean {
   const systems = artifact.technicalImpact.systemsTouched.join(" ").toLowerCase();
-  const needsRollout = ROLLOUT_SIGNAL_RE.test(systems) || ROLLOUT_SIGNAL_RE.test(artifact.goals.join(" "));
+  const needsRollout =
+    ROLLOUT_SIGNAL_RE.test(systems) ||
+    ROLLOUT_SIGNAL_RE.test(artifact.goals.join(" ")) ||
+    persistenceOrTaskGenChangeInScope(artifact);
   if (!needsRollout) {
     return true;
   }
-  if (
-    artifact.wbs.some(
-      (row) =>
-        ROLLOUT_WBS_RE.test(row.title) ||
-        row.technicalScope.some((s) => ROLLOUT_WBS_RE.test(s)) ||
-        row.testingVerification.some((s) => ROLLOUT_WBS_RE.test(s))
-    )
-  ) {
-    return true;
-  }
-  return artifact.implementationGuidance.some((g) => ROLLOUT_WBS_RE.test(g));
+  return hasRolloutOrRollbackCoverage(artifact);
 }
 
 function buildMinimalCoverageMap(artifact: PlanArtifactV1): PlanArtifactCoverageMap {
@@ -403,12 +450,69 @@ function reviewCoreSections(
   }
 }
 
+function reviewGeneratedTaskPayload(
+  row: PlanArtifactWbsItem,
+  basePath: string,
+  blockers: PlanArtifactReviewFinding[]
+): void {
+  const payload = row.generatedTaskPayload;
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    blockers.push(
+      blocker("RUBRIC-WBS-PAYLOAD-INVALID", "generatedTaskPayload missing or invalid", {
+        path: `${basePath}.generatedTaskPayload`,
+        wbsId: row.wbsId
+      })
+    );
+    return;
+  }
+  const issues: string[] = [];
+  if (!nonEmptyString(payload.title)) {
+    issues.push("title");
+  }
+  if (!nonEmptyString(payload.approach)) {
+    issues.push("approach");
+  }
+  if (!nonEmptyStringArray(payload.technicalScope)) {
+    issues.push("technicalScope");
+  }
+  if (!nonEmptyStringArray(payload.acceptanceCriteria)) {
+    issues.push("acceptanceCriteria");
+  }
+  if (issues.length > 0) {
+    blockers.push(
+      blocker(
+        "RUBRIC-WBS-PAYLOAD-INVALID",
+        `generatedTaskPayload missing or empty: ${issues.join(", ")}`,
+        { path: `${basePath}.generatedTaskPayload`, wbsId: row.wbsId }
+      )
+    );
+  }
+}
+
 function reviewProfileSections(
   artifact: PlanArtifactV1,
   profile: PlanArtifactReviewProfile,
   blockers: PlanArtifactReviewFinding[]
 ): void {
   if (profile === "refactor" || profile === "full-feature") {
+    if (!nonEmptyStringArray(artifact.technicalImpact?.systemsTouched)) {
+      blockers.push(
+        blocker(
+          "RUBRIC-PROFILE-SYSTEMS",
+          "technicalImpact.systemsTouched must identify affected systems for this profile",
+          { path: "technicalImpact.systemsTouched" }
+        )
+      );
+    }
+    if (behaviorChangeInScope(artifact) && !hasMigrationOrCompatibilityNotes(artifact)) {
+      blockers.push(
+        blocker(
+          "RUBRIC-PROFILE-MIGRATION",
+          "migrationImpact or compatibilityNotes required when plan changes behavior",
+          { path: "technicalImpact.migrationImpact" }
+        )
+      );
+    }
     if (!nonEmptyString(artifact.architecture?.overview)) {
       blockers.push(
         blocker("RUBRIC-PROFILE-ARCH", "architecture.overview is required for this profile", {
@@ -432,6 +536,24 @@ function reviewProfileSections(
         })
       );
     }
+    if (persistenceOrTaskGenChangeInScope(artifact) && !hasRolloutOrRollbackCoverage(artifact)) {
+      blockers.push(
+        blocker(
+          "RUBRIC-PROFILE-ROLLOUT",
+          "rollout or rollback notes required when persistence, commands, or task generation change",
+          { path: "implementationGuidance" }
+        )
+      );
+    }
+  }
+  if (profile === "refactor" && !testingSliceCovered(artifact)) {
+    blockers.push(
+      blocker(
+        "RUBRIC-PROFILE-TEST",
+        "testingStrategy layers must be reflected in WBS testingVerification for refactor profile",
+        { path: "testingStrategy.layers" }
+      )
+    );
   }
   if (profile === "sprint-phase" && artifact.phaseRecommendations.length < 2) {
     blockers.push(
@@ -464,16 +586,29 @@ function reviewWbsRows(
 
     const shape = validatePlanArtifactWbsItemShape(row);
     if (!shape.ok) {
-      blockers.push(
-        blocker("RUBRIC-WBS-MISSING-FIELD", shape.findings[0]?.message ?? "WBS row invalid", {
-          path: basePath,
-          wbsId: row.wbsId
-        })
+      const payloadFinding = shape.findings.find((f) =>
+        f.field?.startsWith("generatedTaskPayload")
       );
+      if (payloadFinding) {
+        blockers.push(
+          blocker("RUBRIC-WBS-PAYLOAD-INVALID", payloadFinding.message, {
+            path: `${basePath}.generatedTaskPayload`,
+            wbsId: row.wbsId
+          })
+        );
+      } else {
+        blockers.push(
+          blocker("RUBRIC-WBS-MISSING-FIELD", shape.findings[0]?.message ?? "WBS row invalid", {
+            path: basePath,
+            wbsId: row.wbsId
+          })
+        );
+      }
       continue;
     }
 
     const item = shape.item;
+    reviewGeneratedTaskPayload(item, basePath, blockers);
     if (
       item.technicalScope.length === 0 ||
       item.acceptanceCriteria.length === 0 ||
