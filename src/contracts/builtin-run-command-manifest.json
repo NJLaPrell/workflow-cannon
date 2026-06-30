@@ -1444,7 +1444,7 @@
   },
   {
     "moduleId": "planning",
-    "name": "execute-plan-artifact",
+    "name": "get-plan-artifact", "file": "get-plan-artifact.md", "description": "Read PlanArtifact version history and lineage.", "policyOperationId": "planning.get-plan-artifact", "defaultResponseTemplateId": "default", "policySensitivity": "non-sensitive" }, { "moduleId": "planning", "name": "execute-plan-artifact",
     "file": "execute-plan-artifact.md",
     "description": "Link a task to an accepted or finalized PlanArtifact before execute paths (run-transition start).",
     "policyOperationId": "planning.execute-plan-artifact",

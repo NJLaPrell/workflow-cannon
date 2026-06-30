@@ -5,6 +5,7 @@ import type { ModuleLifecycleContext } from "../../contracts/module-contract.js"
 import { persistModuleStateRow } from "../state/module-state-sidecar-migration.js";
 import { UnifiedStateDb } from "../state/unified-state-db.js";
 import { planningSqliteDatabaseRelativePath } from "../../modules/task-engine/planning-config.js";
+import { assertPlanArtifactVersionWritable } from "./plan-artifact-immutability.js";
 import {
   isPlanArtifactV1,
   type PlanArtifactStatus,
@@ -196,6 +197,7 @@ export function writePlanArtifactVersion(
   const paths = getPlanArtifactStoragePaths(workspacePath, artifact.planId);
   fs.mkdirSync(paths.planDirAbsolute, { recursive: true });
   const target = paths.artifactFileAbsolute(artifact.version);
+  if (fs.existsSync(target)) { assertPlanArtifactVersionWritable(workspacePath, artifact.planId, artifact.version); }
   const temp = `${target}.tmp`;
   const payload = `${JSON.stringify(artifact, null, 2)}\n`;
   fs.writeFileSync(temp, payload, "utf8");

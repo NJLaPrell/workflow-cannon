@@ -103,6 +103,11 @@ export {
   type PlanArtifactIndexStateV1,
   type PlanArtifactStoragePaths
 } from "./plan-artifact-storage.js";
+export {
+  IMMUTABLE_PLAN_ARTIFACT_STATUSES, PlanArtifactVersionImmutableError, assertPlanArtifactVersionWritable,
+  findImmutablePlanArtifactVersion, isPlanArtifactStatusImmutable, listPlanArtifactVersionSummaries,
+  summarizePlanArtifactLineage, type PlanArtifactLineageSummary, type PlanArtifactVersionSummary
+} from "./plan-artifact-immutability.js";
 export { renderPlanArtifactMarkdown } from "./render-plan-artifact-markdown.js";
 export {
   formatPlanArtifactInstancePath,
