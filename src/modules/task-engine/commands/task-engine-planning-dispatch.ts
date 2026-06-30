@@ -8,6 +8,7 @@ import { buildRecommendValidation } from "./recommend-validation-commands.js";
 import { buildHarvestDeliveryEvidence } from "./harvest-delivery-evidence-commands.js";
 import { buildWaitForPrChecks } from "./wait-for-pr-checks-commands.js";
 import { buildReleaseStatus } from "./release-status-commands.js";
+import { buildGenerateReleaseNotes } from "./generate-release-notes-commands.js";
 import { runApplyTaskBatchCommand } from "./apply-task-batch-command.js";
 import { resolveAgentActivityCommands } from "./agent-activity-commands.js";
 import { resolveAgentDefinitionCommands } from "./agent-definition-commands.js";
@@ -198,6 +199,10 @@ export async function dispatchTaskEnginePlanningCommands(
 
   if (command.name === "release-status") {
     return await buildReleaseStatus(ctx, planning, store, args as Record<string, unknown>);
+  }
+
+  if (command.name === "generate-release-notes") {
+    return buildGenerateReleaseNotes(ctx, planning, store, args as Record<string, unknown>);
   }
 
   if (command.name === "improvement-dedupe-explain") {

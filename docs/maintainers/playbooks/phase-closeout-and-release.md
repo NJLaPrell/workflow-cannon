@@ -77,6 +77,7 @@ pnpm exec wk run close-subagent-session '{"sessionId":"<uuid>","policyApproval":
 4. Run `workspace-kit run release-evidence-manifest '<json>'` with human approval, release-note evidence, validation records, known risks, publish artifact placeholders/proof, and follow-up scan data. Resolve structured failures before tag/npm/GitHub release actions.
 5. Run full validation on that tip (`pnpm run build`, `pnpm run check`, `pnpm run test`, `pnpm run parity`, and **`pre-merge-gates`** / maintainer gates as in [`RELEASING.md`](../RELEASING.md)).
 6. Run **`workspace-kit run propose-release-version '{"phaseKey":"<N>"}'`** and align `package.json` / changelog version with the recommended bump before tagging (see **`.ai/RELEASING.md`** rule **R200-semver**).
+6b. Run **`workspace-kit run generate-release-notes '{"phaseKey":"<N>"}'`** to generate user-friendly release notes for GitHub Releases and user documentation. Use `format: "github"` for emoji-enhanced GitHub output.
 7. **Fix failures on the phase branch** — small follow-up PRs or commits targeting **`release/phase-<N>`** until checks are green and there are no known release blockers.
 
 **PR review integrity:** Prefer **follow-up commits** on task branches over amend + force-push after review. `pre-merge-gates` includes `check-pr-history-rewritten` (`pr-history-rewritten` when the PR head diverges from the latest approving review commit).

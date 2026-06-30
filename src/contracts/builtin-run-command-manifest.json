@@ -190,6 +190,15 @@
   },
   {
     "moduleId": "task-engine",
+    "name": "generate-release-notes",
+    "file": "generate-release-notes.md",
+    "description": "Generate human-friendly, product-owner-style release notes from completed phase tasks.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive",
+    "executionClass": "read"
+  },
+  {
+    "moduleId": "task-engine",
     "name": "phase-delivery-preflight",
     "file": "phase-delivery-preflight.md",
     "description": "Read-only audit for phase task PR/merge/check evidence or explicit delivery waivers.",
