@@ -28,6 +28,7 @@ import {
 import { publishIdeasPlanningEvents } from "./ideas-planning-events-runtime.js";
 import { persistPlanningChatSession } from "./planning-chat-session.js";
 import { runStartIdeaPlanning } from "./start-idea-planning-handler.js";
+import { runUpdateIdeaPlanningSession } from "./update-idea-planning-session-handler.js";
 
 function attachPlanningMeta(
   data: Record<string, unknown>,
@@ -498,6 +499,14 @@ export const ideasModule: WorkflowModule = {
         args as Record<string, unknown>,
         ctx,
         "src/modules/ideas/instructions/start-idea-planning.md"
+      );
+    }
+
+    if (command.name === "update-idea-planning-session") {
+      return runUpdateIdeaPlanningSession(
+        args as Record<string, unknown>,
+        ctx,
+        "src/modules/ideas/instructions/update-idea-planning-session.md"
       );
     }
 

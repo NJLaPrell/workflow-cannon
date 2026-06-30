@@ -1649,6 +1649,15 @@
     "policySensitivity": "sensitive"
   },
   {
+    "moduleId": "ideas",
+    "name": "update-idea-planning-session",
+    "file": "update-idea-planning-session.md",
+    "description": "Update durable planning session state with idea/session validation and dashboard-ready output.",
+    "policyOperationId": "ideas.persist",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
     "moduleId": "team-execution",
     "name": "list-assignments",
     "file": "list-assignments.md",
