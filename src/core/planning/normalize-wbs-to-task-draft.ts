@@ -16,6 +16,8 @@ export type PlanningExecutionTaskDraft = {
   phase?: string;
   phaseKey?: string;
   approach: string;
+  summary?: string;
+  description?: string;
   technicalScope: string[];
   acceptanceCriteria: string[];
   dependsOn?: string[];
@@ -32,6 +34,7 @@ export type NormalizeWbsToTaskDraftContext = {
   defaultPhase: string;
   defaultPhaseKey?: string;
   defaultStatus?: "proposed" | "ready";
+  sourceIdeaId?: string;
 };
 
 export type WbsShapeFinding = {
@@ -56,6 +59,7 @@ export type NormalizeWbsToTaskDraftResult =
         wbsPath?: string;
         planRef: string;
         planningType: PlanArtifactPlanningType;
+        sourceIdeaId?: string;
         source: "normalize-wbs-to-task-draft";
       };
     }
@@ -160,6 +164,38 @@ function phaseLabelFromKey(phaseKey: string): string {
   return /^\d+$/.test(phaseKey) ? `Phase ${phaseKey}` : phaseKey;
 }
 
+function trimOptionalString(value: unknown): string | undefined {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
+function renderBulletSection(title: string, lines: string[]): string {
+  return [title, ...lines.map((line) => `- ${line}`)].join("\n");
+}
+
+function buildTaskDraftDescription(wbs: PlanArtifactWbsItem, payload: PlanArtifactGeneratedTaskPayload): string {
+  const sections = [
+    `Plan WBS row: ${wbs.wbsId}${wbs.path ? ` (${wbs.path})` : ""} — ${wbs.title.trim()}`,
+    `Approach:\n${wbs.approach.trim()}`,
+    renderBulletSection("Goal mapping:", wbs.goalMapping),
+    renderBulletSection("Technical scope:", wbs.technicalScope.length > 0 ? wbs.technicalScope : payload.technicalScope),
+    renderBulletSection(
+      "Acceptance criteria:",
+      wbs.acceptanceCriteria.length > 0 ? wbs.acceptanceCriteria : payload.acceptanceCriteria
+    ),
+    renderBulletSection("Verification:", wbs.testingVerification),
+    `Done means:\n${wbs.doneMeans.trim()}`
+  ];
+  const riskNotes = trimOptionalString(wbs.riskNotes);
+  if (riskNotes) {
+    sections.push(`Risk notes:\n${riskNotes}`);
+  }
+  return sections.join("\n\n");
+}
+
 /**
  * Stub normalizer (WP-1.3): maps a WBS row to a persist-compatible task draft.
  * Full provenance attachment and id allocation happen in WP-6 finalize.
@@ -182,6 +218,7 @@ export function normalizeWbsItemToTaskDraft(
   const phase =
     (typeof payload.phase === "string" && payload.phase.trim()) ||
     (phaseKey ? phaseLabelFromKey(phaseKey) : context.defaultPhase);
+  const sourceIdeaId = trimOptionalString(context.sourceIdeaId);
 
   const planningProvenance = {
     planId: context.planId,
@@ -190,6 +227,7 @@ export function normalizeWbsItemToTaskDraft(
     wbsPath: wbs.path,
     planRef: context.planRef,
     planningType: context.planningType,
+    sourceIdeaId,
     source: "normalize-wbs-to-task-draft" as const
   };
 
@@ -201,6 +239,8 @@ export function normalizeWbsItemToTaskDraft(
     phase,
     phaseKey: phaseKey || undefined,
     approach: payload.approach.trim(),
+    summary: trimOptionalString(payload.approach) ?? trimOptionalString(wbs.approach),
+    description: buildTaskDraftDescription(wbs, payload),
     technicalScope: [...payload.technicalScope],
     acceptanceCriteria: [...payload.acceptanceCriteria],
     dependsOn: wbs.dependsOn.length > 0 ? [...wbs.dependsOn] : payload.dependsOn ? [...payload.dependsOn] : undefined,

@@ -364,7 +364,9 @@ export async function runFinalizePlanToPhase(
     planningType: loaded.identity.planningType,
     defaultPhase: proposal.label,
     defaultPhaseKey: proposal.phaseKey,
-    defaultStatus: desiredStatus
+    defaultStatus: desiredStatus,
+    sourceIdeaId:
+      typeof loaded.provenance.sourceIdeaId === "string" ? loaded.provenance.sourceIdeaId : undefined
   };
 
   const wbsFindings: Array<Record<string, unknown>> = [];

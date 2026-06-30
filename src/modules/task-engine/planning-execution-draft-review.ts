@@ -6,7 +6,15 @@ export function reviewPlanningExecutionDraftGaps(
 ): Array<Record<string, unknown>> {
   const findings: Array<Record<string, unknown>> = [];
   const textFor = (task: TaskEntity): string =>
-    [task.title, task.approach, ...(task.technicalScope ?? []), ...(task.acceptanceCriteria ?? [])]
+    [
+      task.title,
+      task.summary,
+      task.description,
+      task.approach,
+      ...(task.technicalScope ?? []),
+      ...(task.acceptanceCriteria ?? [])
+    ]
+      .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
       .join("\n")
       .toLowerCase();
   const allText = tasks.map(textFor).join("\n");
