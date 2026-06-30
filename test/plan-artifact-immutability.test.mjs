@@ -17,25 +17,33 @@ function freshDraftArtifact(base) { const planId = crypto.randomUUID(); const do
 function approvalFor(artifact, version = 1) { return { schemaVersion: 1, confirmed: true, approvedVersion: version, approvedAt: "2026-05-27T08:00:00.000Z", approvedBy: "operator@example.com", planRef: artifact.planRef }; }
 async function tmpWorkspace() { const workspace = await mkdtemp(path.join(os.tmpdir(), "wk-plan-immut-")); await mkdir(path.join(workspace, ".workspace-kit", "tasks"), { recursive: true }); return workspace; }
 function persistArgs(artifact, extra = {}) { return { persist: true, artifact, expectedPlanningGeneration: 0, policyApproval: { confirmed: true, rationale: "plan-artifact-immutability.test.mjs" }, ...extra }; }
+async function recordReview(workspace, planId, planningGeneration) {
+  const review = await planningModule.onCommand({ name: "review-plan-artifact", args: { planId, recordReview: true, expectedPlanningGeneration: planningGeneration, policyApproval: { confirmed: true, rationale: "immutability review" } } }, { runtimeVersion: "0.1", workspacePath: workspace, effectiveConfig: SQLITE_CFG });
+  assert.equal(review.ok, true, review.message); return review;
+}
+async function acceptAfterReview(workspace, planId, artifact, planningGeneration) {
+  const review = await recordReview(workspace, planId, planningGeneration);
+  const accept = await planningModule.onCommand({ name: "accept-plan-artifact", args: { planId, approvalRecord: approvalFor(artifact, review.data.version), expectedPlanningGeneration: review.data.planningGeneration ?? planningGeneration, policyApproval: { confirmed: true, rationale: "immutability accept" } } }, { runtimeVersion: "0.1", workspacePath: workspace, effectiveConfig: SQLITE_CFG });
+  assert.equal(accept.ok, true, accept.message); return accept;
+}
 async function draftPersist(workspace, artifact, extra = {}) { const result = await planningModule.onCommand({ name: "draft-plan-artifact", args: persistArgs(artifact, extra) }, { runtimeVersion: "0.1", workspacePath: workspace, effectiveConfig: SQLITE_CFG }); assert.equal(result.ok, true, result.message); return result; }
 describe("PlanArtifact version immutability (T100754)", () => {
   it("bumps version when drafting after acceptance without mutating accepted row", async () => {
     const workspace = await tmpWorkspace(); const artifact = freshDraftArtifact(loadFixture("plan-artifact-full-feature.valid.v1.json")); artifact.openQuestions = [];
     const draft = await draftPersist(workspace, artifact);
-    const accept = await planningModule.onCommand({ name: "accept-plan-artifact", args: { planId: draft.data.planId, approvalRecord: approvalFor(artifact, 1), expectedPlanningGeneration: draft.data.planningGeneration ?? 0, policyApproval: { confirmed: true, rationale: "immutability accept" } } }, { runtimeVersion: "0.1", workspacePath: workspace, effectiveConfig: SQLITE_CFG });
-    assert.equal(accept.ok, true); assert.equal(accept.data.version, 2);
+    const accept = await acceptAfterReview(workspace, draft.data.planId, artifact, draft.data.planningGeneration ?? 0);
     const acceptedOnDisk = JSON.parse(await readFile(path.join(workspace, accept.data.storagePath), "utf8"));
     const secondBody = structuredClone(artifact); delete secondBody.version; secondBody.identity = { ...secondBody.identity, summary: "Replan after acceptance" };
     const replan = await planningModule.onCommand({ name: "draft-plan-artifact", args: persistArgs(secondBody, { expectedPlanningGeneration: accept.data.planningGeneration ?? 0 }) }, { runtimeVersion: "0.1", workspacePath: workspace, effectiveConfig: SQLITE_CFG });
-    assert.equal(replan.data.version, 3);
+    assert.equal(replan.data.version, accept.data.version + 1);
     const acceptedAfterReplan = JSON.parse(await readFile(path.join(workspace, accept.data.storagePath), "utf8"));
     assert.deepEqual(acceptedAfterReplan, acceptedOnDisk);
   });
   it("rejects draft persist targeting an accepted version number", async () => {
     const workspace = await tmpWorkspace(); const artifact = freshDraftArtifact(loadFixture("plan-artifact-full-feature.valid.v1.json")); artifact.openQuestions = [];
     const draft = await draftPersist(workspace, artifact);
-    await planningModule.onCommand({ name: "accept-plan-artifact", args: { planId: draft.data.planId, approvalRecord: approvalFor(artifact, 1), expectedPlanningGeneration: draft.data.planningGeneration ?? 0, policyApproval: { confirmed: true, rationale: "immutability accept" } } }, { runtimeVersion: "0.1", workspacePath: workspace, effectiveConfig: SQLITE_CFG });
-    const blocked = await planningModule.onCommand({ name: "draft-plan-artifact", args: persistArgs({ ...artifact, version: 2, identity: { ...artifact.identity, summary: "mutate accepted" } }) }, { runtimeVersion: "0.1", workspacePath: workspace, effectiveConfig: SQLITE_CFG });
+    const accept = await acceptAfterReview(workspace, draft.data.planId, artifact, draft.data.planningGeneration ?? 0);
+    const blocked = await planningModule.onCommand({ name: "draft-plan-artifact", args: persistArgs({ ...artifact, version: accept.data.version, identity: { ...artifact.identity, summary: "mutate accepted" } }, { expectedPlanningGeneration: accept.data.planningGeneration ?? 0 }) }, { runtimeVersion: "0.1", workspacePath: workspace, effectiveConfig: SQLITE_CFG });
     assert.equal(blocked.code, "plan-artifact-version-immutable");
   });
   it("writePlanArtifactVersion refuses in-place overwrite of accepted versions", () => {

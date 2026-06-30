@@ -37,7 +37,9 @@ async function draftPersist(workspace, artifact) {
   assert.equal(result.ok, true, result.message); return result;
 }
 async function acceptPlan(workspace, planId, artifact, planningGeneration) {
-  const accept = await planningModule.onCommand({ name: "accept-plan-artifact", args: { planId, approvalRecord: approvalFor(artifact, 1), expectedPlanningGeneration: planningGeneration, policyApproval: { confirmed: true, rationale: "accept" } } }, { runtimeVersion: "0.1", workspacePath: workspace, effectiveConfig: SQLITE_CFG });
+  const review = await planningModule.onCommand({ name: "review-plan-artifact", args: { planId, recordReview: true, expectedPlanningGeneration: planningGeneration, policyApproval: { confirmed: true, rationale: "review before accept" } } }, { runtimeVersion: "0.1", workspacePath: workspace, effectiveConfig: SQLITE_CFG });
+  assert.equal(review.ok, true, review.message);
+  const accept = await planningModule.onCommand({ name: "accept-plan-artifact", args: { planId, approvalRecord: approvalFor(artifact, review.data.version), expectedPlanningGeneration: review.data.planningGeneration ?? planningGeneration, policyApproval: { confirmed: true, rationale: "accept" } } }, { runtimeVersion: "0.1", workspacePath: workspace, effectiveConfig: SQLITE_CFG });
   assert.equal(accept.ok, true, accept.message); return accept;
 }
 async function seedReadyTask(workspace, taskId) {
