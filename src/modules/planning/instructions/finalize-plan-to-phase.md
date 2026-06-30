@@ -54,7 +54,7 @@ pnpm exec wk run finalize-plan-to-phase '{"planId":"550e8400-e29b-41d4-a716-4466
 1. Load plan; assert accepted + approval version pin.
 2. Resolve target phase: explicit argv → workspace `nextKitPhase` → next numeric phase with no tasks.
 3. Ensure `kit_phase_catalog` row exists for the resolved phase (upsert when missing).
-4. For each selected WBS row: `normalizeWbsItemToTaskDraft()` → task row shape.
+4. For each selected WBS row: `normalizeWbsItemToTaskDraft()` → exactly one task row with title, synthesized body/description, acceptance criteria, verification context, dependencies, phase/status, and plan/WBS provenance metadata.
 5. Call **`review-planning-execution-drafts`** (or equivalent) on `tasks[]`.
 6. **`dryRun: true`** — return `taskPreview`, embedded `review`, optional `taskGenerationPayloads`; no task writes.
 7. **`dryRun: false`** — call **`persist-planning-execution-drafts`** with `planRef`, `planningType` from `identity`, provenance, `clientMutationId`, `expectedPlanningGeneration`, and `policyApproval`; set plan `status: finalized` after successful task persistence.

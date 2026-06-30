@@ -77,15 +77,33 @@ async function draftPersist(workspace, artifact) {
   return result;
 }
 
-async function acceptPlan(workspace, planId, artifact, planningGeneration) {
+async function acceptPlan(workspace, planId, artifact, planningGeneration, approvedVersion) {
   const result = await planningModule.onCommand(
     {
       name: "accept-plan-artifact",
       args: {
         planId,
-        approvalRecord: approvalFor(artifact, 1),
+        approvalRecord: approvalFor(artifact, approvedVersion),
         expectedPlanningGeneration: planningGeneration,
         policyApproval: { confirmed: true, rationale: "accept for finalize preview test" }
+      }
+    },
+    { runtimeVersion: "0.1", workspacePath: workspace, effectiveConfig: SQLITE_CFG }
+  );
+  assert.equal(result.ok, true, result.message);
+  return result;
+}
+
+async function reviewPlan(workspace, planId, planningGeneration) {
+  const result = await planningModule.onCommand(
+    {
+      name: "review-plan-artifact",
+      args: {
+        planId,
+        profile: "full-feature",
+        recordReview: true,
+        expectedPlanningGeneration: planningGeneration,
+        policyApproval: { confirmed: true, rationale: "review for finalize preview test" }
       }
     },
     { runtimeVersion: "0.1", workspacePath: workspace, effectiveConfig: SQLITE_CFG }
@@ -115,13 +133,16 @@ describe("finalize-plan-to-phase dry-run (T100471)", () => {
     const workspace = await tmpWorkspace();
     const artifact = freshArtifact(loadFixture("plan-artifact-full-feature.valid.v1.json"));
     artifact.openQuestions = [];
+    artifact.provenance = { ...artifact.provenance, sourceIdeaId: "idea-planning-system" };
     enrichWbsForBatchReview(artifact);
     const draft = await draftPersist(workspace, artifact);
+    const reviewed = await reviewPlan(workspace, draft.data.planId, draft.data.planningGeneration ?? 0);
     const accepted = await acceptPlan(
       workspace,
       draft.data.planId,
       artifact,
-      draft.data.planningGeneration ?? 0
+      reviewed.data.planningGeneration ?? 0,
+      reviewed.data.version
     );
 
     const preview = await planningModule.onCommand(
@@ -142,21 +163,29 @@ describe("finalize-plan-to-phase dry-run (T100471)", () => {
     assert.equal(preview.data.phaseKey, "110");
     assert.ok(Array.isArray(preview.data.taskPreview));
     assert.equal(preview.data.taskPreview.length, artifact.wbs.length);
+    assert.match(preview.data.taskPreview[0].description, /Verification:\n- kit unit tests/);
+    assert.equal(
+      preview.data.taskPreview[0].metadata.planningProvenance.sourceIdeaId,
+      "idea-planning-system"
+    );
     assert.equal(preview.data.review.passed, true);
-    assert.equal(accepted.data.version, 2);
+    assert.equal(accepted.data.version, 3);
   });
 
   it("persists reviewed task drafts and marks the plan finalized (T100472)", async () => {
     const workspace = await tmpWorkspace();
     const artifact = freshArtifact(loadFixture("plan-artifact-full-feature.valid.v1.json"));
     artifact.openQuestions = [];
+    artifact.provenance = { ...artifact.provenance, sourceIdeaId: "idea-planning-system" };
     enrichWbsForBatchReview(artifact);
     const draft = await draftPersist(workspace, artifact);
+    const reviewed = await reviewPlan(workspace, draft.data.planId, draft.data.planningGeneration ?? 0);
     const accepted = await acceptPlan(
       workspace,
       draft.data.planId,
       artifact,
-      draft.data.planningGeneration ?? 0
+      reviewed.data.planningGeneration ?? 0,
+      reviewed.data.version
     );
 
     const persisted = await planningModule.onCommand(
@@ -185,7 +214,13 @@ describe("finalize-plan-to-phase dry-run (T100471)", () => {
     assert.equal(persisted.data.createdTasks[0].status, "ready");
     assert.equal(persisted.data.createdTasks[0].metadata.planRef, artifact.planRef);
     assert.equal(persisted.data.createdTasks[0].metadata.planningProvenance.planId, artifact.planId);
-    assert.equal(persisted.data.version, 3);
+    assert.equal(
+      persisted.data.createdTasks[0].metadata.planningProvenance.sourceIdeaId,
+      "idea-planning-system"
+    );
+    assert.match(persisted.data.createdTasks[0].description, /Plan WBS row: WBS-1 \(1\) — Kit contract/);
+    assert.match(persisted.data.createdTasks[0].description, /Verification:\n- kit unit tests/);
+    assert.equal(persisted.data.version, 4);
 
     const latest = readLatestPlanArtifact(workspace, artifact.planId);
     assert.equal(latest?.status, "finalized");
