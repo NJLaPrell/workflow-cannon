@@ -18,6 +18,9 @@ import { planningGenPolicyGate } from "../task-engine/planning-generation-gate.j
 import { attachPolicyMeta } from "../task-engine/attach-planning-response-meta.js";
 import { TaskEngineError } from "../task-engine/transitions.js";
 import { digestPayload, planningConcurrencySaveOpts, readIdempotencyValue, stableStringify } from "../task-engine/mutation-utils.js";
+import { promoteAcceptedPlanArtifactFromAcceptedDraft } from "../ideas/idea-planning-metadata.js";
+import { completePlanningSessionAfterPlanAccept } from "../ideas/planning-session-completed-after-accept.js";
+import { toPlanningChatSessionResponse } from "../ideas/planning-chat-session.js";
 
 const ACCEPT_IDEMPOTENCY_MODULE_PREFIX = "planning-plan-artifact-accept-idempotency:";
 
@@ -197,6 +200,8 @@ function acceptSuccessResult(args: {
   artifact: PlanArtifactV1;
   storagePath: string;
   replayed: boolean;
+  idea?: Record<string, unknown>;
+  planningChatSession?: ReturnType<typeof toPlanningChatSessionResponse>;
 }): ModuleCommandResult {
   return {
     ok: true,
@@ -211,7 +216,9 @@ function acceptSuccessResult(args: {
       status: args.artifact.status,
       approvalRecord: args.artifact.approvalRecord,
       storagePath: args.storagePath,
-      replayed: args.replayed
+      replayed: args.replayed,
+      ...(args.idea ? { idea: args.idea } : {}),
+      ...(args.planningChatSession ? { planningChatSession: args.planningChatSession } : {})
     }
   };
 }
@@ -513,12 +520,22 @@ export async function runAcceptPlanArtifact(
   };
 
   let written;
+  let linkedIdea: Record<string, unknown> | undefined;
+  let planningChatSession: ReturnType<typeof toPlanningChatSessionResponse> | undefined;
   try {
     stores.sqliteDual.withTransaction(() => {
       written = writeNextPlanArtifactVersion(ctx.workspacePath, acceptedBody, {
         effectiveConfig,
         sqliteDb
       });
+      const promoted = promoteAcceptedPlanArtifactFromAcceptedDraft(sqliteDb, written!.artifact, now);
+      if (promoted.idea) {
+        linkedIdea = promoted.idea as unknown as Record<string, unknown>;
+      }
+      const completedSession = completePlanningSessionAfterPlanAccept(sqliteDb, written!.artifact, now);
+      if (completedSession) {
+        planningChatSession = toPlanningChatSessionResponse(completedSession);
+      }
       if (clientMutationId) {
         const storagePath = written!.paths.artifactFileRelative(written!.artifact.version);
         writeAcceptIdempotencyRecord(
@@ -553,7 +570,9 @@ export async function runAcceptPlanArtifact(
     code: "plan-artifact-accepted",
     artifact: written!.artifact,
     storagePath,
-    replayed: false
+    replayed: false,
+    ...(linkedIdea ? { idea: linkedIdea } : {}),
+    ...(planningChatSession ? { planningChatSession } : {})
   });
   attachPolicyMeta(
     result.data as Record<string, unknown>,
