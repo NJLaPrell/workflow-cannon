@@ -150,10 +150,13 @@ export const planningModule: WorkflowModule = {
         args.importSource === "import-build-plan" || args.importSource === "import-wishlist"
           ? args.importSource
           : undefined;
+      const ideaId =
+        typeof args.ideaId === "string" && args.ideaId.trim().length > 0 ? args.ideaId.trim() : undefined;
       const validation = validatePlanArtifactDraftInput(artifactRaw, {
         workspaceRoot: ctx.workspacePath,
         planId: typeof args.planId === "string" ? args.planId : undefined,
         importSource,
+        ideaId,
         actor: typeof args.actor === "string" ? args.actor : undefined
       });
       if (!validation.ok) {

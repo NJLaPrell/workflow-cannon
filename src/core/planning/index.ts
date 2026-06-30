@@ -105,6 +105,7 @@ export {
 export { renderPlanArtifactMarkdown } from "./render-plan-artifact-markdown.js";
 export {
   formatPlanArtifactInstancePath,
+  isIdeaOriginatedPlanArtifactDraft,
   normalizePlanArtifactDraft,
   validatePlanArtifactDocument,
   validatePlanArtifactDraftInput,

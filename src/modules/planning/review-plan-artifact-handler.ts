@@ -116,9 +116,12 @@ async function resolveArtifact(
   const planIdRaw = typeof args.planId === "string" ? args.planId.trim() : "";
 
   if (hasArtifact) {
+    const ideaId =
+      typeof args.ideaId === "string" && args.ideaId.trim().length > 0 ? args.ideaId.trim() : undefined;
     const validation = validatePlanArtifactDraftInput(artifactRaw, {
       workspaceRoot: ctx.workspacePath,
       planId: planIdRaw || undefined,
+      ideaId,
       actor: typeof args.actor === "string" ? args.actor : undefined
     });
     if (!validation.ok) {
