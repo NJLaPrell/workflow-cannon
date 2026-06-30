@@ -10,7 +10,7 @@ type SqliteDatabase = InstanceType<typeof Database>;
  */
 
 /** Bump and add a migration step in `migrateKitSqliteSchema` when DDL changes. Exposed for doctor / list-module-states. */
-export const KIT_SQLITE_USER_VERSION = 38;
+export const KIT_SQLITE_USER_VERSION = 39;
 
 export const TASK_ENGINE_TASKS_TABLE = "task_engine_tasks";
 export const TASK_ENGINE_DEPENDENCIES_TABLE = "task_engine_dependencies";
@@ -586,7 +586,7 @@ function migrateV16ToV17(db: SqliteDatabase): void {
 
 /** SQLite CHECK strings aligned with `TaskStatus` / `TaskPriority` in task-engine types. */
 const TASK_ENGINE_TASK_STATUSES_SQL =
-  "('research','proposed','ready','in_progress','blocked','completed','cancelled')";
+  "('research','proposed','ready','in_progress','awaiting_review','awaiting_policy_approval','awaiting_external_decision','blocked','completed','cancelled')";
 const TASK_ENGINE_PRIORITIES_SQL = "('P1','P2','P3')";
 
 /**
@@ -1474,6 +1474,14 @@ function migrateV37ToV38(db: SqliteDatabase): void {
   }
 }
 
+/** Expand task status CHECK constraints to include human-gate lifecycle states. */
+function migrateV38ToV39(db: SqliteDatabase): void {
+  if (!tableExists(db, TASK_ENGINE_TASKS_TABLE)) {
+    return;
+  }
+  migrateV17ToV18(db);
+}
+
 /**
  * Shared SQLite setup for workspace-kit.db: pragmas, centralized user_version migrations.
  * Call after `new Database(path)` for every open (read/write).
@@ -1686,6 +1694,11 @@ function migrateKitSqliteSchema(db: SqliteDatabase): void {
     migrateV37ToV38(db);
     db.pragma("user_version = 38");
     current = 38;
+  }
+  if (current < 39) {
+    migrateV38ToV39(db);
+    db.pragma("user_version = 39");
+    current = 39;
   }
 }
 
