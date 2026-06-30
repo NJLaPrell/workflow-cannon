@@ -7,6 +7,7 @@ Canonical JSON examples for **AgentDefinition**, **AgentSession**, **assignment 
 | Path | Contract | Role |
 | --- | --- | --- |
 | `agent-definition-orchestration-agent.v1.json` | AgentDefinition v1 | Orchestration Agent |
+| `agent-definition-planning-agent.v1.json` | AgentDefinition v1 | Planning Agent (planner-chat) |
 | `agent-definition-task-worker.v1.json` | AgentDefinition v1 | Task Work Agent |
 | `agent-session-orchestration-agent.v1.json` | AgentSession v1 | Orchestrator session (phase delivery) |
 | `agent-session-task-worker.v1.json` | AgentSession v1 | Worker session on an assignment |
