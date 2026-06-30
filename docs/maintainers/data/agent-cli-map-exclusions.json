@@ -24,6 +24,7 @@
     "get-last-output",
     "get-module-state",
     "get-ready-queue",
+    "get-plan-artifact",
     "get-recent-task-activity",
     "get-task-history",
     "get-task-summary",
@@ -39,6 +40,7 @@
     "queue-git-alignment",
     "remove-dependency",
     "replay-queue-snapshot",
+    "start-idea-planning",
     "sync-transcripts",
     "task-sync-hydrate",
     "task-sync-init",
@@ -46,12 +48,16 @@
     "task-sync-verify",
     "transcript-automation-status",
     "update-workspace-status",
+    "update-idea-planning-session",
     "workspace-status-history"
   ],
   "exclusionRationales": {
     "task-sync-status": "Phase 125 T100622; machine canon via .ai/agent-cli-snippets and task-sync-*.md",
     "task-sync-hydrate": "Phase 125 T100622; machine canon via .ai/agent-cli-snippets and task-sync-*.md",
     "task-sync-init": "Phase 125 T100622; machine canon via .ai/agent-cli-snippets and task-sync-*.md",
-    "task-sync-verify": "Phase 125 T100622; machine canon via .ai/agent-cli-snippets and task-sync-*.md"
+    "task-sync-verify": "Phase 125 T100622; machine canon via .ai/agent-cli-snippets and task-sync-*.md",
+    "get-plan-artifact": "Phase 139; read-only planning command; instruction at src/modules/planning/instructions/get-plan-artifact.md",
+    "start-idea-planning": "Phase 139; ideas module instruction src/modules/ideas/instructions/start-idea-planning.md",
+    "update-idea-planning-session": "Phase 139; ideas module instruction src/modules/ideas/instructions/update-idea-planning-session.md"
   }
 }

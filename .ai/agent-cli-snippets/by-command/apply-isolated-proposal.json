@@ -3,11 +3,9 @@
   "code": "run-args-schema",
   "command": "apply-isolated-proposal",
   "schema": {
-    "type": "object",
-    "additionalProperties": true,
-    "description": "Permissive fallback args schema for 'apply-isolated-proposal'. Use instructionPath for command-specific field guidance until a stricter schema is added."
+    "type": "object"
   },
-  "schemaSource": "manifest-permissive-fallback",
+  "schemaSource": "pilot-run-args-snapshot",
   "sampleArgs": {},
   "examples": [
     {
@@ -38,5 +36,5 @@
     "listCommands": "pnpm exec wk run --list-commands",
     "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
   },
-  "invocationId": "5fa22dd0-5138-43f3-b642-fccf6a9be8c1"
+  "invocationId": "37655c56-ef66-4ba3-8dbb-130358f1254e"
 }

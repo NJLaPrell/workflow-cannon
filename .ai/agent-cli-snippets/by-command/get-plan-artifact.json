@@ -1,24 +1,26 @@
 {
   "ok": true,
   "code": "run-args-schema",
-  "command": "dismiss-phase-note",
+  "command": "get-plan-artifact",
   "schema": {
-    "type": "object"
+    "type": "object",
+    "additionalProperties": true,
+    "description": "Permissive fallback args schema for 'get-plan-artifact'. Use instructionPath for command-specific field guidance until a stricter schema is added."
   },
-  "schemaSource": "pilot-run-args-snapshot",
+  "schemaSource": "manifest-permissive-fallback",
   "sampleArgs": {},
   "examples": [
     {
       "description": "Minimal argv example",
-      "argv": "workspace-kit run dismiss-phase-note '{}'"
+      "argv": "workspace-kit run get-plan-artifact '{}'"
     }
   ],
-  "instructionPath": "src/modules/task-engine/instructions/dismiss-phase-note.md",
-  "moduleId": "task-engine",
-  "description": "Mark a phase note dismissed (requires reason; MVP does not persist reason in-schema).",
+  "instructionPath": "src/modules/planning/instructions/get-plan-artifact.md",
+  "moduleId": "planning",
+  "description": "Read PlanArtifact version history and lineage.",
   "policy": {
     "sensitivity": "non-sensitive",
-    "operationId": null,
+    "operationId": "planning.get-plan-artifact",
     "jsonApprovalRequired": false
   },
   "planningGeneration": {
@@ -36,5 +38,5 @@
     "listCommands": "pnpm exec wk run --list-commands",
     "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
   },
-  "invocationId": "84806a1a-bd13-45a2-974a-95350f1466b8"
+  "invocationId": "3dab5099-0647-4858-9f8a-3503ebcee943"
 }

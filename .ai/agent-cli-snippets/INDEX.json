@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-06-30T15:45:51.226Z",
+  "generatedAt": "2026-06-30T19:40:28.352Z",
   "commands": [
     {
       "name": "accept-improvement",
@@ -708,6 +708,11 @@
       "moduleId": "task-engine"
     },
     {
+      "name": "get-plan-artifact",
+      "path": ".ai/agent-cli-snippets/by-command/get-plan-artifact.json",
+      "moduleId": "planning"
+    },
+    {
       "name": "get-ready-queue",
       "path": ".ai/agent-cli-snippets/by-command/get-ready-queue.json",
       "moduleId": "task-engine"
@@ -1188,6 +1193,11 @@
       "moduleId": "subagents"
     },
     {
+      "name": "start-idea-planning",
+      "path": ".ai/agent-cli-snippets/by-command/start-idea-planning.json",
+      "moduleId": "ideas"
+    },
+    {
       "name": "start-task",
       "path": ".ai/agent-cli-snippets/by-command/start-task.json",
       "moduleId": "task-engine"
@@ -1325,6 +1335,11 @@
     {
       "name": "update-idea",
       "path": ".ai/agent-cli-snippets/by-command/update-idea.json",
+      "moduleId": "ideas"
+    },
+    {
+      "name": "update-idea-planning-session",
+      "path": ".ai/agent-cli-snippets/by-command/update-idea-planning-session.json",
       "moduleId": "ideas"
     },
     {

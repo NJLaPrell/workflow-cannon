@@ -1,26 +1,26 @@
 {
   "ok": true,
   "code": "run-args-schema",
-  "command": "cae-record-shadow-feedback",
+  "command": "update-idea-planning-session",
   "schema": {
     "type": "object",
     "additionalProperties": true,
-    "description": "Permissive fallback args schema for 'cae-record-shadow-feedback'. Use instructionPath for command-specific field guidance until a stricter schema is added."
+    "description": "Permissive fallback args schema for 'update-idea-planning-session'. Use instructionPath for command-specific field guidance until a stricter schema is added."
   },
   "schemaSource": "manifest-permissive-fallback",
   "sampleArgs": {},
   "examples": [
     {
       "description": "Minimal argv example",
-      "argv": "workspace-kit run cae-record-shadow-feedback '{}'"
+      "argv": "workspace-kit run update-idea-planning-session '{}'"
     }
   ],
-  "instructionPath": "src/modules/context-activation/instructions/cae-record-shadow-feedback.md",
-  "moduleId": "context-activation",
-  "description": "Record operator usefulness feedback for a CAE shadow observation.",
+  "instructionPath": "src/modules/ideas/instructions/update-idea-planning-session.md",
+  "moduleId": "ideas",
+  "description": "Update durable planning session state with idea/session validation and dashboard-ready output.",
   "policy": {
     "sensitivity": "sensitive",
-    "operationId": "context-activation.cae-record-shadow-feedback",
+    "operationId": "ideas.persist",
     "jsonApprovalRequired": true
   },
   "planningGeneration": {
@@ -38,5 +38,5 @@
     "listCommands": "pnpm exec wk run --list-commands",
     "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
   },
-  "invocationId": "dae10664-7869-4924-88e6-52f4f427d987"
+  "invocationId": "68c042ea-5764-45c1-8a3a-ac2da5920fe8"
 }
