@@ -491,6 +491,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   private readonly originalRun: CommandClient["run"];
   private readonly originalRunForPaint: CommandClient["runForDashboardPaint"];
   private inFlightStatusHydration: Promise<KitRunResult> | null = null;
+  private readonly inFlightIdeaPlan = new Map<string, Promise<void>>();
 
   constructor(
     private readonly extensionUri: vscode.Uri,
@@ -3493,7 +3494,23 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     await this.view?.webview.postMessage({ type: "wcIdeaMutationResult", operation: "reorder", ok: true });
   }
 
-  private async onPrefillIdeaPlanningChat(ideaId: string, _title: string, _note: string): Promise<void> {
+  private async onPrefillIdeaPlanningChat(ideaId: string, title: string, note: string): Promise<void> {
+    const existing = this.inFlightIdeaPlan.get(ideaId);
+    if (existing) {
+      return existing;
+    }
+    const work = this.runPrefillIdeaPlanningChat(ideaId, title, note);
+    this.inFlightIdeaPlan.set(ideaId, work);
+    try {
+      await work;
+    } finally {
+      if (this.inFlightIdeaPlan.get(ideaId) === work) {
+        this.inFlightIdeaPlan.delete(ideaId);
+      }
+    }
+  }
+
+  private async runPrefillIdeaPlanningChat(ideaId: string, _title: string, _note: string): Promise<void> {
     if (ideaId.length === 0) {
       await this.view?.webview.postMessage({
         type: "wcIdeaMutationResult",
@@ -3708,7 +3725,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   }
 
   private dashboardIdeaPlanMutationId(ideaId: string): string {
-    return this.dashboardDrawerMutationId("dashboard-idea-plan", ideaId);
+    return `dashboard-idea-plan-${ideaId}`;
   }
 
   private formatStartIdeaPlanningError(out: KitRunResult): string {
