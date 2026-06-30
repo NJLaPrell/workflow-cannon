@@ -16,6 +16,7 @@ import {
   readActiveDraftPlanArtifact,
   writeActiveDraftPlanArtifact
 } from "../dist/modules/ideas/idea-planning-metadata.js";
+import { getPlanningChatSession } from "../dist/modules/ideas/planning-chat-session.js";
 import { SqliteDualPlanningStore } from "../dist/modules/task-engine/persistence/sqlite-dual-planning.js";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
