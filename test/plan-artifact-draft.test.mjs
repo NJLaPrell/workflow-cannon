@@ -10,8 +10,13 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
 
-import { planningModule } from "../dist/index.js";
+import { ideasModule, planningModule } from "../dist/index.js";
 import { readLatestPlanArtifact } from "../dist/core/planning/plan-artifact-storage.js";
+import {
+  readActiveDraftPlanArtifact,
+  writeActiveDraftPlanArtifact
+} from "../dist/modules/ideas/idea-planning-metadata.js";
+import { SqliteDualPlanningStore } from "../dist/modules/task-engine/persistence/sqlite-dual-planning.js";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const fixturesDir = path.join(repoRoot, "fixtures", "planning");
@@ -45,6 +50,28 @@ function persistArgs(artifact, extra = {}) {
     policyApproval: { confirmed: true, rationale: "plan-artifact-draft.test.mjs" },
     ...extra
   };
+}
+
+function policyApproval() {
+  return { confirmed: true, rationale: "plan-artifact-draft.test.mjs" };
+}
+
+async function createIdea(workspace, args = {}) {
+  const created = await ideasModule.onCommand(
+    {
+      name: "create-idea",
+      args: { title: "Draft link idea", policyApproval: policyApproval(), ...args }
+    },
+    { runtimeVersion: "0.1", workspacePath: workspace, effectiveConfig: SQLITE_CFG }
+  );
+  assert.equal(created.ok, true);
+  return created.data.idea;
+}
+
+function planningDb(workspace) {
+  const dual = new SqliteDualPlanningStore(workspace, ".workspace-kit/tasks/workspace-kit.db");
+  dual.loadFromDisk();
+  return dual.getDatabase();
 }
 
 describe("draft-plan-artifact fixtures (T100458)", () => {
@@ -247,5 +274,67 @@ describe("draft-plan-artifact fixtures (T100458)", () => {
     assert.equal(replay.data.replayed, true);
     assert.equal(replay.data.version, first.data.version);
     assert.equal(replay.data.planId, first.data.planId);
+  });
+
+  it("links idea-originated draft as activeDraftPlanArtifact without touching linkedPlanArtifact", async () => {
+    const workspace = await tmpWorkspace();
+    const idea = await createIdea(workspace, {
+      title: "First draft idea",
+      linkedPlanArtifact: "plan-artifact:accepted-plan",
+      previousPlanArtifacts: ["plan-artifact:older-plan"]
+    });
+    const artifact = freshDraftArtifact(loadFixture("plan-artifact-minimal.valid.v1.json"));
+    artifact.provenance = {
+      ...artifact.provenance,
+      sourceIdeaId: idea.id,
+      chatSessionRef: "pcs-first-draft"
+    };
+
+    const result = await planningModule.onCommand(
+      { name: "draft-plan-artifact", args: persistArgs(artifact) },
+      { runtimeVersion: "0.1", workspacePath: workspace, effectiveConfig: SQLITE_CFG }
+    );
+    assert.equal(result.ok, true);
+
+    const db = planningDb(workspace);
+    assert.equal(readActiveDraftPlanArtifact(db, idea.id), result.data.planRef);
+
+    const retrieved = await ideasModule.onCommand(
+      { name: "get-idea", args: { ideaId: idea.id } },
+      { runtimeVersion: "0.1", workspacePath: workspace, effectiveConfig: SQLITE_CFG }
+    );
+    assert.equal(retrieved.data.idea.linkedPlanArtifact, "plan-artifact:accepted-plan");
+    assert.deepEqual(retrieved.data.idea.previousPlanArtifacts, ["plan-artifact:older-plan"]);
+  });
+
+  it("updates activeDraftPlanArtifact on replan while preserving accepted linked plan", async () => {
+    const workspace = await tmpWorkspace();
+    const idea = await createIdea(workspace, {
+      title: "Replan idea",
+      linkedPlanArtifact: "plan-artifact:accepted-plan"
+    });
+    const db = planningDb(workspace);
+    writeActiveDraftPlanArtifact(db, idea.id, "plan-artifact:old-draft", new Date().toISOString());
+
+    const artifact = freshDraftArtifact(loadFixture("plan-artifact-minimal.valid.v1.json"));
+    artifact.provenance = {
+      ...artifact.provenance,
+      sourceIdeaId: idea.id,
+      chatSessionRef: "pcs-replan"
+    };
+
+    const result = await planningModule.onCommand(
+      { name: "draft-plan-artifact", args: persistArgs(artifact) },
+      { runtimeVersion: "0.1", workspacePath: workspace, effectiveConfig: SQLITE_CFG }
+    );
+    assert.equal(result.ok, true);
+    assert.equal(readActiveDraftPlanArtifact(db, idea.id), result.data.planRef);
+    assert.notEqual(readActiveDraftPlanArtifact(db, idea.id), "plan-artifact:old-draft");
+
+    const retrieved = await ideasModule.onCommand(
+      { name: "get-idea", args: { ideaId: idea.id } },
+      { runtimeVersion: "0.1", workspacePath: workspace, effectiveConfig: SQLITE_CFG }
+    );
+    assert.equal(retrieved.data.idea.linkedPlanArtifact, "plan-artifact:accepted-plan");
   });
 });
