@@ -10,7 +10,7 @@ This root file is intentionally pointer-only to avoid split release history.
 
 ## [1.0.2] - 2026-06-30
 
-- **Phase 139 — MarkLogic + FastTrack demo and baseline health:** Docker-compose demo scaffold and maintainer baseline health report. See `docs/maintainers/CHANGELOG.md`.
+- **Phase 139 — baseline health:** Maintainer baseline health report for idea-planning work. See `docs/maintainers/CHANGELOG.md`.
 
 ## [1.0.1] - 2026-06-24
 
