@@ -112,6 +112,27 @@ async function reviewPlan(workspace, planId, planningGeneration) {
   return result;
 }
 
+async function prepareAcceptedFullFeatureArtifact(customizeArtifact) {
+  const workspace = await tmpWorkspace();
+  const artifact = freshArtifact(loadFixture("plan-artifact-full-feature.valid.v1.json"));
+  artifact.openQuestions = [];
+  artifact.provenance = { ...artifact.provenance, sourceIdeaId: "idea-planning-system" };
+  enrichWbsForBatchReview(artifact);
+  if (typeof customizeArtifact === "function") {
+    customizeArtifact(artifact);
+  }
+  const draft = await draftPersist(workspace, artifact);
+  const reviewed = await reviewPlan(workspace, draft.data.planId, draft.data.planningGeneration ?? 0);
+  const accepted = await acceptPlan(
+    workspace,
+    draft.data.planId,
+    artifact,
+    reviewed.data.planningGeneration ?? 0,
+    reviewed.data.version
+  );
+  return { workspace, artifact, draft, reviewed, accepted };
+}
+
 describe("finalize-plan-to-phase dry-run (T100471)", () => {
   it("B4: plan-artifact-not-accepted when plan is still draft", async () => {
     const workspace = await tmpWorkspace();
@@ -130,20 +151,7 @@ describe("finalize-plan-to-phase dry-run (T100471)", () => {
   });
 
   it("returns plan-artifact-finalize-preview for accepted full-feature plan", async () => {
-    const workspace = await tmpWorkspace();
-    const artifact = freshArtifact(loadFixture("plan-artifact-full-feature.valid.v1.json"));
-    artifact.openQuestions = [];
-    artifact.provenance = { ...artifact.provenance, sourceIdeaId: "idea-planning-system" };
-    enrichWbsForBatchReview(artifact);
-    const draft = await draftPersist(workspace, artifact);
-    const reviewed = await reviewPlan(workspace, draft.data.planId, draft.data.planningGeneration ?? 0);
-    const accepted = await acceptPlan(
-      workspace,
-      draft.data.planId,
-      artifact,
-      reviewed.data.planningGeneration ?? 0,
-      reviewed.data.version
-    );
+    const { workspace, artifact, draft, accepted } = await prepareAcceptedFullFeatureArtifact();
 
     const preview = await planningModule.onCommand(
       {
@@ -163,6 +171,8 @@ describe("finalize-plan-to-phase dry-run (T100471)", () => {
     assert.equal(preview.data.phaseKey, "110");
     assert.ok(Array.isArray(preview.data.taskPreview));
     assert.equal(preview.data.taskPreview.length, artifact.wbs.length);
+    assert.match(preview.data.taskPreview[0].id, /^T\d+$/);
+    assert.deepEqual(preview.data.taskPreview[1].dependsOn, [preview.data.taskPreview[0].id]);
     assert.match(preview.data.taskPreview[0].description, /Verification:\n- kit unit tests/);
     assert.equal(
       preview.data.taskPreview[0].metadata.planningProvenance.sourceIdeaId,
@@ -173,20 +183,7 @@ describe("finalize-plan-to-phase dry-run (T100471)", () => {
   });
 
   it("persists reviewed task drafts and marks the plan finalized (T100472)", async () => {
-    const workspace = await tmpWorkspace();
-    const artifact = freshArtifact(loadFixture("plan-artifact-full-feature.valid.v1.json"));
-    artifact.openQuestions = [];
-    artifact.provenance = { ...artifact.provenance, sourceIdeaId: "idea-planning-system" };
-    enrichWbsForBatchReview(artifact);
-    const draft = await draftPersist(workspace, artifact);
-    const reviewed = await reviewPlan(workspace, draft.data.planId, draft.data.planningGeneration ?? 0);
-    const accepted = await acceptPlan(
-      workspace,
-      draft.data.planId,
-      artifact,
-      reviewed.data.planningGeneration ?? 0,
-      reviewed.data.version
-    );
+    const { workspace, artifact, draft, accepted } = await prepareAcceptedFullFeatureArtifact();
 
     const persisted = await planningModule.onCommand(
       {
@@ -214,6 +211,7 @@ describe("finalize-plan-to-phase dry-run (T100471)", () => {
     assert.equal(persisted.data.createdTasks[0].status, "ready");
     assert.equal(persisted.data.createdTasks[0].metadata.planRef, artifact.planRef);
     assert.equal(persisted.data.createdTasks[0].metadata.planningProvenance.planId, artifact.planId);
+    assert.deepEqual(persisted.data.createdTasks[1].dependsOn, [persisted.data.createdTasks[0].id]);
     assert.equal(
       persisted.data.createdTasks[0].metadata.planningProvenance.sourceIdeaId,
       "idea-planning-system"
@@ -225,5 +223,74 @@ describe("finalize-plan-to-phase dry-run (T100471)", () => {
     const latest = readLatestPlanArtifact(workspace, artifact.planId);
     assert.equal(latest?.status, "finalized");
     assert.equal(latest?.taskGenerationPayloads?.length, artifact.wbs.length);
+  });
+
+  it("blocks subset finalize when selected WBS rows depend on unselected rows", async () => {
+    const { workspace, draft } = await prepareAcceptedFullFeatureArtifact();
+
+    const preview = await planningModule.onCommand(
+      {
+        name: "finalize-plan-to-phase",
+        args: {
+          planId: draft.data.planId,
+          dryRun: true,
+          targetPhaseKey: "112",
+          targetPhase: "Phase 112",
+          desiredStatus: "ready",
+          wbsFilter: ["WBS-2"]
+        }
+      },
+      { runtimeVersion: "0.1", workspacePath: workspace, effectiveConfig: SQLITE_CFG }
+    );
+
+    assert.equal(preview.ok, false);
+    assert.equal(preview.code, "plan-artifact-finalize-review-failed");
+    assert.equal(preview.message, "Finalize blocked: dependency resolution failed");
+    assert.deepEqual(preview.data.wbsFindings, [
+      {
+        code: "wbs-dependency-unselected",
+        severity: "error",
+        wbsId: "WBS-2",
+        dependency: "WBS-1",
+        field: "dependsOn",
+        message: "Selected WBS row 'WBS-2' depends on unselected WBS row 'WBS-1'"
+      }
+    ]);
+  });
+
+  it("returns a clear error when finalize sees an invalid dependency token", async () => {
+    const { workspace, draft } = await prepareAcceptedFullFeatureArtifact((artifact) => {
+      artifact.wbs[1].dependsOn = [];
+      artifact.wbs[1].generatedTaskPayload.dependsOn = ["NOT-A-TASK"];
+    });
+
+    const preview = await planningModule.onCommand(
+      {
+        name: "finalize-plan-to-phase",
+        args: {
+          planId: draft.data.planId,
+          dryRun: true,
+          targetPhaseKey: "113",
+          targetPhase: "Phase 113",
+          desiredStatus: "ready"
+        }
+      },
+      { runtimeVersion: "0.1", workspacePath: workspace, effectiveConfig: SQLITE_CFG }
+    );
+
+    assert.equal(preview.ok, false);
+    assert.equal(preview.code, "plan-artifact-finalize-review-failed");
+    assert.equal(preview.message, "Finalize blocked: dependency resolution failed");
+    assert.deepEqual(preview.data.wbsFindings, [
+      {
+        code: "wbs-dependency-invalid",
+        severity: "error",
+        wbsId: "WBS-2",
+        dependency: "NOT-A-TASK",
+        field: "dependsOn",
+        message:
+          "Selected WBS row 'WBS-2' has invalid dependency 'NOT-A-TASK' (expected selected WBS row or existing task id)"
+      }
+    ]);
   });
 });
