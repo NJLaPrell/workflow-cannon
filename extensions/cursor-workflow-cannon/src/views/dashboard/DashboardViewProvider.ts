@@ -8,7 +8,6 @@ import {
   ingestPlanningGenerationFromMismatch,
   ingestPlanningMetaFromData
 } from "../../planning-generation-cache.js";
-import { buildPlannerChatPrompt } from "../../planner-chat-prompt.js";
 import {
   GENERATE_FEATURES_SLASH_TEXT,
   buildGenerateFeaturesPrompt,
@@ -3494,7 +3493,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     await this.view?.webview.postMessage({ type: "wcIdeaMutationResult", operation: "reorder", ok: true });
   }
 
-  private async onPrefillIdeaPlanningChat(ideaId: string, title: string, note: string): Promise<void> {
+  private async onPrefillIdeaPlanningChat(ideaId: string, _title: string, _note: string): Promise<void> {
     if (ideaId.length === 0) {
       await this.view?.webview.postMessage({
         type: "wcIdeaMutationResult",
@@ -3505,34 +3504,55 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       });
       return;
     }
-    const prompt = buildPlannerChatPrompt({ ideaId, title, note });
-    const out = await this.client.run("update-idea", {
+    const out = await this.runMutationWithGenerationRetry("start-idea-planning", {
       ideaId,
-      status: "planning",
-      planningChatPrompt: prompt,
+      clientMutationId: this.dashboardIdeaPlanMutationId(ideaId),
       policyApproval: dashboardPolicyApproval(
-        { workflowId: "ideas", action: "plan", command: "update-idea" },
+        { workflowId: "ideas", action: "plan", command: "start-idea-planning" },
         {}
       )
     });
     if (!out.ok) {
-      const message = (out.message ?? String(out.code ?? "update-idea failed")).slice(0, 900);
+      const message = this.formatStartIdeaPlanningError(out);
       await this.view?.webview.postMessage({ type: "wcIdeaMutationResult", operation: "plan", ideaId, ok: false, message });
       return;
     }
-    ingestPlanningMetaFromData(out.data as Record<string, unknown> | undefined);
+    const data = out.data && typeof out.data === "object" ? (out.data as Record<string, unknown>) : {};
+    const prompt = typeof data.planningChatPrompt === "string" ? data.planningChatPrompt.trim() : "";
+    if (prompt.length === 0) {
+      await this.view?.webview.postMessage({
+        type: "wcIdeaMutationResult",
+        operation: "plan",
+        ideaId,
+        ok: false,
+        message: "start-idea-planning succeeded but returned no planningChatPrompt. Refresh and try again."
+      });
+      return;
+    }
+    ingestPlanningMetaFromData(data);
     await this.applyDashboardMutationInvalidation("ideas");
 
     const prefill = await prefillCursorChat(prompt, { newChat: true });
+    const resumed = data.mode === "resumed";
     const message = prefill.opened
-      ? prefill.route === "vscode-chat-command"
-        ? "Planning prompt opened in chat."
-        : "Planning prompt opened."
+      ? resumed
+        ? prefill.route === "vscode-chat-command"
+          ? "Planning session resumed in chat."
+          : "Planning session resumed."
+        : prefill.route === "vscode-chat-command"
+          ? "Planning prompt opened in chat."
+          : "Planning prompt opened."
       : prefill.openedDraft
-        ? "Planning prompt opened in an editor and copied to clipboard."
-      : prefill.copiedToClipboard
-        ? "Planning prompt copied to clipboard. Paste it into chat."
-        : "Planning prompt prepared.";
+        ? resumed
+          ? "Planning session resumed in an editor and copied to clipboard."
+          : "Planning prompt opened in an editor and copied to clipboard."
+        : prefill.copiedToClipboard
+          ? resumed
+            ? "Planning session prompt copied to clipboard. Paste it into chat."
+            : "Planning prompt copied to clipboard. Paste it into chat."
+          : resumed
+            ? "Planning session prepared."
+            : "Planning prompt prepared.";
     await this.view?.webview.postMessage({
       type: "wcIdeaMutationResult",
       operation: "plan",
@@ -3685,6 +3705,25 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
 
   private dashboardDrawerMutationId(prefix: string, taskId: string): string {
     return `${prefix}-${taskId}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+  }
+
+  private dashboardIdeaPlanMutationId(ideaId: string): string {
+    return this.dashboardDrawerMutationId("dashboard-idea-plan", ideaId);
+  }
+
+  private formatStartIdeaPlanningError(out: KitRunResult): string {
+    const code = String(out.code ?? "start-idea-planning-failed");
+    const base = (out.message ?? code).slice(0, 900);
+    if (code === "idea-not-found") {
+      return `${base} Refresh the dashboard or create the idea again.`;
+    }
+    if (code === "invalid-args") {
+      return `${base} Verify the idea id from list-ideas.`;
+    }
+    if (code === "planning-generation-mismatch") {
+      return `${base} Refresh the dashboard and try again.`;
+    }
+    return base;
   }
 
   private isDuplicateCanonicalIdempotencyFailure(out: KitRunResult): boolean {
