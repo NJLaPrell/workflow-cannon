@@ -2621,7 +2621,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     if (code === "planning-wishlist-ready") {
       void vscode.window.showInformationMessage(
-        "Planning interview finished. No wishlist row was written yet — use build-plan finalize with createWishlist from the CLI or chat when you want it persisted."
+        "Legacy planning interview finished. No wishlist row was written yet — prefer Ideas > Plan this / PlanArtifact for the primary flow, and treat build-plan persistence as a compatibility path."
       );
       return;
     }
@@ -3849,7 +3849,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     await this.ingestPlanningGenFromDashboard();
     const approvedBy =
       process.env.GIT_AUTHOR_EMAIL || process.env.USER || process.env.USERNAME || "dashboard-operator";
-    const r = await this.client.run("accept-plan-artifact", {
+    const r = await this.runMutationWithGenerationRetry("accept-plan-artifact", {
       planId,
       approvalRecord: {
         schemaVersion: 1,
@@ -3862,8 +3862,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       policyApproval: dashboardPolicyApproval(
         { workflowId: "plan-artifact", action: "accept", command: "accept-plan-artifact" },
         { humanRationale: "Accept reviewed PlanArtifact from Dashboard", phaseKey: null, taskId: null }
-      ),
-      ...expectedPlanningGenerationArgs()
+      )
     });
     if (!r.ok) {
       await vscode.window.showErrorMessage(
@@ -3882,15 +3881,14 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
 
   private async onReviewPlanArtifact(planId: string, version: number): Promise<void> {
     await this.ingestPlanningGenFromDashboard();
-    const r = await this.client.run("review-plan-artifact", {
+    const r = await this.runMutationWithGenerationRetry("review-plan-artifact", {
       planId,
       version,
       recordReview: true,
       policyApproval: dashboardPolicyApproval(
         { workflowId: "plan-artifact", action: "review", command: "review-plan-artifact" },
         { humanRationale: "Record PlanArtifact review from Dashboard", phaseKey: null, taskId: null }
-      ),
-      ...expectedPlanningGenerationArgs()
+      )
     });
     if (!r.ok) {
       await vscode.window.showErrorMessage(
@@ -3921,10 +3919,9 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       planId,
       version,
       desiredStatus: "ready",
-      ...phaseArgs,
-      ...expectedPlanningGenerationArgs()
+      ...phaseArgs
     };
-    const preview = await this.client.run("finalize-plan-to-phase", {
+    const preview = await this.runMutationWithGenerationRetry("finalize-plan-to-phase", {
       ...commonArgs,
       dryRun: true
     });
@@ -3934,7 +3931,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       );
       return;
     }
-    const r = await this.client.run("finalize-plan-to-phase", {
+    ingestPlanningMetaFromData(preview.data as Record<string, unknown> | undefined);
+    const r = await this.runMutationWithGenerationRetry("finalize-plan-to-phase", {
       ...commonArgs,
       dryRun: false,
       policyApproval: dashboardPolicyApproval(

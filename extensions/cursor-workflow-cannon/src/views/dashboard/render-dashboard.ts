@@ -3599,7 +3599,8 @@ export function renderPlanningInterviewWizardPanel(panel: PlanningInterviewWizar
       )
       .join("");
     return (
-      '<div class="dash-planning-wizard" aria-label="Guided planning interview">' +
+      '<div class="dash-planning-wizard" aria-label="Legacy planning interview">' +
+      '<p class="muted"><b>Legacy preview.</b> Use <b>Plan this</b> from Ideas for the primary PlanArtifact flow.</p>' +
       '<div class="dash-planning-wizard-picker-row">' +
       '<label class="dash-planning-wizard-label dash-planning-wizard-label-inline" for="wc-planning-type">Planning Type</label>' +
       '<select id="wc-planning-type" class="dash-planning-wizard-select">' +
@@ -3616,8 +3617,8 @@ export function renderPlanningInterviewWizardPanel(panel: PlanningInterviewWizar
         ? "<p><b>Examples:</b> " + escapeHtml(panel.examples.join(" · ")) + "</p>"
         : "";
     return (
-      '<div class="dash-planning-wizard" aria-label="Planning question">' +
-      "<p><b>Question</b> · " +
+      '<div class="dash-planning-wizard" aria-label="Legacy planning question">' +
+      "<p><b>Legacy interview</b> · " +
       escapeHtml(panel.planningType) +
       " · " +
       escapeHtml(panel.progressHint) +
@@ -3648,8 +3649,8 @@ export function renderPlanningInterviewWizardPanel(panel: PlanningInterviewWizar
             ? '<p class="muted">Wishlist item created. Refresh the dashboard to see it.</p>'
             : "";
     return (
-      '<div class="dash-planning-wizard ok" aria-label="Planning interview complete">' +
-      "<p><b>Interview complete</b> · " +
+      '<div class="dash-planning-wizard ok" aria-label="Legacy planning interview complete">' +
+      "<p><b>Legacy interview complete</b> · " +
       escapeHtml(panel.planningType) +
       " · <code>" +
       escapeHtml(panel.code) +
@@ -3663,8 +3664,8 @@ export function renderPlanningInterviewWizardPanel(panel: PlanningInterviewWizar
     );
   }
   return (
-    '<div class="dash-planning-wizard bad" aria-label="Planning interview error">' +
-    "<p><b>Interview error</b></p>" +
+    '<div class="dash-planning-wizard bad" aria-label="Legacy planning interview error">' +
+    "<p><b>Legacy interview error</b></p>" +
     "<p>" +
     escapeHtml(panel.message) +
     "</p>" +

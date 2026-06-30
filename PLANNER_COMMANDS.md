@@ -58,6 +58,11 @@ Unless noted, **`artifact`** or **`plan`** in argv is a full or partial **PlanAr
 | `review-planning-execution-drafts` | `finalize-plan-to-phase` dry-run and persist preflight on normalized task rows. |
 | `persist-planning-execution-drafts` | **Only** path that writes execution tasks from an accepted plan. |
 
+### 1.6 Legacy `build-plan` compatibility path
+
+- Direct `build-plan` task output remains a **legacy / preview** path for compatibility; the primary execution flow is **Ideas → Plan this → PlanArtifact draft/review/accept/finalize**.
+- `importSource: "import-build-plan"` and the future `import-build-plan` bridge describe provenance only today; automatic legacy-import implementation remains **deferred until the primary PlanArtifact path is stable**.
+
 ---
 
 ## 2. `draft-plan-artifact`

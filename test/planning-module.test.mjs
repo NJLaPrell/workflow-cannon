@@ -247,6 +247,7 @@ test("planningModule build-plan supports tasks output mode branch", async () => 
   assert.equal(result.code, "planning-task-output-preview");
   assert.equal(result.data.outputMode, "tasks");
   assert.equal(result.data.persistTasks, false);
+  assert.match(result.message, /Legacy build-plan task output prepared/);
   assert.ok(Array.isArray(result.data.taskOutputs));
   assert.equal(result.data.taskOutputs.length, 1);
   assert.equal(typeof result.data.provenance.planRef, "string");
@@ -294,6 +295,7 @@ test("planningModule build-plan finalize with executionTaskDrafts emits multi-ta
   );
   assert.equal(first.ok, true);
   assert.equal(first.code, "planning-multi-task-decomposition-preview");
+  assert.match(first.message, /Legacy build-plan finalize preview produced/);
   assert.equal(first.data.taskOutputs.length, 2);
   assert.equal(first.data.taskOutputs[0].id, "T1");
   assert.equal(first.data.taskOutputs[0].metadata?.planningProvenance?.source, "build-plan-execution-drafts");
@@ -482,6 +484,7 @@ test("planningModule build-plan rejects persistTasks with executionTaskDrafts", 
   );
   assert.equal(result.ok, false);
   assert.equal(result.code, "planning-multi-task-persist-delegated");
+  assert.match(result.message, /legacy preview mode/);
 });
 
 test("planningModule build-plan can persist tasks in tasks output mode", async () => {
@@ -517,6 +520,7 @@ test("planningModule build-plan can persist tasks in tasks output mode", async (
   );
   assert.equal(result.ok, true);
   assert.equal(result.code, "planning-task-output-created");
+  assert.match(result.message, /Legacy build-plan task output persisted/);
   assert.equal(result.data.recommendedNextCommands[0].command, "draft-plan-artifact");
   const outputTaskId = result.data.taskOutputs[0].id;
   const taskStore = await loadSqliteTaskStore(workspace);
