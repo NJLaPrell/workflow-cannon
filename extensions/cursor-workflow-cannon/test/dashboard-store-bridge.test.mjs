@@ -1,11 +1,40 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  dashboardSummaryNeedsPlanningHydration,
   mergeDashboardProjectionIntoSummary,
   mergeSlicePayloadIntoSummary,
+  planArtifactHasContent,
   sliceNamesForDashboardSummaryProjection
 } from "../dist/views/dashboard/dashboard-store-bridge.js";
 import { lookupDashboardSlice } from "../dist/views/dashboard/dashboard-slice-registry.js";
+
+test("planArtifactHasContent requires a planId on current or recent rows", () => {
+  assert.equal(planArtifactHasContent(null), false);
+  assert.equal(planArtifactHasContent({ current: {}, recent: [] }), false);
+  assert.equal(planArtifactHasContent({ current: { planId: "P1" }, recent: [] }), true);
+  assert.equal(planArtifactHasContent({ current: null, recent: [{ planId: "P2" }] }), true);
+});
+
+test("dashboardSummaryNeedsPlanningHydration detects overview planning stubs", () => {
+  assert.equal(dashboardSummaryNeedsPlanningHydration(null), true);
+  assert.equal(
+    dashboardSummaryNeedsPlanningHydration({
+      dashboardProjection: "overview",
+      planArtifact: null,
+      ideas: { schemaVersion: 1, available: false, top: [] }
+    }),
+    true
+  );
+  assert.equal(
+    dashboardSummaryNeedsPlanningHydration({
+      dashboardProjection: "queue",
+      planArtifact: { schemaVersion: 1, current: { planId: "P1" }, recent: [] },
+      ideas: { schemaVersion: 1, available: true, top: [{ id: "I1" }] }
+    }),
+    false
+  );
+});
 
 test("overview slice merge does not clobber queue rollups hydrated from queue slice", () => {
   const queuePayload = lookupDashboardSlice("queue").extractPayload({

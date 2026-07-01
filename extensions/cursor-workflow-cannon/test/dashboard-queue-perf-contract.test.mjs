@@ -43,6 +43,20 @@ test("kit-state refresh on overview upgrades queue rollups before patching", () 
   assert.match(block, /ensureQueueRollupsHydrated/);
 });
 
+test("startup schedules planning hydration for eager planning cards", () => {
+  assert.match(providerSrc, /startup planning hydration scheduled/);
+  assert.match(providerSrc, /void this\.ensurePlanningSectionsHydrated/);
+  assert.match(providerSrc, /dashboardSummaryNeedsPlanningHydration/);
+});
+
+test("planning kit-state refresh uses queue projection", () => {
+  const block = providerSrc.slice(
+    providerSrc.indexOf('if (this.activeDashboardTab === "planning")'),
+    providerSrc.indexOf('await this.markDashboardSectionStale("queue")')
+  );
+  assert.match(block, /projection:\s*"queue"/);
+});
+
 test("postTaskEngineTabBadgesFromSummary includes humanGateCount", () => {
   const block = providerSrc.slice(
     providerSrc.indexOf("private async postTaskEngineTabBadgesFromSummary"),

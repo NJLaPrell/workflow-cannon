@@ -102,7 +102,6 @@ test("PlanArtifact rejection routes needs-revision plans back to Resume planning
 
   assert.match(html, /Review summary/);
   assert.match(html, /Acceptance criteria are not tied to WBS tasks\./);
-  assert.match(html, /wc-plan-card-chip-danger[^>]*>1 blocker</);
   assert.match(html, /wc-plan-status-pill wc-plan-status-warn">Needs revision</);
   // With blockers outstanding the plan card offers no Accept action at all (rather than a disabled one) —
   // the only path forward is resuming planning to resolve the review findings.

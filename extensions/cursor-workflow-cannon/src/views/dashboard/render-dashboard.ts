@@ -29,6 +29,16 @@ import type {
   DashboardAgentStatusKind
 } from "@workflow-cannon/workspace-kit/contracts/dashboard-summary-run";
 import { deriveIdeaPlanningLifecycleState } from "./derive-idea-planning-lifecycle-state.js";
+import {
+  PLAN_STATE_BUCKETS,
+  bucketPlanRowsByDisplayState,
+  derivePlanArtifactDisplayState,
+  groupPlanRowsByTitle,
+  planArtifactDisplayStateMeta,
+  planArtifactEffectiveStatus,
+  planTitleSlug,
+  type PlanArtifactDisplayState
+} from "./plan-artifact-display-state.js";
 import type { DashboardSectionId } from "./dashboard-section-registry.js";
 import { lookupDashboardSection } from "./dashboard-section-registry.js";
 import { renderDashboardReadModeBadgeHtml, renderDashboardSectionPlaceholder } from "./render-dashboard-shell.js";
@@ -3692,53 +3702,9 @@ function formatPlanningUpdatedAt(iso: string): string {
   }
 }
 
-const PLAN_ARTIFACT_FINALIZED_STATUSES = new Set(["finalized", "superseded"]);
-
 function numberOrZero(value: unknown): number {
   const n = typeof value === "number" ? value : Number(value ?? 0);
   return Number.isFinite(n) ? n : 0;
-}
-
-function planArtifactEffectiveStatus(row: Record<string, unknown>): string {
-  const lifecycleStatusRaw = String(row.lifecycleStatus ?? "").trim().toLowerCase();
-  if (lifecycleStatusRaw.length > 0) {
-    return lifecycleStatusRaw;
-  }
-  const statusRaw = String(row.status ?? "").trim().toLowerCase();
-  if (statusRaw === "reviewed") {
-    return numberOrZero(row.blockerCount) > 0 ? "needs_revision" : "approval_ready";
-  }
-  return statusRaw;
-}
-
-function planArtifactStatusMeta(effectiveStatusRaw: string): { label: string; className: string } {
-  switch (effectiveStatusRaw) {
-    case "draft":
-      return { label: "Draft", className: "wc-plan-status-draft" };
-    case "needs_revision":
-      return { label: "Needs revision", className: "wc-plan-status-warn" };
-    case "approval_ready":
-      return { label: "Approval ready", className: "wc-plan-status-info" };
-    case "accepted":
-      return { label: "Accepted", className: "wc-plan-status-accent" };
-    case "finalized":
-      return { label: "Finalized", className: "wc-plan-status-done" };
-    case "superseded":
-      return { label: "Superseded", className: "wc-plan-status-muted" };
-    default:
-      return {
-        label: effectiveStatusRaw.length > 0 ? humanizePlanningToken(effectiveStatusRaw) : "Draft",
-        className: "wc-plan-status-draft"
-      };
-  }
-}
-
-function planArtifactStatusPillHidden(effectiveStatusRaw: string): boolean {
-  return (
-    effectiveStatusRaw === "finalized" ||
-    effectiveStatusRaw === "superseded" ||
-    effectiveStatusRaw === "approval_ready"
-  );
 }
 
 function planCardUiStateAttr(planId: string, suffix: string): string {
@@ -4653,8 +4619,8 @@ function renderPlanArtifactCard(row: Record<string, unknown>): string {
   const warningCount = numberOrZero(row.warningCount);
   const riskCount = numberOrZero(row.riskCount);
   const effectiveStatusRaw = planArtifactEffectiveStatus(row);
-  const statusMeta = planArtifactStatusMeta(effectiveStatusRaw);
-  const showStatusPill = !planArtifactStatusPillHidden(effectiveStatusRaw);
+  const displayState = derivePlanArtifactDisplayState(row);
+  const statusMeta = planArtifactDisplayStateMeta(displayState);
   const profileRaw = String(row.profile ?? "").trim();
   const profileText = profileRaw.length > 0 ? humanizePlanningToken(profileRaw) : "—";
   const sourceIdeaId = String(row.sourceIdeaId ?? "").trim();
@@ -4688,15 +4654,6 @@ function renderPlanArtifactCard(row: Record<string, unknown>): string {
   const executionLinkageRows = Array.isArray(row.executionLinkageRows) ? row.executionLinkageRows : [];
   const linkedTaskCount = numberOrZero(row.linkedTaskCount);
   const reviewFindingCount = blockerCount + warningCount;
-
-  const statChips: string[] = [];
-  if (
-    blockerCount === 0 &&
-    warningCount === 0 &&
-    (effectiveStatusRaw === "approval_ready" || effectiveStatusRaw === "accepted" || effectiveStatusRaw === "finalized")
-  ) {
-    statChips.push('<span class="wc-plan-card-chip wc-plan-card-chip-pass" role="listitem">Reviewed</span>');
-  }
 
   const detailRows: string[] = [];
   if (refLabel.length > 0) {
@@ -4775,12 +4732,13 @@ function renderPlanArtifactCard(row: Record<string, unknown>): string {
     "</b></p>" +
     (summaryText.length > 0 ? '<p class="wc-plan-card-desc muted">' + escapeHtml(summaryText) + "</p>" : "") +
     "</div>" +
-    (showStatusPill
-      ? '<span class="wc-plan-status-pill ' + statusMeta.className + '">' + escapeHtml(statusMeta.label) + "</span>"
-      : "") +
+    '<span class="wc-plan-status-pill ' +
+    statusMeta.className +
+    '">' +
+    escapeHtml(statusMeta.label) +
+    "</span>" +
     "</div>" +
     factsHtml +
-    (statChips.length > 0 ? '<div class="wc-plan-card-stats" role="list">' + statChips.join("") + "</div>" : "") +
     wbsHtml +
     risksHtml +
     openQuestionsHtml +
@@ -4814,6 +4772,35 @@ function renderPlanArtifactCard(row: Record<string, unknown>): string {
   );
 }
 
+function renderPlanTitleGroupsInStateBucket(
+  stateKey: PlanArtifactDisplayState,
+  rows: Record<string, unknown>[]
+): string {
+  const groups = groupPlanRowsByTitle(rows);
+  return groups
+    .map((group) => {
+      const cardsHtml = group.rows.map(renderPlanArtifactCard).join("");
+      const gridHtml = '<div class="wc-plan-card-grid">' + cardsHtml + "</div>";
+      if (group.rows.length <= 1) {
+        return gridHtml;
+      }
+      const titleSlug = planTitleSlug(group.titleLabel);
+      const uiKey = "plan-title-" + stateKey + "-" + titleSlug;
+      return (
+        '<details class="wc-plan-title-group"' +
+        wcUiStateAttr(uiKey) +
+        "><summary>" +
+        escapeHtml(group.titleLabel) +
+        " (" +
+        escapeHtml(String(group.rows.length)) +
+        ")</summary>" +
+        gridHtml +
+        "</details>"
+      );
+    })
+    .join("");
+}
+
 function renderPlanArtifactsSectionInnerHtml(planArtifact: unknown): string {
   if (!planArtifact || typeof planArtifact !== "object") {
     return '<section class="dash-card wc-plan-artifacts-section" aria-label="Plans"><p><b>Plans</b></p><p class="muted">No plans yet.</p></section>';
@@ -4841,46 +4828,36 @@ function renderPlanArtifactsSectionInnerHtml(planArtifact: unknown): string {
   if (allRows.length === 0) {
     return '<section class="dash-card wc-plan-artifacts-section" aria-label="Plans"><p><b>Plans</b></p><p class="muted">No plans yet.</p></section>';
   }
-  const activeRows: Record<string, unknown>[] = [];
-  const finalizedRows: Record<string, unknown>[] = [];
-  for (const row of allRows) {
-    const effectiveStatusRaw = planArtifactEffectiveStatus(row);
-    (PLAN_ARTIFACT_FINALIZED_STATUSES.has(effectiveStatusRaw) ? finalizedRows : activeRows).push(row);
-  }
-  const byUpdatedAtDesc = (a: Record<string, unknown>, b: Record<string, unknown>) =>
-    String(b.updatedAt ?? "").localeCompare(String(a.updatedAt ?? ""));
-  activeRows.sort(byUpdatedAtDesc);
-  finalizedRows.sort(byUpdatedAtDesc);
 
-  const activeCardsHtml = activeRows.map(renderPlanArtifactCard).join("");
-  const finalizedCardsHtml = finalizedRows.map(renderPlanArtifactCard).join("");
-  const finalizedBucketHtml =
-    finalizedRows.length > 0
-      ? '<details class="wc-plan-finalized-bucket" data-wc-ui-state-key="plan-artifact-finalized">' +
-        "<summary>Finalized (" +
-        escapeHtml(String(finalizedRows.length)) +
-        ")</summary>" +
-        '<div class="wc-plan-card-grid">' +
-        finalizedCardsHtml +
-        "</div>" +
-        "</details>"
-      : "";
-  const activeGridHtml =
-    activeRows.length > 0
-      ? '<div class="wc-plan-card-grid">' + activeCardsHtml + "</div>"
-      : finalizedRows.length > 0
-        ? '<p class="muted">No plans need attention right now.</p>'
-        : "";
+  const rowsByState = bucketPlanRowsByDisplayState(allRows);
+  const stateBucketsHtml = PLAN_STATE_BUCKETS.map((bucket) => {
+    const rows = rowsByState.get(bucket.key) ?? [];
+    if (rows.length === 0) {
+      return "";
+    }
+    const bodyHtml = renderPlanTitleGroupsInStateBucket(bucket.key, rows);
+    const openAttr = bucket.defaultOpen ? " open" : "";
+    return (
+      '<details class="wc-plan-state-bucket"' +
+      wcUiStateAttr("plan-state-" + bucket.key) +
+      openAttr +
+      "><summary>" +
+      escapeHtml(bucket.label) +
+      " (" +
+      escapeHtml(String(rows.length)) +
+      ")</summary>" +
+      '<div class="wc-plan-state-bucket-body">' +
+      bodyHtml +
+      "</div></details>"
+    );
+  }).join("");
 
   return (
     '<section class="dash-card wc-plan-artifacts-section" aria-label="Plans">' +
     "<p><b>Plans</b> · " +
-    escapeHtml(String(activeRows.length)) +
-    " active · " +
-    escapeHtml(String(finalizedRows.length)) +
-    " finalized</p>" +
-    activeGridHtml +
-    finalizedBucketHtml +
+    escapeHtml(String(allRows.length)) +
+    " total</p>" +
+    stateBucketsHtml +
     "</section>"
   );
 }

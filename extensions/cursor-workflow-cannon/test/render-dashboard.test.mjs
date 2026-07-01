@@ -641,7 +641,10 @@ test("renderDashboardRootInnerHtml renders PlanArtifact card grid for a draft pl
   assert.match(html, />1 Execution Linkage</);
   assert.match(html, /wc-plan-execution-linkages-table/);
   assert.match(html, /data-wc-ui-state-key="plan-123-execution-linkages"/);
-  assert.match(html, /wc-plan-status-pill wc-plan-status-draft">Draft/);
+  assert.match(html, /wc-plan-status-pill wc-plan-status-draft">New/);
+  assert.match(html, /data-wc-ui-state-key="plan-state-new"/);
+  assert.match(html, /<details class="wc-plan-state-bucket"[^>]*data-wc-ui-state-key="plan-state-new"[^>]*open/);
+  assert.match(html, /Plans<\/b> · 1 total/);
   assert.doesNotMatch(html, /wc-plan-card-meta/);
   assert.doesNotMatch(html, /data-wc-action="plan-artifact-accept"/);
   assert.match(html, /data-wc-action="plan-artifact-review"/);
@@ -685,6 +688,7 @@ test("renderDashboardRootInnerHtml enables PlanArtifact accept after review pass
   assert.match(html, /data-plan-version="3"/);
   const button = html.match(/<button[^>]+data-wc-action="plan-artifact-accept"[^>]*>/)?.[0] ?? "";
   assert.doesNotMatch(button, /disabled/);
+  assert.match(html, /wc-plan-status-pill wc-plan-status-info">Reviewed/);
   assert.doesNotMatch(html, /wc-plan-status-pill[^>]*>Approval ready</);
 });
 
@@ -865,10 +869,81 @@ test("renderDashboardRootInnerHtml hides PlanArtifact lifecycle actions after fi
       wishlistSummary: { count: 0, top: [] }
     }
   });
-  assert.match(html, /Finalized \(1\)/);
-  assert.doesNotMatch(html, /wc-plan-status-pill[^>]*>Finalized</);
+  assert.match(html, /data-wc-ui-state-key="plan-state-finalized"/);
+  assert.match(html, /<details class="wc-plan-state-bucket"[^>]*data-wc-ui-state-key="plan-state-finalized"[^>]*open/);
+  assert.match(html, /wc-plan-status-pill wc-plan-status-done">Finalized/);
   assert.doesNotMatch(html, /data-wc-action="plan-artifact-accept"/);
   assert.doesNotMatch(html, /data-wc-action="plan-artifact-finalize"/);
+});
+
+test("renderDashboardRootInnerHtml groups plans by lifecycle state and title", () => {
+  const html = renderDashboardRootInnerHtml({
+    ok: true,
+    data: {
+      workspaceStatus: { activeFocus: "Planning" },
+      stateSummary: { proposed: 0, ready: 0, in_progress: 0, completed: 0, total: 0 },
+      planningSession: null,
+      planArtifact: {
+        count: 5,
+        current: {
+          planId: "plan-scheduled",
+          title: "Shared Feature",
+          status: "finalized",
+          tasksGenerated: true,
+          executed: false,
+          updatedAt: "2026-05-28T00:00:00.000Z"
+        },
+        recent: [
+          {
+            planId: "plan-scheduled-2",
+            title: "Shared Feature",
+            status: "finalized",
+            tasksGenerated: true,
+            executed: false,
+            updatedAt: "2026-05-27T12:00:00.000Z"
+          },
+          {
+            planId: "plan-delivered",
+            title: "Shared Feature",
+            status: "finalized",
+            tasksGenerated: true,
+            executed: true,
+            updatedAt: "2026-05-27T00:00:00.000Z"
+          },
+          {
+            planId: "plan-new-a",
+            title: "Alpha Plan",
+            status: "draft",
+            updatedAt: "2026-05-26T00:00:00.000Z"
+          },
+          {
+            planId: "plan-new-b",
+            title: "Beta Plan",
+            status: "draft",
+            updatedAt: "2026-05-25T00:00:00.000Z"
+          }
+        ]
+      },
+      readyExecutionSummary: { count: 0, top: [] },
+      readyImprovementsSummary: { count: 0, top: [] },
+      proposedExecutionSummary: { count: 0, top: [] },
+      proposedImprovementsSummary: { count: 0, top: [] },
+      transcriptChurnResearchSummary: { count: 0, top: [] },
+      wishlistSummary: { count: 0, top: [] }
+    }
+  });
+
+  assert.match(html, /Plans<\/b> · 5 total/);
+  assert.match(html, /data-wc-ui-state-key="plan-state-scheduled"/);
+  assert.match(html, /data-wc-ui-state-key="plan-state-delivered"/);
+  assert.doesNotMatch(
+    html,
+    /<details class="wc-plan-state-bucket"[^>]*data-wc-ui-state-key="plan-state-scheduled"[^>]*open/
+  );
+  assert.match(html, /data-wc-ui-state-key="plan-title-scheduled-shared-feature"/);
+  assert.match(html, />Shared Feature \(2\)</);
+  assert.match(html, /wc-plan-status-pill wc-plan-status-info">Scheduled/);
+  assert.match(html, /wc-plan-status-pill wc-plan-status-done">Delivered/);
 });
 
 test("renderDashboardRootInnerHtml renders phase roster deliverables inline edit affordances", () => {
