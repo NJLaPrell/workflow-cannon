@@ -65,6 +65,10 @@ export class DashboardReadPathCoordinator {
       configured,
       active: this.activePath ?? "cli-polling",
       pollingCadence: this.activePath === "service" ? "push-safety-net" : "full",
+      serviceRetrySliceCount:
+        this.activePath === "service"
+          ? (this.deps.pollers.getServiceRetrySliceCount?.() ?? 0)
+          : undefined,
       detail: this.serviceFailDetail
     };
   }
@@ -224,29 +228,16 @@ export class DashboardReadPathCoordinator {
   }
 
   private async emitServiceHealthDiagnostics(): Promise<void> {
-    try {
-      const abs = path.join(this.deps.workspacePath, DASHBOARD_SERVICE_RUNTIME_REL);
-      const raw = JSON.parse(await readFile(abs, "utf8")) as unknown;
-      const runtime = parseDashboardServiceRuntime(raw);
-      if (!runtime) {
-        return;
-      }
-      const res = await fetch(`http://${runtime.host}:${runtime.port}/health`);
-      if (!res.ok) {
-        return;
-      }
-      const health = (await res.json()) as {
-        generation?: number;
-        summary?: { failingSlices?: string[]; slowestSlice?: string | null; totalErrors?: number };
-      };
-      const failing = health.summary?.failingSlices ?? [];
-      const slowest = health.summary?.slowestSlice ?? "none";
-      this.deps.log?.(
-        `dashboard service health gen=${health.generation ?? "?"} slowest=${slowest} failing=${failing.length > 0 ? failing.join(",") : "none"} errors=${health.summary?.totalErrors ?? 0}`
-      );
-    } catch {
-      // diagnostics are best-effort
+    const health = await this.fetchServiceHealthDetail() as (Record<string, unknown> | null);
+    if (!health) {
+      return;
     }
+    const summary = health.summary as { failingSlices?: string[]; slowestSlice?: string | null; totalErrors?: number } | undefined;
+    const failing = summary?.failingSlices ?? [];
+    const slowest = summary?.slowestSlice ?? "none";
+    this.deps.log?.(
+      `dashboard service health gen=${(health.generation as number | undefined) ?? "?"} slowest=${slowest} failing=${failing.length > 0 ? failing.join(",") : "none"} errors=${summary?.totalErrors ?? 0}`
+    );
   }
 
   private async startServicePath(): Promise<void> {
@@ -266,13 +257,19 @@ export class DashboardReadPathCoordinator {
     }
     this.activePath = "service";
     this.deps.pollers.usePushSafetyNetCadence();
+    // Wire the targeted-refresh callback so the poller can request a service-side
+    // refresh for a stale slice without spawning a CLI subprocess.
+    const syncRef = this.serviceSync;
+    this.deps.pollers.setRequestServiceRefresh?.(
+      (name) => syncRef!.refreshSlice(name)
+    );
     this.deps.pollers.start();
     if (!this.pollersPaused) {
       this.deps.pollers.resume();
     }
     this.startServiceHealthMonitor();
     this.deps.log?.(
-      `dashboard read path: push-driven warm service (CLI safety-net=${DASHBOARD_PUSH_SAFETY_NET_MULTIPLIER}x)`
+      `dashboard read path: push-driven warm service (CLI fallback=${DASHBOARD_PUSH_SAFETY_NET_MULTIPLIER}x interval, service-refresh-retry before CLI)`
     );
     await this.emitServiceHealthDiagnostics();
   }
@@ -326,27 +323,38 @@ export class DashboardReadPathCoordinator {
       await this.serviceSync.stop();
       this.serviceSync = undefined;
     }
+    // Remove the service-refresh callback before stopping pollers — useFullCadence()
+    // also clears it, but being explicit here is defensive.
+    this.deps.pollers.setRequestServiceRefresh?.(undefined);
     this.deps.pollers.stop();
     this.deps.pollers.useFullCadence();
   }
 
   private recordServicePushEvent(event: DashboardServiceEvent): void {
     if (event.type === "dashboard.slice.updated") {
-      this.deps.pollers.recordPushSliceUpdate(event.slice as DashboardSliceName);
+      // ok===false means the service-side builder threw; treat as error push —
+      // do NOT reset the success freshness clock for this slice.
+      const isSuccess = event.ok !== false;
+      this.deps.pollers.recordPushSliceUpdate(
+        event.slice as DashboardSliceName,
+        undefined,
+        isSuccess
+      );
       return;
     }
     if (event.type === "dashboard.snapshot.updated") {
+      // Snapshot events don't carry per-slice ok status; conservatively treat as success.
       const names =
         event.changedSlices.length > 0
           ? event.changedSlices
           : DASHBOARD_SLICE_REGISTRY.map((desc) => desc.name);
       for (const name of names) {
-        this.deps.pollers.recordPushSliceUpdate(name as DashboardSliceName);
+        this.deps.pollers.recordPushSliceUpdate(name as DashboardSliceName, undefined, true);
       }
       return;
     }
     if (event.type === "task-sync.status.changed") {
-      this.deps.pollers.recordPushSliceUpdate("status");
+      this.deps.pollers.recordPushSliceUpdate("status", undefined, true);
     }
   }
 
@@ -377,19 +385,71 @@ export class DashboardReadPathCoordinator {
     }
     this.serviceHealthCheckInFlight = true;
     try {
-      const healthy = await probeDashboardServiceHealth(this.deps.workspacePath);
+      const health = await this.fetchServiceHealthDetail();
       if (
-        healthy ||
         generation !== this.serviceHealthMonitorGeneration ||
         this.activePath !== "service"
       ) {
         return;
       }
-      await this.switchServiceFailureToCliPolling(
-        "Dashboard service became unhealthy — using CLI polling"
-      );
+
+      if (!health || health.ok !== true) {
+        // Service is unreachable or returning a non-ok health response — fall back entirely.
+        await this.switchServiceFailureToCliPolling(
+          "Dashboard service became unhealthy — using CLI polling"
+        );
+        return;
+      }
+
+      // Service is overall healthy. Check per-slice failing slices and proactively
+      // request targeted refreshes so they can recover on the service path rather
+      // than waiting for the safety-net poller to notice them as stale.
+      const failingSlices: string[] = health.summary?.failingSlices ?? [];
+      if (failingSlices.length > 0 && this.serviceSync) {
+        const syncRef = this.serviceSync;
+        this.deps.log?.(
+          `health monitor: proactive service refresh for ${failingSlices.length} failing slice(s): ${failingSlices.join(", ")}`
+        );
+        for (const name of failingSlices) {
+          void syncRef.refreshSlice(name as DashboardSliceName).catch((err) => {
+            this.deps.log?.(
+              `health-monitor targeted refresh failed slice=${name}: ${err instanceof Error ? err.message : String(err)}`
+            );
+          });
+        }
+      }
+      // Emit badge update so UI reflects current service-retry slice count.
+      this.emitModeChanged();
     } finally {
       this.serviceHealthCheckInFlight = false;
+    }
+  }
+
+  /**
+   * Fetches the full /health payload from the running service.
+   * Returns null on any error (network, parse, missing runtime, etc.).
+   */
+  private async fetchServiceHealthDetail(): Promise<{
+    ok?: boolean;
+    summary?: { failingSlices?: string[]; slowestSlice?: string | null; totalErrors?: number };
+  } | null> {
+    try {
+      const abs = path.join(this.deps.workspacePath, DASHBOARD_SERVICE_RUNTIME_REL);
+      const raw = JSON.parse(await readFile(abs, "utf8")) as unknown;
+      const runtime = parseDashboardServiceRuntime(raw);
+      if (!runtime) {
+        return null;
+      }
+      const res = await fetch(`http://${runtime.host}:${runtime.port}/health`);
+      if (!res.ok) {
+        return { ok: false };
+      }
+      return (await res.json()) as {
+        ok?: boolean;
+        summary?: { failingSlices?: string[]; slowestSlice?: string | null; totalErrors?: number };
+      };
+    } catch {
+      return null;
     }
   }
 
