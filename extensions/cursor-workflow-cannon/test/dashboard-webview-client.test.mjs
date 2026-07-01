@@ -37,6 +37,10 @@ test("buildDashboardWebviewBootstrapScript returns drawer + refresh client", () 
   assert.match(script, /idea-undo-delete/);
   assert.match(script, /dragstart/);
   assert.match(script, /drop/);
+  assert.match(script, /open-queue-task/);
+  assert.match(script, /requestRevealQueueTask/);
+  assert.match(script, /renderPlanMermaidDiagrams/);
+  assert.match(script, /wc-queue-task-highlight/);
   assert.doesNotMatch(readFileSync(path.join(__dirname, "../src/views/dashboard/DashboardViewProvider.ts"), "utf8"), /function setDrawerBusy\(busy, label\)/);
 });
 
@@ -56,4 +60,5 @@ test("DashboardViewProvider buildHtml delegates to dashboard webview client", ()
     "utf8"
   );
   assert.match(providerSrc, /buildDashboardWebviewBootstrapScript/);
+  assert.match(providerSrc, /mermaid\.min\.js/);
 });

@@ -520,7 +520,7 @@ test("renderDashboardRootInnerHtml renders PlanArtifact card grid for a draft pl
             outOfScopeTesting: ["manual VS Code UX polish"]
           },
           implementationGuidanceRows: [{ text: "Reuse text-list rollup renderer for guidance bullets" }],
-          whatNotToDoRows: [{ text: "Do not render mermaid in-webview without a renderer" }],
+          whatNotToDoRows: [{ text: "Do not bypass queue jump when correlating WBS tasks" }],
           uiUxSummary: {
             hasUiChanges: true,
             summary: "Collapsible deep-drill sections on plan cards",
@@ -616,8 +616,10 @@ test("renderDashboardRootInnerHtml renders PlanArtifact card grid for a draft pl
   assert.match(html, />1 Architecture Decision</);
   assert.match(html, /Keep rollups in dashboard-summary contract/);
   assert.match(html, />1 Architecture Diagram</);
-  assert.match(html, /wc-plan-mermaid-source/);
-  assert.match(html, /flowchart LR/);
+  assert.match(html, /wc-plan-mermaid-render/);
+  assert.match(html, /data-wc-mermaid-source=/);
+  assert.match(html, /View mermaid source/);
+  assert.doesNotMatch(html, /Do not render mermaid in-webview without a renderer/);
   assert.match(html, />Technical impact</);
   assert.match(html, /task-engine\/dashboard/);
   assert.match(html, />Testing strategy</);
@@ -625,14 +627,14 @@ test("renderDashboardRootInnerHtml renders PlanArtifact card grid for a draft pl
   assert.match(html, />1 Implementation note</);
   assert.match(html, /Reuse text-list rollup renderer/);
   assert.match(html, />1 Anti-pattern</);
-  assert.match(html, /Do not render mermaid in-webview/);
+  assert.match(html, /Do not bypass queue jump when correlating WBS tasks/);
   assert.match(html, />UI \/ UX direction</);
   assert.match(html, /Collapsible deep-drill sections on plan cards/);
   assert.match(html, /data-wc-ui-state-key="plan-123-architecture-overview"/);
   assert.match(html, /data-wc-ui-state-key="plan-123-technical-impact"/);
   assert.match(html, /<th>Generated task<\/th>/);
   assert.match(html, /wc-plan-linked-task-btn/);
-  assert.match(html, /data-wc-action="task-detail"[^>]+data-task-id="T100623"/);
+  assert.match(html, /data-wc-action="open-queue-task"[^>]+data-task-id="T100623"/);
   assert.match(html, />Approval record</);
   assert.match(html, /maintainer@example.com/);
   assert.match(html, /Approved after rubric pass/);
@@ -2876,7 +2878,7 @@ test("renderDashboardRootInnerHtml ready rows keep flex task actions without gri
     }
   });
   const rowMatch = html.match(
-    /<div class="dash-row" role="listitem">[\s\S]*?T888[\s\S]*?<\/div>/
+    /<div class="dash-row" role="listitem"[^>]*>[\s\S]*?T888[\s\S]*?<\/div>/
   );
   assert.ok(rowMatch, "expected ready row");
   const rowHtml = rowMatch[0];

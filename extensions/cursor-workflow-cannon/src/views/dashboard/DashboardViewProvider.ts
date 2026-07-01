@@ -5544,6 +5544,9 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     );
 
     const bootstrap = buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource);
+    const mermaidScriptUri = webview.asWebviewUri(
+      vscode.Uri.joinPath(this.extensionUri, "media", "mermaid.min.js")
+    );
     const startupProbe = `(function(){
   var vscode = window.__wfcVscode || (window.__wfcVscode = acquireVsCodeApi());
   window.addEventListener('message', function(ev){
@@ -6710,6 +6713,11 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     .wc-plan-card.wc-plan-status-done { border-left-color: var(--vscode-testing-iconPassed, #4ec9b0); }
     .wc-plan-card.wc-plan-status-muted { border-left-color: var(--vscode-widget-border, rgba(127,127,127,.35)); opacity: .82; }
     .wc-plan-card-highlight { outline: 2px solid var(--vscode-focusBorder, #4fc1ff); outline-offset: 2px; }
+    .wc-queue-task-highlight {
+      outline: 2px solid var(--vscode-focusBorder, #4fc1ff);
+      outline-offset: 1px;
+      background: color-mix(in srgb, var(--vscode-focusBorder, #4fc1ff) 12%, var(--vscode-textCodeBlock-background));
+    }
     .wc-plan-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
     .wc-plan-card-title-wrap { min-width: 0; flex: 1; }
     .wc-plan-card-title { margin: 0; overflow-wrap: anywhere; }
@@ -6878,6 +6886,17 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     .wc-plan-linked-task-btn:hover { color: var(--vscode-textLink-activeForeground, var(--vscode-foreground)); }
     .wc-plan-execution-linkages-table td .wc-plan-linked-task-btn { font-weight: 600; }
+    .wc-plan-mermaid-render {
+      margin-top: 6px;
+      padding: 6px 8px;
+      border-radius: 4px;
+      background: var(--vscode-editor-background);
+      border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.35));
+      overflow-x: auto;
+    }
+    .wc-plan-mermaid-render svg { max-width: 100%; height: auto; display: block; }
+    .wc-plan-mermaid-loading { margin: 0; font-size: 11px; }
+    .wc-plan-mermaid-source-toggle { margin-top: 4px; font-size: 11px; }
     .wc-plan-card-detail-grid { margin: 6px 0 0 0; display: grid; grid-template-columns: max-content 1fr; gap: 2px 8px; font-size: 11px; }
     .wc-plan-card-detail-grid dt { color: var(--vscode-descriptionForeground, var(--vscode-foreground)); font-weight: 600; }
     .wc-plan-card-detail-grid dd { margin: 0; overflow-wrap: anywhere; }
@@ -7991,6 +8010,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   <footer class="dash-footer">
     <button type="button" id="btn" class="wc-btn wc-btn-lg wc-btn-primary dash-refresh-btn" title="Refresh the dashboard now. The panel also updates when you return to it or when planning data changes.">Refresh</button>
   </footer>
+  <script src="${mermaidScriptUri}"></script>
   <script>${startupProbe}</script>
   <script>${bootstrap}</script>
   <script>${buildConfigWebviewBootstrapScript({ autoLoad: false })}</script>

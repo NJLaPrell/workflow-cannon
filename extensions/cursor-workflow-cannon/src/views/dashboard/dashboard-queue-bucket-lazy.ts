@@ -112,7 +112,9 @@ function renderProposedImprovementRows(tasks: unknown[]): string {
           row?.phase != null && String(row.phase).length > 0 ? " · " + escapeHtml(String(row.phase)) : "";
         const idAttr = escapeHtml(id);
         return (
-          '<div class="dash-row" role="listitem">' +
+          '<div class="dash-row" role="listitem"' +
+          (id.length > 0 ? ' data-wc-queue-task-id="' + idAttr + '"' : '') +
+          ">" +
           '<span class="dash-row-label">- ' +
           escapeHtml(id) +
           (id ? " " : "") +
@@ -150,7 +152,9 @@ function renderProposedExecutionRows(tasks: unknown[]): string {
         const idAttr = escapeHtml(id);
         const summary = escapeHtml(String(row?.summary ?? row?.title ?? ""));
         return (
-          '<div class="dash-row" role="listitem">' +
+          '<div class="dash-row" role="listitem"' +
+          (id.length > 0 ? ' data-wc-queue-task-id="' + idAttr + '"' : '') +
+          ">" +
           '<span class="dash-row-label dash-task-row-body">' +
           '<span class="dash-task-row-line">' +
           '<span class="dash-task-row-id">' +
@@ -190,7 +194,9 @@ function renderTranscriptChurnRows(tasks: unknown[]): string {
         const idAttr = escapeHtml(id);
         const title = escapeHtml(String(row?.title ?? ""));
         return (
-          '<div class="dash-row" role="listitem">' +
+          '<div class="dash-row" role="listitem"' +
+          (id.length > 0 ? ' data-wc-queue-task-id="' + idAttr + '"' : '') +
+          ">" +
           '<span class="dash-row-label">- ' +
           idAttr +
           (id ? " " : "") +
@@ -224,7 +230,9 @@ function renderBlockedTaskRows(tasks: unknown[]): string {
         const idAttr = escapeHtml(id);
         const title = escapeHtml(String(row?.title ?? ""));
         return (
-          '<div class="dash-row" role="listitem">' +
+          '<div class="dash-row" role="listitem"' +
+          (id.length > 0 ? ' data-wc-queue-task-id="' + idAttr + '"' : '') +
+          ">" +
           '<span class="dash-row-label">- ' +
           idAttr +
           (id ? " " : "") +

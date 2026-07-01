@@ -450,6 +450,7 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
     reloadOpenLazyQueueBucketsAfterMetaChange(root, preservedQueue.lazyBuckets);
     if (editState) restorePhaseDeliverablesEditState(editState);
     if (typeof window.wcReinitEmbeddedCae === 'function') window.wcReinitEmbeddedCae();
+    renderPlanMermaidDiagrams(root);
     var refreshBtn = document.getElementById('btn');
     setButtonBusy(refreshBtn, false);
     setUiInteraction('refresh', false);
@@ -710,6 +711,9 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
     );
     el.classList.add('wc-dash-section--' + st);
     el.setAttribute('aria-busy', st === 'loading' ? 'true' : 'false');
+    if (sectionId === 'plan-artifact' || sectionId === 'ideas' || sectionId === 'planning-roster') {
+      renderPlanMermaidDiagrams(el);
+    }
     if (sectionId === 'cae' && typeof window.wcReinitEmbeddedCae === 'function') {
       window.wcReinitEmbeddedCae();
     }
@@ -830,6 +834,149 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
       body.setAttribute('data-wc-lazy-loaded', '1');
       bucket.setAttribute('data-wc-lazy-loaded', '1');
     }
+    if (pendingQueueTaskReveal && pendingQueueTaskReveal.taskId) {
+      var revealTaskId = pendingQueueTaskReveal.taskId;
+      setTimeout(function() {
+        completeRevealQueueTask(revealTaskId);
+      }, 0);
+    }
+  }
+
+  var pendingQueueTaskReveal = null;
+  var planMermaidInitialized = false;
+
+  function cssEscapeAttrValue(value) {
+    return String(value).replace(/\\\\/g, '\\\\\\\\').replace(/"/g, '\\\\"');
+  }
+
+  function findQueueTaskRow(root, taskId) {
+    if (!root || !taskId) return null;
+    var esc = cssEscapeAttrValue(taskId);
+    var row = root.querySelector('.dash-row[data-wc-queue-task-id="' + esc + '"]');
+    if (row) return row;
+    var btn = root.querySelector('[data-task-id="' + esc + '"]');
+    return btn ? btn.closest('.dash-row') : null;
+  }
+
+  function highlightQueueTaskRow(row) {
+    if (!row) return;
+    row.classList.add('wc-queue-task-highlight');
+    setTimeout(function() {
+      row.classList.remove('wc-queue-task-highlight');
+    }, 1800);
+  }
+
+  function openQueueAncestorsForRow(row) {
+    if (!row) return;
+    var bucket = row.closest('details.wc-lazy-queue-bucket');
+    if (bucket && !bucket.open) {
+      bucket.setAttribute('open', '');
+      requestLazyQueueBucketLoad(bucket);
+    }
+    var section = row.closest('details.status-section');
+    if (section && !section.open) section.setAttribute('open', '');
+  }
+
+  function bucketContainsTaskId(bucket, taskId) {
+    var csv = bucket.getAttribute('data-wc-bucket-task-ids') || '';
+    if (!csv) return false;
+    var parts = csv.split(',');
+    for (var i = 0; i < parts.length; i++) {
+      if (parts[i].trim() === taskId) return true;
+    }
+    return false;
+  }
+
+  function findQueueBucketsForTaskId(root, taskId) {
+    var matches = [];
+    if (!root || !taskId) return matches;
+    root.querySelectorAll('details.wc-lazy-queue-bucket').forEach(function(bucket) {
+      if (bucketContainsTaskId(bucket, taskId)) matches.push(bucket);
+    });
+    return matches;
+  }
+
+  function completeRevealQueueTask(taskId) {
+    var root = document.getElementById('root');
+    if (!root || !taskId) return false;
+    var row = findQueueTaskRow(root, taskId);
+    if (!row) return false;
+    openQueueAncestorsForRow(row);
+    if (typeof row.scrollIntoView === 'function') {
+      row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    highlightQueueTaskRow(row);
+    pendingQueueTaskReveal = null;
+    return true;
+  }
+
+  function requestRevealQueueTask(taskId, phaseKey) {
+    var root = document.getElementById('root');
+    if (!root || !taskId) return;
+    applyTab('task-engine');
+    activeFilter = 'all';
+    if (phaseKey && phaseKey.length > 0) activePhaseFilter = phaseKey;
+    applyQueueFilters(root);
+    if (completeRevealQueueTask(taskId)) return;
+    pendingQueueTaskReveal = { taskId: taskId, phaseKey: phaseKey || '' };
+    var buckets = findQueueBucketsForTaskId(root, taskId);
+    if (buckets.length === 0 && phaseKey && phaseKey.length > 0) {
+      root.querySelectorAll('details.wc-lazy-queue-bucket').forEach(function(bucket) {
+        if ((bucket.getAttribute('data-wc-phase-key') || '').trim() === phaseKey) {
+          buckets.push(bucket);
+        }
+      });
+    }
+    for (var i = 0; i < buckets.length; i++) {
+      var bucket = buckets[i];
+      if (!bucket.open) bucket.setAttribute('open', '');
+      if (bucket.getAttribute('data-wc-lazy-loaded') !== '1') {
+        requestLazyQueueBucketLoad(bucket);
+      }
+    }
+    setTimeout(function() {
+      completeRevealQueueTask(taskId);
+    }, 150);
+  }
+
+  function renderPlanMermaidDiagrams(scope) {
+    var root = scope && scope.querySelector ? scope : document.getElementById('root');
+    if (!root || typeof window.mermaid === 'undefined') return;
+    if (!planMermaidInitialized) {
+      try {
+        window.mermaid.initialize({
+          startOnLoad: false,
+          theme: 'dark',
+          securityLevel: 'strict',
+          fontFamily: 'var(--vscode-font-family, sans-serif)'
+        });
+      } catch (e) {}
+      planMermaidInitialized = true;
+    }
+    root.querySelectorAll('.wc-plan-mermaid-render[data-wc-mermaid-source]').forEach(function(node, index) {
+      if (node.getAttribute('data-wc-mermaid-rendered') === '1') return;
+      var src = (node.getAttribute('data-wc-mermaid-source') || '').trim();
+      if (!src) return;
+      var renderId = node.id || ('wc-plan-mermaid-render-' + String(index));
+      if (!node.id) node.id = renderId;
+      node.setAttribute('data-wc-mermaid-rendered', '1');
+      var loading = node.querySelector('.wc-plan-mermaid-loading');
+      try {
+        window.mermaid
+          .render(renderId + '-svg', src)
+          .then(function(result) {
+            node.innerHTML = result.svg;
+          })
+          .catch(function() {
+            node.innerHTML =
+              '<pre class="wc-plan-mermaid-source"><code>' +
+              src.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') +
+              '</code></pre>';
+          });
+      } catch (e) {
+        if (loading) loading.textContent = 'Could not render diagram.';
+      }
+    });
   }
 
   function findQueueBucket(category, phaseKey) {
@@ -1835,6 +1982,12 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
       applyQueueFilters(rootEl);
       return;
     }
+    if (act === 'open-queue-task') {
+      var queueJumpTaskId = (t.getAttribute('data-task-id') || '').trim();
+      var queueJumpPhaseKey = (t.getAttribute('data-wc-phase-key') || '').trim();
+      if (queueJumpTaskId) requestRevealQueueTask(queueJumpTaskId, queueJumpPhaseKey);
+      return;
+    }
     if (act === 'phase-deliverables-edit') {
       var row = t.closest('[data-wc-phase-row]');
       if (!row) return;
@@ -2010,6 +2163,10 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
     if (!el || el.tagName !== 'DETAILS' || !rootEl.contains(el)) return;
     if (el.classList && el.classList.contains('wc-agent-card')) {
       setAgentCardExpanded(el, !!el.open);
+      return;
+    }
+    if (el.classList && el.classList.contains('wc-plan-card-architecture-diagrams') && el.open) {
+      renderPlanMermaidDiagrams(el);
       return;
     }
     if (!el.classList.contains('wc-lazy-queue-bucket') || !el.open) return;

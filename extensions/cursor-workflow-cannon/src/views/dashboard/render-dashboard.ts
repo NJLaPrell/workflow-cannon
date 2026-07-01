@@ -2292,7 +2292,9 @@ function renderTaskRowList(items: unknown, emptyMessage = "No ready tasks."): st
         const id = String(row?.id ?? "").trim();
         const idAttr = escapeHtml(id);
         return (
-          '<div class="dash-row" role="listitem">' +
+          '<div class="dash-row" role="listitem" data-wc-queue-task-id="' +
+          idAttr +
+          '">' +
           renderDashboardTaskBody(row) +
           renderQueueTaskActionButtons(id) +
           "</div>"
@@ -3744,6 +3746,29 @@ function planCardUiStateAttr(planId: string, suffix: string): string {
   return wcTrackAttr(key);
 }
 
+function planMermaidDiagramDomId(planId: string, index: number): string {
+  const safe = planId.trim().replace(/[^a-zA-Z0-9_-]+/g, "-") || "plan";
+  return `wc-plan-mermaid-${safe}-${index}`;
+}
+
+function renderPlanLinkedTaskButton(taskId: string, phaseKey: string): string {
+  const normalizedTaskId = taskId.trim();
+  if (normalizedTaskId.length === 0) {
+    return "—";
+  }
+  const phaseAttr =
+    phaseKey.trim().length > 0 ? ' data-wc-phase-key="' + escapeHtmlAttr(phaseKey.trim()) + '"' : "";
+  return (
+    '<button type="button" class="wc-plan-linked-task-btn" data-wc-action="open-queue-task" data-task-id="' +
+    escapeHtmlAttr(normalizedTaskId) +
+    '"' +
+    phaseAttr +
+    ' title="Jump to task in queue">' +
+    escapeHtml(normalizedTaskId) +
+    "</button>"
+  );
+}
+
 function yesNoLabel(value: unknown): string {
   return value === true ? "Yes" : "No";
 }
@@ -3801,7 +3826,12 @@ function renderPlanArtifactFactsMeta(row: Record<string, unknown>): string {
   return html;
 }
 
-function renderPlanArtifactWbsTable(planId: string, wbsRows: unknown[], wbsRowCount: number): string {
+function renderPlanArtifactWbsTable(
+  planId: string,
+  wbsRows: unknown[],
+  wbsRowCount: number,
+  phaseKey: string
+): string {
   const count = wbsRowCount > 0 ? wbsRowCount : wbsRows.length;
   if (count <= 0) {
     return "";
@@ -3856,13 +3886,7 @@ function renderPlanArtifactWbsTable(planId: string, wbsRows: unknown[], wbsRowCo
         const linkedTaskId = String(wbs.linkedTaskId ?? "").trim();
         const linkedTaskStatus = String(wbs.linkedTaskStatus ?? "").trim();
         const taskCell =
-          linkedTaskId.length > 0
-            ? '<button type="button" class="wc-plan-linked-task-btn" data-wc-action="task-detail" data-task-id="' +
-              escapeHtmlAttr(linkedTaskId) +
-              '" title="Open task detail">' +
-              escapeHtml(linkedTaskId) +
-              "</button>"
-            : "—";
+          linkedTaskId.length > 0 ? renderPlanLinkedTaskButton(linkedTaskId, phaseKey) : "—";
         rowHtml += "<td>" + taskCell + "</td>";
         rowHtml += "<td>" + escapeHtml(linkedTaskStatus.length > 0 ? linkedTaskStatus : "—") + "</td>";
       }
@@ -4294,7 +4318,17 @@ function renderPlanArtifactArchitectureDiagrams(planId: string, architectureDiag
       }
       if (mermaid.length > 0) {
         html +=
-          '<pre class="wc-plan-mermaid-source"><code>' + escapeHtml(mermaid) + "</code></pre>";
+          '<div class="wc-plan-mermaid-render" id="' +
+          escapeHtmlAttr(planMermaidDiagramDomId(planId, index)) +
+          '" data-wc-mermaid-source="' +
+          escapeHtmlAttr(mermaid) +
+          '" role="img" aria-label="' +
+          escapeHtmlAttr(title) +
+          '"><p class="muted wc-plan-mermaid-loading">Rendering diagram…</p></div>' +
+          '<details class="wc-plan-mermaid-source-toggle"><summary>View mermaid source</summary>' +
+          '<pre class="wc-plan-mermaid-source"><code>' +
+          escapeHtml(mermaid) +
+          "</code></pre></details>";
       }
       return html + "</section>";
     })
@@ -4468,7 +4502,8 @@ function renderPlanArtifactApprovalSummary(planId: string, approvalSummary: unkn
 function renderPlanArtifactExecutionLinkagesTable(
   planId: string,
   executionLinkageRows: unknown[],
-  linkedTaskCount: number
+  linkedTaskCount: number,
+  phaseKey: string
 ): string {
   const count = executionLinkageRows.length > 0 ? executionLinkageRows.length : linkedTaskCount;
   if (count <= 0) {
@@ -4482,14 +4517,7 @@ function renderPlanArtifactExecutionLinkagesTable(
       const taskStatus = String(row.taskStatus ?? "").trim() || "—";
       const linkedAt = String(row.linkedAt ?? "").trim() || "—";
       const linkedBy = String(row.linkedBy ?? "").trim() || "—";
-      const taskCell =
-        taskId !== "—"
-          ? '<button type="button" class="wc-plan-linked-task-btn" data-wc-action="task-detail" data-task-id="' +
-            escapeHtmlAttr(taskId) +
-            '" title="Open task detail">' +
-            escapeHtml(taskId) +
-            "</button>"
-          : "—";
+      const taskCell = taskId !== "—" ? renderPlanLinkedTaskButton(taskId, phaseKey) : "—";
       return (
         "<tr>" +
         "<td>" +
@@ -4632,6 +4660,7 @@ function renderPlanArtifactCard(row: Record<string, unknown>): string {
   const sourceIdeaId = String(row.sourceIdeaId ?? "").trim();
   const reviewSummaryText = String(row.reviewSummary ?? "").trim();
   const refLabel = planRef.length > 0 ? planRef : planId;
+  const phaseKey = String(row.phaseKey ?? "").trim();
   const wbsRows = Array.isArray(row.wbsRows) ? row.wbsRows : [];
   const riskRows = Array.isArray(row.riskRows) ? row.riskRows : [];
   const openQuestionRows = Array.isArray(row.openQuestionRows) ? row.openQuestionRows : [];
@@ -4689,7 +4718,7 @@ function renderPlanArtifactCard(row: Record<string, unknown>): string {
 
   const actionsHtml = renderPlanArtifactCardActions(row, effectiveStatusRaw);
   const factsHtml = renderPlanArtifactFactsMeta(row);
-  const wbsHtml = renderPlanArtifactWbsTable(planId, wbsRows, wbsRowCount);
+  const wbsHtml = renderPlanArtifactWbsTable(planId, wbsRows, wbsRowCount, phaseKey);
   const risksHtml = renderPlanArtifactRiskTable(planId, riskRows, riskCount);
   const openQuestionsHtml = renderPlanArtifactOpenQuestionsTable(planId, openQuestionRows, openQuestions);
   const reviewFindingsHtml = renderPlanArtifactReviewFindingsTable(
@@ -4727,7 +4756,8 @@ function renderPlanArtifactCard(row: Record<string, unknown>): string {
   const executionLinkagesHtml = renderPlanArtifactExecutionLinkagesTable(
     planId,
     executionLinkageRows,
-    linkedTaskCount
+    linkedTaskCount,
+    phaseKey
   );
 
   return (
