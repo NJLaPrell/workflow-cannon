@@ -180,9 +180,13 @@ export async function runApplyTaskBatchCommand(
           message: `apply-task-batch ops[${i}]: features must be an array of strings when provided`
         };
       }
-      const allocateId = payload.allocateId !== false;
       const idArgRaw = typeof payload.id === "string" ? payload.id.trim() : "";
       const idArg = idArgRaw.length > 0 ? idArgRaw : undefined;
+      // Auto-allocation is the default: allocate when no explicit id is supplied
+      // (or the "auto" sentinel is used). Explicit allocateId:true stays supported.
+      const allocateIdExplicit = payload.allocateId === true;
+      const explicitAutoSentinel = idArg === "auto";
+      const allocateId = allocateIdExplicit || idArg === undefined || explicitAutoSentinel;
       const title =
         typeof payload.title === "string" && payload.title.trim().length > 0 ? payload.title.trim() : undefined;
       const type =
@@ -205,7 +209,7 @@ export async function runApplyTaskBatchCommand(
           message: `apply-task-batch ops[${i}]: create-task requires title and valid initial status`
         };
       }
-      if (allocateId && idArg !== undefined && TASK_ID_RE.test(idArg)) {
+      if (allocateIdExplicit && idArg !== undefined && !explicitAutoSentinel && TASK_ID_RE.test(idArg)) {
         return {
           ok: false,
           code: "invalid-run-args",
@@ -220,7 +224,7 @@ export async function runApplyTaskBatchCommand(
           return {
             ok: false,
             code: "invalid-task-schema",
-            message: `apply-task-batch ops[${i}]: create-task requires id or allocateId:true`
+            message: `apply-task-batch ops[${i}]: create-task id must match format T<number> when provided; omit id (or use id:"auto") for automatic allocation`
           };
         }
         resolvedId = idArg;

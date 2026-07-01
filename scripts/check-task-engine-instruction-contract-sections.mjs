@@ -19,6 +19,8 @@ const INSTRUCTION_DIR = path.join(ROOT, "src/modules/task-engine/instructions");
 const FIELD_DESCRIPTIONS = {
   action: "Transition action.",
   actor: "Actor recorded on transition evidence or task mutation metadata.",
+  allocateId:
+    "Legacy opt-in for server-side id allocation. Optional — allocation is the default when `id` is omitted. Cannot combine with an explicit `T###` id.",
   clientMutationId: "Retry/idempotency key.",
   config: "Invocation-local config override.",
   expectedPlanningGeneration: "Optimistic concurrency token from a prior read response.",

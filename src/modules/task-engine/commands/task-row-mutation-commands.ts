@@ -241,6 +241,11 @@ export async function runTaskRowMutationCommands(
     const dryRunCreate = args.dryRun === true;
     const idArgRaw = typeof args.id === "string" ? args.id.trim() : "";
     const idArg = idArgRaw.length > 0 ? idArgRaw : undefined;
+    // Auto-allocation is the default: when no explicit id is supplied (or the
+    // "auto" sentinel is passed), the server assigns the next T### id. The
+    // legacy allocateId:true flag stays supported so existing callers keep working.
+    const explicitAutoSentinel = idArg === "auto";
+    const wantsAllocate = allocateId || idArg === undefined || explicitAutoSentinel;
     const title = typeof args.title === "string" && args.title.trim().length > 0 ? args.title.trim() : undefined;
     const type = typeof args.type === "string" && args.type.trim().length > 0 ? args.type.trim() : "workspace-kit";
     const status = typeof args.status === "string" ? args.status : "proposed";
@@ -261,7 +266,7 @@ export async function runTaskRowMutationCommands(
           "create-task requires title and status proposed, ready, or research (research only with type transcript_churn)"
       };
     }
-    if (allocateId && idArg !== undefined && TASK_ID_RE.test(idArg)) {
+    if (allocateId && idArg !== undefined && !explicitAutoSentinel && TASK_ID_RE.test(idArg)) {
       return {
         ok: false,
         code: "invalid-run-args",
@@ -271,7 +276,7 @@ export async function runTaskRowMutationCommands(
       };
     }
     const evidenceType = command.name === "create-task-from-plan" ? "create-task-from-plan" : "create-task";
-    if (allocateId && clientMutationId) {
+    if (wantsAllocate && clientMutationId) {
       const priorAlloc = findIdempotentAllocatedCreate(store, evidenceType, clientMutationId);
       if (priorAlloc) {
         const existing = store.getTask(priorAlloc.taskId);
@@ -323,7 +328,7 @@ export async function runTaskRowMutationCommands(
       }
     }
     let resolvedId: string;
-    if (allocateId) {
+    if (wantsAllocate) {
       resolvedId = allocateNextTaskId(store.getAllTasks());
     } else {
       if (!idArg || !TASK_ID_RE.test(idArg)) {
@@ -331,7 +336,7 @@ export async function runTaskRowMutationCommands(
           ok: false,
           code: "invalid-task-schema",
           message:
-            "create-task requires id/title, id format T<number>, and status proposed, ready, or research (research only with type transcript_churn); or pass allocateId:true for server-side id allocation"
+            "create-task id must match format T<number> when provided; omit id (or use id:\"auto\") for server-side id allocation"
         };
       }
       resolvedId = idArg;
@@ -391,7 +396,7 @@ export async function runTaskRowMutationCommands(
       features: task.features ?? []
     };
     const payloadDigest = digestPayload(createPayloadForDigest);
-    if (!allocateId && clientMutationId) {
+    if (!wantsAllocate && clientMutationId) {
       const prior = findIdempotentMutation(store, evidenceType, resolvedId, clientMutationId);
       if (prior) {
         if (prior.payloadDigest !== payloadDigest) {
@@ -464,7 +469,7 @@ export async function runTaskRowMutationCommands(
       const dryData: Record<string, unknown> = {
         task,
         dryRun: true,
-        allocateId: allocateId === true
+        allocateId: wantsAllocate
       };
       if (intakeCreate.intakePayload.enforcementMode !== "off") {
         dryData.taskIntake = intakeCreate.intakePayload;
@@ -488,7 +493,7 @@ export async function runTaskRowMutationCommands(
         source: command.name,
         clientMutationId,
         payloadDigest,
-        allocateId: allocateId === true
+        allocateId: wantsAllocate
       })
     );
     const strictIssue = strictValidationError(store, ctx.effectiveConfig as Record<string, unknown> | undefined);

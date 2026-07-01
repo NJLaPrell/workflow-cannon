@@ -6051,3 +6051,69 @@ test("taskEngineModule create-task allocateId and apply-task-batch single genera
   assert.equal(dry.data.dryRun, true);
   assert.equal(dry.data.planningGeneration, gen2);
 });
+
+test("taskEngineModule create-task auto-allocates id by default when id omitted", async () => {
+  const workspace = await tmpDir();
+  await storeWithTasks([makeTask({ id: "T7200", title: "seed" })], workspace);
+  const ctx = sqliteTaskEngineCtx(workspace);
+
+  const readGen = async () =>
+    (await taskEngineModule.onCommand({ name: "list-tasks", args: {} }, ctx)).data.planningGeneration;
+
+  // No id and no allocateId → server allocates automatically.
+  const auto = await taskEngineModule.onCommand(
+    { name: "create-task", args: { title: "no id supplied", status: "proposed", expectedPlanningGeneration: await readGen() } },
+    ctx
+  );
+  assert.equal(auto.ok, true);
+  assert.equal(auto.code, "task-created");
+  assert.match(auto.data.task.id, /^T\d+$/);
+
+  // id:"auto" sentinel also allocates.
+  const sentinel = await taskEngineModule.onCommand(
+    { name: "create-task", args: { id: "auto", title: "auto sentinel", status: "proposed", expectedPlanningGeneration: await readGen() } },
+    ctx
+  );
+  assert.equal(sentinel.ok, true);
+  assert.match(sentinel.data.task.id, /^T\d+$/);
+  assert.notEqual(sentinel.data.task.id, auto.data.task.id);
+
+  // Explicit valid id is still honored verbatim.
+  const explicit = await taskEngineModule.onCommand(
+    { name: "create-task", args: { id: "T7250", title: "explicit id", status: "proposed", expectedPlanningGeneration: await readGen() } },
+    ctx
+  );
+  assert.equal(explicit.ok, true);
+  assert.equal(explicit.data.task.id, "T7250");
+
+  // allocateId:true combined with an explicit T### id is still a contradiction.
+  const conflict = await taskEngineModule.onCommand(
+    { name: "create-task", args: { allocateId: true, id: "T7251", title: "conflict", status: "proposed", expectedPlanningGeneration: await readGen() } },
+    ctx
+  );
+  assert.equal(conflict.ok, false);
+  assert.equal(conflict.code, "invalid-run-args");
+
+  // A malformed explicit id (not the auto sentinel) is rejected.
+  const bad = await taskEngineModule.onCommand(
+    { name: "create-task", args: { id: "nope", title: "bad id", status: "proposed", expectedPlanningGeneration: await readGen() } },
+    ctx
+  );
+  assert.equal(bad.ok, false);
+  assert.equal(bad.code, "invalid-task-schema");
+
+  // Idempotent replay works for the auto-allocated path via clientMutationId.
+  const genForReplay = await readGen();
+  const first = await taskEngineModule.onCommand(
+    { name: "create-task", args: { title: "idempotent", status: "proposed", clientMutationId: "cmid-auto-1", expectedPlanningGeneration: genForReplay } },
+    ctx
+  );
+  assert.equal(first.ok, true);
+  const replay = await taskEngineModule.onCommand(
+    { name: "create-task", args: { title: "idempotent", status: "proposed", clientMutationId: "cmid-auto-1", expectedPlanningGeneration: await readGen() } },
+    ctx
+  );
+  assert.equal(replay.ok, true);
+  assert.equal(replay.code, "task-create-idempotent-replay");
+  assert.equal(replay.data.task.id, first.data.task.id);
+});

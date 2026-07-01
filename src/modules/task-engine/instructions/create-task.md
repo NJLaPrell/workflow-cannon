@@ -8,6 +8,14 @@ Create a task record through the Task Engine persistence path.
 
 ## Usage
 
+The id is optional. Omit it and the server allocates the next `T###` automatically:
+
+```
+workspace-kit run create-task '{"title":"My task","status":"proposed"}'
+```
+
+Pass an explicit `id` only when you need a specific one (e.g. deterministic imports):
+
 ```
 workspace-kit run create-task '{"id":"T400","title":"My task","status":"proposed"}'
 ```
@@ -19,7 +27,7 @@ workspace-kit run create-task '{"id":"T400","title":"My task","status":"proposed
 | --- | --- | --- | --- |
 | `title` | `string` | yes | Task title. |
 | `id` | `string` | no | Task id. |
-| `allocateId` | `boolean` | no | Command argument. |
+| `allocateId` | `boolean` | no | Legacy opt-in for server-side id allocation. Optional — allocation is the default when `id` is omitted. Cannot combine with an explicit `T###` id. |
 | `dryRun` | `boolean` | no | Command argument. |
 | `status` | string (`proposed`, `ready`) | no | Initial task status. |
 | `clientMutationId` | `string` | no | Retry/idempotency key. |
@@ -27,6 +35,8 @@ workspace-kit run create-task '{"id":"T400","title":"My task","status":"proposed
 | `actor` | `string` | no | Actor recorded on transition evidence or task mutation metadata. |
 | `config` | `object` | no | Invocation-local config override. |
 <!-- workspace-kit:generated task-engine-instruction-contract command=create-task section=args end -->
+
+**Id allocation:** `id` is optional. When omitted (or set to the `"auto"` sentinel), the server allocates the next `T###` id automatically — you do **not** need to pass `allocateId:true`. Provide an explicit `T###` `id` only when you need a specific one (e.g. deterministic imports); an explicit id cannot be combined with `allocateId:true`.
 
 The schema permits additional task fields; common fields include `type`, `priority`, `dependsOn`, `unblocks`, `phase`, `phaseKey`, `metadata`, `ownership`, `approach`, `summary`, `description`, `risk`, `technicalScope`, `acceptanceCriteria`, and `features` (taxonomy slugs from `feature-taxonomy.json`; unknown slugs produce advisory warnings).
 
