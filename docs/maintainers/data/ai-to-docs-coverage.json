@@ -119,6 +119,10 @@
       "output": "docs/maintainers/runbooks/dashboard-data-map.md"
     },
     {
+      "source": ".ai/runbooks/dashboard-perf-baseline.md",
+      "output": "docs/maintainers/runbooks/dashboard-perf-baseline.md"
+    },
+    {
       "source": ".ai/runbooks/documentation-governance-checks.md",
       "output": "docs/maintainers/runbooks/documentation-governance-checks.md"
     },
