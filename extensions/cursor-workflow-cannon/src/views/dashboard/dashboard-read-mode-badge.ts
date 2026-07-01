@@ -12,7 +12,12 @@ export type DashboardReadModeBadge = {
 
 /** Human-readable dashboard read-path label for the overview badge. */
 export function formatDashboardReadModeBadgeLabel(badge: DashboardReadModeBadge): string {
-  const pathLabel = badge.active === "service" ? "Warm service" : "CLI polling";
+  const pathLabel =
+    badge.active === "service" && badge.pollingCadence === "push-safety-net"
+      ? "Push-driven service"
+      : badge.active === "service"
+        ? "Warm service"
+        : "CLI polling";
   if (badge.configured === "auto") {
     if (badge.active === "cli-polling" && badge.detail) {
       return `${pathLabel} (auto)`;
@@ -31,6 +36,9 @@ export function formatDashboardReadModeBadgeDetail(badge: DashboardReadModeBadge
   }
   if (badge.configured === "service" && badge.active !== "service") {
     return "Configured for warm service; service is not reachable. Using CLI polling for live data.";
+  }
+  if (badge.active === "service" && badge.pollingCadence === "push-safety-net") {
+    return "SSE push updates active; CLI polling is limited to a stale-slice safety net.";
   }
   return undefined;
 }
