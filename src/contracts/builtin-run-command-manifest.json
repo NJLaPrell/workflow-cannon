@@ -1299,6 +1299,15 @@
   },
   {
     "moduleId": "task-engine",
+    "name": "dashboard-ops-slice",
+    "file": "dashboard-ops-slice.md",
+    "description": "Lightweight ops snapshot: planArtifact, workspaceStatus, teamExecution, subagentRegistry, taskCheckpoints — no doctor/CAE/git-drift scan.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive",
+    "executionClass": "read_hot"
+  },
+  {
+    "moduleId": "task-engine",
     "name": "dashboard-terminal-tasks",
     "file": "dashboard-terminal-tasks.md",
     "description": "Dashboard terminal tasks slice (paginated).",

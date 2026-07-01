@@ -18,6 +18,7 @@ import {
   buildDashboardAgentTypesSlice as originalBuildDashboardAgentTypesSlice,
   buildDashboardOverviewSlice as originalBuildDashboardOverviewSlice,
   buildDashboardTerminalTasksPage as originalBuildDashboardTerminalTasksPage,
+  buildDashboardOpsSlice as originalBuildDashboardOpsSlice,
   parseDashboardWishlistPaging
 } from "./build-dashboard-base.js";
 
@@ -121,6 +122,8 @@ export async function buildDashboardAgentTypesSlice(
 }
 
 export const buildDashboardTerminalTasksPage = originalBuildDashboardTerminalTasksPage;
+
+export const buildDashboardOpsSlice = originalBuildDashboardOpsSlice;
 
 export { parseDashboardWishlistPaging };
 

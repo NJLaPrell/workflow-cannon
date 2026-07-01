@@ -895,6 +895,59 @@ export async function buildDashboardAgentTypesSlice(
   } as DashboardSummaryData;
 }
 
+/**
+ * 7. buildDashboardOpsSlice: Cheap "ops" snapshot — planArtifact, workspaceStatus,
+ * teamExecution, subagentRegistry, taskCheckpoints — without the doctor/CAE/git-drift
+ * scan that buildDashboardSystemStatus performs. Suitable for the 2-second critical poll
+ * tier and any consumer that only needs these five fields.
+ */
+export async function buildDashboardOpsSlice(
+  ctx: ModuleLifecycleContext,
+  store: TaskStore,
+  planningGeneration: number,
+  sqliteDual: SqliteDualPlanningStore | undefined
+): Promise<Record<string, unknown>> {
+  const dualForStatus = sqliteDual ?? openSqliteDualForWorkspaceStatus(ctx);
+  const db = dualForStatus.getDatabase();
+  const workspaceStatus = readWorkspaceStatusSnapshotFromDual(dualForStatus);
+  const tasks = store.getActiveTasks();
+  const planArtifact = buildDashboardPlanArtifactSummary(ctx, tasks);
+
+  const teamExecution: DashboardTeamExecutionSummary = db
+    ? (summarizeTeamAssignmentsForDashboard(db, (id) => store.getTask(id)?.title ?? null) as DashboardTeamExecutionSummary)
+    : {
+        schemaVersion: 1 as const,
+        available: false,
+        totalCount: 0,
+        activeCount: 0,
+        byStatus: { assigned: 0, submitted: 0, blocked: 0, reconciled: 0, cancelled: 0 },
+        topActive: []
+      };
+
+  const subagentRegistry: DashboardSubagentRegistrySummary = db
+    ? (summarizeSubagentsForDashboard(db) as DashboardSubagentRegistrySummary)
+    : {
+        schemaVersion: 1 as const,
+        available: false,
+        definitionsCount: 0,
+        retiredDefinitionsCount: 0,
+        openSessionsCount: 0,
+        topOpenSessions: []
+      };
+
+  const taskCheckpoints = summarizeCheckpointsForDashboard(db);
+
+  return {
+    schemaVersion: 1,
+    planningGeneration,
+    workspaceStatus,
+    planArtifact,
+    teamExecution,
+    subagentRegistry,
+    taskCheckpoints
+  };
+}
+
 /** 6. buildDashboardTerminalTasksPage: Paginated completed/cancelled tasks, SQLite + memory. */
 export function buildDashboardTerminalTasksPage(
   store: TaskStore,
