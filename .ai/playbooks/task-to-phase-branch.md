@@ -151,10 +151,16 @@ Repeat until satisfied.
 
 1. **Merge** the PR into **`release/phase-<N>`** via normal GitHub flow (`gh pr merge` or UI) using the repo’s preferred strategy (merge / squash / rebase), consistent with **maintainer-delivery-loop**.
 2. Do **not** merge past known **release** or **safety** gates without explicit maintainer decision.
-3. Record delivery metadata on the task before completion. Use `update-task` to preserve existing metadata and add **either** `metadata.deliveryEvidence` **or** `metadata.deliveryWaiver`:
+3. Record delivery metadata and **user-facing release note copy** on the task before completion. Use **`update-task`** to preserve existing metadata and add:
+
+   - **`metadata.deliveryEvidence`** **or** **`metadata.deliveryWaiver`** (when the delivery-evidence guard applies)
+   - **`metadata.releaseNoteSummary`** for **user-visible** shipped work — one benefit-focused sentence for adopters (not implementation detail). Omit for internal-only, chore, or non-shipping tasks unless you explicitly want the row in public release notes (`metadata.includeInReleaseNotes: true`). When **`tasks.releaseNotes.enforcementMode`** is **`enforce`**, **`complete`** is blocked until this field (or **`metadata.releaseNoteWaiver`**) is present. Authoring contract: [`release-notes-authoring.md`](../../src/modules/documentation/instructions/release-notes-authoring.md).
+
+   Prefer a **single** `update-task` that merges the full metadata object (shallow merge replaces the whole map — include prior keys):
 
 ```json
 {
+  "releaseNoteSummary": "See terminal tasks directly on your dashboard.",
   "deliveryEvidence": {
     "schemaVersion": 1,
     "branchName": "feature/T###-short-slug",
@@ -170,6 +176,12 @@ Repeat until satisfied.
     ]
   }
 }
+```
+
+   Example **`update-task`** (replace task id, merge sha, and preserve existing metadata keys from **`get-task`**):
+
+```bash
+workspace-kit run update-task '{"taskId":"T###","updates":{"metadata":{"releaseNoteSummary":"See terminal tasks directly on your dashboard.","deliveryEvidence":{"schemaVersion":1,"branchName":"feature/T###-short-slug","prUrl":"https://github.com/org/repo/pull/123","prNumber":123,"baseBranch":"release/phase-<N>","mergeSha":"<merge-sha>","checks":[{"name":"test","conclusion":"success"}],"validationCommands":[{"command":"pnpm run test","exitCode":0}]}}},"expectedPlanningGeneration":<n>}'
 ```
 
 Waivers are for maintainer-approved exceptions only and require `schemaVersion`, `actor`, `rationale`, `timestamp`, and `scope`.
@@ -205,6 +217,7 @@ If the task should **not** complete (partial delivery, superseded scope), use th
 ## Related
 
 - **Phase closeout (merge phase → `main`, release)** — [`phase-closeout-and-release.md`](./phase-closeout-and-release.md)
+- **Release note authoring** — [`release-notes-authoring.md`](../../src/modules/documentation/instructions/release-notes-authoring.md)
 - **Canonical delivery loop** — `.cursor/rules/maintainer-delivery-loop.mdc`
 - **Branch naming** — `.cursor/rules/branching-tagging-strategy.mdc`
 - **Requestable Cursor rule** — `.cursor/rules/playbook-task-to-phase-branch.mdc`

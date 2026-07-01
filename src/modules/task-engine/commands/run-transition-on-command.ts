@@ -8,6 +8,10 @@ import {
   readDeliveryEvidenceEnforcementMode
 } from "../delivery-evidence.js";
 import {
+  createReleaseNoteSummaryGuard,
+  readReleaseNoteSummaryEnforcementMode
+} from "../release-note-summary-guard.js";
+import {
   createPlanArtifactExecuteGuard,
   readPlanArtifactExecuteEnforcementMode
 } from "../plan-artifact-execute-policy.js";
@@ -138,6 +142,9 @@ export async function runTransitionOnCommand(
     const deliveryEvidenceMode = readDeliveryEvidenceEnforcementMode(
       ctx.effectiveConfig as Record<string, unknown> | undefined
     );
+    const releaseNotesMode = readReleaseNoteSummaryEnforcementMode(
+      ctx.effectiveConfig as Record<string, unknown> | undefined
+    );
     const effectiveConfig = ctx.effectiveConfig as Record<string, unknown> | undefined;
     const service = new TransitionService(
       store,
@@ -150,6 +157,10 @@ export async function runTransitionOnCommand(
             const resolved = resolveMaintainerDeliveryPolicy({ effectiveConfig, task });
             return buildDeliveryEvidencePolicyContext(resolved);
           }
+        }),
+        createReleaseNoteSummaryGuard({
+          enforcementMode: releaseNotesMode,
+          workspacePath: ctx.workspacePath
         })
       ],
       hookBus.isEnabled() ? hookBus : undefined

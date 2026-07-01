@@ -1,27 +1,25 @@
 import { readPackageMetadata } from "./release-evidence-manifest.js";
 import { inferTaskPhaseKey } from "./phase-resolution.js";
 import type { TaskEntity } from "./types.js";
+import {
+  buildFeatureGroups,
+  classifyReleaseNoteTask,
+  collectPublicSectionItems,
+  generateBenefitOverview,
+  generateHeadline,
+  generateHighlights,
+  loadFeatureTaxonomyForReleaseNotes,
+  type ClassifiedReleaseNoteTask,
+  type ReleaseNoteFeatureGroup
+} from "../documentation/release-notes.js";
 
-export const GENERATE_RELEASE_NOTES_SCHEMA_VERSION = 1 as const;
+export const GENERATE_RELEASE_NOTES_SCHEMA_VERSION = 2 as const;
 export const DEFAULT_MAX_FEATURES = 20;
 export const DEFAULT_MAX_HIGHLIGHTS = 5;
 
 type ChangeKind = "breaking" | "feature" | "improvement" | "fix" | "chore" | "unknown";
 
 type OutputFormat = "markdown" | "github" | "plain";
-
-type ClassifiedTask = {
-  taskId: string;
-  title: string;
-  summary: string | null;
-  description: string | null;
-  changeKind: ChangeKind;
-  userFacingDescription: string;
-  acceptanceCriteria: string[];
-  features: string[];
-  isBreaking: boolean;
-  migrationNote: string | null;
-};
 
 type ReleaseNotesSection = {
   headline: string;
@@ -32,6 +30,7 @@ type ReleaseNotesSection = {
   fixes: string[];
   breakingChanges: string[];
   migration: string | null;
+  featureGroups: ReleaseNoteFeatureGroup[];
 };
 
 type GenerateReleaseNotesSuccess = {
@@ -45,7 +44,7 @@ type GenerateReleaseNotesSuccess = {
     markdown: string;
     sections: ReleaseNotesSection;
     sourceTaskCount: number;
-    sourceTasks: Array<{ taskId: string; title: string; changeKind: ChangeKind }>;
+    sourceTasks: Array<{ taskId: string; title: string; changeKind: ChangeKind; includedInPublicSections: boolean }>;
   };
 };
 
@@ -56,207 +55,33 @@ type GenerateReleaseNotesFailure = {
   details?: Record<string, unknown>;
 };
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
-}
-
 function nonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
 }
 
-function extractChangeKind(task: TaskEntity): ChangeKind {
-  const meta = task.metadata;
-  if (isRecord(meta) && nonEmptyString(meta.changeKind)) {
-    const kind = meta.changeKind.toLowerCase().trim();
-    if (kind === "breaking" || kind === "major") return "breaking";
-    if (kind === "feature" || kind === "minor") return "feature";
-    if (kind === "improvement" || kind === "enhancement") return "improvement";
-    if (kind === "fix" || kind === "patch" || kind === "bugfix") return "fix";
-    if (kind === "chore" || kind === "maintenance" || kind === "docs") return "chore";
-  }
-  const taskType = task.type?.toLowerCase() ?? "";
-  if (taskType === "feature") return "feature";
-  if (taskType === "improvement" || taskType === "enhancement") return "improvement";
-  if (taskType === "bug" || taskType === "bugfix" || taskType === "fix") return "fix";
-  if (taskType === "chore" || taskType === "maintenance") return "chore";
-  if (taskType === "execution") return "feature";
-  return "unknown";
-}
-
-function isBreakingChange(task: TaskEntity): boolean {
-  const meta = task.metadata;
-  if (isRecord(meta)) {
-    if (meta.changeKind === "breaking" || meta.changeKind === "major") return true;
-    if (meta.breaking === true) return true;
-    if (nonEmptyString(meta.breakingChange)) return true;
-  }
-  const title = task.title?.toLowerCase() ?? "";
-  const summary = task.summary?.toLowerCase() ?? "";
-  return title.includes("breaking") || summary.includes("breaking change");
-}
-
-function extractMigrationNote(task: TaskEntity): string | null {
-  const meta = task.metadata;
-  if (isRecord(meta)) {
-    if (nonEmptyString(meta.migrationNote)) return meta.migrationNote.trim();
-    if (nonEmptyString(meta.migration)) return meta.migration.trim();
-  }
-  return null;
-}
-
-function humanizeTitle(title: string): string {
-  let cleaned = title.replace(/^(T\d+[-:\s]*|Phase\s*\d+[-:\s]*)/i, "").trim();
-  cleaned = cleaned.replace(/[_-]/g, " ");
-  cleaned = cleaned.replace(/\s+/g, " ");
-  if (cleaned.length > 0) {
-    cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
-  }
-  return cleaned;
-}
-
-function generateUserFacingDescription(task: TaskEntity): string {
-  if (nonEmptyString(task.summary)) {
-    return humanizeTitle(task.summary);
-  }
-  if (nonEmptyString(task.title)) {
-    return humanizeTitle(task.title);
-  }
-  return "General improvements and updates";
-}
-
-function classifyTask(task: TaskEntity): ClassifiedTask {
-  const changeKind = extractChangeKind(task);
-  return {
-    taskId: task.id,
-    title: task.title,
-    summary: task.summary ?? null,
-    description: task.description ?? null,
-    changeKind,
-    userFacingDescription: generateUserFacingDescription(task),
-    acceptanceCriteria: task.acceptanceCriteria ?? [],
-    features: task.features ?? [],
-    isBreaking: isBreakingChange(task),
-    migrationNote: extractMigrationNote(task)
-  };
-}
-
-function generateHeadline(tasks: ClassifiedTask[], releaseName: string | null): string {
-  if (releaseName) {
-    return releaseName;
-  }
-  const featureCount = tasks.filter((t) => t.changeKind === "feature").length;
-  const fixCount = tasks.filter((t) => t.changeKind === "fix").length;
-  const improvementCount = tasks.filter((t) => t.changeKind === "improvement").length;
-  const breakingCount = tasks.filter((t) => t.isBreaking).length;
-
-  if (breakingCount > 0) {
-    return "Major update with breaking changes";
-  }
-  if (featureCount >= 3) {
-    return "Feature-packed release";
-  }
-  if (featureCount > 0 && improvementCount > 0) {
-    return "New features and improvements";
-  }
-  if (fixCount >= 3) {
-    return "Stability and bug fixes";
-  }
-  if (improvementCount >= 2) {
-    return "Quality of life improvements";
-  }
-  return "Updates and improvements";
-}
-
-function generateOverview(tasks: ClassifiedTask[], releaseName: string | null): string {
-  const featureCount = tasks.filter((t) => t.changeKind === "feature").length;
-  const fixCount = tasks.filter((t) => t.changeKind === "fix").length;
-  const improvementCount = tasks.filter((t) => t.changeKind === "improvement").length;
-  const breakingCount = tasks.filter((t) => t.isBreaking).length;
-
-  const parts: string[] = [];
-
-  if (releaseName) {
-    parts.push(`This release delivers ${releaseName}.`);
-  }
-
-  if (breakingCount > 0) {
-    parts.push(
-      `**Heads up:** This release includes ${breakingCount} breaking change${breakingCount > 1 ? "s" : ""} — please review the migration notes below.`
-    );
-  }
-
-  const summaryParts: string[] = [];
-  if (featureCount > 0) {
-    summaryParts.push(`${featureCount} new feature${featureCount > 1 ? "s" : ""}`);
-  }
-  if (improvementCount > 0) {
-    summaryParts.push(`${improvementCount} improvement${improvementCount > 1 ? "s" : ""}`);
-  }
-  if (fixCount > 0) {
-    summaryParts.push(`${fixCount} bug fix${fixCount > 1 ? "es" : ""}`);
-  }
-
-  if (summaryParts.length > 0) {
-    parts.push(`Includes ${summaryParts.join(", ")}.`);
-  }
-
-  return parts.join(" ");
-}
-
-function generateHighlights(tasks: ClassifiedTask[], maxHighlights: number): string[] {
-  const highlights: string[] = [];
-  const breakingTasks = tasks.filter((t) => t.isBreaking);
-  for (const task of breakingTasks.slice(0, 2)) {
-    highlights.push(`**Breaking:** ${task.userFacingDescription}`);
-  }
-  const features = tasks.filter((t) => t.changeKind === "feature" && !t.isBreaking);
-  for (const task of features.slice(0, maxHighlights - highlights.length)) {
-    highlights.push(task.userFacingDescription);
-  }
-  if (highlights.length < maxHighlights) {
-    const improvements = tasks.filter((t) => t.changeKind === "improvement" && !t.isBreaking);
-    for (const task of improvements.slice(0, maxHighlights - highlights.length)) {
-      highlights.push(task.userFacingDescription);
-    }
-  }
-
-  return highlights.slice(0, maxHighlights);
-}
-
 function buildSections(
-  tasks: ClassifiedTask[],
+  tasks: ClassifiedReleaseNoteTask[],
   releaseName: string | null,
   includeBreaking: boolean,
   includeMigration: boolean,
   maxFeatures: number
 ): ReleaseNotesSection {
   const headline = generateHeadline(tasks, releaseName);
-  const overview = generateOverview(tasks, releaseName);
+  const overview = generateBenefitOverview(tasks, releaseName);
   const highlights = generateHighlights(tasks, DEFAULT_MAX_HIGHLIGHTS);
+  const featureGroups = buildFeatureGroups(tasks);
 
-  const newFeatures = tasks
-    .filter((t) => t.changeKind === "feature" && !t.isBreaking)
-    .map((t) => t.userFacingDescription)
-    .slice(0, maxFeatures);
-
-  const improvements = tasks
-    .filter((t) => t.changeKind === "improvement" && !t.isBreaking)
-    .map((t) => t.userFacingDescription)
-    .slice(0, maxFeatures);
-
-  const fixes = tasks
-    .filter((t) => t.changeKind === "fix")
-    .map((t) => t.userFacingDescription)
-    .slice(0, maxFeatures);
-
+  const newFeatures = collectPublicSectionItems(tasks, "feature", maxFeatures);
+  const improvements = collectPublicSectionItems(tasks, "improvement", maxFeatures);
+  const fixes = collectPublicSectionItems(tasks, "fix", maxFeatures);
   const breakingChanges = includeBreaking
     ? tasks
-        .filter((t) => t.isBreaking)
-        .map((t) => t.userFacingDescription)
+        .filter((task) => task.includeInPublicSections && task.isBreaking)
+        .map((task) => task.userFacingDescription)
         .slice(0, maxFeatures)
     : [];
 
-  const migrationNotes = tasks.map((t) => t.migrationNote).filter(nonEmptyString);
+  const migrationNotes = tasks.map((task) => task.migrationNote).filter(nonEmptyString);
   const migration = includeMigration && migrationNotes.length > 0 ? migrationNotes.join("\n\n") : null;
 
   return {
@@ -267,8 +92,24 @@ function buildSections(
     improvements,
     fixes,
     breakingChanges,
-    migration
+    migration,
+    featureGroups
   };
+}
+
+function appendFeatureGroups(lines: string[], featureGroups: ReleaseNoteFeatureGroup[], headingLevel: "###" | "####"): string[] {
+  if (featureGroups.length <= 1) {
+    return lines;
+  }
+  for (const group of featureGroups) {
+    lines.push(`${headingLevel} ${group.label}`);
+    lines.push("");
+    for (const item of group.items) {
+      lines.push(`- ${item}`);
+    }
+    lines.push("");
+  }
+  return lines;
 }
 
 function formatMarkdown(
@@ -307,13 +148,20 @@ function formatMarkdown(
     lines.push("");
   }
 
+  const groupedFeatures = sections.featureGroups.filter((group) =>
+    group.items.some((item) => sections.newFeatures.includes(item))
+  );
   if (sections.newFeatures.length > 0) {
     lines.push("## New Features");
     lines.push("");
-    for (const feature of sections.newFeatures) {
-      lines.push(`- ${feature}`);
+    if (groupedFeatures.length > 1) {
+      appendFeatureGroups(lines, groupedFeatures, "###");
+    } else {
+      for (const feature of sections.newFeatures) {
+        lines.push(`- ${feature}`);
+      }
+      lines.push("");
     }
-    lines.push("");
   }
 
   if (sections.improvements.length > 0) {
@@ -340,6 +188,12 @@ function formatMarkdown(
     lines.push(sections.migration);
     lines.push("");
   }
+
+  lines.push("---");
+  lines.push("");
+  lines.push(
+    "_For command names, schema changes, and maintainer-level detail, see `docs/maintainers/CHANGELOG.md`._"
+  );
 
   return lines.join("\n").trimEnd();
 }
@@ -378,13 +232,20 @@ function formatGitHub(
     lines.push("");
   }
 
+  const groupedFeatures = sections.featureGroups.filter((group) =>
+    group.items.some((item) => sections.newFeatures.includes(item))
+  );
   if (sections.newFeatures.length > 0) {
     lines.push("### 🚀 New Features");
     lines.push("");
-    for (const feature of sections.newFeatures) {
-      lines.push(`- ${feature}`);
+    if (groupedFeatures.length > 1) {
+      appendFeatureGroups(lines, groupedFeatures, "####");
+    } else {
+      for (const feature of sections.newFeatures) {
+        lines.push(`- ${feature}`);
+      }
+      lines.push("");
     }
-    lines.push("");
   }
 
   if (sections.improvements.length > 0) {
@@ -414,6 +275,12 @@ function formatGitHub(
     lines.push("</details>");
     lines.push("");
   }
+
+  lines.push("---");
+  lines.push("");
+  lines.push(
+    "_Technical changelog: [`docs/maintainers/CHANGELOG.md`](docs/maintainers/CHANGELOG.md)_"
+  );
 
   return lines.join("\n").trimEnd();
 }
@@ -544,7 +411,9 @@ export function buildReleaseNotes(args: {
       details: { phaseKey, totalTasks: args.tasks.length }
     };
   }
-  const classifiedTasks = eligibleTasks.map(classifyTask);
+
+  const taxonomy = loadFeatureTaxonomyForReleaseNotes(args.workspacePath);
+  const classifiedTasks = eligibleTasks.map((task) => classifyReleaseNoteTask(task, taxonomy));
   const sections = buildSections(classifiedTasks, releaseName, includeBreaking, includeMigration, maxFeatures);
   let markdown: string;
   switch (format) {
@@ -572,7 +441,8 @@ export function buildReleaseNotes(args: {
       sourceTasks: classifiedTasks.map((t) => ({
         taskId: t.taskId,
         title: t.title,
-        changeKind: t.changeKind
+        changeKind: t.changeKind,
+        includedInPublicSections: t.includeInPublicSections
       }))
     }
   };

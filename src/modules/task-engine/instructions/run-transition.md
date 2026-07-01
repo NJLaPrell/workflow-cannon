@@ -75,6 +75,13 @@ When a phased execution task is completed, the `delivery-evidence` guard evaluat
 - `tasks.deliveryEvidence.enforcementMode: "advisory"` allows completion and emits a structured guard result when evidence is missing.
 - `tasks.deliveryEvidence.enforcementMode: "off"` skips this guard.
 
+**Release note summary guard (user-visible phased tasks):**
+
+- `tasks.releaseNotes.enforcementMode: "advisory"` (default) records a structured guard result when **`metadata.releaseNoteSummary`** is missing for tasks that would appear in public release notes.
+- `tasks.releaseNotes.enforcementMode: "enforce"` blocks **`complete`** until summary or **`metadata.releaseNoteWaiver`** is present.
+- `tasks.releaseNotes.enforcementMode: "off"` skips this guard.
+- Scope is **pragmatic**: internal/chore/technical tasks that **`generate-release-notes`** would omit are not gated. Set **`metadata.releaseNoteRequired: false`** to opt out explicitly.
+
 Expected `metadata.deliveryEvidence` fields:
 
 ```json
@@ -107,6 +114,14 @@ Maintainer waiver fields:
 ```
 
 Use **`phase-delivery-preflight`** before completion to list completed or in-progress phase tasks missing this evidence. For non-shipping/local-only tasks, set `metadata.deliveryEvidenceRequired` to `false` or `metadata.localOnly` / `metadata.nonShipping` to `true`.
+
+## User-facing release note copy (before `complete`)
+
+For **user-visible** execution tasks, set **`metadata.releaseNoteSummary`** via **`update-task`** in the same pre-completion pass as delivery evidence — **before** calling **`action":"complete"`**. One benefit-focused sentence for adopters; implementation detail belongs in **`docs/maintainers/CHANGELOG.md`**.
+
+- Authoring contract: **`src/modules/documentation/instructions/release-notes-authoring.md`**
+- Phase closeout aggregates these fields with **`generate-release-notes`** (see **`.ai/playbooks/phase-closeout-and-release.md`** step **6b**)
+- Skip for internal-only/chore tasks unless **`metadata.includeInReleaseNotes: true`**
 
 ## Response template (CLI shaping)
 

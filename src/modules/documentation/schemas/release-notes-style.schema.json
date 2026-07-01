@@ -1,0 +1,72 @@
+{
+  "$id": "https://workflow-cannon.dev/schemas/release-notes-style.schema.json",
+  "title": "Release notes style contract",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "audience",
+    "sourcePriority",
+    "excludeChangeKinds",
+    "includeWhenMetadata",
+    "internalKeywords",
+    "stripPatterns",
+    "leadingVerbReplacements",
+    "phraseCleanup",
+    "technicalDensityThreshold",
+    "minPublicDescriptionLength",
+    "maxDescriptionLength"
+  ],
+  "properties": {
+    "schemaVersion": { "type": "integer", "minimum": 1 },
+    "audience": { "type": "string", "minLength": 1 },
+    "sourcePriority": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "excludeChangeKinds": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "includeWhenMetadata": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "internalKeywords": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "stripPatterns": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "leadingVerbReplacements": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["pattern", "replacement"],
+        "properties": {
+          "pattern": { "type": "string", "minLength": 1 },
+          "replacement": { "type": "string" }
+        }
+      }
+    },
+    "phraseCleanup": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["pattern", "replacement"],
+        "properties": {
+          "pattern": { "type": "string", "minLength": 1 },
+          "replacement": { "type": "string" }
+        }
+      }
+    },
+    "technicalDensityThreshold": { "type": "number", "minimum": 0, "maximum": 1 },
+    "minPublicDescriptionLength": { "type": "integer", "minimum": 1 },
+    "maxDescriptionLength": { "type": "integer", "minimum": 20 }
+  }
+}

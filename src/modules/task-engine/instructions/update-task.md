@@ -29,6 +29,8 @@ workspace-kit run update-task '{"taskId":"T400","updates":{"title":"Updated titl
 
 Mutable task fields include `title`, `type`, `priority`, `dependsOn`, `unblocks`, `phase`, `phaseKey`, `metadata`, `ownership`, `approach`, `summary`, `description`, `risk`, `technicalScope`, `acceptanceCriteria`, and `features`.
 
+**User-facing release notes:** for shipped work adopters should hear about, set **`metadata.releaseNoteSummary`** (or **`metadata.userFacingSummary`**) before **`run-transition`** **`complete`**. Prefer the same **`update-task`** call as **`metadata.deliveryEvidence`**. Omit for internal/chore tasks unless **`metadata.includeInReleaseNotes`** is true. See **`src/modules/documentation/instructions/release-notes-authoring.md`**.
+
 Immutable fields (`id`, `createdAt`, `status`) are rejected.
 
 Known type guardrails:

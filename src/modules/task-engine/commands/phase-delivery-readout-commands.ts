@@ -1,6 +1,7 @@
 import type { ModuleCommandResult, ModuleLifecycleContext } from "../../../contracts/module-contract.js";
 import { attachPolicyMeta } from "../attach-planning-response-meta.js";
 import { buildPhaseCloseoutReadiness, buildPhaseDeliveryPreflight } from "../delivery-evidence.js";
+import { buildPhaseReleaseNotePreflight } from "../release-note-summary-guard.js";
 import {
   buildDeliveryEvidencePolicyContext,
   resolveMaintainerDeliveryPolicy
@@ -452,6 +453,12 @@ export async function resolvePhaseDeliveryReadoutCommands(
       includeInProgress,
       policyContextByTaskId
     });
+    const releaseNotePreflight = buildPhaseReleaseNotePreflight({
+      tasks: activeTasks,
+      workspacePath: ctx.workspacePath,
+      phaseKey,
+      includeInProgress
+    });
     const baseRef = typeof argObj.baseRef === "string" && argObj.baseRef.trim().length > 0 ? argObj.baseRef.trim() : null;
     const strandedWork = buildStrandedWorkReport({
       workspacePath: ctx.workspacePath,
@@ -468,12 +475,14 @@ export async function resolvePhaseDeliveryReadoutCommands(
     });
     const blockingFindingCount =
       preflight.violationCount +
+      releaseNotePreflight.violationCount +
       readiness.remainingCount +
       strandedWork.findings.length +
       serviceSync.blockingFindingCount +
       phaseProjection.blockingFindingCount;
     const data: Record<string, unknown> = {
       ...preflight,
+      releaseNotePreflight,
       canonicalPhase: phaseRes,
       includeInProgress,
       readiness,

@@ -4,7 +4,9 @@ agentCapsule|v=1|command=generate-release-notes|module=task-engine|schema_only=p
 
 # generate-release-notes
 
-Generate human-friendly, product-owner-style release notes from completed tasks in a phase. Unlike the technical changelog, these notes are written for end users and focus on **what's new**, **what's improved**, and **what's fixed** — not implementation details.
+Generate **human-facing release notes** from completed phase tasks. These notes describe **what adopters get**, not how it was built — save command names, schema bumps, and file paths for **`docs/maintainers/CHANGELOG.md`**.
+
+Style and humanization rules are owned by the **documentation module** (`src/modules/documentation/release-notes.ts`, `data/release-notes-style.json`). See **`release-notes-authoring.md`** for the authoring contract.
 
 ## Usage
 
@@ -40,72 +42,82 @@ Success `data` includes:
 - `markdown` — the full release notes in Markdown format
 - `sections` — structured sections object:
   - `headline` — one-line summary
-  - `overview` — 2-3 sentence overview paragraph
-  - `highlights` — top 3-5 user-facing highlights
-  - `newFeatures` — array of new feature descriptions
-  - `improvements` — array of improvement descriptions
-  - `fixes` — array of bug fix descriptions
-  - `breakingChanges` — array of breaking change descriptions (when applicable)
-  - `migration` — migration notes (when applicable)
+  - `overview` — benefit-oriented overview paragraph
+  - `highlights` — top user-facing highlights
+  - `newFeatures` — new capability bullets
+  - `improvements` — improvement bullets
+  - `fixes` — bug fix bullets
+  - `breakingChanges` — breaking change bullets (when applicable)
+  - `migration` — simplified migration notes (when applicable)
+  - `featureGroups` — grouped bullets by feature taxonomy label
 - `sourceTaskCount` — number of completed tasks processed
-- `sourceTasks` — array of `{taskId, title, changeKind}` for traceability
+- `sourceTasks` — array of `{taskId, title, changeKind, includedInPublicSections}` for traceability
 
-## Output Formats
+## Output formats
 
 ### `markdown` (default)
 
-Standard Markdown suitable for documentation or GitHub Releases:
+User-facing Markdown with a changelog pointer footer:
 
 ```markdown
 # Release 0.99.28: Agent Activity Board
 
-Multi-agent live activity tracking with dashboard integration.
+This release delivers **Agent Activity Board**. Includes 2 new capabilities, 1 improvement.
 
 ## Highlights
 
-- **Live agent status** — See what agents are working on in real-time
-- **Activity timeline** — Track agent progress across tasks
-- **Stale detection** — Get alerts when agents go quiet
+- See what every agent is working on from a single live dashboard
+- Get alerts when an agent goes quiet
+- Dashboard layout stays put after you refresh
 
 ## New Features
 
-- Multi-lease Agent Activity projection with task enrichment
-- Dashboard Agent Activity Board with status chips and attention sorting
-- Activity-slice refresh and polling integration
+### Cursor extension & dashboard
+
+- See what every agent is working on from a single live dashboard
+- Status badges and priority sorting on the activity board
 
 ## Improvements
 
-- Dashboard queue rendering now uses narrower projections
-- Improved expand/collapse state persistence
+- Faster background updates on the dashboard
 
 ## Bug Fixes
 
-- Fixed dashboard terminal task loading performance
+- Dashboard layout stays put after you refresh
+
+---
+
+_For command names, schema changes, and maintainer-level detail, see `docs/maintainers/CHANGELOG.md`._
 ```
 
 ### `github`
 
-Optimized for GitHub Releases with emoji and collapsible sections.
+GitHub Releases layout with emoji headings and a changelog link footer.
 
 ### `plain`
 
 Plain text without Markdown formatting.
 
-## Structured Failures
+## Structured failures
 
 - `generate-release-notes-no-tasks` — No completed tasks found for the specified phase
 - `generate-release-notes-invalid-phase` — Phase key not found in phase catalog
 
-## How It Works
+## How it works
 
 1. **Gathers completed tasks** for the phase from the task store
-2. **Classifies each task** by `metadata.changeKind` (breaking, feature, improvement, fix, chore) or falls back to task `type` heuristics
-3. **Extracts user-facing descriptions** from task `summary`, `title`, and `acceptanceCriteria`
-4. **Groups and organizes** into sections (highlights, features, improvements, fixes)
-5. **Generates human-friendly copy** that focuses on user benefits, not implementation
+2. **Classifies each task** by `metadata.changeKind` or task `type`
+3. **Resolves user-facing copy** using documentation-module style rules:
+   - Prefer `metadata.releaseNoteSummary` / `metadata.userFacingSummary`
+   - Fall back to acceptance criteria, then humanized summary/title
+   - Strip commands, paths, schema tokens, and internal jargon
+   - Group by feature taxonomy when multiple areas ship together
+4. **Omits internal/chore tasks** unless explicitly marked for release notes
+5. **Links to the changelog** for technical detail — release notes stay benefit-focused
 
 ## Related
 
+- `release-notes-authoring` — documentation module authoring contract
 - `release-closeout-result` — Final release closeout packet (includes technical evidence)
 - `release-evidence-manifest` — Machine-readable release evidence
 - `propose-release-version` — SemVer recommendation from task metadata
