@@ -6775,12 +6775,42 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     .wc-plan-card-open-questions,
     .wc-plan-card-review-findings,
     .wc-plan-card-phase-recommendations,
+    .wc-plan-card-goals,
+    .wc-plan-card-non-goals,
+    .wc-plan-card-assumptions,
+    .wc-plan-card-user-stories,
+    .wc-plan-card-value-rationale,
+    .wc-plan-card-architecture-overview,
+    .wc-plan-card-architecture-decisions,
+    .wc-plan-card-architecture-diagrams,
+    .wc-plan-card-technical-impact,
+    .wc-plan-card-testing-strategy,
+    .wc-plan-card-implementation-guidance,
+    .wc-plan-card-what-not-to-do,
+    .wc-plan-card-ui-ux,
+    .wc-plan-card-approval,
+    .wc-plan-card-execution-linkages,
     .wc-plan-card-details { margin-top: 2px; }
     .wc-plan-card-wbs summary,
     .wc-plan-card-risks summary,
     .wc-plan-card-open-questions summary,
     .wc-plan-card-review-findings summary,
     .wc-plan-card-phase-recommendations summary,
+    .wc-plan-card-goals summary,
+    .wc-plan-card-non-goals summary,
+    .wc-plan-card-assumptions summary,
+    .wc-plan-card-user-stories summary,
+    .wc-plan-card-value-rationale summary,
+    .wc-plan-card-architecture-overview summary,
+    .wc-plan-card-architecture-decisions summary,
+    .wc-plan-card-architecture-diagrams summary,
+    .wc-plan-card-technical-impact summary,
+    .wc-plan-card-testing-strategy summary,
+    .wc-plan-card-implementation-guidance summary,
+    .wc-plan-card-what-not-to-do summary,
+    .wc-plan-card-ui-ux summary,
+    .wc-plan-card-approval summary,
+    .wc-plan-card-execution-linkages summary,
     .wc-plan-card-details summary { cursor: pointer; user-select: none; font-size: 11px; font-weight: 600; color: var(--vscode-foreground); }
     .wc-plan-wbs-table {
       width: 100%;
@@ -6811,6 +6841,43 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     .wc-plan-review-finding-severity { font-weight: 600; }
     .wc-plan-review-finding-blocker { color: var(--vscode-errorForeground); }
     .wc-plan-review-finding-warning { color: var(--vscode-editorWarning-foreground, #cca700); }
+    .wc-plan-text-rollup {
+      margin: 6px 0 0 0;
+      padding-left: 18px;
+      font-size: 11px;
+      overflow-wrap: anywhere;
+    }
+    .wc-plan-text-rollup li { margin: 0 0 4px 0; }
+    .wc-plan-value-rationale-text { margin: 6px 0 0 0; font-size: 11px; overflow-wrap: anywhere; }
+    .wc-plan-architecture-overview-text { margin: 6px 0 0 0; font-size: 11px; overflow-wrap: anywhere; }
+    .wc-plan-wbs-table-extended { display: block; overflow-x: auto; max-width: 100%; }
+    .wc-plan-diagram-list { margin-top: 6px; display: flex; flex-direction: column; gap: 8px; }
+    .wc-plan-diagram-block { border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.35)); border-radius: 4px; padding: 6px 8px; }
+    .wc-plan-diagram-title { margin: 0 0 4px 0; font-size: 11px; font-weight: 600; }
+    .wc-plan-diagram-caption { margin: 0 0 4px 0; font-size: 11px; }
+    .wc-plan-mermaid-source {
+      margin: 0;
+      padding: 6px 8px;
+      font-size: 10px;
+      line-height: 1.35;
+      overflow-x: auto;
+      background: var(--vscode-textCodeBlock-background, var(--vscode-editor-background));
+      border-radius: 4px;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+    .wc-plan-linked-task-btn {
+      border: none;
+      background: transparent;
+      color: var(--vscode-textLink-foreground, var(--vscode-foreground));
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 0;
+      text-decoration: underline;
+    }
+    .wc-plan-linked-task-btn:hover { color: var(--vscode-textLink-activeForeground, var(--vscode-foreground)); }
+    .wc-plan-execution-linkages-table td .wc-plan-linked-task-btn { font-weight: 600; }
     .wc-plan-card-detail-grid { margin: 6px 0 0 0; display: grid; grid-template-columns: max-content 1fr; gap: 2px 8px; font-size: 11px; }
     .wc-plan-card-detail-grid dt { color: var(--vscode-descriptionForeground, var(--vscode-foreground)); font-weight: 600; }
     .wc-plan-card-detail-grid dd { margin: 0; overflow-wrap: anywhere; }

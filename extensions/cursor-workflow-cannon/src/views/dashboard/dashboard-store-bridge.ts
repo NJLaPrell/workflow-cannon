@@ -127,6 +127,105 @@ function planArtifactRowPhaseRecommendationRows(row: unknown): unknown[] {
   return Array.isArray(phaseRecommendationRows) ? phaseRecommendationRows : [];
 }
 
+function planArtifactRowArrayField(row: unknown, key: string): unknown[] {
+  if (!row || typeof row !== "object") {
+    return [];
+  }
+  const value = (row as Record<string, unknown>)[key];
+  return Array.isArray(value) ? value : [];
+}
+
+function planArtifactRowStringField(row: unknown, key: string): string {
+  if (!row || typeof row !== "object") {
+    return "";
+  }
+  return String((row as Record<string, unknown>)[key] ?? "").trim();
+}
+
+function planArtifactRowObjectField(row: unknown, key: string): Record<string, unknown> | null {
+  if (!row || typeof row !== "object") {
+    return null;
+  }
+  const value = (row as Record<string, unknown>)[key];
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+  return value as Record<string, unknown>;
+}
+
+function planArtifactWbsRowMergeKey(row: unknown): string {
+  if (!row || typeof row !== "object") {
+    return "";
+  }
+  const record = row as Record<string, unknown>;
+  const wbsId = String(record.wbsId ?? "").trim();
+  if (wbsId.length > 0) {
+    return wbsId;
+  }
+  return String(record.title ?? "").trim();
+}
+
+function mergePlanArtifactWbsRowLinkages(priorRows: unknown[], nextRows: unknown[]): unknown[] {
+  const priorByKey = new Map<string, unknown>();
+  for (const row of priorRows) {
+    const key = planArtifactWbsRowMergeKey(row);
+    if (key.length > 0) {
+      priorByKey.set(key, row);
+    }
+  }
+  return nextRows.map((nextRow) => {
+    const key = planArtifactWbsRowMergeKey(nextRow);
+    const priorRow = key.length > 0 ? priorByKey.get(key) : undefined;
+    if (!priorRow || typeof nextRow !== "object" || typeof priorRow !== "object") {
+      return nextRow;
+    }
+    const next = nextRow as Record<string, unknown>;
+    const prior = priorRow as Record<string, unknown>;
+    const nextLinkedTaskId = String(next.linkedTaskId ?? "").trim();
+    if (nextLinkedTaskId.length > 0) {
+      return nextRow;
+    }
+    const priorLinkedTaskId = String(prior.linkedTaskId ?? "").trim();
+    if (priorLinkedTaskId.length === 0) {
+      return nextRow;
+    }
+    const priorLinkedTaskStatus = String(prior.linkedTaskStatus ?? "").trim();
+    const nextLinkedTaskStatus = String(next.linkedTaskStatus ?? "").trim();
+    return {
+      ...next,
+      linkedTaskId: priorLinkedTaskId,
+      ...(nextLinkedTaskStatus.length > 0 || priorLinkedTaskStatus.length > 0
+        ? { linkedTaskStatus: nextLinkedTaskStatus || priorLinkedTaskStatus }
+        : {})
+    };
+  });
+}
+
+function planArtifactRowLinkedTaskCount(row: unknown): number {
+  if (!row || typeof row !== "object") {
+    return 0;
+  }
+  const linkedTaskCount = (row as Record<string, unknown>).linkedTaskCount;
+  return typeof linkedTaskCount === "number" && Number.isFinite(linkedTaskCount)
+    ? Math.max(0, Math.floor(linkedTaskCount))
+    : 0;
+}
+
+function planArtifactRowValueAssessment(row: unknown): Record<string, unknown> | null {
+  if (!row || typeof row !== "object") {
+    return null;
+  }
+  const valueAssessment = (row as Record<string, unknown>).valueAssessment;
+  if (!valueAssessment || typeof valueAssessment !== "object") {
+    return null;
+  }
+  const impact = String((valueAssessment as Record<string, unknown>).impact ?? "").trim();
+  if (impact.length === 0) {
+    return null;
+  }
+  return valueAssessment as Record<string, unknown>;
+}
+
 function preservePlanArtifactRowRollups(priorRow: unknown, nextRow: unknown): unknown {
   if (!nextRow || typeof nextRow !== "object") {
     return nextRow;
@@ -137,6 +236,8 @@ function preservePlanArtifactRowRollups(priorRow: unknown, nextRow: unknown): un
   const wbsCount = planArtifactRowWbsCount(nextRow) || planArtifactRowWbsCount(priorRow);
   if (nextWbs.length === 0 && priorWbs.length > 0 && wbsCount > 0) {
     patched = { ...patched, wbsRows: priorWbs };
+  } else if (nextWbs.length > 0 && priorWbs.length > 0) {
+    patched = { ...patched, wbsRows: mergePlanArtifactWbsRowLinkages(priorWbs, nextWbs) };
   }
   const priorRisks = planArtifactRowRiskRows(priorRow);
   const nextRisks = planArtifactRowRiskRows(nextRow);
@@ -162,6 +263,45 @@ function preservePlanArtifactRowRollups(priorRow: unknown, nextRow: unknown): un
   const nextPhaseRecommendations = planArtifactRowPhaseRecommendationRows(nextRow);
   if (nextPhaseRecommendations.length === 0 && priorPhaseRecommendations.length > 0) {
     patched = { ...patched, phaseRecommendationRows: priorPhaseRecommendations };
+  }
+  for (const key of [
+    "goalRows",
+    "nonGoalRows",
+    "assumptionRows",
+    "userStoryRows",
+    "architectureDecisionRows",
+    "architectureDiagramRows",
+    "implementationGuidanceRows",
+    "whatNotToDoRows",
+    "executionLinkageRows"
+  ] as const) {
+    const priorRows = planArtifactRowArrayField(priorRow, key);
+    const nextRows = planArtifactRowArrayField(nextRow, key);
+    if (nextRows.length === 0 && priorRows.length > 0) {
+      patched = { ...patched, [key]: priorRows };
+    }
+  }
+  for (const key of ["technicalImpact", "testingStrategy", "uiUxSummary", "approvalSummary"] as const) {
+    const priorObject = planArtifactRowObjectField(priorRow, key);
+    const nextObject = planArtifactRowObjectField(nextRow, key);
+    if (!nextObject && priorObject) {
+      patched = { ...patched, [key]: priorObject };
+    }
+  }
+  const priorArchitectureOverview = planArtifactRowStringField(priorRow, "architectureOverview");
+  const nextArchitectureOverview = planArtifactRowStringField(nextRow, "architectureOverview");
+  if (nextArchitectureOverview.length === 0 && priorArchitectureOverview.length > 0) {
+    patched = { ...patched, architectureOverview: priorArchitectureOverview };
+  }
+  const priorValueAssessment = planArtifactRowValueAssessment(priorRow);
+  const nextValueAssessment = planArtifactRowValueAssessment(nextRow);
+  if (!nextValueAssessment && priorValueAssessment) {
+    patched = { ...patched, valueAssessment: priorValueAssessment };
+  }
+  const priorLinkedTaskCount = planArtifactRowLinkedTaskCount(priorRow);
+  const nextLinkedTaskCount = planArtifactRowLinkedTaskCount(nextRow);
+  if (nextLinkedTaskCount === 0 && priorLinkedTaskCount > 0) {
+    patched = { ...patched, linkedTaskCount: priorLinkedTaskCount };
   }
   return patched;
 }

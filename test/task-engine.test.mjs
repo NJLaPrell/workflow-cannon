@@ -2521,6 +2521,20 @@ test("taskEngineModule dashboard-summary reports Tasks Generated/Executed for fi
   assert.equal(afterFinalize.data.planArtifact.current.status, "finalized");
   assert.equal(afterFinalize.data.planArtifact.current.tasksGenerated, true);
   assert.equal(afterFinalize.data.planArtifact.current.executed, false);
+  assert.ok(afterFinalize.data.planArtifact.current.linkedTaskCount > 0);
+  const linkedWbsRows = afterFinalize.data.planArtifact.current.wbsRows.filter(
+    (row) => typeof row.linkedTaskId === "string" && row.linkedTaskId.trim().length > 0
+  );
+  assert.ok(linkedWbsRows.length > 0, "finalized plan WBS rows should correlate to generated tasks");
+  assert.ok(
+    afterFinalize.data.planArtifact.current.executionLinkageRows?.length > 0,
+    "finalized plan should expose execution linkage rows"
+  );
+  assert.equal(linkedWbsRows[0].linkedTaskId, linkedWbsRows[0].linkedTaskId.trim());
+  assert.ok(
+    typeof linkedWbsRows[0].linkedTaskStatus === "string" && linkedWbsRows[0].linkedTaskStatus.length > 0
+  );
+  assert.ok(afterFinalize.data.planArtifact.current.approvalSummary?.approvedBy);
 
   // Mark the generated tasks delivered directly in the store (bypassing transition guards, which are
   // out of scope here) to verify the projection flips Executed to Yes once all WBS tasks complete.

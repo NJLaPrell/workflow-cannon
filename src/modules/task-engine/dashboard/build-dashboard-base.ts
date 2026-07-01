@@ -5,6 +5,16 @@ import type {
   DashboardPlanArtifactOpenQuestionRow,
   DashboardPlanArtifactReviewFindingRow,
   DashboardPlanArtifactPhaseRecommendationRow,
+  DashboardPlanArtifactTextRow,
+  DashboardPlanArtifactUserStoryRow,
+  DashboardPlanArtifactValueAssessmentSummary,
+  DashboardPlanArtifactArchitectureDecisionRow,
+  DashboardPlanArtifactArchitectureDiagramRow,
+  DashboardPlanArtifactTechnicalImpactSummary,
+  DashboardPlanArtifactTestingStrategySummary,
+  DashboardPlanArtifactUiUxSummary,
+  DashboardPlanArtifactApprovalSummary,
+  DashboardPlanArtifactExecutionLinkageRow,
   DashboardSubagentRegistrySummary,
   DashboardSummaryData,
   DashboardPhaseKickoffSummary,
@@ -35,8 +45,16 @@ import {
   type PlanArtifactReviewRecordV1
 } from "../../../core/planning/plan-artifact-review-record.js";
 import type {
+  PlanArtifactArchitectureDecision,
+  PlanArtifactApprovalRecord,
+  PlanArtifactExecutionLinkage,
   PlanArtifactPhaseRecommendation,
   PlanArtifactRiskItem,
+  PlanArtifactTechnicalImpact,
+  PlanArtifactTestingStrategy,
+  PlanArtifactUiUxDirection,
+  PlanArtifactUserStory,
+  PlanArtifactValueAssessment,
   PlanArtifactV1,
   PlanArtifactWbsItem
 } from "../../../core/planning/plan-artifact-v1.js";
@@ -158,6 +176,416 @@ const PLAN_ARTIFACT_RISK_DESCRIPTION_MAX_LENGTH = 200;
 const PLAN_ARTIFACT_RISK_MITIGATION_MAX_LENGTH = 160;
 const PLAN_ARTIFACT_OPEN_QUESTION_MAX_LENGTH = 240;
 const PLAN_ARTIFACT_PHASE_RECOMMENDATION_RATIONALE_MAX_LENGTH = 160;
+const PLAN_ARTIFACT_TEXT_ROLLUP_MAX_LENGTH = 220;
+const PLAN_ARTIFACT_USER_STORY_MAX_LENGTH = 240;
+const PLAN_ARTIFACT_VALUE_RATIONALE_MAX_LENGTH = 200;
+const PLAN_ARTIFACT_ARCHITECTURE_OVERVIEW_MAX_LENGTH = 280;
+const PLAN_ARTIFACT_ARCHITECTURE_TEXT_MAX_LENGTH = 180;
+const PLAN_ARTIFACT_DIAGRAM_MERMAID_MAX_LENGTH = 480;
+const PLAN_ARTIFACT_TECH_NOTES_MAX_LENGTH = 180;
+const PLAN_ARTIFACT_WBS_EXTRA_FIELD_MAX_LENGTH = 140;
+
+function joinPlanArtifactDisplayList(items: readonly string[], maxLength: number): string {
+  const joined = items
+    .map((value) => (typeof value === "string" ? value.trim() : ""))
+    .filter((value) => value.length > 0)
+    .join("; ");
+  if (joined.length === 0) {
+    return "";
+  }
+  return truncatePlanArtifactWbsText(joined, maxLength);
+}
+
+function buildDashboardPlanArtifactTextRows(items: readonly string[]): DashboardPlanArtifactTextRow[] {
+  if (items.length === 0) {
+    return [];
+  }
+  return items
+    .map((raw) => ({
+      text: truncatePlanArtifactWbsText(raw.trim(), PLAN_ARTIFACT_TEXT_ROLLUP_MAX_LENGTH)
+    }))
+    .filter((row) => row.text.length > 0);
+}
+
+function humanizePlanArtifactUserStoryPriority(value: unknown): string {
+  const raw = typeof value === "string" ? value.trim().toLowerCase() : "";
+  switch (raw) {
+    case "must":
+      return "Must";
+    case "should":
+      return "Should";
+    case "could":
+      return "Could";
+    default:
+      return raw.length > 0 ? raw.charAt(0).toUpperCase() + raw.slice(1) : "—";
+  }
+}
+
+function buildDashboardPlanArtifactUserStoryRows(
+  stories: readonly PlanArtifactUserStory[]
+): DashboardPlanArtifactUserStoryRow[] {
+  if (stories.length === 0) {
+    return [];
+  }
+  return stories
+    .map((story) => {
+      const id = story.id.trim() || "Story";
+      const asA = story.asA.trim() || "user";
+      const iWant = story.iWant.trim() || "…";
+      const soThat = story.soThat.trim() || "…";
+      const storyText = truncatePlanArtifactWbsText(
+        `As a ${asA}, I want ${iWant} so that ${soThat}.`,
+        PLAN_ARTIFACT_USER_STORY_MAX_LENGTH
+      );
+      return {
+        id,
+        priority: humanizePlanArtifactUserStoryPriority(story.priority),
+        story: storyText
+      };
+    })
+    .filter((row) => row.story.length > 0);
+}
+
+function buildDashboardPlanArtifactValueAssessmentSummary(
+  valueAssessment: PlanArtifactValueAssessment | undefined
+): DashboardPlanArtifactValueAssessmentSummary | null {
+  if (!valueAssessment || typeof valueAssessment !== "object") {
+    return null;
+  }
+  const impact = valueAssessment.impact.trim();
+  const confidence = humanizePlanArtifactRiskSeverity(valueAssessment.confidence);
+  const rationaleRaw =
+    typeof valueAssessment.rationale === "string" ? valueAssessment.rationale.trim() : "";
+  const rationale =
+    rationaleRaw.length > PLAN_ARTIFACT_VALUE_RATIONALE_MAX_LENGTH
+      ? rationaleRaw.slice(0, PLAN_ARTIFACT_VALUE_RATIONALE_MAX_LENGTH - 3).trimEnd() + "..."
+      : rationaleRaw;
+  if (impact.length === 0 && confidence === "—") {
+    return null;
+  }
+  return {
+    impact: impact.length > 0 ? impact : "—",
+    confidence,
+    ...(rationale.length > 0 ? { rationale } : {})
+  };
+}
+
+function buildDashboardPlanArtifactArchitectureDecisionRows(
+  decisions: readonly PlanArtifactArchitectureDecision[]
+): DashboardPlanArtifactArchitectureDecisionRow[] {
+  if (decisions.length === 0) {
+    return [];
+  }
+  return decisions
+    .map((decision) => {
+      const id = decision.id.trim() || "ADR";
+      const decisionText = truncatePlanArtifactWbsText(
+        decision.decision.trim() || "—",
+        PLAN_ARTIFACT_ARCHITECTURE_TEXT_MAX_LENGTH
+      );
+      const rationale = truncatePlanArtifactWbsText(
+        decision.rationale.trim() || "—",
+        PLAN_ARTIFACT_ARCHITECTURE_TEXT_MAX_LENGTH
+      );
+      return { id, decision: decisionText, rationale };
+    })
+    .filter((row) => row.decision !== "—" || row.rationale !== "—");
+}
+
+function buildDashboardPlanArtifactArchitectureDiagramRows(
+  diagrams: readonly { title: string; mermaid?: string; caption?: string }[]
+): DashboardPlanArtifactArchitectureDiagramRow[] {
+  if (diagrams.length === 0) {
+    return [];
+  }
+  return diagrams
+    .map((diagram, index) => {
+      const title = diagram.title.trim() || `Diagram ${index + 1}`;
+      const mermaidRaw = typeof diagram.mermaid === "string" ? diagram.mermaid.trim() : "";
+      const mermaid =
+        mermaidRaw.length > 0
+          ? truncatePlanArtifactWbsText(mermaidRaw, PLAN_ARTIFACT_DIAGRAM_MERMAID_MAX_LENGTH)
+          : "";
+      const captionRaw = typeof diagram.caption === "string" ? diagram.caption.trim() : "";
+      const caption =
+        captionRaw.length > 0
+          ? truncatePlanArtifactWbsText(captionRaw, PLAN_ARTIFACT_ARCHITECTURE_TEXT_MAX_LENGTH)
+          : "";
+      if (mermaid.length === 0 && caption.length === 0) {
+        return null;
+      }
+      return { title, mermaid, caption };
+    })
+    .filter((row): row is DashboardPlanArtifactArchitectureDiagramRow => row !== null);
+}
+
+function buildDashboardPlanArtifactTechnicalImpactSummary(
+  technicalImpact: PlanArtifactTechnicalImpact | undefined
+): DashboardPlanArtifactTechnicalImpactSummary | null {
+  if (!technicalImpact || typeof technicalImpact !== "object") {
+    return null;
+  }
+  const systemsTouched = (technicalImpact.systemsTouched ?? [])
+    .map((value) => (typeof value === "string" ? value.trim() : ""))
+    .filter((value) => value.length > 0);
+  const compatibilityNotesRaw =
+    typeof technicalImpact.compatibilityNotes === "string" ? technicalImpact.compatibilityNotes.trim() : "";
+  const migrationImpactRaw =
+    typeof technicalImpact.migrationImpact === "string" ? technicalImpact.migrationImpact.trim() : "";
+  const compatibilityNotes =
+    compatibilityNotesRaw.length > 0
+      ? truncatePlanArtifactWbsText(compatibilityNotesRaw, PLAN_ARTIFACT_TECH_NOTES_MAX_LENGTH)
+      : "";
+  const migrationImpact =
+    migrationImpactRaw.length > 0
+      ? truncatePlanArtifactWbsText(migrationImpactRaw, PLAN_ARTIFACT_TECH_NOTES_MAX_LENGTH)
+      : "";
+  if (systemsTouched.length === 0 && compatibilityNotes.length === 0 && migrationImpact.length === 0) {
+    return null;
+  }
+  return {
+    systemsTouched,
+    ...(compatibilityNotes.length > 0 ? { compatibilityNotes } : {}),
+    ...(migrationImpact.length > 0 ? { migrationImpact } : {})
+  };
+}
+
+function buildDashboardPlanArtifactTestingStrategySummary(
+  testingStrategy: PlanArtifactTestingStrategy | undefined
+): DashboardPlanArtifactTestingStrategySummary | null {
+  if (!testingStrategy || typeof testingStrategy !== "object") {
+    return null;
+  }
+  const layers = (testingStrategy.layers ?? [])
+    .map((value) => (typeof value === "string" ? value.trim() : ""))
+    .filter((value) => value.length > 0);
+  const criticalPaths = (testingStrategy.criticalPaths ?? [])
+    .map((value) => (typeof value === "string" ? value.trim() : ""))
+    .filter((value) => value.length > 0);
+  const outOfScopeTesting = (testingStrategy.outOfScopeTesting ?? [])
+    .map((value) => (typeof value === "string" ? value.trim() : ""))
+    .filter((value) => value.length > 0);
+  if (layers.length === 0 && criticalPaths.length === 0 && outOfScopeTesting.length === 0) {
+    return null;
+  }
+  return {
+    layers,
+    criticalPaths,
+    ...(outOfScopeTesting.length > 0 ? { outOfScopeTesting } : {})
+  };
+}
+
+function buildDashboardPlanArtifactUiUxSummary(
+  uiUx: PlanArtifactUiUxDirection | undefined
+): DashboardPlanArtifactUiUxSummary | null {
+  if (!uiUx || typeof uiUx !== "object") {
+    return null;
+  }
+  const summaryRaw = typeof uiUx.summary === "string" ? uiUx.summary.trim() : "";
+  const summary =
+    summaryRaw.length > 0
+      ? truncatePlanArtifactWbsText(summaryRaw, PLAN_ARTIFACT_ARCHITECTURE_OVERVIEW_MAX_LENGTH)
+      : "";
+  const mockupRefs = (uiUx.mockupRefs ?? [])
+    .map((value) => (typeof value === "string" ? value.trim() : ""))
+    .filter((value) => value.length > 0);
+  if (!uiUx.hasUiChanges && summary.length === 0 && mockupRefs.length === 0) {
+    return null;
+  }
+  return {
+    hasUiChanges: uiUx.hasUiChanges === true,
+    ...(summary.length > 0 ? { summary } : {}),
+    ...(mockupRefs.length > 0 ? { mockupRefs } : {})
+  };
+}
+
+function readTaskPlanningWbsId(task: TaskEntity): string {
+  const metadata = task.metadata;
+  if (!metadata || typeof metadata !== "object") {
+    return "";
+  }
+  const planningProvenance = (metadata as Record<string, unknown>).planningProvenance;
+  if (!planningProvenance || typeof planningProvenance !== "object" || Array.isArray(planningProvenance)) {
+    return "";
+  }
+  const wbsId = (planningProvenance as Record<string, unknown>).wbsId;
+  return typeof wbsId === "string" ? wbsId.trim() : "";
+}
+
+function buildWbsIdToLinkedTaskIndex(linkedTasks: readonly TaskEntity[]): Map<string, TaskEntity> {
+  const index = new Map<string, TaskEntity>();
+  for (const task of linkedTasks) {
+    const wbsId = readTaskPlanningWbsId(task);
+    if (wbsId.length > 0 && !index.has(wbsId)) {
+      index.set(wbsId, task);
+    }
+  }
+  return index;
+}
+
+function humanizeDashboardTaskStatus(status: unknown): string {
+  const raw = typeof status === "string" ? status.trim().toLowerCase().replace(/[-\s]+/g, "_") : "";
+  switch (raw) {
+    case "research":
+      return "Research";
+    case "proposed":
+      return "Proposed";
+    case "ready":
+      return "Ready";
+    case "in_progress":
+      return "In progress";
+    case "awaiting_review":
+      return "Awaiting review";
+    case "awaiting_policy_approval":
+      return "Awaiting policy";
+    case "awaiting_external_decision":
+      return "Awaiting decision";
+    case "blocked":
+      return "Blocked";
+    case "completed":
+      return "Completed";
+    case "cancelled":
+      return "Cancelled";
+    default:
+      return raw.length > 0 ? raw.charAt(0).toUpperCase() + raw.slice(1) : "—";
+  }
+}
+
+function formatDashboardLinkageTimestamp(iso: unknown): string {
+  const trimmed = typeof iso === "string" ? iso.trim() : "";
+  if (trimmed.length === 0) {
+    return "—";
+  }
+  const parsed = new Date(trimmed);
+  if (Number.isNaN(parsed.getTime())) {
+    return trimmed;
+  }
+  return parsed.toISOString().slice(0, 16).replace("T", " ");
+}
+
+function enrichDashboardPlanArtifactWbsRowsWithLinkedTasks(
+  rows: DashboardPlanArtifactWbsRow[],
+  wbsItems: readonly PlanArtifactWbsItem[],
+  wbsIdToTask: Map<string, TaskEntity>,
+  taskById: Map<string, TaskEntity>,
+  executionLinkages: readonly PlanArtifactExecutionLinkage[]
+): DashboardPlanArtifactWbsRow[] {
+  if (rows.length === 0) {
+    return rows;
+  }
+  const linkageTaskIdByWbsId = new Map<string, string>();
+  for (const linkage of executionLinkages) {
+    const wbsId = typeof linkage.wbsId === "string" ? linkage.wbsId.trim() : "";
+    const taskId = linkage.taskId.trim();
+    if (wbsId.length > 0 && taskId.length > 0) {
+      linkageTaskIdByWbsId.set(wbsId, taskId);
+    }
+  }
+  return rows.map((row, index) => {
+    const wbsId = wbsItems[index]?.wbsId.trim() || row.wbsId.trim();
+    let linkedTask =
+      wbsId.length > 0 ? wbsIdToTask.get(wbsId) : undefined;
+    if (!linkedTask && wbsId.length > 0) {
+      const linkageTaskId = linkageTaskIdByWbsId.get(wbsId);
+      if (linkageTaskId) {
+        linkedTask = taskById.get(linkageTaskId);
+      }
+    }
+    if (!linkedTask) {
+      return row;
+    }
+    return {
+      ...row,
+      linkedTaskId: linkedTask.id,
+      linkedTaskStatus: humanizeDashboardTaskStatus(linkedTask.status)
+    };
+  });
+}
+
+function buildDashboardPlanArtifactExecutionLinkageRows(
+  executionLinkages: readonly PlanArtifactExecutionLinkage[],
+  linkedTasks: readonly TaskEntity[],
+  wbsItems: readonly PlanArtifactWbsItem[],
+  wbsIdToTask: Map<string, TaskEntity>
+): DashboardPlanArtifactExecutionLinkageRow[] {
+  const taskById = new Map(linkedTasks.map((task) => [task.id, task]));
+  if (executionLinkages.length > 0) {
+    return executionLinkages
+      .map((linkage) => {
+        const taskId = linkage.taskId.trim();
+        if (taskId.length === 0) {
+          return null;
+        }
+        const task = taskById.get(taskId);
+        const wbsId = typeof linkage.wbsId === "string" ? linkage.wbsId.trim() : "";
+        return {
+          taskId,
+          wbsId: wbsId.length > 0 ? wbsId : "—",
+          taskStatus: task ? humanizeDashboardTaskStatus(task.status) : "—",
+          linkedAt: formatDashboardLinkageTimestamp(linkage.linkedAt),
+          linkedBy: linkage.linkedBy.trim() || "—"
+        };
+      })
+      .filter((row): row is DashboardPlanArtifactExecutionLinkageRow => row !== null);
+  }
+  if (linkedTasks.length === 0) {
+    return [];
+  }
+  const rows: DashboardPlanArtifactExecutionLinkageRow[] = [];
+  for (const wbsItem of wbsItems) {
+    const wbsId = wbsItem.wbsId.trim();
+    if (wbsId.length === 0) {
+      continue;
+    }
+    const task = wbsIdToTask.get(wbsId);
+    if (!task) {
+      continue;
+    }
+    rows.push({
+      taskId: task.id,
+      wbsId,
+      taskStatus: humanizeDashboardTaskStatus(task.status),
+      linkedAt: formatDashboardLinkageTimestamp(task.createdAt),
+      linkedBy: "finalize"
+    });
+  }
+  return rows;
+}
+
+function buildDashboardPlanArtifactApprovalSummary(
+  approvalRecord: PlanArtifactApprovalRecord | undefined
+): DashboardPlanArtifactApprovalSummary | null {
+  if (!approvalRecord || typeof approvalRecord !== "object") {
+    return null;
+  }
+  if (approvalRecord.confirmed !== true) {
+    return null;
+  }
+  const approvedVersion = approvalRecord.approvedVersion;
+  const approvedAt = formatDashboardLinkageTimestamp(approvalRecord.approvedAt);
+  const approvedBy = approvalRecord.approvedBy.trim();
+  if (!Number.isFinite(approvedVersion) || approvedVersion <= 0 || approvedBy.length === 0) {
+    return null;
+  }
+  const reviewSummaryRaw =
+    typeof approvalRecord.reviewSummary === "string" ? approvalRecord.reviewSummary.trim() : "";
+  const reviewSummary =
+    reviewSummaryRaw.length > 0
+      ? truncatePlanArtifactWbsText(reviewSummaryRaw, PLAN_ARTIFACT_ARCHITECTURE_OVERVIEW_MAX_LENGTH)
+      : "";
+  const openQuestionsAcceptedCount = Array.isArray(approvalRecord.openQuestionsAccepted)
+    ? approvalRecord.openQuestionsAccepted.filter(
+        (value) => typeof value === "string" && value.trim().length > 0
+      ).length
+    : 0;
+  return {
+    approvedVersion: Math.floor(approvedVersion),
+    approvedAt,
+    approvedBy,
+    ...(reviewSummary.length > 0 ? { reviewSummary } : {}),
+    ...(openQuestionsAcceptedCount > 0 ? { openQuestionsAcceptedCount } : {})
+  };
+}
 
 function buildDashboardPlanArtifactReviewFindingRows(
   findings: readonly PlanArtifactReviewFindingRecordV1[]
@@ -336,13 +764,35 @@ function buildDashboardPlanArtifactWbsRows(wbs: readonly PlanArtifactWbsItem[]):
     const dependsOnIds = (row.dependsOn ?? [])
       .map((value) => (typeof value === "string" ? value.trim() : ""))
       .filter((value) => value.length > 0);
+    const approachRaw = row.approach.trim();
+    const doneMeansRaw = row.doneMeans.trim();
+    const testingVerification = joinPlanArtifactDisplayList(
+      row.testingVerification ?? [],
+      PLAN_ARTIFACT_WBS_EXTRA_FIELD_MAX_LENGTH
+    );
+    const acceptanceCriteria = joinPlanArtifactDisplayList(
+      row.acceptanceCriteria ?? [],
+      PLAN_ARTIFACT_WBS_EXTRA_FIELD_MAX_LENGTH
+    );
+    const approach =
+      approachRaw.length > 0
+        ? truncatePlanArtifactWbsText(approachRaw, PLAN_ARTIFACT_WBS_EXTRA_FIELD_MAX_LENGTH)
+        : "";
+    const doneMeans =
+      doneMeansRaw.length > 0
+        ? truncatePlanArtifactWbsText(doneMeansRaw, PLAN_ARTIFACT_WBS_EXTRA_FIELD_MAX_LENGTH)
+        : "";
     return {
       wbsId: wbsId || title,
       title,
       description: description.length > 0 ? description : "—",
       dependsOn: dependsOnIds.length > 0 ? formatLinkedTitles(dependsOnIds) : "—",
       blocks: formatLinkedTitles(blocksById.get(wbsId) ?? []),
-      size: humanizeWbsSizingConfidence(row.sizingConfidence)
+      size: humanizeWbsSizingConfidence(row.sizingConfidence),
+      ...(approach.length > 0 ? { approach } : {}),
+      ...(doneMeans.length > 0 ? { doneMeans } : {}),
+      ...(testingVerification.length > 0 ? { testingVerification } : {}),
+      ...(acceptanceCriteria.length > 0 ? { acceptanceCriteria } : {})
     };
   });
 }
@@ -398,10 +848,80 @@ export function buildDashboardPlanArtifactSummary(
     const phaseRecommendationPreviewRows = phaseRecommendations.length > 0
       ? buildDashboardPlanArtifactPhaseRecommendationRows(phaseRecommendations)
       : [];
+    const goalPreviewRows = Array.isArray(latestArtifact?.goals)
+      ? buildDashboardPlanArtifactTextRows(latestArtifact.goals)
+      : [];
+    const nonGoalPreviewRows = Array.isArray(latestArtifact?.nonGoals)
+      ? buildDashboardPlanArtifactTextRows(latestArtifact.nonGoals)
+      : [];
+    const assumptionPreviewRows = Array.isArray(latestArtifact?.assumptions)
+      ? buildDashboardPlanArtifactTextRows(latestArtifact.assumptions)
+      : [];
+    const userStoryPreviewRows = Array.isArray(latestArtifact?.userStories)
+      ? buildDashboardPlanArtifactUserStoryRows(latestArtifact.userStories)
+      : [];
+    const valueAssessmentSummary = buildDashboardPlanArtifactValueAssessmentSummary(
+      latestArtifact?.valueAssessment
+    );
+    const architectureOverviewRaw =
+      typeof latestArtifact?.architecture?.overview === "string"
+        ? latestArtifact.architecture.overview.trim()
+        : "";
+    const architectureOverview =
+      architectureOverviewRaw.length > PLAN_ARTIFACT_ARCHITECTURE_OVERVIEW_MAX_LENGTH
+        ? architectureOverviewRaw
+            .slice(0, PLAN_ARTIFACT_ARCHITECTURE_OVERVIEW_MAX_LENGTH - 3)
+            .trimEnd() + "..."
+        : architectureOverviewRaw;
+    const architectureDecisionPreviewRows = Array.isArray(latestArtifact?.architecture?.decisions)
+      ? buildDashboardPlanArtifactArchitectureDecisionRows(latestArtifact.architecture.decisions)
+      : [];
+    const architectureDiagramPreviewRows = Array.isArray(latestArtifact?.architecture?.diagrams)
+      ? buildDashboardPlanArtifactArchitectureDiagramRows(latestArtifact.architecture.diagrams)
+      : [];
+    const technicalImpactSummary = buildDashboardPlanArtifactTechnicalImpactSummary(
+      latestArtifact?.technicalImpact
+    );
+    const testingStrategySummary = buildDashboardPlanArtifactTestingStrategySummary(
+      latestArtifact?.testingStrategy
+    );
+    const implementationGuidancePreviewRows = Array.isArray(latestArtifact?.implementationGuidance)
+      ? buildDashboardPlanArtifactTextRows(latestArtifact.implementationGuidance)
+      : [];
+    const whatNotToDoPreviewRows = Array.isArray(latestArtifact?.whatNotToDo)
+      ? buildDashboardPlanArtifactTextRows(latestArtifact.whatNotToDo)
+      : [];
+    const uiUxSummary = buildDashboardPlanArtifactUiUxSummary(latestArtifact?.uiUxDirection);
     const wbsPreviewRows = Array.isArray(latestArtifact?.wbs)
       ? buildDashboardPlanArtifactWbsRows(latestArtifact.wbs)
       : [];
     const linkedTasks = planRefToTasks.get(summary.planRef) ?? [];
+    const wbsIdToTask = buildWbsIdToLinkedTaskIndex(linkedTasks);
+    const taskById = new Map(linkedTasks.map((task) => [task.id, task]));
+    const executionLinkages = Array.isArray(latestArtifact?.executionLinkages)
+      ? latestArtifact.executionLinkages
+      : [];
+    const wbsItems = Array.isArray(latestArtifact?.wbs) ? latestArtifact.wbs : [];
+    const wbsRowsWithLinkedTasks =
+      wbsPreviewRows.length > 0
+        ? enrichDashboardPlanArtifactWbsRowsWithLinkedTasks(
+            wbsPreviewRows,
+            wbsItems,
+            wbsIdToTask,
+            taskById,
+            executionLinkages
+          )
+        : [];
+    const linkedTaskCount = wbsRowsWithLinkedTasks.filter(
+      (row) => typeof row.linkedTaskId === "string" && row.linkedTaskId.trim().length > 0
+    ).length;
+    const executionLinkagePreviewRows = buildDashboardPlanArtifactExecutionLinkageRows(
+      executionLinkages,
+      linkedTasks,
+      wbsItems,
+      wbsIdToTask
+    );
+    const approvalSummary = buildDashboardPlanArtifactApprovalSummary(latestArtifact?.approvalRecord);
     const tasksGenerated = linkedTasks.length > 0;
     // Cancelled tasks don't block "executed"; only count them if that's all there is (avoids reporting
     // "executed" for a plan whose entire WBS was cancelled rather than delivered).
@@ -441,13 +961,37 @@ export function buildDashboardPlanArtifactSummary(
       ...(sourceIdeaId.length > 0 ? { sourceIdeaId } : {}),
       tasksGenerated,
       executed,
-      ...(wbsPreviewRows.length > 0 ? { wbsRows: wbsPreviewRows } : {}),
+      ...(wbsPreviewRows.length > 0 ? { wbsRows: wbsRowsWithLinkedTasks } : {}),
       ...(riskPreviewRows.length > 0 ? { riskRows: riskPreviewRows } : {}),
       ...(openQuestionPreviewRows.length > 0 ? { openQuestionRows: openQuestionPreviewRows } : {}),
       ...(reviewFindingPreviewRows.length > 0 ? { reviewFindingRows: reviewFindingPreviewRows } : {}),
       ...(phaseRecommendationPreviewRows.length > 0
         ? { phaseRecommendationRows: phaseRecommendationPreviewRows }
-        : {})
+        : {}),
+      ...(goalPreviewRows.length > 0 ? { goalRows: goalPreviewRows } : {}),
+      ...(nonGoalPreviewRows.length > 0 ? { nonGoalRows: nonGoalPreviewRows } : {}),
+      ...(assumptionPreviewRows.length > 0 ? { assumptionRows: assumptionPreviewRows } : {}),
+      ...(userStoryPreviewRows.length > 0 ? { userStoryRows: userStoryPreviewRows } : {}),
+      ...(valueAssessmentSummary ? { valueAssessment: valueAssessmentSummary } : {}),
+      ...(architectureOverview.length > 0 ? { architectureOverview } : {}),
+      ...(architectureDecisionPreviewRows.length > 0
+        ? { architectureDecisionRows: architectureDecisionPreviewRows }
+        : {}),
+      ...(architectureDiagramPreviewRows.length > 0
+        ? { architectureDiagramRows: architectureDiagramPreviewRows }
+        : {}),
+      ...(technicalImpactSummary ? { technicalImpact: technicalImpactSummary } : {}),
+      ...(testingStrategySummary ? { testingStrategy: testingStrategySummary } : {}),
+      ...(implementationGuidancePreviewRows.length > 0
+        ? { implementationGuidanceRows: implementationGuidancePreviewRows }
+        : {}),
+      ...(whatNotToDoPreviewRows.length > 0 ? { whatNotToDoRows: whatNotToDoPreviewRows } : {}),
+      ...(uiUxSummary ? { uiUxSummary } : {}),
+      ...(approvalSummary ? { approvalSummary } : {}),
+      ...(executionLinkagePreviewRows.length > 0
+        ? { executionLinkageRows: executionLinkagePreviewRows }
+        : {}),
+      ...(linkedTaskCount > 0 ? { linkedTaskCount } : {})
     };
   });
   return {

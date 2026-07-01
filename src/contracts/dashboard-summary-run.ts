@@ -378,6 +378,18 @@ export type DashboardPlanArtifactWbsRow = {
   dependsOn: string;
   blocks: string;
   size: string;
+  /** Tier 3 — approach slice from WBS when present. */
+  approach?: string;
+  /** Tier 3 — done-means slice from WBS when present. */
+  doneMeans?: string;
+  /** Tier 3 — joined testing/verification bullets. */
+  testingVerification?: string;
+  /** Tier 3 — joined acceptance criteria bullets. */
+  acceptanceCriteria?: string;
+  /** Tier 4 — generated task id correlated via finalize / execute linkage. */
+  linkedTaskId?: string;
+  /** Tier 4 — humanized task status for the correlated generated task. */
+  linkedTaskStatus?: string;
 };
 
 /** Human-oriented risk row for dashboard plan cards (derived from `PlanArtifactRiskItem`). */
@@ -408,6 +420,78 @@ export type DashboardPlanArtifactPhaseRecommendationRow = {
   label: string;
   primary: boolean;
   rationale: string;
+};
+
+/** Single-line text row for goals, non-goals, and assumptions rollups. */
+export type DashboardPlanArtifactTextRow = {
+  text: string;
+};
+
+/** Human-oriented user story row for dashboard plan cards. */
+export type DashboardPlanArtifactUserStoryRow = {
+  id: string;
+  priority: string;
+  story: string;
+};
+
+/** Value assessment summary for plan-card facts. */
+export type DashboardPlanArtifactValueAssessmentSummary = {
+  impact: string;
+  confidence: string;
+  rationale?: string;
+};
+
+/** Human-oriented architecture decision row for dashboard plan cards. */
+export type DashboardPlanArtifactArchitectureDecisionRow = {
+  id: string;
+  decision: string;
+  rationale: string;
+};
+
+/** Architecture diagram preview (mermaid source as read-only text in the webview). */
+export type DashboardPlanArtifactArchitectureDiagramRow = {
+  title: string;
+  mermaid: string;
+  caption: string;
+};
+
+/** Technical impact summary for dashboard plan cards. */
+export type DashboardPlanArtifactTechnicalImpactSummary = {
+  systemsTouched: string[];
+  compatibilityNotes?: string;
+  migrationImpact?: string;
+};
+
+/** Testing strategy summary for dashboard plan cards. */
+export type DashboardPlanArtifactTestingStrategySummary = {
+  layers: string[];
+  criticalPaths: string[];
+  outOfScopeTesting?: string[];
+};
+
+/** UI/UX direction summary for dashboard plan cards. */
+export type DashboardPlanArtifactUiUxSummary = {
+  hasUiChanges: boolean;
+  summary?: string;
+  mockupRefs?: string[];
+};
+
+/** Approval sign-off summary for accepted/finalized plan cards. */
+export type DashboardPlanArtifactApprovalSummary = {
+  approvedVersion: number;
+  approvedAt: string;
+  approvedBy: string;
+  reviewSummary?: string;
+  openQuestionsAcceptedCount?: number;
+};
+
+/** Execution linkage row correlating WBS rows to generated/linked tasks. */
+export type DashboardPlanArtifactExecutionLinkageRow = {
+  taskId: string;
+  wbsId: string;
+  taskStatus: string;
+  linkedAt: string;
+  linkedBy: string;
 };
 
 export type DashboardPlanArtifactRow = {
@@ -446,6 +530,38 @@ export type DashboardPlanArtifactRow = {
   reviewFindingRows?: DashboardPlanArtifactReviewFindingRow[];
   /** Human-readable phase recommendation rows for the collapsible plan-card table. */
   phaseRecommendationRows?: DashboardPlanArtifactPhaseRecommendationRow[];
+  /** Human-readable goal rows for the collapsible plan-card list. */
+  goalRows?: DashboardPlanArtifactTextRow[];
+  /** Human-readable non-goal rows for the collapsible plan-card list. */
+  nonGoalRows?: DashboardPlanArtifactTextRow[];
+  /** Human-readable assumption rows for the collapsible plan-card list. */
+  assumptionRows?: DashboardPlanArtifactTextRow[];
+  /** Human-readable user story rows for the collapsible plan-card table. */
+  userStoryRows?: DashboardPlanArtifactUserStoryRow[];
+  /** Value assessment facts for the plan card header. */
+  valueAssessment?: DashboardPlanArtifactValueAssessmentSummary;
+  /** Truncated architecture overview paragraph. */
+  architectureOverview?: string;
+  /** Human-readable architecture decision rows. */
+  architectureDecisionRows?: DashboardPlanArtifactArchitectureDecisionRow[];
+  /** Human-readable architecture diagram previews (mermaid source). */
+  architectureDiagramRows?: DashboardPlanArtifactArchitectureDiagramRow[];
+  /** Technical impact summary for the plan card. */
+  technicalImpact?: DashboardPlanArtifactTechnicalImpactSummary;
+  /** Testing strategy summary for the plan card. */
+  testingStrategy?: DashboardPlanArtifactTestingStrategySummary;
+  /** Human-readable implementation guidance rows. */
+  implementationGuidanceRows?: DashboardPlanArtifactTextRow[];
+  /** Human-readable what-not-to-do rows. */
+  whatNotToDoRows?: DashboardPlanArtifactTextRow[];
+  /** UI/UX direction summary for the plan card. */
+  uiUxSummary?: DashboardPlanArtifactUiUxSummary;
+  /** Approval sign-off summary (accepted/finalized plans). */
+  approvalSummary?: DashboardPlanArtifactApprovalSummary;
+  /** WBS ↔ task correlation rows (finalize + execute-plan-artifact). */
+  executionLinkageRows?: DashboardPlanArtifactExecutionLinkageRow[];
+  /** Count of WBS rows with a correlated generated task. */
+  linkedTaskCount?: number;
 };
 
 /**

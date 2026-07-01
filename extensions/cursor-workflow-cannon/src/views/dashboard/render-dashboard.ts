@@ -3753,7 +3753,14 @@ function renderPlanArtifactFactsMeta(row: Record<string, unknown>): string {
   const versionText = Number.isFinite(version) && version > 0 ? String(Math.floor(version)) : "—";
   const updatedAt = String(row.updatedAt ?? "").trim();
   const updatedText = updatedAt.length > 0 ? formatPlanningUpdatedAt(updatedAt) : "—";
-  return (
+  const valueAssessment =
+    row.valueAssessment && typeof row.valueAssessment === "object"
+      ? (row.valueAssessment as Record<string, unknown>)
+      : null;
+  const impact = valueAssessment ? String(valueAssessment.impact ?? "").trim() : "";
+  const confidence = valueAssessment ? String(valueAssessment.confidence ?? "").trim() : "";
+  const rationale = valueAssessment ? String(valueAssessment.rationale ?? "").trim() : "";
+  let html =
     '<dl class="wc-plan-card-facts">' +
     '<div class="wc-plan-card-facts-row">' +
     '<div class="wc-plan-card-fact"><dt>Version</dt><dd>' +
@@ -3770,9 +3777,28 @@ function renderPlanArtifactFactsMeta(row: Record<string, unknown>): string {
     '<div class="wc-plan-card-fact"><dt>Tasks Generated</dt><dd>' +
     escapeHtml(yesNoLabel(row.tasksGenerated)) +
     "</dd></div>" +
-    "</div>" +
-    "</dl>"
-  );
+    "</div>";
+  if (impact.length > 0 || confidence.length > 0) {
+    html +=
+      '<div class="wc-plan-card-facts-row">' +
+      '<div class="wc-plan-card-fact"><dt>Impact</dt><dd>' +
+      escapeHtml(impact.length > 0 ? impact : "—") +
+      "</dd></div>" +
+      '<div class="wc-plan-card-fact"><dt>Confidence</dt><dd>' +
+      escapeHtml(confidence.length > 0 ? confidence : "—") +
+      "</dd></div>" +
+      "</div>";
+  }
+  html += "</dl>";
+  if (rationale.length > 0) {
+    html +=
+      '<details class="wc-plan-card-value-rationale"' +
+      planCardUiStateAttr(String(row.planId ?? "").trim(), "value-rationale") +
+      '><summary>Value rationale</summary><p class="muted wc-plan-value-rationale-text">' +
+      escapeHtml(rationale) +
+      "</p></details>";
+  }
+  return html;
 }
 
 function renderPlanArtifactWbsTable(planId: string, wbsRows: unknown[], wbsRowCount: number): string {
@@ -3780,15 +3806,22 @@ function renderPlanArtifactWbsTable(planId: string, wbsRows: unknown[], wbsRowCo
   if (count <= 0) {
     return "";
   }
-  const tableRows = wbsRows
-    .map((entry) => {
-      const wbs = entry && typeof entry === "object" ? (entry as Record<string, unknown>) : {};
+  const normalizedRows = wbsRows.map((entry) =>
+    entry && typeof entry === "object" ? (entry as Record<string, unknown>) : {}
+  );
+  const hasApproach = normalizedRows.some((wbs) => String(wbs.approach ?? "").trim().length > 0);
+  const hasDoneMeans = normalizedRows.some((wbs) => String(wbs.doneMeans ?? "").trim().length > 0);
+  const hasTesting = normalizedRows.some((wbs) => String(wbs.testingVerification ?? "").trim().length > 0);
+  const hasAcceptance = normalizedRows.some((wbs) => String(wbs.acceptanceCriteria ?? "").trim().length > 0);
+  const hasLinkedTask = normalizedRows.some((wbs) => String(wbs.linkedTaskId ?? "").trim().length > 0);
+  const tableRows = normalizedRows
+    .map((wbs) => {
       const title = String(wbs.title ?? "").trim() || "Work item";
       const description = String(wbs.description ?? "").trim() || "—";
       const dependsOn = String(wbs.dependsOn ?? "").trim() || "—";
       const blocks = String(wbs.blocks ?? "").trim() || "—";
       const size = String(wbs.size ?? "").trim() || "—";
-      return (
+      let rowHtml =
         "<tr>" +
         "<td>" +
         escapeHtml(title) +
@@ -3804,15 +3837,65 @@ function renderPlanArtifactWbsTable(planId: string, wbsRows: unknown[], wbsRowCo
         "</td>" +
         "<td>" +
         escapeHtml(size) +
-        "</td>" +
-        "</tr>"
-      );
+        "</td>";
+      if (hasApproach) {
+        rowHtml += "<td>" + escapeHtml(String(wbs.approach ?? "").trim() || "—") + "</td>";
+      }
+      if (hasDoneMeans) {
+        rowHtml += "<td>" + escapeHtml(String(wbs.doneMeans ?? "").trim() || "—") + "</td>";
+      }
+      if (hasTesting) {
+        rowHtml +=
+          "<td>" + escapeHtml(String(wbs.testingVerification ?? "").trim() || "—") + "</td>";
+      }
+      if (hasAcceptance) {
+        rowHtml +=
+          "<td>" + escapeHtml(String(wbs.acceptanceCriteria ?? "").trim() || "—") + "</td>";
+      }
+      if (hasLinkedTask) {
+        const linkedTaskId = String(wbs.linkedTaskId ?? "").trim();
+        const linkedTaskStatus = String(wbs.linkedTaskStatus ?? "").trim();
+        const taskCell =
+          linkedTaskId.length > 0
+            ? '<button type="button" class="wc-plan-linked-task-btn" data-wc-action="task-detail" data-task-id="' +
+              escapeHtmlAttr(linkedTaskId) +
+              '" title="Open task detail">' +
+              escapeHtml(linkedTaskId) +
+              "</button>"
+            : "—";
+        rowHtml += "<td>" + taskCell + "</td>";
+        rowHtml += "<td>" + escapeHtml(linkedTaskStatus.length > 0 ? linkedTaskStatus : "—") + "</td>";
+      }
+      return rowHtml + "</tr>";
     })
     .join("");
+  let headerHtml =
+    "<th>Work item</th><th>Description</th><th>Depends on</th><th>Blocks</th><th>Size</th>";
+  if (hasApproach) {
+    headerHtml += "<th>Approach</th>";
+  }
+  if (hasDoneMeans) {
+    headerHtml += "<th>Done means</th>";
+  }
+  if (hasTesting) {
+    headerHtml += "<th>Testing</th>";
+  }
+  if (hasAcceptance) {
+    headerHtml += "<th>Acceptance</th>";
+  }
+  if (hasLinkedTask) {
+    headerHtml += "<th>Generated task</th><th>Task status</th>";
+  }
+  const tableClass =
+    hasApproach || hasDoneMeans || hasTesting || hasAcceptance || hasLinkedTask
+      ? "wc-plan-wbs-table wc-plan-wbs-table-extended"
+      : "wc-plan-wbs-table";
   const bodyHtml =
     tableRows.length > 0
-      ? '<table class="wc-plan-wbs-table"><thead><tr>' +
-        "<th>Work item</th><th>Description</th><th>Depends on</th><th>Blocks</th><th>Size</th>" +
+      ? '<table class="' +
+        tableClass +
+        '"><thead><tr>' +
+        headerHtml +
         "</tr></thead><tbody>" +
         tableRows +
         "</tbody></table>"
@@ -4053,6 +4136,402 @@ function renderPlanArtifactPhaseRecommendationsTable(
   );
 }
 
+function renderPlanArtifactTextListRollup(
+  planId: string,
+  uiSuffix: string,
+  labelSingular: string,
+  rows: unknown[]
+): string {
+  const count = rows.length;
+  if (count <= 0) {
+    return "";
+  }
+  const items = rows
+    .map((entry) => {
+      const row = entry && typeof entry === "object" ? (entry as Record<string, unknown>) : {};
+      const text = String(row.text ?? "").trim();
+      return text.length > 0 ? "<li>" + escapeHtml(text) + "</li>" : "";
+    })
+    .filter((item) => item.length > 0)
+    .join("");
+  const bodyHtml =
+    items.length > 0
+      ? '<ul class="wc-plan-text-rollup">' + items + "</ul>"
+      : '<p class="muted wc-plan-wbs-empty">No items available for this plan.</p>';
+  return (
+    '<details class="wc-plan-card-wbs wc-plan-card-' +
+    uiSuffix +
+    '"' +
+    planCardUiStateAttr(planId, uiSuffix) +
+    "><summary>" +
+    escapeHtml(String(count)) +
+    " " +
+    escapeHtml(labelSingular) +
+    (count === 1 ? "" : "s") +
+    "</summary>" +
+    bodyHtml +
+    "</details>"
+  );
+}
+
+function renderPlanArtifactUserStoriesTable(planId: string, userStoryRows: unknown[]): string {
+  const count = userStoryRows.length;
+  if (count <= 0) {
+    return "";
+  }
+  const tableRows = userStoryRows
+    .map((entry) => {
+      const row = entry && typeof entry === "object" ? (entry as Record<string, unknown>) : {};
+      const id = String(row.id ?? "").trim() || "Story";
+      const priority = String(row.priority ?? "").trim() || "—";
+      const story = String(row.story ?? "").trim() || "—";
+      return (
+        "<tr>" +
+        "<td>" +
+        escapeHtml(id) +
+        "</td>" +
+        "<td>" +
+        escapeHtml(priority) +
+        "</td>" +
+        "<td>" +
+        escapeHtml(story) +
+        "</td>" +
+        "</tr>"
+      );
+    })
+    .join("");
+  return (
+    '<details class="wc-plan-card-wbs wc-plan-card-user-stories"' +
+    planCardUiStateAttr(planId, "user-stories") +
+    "><summary>" +
+    escapeHtml(String(count)) +
+    " User " +
+    (count === 1 ? "Story" : "Stories") +
+    "</summary>" +
+    '<table class="wc-plan-wbs-table wc-plan-user-stories-table"><thead><tr>' +
+    "<th>ID</th><th>Priority</th><th>Story</th>" +
+    "</tr></thead><tbody>" +
+    tableRows +
+    "</tbody></table>" +
+    "</details>"
+  );
+}
+
+function renderPlanArtifactArchitectureOverview(planId: string, overview: string): string {
+  const text = overview.trim();
+  if (text.length <= 0) {
+    return "";
+  }
+  return (
+    '<details class="wc-plan-card-wbs wc-plan-card-architecture-overview"' +
+    planCardUiStateAttr(planId, "architecture-overview") +
+    '><summary>Architecture overview</summary><p class="muted wc-plan-architecture-overview-text">' +
+    escapeHtml(text) +
+    "</p></details>"
+  );
+}
+
+function renderPlanArtifactArchitectureDecisionsTable(
+  planId: string,
+  architectureDecisionRows: unknown[]
+): string {
+  const count = architectureDecisionRows.length;
+  if (count <= 0) {
+    return "";
+  }
+  const tableRows = architectureDecisionRows
+    .map((entry) => {
+      const row = entry && typeof entry === "object" ? (entry as Record<string, unknown>) : {};
+      const id = String(row.id ?? "").trim() || "ADR";
+      const decision = String(row.decision ?? "").trim() || "—";
+      const rationale = String(row.rationale ?? "").trim() || "—";
+      return (
+        "<tr>" +
+        "<td>" +
+        escapeHtml(id) +
+        "</td>" +
+        "<td>" +
+        escapeHtml(decision) +
+        "</td>" +
+        "<td>" +
+        escapeHtml(rationale) +
+        "</td>" +
+        "</tr>"
+      );
+    })
+    .join("");
+  return (
+    '<details class="wc-plan-card-wbs wc-plan-card-architecture-decisions"' +
+    planCardUiStateAttr(planId, "architecture-decisions") +
+    "><summary>" +
+    escapeHtml(String(count)) +
+    " Architecture " +
+    (count === 1 ? "Decision" : "Decisions") +
+    "</summary>" +
+    '<table class="wc-plan-wbs-table wc-plan-architecture-decisions-table"><thead><tr>' +
+    "<th>ID</th><th>Decision</th><th>Rationale</th>" +
+    "</tr></thead><tbody>" +
+    tableRows +
+    "</tbody></table>" +
+    "</details>"
+  );
+}
+
+function renderPlanArtifactArchitectureDiagrams(planId: string, architectureDiagramRows: unknown[]): string {
+  const count = architectureDiagramRows.length;
+  if (count <= 0) {
+    return "";
+  }
+  const blocks = architectureDiagramRows
+    .map((entry, index) => {
+      const row = entry && typeof entry === "object" ? (entry as Record<string, unknown>) : {};
+      const title = String(row.title ?? "").trim() || `Diagram ${index + 1}`;
+      const mermaid = String(row.mermaid ?? "").trim();
+      const caption = String(row.caption ?? "").trim();
+      let html = '<section class="wc-plan-diagram-block"><h4 class="wc-plan-diagram-title">' + escapeHtml(title) + "</h4>";
+      if (caption.length > 0) {
+        html += '<p class="muted wc-plan-diagram-caption">' + escapeHtml(caption) + "</p>";
+      }
+      if (mermaid.length > 0) {
+        html +=
+          '<pre class="wc-plan-mermaid-source"><code>' + escapeHtml(mermaid) + "</code></pre>";
+      }
+      return html + "</section>";
+    })
+    .join("");
+  return (
+    '<details class="wc-plan-card-wbs wc-plan-card-architecture-diagrams"' +
+    planCardUiStateAttr(planId, "architecture-diagrams") +
+    "><summary>" +
+    escapeHtml(String(count)) +
+    " Architecture " +
+    (count === 1 ? "Diagram" : "Diagrams") +
+    "</summary>" +
+    '<div class="wc-plan-diagram-list">' +
+    blocks +
+    "</div></details>"
+  );
+}
+
+function renderPlanArtifactTechnicalImpact(planId: string, technicalImpact: unknown): string {
+  if (!technicalImpact || typeof technicalImpact !== "object") {
+    return "";
+  }
+  const impact = technicalImpact as Record<string, unknown>;
+  const systemsTouched = Array.isArray(impact.systemsTouched)
+    ? impact.systemsTouched
+        .map((value) => String(value ?? "").trim())
+        .filter((value) => value.length > 0)
+    : [];
+  const compatibilityNotes = String(impact.compatibilityNotes ?? "").trim();
+  const migrationImpact = String(impact.migrationImpact ?? "").trim();
+  if (systemsTouched.length === 0 && compatibilityNotes.length === 0 && migrationImpact.length === 0) {
+    return "";
+  }
+  const systemsHtml =
+    systemsTouched.length > 0
+      ? '<ul class="wc-plan-text-rollup">' +
+        systemsTouched.map((system) => "<li>" + escapeHtml(system) + "</li>").join("") +
+        "</ul>"
+      : '<p class="muted wc-plan-wbs-empty">No systems listed.</p>';
+  let detailRows = "<dt>Systems touched</dt><dd>" + systemsHtml + "</dd>";
+  if (compatibilityNotes.length > 0) {
+    detailRows += "<dt>Compatibility</dt><dd>" + escapeHtml(compatibilityNotes) + "</dd>";
+  }
+  if (migrationImpact.length > 0) {
+    detailRows += "<dt>Migration</dt><dd>" + escapeHtml(migrationImpact) + "</dd>";
+  }
+  return (
+    '<details class="wc-plan-card-wbs wc-plan-card-technical-impact"' +
+    planCardUiStateAttr(planId, "technical-impact") +
+    '><summary>Technical impact</summary><dl class="wc-plan-card-details-dl">' +
+    detailRows +
+    "</dl></details>"
+  );
+}
+
+function renderPlanArtifactTestingStrategy(planId: string, testingStrategy: unknown): string {
+  if (!testingStrategy || typeof testingStrategy !== "object") {
+    return "";
+  }
+  const strategy = testingStrategy as Record<string, unknown>;
+  const layers = Array.isArray(strategy.layers)
+    ? strategy.layers.map((value) => String(value ?? "").trim()).filter((value) => value.length > 0)
+    : [];
+  const criticalPaths = Array.isArray(strategy.criticalPaths)
+    ? strategy.criticalPaths
+        .map((value) => String(value ?? "").trim())
+        .filter((value) => value.length > 0)
+    : [];
+  const outOfScopeTesting = Array.isArray(strategy.outOfScopeTesting)
+    ? strategy.outOfScopeTesting
+        .map((value) => String(value ?? "").trim())
+        .filter((value) => value.length > 0)
+    : [];
+  if (layers.length === 0 && criticalPaths.length === 0 && outOfScopeTesting.length === 0) {
+    return "";
+  }
+  const listHtml = (items: string[]) =>
+    items.length > 0
+      ? '<ul class="wc-plan-text-rollup">' +
+        items.map((item) => "<li>" + escapeHtml(item) + "</li>").join("") +
+        "</ul>"
+      : '<p class="muted wc-plan-wbs-empty">—</p>';
+  let detailRows = "<dt>Layers</dt><dd>" + listHtml(layers) + "</dd>";
+  detailRows += "<dt>Critical paths</dt><dd>" + listHtml(criticalPaths) + "</dd>";
+  if (outOfScopeTesting.length > 0) {
+    detailRows += "<dt>Out of scope</dt><dd>" + listHtml(outOfScopeTesting) + "</dd>";
+  }
+  return (
+    '<details class="wc-plan-card-wbs wc-plan-card-testing-strategy"' +
+    planCardUiStateAttr(planId, "testing-strategy") +
+    '><summary>Testing strategy</summary><dl class="wc-plan-card-details-dl">' +
+    detailRows +
+    "</dl></details>"
+  );
+}
+
+function renderPlanArtifactUiUxSummary(planId: string, uiUxSummary: unknown): string {
+  if (!uiUxSummary || typeof uiUxSummary !== "object") {
+    return "";
+  }
+  const uiUx = uiUxSummary as Record<string, unknown>;
+  const hasUiChanges = uiUx.hasUiChanges === true;
+  const summary = String(uiUx.summary ?? "").trim();
+  const mockupRefs = Array.isArray(uiUx.mockupRefs)
+    ? uiUx.mockupRefs.map((value) => String(value ?? "").trim()).filter((value) => value.length > 0)
+    : [];
+  if (!hasUiChanges && summary.length === 0 && mockupRefs.length === 0) {
+    return "";
+  }
+  let detailRows =
+    "<dt>UI changes</dt><dd>" + escapeHtml(hasUiChanges ? "Yes" : "No") + "</dd>";
+  if (summary.length > 0) {
+    detailRows += "<dt>Summary</dt><dd>" + escapeHtml(summary) + "</dd>";
+  }
+  if (mockupRefs.length > 0) {
+    detailRows +=
+      "<dt>Mockup refs</dt><dd><ul class=\"wc-plan-text-rollup\">" +
+      mockupRefs.map((ref) => "<li>" + escapeHtml(ref) + "</li>").join("") +
+      "</ul></dd>";
+  }
+  return (
+    '<details class="wc-plan-card-wbs wc-plan-card-ui-ux"' +
+    planCardUiStateAttr(planId, "ui-ux") +
+    '><summary>UI / UX direction</summary><dl class="wc-plan-card-details-dl">' +
+    detailRows +
+    "</dl></details>"
+  );
+}
+
+function renderPlanArtifactApprovalSummary(planId: string, approvalSummary: unknown): string {
+  if (!approvalSummary || typeof approvalSummary !== "object") {
+    return "";
+  }
+  const approval = approvalSummary as Record<string, unknown>;
+  const approvedVersion = Number(approval.approvedVersion ?? 0);
+  const approvedAt = String(approval.approvedAt ?? "").trim();
+  const approvedBy = String(approval.approvedBy ?? "").trim();
+  if (!Number.isFinite(approvedVersion) || approvedVersion <= 0 || approvedBy.length === 0) {
+    return "";
+  }
+  const reviewSummary = String(approval.reviewSummary ?? "").trim();
+  const openQuestionsAcceptedCount = Number(approval.openQuestionsAcceptedCount ?? 0);
+  let detailRows =
+    "<dt>Approved version</dt><dd>" +
+    escapeHtml(String(Math.floor(approvedVersion))) +
+    "</dd>" +
+    "<dt>Approved at</dt><dd>" +
+    escapeHtml(approvedAt.length > 0 ? approvedAt : "—") +
+    "</dd>" +
+    "<dt>Approved by</dt><dd>" +
+    escapeHtml(approvedBy) +
+    "</dd>";
+  if (reviewSummary.length > 0) {
+    detailRows += "<dt>Review summary</dt><dd>" + escapeHtml(reviewSummary) + "</dd>";
+  }
+  if (Number.isFinite(openQuestionsAcceptedCount) && openQuestionsAcceptedCount > 0) {
+    detailRows +=
+      "<dt>Deferred open questions</dt><dd>" +
+      escapeHtml(String(Math.floor(openQuestionsAcceptedCount))) +
+      " accepted at sign-off</dd>";
+  }
+  return (
+    '<details class="wc-plan-card-wbs wc-plan-card-approval"' +
+    planCardUiStateAttr(planId, "approval") +
+    '><summary>Approval record</summary><dl class="wc-plan-card-details-dl">' +
+    detailRows +
+    "</dl></details>"
+  );
+}
+
+function renderPlanArtifactExecutionLinkagesTable(
+  planId: string,
+  executionLinkageRows: unknown[],
+  linkedTaskCount: number
+): string {
+  const count = executionLinkageRows.length > 0 ? executionLinkageRows.length : linkedTaskCount;
+  if (count <= 0) {
+    return "";
+  }
+  const tableRows = executionLinkageRows
+    .map((entry) => {
+      const row = entry && typeof entry === "object" ? (entry as Record<string, unknown>) : {};
+      const taskId = String(row.taskId ?? "").trim() || "—";
+      const wbsId = String(row.wbsId ?? "").trim() || "—";
+      const taskStatus = String(row.taskStatus ?? "").trim() || "—";
+      const linkedAt = String(row.linkedAt ?? "").trim() || "—";
+      const linkedBy = String(row.linkedBy ?? "").trim() || "—";
+      const taskCell =
+        taskId !== "—"
+          ? '<button type="button" class="wc-plan-linked-task-btn" data-wc-action="task-detail" data-task-id="' +
+            escapeHtmlAttr(taskId) +
+            '" title="Open task detail">' +
+            escapeHtml(taskId) +
+            "</button>"
+          : "—";
+      return (
+        "<tr>" +
+        "<td>" +
+        escapeHtml(wbsId) +
+        "</td>" +
+        "<td>" +
+        taskCell +
+        "</td>" +
+        "<td>" +
+        escapeHtml(taskStatus) +
+        "</td>" +
+        "<td>" +
+        escapeHtml(linkedAt) +
+        "</td>" +
+        "<td>" +
+        escapeHtml(linkedBy) +
+        "</td>" +
+        "</tr>"
+      );
+    })
+    .join("");
+  const bodyHtml =
+    tableRows.length > 0
+      ? '<table class="wc-plan-wbs-table wc-plan-execution-linkages-table"><thead><tr>' +
+        "<th>WBS</th><th>Task</th><th>Status</th><th>Linked at</th><th>Linked by</th>" +
+        "</tr></thead><tbody>" +
+        tableRows +
+        "</tbody></table>"
+      : '<p class="muted wc-plan-wbs-empty">No execution linkages recorded for this plan.</p>';
+  return (
+    '<details class="wc-plan-card-wbs wc-plan-card-execution-linkages"' +
+    planCardUiStateAttr(planId, "execution-linkages") +
+    "><summary>" +
+    escapeHtml(String(count)) +
+    " Execution " +
+    (count === 1 ? "Linkage" : "Linkages") +
+    "</summary>" +
+    bodyHtml +
+    "</details>"
+  );
+}
+
 /** Reuses the same PlanArtifact lifecycle actions as the Ideas rows, keyed off the plan's own status (not an idea's). */
 function renderPlanArtifactCardActions(row: Record<string, unknown>, effectiveStatusRaw: string): string {
   const planId = String(row.planId ?? "").trim();
@@ -4158,6 +4637,27 @@ function renderPlanArtifactCard(row: Record<string, unknown>): string {
   const openQuestionRows = Array.isArray(row.openQuestionRows) ? row.openQuestionRows : [];
   const reviewFindingRows = Array.isArray(row.reviewFindingRows) ? row.reviewFindingRows : [];
   const phaseRecommendationRows = Array.isArray(row.phaseRecommendationRows) ? row.phaseRecommendationRows : [];
+  const goalRows = Array.isArray(row.goalRows) ? row.goalRows : [];
+  const nonGoalRows = Array.isArray(row.nonGoalRows) ? row.nonGoalRows : [];
+  const assumptionRows = Array.isArray(row.assumptionRows) ? row.assumptionRows : [];
+  const userStoryRows = Array.isArray(row.userStoryRows) ? row.userStoryRows : [];
+  const architectureOverview = String(row.architectureOverview ?? "").trim();
+  const architectureDecisionRows = Array.isArray(row.architectureDecisionRows)
+    ? row.architectureDecisionRows
+    : [];
+  const architectureDiagramRows = Array.isArray(row.architectureDiagramRows)
+    ? row.architectureDiagramRows
+    : [];
+  const technicalImpact = row.technicalImpact;
+  const testingStrategy = row.testingStrategy;
+  const implementationGuidanceRows = Array.isArray(row.implementationGuidanceRows)
+    ? row.implementationGuidanceRows
+    : [];
+  const whatNotToDoRows = Array.isArray(row.whatNotToDoRows) ? row.whatNotToDoRows : [];
+  const uiUxSummary = row.uiUxSummary;
+  const approvalSummary = row.approvalSummary;
+  const executionLinkageRows = Array.isArray(row.executionLinkageRows) ? row.executionLinkageRows : [];
+  const linkedTaskCount = numberOrZero(row.linkedTaskCount);
   const reviewFindingCount = blockerCount + warningCount;
 
   const statChips: string[] = [];
@@ -4198,6 +4698,37 @@ function renderPlanArtifactCard(row: Record<string, unknown>): string {
     reviewFindingCount
   );
   const phaseRecommendationsHtml = renderPlanArtifactPhaseRecommendationsTable(planId, phaseRecommendationRows);
+  const goalsHtml = renderPlanArtifactTextListRollup(planId, "goals", "Goal", goalRows);
+  const nonGoalsHtml = renderPlanArtifactTextListRollup(planId, "non-goals", "Non-goal", nonGoalRows);
+  const assumptionsHtml = renderPlanArtifactTextListRollup(planId, "assumptions", "Assumption", assumptionRows);
+  const userStoriesHtml = renderPlanArtifactUserStoriesTable(planId, userStoryRows);
+  const technicalImpactHtml = renderPlanArtifactTechnicalImpact(planId, technicalImpact);
+  const architectureOverviewHtml = renderPlanArtifactArchitectureOverview(planId, architectureOverview);
+  const architectureDecisionsHtml = renderPlanArtifactArchitectureDecisionsTable(
+    planId,
+    architectureDecisionRows
+  );
+  const architectureDiagramsHtml = renderPlanArtifactArchitectureDiagrams(planId, architectureDiagramRows);
+  const testingStrategyHtml = renderPlanArtifactTestingStrategy(planId, testingStrategy);
+  const implementationGuidanceHtml = renderPlanArtifactTextListRollup(
+    planId,
+    "implementation-guidance",
+    "Implementation note",
+    implementationGuidanceRows
+  );
+  const whatNotToDoHtml = renderPlanArtifactTextListRollup(
+    planId,
+    "what-not-to-do",
+    "Anti-pattern",
+    whatNotToDoRows
+  );
+  const uiUxHtml = renderPlanArtifactUiUxSummary(planId, uiUxSummary);
+  const approvalHtml = renderPlanArtifactApprovalSummary(planId, approvalSummary);
+  const executionLinkagesHtml = renderPlanArtifactExecutionLinkagesTable(
+    planId,
+    executionLinkageRows,
+    linkedTaskCount
+  );
 
   return (
     '<article class="wc-plan-card ' +
@@ -4225,6 +4756,20 @@ function renderPlanArtifactCard(row: Record<string, unknown>): string {
     openQuestionsHtml +
     reviewFindingsHtml +
     phaseRecommendationsHtml +
+    goalsHtml +
+    nonGoalsHtml +
+    userStoriesHtml +
+    assumptionsHtml +
+    technicalImpactHtml +
+    architectureOverviewHtml +
+    architectureDecisionsHtml +
+    architectureDiagramsHtml +
+    testingStrategyHtml +
+    implementationGuidanceHtml +
+    whatNotToDoHtml +
+    uiUxHtml +
+    approvalHtml +
+    executionLinkagesHtml +
     '<div class="wc-plan-card-actions">' +
     actionsHtml +
     "</div>" +

@@ -462,7 +462,13 @@ test("renderDashboardRootInnerHtml renders PlanArtifact card grid for a draft pl
               description: "Extend projection",
               dependsOn: "—",
               blocks: "Plan draft panel",
-              size: "Medium"
+              size: "Medium",
+              approach: "Mirror PLANNER_SCHEMA fields in dashboard contract",
+              doneMeans: "Projection tests green",
+              testingVerification: "Unit tests for builders",
+              acceptanceCriteria: "Cards render rollups without flicker",
+              linkedTaskId: "T100623",
+              linkedTaskStatus: "Ready"
             },
             {
               wbsId: "WBS-2",
@@ -472,7 +478,71 @@ test("renderDashboardRootInnerHtml renders PlanArtifact card grid for a draft pl
               blocks: "—",
               size: "Medium"
             }
-          ]
+          ],
+          goalRows: [{ text: "Ship plan cards with rollups" }, { text: "Stop partial refresh flicker" }],
+          nonGoalRows: [{ text: "Rewrite the entire planner UX" }],
+          assumptionRows: [{ text: "Dashboard service stays the read path" }],
+          userStoryRows: [
+            {
+              id: "US-1",
+              priority: "High",
+              story: "As a maintainer I see goals on the plan card"
+            }
+          ],
+          valueAssessment: {
+            impact: "High",
+            confidence: "Medium",
+            rationale: "Unblocks planning tab review without opening artifacts"
+          },
+          architectureOverview: "Dashboard reads plan artifacts through the service projection layer.",
+          architectureDecisionRows: [
+            {
+              id: "ADR-1",
+              decision: "Keep rollups in dashboard-summary contract",
+              rationale: "Single read path for webview and CLI"
+            }
+          ],
+          architectureDiagramRows: [
+            {
+              title: "Read path",
+              mermaid: "flowchart LR\n  Service --> Dashboard",
+              caption: "Option 2 read service"
+            }
+          ],
+          technicalImpact: {
+            systemsTouched: ["src/modules/task-engine/dashboard", "extensions/cursor-workflow-cannon"],
+            compatibilityNotes: "Additive contract fields only",
+            migrationImpact: "None — partial refresh merge preserves prior rows"
+          },
+          testingStrategy: {
+            layers: ["unit", "integration"],
+            criticalPaths: ["render-dashboard", "dashboard-store-bridge"],
+            outOfScopeTesting: ["manual VS Code UX polish"]
+          },
+          implementationGuidanceRows: [{ text: "Reuse text-list rollup renderer for guidance bullets" }],
+          whatNotToDoRows: [{ text: "Do not render mermaid in-webview without a renderer" }],
+          uiUxSummary: {
+            hasUiChanges: true,
+            summary: "Collapsible deep-drill sections on plan cards",
+            mockupRefs: ["docs/maintainers/plan-card-mock.md"]
+          },
+          approvalSummary: {
+            approvedVersion: 1,
+            approvedAt: "2026-05-27 17:00",
+            approvedBy: "maintainer@example.com",
+            reviewSummary: "Approved after rubric pass",
+            openQuestionsAcceptedCount: 1
+          },
+          executionLinkageRows: [
+            {
+              taskId: "T100623",
+              wbsId: "WBS-1",
+              taskStatus: "Ready",
+              linkedAt: "2026-05-27 17:00",
+              linkedBy: "finalize"
+            }
+          ],
+          linkedTaskCount: 1
         },
         recent: []
       },
@@ -520,6 +590,55 @@ test("renderDashboardRootInnerHtml renders PlanArtifact card grid for a draft pl
   assert.match(html, /data-wc-ui-state-key="plan-123-open-questions"/);
   assert.match(html, /data-wc-ui-state-key="plan-123-review-findings"/);
   assert.match(html, /data-wc-ui-state-key="plan-123-phase-recommendations"/);
+  assert.match(html, />2 Goals</);
+  assert.match(html, /Ship plan cards with rollups/);
+  assert.match(html, />1 Non-goal</);
+  assert.match(html, /Rewrite the entire planner UX/);
+  assert.match(html, />1 Assumption</);
+  assert.match(html, /Dashboard service stays the read path/);
+  assert.match(html, />1 User Story</);
+  assert.match(html, /wc-plan-user-stories-table/);
+  assert.match(html, /As a maintainer I see goals on the plan card/);
+  assert.match(html, /<dt>Impact<\/dt><dd>High<\/dd>/);
+  assert.match(html, /<dt>Confidence<\/dt><dd>Medium<\/dd>/);
+  assert.match(html, />Value rationale</);
+  assert.match(html, /Unblocks planning tab review without opening artifacts/);
+  assert.match(html, /data-wc-ui-state-key="plan-123-goals"/);
+  assert.match(html, /data-wc-ui-state-key="plan-123-non-goals"/);
+  assert.match(html, /data-wc-ui-state-key="plan-123-assumptions"/);
+  assert.match(html, /data-wc-ui-state-key="plan-123-user-stories"/);
+  assert.match(html, /data-wc-ui-state-key="plan-123-value-rationale"/);
+  assert.match(html, /wc-plan-wbs-table-extended/);
+  assert.match(html, /<th>Approach<\/th>/);
+  assert.match(html, /Mirror PLANNER_SCHEMA fields in dashboard contract/);
+  assert.match(html, />Architecture overview</);
+  assert.match(html, /Dashboard reads plan artifacts through the service projection layer/);
+  assert.match(html, />1 Architecture Decision</);
+  assert.match(html, /Keep rollups in dashboard-summary contract/);
+  assert.match(html, />1 Architecture Diagram</);
+  assert.match(html, /wc-plan-mermaid-source/);
+  assert.match(html, /flowchart LR/);
+  assert.match(html, />Technical impact</);
+  assert.match(html, /task-engine\/dashboard/);
+  assert.match(html, />Testing strategy</);
+  assert.match(html, /render-dashboard/);
+  assert.match(html, />1 Implementation note</);
+  assert.match(html, /Reuse text-list rollup renderer/);
+  assert.match(html, />1 Anti-pattern</);
+  assert.match(html, /Do not render mermaid in-webview/);
+  assert.match(html, />UI \/ UX direction</);
+  assert.match(html, /Collapsible deep-drill sections on plan cards/);
+  assert.match(html, /data-wc-ui-state-key="plan-123-architecture-overview"/);
+  assert.match(html, /data-wc-ui-state-key="plan-123-technical-impact"/);
+  assert.match(html, /<th>Generated task<\/th>/);
+  assert.match(html, /wc-plan-linked-task-btn/);
+  assert.match(html, /data-wc-action="task-detail"[^>]+data-task-id="T100623"/);
+  assert.match(html, />Approval record</);
+  assert.match(html, /maintainer@example.com/);
+  assert.match(html, /Approved after rubric pass/);
+  assert.match(html, />1 Execution Linkage</);
+  assert.match(html, /wc-plan-execution-linkages-table/);
+  assert.match(html, /data-wc-ui-state-key="plan-123-execution-linkages"/);
   assert.match(html, /wc-plan-status-pill wc-plan-status-draft">Draft/);
   assert.doesNotMatch(html, /wc-plan-card-meta/);
   assert.doesNotMatch(html, /data-wc-action="plan-artifact-accept"/);

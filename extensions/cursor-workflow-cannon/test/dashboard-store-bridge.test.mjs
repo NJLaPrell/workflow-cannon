@@ -373,3 +373,123 @@ test("mergeSlicePayloadIntoSummary preserves prior openQuestionRows when refresh
   const merged = mergeSlicePayloadIntoSummary(prior, "planArtifact", payload);
   assert.equal(merged.planArtifact.current.openQuestionRows[0].question, "Who owns finalize?");
 });
+
+test("mergeSlicePayloadIntoSummary preserves prior tier-2 plan rows when refreshed plan row drops them", () => {
+  const prior = {
+    planArtifact: {
+      count: 1,
+      current: {
+        planId: "P-tier2",
+        goalRows: [{ text: "Keep goals visible" }],
+        userStoryRows: [{ id: "US-1", priority: "High", story: "See goals on card" }],
+        valueAssessment: { impact: "High", confidence: "Medium", rationale: "Context at a glance" }
+      },
+      recent: []
+    }
+  };
+  const payload = lookupDashboardSlice("planArtifact").extractPayload({
+    schemaVersion: 1,
+    dashboardProjection: "planArtifact",
+    planArtifact: {
+      count: 1,
+      current: { planId: "P-tier2", title: "Refreshed without tier-2 rows" },
+      recent: []
+    }
+  });
+  const merged = mergeSlicePayloadIntoSummary(prior, "planArtifact", payload);
+  assert.equal(merged.planArtifact.current.goalRows[0].text, "Keep goals visible");
+  assert.equal(merged.planArtifact.current.userStoryRows[0].id, "US-1");
+  assert.equal(merged.planArtifact.current.valueAssessment.impact, "High");
+});
+
+test("mergeSlicePayloadIntoSummary preserves prior tier-3 plan rows when refreshed plan row drops them", () => {
+  const prior = {
+    planArtifact: {
+      count: 1,
+      current: {
+        planId: "P-tier3",
+        architectureOverview: "Keep architecture context on card",
+        architectureDecisionRows: [{ id: "ADR-1", decision: "Stay additive", rationale: "No breaking changes" }],
+        technicalImpact: { systemsTouched: ["dashboard"] },
+        testingStrategy: { layers: ["unit"], criticalPaths: ["render"] },
+        implementationGuidanceRows: [{ text: "Follow tier rollup pattern" }],
+        whatNotToDoRows: [{ text: "No inline mermaid render yet" }],
+        uiUxSummary: { hasUiChanges: true, summary: "Collapsible sections" }
+      },
+      recent: []
+    }
+  };
+  const payload = lookupDashboardSlice("planArtifact").extractPayload({
+    schemaVersion: 1,
+    dashboardProjection: "planArtifact",
+    planArtifact: {
+      count: 1,
+      current: { planId: "P-tier3", title: "Refreshed without tier-3 rows" },
+      recent: []
+    }
+  });
+  const merged = mergeSlicePayloadIntoSummary(prior, "planArtifact", payload);
+  assert.equal(merged.planArtifact.current.architectureOverview, "Keep architecture context on card");
+  assert.equal(merged.planArtifact.current.architectureDecisionRows[0].id, "ADR-1");
+  assert.equal(merged.planArtifact.current.technicalImpact.systemsTouched[0], "dashboard");
+  assert.equal(merged.planArtifact.current.testingStrategy.layers[0], "unit");
+  assert.equal(merged.planArtifact.current.implementationGuidanceRows[0].text, "Follow tier rollup pattern");
+  assert.equal(merged.planArtifact.current.whatNotToDoRows[0].text, "No inline mermaid render yet");
+  assert.equal(merged.planArtifact.current.uiUxSummary.summary, "Collapsible sections");
+});
+
+test("mergeSlicePayloadIntoSummary preserves WBS linked-task fields when refreshed plan row drops them", () => {
+  const prior = {
+    planArtifact: {
+      count: 1,
+      current: {
+        planId: "P-wbs-link",
+        wbsRowCount: 1,
+        wbsRows: [
+          {
+            wbsId: "WBS-1",
+            title: "Row one",
+            description: "Do thing",
+            dependsOn: "—",
+            blocks: "—",
+            size: "Medium",
+            linkedTaskId: "T77",
+            linkedTaskStatus: "Ready"
+          }
+        ],
+        linkedTaskCount: 1,
+        executionLinkageRows: [
+          { taskId: "T77", wbsId: "WBS-1", taskStatus: "Ready", linkedAt: "2026-05-27", linkedBy: "finalize" }
+        ]
+      },
+      recent: []
+    }
+  };
+  const payload = lookupDashboardSlice("planArtifact").extractPayload({
+    schemaVersion: 1,
+    dashboardProjection: "planArtifact",
+    planArtifact: {
+      count: 1,
+      current: {
+        planId: "P-wbs-link",
+        wbsRowCount: 1,
+        wbsRows: [
+          {
+            wbsId: "WBS-1",
+            title: "Row one",
+            description: "Do thing",
+            dependsOn: "—",
+            blocks: "—",
+            size: "Medium"
+          }
+        ]
+      },
+      recent: []
+    }
+  });
+  const merged = mergeSlicePayloadIntoSummary(prior, "planArtifact", payload);
+  assert.equal(merged.planArtifact.current.wbsRows[0].linkedTaskId, "T77");
+  assert.equal(merged.planArtifact.current.wbsRows[0].linkedTaskStatus, "Ready");
+  assert.equal(merged.planArtifact.current.linkedTaskCount, 1);
+  assert.equal(merged.planArtifact.current.executionLinkageRows[0].taskId, "T77");
+});
