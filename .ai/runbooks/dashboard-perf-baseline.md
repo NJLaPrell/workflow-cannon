@@ -62,3 +62,9 @@ refresh (see `option-b` work).
 
 Re-run both scripts on `option-a` and `option-b` (and after the final merge into
 `dashboard-fixes`) for before/after comparison.
+
+## option-a-backend1 fix results (2026-07-01)
+
+**Double store-open fix (Background finding 1):** Introduced `resolveQueueDashboardReadoutCommandsNoPriorOpen` in `queue-dashboard-readout-commands.ts`. Called from `task-engine-internal.ts` `onCommand` AFTER `routeTaskEngineBeforeOpenPlanningStores` and BEFORE `openPlanningStores(ctx)`. All dashboard commands (`dashboard-summary`, `dashboard-*-slice`, `dashboard-terminal-tasks`, `dashboard-terminal-tasks-page`, `dashboard-bootstrap-slices`, `dashboard-ops-slice`) are intercepted and handled with a single slice-scoped read-only store open. `dashboard-terminal-rows` is the only dashboard command that still goes through the full store open path (it is not on the high-frequency poll tier and uses the pre-opened store). This eliminates one full SQLite hydration per dashboard CLI call.
+
+**New `dashboard-ops-slice` command (Background finding 2):** Implemented in `buildDashboardOpsSlice` (`focused-slice-builders.ts`) and wired as `dashboard-ops-slice` (`read_hot`). Returns `planArtifact`, `workspaceStatus`, `teamExecution`, `subagentRegistry`, `taskCheckpoints` — the five fields that the `planArtifact`/`team`/`subagents`/`checkpoints` extension slices needed from `projection=status`. Does NOT call `buildDashboardSystemStatus`, `runPhaseStatus`, `collectDoctorContractIssues`, or `collectCaeDoctorSummaryLines`. Measured timing (worktree, empty task store): `dashboard-summary projection=status` ≈ 41–416 ms, `dashboard-ops-slice` ≈ 1–2 ms — approximately 200x faster. The bench script (`scripts/bench-dashboard-refresh.mjs`) shows the `projection=full` path at ~2915 ms and the `overview`/`queue` paths at ~445 ms; `dashboard-ops-slice` is not yet in the bench script rotation (the frontend workstream will wire the extension slices).
