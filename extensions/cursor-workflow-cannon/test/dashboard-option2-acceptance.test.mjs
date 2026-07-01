@@ -17,11 +17,13 @@ const routesSrc = readFileSync(
   "utf8"
 );
 
-test("Option 2: read path coordinator — service OR pollers, never both", () => {
+test("Option 2: read path coordinator — service mode uses push-driven safety-net polling", () => {
   assert.match(coordinatorSrc, /stopActivePath/);
   assert.match(coordinatorSrc, /startServicePath/);
   assert.match(coordinatorSrc, /startCliPollingPath/);
-  assert.doesNotMatch(coordinatorSrc, /dashboardPollers\.start\(\)[\s\S]*serviceSync\.start/);
+  assert.match(coordinatorSrc, /usePushSafetyNetCadence/);
+  assert.match(coordinatorSrc, /DASHBOARD_PUSH_SAFETY_NET_MULTIPLIER/);
+  assert.match(coordinatorSrc, /checkServiceHealth/);
 });
 
 test("Option 2: auto fallback preserves store (no blanket clear on service failure)", () => {

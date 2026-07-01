@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-06-30T19:40:28.352Z",
+  "generatedAt": "2026-07-01T14:40:34.382Z",
   "commands": [
     {
       "name": "accept-improvement",
@@ -480,6 +480,11 @@
     {
       "name": "dashboard-bootstrap-slices",
       "path": ".ai/agent-cli-snippets/by-command/dashboard-bootstrap-slices.json",
+      "moduleId": "task-engine"
+    },
+    {
+      "name": "dashboard-ops-slice",
+      "path": ".ai/agent-cli-snippets/by-command/dashboard-ops-slice.json",
       "moduleId": "task-engine"
     },
     {

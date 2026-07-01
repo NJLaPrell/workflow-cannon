@@ -17,7 +17,8 @@ import {
   buildDashboardStatusSlice,
   buildDashboardAgentActivitySlice,
   buildDashboardAgentTypesSlice,
-  buildDashboardTerminalTasksPage
+  buildDashboardTerminalTasksPage,
+  buildDashboardOpsSlice
 } from "../dashboard/slice-builders.js";
 import {
   finalizeDashboardSummaryProjection,
@@ -151,4 +152,20 @@ export async function dashboardTerminalTasksSliceCommand(
 
   const data = await buildDashboardTerminalTasksPage(store, sqliteDual, { status, limit, cursor, phaseKey });
   return { ok: true, code: "dashboard-terminal-tasks", message: "Dashboard terminal tasks slice built", data: data as Record<string, unknown> };
+}
+
+export async function dashboardOpsSliceCommand(
+  ctx: ModuleLifecycleContext,
+  store: TaskStore,
+  planningGeneration: number,
+  sqliteDual?: SqliteDualPlanningStore,
+  commandArgs?: Record<string, unknown>
+): Promise<ModuleCommandResult> {
+  const data = await buildDashboardOpsSlice(ctx, store, planningGeneration, sqliteDual);
+  return {
+    ok: true,
+    code: "dashboard-ops-slice",
+    message: "Dashboard ops slice built (planArtifact, workspaceStatus, teamExecution, subagentRegistry, taskCheckpoints)",
+    data: data as Record<string, unknown>
+  };
 }

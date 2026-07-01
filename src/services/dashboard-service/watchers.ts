@@ -30,6 +30,32 @@ const TASK_STORE_WATCH_SLICES = [
   "status"
 ] as const;
 
+/**
+ * Determines whether a timer-driven refresh tick should be skipped for a slice.
+ *
+ * The timer acts as a safety-net backstop: it only needs to fire when no
+ * fresher refresh has already happened recently. We skip the tick when the
+ * slice was last refreshed within 50% of the poll interval, meaning a
+ * watcher-driven or manual refresh already covered it.
+ *
+ * @param lastRefreshAt - Date.now() value from the most recent completed refresh (0 = never)
+ * @param intervalMs    - the poll-group timer interval in milliseconds
+ * @param now           - current timestamp (defaults to Date.now())
+ */
+export function shouldSkipTimerRefresh(
+  lastRefreshAt: number,
+  intervalMs: number,
+  now: number = Date.now()
+): boolean {
+  if (lastRefreshAt === 0) {
+    // Never refreshed – always run.
+    return false;
+  }
+  const elapsed = now - lastRefreshAt;
+  // Skip if elapsed time is less than 50% of the interval.
+  return elapsed < intervalMs * 0.5;
+}
+
 export type DashboardServiceWatchersOptions = {
   workspacePath: string;
   ctx: ModuleLifecycleContext;
@@ -73,7 +99,21 @@ export class DashboardServiceWatchers {
     for (const group of listDashboardServicePollGroups()) {
       const intervalMs = this.pollIntervalMs[group];
       const handle = setInterval(() => {
-        void this.refresher.refreshSlices(dashboardServiceSliceNamesForPollGroup(group));
+        if (!this.running) {
+          return;
+        }
+        const slices = dashboardServiceSliceNamesForPollGroup(group);
+        const now = Date.now();
+        // Backstop: skip the timer tick only when ALL slices in this group were
+        // refreshed recently enough by a watcher-driven or manual refresh.
+        // If any slice needs a refresh (hasn't been touched within 50% of the
+        // interval), run the whole group so it stays in sync.
+        const allRecentlyRefreshed = slices.every((name) =>
+          shouldSkipTimerRefresh(this.refresher.getLastRefreshAt(name), intervalMs, now)
+        );
+        if (!allRecentlyRefreshed) {
+          void this.refresher.refreshSlices(slices);
+        }
       }, intervalMs);
       this.intervalHandles.add(handle);
     }

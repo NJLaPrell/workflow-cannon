@@ -1,9 +1,13 @@
 import type { CommandClient } from "../../runtime/command-client.js";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import type { DashboardServiceEvent } from "@workflow-cannon/workspace-kit/contracts/dashboard-events";
 import type { DashboardDataSourceMode } from "./dashboard-data-source.js";
 import type { DashboardDataStore } from "./dashboard-data-store.js";
-import type { DashboardPollerCoordinator } from "./dashboard-pollers.js";
+import {
+  DASHBOARD_PUSH_SAFETY_NET_MULTIPLIER,
+  type DashboardPollerCoordinator
+} from "./dashboard-pollers.js";
 import {
   formatDashboardReadModeBadgeDetail,
   formatDashboardReadModeBadgeLabel,
@@ -22,6 +26,9 @@ import {
 } from "./service-dashboard-data-source.js";
 import type { DashboardSliceName } from "./dashboard-snapshot-types.js";
 import type { DashboardSectionId } from "./dashboard-section-registry.js";
+import { DASHBOARD_SLICE_REGISTRY } from "./dashboard-slice-registry.js";
+
+const DASHBOARD_SERVICE_HEALTH_MONITOR_INTERVAL_MS = 3_000;
 
 export type DashboardReadPathCoordinatorDeps = {
   workspacePath: string;
@@ -34,7 +41,7 @@ export type DashboardReadPathCoordinatorDeps = {
 
 /**
  * Selects Option 1 CLI pollers vs Option 2 warm service (T100599).
- * Only one read path runs at a time — no duplicate CLI spawn during service mode.
+ * Service mode is push-driven; CLI pollers stay alive only as a stale safety net.
  */
 export class DashboardReadPathCoordinator {
   private configuredMode: DashboardDataSourceMode = "auto";
@@ -42,6 +49,10 @@ export class DashboardReadPathCoordinator {
   private activePath: DashboardActiveReadPath | null = null;
   private serviceFailDetail: string | undefined;
   private serviceSync: DashboardServiceStoreSync | undefined;
+  private serviceEventSubscription: { dispose(): void } | undefined;
+  private serviceHealthInterval: ReturnType<typeof setInterval> | undefined;
+  private serviceHealthCheckInFlight = false;
+  private serviceHealthMonitorGeneration = 0;
   private pollersPaused = false;
   private serviceStartAttempted = false;
   private running = false;
@@ -53,6 +64,11 @@ export class DashboardReadPathCoordinator {
     return {
       configured,
       active: this.activePath ?? "cli-polling",
+      pollingCadence: this.activePath === "service" ? "push-safety-net" : "full",
+      serviceRetrySliceCount:
+        this.activePath === "service"
+          ? (this.deps.pollers.getServiceRetrySliceCount?.() ?? 0)
+          : undefined,
       detail: this.serviceFailDetail
     };
   }
@@ -136,7 +152,7 @@ export class DashboardReadPathCoordinator {
 
   resume(): void {
     this.pollersPaused = false;
-    if (this.activePath === "cli-polling") {
+    if (this.activePath) {
       this.deps.pollers.resume();
     }
   }
@@ -199,18 +215,8 @@ export class DashboardReadPathCoordinator {
       // Auto mode: attempt to start service once per session.
       if (!this.serviceStartAttempted) {
         this.serviceStartAttempted = true;
-        const startResult = await this.restartDashboardService();
-        if (startResult.ok) {
-          // After successful start, re-probe health and try service path.
-          const reprobe = await probeDashboardServiceHealth(this.deps.workspacePath);
-          if (reprobe) {
-            await this.startServicePath();
-            this.emitModeChanged();
-            return;
-          }
-        }
-        // If start failed or still unhealthy, fall back.
-        this.serviceFailDetail = startResult.message ?? "Dashboard service start failed — using CLI polling";
+        await this.restartDashboardService();
+        return;
       } else {
         this.serviceFailDetail = "Dashboard service unavailable — using CLI polling";
       }
@@ -222,29 +228,16 @@ export class DashboardReadPathCoordinator {
   }
 
   private async emitServiceHealthDiagnostics(): Promise<void> {
-    try {
-      const abs = path.join(this.deps.workspacePath, DASHBOARD_SERVICE_RUNTIME_REL);
-      const raw = JSON.parse(await readFile(abs, "utf8")) as unknown;
-      const runtime = parseDashboardServiceRuntime(raw);
-      if (!runtime) {
-        return;
-      }
-      const res = await fetch(`http://${runtime.host}:${runtime.port}/health`);
-      if (!res.ok) {
-        return;
-      }
-      const health = (await res.json()) as {
-        generation?: number;
-        summary?: { failingSlices?: string[]; slowestSlice?: string | null; totalErrors?: number };
-      };
-      const failing = health.summary?.failingSlices ?? [];
-      const slowest = health.summary?.slowestSlice ?? "none";
-      this.deps.log?.(
-        `dashboard service health gen=${health.generation ?? "?"} slowest=${slowest} failing=${failing.length > 0 ? failing.join(",") : "none"} errors=${health.summary?.totalErrors ?? 0}`
-      );
-    } catch {
-      // diagnostics are best-effort
+    const health = await this.fetchServiceHealthDetail() as (Record<string, unknown> | null);
+    if (!health) {
+      return;
     }
+    const summary = health.summary as { failingSlices?: string[]; slowestSlice?: string | null; totalErrors?: number } | undefined;
+    const failing = summary?.failingSlices ?? [];
+    const slowest = summary?.slowestSlice ?? "none";
+    this.deps.log?.(
+      `dashboard service health gen=${(health.generation as number | undefined) ?? "?"} slowest=${slowest} failing=${failing.length > 0 ? failing.join(",") : "none"} errors=${summary?.totalErrors ?? 0}`
+    );
   }
 
   private async startServicePath(): Promise<void> {
@@ -252,13 +245,38 @@ export class DashboardReadPathCoordinator {
       workspacePath: this.deps.workspacePath
     });
     this.serviceSync = new DashboardServiceStoreSync(dataSource, this.deps.store);
-    await this.serviceSync.start();
+    this.serviceEventSubscription = dataSource.subscribe?.((event) => {
+      this.recordServicePushEvent(event);
+    });
+    try {
+      await this.serviceSync.start();
+    } catch (error) {
+      this.serviceEventSubscription?.dispose();
+      this.serviceEventSubscription = undefined;
+      throw error;
+    }
     this.activePath = "service";
-    this.deps.log?.("dashboard read path: warm service");
+    this.deps.pollers.usePushSafetyNetCadence();
+    // Wire the targeted-refresh callback so the poller can request a service-side
+    // refresh for a stale slice without spawning a CLI subprocess.
+    const syncRef = this.serviceSync;
+    this.deps.pollers.setRequestServiceRefresh?.(
+      (name) => syncRef!.refreshSlice(name)
+    );
+    this.deps.pollers.start();
+    if (!this.pollersPaused) {
+      this.deps.pollers.resume();
+    }
+    this.startServiceHealthMonitor();
+    this.deps.log?.(
+      `dashboard read path: push-driven warm service (CLI fallback=${DASHBOARD_PUSH_SAFETY_NET_MULTIPLIER}x interval, service-refresh-retry before CLI)`
+    );
     await this.emitServiceHealthDiagnostics();
   }
 
   private async startCliPollingPath(): Promise<void> {
+    this.stopServiceHealthMonitor();
+    this.deps.pollers.useFullCadence();
     this.deps.pollers.start();
     if (!this.pollersPaused) {
       this.deps.pollers.resume();
@@ -290,6 +308,7 @@ export class DashboardReadPathCoordinator {
     // Mark the active path as CLI polling for UI consistency.
     this.activePath = "cli-polling";
     // Ensure pollers are running.
+    this.deps.pollers.useFullCadence();
     this.deps.pollers.start();
     if (!this.pollersPaused) {
       this.deps.pollers.resume();
@@ -297,11 +316,155 @@ export class DashboardReadPathCoordinator {
   }
 
   private async stopActivePath(): Promise<void> {
+    this.stopServiceHealthMonitor();
+    this.serviceEventSubscription?.dispose();
+    this.serviceEventSubscription = undefined;
     if (this.serviceSync) {
       await this.serviceSync.stop();
       this.serviceSync = undefined;
     }
+    // Remove the service-refresh callback before stopping pollers — useFullCadence()
+    // also clears it, but being explicit here is defensive.
+    this.deps.pollers.setRequestServiceRefresh?.(undefined);
     this.deps.pollers.stop();
+    this.deps.pollers.useFullCadence();
+  }
+
+  private recordServicePushEvent(event: DashboardServiceEvent): void {
+    if (event.type === "dashboard.slice.updated") {
+      // ok===false means the service-side builder threw; treat as error push —
+      // do NOT reset the success freshness clock for this slice.
+      const isSuccess = event.ok !== false;
+      this.deps.pollers.recordPushSliceUpdate(
+        event.slice as DashboardSliceName,
+        undefined,
+        isSuccess
+      );
+      return;
+    }
+    if (event.type === "dashboard.snapshot.updated") {
+      // Snapshot events don't carry per-slice ok status; conservatively treat as success.
+      const names =
+        event.changedSlices.length > 0
+          ? event.changedSlices
+          : DASHBOARD_SLICE_REGISTRY.map((desc) => desc.name);
+      for (const name of names) {
+        this.deps.pollers.recordPushSliceUpdate(name as DashboardSliceName, undefined, true);
+      }
+      return;
+    }
+    if (event.type === "task-sync.status.changed") {
+      this.deps.pollers.recordPushSliceUpdate("status", undefined, true);
+    }
+  }
+
+  private startServiceHealthMonitor(): void {
+    this.stopServiceHealthMonitor();
+    const generation = ++this.serviceHealthMonitorGeneration;
+    this.serviceHealthInterval = setInterval(() => {
+      void this.checkServiceHealth(generation);
+    }, DASHBOARD_SERVICE_HEALTH_MONITOR_INTERVAL_MS);
+  }
+
+  private stopServiceHealthMonitor(): void {
+    this.serviceHealthMonitorGeneration += 1;
+    if (this.serviceHealthInterval) {
+      clearInterval(this.serviceHealthInterval);
+      this.serviceHealthInterval = undefined;
+    }
+    this.serviceHealthCheckInFlight = false;
+  }
+
+  private async checkServiceHealth(generation: number): Promise<void> {
+    if (
+      generation !== this.serviceHealthMonitorGeneration ||
+      this.activePath !== "service" ||
+      this.serviceHealthCheckInFlight
+    ) {
+      return;
+    }
+    this.serviceHealthCheckInFlight = true;
+    try {
+      const health = await this.fetchServiceHealthDetail();
+      if (
+        generation !== this.serviceHealthMonitorGeneration ||
+        this.activePath !== "service"
+      ) {
+        return;
+      }
+
+      if (!health || health.ok !== true) {
+        // Service is unreachable or returning a non-ok health response — fall back entirely.
+        await this.switchServiceFailureToCliPolling(
+          "Dashboard service became unhealthy — using CLI polling"
+        );
+        return;
+      }
+
+      // Service is overall healthy. Check per-slice failing slices and proactively
+      // request targeted refreshes so they can recover on the service path rather
+      // than waiting for the safety-net poller to notice them as stale.
+      const failingSlices: string[] = health.summary?.failingSlices ?? [];
+      if (failingSlices.length > 0 && this.serviceSync) {
+        const syncRef = this.serviceSync;
+        this.deps.log?.(
+          `health monitor: proactive service refresh for ${failingSlices.length} failing slice(s): ${failingSlices.join(", ")}`
+        );
+        for (const name of failingSlices) {
+          void syncRef.refreshSlice(name as DashboardSliceName).catch((err) => {
+            this.deps.log?.(
+              `health-monitor targeted refresh failed slice=${name}: ${err instanceof Error ? err.message : String(err)}`
+            );
+          });
+        }
+      }
+      // Emit badge update so UI reflects current service-retry slice count.
+      this.emitModeChanged();
+    } finally {
+      this.serviceHealthCheckInFlight = false;
+    }
+  }
+
+  /**
+   * Fetches the full /health payload from the running service.
+   * Returns null on any error (network, parse, missing runtime, etc.).
+   */
+  private async fetchServiceHealthDetail(): Promise<{
+    ok?: boolean;
+    summary?: { failingSlices?: string[]; slowestSlice?: string | null; totalErrors?: number };
+  } | null> {
+    try {
+      const abs = path.join(this.deps.workspacePath, DASHBOARD_SERVICE_RUNTIME_REL);
+      const raw = JSON.parse(await readFile(abs, "utf8")) as unknown;
+      const runtime = parseDashboardServiceRuntime(raw);
+      if (!runtime) {
+        return null;
+      }
+      const res = await fetch(`http://${runtime.host}:${runtime.port}/health`);
+      if (!res.ok) {
+        return { ok: false };
+      }
+      return (await res.json()) as {
+        ok?: boolean;
+        summary?: { failingSlices?: string[]; slowestSlice?: string | null; totalErrors?: number };
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  private async switchServiceFailureToCliPolling(detail: string): Promise<void> {
+    this.serviceFailDetail = detail;
+    this.deps.log?.(`dashboard read path: ${detail}`);
+    this.stopServiceHealthMonitor();
+    this.serviceEventSubscription?.dispose();
+    this.serviceEventSubscription = undefined;
+    if (this.serviceSync) {
+      await this.serviceSync.stop();
+      this.serviceSync = undefined;
+    }
+    await this.startCliPollingPath();
+    this.emitModeChanged();
   }
 
   private emitModeChanged(): void {

@@ -56,6 +56,7 @@
         "dashboard-agent-activity-slice",
         "dashboard-agent-types-slice",
         "dashboard-bootstrap-slices",
+        "dashboard-ops-slice",
         "dashboard-overview-slice",
         "dashboard-queue-slice",
         "dashboard-service-snapshot",
@@ -536,6 +537,9 @@
           "$ref": "#/$defs/contractBase"
         },
         "dashboard-overview-slice": {
+          "$ref": "#/$defs/contractBase"
+        },
+        "dashboard-ops-slice": {
           "$ref": "#/$defs/contractBase"
         },
         "dashboard-queue-slice": {

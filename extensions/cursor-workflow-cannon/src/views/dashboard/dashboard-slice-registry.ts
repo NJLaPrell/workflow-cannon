@@ -49,8 +49,8 @@ export const DASHBOARD_SLICE_REGISTRY: readonly DashboardSliceDescriptor[] = [
   {
     name: "overview",
     sectionId: "overview",
-    command: "dashboard-summary",
-    args: { projection: "overview" },
+    command: "dashboard-overview-slice",
+    args: {},
     pollGroup: "critical",
     visibleOnly: false,
     freshnessTtlMs: 5_000,
@@ -80,8 +80,8 @@ export const DASHBOARD_SLICE_REGISTRY: readonly DashboardSliceDescriptor[] = [
   {
     name: "phase",
     sectionId: "phase-roster",
-    command: "dashboard-summary",
-    args: { projection: "overview" },
+    command: "dashboard-overview-slice",
+    args: {},
     pollGroup: "critical",
     visibleOnly: false,
     freshnessTtlMs: 10_000,
@@ -103,8 +103,11 @@ export const DASHBOARD_SLICE_REGISTRY: readonly DashboardSliceDescriptor[] = [
   {
     name: "planArtifact",
     sectionId: "plan-artifact",
-    command: "dashboard-summary",
-    args: { projection: "status" },
+    // Lightweight ops slice (planArtifact + workspaceStatus only) — avoids the
+    // full doctor/CAE/git-drift scan `dashboard-status-slice`/`projection:"status"`
+    // pays for, since this is the highest-frequency ("critical", 2s) poll tier.
+    command: "dashboard-ops-slice",
+    args: {},
     pollGroup: "critical",
     visibleOnly: false,
     freshnessTtlMs: 10_000,
@@ -115,8 +118,8 @@ export const DASHBOARD_SLICE_REGISTRY: readonly DashboardSliceDescriptor[] = [
   {
     name: "agent",
     sectionId: "overview",
-    command: "dashboard-summary",
-    args: { projection: "overview" },
+    command: "dashboard-overview-slice",
+    args: {},
     pollGroup: "critical",
     visibleOnly: false,
     freshnessTtlMs: 10_000,
@@ -128,8 +131,8 @@ export const DASHBOARD_SLICE_REGISTRY: readonly DashboardSliceDescriptor[] = [
   {
     name: "agentActivity",
     sectionId: "overview",
-    command: "dashboard-summary",
-    args: { projection: "agentActivity" },
+    command: "dashboard-agent-activity-slice",
+    args: {},
     pollGroup: "live",
     visibleOnly: true,
     freshnessTtlMs: 10_000,
@@ -153,8 +156,8 @@ export const DASHBOARD_SLICE_REGISTRY: readonly DashboardSliceDescriptor[] = [
   {
     name: "queue",
     sectionId: "queue",
-    command: "dashboard-summary",
-    args: { projection: "queue" },
+    command: "dashboard-queue-slice",
+    args: {},
     pollGroup: "queue",
     visibleOnly: true,
     freshnessTtlMs: 10_000,
@@ -182,8 +185,8 @@ export const DASHBOARD_SLICE_REGISTRY: readonly DashboardSliceDescriptor[] = [
   {
     name: "ideas",
     sectionId: "ideas",
-    command: "dashboard-summary",
-    args: { projection: "queue" },
+    command: "dashboard-queue-slice",
+    args: {},
     pollGroup: "queue",
     visibleOnly: true,
     freshnessTtlMs: 10_000,
@@ -194,8 +197,10 @@ export const DASHBOARD_SLICE_REGISTRY: readonly DashboardSliceDescriptor[] = [
   {
     name: "team",
     sectionId: "overview",
-    command: "dashboard-summary",
-    args: { projection: "status" },
+    // Lightweight ops slice — teamExecution only needs kit SQLite rollups, not
+    // the full doctor/CAE/git-drift scan `dashboard-status-slice` pays for.
+    command: "dashboard-ops-slice",
+    args: {},
     pollGroup: "ops",
     visibleOnly: false,
     freshnessTtlMs: 10_000,
@@ -206,8 +211,10 @@ export const DASHBOARD_SLICE_REGISTRY: readonly DashboardSliceDescriptor[] = [
   {
     name: "subagents",
     sectionId: "overview",
-    command: "dashboard-summary",
-    args: { projection: "status" },
+    // Lightweight ops slice — subagentRegistry only needs kit SQLite rollups,
+    // not the full doctor/CAE/git-drift scan `dashboard-status-slice` pays for.
+    command: "dashboard-ops-slice",
+    args: {},
     pollGroup: "ops",
     visibleOnly: false,
     freshnessTtlMs: 10_000,
@@ -218,8 +225,10 @@ export const DASHBOARD_SLICE_REGISTRY: readonly DashboardSliceDescriptor[] = [
   {
     name: "checkpoints",
     sectionId: "overview",
-    command: "dashboard-summary",
-    args: { projection: "status" },
+    // Lightweight ops slice — taskCheckpoints only needs kit SQLite rollups,
+    // not the full doctor/CAE/git-drift scan `dashboard-status-slice` pays for.
+    command: "dashboard-ops-slice",
+    args: {},
     pollGroup: "ops",
     visibleOnly: false,
     freshnessTtlMs: 10_000,
@@ -230,8 +239,8 @@ export const DASHBOARD_SLICE_REGISTRY: readonly DashboardSliceDescriptor[] = [
   {
     name: "status",
     sectionId: "status",
-    command: "dashboard-summary",
-    args: { projection: "status" },
+    command: "dashboard-status-slice",
+    args: {},
     pollGroup: "status",
     visibleOnly: true,
     freshnessTtlMs: 30_000,
@@ -250,8 +259,8 @@ export const DASHBOARD_SLICE_REGISTRY: readonly DashboardSliceDescriptor[] = [
   {
     name: "phaseJournal",
     sectionId: "phase-journal",
-    command: "dashboard-summary",
-    args: { projection: "queue" },
+    command: "dashboard-queue-slice",
+    args: {},
     pollGroup: "manual",
     visibleOnly: true,
     freshnessTtlMs: 10_000,
@@ -275,8 +284,8 @@ export const DASHBOARD_SLICE_REGISTRY: readonly DashboardSliceDescriptor[] = [
   {
     name: "config",
     sectionId: "config",
-    command: "dashboard-summary",
-    args: { projection: "overview" },
+    command: "dashboard-overview-slice",
+    args: {},
     pollGroup: "manual",
     visibleOnly: true,
     freshnessTtlMs: null,

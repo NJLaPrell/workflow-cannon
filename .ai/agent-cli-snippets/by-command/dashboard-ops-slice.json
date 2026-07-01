@@ -1,0 +1,42 @@
+{
+  "ok": true,
+  "code": "run-args-schema",
+  "command": "dashboard-ops-slice",
+  "schema": {
+    "type": "object",
+    "additionalProperties": true,
+    "description": "Permissive fallback args schema for 'dashboard-ops-slice'. Use instructionPath for command-specific field guidance until a stricter schema is added."
+  },
+  "schemaSource": "manifest-permissive-fallback",
+  "sampleArgs": {},
+  "examples": [
+    {
+      "description": "Minimal argv example",
+      "argv": "workspace-kit run dashboard-ops-slice '{}'"
+    }
+  ],
+  "instructionPath": "src/modules/task-engine/instructions/dashboard-ops-slice.md",
+  "moduleId": "task-engine",
+  "description": "Lightweight ops snapshot: planArtifact, workspaceStatus, teamExecution, subagentRegistry, taskCheckpoints — no doctor/CAE/git-drift scan.",
+  "policy": {
+    "sensitivity": "non-sensitive",
+    "operationId": null,
+    "jsonApprovalRequired": false
+  },
+  "planningGeneration": {
+    "cliPrelude": false,
+    "expectedPlanningGeneration": "not required by CLI prelude"
+  },
+  "idempotency": {
+    "clientMutationId": false
+  },
+  "responseTemplate": {
+    "defaultResponseTemplateId": "default"
+  },
+  "remediationContract": ".ai/runbooks/agent-task-engine-ergonomics.md",
+  "discovery": {
+    "listCommands": "pnpm exec wk run --list-commands",
+    "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
+  },
+  "invocationId": "02f5f52c-daf8-4d42-ac95-8428db82eac7"
+}

@@ -15,6 +15,17 @@ import {
 import type { DashboardMutationKind } from "./dashboard-section-invalidation.js";
 import type { DashboardSliceName } from "./dashboard-snapshot-types.js";
 
+export type DashboardPollerCadenceMode = "full" | "push-safety-net";
+
+export const DASHBOARD_PUSH_SAFETY_NET_MULTIPLIER = 3;
+
+/**
+ * Number of consecutive service-refresh failures before a slice falls back to
+ * a direct CLI read. Chosen conservatively (3) so the service gets multiple
+ * chances before we spawn a subprocess — but not so high that stale data lingers.
+ */
+export const DASHBOARD_SERVICE_REFRESH_MAX_RETRIES = 3;
+
 export type DashboardPollerCoordinatorDeps = {
   client: Pick<CommandClient, "run">;
   store: DashboardDataStore;
@@ -39,6 +50,33 @@ export class DashboardPollerCoordinator {
   private visibleSectionIds = new Set<DashboardSectionId>();
   private paused = false;
   private running = false;
+  private cadenceMode: DashboardPollerCadenceMode = "full";
+
+  /**
+   * Timestamp of the last *successful* push for each slice.
+   * Error pushes (ok=false) do NOT update this map — only genuine data refreshes do.
+   * `isPushSafetyNetFresh` uses this so an erroring slice doesn't appear "covered".
+   */
+  private readonly pushSliceSuccessAt = new Map<DashboardSliceName, number>();
+
+  /**
+   * Callback wired by the coordinator when the service path is active.
+   * Lets the safety-net ticker request a targeted `POST /dashboard/refresh`
+   * for a single stale slice instead of spawning a CLI process.
+   */
+  private requestServiceRefresh: ((name: DashboardSliceName) => Promise<void>) | undefined;
+
+  /** Tracks in-flight targeted service-refresh requests (one per slice). */
+  private readonly serviceRefreshInFlight = new Set<DashboardSliceName>();
+
+  /** Consecutive service-refresh failures per slice (reset on success or CLI fallback). */
+  private readonly serviceRefreshFailureCount = new Map<DashboardSliceName, number>();
+
+  /**
+   * Slices currently being kept fresh via the targeted service-refresh path.
+   * Non-empty means we're in "push-driven but N slice(s) need service-retry" state.
+   */
+  private readonly serviceRetrySlices = new Set<DashboardSliceName>();
 
   constructor(private readonly deps: DashboardPollerCoordinatorDeps) {}
 
@@ -60,6 +98,76 @@ export class DashboardPollerCoordinator {
     this.intervals.clear();
     this.running = false;
     this.deps.log?.("dashboard pollers stopped");
+  }
+
+  useFullCadence(): void {
+    if (this.cadenceMode === "full") {
+      return;
+    }
+    this.cadenceMode = "full";
+    this.pushSliceSuccessAt.clear();
+    this.serviceRefreshInFlight.clear();
+    this.serviceRefreshFailureCount.clear();
+    this.serviceRetrySlices.clear();
+    this.requestServiceRefresh = undefined;
+    this.deps.log?.("dashboard pollers cadence=full");
+  }
+
+  usePushSafetyNetCadence(): void {
+    if (this.cadenceMode === "push-safety-net") {
+      return;
+    }
+    this.cadenceMode = "push-safety-net";
+    this.deps.log?.(
+      `dashboard pollers cadence=push-safety-net multiplier=${DASHBOARD_PUSH_SAFETY_NET_MULTIPLIER}`
+    );
+  }
+
+  getCadenceMode(): DashboardPollerCadenceMode {
+    return this.cadenceMode;
+  }
+
+  /**
+   * Register a callback the poller can use to request a targeted service-side
+   * refresh for a single stale slice.  Call with `undefined` to remove it
+   * (e.g. when switching back to CLI polling).
+   */
+  setRequestServiceRefresh(
+    cb: ((name: DashboardSliceName) => Promise<void>) | undefined
+  ): void {
+    this.requestServiceRefresh = cb;
+    if (!cb) {
+      this.serviceRefreshInFlight.clear();
+      this.serviceRefreshFailureCount.clear();
+      this.serviceRetrySlices.clear();
+    }
+  }
+
+  /**
+   * Record an incoming push event for a slice.
+   *
+   * @param isSuccess - true (default) when the service successfully refreshed the slice.
+   *   Pass false for error-push events (ok===false in the SSE payload).
+   *   Only successful pushes reset the freshness clock and exit the retry set.
+   */
+  recordPushSliceUpdate(
+    name: DashboardSliceName,
+    now = Date.now(),
+    isSuccess = true
+  ): void {
+    if (isSuccess) {
+      this.pushSliceSuccessAt.set(name, now);
+      // Slice recovered — remove from retry tracking.
+      this.serviceRetrySlices.delete(name);
+      this.serviceRefreshFailureCount.delete(name);
+    }
+    // Error pushes are intentionally ignored for freshness purposes:
+    // a stale/erroring slice must not appear "covered" by recent push activity.
+  }
+
+  /** Number of slices currently being kept live via the service-refresh retry path. */
+  getServiceRetrySliceCount(): number {
+    return this.serviceRetrySlices.size;
   }
 
   /** Hold interval ticks during mutation / drawer critical sections. */
@@ -101,13 +209,63 @@ export class DashboardPollerCoordinator {
         return;
       }
       for (const name of dashboardSliceNamesForPollGroup(group)) {
-        if (this.isSliceEligible(name)) {
-          void this.fetchSlice(name, { source: "poller refresh" });
+        if (!this.isSliceEligible(name)) {
+          continue;
+        }
+        if (this.isPushSafetyNetFresh(name, intervalMs)) {
+          continue;
+        }
+        if (this.cadenceMode === "push-safety-net" && this.requestServiceRefresh) {
+          // Primary degraded path: ask the warm service to refresh just this slice.
+          // CLI polling is only used as a final resort after repeated service failures.
+          void this.tryServiceRefresh(name);
+        } else {
+          const source =
+            this.cadenceMode === "push-safety-net"
+              ? "poller safety-net refresh"
+              : "poller refresh";
+          void this.fetchSlice(name, { source });
         }
       }
     };
     const handle = setInterval(tick, intervalMs);
     this.intervals.set(group, handle);
+  }
+
+  /**
+   * Attempts a targeted service-side refresh for a stale slice.
+   * Falls back to a direct CLI read only after DASHBOARD_SERVICE_REFRESH_MAX_RETRIES
+   * consecutive failures — keeping all refresh traffic on the warm path whenever
+   * the service is able to serve it.
+   */
+  private async tryServiceRefresh(name: DashboardSliceName): Promise<void> {
+    if (this.serviceRefreshInFlight.has(name) || !this.requestServiceRefresh) {
+      return;
+    }
+    this.serviceRefreshInFlight.add(name);
+    this.serviceRetrySlices.add(name);
+    try {
+      await this.requestServiceRefresh(name);
+      // Success: the SSE push will arrive shortly with ok=true and reset pushSliceSuccessAt.
+      this.serviceRefreshFailureCount.delete(name);
+    } catch (error) {
+      const failures = (this.serviceRefreshFailureCount.get(name) ?? 0) + 1;
+      this.serviceRefreshFailureCount.set(name, failures);
+      this.deps.log?.(
+        `service refresh failed (${failures}/${DASHBOARD_SERVICE_REFRESH_MAX_RETRIES}) slice=${name}: ${error instanceof Error ? error.message : String(error)}`
+      );
+      if (failures >= DASHBOARD_SERVICE_REFRESH_MAX_RETRIES) {
+        // Service persistently unable to refresh this slice — fall back to CLI.
+        this.deps.log?.(
+          `slice=${name} service refresh exhausted, falling back to CLI read`
+        );
+        this.serviceRefreshFailureCount.delete(name);
+        this.serviceRetrySlices.delete(name);
+        void this.fetchSlice(name, { source: "poller CLI fallback after service-refresh failure" });
+      }
+    } finally {
+      this.serviceRefreshInFlight.delete(name);
+    }
   }
 
   private isSliceEligible(name: DashboardSliceName): boolean {
@@ -127,6 +285,25 @@ export class DashboardPollerCoordinator {
       return false;
     }
     return true;
+  }
+
+  private isPushSafetyNetFresh(name: DashboardSliceName, intervalMs: number): boolean {
+    if (this.cadenceMode !== "push-safety-net") {
+      return false;
+    }
+    // Only *successful* push timestamps count as proof of coverage.
+    // Error pushes intentionally do NOT update pushSliceSuccessAt so that
+    // a repeatedly-failing service slice still triggers the safety-net path.
+    const lastSuccessPushAt = this.pushSliceSuccessAt.get(name);
+    // Also consider the store's own updatedAt — which is only set on successful
+    // store.updateSlice() calls, never on markError() — so this is safe to include.
+    const sliceUpdatedAt = this.deps.store.getSlice(name).updatedAt ?? undefined;
+    const lastSuccessAt = Math.max(lastSuccessPushAt ?? 0, sliceUpdatedAt ?? 0);
+    if (lastSuccessAt <= 0) {
+      return false;
+    }
+    const safetyNetMs = intervalMs * DASHBOARD_PUSH_SAFETY_NET_MULTIPLIER;
+    return Date.now() - lastSuccessAt < safetyNetMs;
   }
 
   private isSectionVisible(sectionId: DashboardSectionId): boolean {
