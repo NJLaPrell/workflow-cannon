@@ -81,7 +81,10 @@ test("Option 1: dashboard-summary calls are source labeled and activation avoids
   assert.match(providerSrc, /"kit-state refresh"/);
   assert.match(providerSrc, /manual refresh/);
   assert.match(pollerSrc, /source: "read-path prefetch"/);
-  assert.match(pollerSrc, /source: "poller refresh"/);
+  // "poller refresh" is now chosen via a cadence-mode ternary (full vs
+  // push-safety-net) rather than an inline object literal — assert the
+  // source label string itself still exists rather than its exact shape.
+  assert.match(pollerSrc, /"poller refresh"/);
   assert.match(extensionSrc, /workspace-coordination-status/);
   assert.match(extensionSrc, /statusBarInFlight/);
   assert.match(extensionSrc, /lastStatusBarRefreshAt/);
