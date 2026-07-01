@@ -75,12 +75,20 @@ test("boot ready and timeout startup triggers coalesce through the startup singl
   assert.match(messageBlock, /dashboardWebviewReady[\s\S]*renderDashboardStartupDirect\(webview\)/);
 });
 
-test("first dashboard data render replaces full document before root patches", () => {
+test("first dashboard data render patches the painted shell root", () => {
   const providerSrc = fs.readFileSync(providerPath, "utf8");
   assert.match(providerSrc, /dashboardRootHydrated = false/);
-  assert.match(providerSrc, /if \(!this\.dashboardRootHydrated\)/);
-  assert.match(providerSrc, /webview\.html = this\.buildHtml\(webview, rootInner\)/);
-  assert.match(providerSrc, /wcReplaceRoot/);
+  const startupBlock = providerSrc.slice(
+    providerSrc.indexOf("private async renderDashboardStartupDirectOnce"),
+    providerSrc.indexOf("private async postSectionPatch")
+  );
+  assert.match(startupBlock, /postMessage\(\{ type: "wcReplaceRoot", html: rootInner \}\)/);
+  assert.doesNotMatch(startupBlock, /webview\.html = this\.buildHtml\(webview, rootInner\)/);
+  const refreshBlock = providerSrc.slice(
+    providerSrc.indexOf("private async executeDashboardRefresh"),
+    providerSrc.indexOf("scheduleConfigTabRefresh")
+  );
+  assert.match(refreshBlock, /pushUpdate applied first root patch over shell/);
 });
 
 test("startup timeout and refresh failures preserve actionable recovery without blanking a good dashboard", () => {

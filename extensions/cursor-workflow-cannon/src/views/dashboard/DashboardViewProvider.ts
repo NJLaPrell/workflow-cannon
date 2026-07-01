@@ -1762,8 +1762,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       for (const sectionId of ["queue", "status", "config", "cae", "phase-journal"] as const) {
         this.staleDashboardSections.add(sectionId);
       }
-      webview.html = this.buildHtml(webview, rootInner);
-      logWc("dashboard", "startup diagnostic direct render applied");
+      await webview.postMessage({ type: "wcReplaceRoot", html: rootInner });
+      logWc("dashboard", "startup diagnostic direct render applied via wcReplaceRoot");
       this.markDashboardRootHydrated();
       void this.ensureQueueRollupsHydrated(this.refreshController.currentGeneration());
       logWc("dashboard", "startup queue rollup hydration scheduled");
@@ -5422,8 +5422,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     try {
       if (!this.dashboardRootHydrated) {
-        webview.html = this.buildHtml(webview, rootInner);
-        logWc("dashboard", "pushUpdate applied first full document render");
+        await webview.postMessage({ type: "wcReplaceRoot", html: rootInner });
+        logWc("dashboard", "pushUpdate applied first root patch over shell");
         this.markDashboardRootHydrated();
         if (useDeferredSecondary) {
           logWc("dashboard", "pushUpdate deferred secondary hydration: queue/status/full not launched");

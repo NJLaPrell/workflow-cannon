@@ -103,6 +103,8 @@ test("DashboardViewProvider startup first paint uses overview then schedules que
   );
   assert.match(startupBlock, /projection:\s*"overview"/);
   assert.doesNotMatch(startupBlock, /projection:\s*"full"/);
+  assert.match(startupBlock, /postMessage\(\{ type: "wcReplaceRoot", html: rootInner \}\)/);
+  assert.doesNotMatch(startupBlock, /webview\.html = this\.buildHtml\(webview, rootInner\)/);
   assert.match(startupBlock, /ensureQueueRollupsHydrated\(/);
   assert.match(startupBlock, /startup queue rollup hydration scheduled/);
   assert.doesNotMatch(startupBlock, /ensureStatusHydrated\(/);
