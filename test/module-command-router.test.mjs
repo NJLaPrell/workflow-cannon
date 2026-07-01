@@ -71,6 +71,7 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
     "dashboard-agent-activity-slice",
     "dashboard-agent-types-slice",
     "dashboard-bootstrap-slices",
+    "dashboard-ops-slice",
     "dashboard-overview-slice",
     "dashboard-queue-slice",
     "dashboard-service-snapshot",

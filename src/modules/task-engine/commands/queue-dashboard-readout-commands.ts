@@ -6,7 +6,8 @@ import {
   dashboardStatusSliceCommand,
   dashboardAgentActivitySliceCommand,
   dashboardAgentTypesSliceCommand,
-  dashboardTerminalTasksSliceCommand
+  dashboardTerminalTasksSliceCommand,
+  dashboardOpsSliceCommand
 } from "./task-engine-dashboard-on-command.js";
 import { dashboardBootstrapSlices } from "./dashboard-bootstrap-slices.js";
 import type { OpenedPlanningStores } from "../persistence/planning-open.js";
@@ -38,102 +39,69 @@ import { parseDashboardSummaryProjection } from "../dashboard/dashboard-summary-
 import { buildDashboardTerminalTasksPage } from "../dashboard/focused-slice-builders.js";
 
 /**
- * Dashboard + queue diagnostics that do not mutate task rows.
- * Returns **`null`** when the command name is not handled here.
+ * Pre-dispatch handler for all dashboard commands that open their own slice stores.
+ * Called from {@link task-engine-internal.ts} BEFORE `openPlanningStores` to prevent
+ * the double-store-open that occurs when the full store is opened and then these
+ * commands open a second, slice-scoped store internally.
+ *
+ * `dashboard-terminal-rows` is intentionally excluded: it uses the pre-opened
+ * full planning store and is not on the high-frequency poll tier.
+ *
+ * Returns `null` when the command is not handled here.
  */
-export async function resolveQueueDashboardReadoutCommands(
+export async function resolveQueueDashboardReadoutCommandsNoPriorOpen(
   command: { name: string; args?: Record<string, unknown> },
-  ctx: ModuleLifecycleContext,
-  planning: OpenedPlanningStores,
-  store: TaskStore
+  ctx: ModuleLifecycleContext
 ): Promise<ModuleCommandResult | null> {
   const args = command.args ?? {};
 
   if (command.name === "dashboard-summary") {
-    // Determine projection to decide which slice store mode to use
     const projection = parseDashboardSummaryProjection(args);
-    // Open planning stores optimized for the requested dashboard slice
     const slicePlanning = await openPlanningStoresForDashboardSlice(ctx, projection);
     const generation = slicePlanning.sqliteDual.getPlanningGeneration();
-    return runDashboardSummaryCommand(
-      ctx,
-      slicePlanning.taskStore,
-      generation,
-      slicePlanning.sqliteDual,
-      args
-    );
+    return runDashboardSummaryCommand(ctx, slicePlanning.taskStore, generation, slicePlanning.sqliteDual, args);
   }
 
   if (command.name === "dashboard-overview-slice") {
     const slicePlanning = await openPlanningStoresForDashboardSlice(ctx, "overview");
     const generation = slicePlanning.sqliteDual.getPlanningGeneration();
-    return dashboardOverviewSliceCommand(
-      ctx,
-      slicePlanning.taskStore,
-      generation,
-      slicePlanning.sqliteDual,
-      args
-    );
+    return dashboardOverviewSliceCommand(ctx, slicePlanning.taskStore, generation, slicePlanning.sqliteDual, args);
   }
 
   if (command.name === "dashboard-queue-slice") {
     const slicePlanning = await openPlanningStoresForDashboardSlice(ctx, "queue");
     const generation = slicePlanning.sqliteDual.getPlanningGeneration();
-    return dashboardQueueSliceCommand(
-      ctx,
-      slicePlanning.taskStore,
-      generation,
-      slicePlanning.sqliteDual,
-      args
-    );
+    return dashboardQueueSliceCommand(ctx, slicePlanning.taskStore, generation, slicePlanning.sqliteDual, args);
   }
 
   if (command.name === "dashboard-status-slice") {
     const slicePlanning = await openPlanningStoresForDashboardSlice(ctx, "status");
     const generation = slicePlanning.sqliteDual.getPlanningGeneration();
-    return dashboardStatusSliceCommand(
-      ctx,
-      slicePlanning.taskStore,
-      generation,
-      slicePlanning.sqliteDual,
-      args
-    );
+    return dashboardStatusSliceCommand(ctx, slicePlanning.taskStore, generation, slicePlanning.sqliteDual, args);
   }
 
   if (command.name === "dashboard-agent-activity-slice") {
     const slicePlanning = await openPlanningStoresForDashboardSlice(ctx, "agentActivity");
     const generation = slicePlanning.sqliteDual.getPlanningGeneration();
-    return dashboardAgentActivitySliceCommand(
-      ctx,
-      slicePlanning.taskStore,
-      generation,
-      slicePlanning.sqliteDual,
-      args
-    );
+    return dashboardAgentActivitySliceCommand(ctx, slicePlanning.taskStore, generation, slicePlanning.sqliteDual, args);
   }
 
   if (command.name === "dashboard-agent-types-slice") {
     const slicePlanning = await openPlanningStoresForDashboardSlice(ctx, "agentTypes");
     const generation = slicePlanning.sqliteDual.getPlanningGeneration();
-    return dashboardAgentTypesSliceCommand(
-      ctx,
-      slicePlanning.taskStore,
-      generation,
-      slicePlanning.sqliteDual,
-      args
-    );
+    return dashboardAgentTypesSliceCommand(ctx, slicePlanning.taskStore, generation, slicePlanning.sqliteDual, args);
   }
 
   if (command.name === "dashboard-terminal-tasks-page") {
     const slicePlanning = await openPlanningStoresForDashboardSlice(ctx, "terminalTasks");
     const generation = slicePlanning.sqliteDual.getPlanningGeneration();
-    return dashboardTerminalTasksSliceCommand(
-      ctx,
-      slicePlanning.taskStore,
-      generation,
-      slicePlanning.sqliteDual,
-      args
-    );
+    return dashboardTerminalTasksSliceCommand(ctx, slicePlanning.taskStore, generation, slicePlanning.sqliteDual, args);
+  }
+
+  if (command.name === "dashboard-terminal-tasks") {
+    const slicePlanning = await openPlanningStoresForDashboardSlice(ctx, "terminalTasks");
+    const generation = slicePlanning.sqliteDual.getPlanningGeneration();
+    return dashboardTerminalTasksSliceCommand(ctx, slicePlanning.taskStore, generation, slicePlanning.sqliteDual, args);
   }
 
   if (command.name === "dashboard-bootstrap-slices") {
@@ -141,14 +109,38 @@ export async function resolveQueueDashboardReadoutCommands(
     const sliceName = slices.includes("status") || slices.includes("queue") ? "status" : "overview";
     const slicePlanning = await openPlanningStoresForDashboardSlice(ctx, sliceName);
     const generation = slicePlanning.sqliteDual.getPlanningGeneration();
-    return dashboardBootstrapSlices(
-      ctx,
-      slicePlanning.taskStore,
-      generation,
-      slicePlanning.sqliteDual,
-      args as { slices?: string[] }
-    );
+    return dashboardBootstrapSlices(ctx, slicePlanning.taskStore, generation, slicePlanning.sqliteDual, args as { slices?: string[] });
   }
+
+  if (command.name === "dashboard-ops-slice") {
+    const slicePlanning = await openPlanningStoresForDashboardSlice(ctx, "ops");
+    const generation = slicePlanning.sqliteDual.getPlanningGeneration();
+    return dashboardOpsSliceCommand(ctx, slicePlanning.taskStore, generation, slicePlanning.sqliteDual, args);
+  }
+
+  return null;
+}
+
+/**
+ * Dashboard + queue diagnostics that do not mutate task rows.
+ * Returns **`null`** when the command name is not handled here.
+ *
+ * Delegates self-opening dashboard commands to
+ * {@link resolveQueueDashboardReadoutCommandsNoPriorOpen} to avoid redundant work
+ * when called from the tail-dispatch path (where the planning store was already opened).
+ */
+export async function resolveQueueDashboardReadoutCommands(
+  command: { name: string; args?: Record<string, unknown> },
+  ctx: ModuleLifecycleContext,
+  planning: OpenedPlanningStores,
+  store: TaskStore
+): Promise<ModuleCommandResult | null> {
+  // Self-opening commands: each manages its own slice-scoped store and does not
+  // use the pre-opened `planning`/`store` arguments.
+  const selfOpenResult = await resolveQueueDashboardReadoutCommandsNoPriorOpen(command, ctx);
+  if (selfOpenResult !== null) return selfOpenResult;
+
+  const args = command.args ?? {};
 
   if (command.name === "dashboard-terminal-rows" || command.name === "dashboard-terminal-tasks") {
     const status = typeof args.status === "string" ? args.status : "completed";
