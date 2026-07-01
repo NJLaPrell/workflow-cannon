@@ -172,6 +172,23 @@ function trimOptionalString(value: unknown): string | undefined {
   return trimmed.length > 0 ? trimmed : undefined;
 }
 
+/** Unresolved WBS dependency tokens (WBS ids or existing task ids) before finalize pass 2. */
+export function extractWbsDependencyReferences(
+  wbs: PlanArtifactWbsItem,
+  payload: PlanArtifactGeneratedTaskPayload
+): string[] {
+  const fromWbs = wbs.dependsOn
+    .filter((dep): dep is string => typeof dep === "string" && dep.trim().length > 0)
+    .map((dep) => dep.trim());
+  if (fromWbs.length > 0) {
+    return fromWbs;
+  }
+  const fromPayload = payload.dependsOn
+    ?.filter((dep): dep is string => typeof dep === "string" && dep.trim().length > 0)
+    .map((dep) => dep.trim());
+  return fromPayload && fromPayload.length > 0 ? fromPayload : [];
+}
+
 function renderBulletSection(title: string, lines: string[]): string {
   return [title, ...lines.map((line) => `- ${line}`)].join("\n");
 }
@@ -243,7 +260,10 @@ export function normalizeWbsItemToTaskDraft(
     description: buildTaskDraftDescription(wbs, payload),
     technicalScope: [...payload.technicalScope],
     acceptanceCriteria: [...payload.acceptanceCriteria],
-    dependsOn: wbs.dependsOn.length > 0 ? [...wbs.dependsOn] : payload.dependsOn ? [...payload.dependsOn] : undefined,
+    dependsOn: (() => {
+      const refs = extractWbsDependencyReferences(wbs, payload);
+      return refs.length > 0 ? refs : undefined;
+    })(),
     status: payload.status ?? context.defaultStatus ?? "proposed",
     metadata: {
       planRef: context.planRef,

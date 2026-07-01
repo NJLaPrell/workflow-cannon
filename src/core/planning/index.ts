@@ -78,6 +78,7 @@ export {
   type PlanArtifactWbsItem
 } from "./plan-artifact-v1.js";
 export {
+  extractWbsDependencyReferences,
   isPlanArtifactWbsItem,
   normalizeWbsItemToTaskDraft,
   validatePlanArtifactWbsItemShape,
@@ -87,6 +88,15 @@ export {
   type WbsShapeFinding,
   type WbsShapeGuardResult
 } from "./normalize-wbs-to-task-draft.js";
+export {
+  assignDeterministicDraftIdentities,
+  prepareFinalizeDraftsWithWbsDependencies,
+  resolveWbsDependsOnToDraftIds,
+  type AssignDraftIdentitiesResult,
+  type PrepareFinalizeDraftsInput,
+  type ResolveWbsDependsOnInput,
+  type WbsDependencyFinding
+} from "./wbs-dependency-resolution.js";
 export {
   PLAN_ARTIFACT_MODULE_ID_PREFIX,
   PLAN_ARTIFACT_ROOT_REL,

@@ -2,6 +2,7 @@ import type { ModuleCommandResult } from "../../contracts/module-contract.js";
 import type { ModuleLifecycleContext } from "../../contracts/module-contract.js";
 import {
   normalizeWbsItemToTaskDraft,
+  prepareFinalizeDraftsWithWbsDependencies,
   type PlanningExecutionTaskDraft,
   type PlanArtifactV1,
   type PlanArtifactWbsItem,
@@ -138,103 +139,6 @@ function resolveApprovalTargetVersion(loaded: PlanArtifactV1): number {
     return loaded.approvalRecord.approvedVersion;
   }
   return loaded.version;
-}
-
-function prepareFinalizeDrafts(
-  drafts: PlanningExecutionTaskDraft[],
-  selectedWbsRows: PlanArtifactWbsItem[],
-  allWbsRows: PlanArtifactWbsItem[],
-  existing: TaskEntity[]
-): { ok: true; drafts: PlanningExecutionTaskDraft[] } | { ok: false; message: string; findings: Array<Record<string, unknown>> } {
-  let allocBase = [...existing];
-  const assignedIds = new Map<string, string>();
-  const assignedTaskIds = new Set<string>();
-  const rowsWithIds = drafts.map((draft, index) => {
-    const id = draft.id ?? allocateNextTaskNumericId(allocBase);
-    const wbsId = selectedWbsRows[index]?.wbsId;
-    if (wbsId) {
-      assignedIds.set(wbsId, id);
-    }
-    assignedTaskIds.add(id);
-    const row = { ...draft, id };
-    allocBase = [
-      ...allocBase,
-      {
-        id,
-        title: draft.title,
-        type: draft.type ?? "workspace-kit",
-        status: draft.status ?? "proposed",
-        createdAt: "",
-        updatedAt: "",
-        phase: draft.phase,
-        phaseKey: draft.phaseKey,
-        approach: draft.approach,
-        technicalScope: draft.technicalScope,
-        acceptanceCriteria: draft.acceptanceCriteria
-      }
-    ];
-    return row;
-  });
-
-  const allWbsIds = new Set(allWbsRows.map((row) => row.wbsId));
-  const existingTaskIds = new Set(existing.map((task) => task.id));
-  const findings: Array<Record<string, unknown>> = [];
-  const resolvedDrafts = rowsWithIds.map((draft, index) => {
-    const wbsRow = selectedWbsRows[index];
-    const resolvedDependsOn: string[] = [];
-    for (const dep of draft.dependsOn ?? []) {
-      const dependency = dep.trim();
-      if (!dependency) {
-        continue;
-      }
-      const selectedDraftId = assignedIds.get(dependency);
-      if (selectedDraftId) {
-        resolvedDependsOn.push(selectedDraftId);
-        continue;
-      }
-      if (assignedTaskIds.has(dependency)) {
-        resolvedDependsOn.push(dependency);
-        continue;
-      }
-      if (allWbsIds.has(dependency)) {
-        findings.push({
-          code: "wbs-dependency-unselected",
-          severity: "error",
-          wbsId: wbsRow?.wbsId,
-          dependency,
-          field: "dependsOn",
-          message: `Selected WBS row '${wbsRow?.wbsId ?? "unknown"}' depends on unselected WBS row '${dependency}'`
-        });
-        continue;
-      }
-      if (existingTaskIds.has(dependency)) {
-        resolvedDependsOn.push(dependency);
-        continue;
-      }
-      findings.push({
-        code: "wbs-dependency-invalid",
-        severity: "error",
-        wbsId: wbsRow?.wbsId,
-        dependency,
-        field: "dependsOn",
-        message: `Selected WBS row '${wbsRow?.wbsId ?? "unknown"}' has invalid dependency '${dependency}' (expected selected WBS row or existing task id)`
-      });
-    }
-    return {
-      ...draft,
-      dependsOn: resolvedDependsOn.length > 0 ? resolvedDependsOn : undefined
-    };
-  });
-
-  if (findings.length > 0) {
-    return {
-      ok: false,
-      message: "Finalize blocked: dependency resolution failed",
-      findings
-    };
-  }
-
-  return { ok: true, drafts: resolvedDrafts };
 }
 
 function buildFinalizeTasks(
@@ -476,12 +380,13 @@ export async function runFinalizePlanToPhase(
     desiredStatus
   );
 
-  const preparedDrafts = prepareFinalizeDrafts(
-    taskPreview,
-    wbsRows,
-    loaded.wbs,
-    stores.taskStore.getAllTasks()
-  );
+  const preparedDrafts = prepareFinalizeDraftsWithWbsDependencies({
+    drafts: taskPreview,
+    selectedWbsRows: wbsRows,
+    allWbsRows: loaded.wbs,
+    existingTasks: stores.taskStore.getAllTasks(),
+    allocateTaskId: allocateNextTaskNumericId
+  });
   if (!preparedDrafts.ok) {
     return {
       ok: false,
