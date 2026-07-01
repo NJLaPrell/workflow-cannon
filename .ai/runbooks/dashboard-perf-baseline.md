@@ -111,3 +111,21 @@ Interpretation:
   avoiding mutation-class command execution for pollers, eliminating the second full
   webview document load at startup, and avoiding whole-root HTML renders for section-only
   patches.
+
+## option-a integration fix (orchestrator, 2026-07-01)
+
+The frontend track routed `team`/`subagents`/`checkpoints` to `dashboard-status-slice`
+(still computationally heavy — same doctor/CAE/git-drift scan as `projection:"status"`,
+just without the mutation-class CLI overhead) because backend1's `dashboard-ops-slice`
+command didn't exist yet in its worktree. After merging all three option-a tracks,
+`planArtifact` (critical/2s tier), `team`, `subagents`, and `checkpoints` (ops/10s tier)
+were rewired to `dashboard-ops-slice`. End-to-end CLI process timing, full cold spawn,
+against this repo's real data:
+
+| Path | ms |
+| --- | --- |
+| `dashboard-summary projection=status` (old path for these 4 slices) | **2937** |
+| `dashboard-ops-slice` (new path) | **367** |
+
+**~8x faster**, on the single highest-frequency (2s) poll tier slice. `dashboard-status-slice`
+now serves only the `status` tab slice itself (30s tier, genuinely needs full detail).
