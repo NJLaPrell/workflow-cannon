@@ -16,6 +16,13 @@ export type DashboardServiceSliceUpdatedEvent = {
   generation: number;
   slice: string;
   updatedAt: string;
+  /**
+   * Whether the service-side slice refresh succeeded.
+   * false = the builder threw and the slice is now in error status.
+   * Absent (undefined) is treated as true for backward compatibility with
+   * older service versions and the agentActivity.updated normalization path.
+   */
+  ok?: boolean;
 };
 
 export type DashboardServiceAgentActivityUpdatedEvent = {

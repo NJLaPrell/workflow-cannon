@@ -62,13 +62,15 @@ export function toSseEvent(input: {
   changedSlices: string[];
   generation: number;
   updatedAt: string;
+  ok?: boolean;
 }): DashboardServiceEvent {
   if (input.type === "slice.updated" && input.slice) {
     return {
       type: "dashboard.slice.updated",
       generation: input.generation,
       slice: input.slice,
-      updatedAt: input.updatedAt
+      updatedAt: input.updatedAt,
+      ok: input.ok
     };
   }
   return {

@@ -19,6 +19,8 @@ export type DashboardSnapshotStoreListener = (event: {
   changedSlices: string[];
   generation: number;
   updatedAt: string;
+  /** true = slice refresh succeeded; false = builder threw and slice is in error state. */
+  ok?: boolean;
 }) => void;
 
 export class DashboardSnapshotStore {
@@ -85,7 +87,7 @@ export class DashboardSnapshotStore {
       value,
       planningGeneration: planningGeneration ?? undefined
     });
-    this.emit("slice.updated", [name], now);
+    this.emit("slice.updated", [name], now, true);
     return [name];
   }
 
@@ -104,7 +106,8 @@ export class DashboardSnapshotStore {
       value: prev.value,
       error: message
     });
-    this.emit("slice.updated", [name], now);
+    // ok=false so the extension can distinguish an error push from a success push.
+    this.emit("slice.updated", [name], now, false);
     return [name];
   }
 
@@ -128,18 +131,22 @@ export class DashboardSnapshotStore {
     return this.slices.get(name);
   }
 
-  private emit(type: "slice.updated" | "snapshot.updated", changedSlices: string[], updatedAt: string): void {
-    const payload = {
-      type,
+  private emit(
+    type: "slice.updated" | "snapshot.updated",
+    changedSlices: string[],
+    updatedAt: string,
+    ok?: boolean
+  ): void {
+    const base = {
       changedSlices,
       generation: this.generation,
       updatedAt
-    } as const;
+    };
     for (const listener of this.listeners) {
       listener(
         type === "slice.updated"
-          ? { ...payload, type: "slice.updated", slice: changedSlices[0] }
-          : { ...payload, type: "snapshot.updated" }
+          ? { ...base, type: "slice.updated", slice: changedSlices[0], ok }
+          : { ...base, type: "snapshot.updated" }
       );
     }
   }
