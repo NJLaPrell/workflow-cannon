@@ -63,6 +63,7 @@ test("T100612: auto mode selects warm service when health probe succeeds", async
   );
 
   let pollersStarted = 0;
+  let pushSafetyNetEnabled = 0;
   const pollers = {
     start: () => {
       pollersStarted += 1;
@@ -70,6 +71,11 @@ test("T100612: auto mode selects warm service when health probe succeeds", async
     stop: () => {},
     pause: () => {},
     resume: () => {},
+    useFullCadence: () => {},
+    usePushSafetyNetCadence: () => {
+      pushSafetyNetEnabled += 1;
+    },
+    recordPushSliceUpdate: () => {},
     refreshCriticalNow: async () => {},
     refreshSlicesNow: async () => {},
     setVisibleSections: () => {}
@@ -83,8 +89,10 @@ test("T100612: auto mode selects warm service when health probe succeeds", async
   });
   await coordinator.start();
   assert.equal(coordinator.getModeBadge().active, "service");
+  assert.equal(coordinator.getModeBadge().pollingCadence, "push-safety-net");
   assert.equal(coordinator.isServicePathActive(), true);
-  assert.equal(pollersStarted, 0);
+  assert.equal(pollersStarted, 1);
+  assert.equal(pushSafetyNetEnabled, 1);
   await coordinator.stop();
   await new Promise((resolve) => server.close(resolve));
 });
@@ -104,6 +112,9 @@ test("T100599: auto mode falls back to CLI pollers when service health fails", a
     stop: () => {},
     pause: () => {},
     resume: () => {},
+    useFullCadence: () => {},
+    usePushSafetyNetCadence: () => {},
+    recordPushSliceUpdate: () => {},
     refreshCriticalNow: async () => {},
     refreshSlicesNow: async () => {},
     setVisibleSections: () => {}
@@ -118,8 +129,122 @@ test("T100599: auto mode falls back to CLI pollers when service health fails", a
   await coordinator.start();
   assert.equal(pollersStarted, 1);
   assert.equal(coordinator.getModeBadge().active, "cli-polling");
+  assert.equal(coordinator.getModeBadge().pollingCadence, "full");
   assert.match(coordinator.getModeBadge().detail ?? "", /unavailable/i);
   await coordinator.stop();
+});
+
+test("T100599: service health failure resumes full-cadence CLI polling", async () => {
+  let healthy = true;
+  const server = http.createServer((req, res) => {
+    const url = req.url ?? "";
+    if (url === "/health") {
+      res.writeHead(healthy ? 200 : 503, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ ok: healthy }));
+      return;
+    }
+    if (url === "/dashboard/snapshot") {
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(
+        JSON.stringify({
+          schemaVersion: 1,
+          serviceVersion: "0.99.21",
+          generatedAt: "2026-05-30T03:00:00.000Z",
+          generation: 1,
+          planningGeneration: 42,
+          slices: {}
+        })
+      );
+      return;
+    }
+    if (url.startsWith("/dashboard/events")) {
+      res.writeHead(200, { "Content-Type": "text/event-stream" });
+      res.end("");
+      return;
+    }
+    res.writeHead(404);
+    res.end("");
+  });
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const port = server.address().port;
+  const workspace = await fsMkdtemp();
+  const runtimeDir = path.join(workspace, ".workspace-kit", "dashboard-service");
+  await mkdir(runtimeDir, { recursive: true });
+  await writeFile(
+    path.join(runtimeDir, "runtime.json"),
+    JSON.stringify({
+      schemaVersion: 1,
+      pid: 1,
+      host: "127.0.0.1",
+      port,
+      startedAt: "2026-05-30T03:00:00.000Z",
+      serviceVersion: "0.99.21",
+      generation: 1,
+      planningGeneration: 42
+    })
+  );
+
+  const originalSetInterval = globalThis.setInterval;
+  const originalClearInterval = globalThis.clearInterval;
+  const intervals = [];
+  globalThis.setInterval = (fn, ms) => {
+    const handle = { fn, ms };
+    intervals.push(handle);
+    return handle;
+  };
+  globalThis.clearInterval = () => {};
+
+  let pollersStarted = 0;
+  let fullCadenceEnabled = 0;
+  let pushSafetyNetEnabled = 0;
+  const pollers = {
+    start: () => {
+      pollersStarted += 1;
+    },
+    stop: () => {},
+    pause: () => {},
+    resume: () => {},
+    useFullCadence: () => {
+      fullCadenceEnabled += 1;
+    },
+    usePushSafetyNetCadence: () => {
+      pushSafetyNetEnabled += 1;
+    },
+    recordPushSliceUpdate: () => {},
+    refreshCriticalNow: async () => {},
+    refreshSlicesNow: async () => {},
+    setVisibleSections: () => {}
+  };
+  const coordinator = new DashboardReadPathCoordinator({
+    workspacePath: workspace,
+    client: { run: async () => ({ ok: false }) },
+    store: new DashboardDataStore(),
+    pollers,
+    log: () => {}
+  });
+
+  try {
+    await coordinator.start();
+    assert.equal(coordinator.getModeBadge().active, "service");
+    assert.equal(pushSafetyNetEnabled, 1);
+    assert.equal(pollersStarted, 1);
+
+    healthy = false;
+    const healthMonitor = intervals.find((entry) => entry.ms === 3000);
+    assert.ok(healthMonitor);
+    healthMonitor.fn();
+    await waitFor(() => coordinator.getModeBadge().active === "cli-polling");
+
+    assert.equal(coordinator.getModeBadge().pollingCadence, "full");
+    assert.match(coordinator.getModeBadge().detail ?? "", /became unhealthy/i);
+    assert.equal(fullCadenceEnabled >= 1, true);
+    assert.equal(pollersStarted >= 2, true);
+  } finally {
+    await coordinator.stop();
+    globalThis.setInterval = originalSetInterval;
+    globalThis.clearInterval = originalClearInterval;
+    await new Promise((resolve) => server.close(resolve));
+  }
 });
 
 test("T100599: forceCliPollingMode keeps CLI path for session", async () => {
@@ -129,6 +254,9 @@ test("T100599: forceCliPollingMode keeps CLI path for session", async () => {
     stop: () => {},
     pause: () => {},
     resume: () => {},
+    useFullCadence: () => {},
+    usePushSafetyNetCadence: () => {},
+    recordPushSliceUpdate: () => {},
     refreshCriticalNow: async () => {},
     refreshSlicesNow: async () => {},
     setVisibleSections: () => {}
@@ -142,6 +270,17 @@ test("T100599: forceCliPollingMode keeps CLI path for session", async () => {
   await coordinator.forceCliPollingMode();
   assert.equal(coordinator.getModeBadge().configured, "cli-polling");
 });
+
+async function waitFor(predicate, timeoutMs = 1000) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (predicate()) {
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+  assert.equal(predicate(), true);
+}
 
 test("T100599: provider wires DashboardReadPathCoordinator", () => {
   const providerSrc = readFileSync(

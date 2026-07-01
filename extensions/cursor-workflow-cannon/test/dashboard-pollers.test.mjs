@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import { DashboardDataStore } from "../dist/views/dashboard/dashboard-data-store.js";
 import { DashboardRefreshController } from "../dist/views/dashboard/dashboard-refresh-controller.js";
 import {
+  DASHBOARD_PUSH_SAFETY_NET_MULTIPLIER,
   DashboardPollerCoordinator,
   sliceNamesForMutation
 } from "../dist/views/dashboard/dashboard-pollers.js";
@@ -162,13 +163,73 @@ test("DashboardPollerCoordinator only polls agentActivity while overview is visi
     coordinator.setVisibleSections(["overview"]);
     liveTick.fn();
     await Promise.resolve();
-    assert.equal(runs.length, 1, "live poll runs when overview is visible");
+    assert.equal(runs.length, 2, "live poll runs visible overview slices");
     assert.equal(runs[0].args.projection, "agentActivity");
+    assert.ok(runs.some((run) => run.command === "dashboard-agent-types-slice"));
   } finally {
     coordinator.stop();
     globalThis.setInterval = originalSetInterval;
   }
 });
+
+test("DashboardPollerCoordinator limits CLI reads to push safety-net cadence", async () => {
+  const originalSetInterval = globalThis.setInterval;
+  const originalClearInterval = globalThis.clearInterval;
+  const originalDateNow = Date.now;
+  const callbacks = [];
+  let now = 10_000;
+  Date.now = () => now;
+  globalThis.setInterval = (fn, ms) => {
+    const handle = { fn, ms };
+    callbacks.push(handle);
+    return handle;
+  };
+  globalThis.clearInterval = () => {};
+
+  try {
+    const { coordinator, runs } = makeCoordinator();
+    coordinator.usePushSafetyNetCadence();
+    coordinator.start();
+    assert.equal(callbacks.length, 5);
+    assert.equal(coordinator.getCadenceMode(), "push-safety-net");
+
+    for (const name of ["overview", "phase", "planArtifact", "agent"]) {
+      coordinator.recordPushSliceUpdate(name, now);
+    }
+
+    const criticalTick = callbacks.find((entry) => entry.ms === 2000);
+    assert.ok(criticalTick);
+    criticalTick.fn();
+    await Promise.resolve();
+    assert.equal(runs.length, 0, "recent SSE updates suppress full-rate critical CLI reads");
+
+    now += 2000 * DASHBOARD_PUSH_SAFETY_NET_MULTIPLIER;
+    criticalTick.fn();
+    await nextTick();
+    assert.equal(runs.length, 4, "stale SSE updates allow one safety-net read per critical slice");
+
+    coordinator.useFullCadence();
+    for (const name of ["overview", "phase", "planArtifact", "agent"]) {
+      coordinator.recordPushSliceUpdate(name, now);
+    }
+    criticalTick.fn();
+    await nextTick();
+    assert.equal(runs.length, 8, "full cadence ignores push timestamps after fallback");
+  } finally {
+    Date.now = originalDateNow;
+    coordinatorCleanup(callbacks);
+    globalThis.setInterval = originalSetInterval;
+    globalThis.clearInterval = originalClearInterval;
+  }
+});
+
+function coordinatorCleanup(callbacks) {
+  callbacks.length = 0;
+}
+
+function nextTick() {
+  return new Promise((resolve) => setImmediate(resolve));
+}
 
 test("DashboardPollerCoordinator discards stale generation results", async () => {
   const { coordinator, store, refreshController } = makeCoordinator({

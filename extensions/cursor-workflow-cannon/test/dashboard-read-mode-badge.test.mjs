@@ -20,10 +20,21 @@ test("formatDashboardReadModeBadgeLabel covers auto fallback", () => {
 test("renderDashboardReadModeBadgeHtml includes data-wc-read-mode-badge", () => {
   const html = renderDashboardReadModeBadgeHtml({
     configured: "service",
-    active: "service"
+    active: "service",
+    pollingCadence: "push-safety-net"
   });
   assert.match(html, /data-wc-read-mode-badge/);
-  assert.match(html, /Warm service/);
+  assert.match(html, /Push-driven service/);
+});
+
+test("push-driven service badge explains safety-net polling", () => {
+  const detail = formatDashboardReadModeBadgeDetail({
+    configured: "auto",
+    active: "service",
+    pollingCadence: "push-safety-net"
+  });
+  assert.match(detail ?? "", /SSE push updates active/i);
+  assert.match(detail ?? "", /safety net/i);
 });
 
 test("service mode unavailable preserves detail copy", () => {
