@@ -108,6 +108,14 @@ Maintainer waiver fields:
 
 Use **`phase-delivery-preflight`** before completion to list completed or in-progress phase tasks missing this evidence. For non-shipping/local-only tasks, set `metadata.deliveryEvidenceRequired` to `false` or `metadata.localOnly` / `metadata.nonShipping` to `true`.
 
+## User-facing release note copy (before `complete`)
+
+For **user-visible** execution tasks, set **`metadata.releaseNoteSummary`** via **`update-task`** in the same pre-completion pass as delivery evidence — **before** calling **`action":"complete"`**. One benefit-focused sentence for adopters; implementation detail belongs in **`docs/maintainers/CHANGELOG.md`**.
+
+- Authoring contract: **`src/modules/documentation/instructions/release-notes-authoring.md`**
+- Phase closeout aggregates these fields with **`generate-release-notes`** (see **`.ai/playbooks/phase-closeout-and-release.md`** step **6b**)
+- Skip for internal-only/chore tasks unless **`metadata.includeInReleaseNotes: true`**
+
 ## Response template (CLI shaping)
 
 When **`action`** is **`complete`**, the kit applies the builtin **`phase_ship`** response template unless you pass **`responseTemplateId`** (or a template directive) or a config **`commandOverrides`** entry for **`run-transition`**. That adds **`data.presentation.matchedSections`** for closeout fields (e.g. **`evidence`**, **`planningGeneration`**). See **`docs/maintainers/response-template-contract.md`**.

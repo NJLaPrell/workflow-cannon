@@ -19,6 +19,7 @@ Canonical process remains: [`AGENTS.md`](../AGENTS.md), [`AGENT-CLI-MAP.md`](../
 | “Move the workspace phase?” | `pnpm exec wk run get-workspace-status '{}'`, then `set-current-phase` with `expectedWorkspaceRevision` |
 | “Regenerate maintainer docs” | `generate-document` with `dryRun` first; batch: `document-project` — both Tier B for real writes |
 | “Move task lifecycle” | `run-transition` with JSON `policyApproval` (+ `expectedPlanningGeneration` when policy `require`) |
+| “Shipped user-facing work — release note line?” | `update-task` → `metadata.releaseNoteSummary` before `complete`; batch at closeout: `generate-release-notes` |
 | “SQLite / persistence broke” | `wk doctor`; consumer ladder: `docs/maintainers/runbooks/native-sqlite-consumer-install.md` |
 
 ## 1. Git merge is not task completion
@@ -41,6 +42,7 @@ Canonical process remains: [`AGENTS.md`](../AGENTS.md), [`AGENT-CLI-MAP.md`](../
 - After **`get-task`** / **`list-tasks`**, if you are implementing this task and **`status`** is **`ready`**, run **`workspace-kit run run-transition`** with **`action":"start"`** before substantive edits or the **first implementation commit**. If already **`in_progress`**, continue.
 - Pass **`expectedPlanningGeneration`** from the same JSON read when **`tasks.planningGenerationPolicy`** is **`require`** (see [`ADR-planning-generation-optimistic-concurrency.md`](../adrs/ADR-planning-generation-optimistic-concurrency.md)).
 - Between **`start`** and **`complete`**, use **`workspace-kit run update-task`** for **`summary`**, **`description`**, **`approach`**, or **`metadata`** (e.g. PR link, milestone label) — the engine has no **`in_review`** status; mutable fields carry progress signals.
+- **Before `complete` on user-visible work:** set **`metadata.releaseNoteSummary`** in the same **`update-task`** as **`deliveryEvidence`** when possible — one adopters-facing sentence; phase closeout **`generate-release-notes`** reads it. Authoring: [`release-notes-authoring.md`](../../src/modules/documentation/instructions/release-notes-authoring.md). Changelog detail stays in **`docs/maintainers/CHANGELOG.md`**.
 - If blocked on a human or external dependency, prefer **`run-transition`** **`block`** (then **`unblock`** when clear). To park work back on the queue, **`pause`** returns the task to **`ready`** per [`run-transition` instruction](../../../src/modules/task-engine/instructions/run-transition.md).
 
 **Playbook:** ordered checklist in [`task-to-phase-branch.md`](../playbooks/task-to-phase-branch.md) (step **0b**).

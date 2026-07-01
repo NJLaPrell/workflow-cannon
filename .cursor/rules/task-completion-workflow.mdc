@@ -10,8 +10,9 @@ Before marking a task complete:
 1. Confirm scope and acceptance signals are met.
 2. Confirm behavior was validated with relevant checks.
 3. Update docs affected by behavior or process changes.
-4. Record evidence references for risky/release-impacting changes.
-5. Capture follow-up work instead of hiding residual risk.
-6. Close any open subagent sessions linked to this task using `close-subagent-session` before transitioning.
+4. For **user-visible** work, set **`metadata.releaseNoteSummary`** on the task (via **`update-task`**) before **`complete`** — one sentence adopters should read; see **`src/modules/documentation/instructions/release-notes-authoring.md`**. Internal/chore tasks may omit it.
+5. Record evidence references for risky/release-impacting changes.
+6. Capture follow-up work instead of hiding residual risk.
+7. Close any open subagent sessions linked to this task using `close-subagent-session` before transitioning.
 
 

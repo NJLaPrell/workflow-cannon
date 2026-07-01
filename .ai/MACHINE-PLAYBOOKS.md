@@ -8,7 +8,8 @@
 2. **Before the first implementation commit:** Tier A `run-transition` **`start`** (JSON **`policyApproval`**) if the task is still **`ready`**; pass **`expectedPlanningGeneration`** when policy **`require`**. Staying **`ready`** while coding is wrong — see playbook step **0b**. Read **`resolve-maintainer-delivery-policy`** / **`resolve-task-intake-policy`** when you need resolved defaults (CLI JSON — no config spelunking).
 3. Implement with commits; run `pnpm run check` / `pnpm run test` as appropriate. Optional: Tier C **`update-task`** on **`summary`** / **`metadata`** at milestones (PR opened, CI green).
 4. Open **PR targeting `release/phase-<N>`** when the resolved delivery profile expects GitHub-style review (default); iterate review; merge into the phase branch. If policy selects a non-PR evidence path, still land work on the **phase integration branch** unless the resolved policy explicitly relaxes it.
-5. After merge: Tier A **`complete`** with JSON **`policyApproval`** so the store matches shipped work.
+5. **Before `complete`:** on user-visible tasks, set **`metadata.releaseNoteSummary`** (one adopters-facing sentence) via **`update-task`** — same **`update-task`** call as **`deliveryEvidence`** when possible. Skip for internal-only/chore rows. Authoring: **`src/modules/documentation/instructions/release-notes-authoring.md`**. Phase closeout **`generate-release-notes`** reads these fields; the changelog stays technical in **`docs/maintainers/CHANGELOG.md`**.
+6. After merge: Tier A **`complete`** with JSON **`policyApproval`** so the store matches shipped work.
 
 ### Repair: accidental bulk starts
 
