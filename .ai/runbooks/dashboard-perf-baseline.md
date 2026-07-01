@@ -129,3 +129,54 @@ against this repo's real data:
 
 **~8x faster**, on the single highest-frequency (2s) poll tier slice. `dashboard-status-slice`
 now serves only the `status` tab slice itself (30s tier, genuinely needs full detail).
+
+## Final merge results (dashboard-fixes, both options merged, 2026-07-01)
+
+Both `option-a` and `option-b` merged cleanly into `dashboard-fixes` with two real
+conflicts (both resolved by keeping the more complete/correct side after empirical
+verification, not by guessing): `slice-refreshers.ts` (kept option-b's comprehensive
+`def.name`-keyed direct-builder dispatch covering all 15 service slices over
+option-a-backend2's narrower 6-slice version) and `dashboard-pollers.test.mjs`
+(verified actual single-flight coalescing behavior against the real merged
+implementation rather than trusting either side's test assertion blindly). Three
+more pre-existing/merge-surfaced stale assertions were fixed: a `buildDashboardOverview(`
+regex broken by a prior rename (pre-existing on `main`, coincidentally fixed by the
+frontend track, reapplied on `option-b` directly), a `source: "poller refresh"` regex
+broken by option-b's cadence-mode refactor, and a hardcoded full-command-list
+snapshot test missing the new `dashboard-ops-slice` command.
+
+**Post-merge re-benchmark** (`node scripts/bench-dashboard-refresh.mjs`):
+
+| Path | Before | After |
+| --- | --- | --- |
+| `projection=overview` | 485 ms | 446 ms |
+| `projection=queue` | 490 ms | 449 ms |
+| `projection=full` | 3057 ms | 2983 ms |
+| secondary block | 530 ms | 512 ms |
+
+(Small deltas here are expected — this bench only exercises the legacy
+`dashboard-summary` CLI path, which most pollers no longer use after Option A's
+slice-registry swap; the real win is off this chart, see below.)
+
+**Real-workspace Option B benchmark** (`node scripts/bench-dashboard-service-real.mjs`,
+new script, against this repo's actual `.workspace-kit` data — not a synthetic
+empty fixture):
+
+| Metric | ms |
+| --- | --- |
+| Service startup | 917 |
+| Cold first refresh (overview) | 2294 |
+| Warm 2nd refresh (queue, different slice) | **16** |
+| Warm 3rd refresh (status, different slice) | 2617 |
+| Warm snapshot memory serve | 2 |
+| Store open count across all 3 refreshes | **1** (was N — one per refresh — before the fix) |
+
+**Critical-tier ops slice, full cold CLI spawn** (`dashboard-summary projection=status`
+vs `dashboard-ops-slice`, real data): **2937 ms → 367 ms (~8x)**.
+
+Net picture: the CLI-polling path (Option A) now avoids mutation-class overhead, the
+double store-open, and the heaviest projection on the highest-frequency tier. The
+warm-service path (Option B) now proves out the "genuinely warm" architecture end to
+end — one store open serving arbitrarily many slice refreshes — which is the
+prerequisite for the push-driven, poll-elimination direction to actually pay off
+rather than just moving the same redundant work onto a different timer.
