@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 
 import {
   renderDashboardRootInnerHtml,
+  renderDashboardSectionInnerHtml,
   escapeHtml,
   renderActiveFocusHtml,
   renderMarkdownBoldAfterEscape,
@@ -24,6 +25,7 @@ import {
   renderTaskStateSyncStatusHtml,
   renderPhaseKickoffFindingsList
 } from "../dist/views/dashboard/render-dashboard.js";
+import { extractDashboardSectionInnerHtml } from "../dist/views/dashboard/dashboard-section-invalidation.js";
 import { buildPhaseCompleteReleaseChatPrompt } from "../dist/phase-complete-release-prompt.js";
 import { renderGuidanceAuthoringPanelInnerHtml } from "../dist/views/guidance/render-guidance-panel.js";
 
@@ -136,6 +138,52 @@ test("renderDashboardRootInnerHtml shows error JSON when ok is false", () => {
   });
   assert.match(html, /extension-exec-error/);
   assert.match(html, /bad/);
+});
+
+test("renderDashboardSectionInnerHtml matches root extraction for each dashboard section", () => {
+  const fixturePath = path.join(__dirname, "../docs/fixtures/dashboard-summary.example.json");
+  const fixture = JSON.parse(readFileSync(fixturePath, "utf8"));
+  const phaseJournalBundle = {
+    listPhaseNotes: {
+      ok: true,
+      data: {
+        notes: [{ id: "N1", summary: "Capture release note", noteType: "follow-up", status: "active" }]
+      }
+    },
+    getPhaseContext: {
+      ok: true,
+      data: {
+        notes: [{ id: "N2", summary: "Keep queue tidy", noteType: "task-suggestion", status: "active" }]
+      }
+    },
+    pastPhaseNotes: [{ phaseKey: "70", notes: [{ id: "N3", summary: "Past note", status: "done" }] }]
+  };
+  const embeddedCaePanelHtml = '<section class="dash-card"><p><b>Embedded CAE</b></p></section>';
+  const rootHtml = renderDashboardRootInnerHtml(
+    fixture,
+    null,
+    null,
+    phaseJournalBundle,
+    embeddedCaePanelHtml
+  );
+  for (const sectionId of [
+    "overview",
+    "phase-roster",
+    "ideas",
+    "plan-artifact",
+    "queue",
+    "phase-journal",
+    "status",
+    "config",
+    "cae"
+  ]) {
+    const expected = extractDashboardSectionInnerHtml(rootHtml, sectionId);
+    const actual = renderDashboardSectionInnerHtml(sectionId, fixture, {
+      phaseJournal: phaseJournalBundle,
+      embeddedCaePanelHtml
+    });
+    assert.equal(actual, expected, `section ${sectionId} should match root extraction`);
+  }
 });
 
 test("renderDashboardRootInnerHtml places planning cards on the Planning tab", () => {
