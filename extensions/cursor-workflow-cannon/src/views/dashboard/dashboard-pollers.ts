@@ -15,6 +15,10 @@ import {
 import type { DashboardMutationKind } from "./dashboard-section-invalidation.js";
 import type { DashboardSliceName } from "./dashboard-snapshot-types.js";
 
+export type DashboardPollerCadenceMode = "full" | "push-safety-net";
+
+export const DASHBOARD_PUSH_SAFETY_NET_MULTIPLIER = 3;
+
 export type DashboardPollerCoordinatorDeps = {
   client: Pick<CommandClient, "run">;
   store: DashboardDataStore;
@@ -39,6 +43,8 @@ export class DashboardPollerCoordinator {
   private visibleSectionIds = new Set<DashboardSectionId>();
   private paused = false;
   private running = false;
+  private cadenceMode: DashboardPollerCadenceMode = "full";
+  private readonly pushSliceUpdatedAt = new Map<DashboardSliceName, number>();
 
   constructor(private readonly deps: DashboardPollerCoordinatorDeps) {}
 
@@ -60,6 +66,33 @@ export class DashboardPollerCoordinator {
     this.intervals.clear();
     this.running = false;
     this.deps.log?.("dashboard pollers stopped");
+  }
+
+  useFullCadence(): void {
+    if (this.cadenceMode === "full") {
+      return;
+    }
+    this.cadenceMode = "full";
+    this.pushSliceUpdatedAt.clear();
+    this.deps.log?.("dashboard pollers cadence=full");
+  }
+
+  usePushSafetyNetCadence(): void {
+    if (this.cadenceMode === "push-safety-net") {
+      return;
+    }
+    this.cadenceMode = "push-safety-net";
+    this.deps.log?.(
+      `dashboard pollers cadence=push-safety-net multiplier=${DASHBOARD_PUSH_SAFETY_NET_MULTIPLIER}`
+    );
+  }
+
+  getCadenceMode(): DashboardPollerCadenceMode {
+    return this.cadenceMode;
+  }
+
+  recordPushSliceUpdate(name: DashboardSliceName, now = Date.now()): void {
+    this.pushSliceUpdatedAt.set(name, now);
   }
 
   /** Hold interval ticks during mutation / drawer critical sections. */
@@ -102,7 +135,14 @@ export class DashboardPollerCoordinator {
       }
       for (const name of dashboardSliceNamesForPollGroup(group)) {
         if (this.isSliceEligible(name)) {
-          void this.fetchSlice(name, { source: "poller refresh" });
+          if (this.isPushSafetyNetFresh(name, intervalMs)) {
+            continue;
+          }
+          const source =
+            this.cadenceMode === "push-safety-net"
+              ? "poller safety-net refresh"
+              : "poller refresh";
+          void this.fetchSlice(name, { source });
         }
       }
     };
@@ -127,6 +167,20 @@ export class DashboardPollerCoordinator {
       return false;
     }
     return true;
+  }
+
+  private isPushSafetyNetFresh(name: DashboardSliceName, intervalMs: number): boolean {
+    if (this.cadenceMode !== "push-safety-net") {
+      return false;
+    }
+    const lastPushAt = this.pushSliceUpdatedAt.get(name);
+    const sliceUpdatedAt = this.deps.store.getSlice(name).updatedAt ?? undefined;
+    const lastUpdateAt = Math.max(lastPushAt ?? 0, sliceUpdatedAt ?? 0);
+    if (lastUpdateAt <= 0) {
+      return false;
+    }
+    const safetyNetMs = intervalMs * DASHBOARD_PUSH_SAFETY_NET_MULTIPLIER;
+    return Date.now() - lastUpdateAt < safetyNetMs;
   }
 
   private isSectionVisible(sectionId: DashboardSectionId): boolean {

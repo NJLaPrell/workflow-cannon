@@ -1,10 +1,12 @@
 import type { DashboardDataSourceMode } from "./dashboard-data-source.js";
 
 export type DashboardActiveReadPath = "service" | "cli-polling";
+export type DashboardPollingCadence = "full" | "push-safety-net";
 
 export type DashboardReadModeBadge = {
   configured: DashboardDataSourceMode;
   active: DashboardActiveReadPath;
+  pollingCadence?: DashboardPollingCadence;
   detail?: string;
 };
 
