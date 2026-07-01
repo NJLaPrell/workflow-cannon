@@ -6824,20 +6824,58 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       border-collapse: collapse;
       margin-top: 6px;
       font-size: 11px;
+      table-layout: auto;
     }
     .wc-plan-wbs-table th,
-    .wc-plan-wbs-table td {
+    .wc-plan-wbs-table td,
+    .wc-plan-risk-table th,
+    .wc-plan-risk-table td,
+    .wc-plan-open-questions-table th,
+    .wc-plan-open-questions-table td,
+    .wc-plan-review-findings-table th,
+    .wc-plan-review-findings-table td,
+    .wc-plan-user-stories-table th,
+    .wc-plan-user-stories-table td,
+    .wc-plan-execution-linkages-table th,
+    .wc-plan-execution-linkages-table td {
       border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.35));
       padding: 4px 6px;
       text-align: left;
       vertical-align: top;
+      overflow-wrap: break-word;
+      word-break: normal;
+      hyphens: auto;
     }
-    .wc-plan-wbs-table th {
+    .wc-plan-wbs-table th,
+    .wc-plan-risk-table th,
+    .wc-plan-open-questions-table th,
+    .wc-plan-review-findings-table th,
+    .wc-plan-user-stories-table th,
+    .wc-plan-execution-linkages-table th {
       background: var(--vscode-editor-background);
       color: var(--vscode-descriptionForeground, var(--vscode-foreground));
       font-weight: 600;
     }
-    .wc-plan-wbs-table td { overflow-wrap: anywhere; }
+    .wc-plan-wbs-table td:nth-child(1),
+    .wc-plan-risk-table td:nth-child(1),
+    .wc-plan-open-questions-table td:nth-child(1),
+    .wc-plan-review-findings-table td:nth-child(1),
+    .wc-plan-user-stories-table td:nth-child(1),
+    .wc-plan-execution-linkages-table td:nth-child(1) { min-width: 6rem; }
+    .wc-plan-wbs-table td:nth-child(2),
+    .wc-plan-wbs-table td:nth-child(6),
+    .wc-plan-wbs-table td:nth-child(7),
+    .wc-plan-wbs-table td:nth-child(8),
+    .wc-plan-wbs-table td:nth-child(9),
+    .wc-plan-risk-table td:nth-child(2),
+    .wc-plan-open-questions-table td:nth-child(2),
+    .wc-plan-review-findings-table td:nth-child(2),
+    .wc-plan-user-stories-table td:nth-child(3),
+    .wc-plan-user-stories-table td:nth-child(4) { min-width: 10rem; }
+    .wc-plan-wbs-table td:nth-child(10),
+    .wc-plan-wbs-table td:nth-child(11),
+    .wc-plan-execution-linkages-table td:nth-child(2),
+    .wc-plan-execution-linkages-table td:nth-child(3) { min-width: 5rem; }
     .wc-plan-wbs-empty { margin: 6px 0 0 0; font-size: 11px; }
     .wc-plan-risk-severity { font-weight: 600; }
     .wc-plan-risk-severity-high { color: var(--vscode-errorForeground); }
@@ -6899,8 +6937,26 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     .wc-plan-card-detail-grid { margin: 6px 0 0 0; display: grid; grid-template-columns: max-content 1fr; gap: 2px 8px; font-size: 11px; }
     .wc-plan-card-detail-grid dt { color: var(--vscode-descriptionForeground, var(--vscode-foreground)); font-weight: 600; }
     .wc-plan-card-detail-grid dd { margin: 0; overflow-wrap: anywhere; }
-    .wc-plan-finalized-bucket { margin-top: 12px; }
-    .wc-plan-finalized-bucket > summary { cursor: pointer; user-select: none; font-weight: 600; margin-bottom: 6px; }
+    .wc-plan-state-bucket { margin-top: 10px; }
+    .wc-plan-state-bucket > summary {
+      cursor: pointer;
+      user-select: none;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+    .wc-plan-state-bucket-body {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .wc-plan-title-group { margin-left: 4px; }
+    .wc-plan-title-group > summary {
+      cursor: pointer;
+      user-select: none;
+      font-weight: 600;
+      font-size: 12px;
+      margin-bottom: 4px;
+    }
     .ok { color: var(--vscode-testing-iconPassed); }
     .bad { color: var(--vscode-errorForeground); }
     .phase-stack { margin: 4px 0 8px 0; }
