@@ -156,7 +156,7 @@ Repeat until satisfied.
 3. Record delivery metadata and **user-facing release note copy** on the task before completion. Use **`update-task`** to preserve existing metadata and add:
 
    - **`metadata.deliveryEvidence`** **or** **`metadata.deliveryWaiver`** (when the delivery-evidence guard applies)
-   - **`metadata.releaseNoteSummary`** for **user-visible** shipped work — one benefit-focused sentence for adopters (not implementation detail). Omit for internal-only, chore, or non-shipping tasks unless you explicitly want the row in public release notes (`metadata.includeInReleaseNotes: true`). Authoring contract: [`release-notes-authoring.md`](../../src/modules/documentation/instructions/release-notes-authoring.md).
+   - **`metadata.releaseNoteSummary`** for **user-visible** shipped work — one benefit-focused sentence for adopters (not implementation detail). Omit for internal-only, chore, or non-shipping tasks unless you explicitly want the row in public release notes (`metadata.includeInReleaseNotes: true`). When **`tasks.releaseNotes.enforcementMode`** is **`enforce`**, **`complete`** is blocked until this field (or **`metadata.releaseNoteWaiver`**) is present. Authoring contract: [`release-notes-authoring.md`](../../src/modules/documentation/instructions/release-notes-authoring.md).
 
    Prefer a **single** `update-task` that merges the full metadata object (shallow merge replaces the whole map — include prior keys):
 
