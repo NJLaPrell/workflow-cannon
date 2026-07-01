@@ -172,7 +172,7 @@ test("overview backend fast path uses lightweight status, task-state, wishlist, 
     path.join(repoRoot, "src/modules/task-engine/commands/task-engine-dashboard-on-command.ts"),
     "utf8"
   );
-  assert.match(commandSrc, /projection === "overview"[\s\S]*buildDashboardOverview\(/);
+  assert.match(commandSrc, /projection === "overview"[\s\S]*buildDashboardOverviewSlice\(/);
   const overviewBlock = baseSrc.slice(
     baseSrc.indexOf("export async function buildDashboardOverview"),
     baseSrc.indexOf("export function buildDashboardFullProjection")
