@@ -4,8 +4,24 @@ import { cliPerfTracer, recordMetric } from "../../core/cli-perf-trace.js";
 import type { OpenedPlanningStores } from "../../modules/task-engine/persistence/planning-open.ts";
 import { resolveRegistryAndConfig } from "../../core/module-registry-resolve.js";
 import { defaultRegistryModules } from "../../modules/index.js";
-import { buildDashboardOverviewSlice, buildDashboardQueueSlice, buildDashboardStatusSlice, buildDashboardAgentActivitySlice, buildDashboardAgentTypesSlice, buildDashboardTerminalTasksPage } from "../../modules/task-engine/dashboard/slice-builders.js";
-import { openPlanningStores, openPlanningStoresReadOnly } from "../../modules/task-engine/persistence/planning-open.js";
+import {
+  buildDashboardOverviewSlice,
+  buildDashboardQueueSlice,
+  buildDashboardStatusSlice,
+  buildDashboardAgentActivitySlice,
+  buildDashboardAgentTypesSlice,
+  buildDashboardTerminalTasksPage,
+  buildDashboardPhaseSlice,
+  buildDashboardAgentSlice,
+  buildDashboardPlanArtifactSlice,
+  buildDashboardIdeasSlice,
+  buildDashboardTeamSlice,
+  buildDashboardSubagentsSlice,
+  buildDashboardCheckpointsSlice,
+  buildDashboardPhaseJournalSlice,
+  buildDashboardConfigSlice
+} from "../../modules/task-engine/dashboard/slice-builders.js";
+import { openPlanningStoresReadOnly } from "../../modules/task-engine/persistence/planning-open.js";
 import {
   lookupDashboardServiceSlice,
   type DashboardServiceSliceDefinition
@@ -30,8 +46,12 @@ export class DashboardSliceRefresher {
   private ctx: ModuleLifecycleContext | null = null;
   private router: ModuleCommandRouter | null = null;
   private planningGeneration = 0;
-  // Store the opened planning stores after first access
+  /** Single read-only store opened once and reused for all slice refreshes. */
   private storesPromise: OpenedPlanningStores | null = null;
+  /** How many times openPlanningStoresReadOnly was actually invoked. */
+  private storeOpenCount = 0;
+  /** Wall-clock ms timestamp of the most recent successful/error completion per slice name. */
+  private readonly lastRefreshAt = new Map<string, number>();
 
   constructor(options: DashboardSliceRefresherOptions) {
     this.workspacePath = options.workspacePath;
@@ -52,7 +72,6 @@ export class DashboardSliceRefresher {
     };
     this.router = new ModuleCommandRouter(registry);
     const opened = await this.openStores();
-    // opened is guaranteed non‑null after openStores resolves
     this.planningGeneration = opened.sqliteDual.getPlanningGeneration();
   }
 
@@ -83,6 +102,24 @@ export class DashboardSliceRefresher {
     return this.observability.summarize();
   }
 
+  /**
+   * How many times the underlying planning store was actually opened.
+   * Should be 1 after the first refresh; stays 1 for all subsequent refreshes
+   * because the store is cached in storesPromise.
+   */
+  getStoreOpenCount(): number {
+    return this.storeOpenCount;
+  }
+
+  /**
+   * Returns the wall-clock timestamp (Date.now()) of the most recent completed
+   * refresh for the given slice, or 0 if the slice has never been refreshed.
+   * Used by the watcher timer backstop to decide whether to skip a tick.
+   */
+  getLastRefreshAt(sliceName: string): number {
+    return this.lastRefreshAt.get(sliceName) ?? 0;
+  }
+
   async refreshSlice(name: string): Promise<string[]> {
     const def = lookupDashboardServiceSlice(name);
     if (!def) {
@@ -90,17 +127,22 @@ export class DashboardSliceRefresher {
     }
     this.observability.markLoading(name, def.source);
     this.snapshotStore.markSliceLoading(name);
+    let result: string[];
     try {
       const payload = await this.loadSlicePayload(def);
       const planningGeneration =
         typeof payload.planningGeneration === "number" ? payload.planningGeneration : this.planningGeneration;
       this.observability.markSuccess(name, def.source);
-      return this.snapshotStore.applySliceSuccess(name, def.source, payload, planningGeneration);
+      result = this.snapshotStore.applySliceSuccess(name, def.source, payload, planningGeneration);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       this.observability.markError(name, def.source, message);
-      return this.snapshotStore.applySliceError(name, def.source, message);
+      result = this.snapshotStore.applySliceError(name, def.source, message);
     }
+    // Record completion time regardless of success/error so the timer backstop
+    // knows this slice was recently touched.
+    this.lastRefreshAt.set(name, Date.now());
+    return result;
   }
 
   private async openStores(): Promise<OpenedPlanningStores> {
@@ -108,11 +150,12 @@ export class DashboardSliceRefresher {
       if (!this.ctx) {
         throw new Error("dashboard slice refresher not started");
       }
-      // openPlanningStoresReadOnly returns OpenedPlanningStores
-      this.storesPromise = await cliPerfTracer.spanAsync('store-open', async () => openPlanningStoresReadOnly(this.ctx as ModuleLifecycleContext));
+      this.storeOpenCount += 1;
+      this.storesPromise = await cliPerfTracer.spanAsync('store-open', async () =>
+        openPlanningStoresReadOnly(this.ctx as ModuleLifecycleContext)
+      );
       recordMetric('storeOpenMs', undefined);
     }
-    // Non‑null assertion because we just ensured it is set
     return this.storesPromise!;
   }
 
@@ -121,15 +164,122 @@ export class DashboardSliceRefresher {
       throw new Error("dashboard slice refresher not started");
     }
 
-    // Slice-native commands build their payload directly from the cached read-only
-    // planning store (`openStores` memoizes `storesPromise`). Routing them through
-    // `router.execute` would re-enter the module command path and open a *fresh*
-    // planning store on every refresh, bypassing the warm cache entirely — the
-    // regression this fixes. Non-native commands (dashboard-summary projections,
-    // cae-authoring-summary, and anything unknown) still resolve via the router.
-    const nativePayload = await this.buildSliceNativePayload(def);
-    if (nativePayload) {
-      return nativePayload.payload;
+    // For all known dashboard slices, call the builder function directly against
+    // the cached read-only store instead of round-tripping through the CLI command
+    // router / registry / policy machinery. This is the "genuinely warm" path:
+    // one persistent store connection, direct function calls, no command overhead.
+    const opened = await this.openStores();
+    const { taskStore, sqliteDual } = opened;
+    const generation = sqliteDual.getPlanningGeneration();
+
+    switch (def.name) {
+      case "overview":
+        return def.extractPayload(
+          await cliPerfTracer.spanAsync('builder-overview', () =>
+            buildDashboardOverviewSlice(this.ctx!, taskStore, generation, sqliteDual, def.args, undefined)
+          ) as Record<string, unknown>
+        );
+
+      case "queue":
+        return def.extractPayload(
+          await cliPerfTracer.spanAsync('builder-queue', () =>
+            buildDashboardQueueSlice(this.ctx!, taskStore, generation, sqliteDual, def.args, undefined)
+          ) as Record<string, unknown>
+        );
+
+      case "status":
+        return def.extractPayload(
+          await cliPerfTracer.spanAsync('builder-status', () =>
+            buildDashboardStatusSlice(this.ctx!, taskStore, generation, sqliteDual, def.args, undefined)
+          ) as Record<string, unknown>
+        );
+
+      case "agentActivity":
+        return def.extractPayload(
+          await cliPerfTracer.spanAsync('builder-agentActivity', () =>
+            buildDashboardAgentActivitySlice(this.ctx!, taskStore, generation, sqliteDual, def.args, undefined)
+          ) as Record<string, unknown>
+        );
+
+      case "agentTypes":
+        return def.extractPayload(
+          await cliPerfTracer.spanAsync('builder-agentTypes', () =>
+            buildDashboardAgentTypesSlice(this.ctx!, taskStore, generation, sqliteDual, def.args, undefined)
+          ) as Record<string, unknown>
+        );
+
+      case "terminalTasks":
+        return def.extractPayload(
+          buildDashboardTerminalTasksPage(taskStore, sqliteDual, { status: "completed", limit: 10 }) as Record<string, unknown>
+        );
+
+      case "phase":
+        return def.extractPayload(
+          await cliPerfTracer.spanAsync('builder-phase', () =>
+            buildDashboardPhaseSlice(this.ctx!, taskStore, generation, sqliteDual, def.args, undefined)
+          ) as Record<string, unknown>
+        );
+
+      case "agent":
+        return def.extractPayload(
+          await cliPerfTracer.spanAsync('builder-agent', () =>
+            buildDashboardAgentSlice(this.ctx!, taskStore, generation, sqliteDual, def.args, undefined)
+          ) as Record<string, unknown>
+        );
+
+      case "planArtifact":
+        return def.extractPayload(
+          await cliPerfTracer.spanAsync('builder-planArtifact', () =>
+            buildDashboardPlanArtifactSlice(this.ctx!, taskStore, generation, sqliteDual, def.args, undefined)
+          ) as Record<string, unknown>
+        );
+
+      case "ideas":
+        return def.extractPayload(
+          await cliPerfTracer.spanAsync('builder-ideas', () =>
+            buildDashboardIdeasSlice(this.ctx!, taskStore, generation, sqliteDual, def.args, undefined)
+          ) as Record<string, unknown>
+        );
+
+      case "team":
+        return def.extractPayload(
+          await cliPerfTracer.spanAsync('builder-team', () =>
+            buildDashboardTeamSlice(this.ctx!, taskStore, generation, sqliteDual, def.args, undefined)
+          ) as Record<string, unknown>
+        );
+
+      case "subagents":
+        return def.extractPayload(
+          await cliPerfTracer.spanAsync('builder-subagents', () =>
+            buildDashboardSubagentsSlice(this.ctx!, taskStore, generation, sqliteDual, def.args, undefined)
+          ) as Record<string, unknown>
+        );
+
+      case "checkpoints":
+        return def.extractPayload(
+          await cliPerfTracer.spanAsync('builder-checkpoints', () =>
+            buildDashboardCheckpointsSlice(this.ctx!, taskStore, generation, sqliteDual, def.args, undefined)
+          ) as Record<string, unknown>
+        );
+
+      case "phaseJournal":
+        return def.extractPayload(
+          await cliPerfTracer.spanAsync('builder-phaseJournal', () =>
+            buildDashboardPhaseJournalSlice(this.ctx!, taskStore, generation, sqliteDual, def.args, undefined)
+          ) as Record<string, unknown>
+        );
+
+      case "config":
+        return def.extractPayload(
+          await cliPerfTracer.spanAsync('builder-config', () =>
+            buildDashboardConfigSlice(this.ctx!, taskStore, generation, sqliteDual, def.args, undefined)
+          ) as Record<string, unknown>
+        );
+
+      default:
+        // Fallback: go through the router for slices that have no direct builder
+        // (e.g. "cae" which uses cae-authoring-summary command).
+        break;
     }
 
     const result = await this.router.execute(def.command, { ...def.args }, this.ctx);
@@ -137,74 +287,5 @@ export class DashboardSliceRefresher {
       throw new Error(result.message ?? `${def.command} failed (${result.code})`);
     }
     return def.extractPayload(result.data as Record<string, unknown>);
-  }
-
-  /**
-   * Build a slice payload from a slice-native builder against the cached warm store.
-   * Returns `null` when `def.command` has no slice-native builder so the caller can fall
-   * back to `router.execute`. Dispatch is keyed on `def.command` (the slice-native command
-   * name) rather than `def.name` so the builders are actually reachable.
-   */
-  private async buildSliceNativePayload(
-    def: DashboardServiceSliceDefinition
-  ): Promise<{ payload: Record<string, unknown> } | null> {
-    const ctx = this.ctx as ModuleLifecycleContext;
-    switch (def.command) {
-      case "dashboard-overview-slice": {
-        const { taskStore, sqliteDual } = await this.openStores();
-        const generation = sqliteDual.getPlanningGeneration();
-        const sliceData = await cliPerfTracer.spanAsync("builder-overview", async () =>
-          buildDashboardOverviewSlice(ctx, taskStore, generation, sqliteDual, def.args, undefined)
-        );
-        recordMetric("builderOverviewMs", undefined);
-        return { payload: def.extractPayload(sliceData) };
-      }
-      case "dashboard-queue-slice": {
-        const { taskStore, sqliteDual } = await this.openStores();
-        const generation = sqliteDual.getPlanningGeneration();
-        const sliceData = await cliPerfTracer.spanAsync("builder-queue", async () =>
-          buildDashboardQueueSlice(ctx, taskStore, generation, sqliteDual, def.args, undefined)
-        );
-        recordMetric("builderQueueMs", undefined);
-        return { payload: def.extractPayload(sliceData) };
-      }
-      case "dashboard-status-slice": {
-        const { taskStore, sqliteDual } = await this.openStores();
-        const generation = sqliteDual.getPlanningGeneration();
-        const sliceData = await cliPerfTracer.spanAsync("builder-status", async () =>
-          buildDashboardStatusSlice(ctx, taskStore, generation, sqliteDual, def.args, undefined)
-        );
-        recordMetric("builderStatusMs", undefined);
-        return { payload: def.extractPayload(sliceData) };
-      }
-      case "dashboard-agent-activity-slice": {
-        const { taskStore, sqliteDual } = await this.openStores();
-        const generation = sqliteDual.getPlanningGeneration();
-        const sliceData = await cliPerfTracer.spanAsync("builder-agentActivity", async () =>
-          buildDashboardAgentActivitySlice(ctx, taskStore, generation, sqliteDual, def.args, undefined)
-        );
-        recordMetric("builderAgentActivityMs", undefined);
-        return { payload: def.extractPayload(sliceData) };
-      }
-      case "dashboard-agent-types-slice": {
-        const { taskStore, sqliteDual } = await this.openStores();
-        const generation = sqliteDual.getPlanningGeneration();
-        const sliceData = await cliPerfTracer.spanAsync("builder-agentTypes", async () =>
-          buildDashboardAgentTypesSlice(ctx, taskStore, generation, sqliteDual, def.args, undefined)
-        );
-        recordMetric("builderAgentTypesMs", undefined);
-        return { payload: def.extractPayload(sliceData) };
-      }
-      case "dashboard-terminal-tasks-page": {
-        const { taskStore, sqliteDual } = await this.openStores();
-        const sliceData = await cliPerfTracer.spanAsync("builder-terminalTasks", async () =>
-          buildDashboardTerminalTasksPage(taskStore, sqliteDual, { status: "completed", limit: 10 })
-        );
-        recordMetric("builderTerminalTasksMs", undefined);
-        return { payload: def.extractPayload(sliceData) };
-      }
-      default:
-        return null;
-    }
   }
 }

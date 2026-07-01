@@ -617,7 +617,12 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
           logWc("dashboard", message);
         }
       },
-      onModeChanged: () => {
+      onModeChanged: (badge) => {
+        const detail = formatDashboardReadModeBadgeDetail(badge);
+        logWc(
+          "dashboard",
+          `dashboard read mode: ${formatDashboardReadModeBadgeLabel(badge)}${detail ? ` — ${detail}` : ""}`
+        );
         this.postDashboardReadModeBadge();
       }
     });
