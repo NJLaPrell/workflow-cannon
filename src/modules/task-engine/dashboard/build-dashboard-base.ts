@@ -1,5 +1,6 @@
 import type { ModuleLifecycleContext } from "../../../contracts/module-contract.js";
 import type {
+  DashboardPlanArtifactWbsRow,
   DashboardSubagentRegistrySummary,
   DashboardSummaryData,
   DashboardPhaseKickoffSummary,
@@ -22,6 +23,7 @@ import { buildDashboardDependencyOverview } from "./dashboard-dependency-overvie
 import { buildDashboardPhaseBucketsForTasks } from "./dashboard-phase-buckets.js";
 import { readBuildPlanSession, toDashboardPlanningSession } from "../../../core/planning/build-plan-session-file.js";
 import { listPlanArtifactSummaries, readLatestPlanArtifact } from "../../../core/planning/plan-artifact-storage.js";
+import type { PlanArtifactWbsItem } from "../../../core/planning/plan-artifact-v1.js";
 import { dashboardOnboardingTemperamentLabel } from "../../agent-behavior/onboarding-temperament-label.js";
 import { loadBehaviorWorkspaceState } from "../../agent-behavior/persistence.js";
 import { BehaviorProfileStore } from "../../agent-behavior/store.js";
@@ -31,6 +33,7 @@ import {
   listWishlistIntakeTasksAsItems
 } from "../wishlist-intake.js";
 import type { TaskStore } from "../persistence/store.js";
+import type { TaskEntity } from "../types.js";
 import type { SqliteDualPlanningStore } from "../persistence/sqlite-dual-planning.js";
 import { buildFeatureEnrichmentBySlug } from "../persistence/feature-registry-queries.js";
 import { buildDashboardSystemStatus, buildDashboardSystemStatusOverview } from "./build-dashboard-system-status.js";
@@ -116,7 +119,103 @@ export function parseDashboardIncludeWishlist(
   );
 }
 
-function buildDashboardPlanArtifactSummary(ctx: ModuleLifecycleContext): DashboardSummaryData["planArtifact"] {
+/** Tasks minted from a plan's WBS carry `metadata.planRef` back to the originating PlanArtifact (see normalize-wbs-to-task-draft.ts). */
+function buildPlanRefToTasksIndex(allTasks: readonly TaskEntity[]): Map<string, TaskEntity[]> {
+  const index = new Map<string, TaskEntity[]>();
+  for (const task of allTasks) {
+    const planRef = typeof task.metadata?.planRef === "string" ? task.metadata.planRef.trim() : "";
+    if (!planRef) {
+      continue;
+    }
+    const list = index.get(planRef);
+    if (list) {
+      list.push(task);
+    } else {
+      index.set(planRef, [task]);
+    }
+  }
+  return index;
+}
+
+const PLAN_ARTIFACT_WBS_DESCRIPTION_MAX_LENGTH = 140;
+
+function humanizeWbsSizingConfidence(value: unknown): string {
+  const raw = typeof value === "string" ? value.trim().toLowerCase() : "";
+  switch (raw) {
+    case "high":
+      return "High";
+    case "medium":
+      return "Medium";
+    case "low":
+      return "Low";
+    default:
+      return raw.length > 0 ? raw.charAt(0).toUpperCase() + raw.slice(1) : "—";
+  }
+}
+
+function truncatePlanArtifactWbsText(text: string, maxLength: number): string {
+  const trimmed = text.trim();
+  if (trimmed.length <= maxLength) {
+    return trimmed;
+  }
+  return trimmed.slice(0, maxLength - 3).trimEnd() + "...";
+}
+
+function buildDashboardPlanArtifactWbsRows(wbs: readonly PlanArtifactWbsItem[]): DashboardPlanArtifactWbsRow[] {
+  if (wbs.length === 0) {
+    return [];
+  }
+  const titleById = new Map<string, string>();
+  for (const row of wbs) {
+    const wbsId = row.wbsId.trim();
+    if (wbsId.length === 0) {
+      continue;
+    }
+    const title = row.title.trim() || row.suggestedTaskTitle.trim() || wbsId;
+    titleById.set(wbsId, title);
+  }
+  const blocksById = new Map<string, string[]>();
+  for (const row of wbs) {
+    const wbsId = row.wbsId.trim();
+    for (const dependency of row.dependsOn ?? []) {
+      const depId = typeof dependency === "string" ? dependency.trim() : "";
+      if (depId.length === 0) {
+        continue;
+      }
+      const list = blocksById.get(depId) ?? [];
+      list.push(wbsId.length > 0 ? wbsId : "row");
+      blocksById.set(depId, list);
+    }
+  }
+  const formatLinkedTitles = (ids: string[]): string => {
+    const labels = ids
+      .map((id) => titleById.get(id) ?? id)
+      .filter((label) => label.length > 0);
+    return labels.length > 0 ? labels.join(", ") : "—";
+  };
+  return wbs.map((row) => {
+    const wbsId = row.wbsId.trim();
+    const title = row.title.trim() || row.suggestedTaskTitle.trim() || wbsId || "Work item";
+    const descriptionRaw = row.approach.trim() || row.doneMeans.trim() || row.suggestedTaskTitle.trim();
+    const description = truncatePlanArtifactWbsText(descriptionRaw, PLAN_ARTIFACT_WBS_DESCRIPTION_MAX_LENGTH);
+    const dependsOnIds = (row.dependsOn ?? [])
+      .map((value) => (typeof value === "string" ? value.trim() : ""))
+      .filter((value) => value.length > 0);
+    return {
+      wbsId: wbsId || title,
+      title,
+      description: description.length > 0 ? description : "—",
+      dependsOn: dependsOnIds.length > 0 ? formatLinkedTitles(dependsOnIds) : "—",
+      blocks: formatLinkedTitles(blocksById.get(wbsId) ?? []),
+      size: humanizeWbsSizingConfidence(row.sizingConfidence)
+    };
+  });
+}
+
+export function buildDashboardPlanArtifactSummary(
+  ctx: ModuleLifecycleContext,
+  allTasks: readonly TaskEntity[]
+): DashboardSummaryData["planArtifact"] {
   const summaries = listPlanArtifactSummaries(
     ctx.workspacePath,
     ctx.effectiveConfig as Record<string, unknown> | undefined
@@ -124,7 +223,9 @@ function buildDashboardPlanArtifactSummary(ctx: ModuleLifecycleContext): Dashboa
   if (summaries.length === 0) {
     return null;
   }
-  const rows = summaries.slice(0, 5).map((summary) => {
+  const planRefToTasks = buildPlanRefToTasksIndex(allTasks);
+  const PLAN_ARTIFACT_SUMMARY_TEXT_MAX_LENGTH = 160;
+  const rows = summaries.slice(0, 20).map((summary) => {
     const latestArtifact = readLatestPlanArtifact(ctx.workspacePath, summary.planId);
     const latestReview =
       summary.latestReview &&
@@ -139,8 +240,29 @@ function buildDashboardPlanArtifactSummary(ctx: ModuleLifecycleContext): Dashboa
     const phaseRecommendation = primaryPhase
       ? [primaryPhase.label?.trim(), primaryPhase.phaseKey?.trim()].filter((value) => !!value).join(" · ")
       : "";
+    const phaseKey = typeof primaryPhase?.phaseKey === "string" ? primaryPhase.phaseKey.trim() : "";
     const sourceIdeaId =
       typeof latestArtifact?.provenance?.sourceIdeaId === "string" ? latestArtifact.provenance.sourceIdeaId.trim() : "";
+    const summaryTextRaw =
+      typeof latestArtifact?.identity?.summary === "string" ? latestArtifact.identity.summary.trim() : "";
+    const summaryText =
+      summaryTextRaw.length > PLAN_ARTIFACT_SUMMARY_TEXT_MAX_LENGTH
+        ? summaryTextRaw.slice(0, PLAN_ARTIFACT_SUMMARY_TEXT_MAX_LENGTH - 3).trimEnd() + "..."
+        : summaryTextRaw;
+    const riskCount = Array.isArray(latestArtifact?.riskAssessment) ? latestArtifact.riskAssessment.length : 0;
+    const wbsPreviewRows = Array.isArray(latestArtifact?.wbs)
+      ? buildDashboardPlanArtifactWbsRows(latestArtifact.wbs)
+      : [];
+    const linkedTasks = planRefToTasks.get(summary.planRef) ?? [];
+    const tasksGenerated = linkedTasks.length > 0;
+    // Cancelled tasks don't block "executed"; only count them if that's all there is (avoids reporting
+    // "executed" for a plan whose entire WBS was cancelled rather than delivered).
+    const nonCancelledTasks = linkedTasks.filter((task) => task.status !== "cancelled");
+    const deliveryConsideredTasks = nonCancelledTasks.length > 0 ? nonCancelledTasks : linkedTasks;
+    const executed =
+      tasksGenerated &&
+      deliveryConsideredTasks.length > 0 &&
+      deliveryConsideredTasks.every((task) => task.status === "completed");
     const blockerCount = latestReview?.blockerCount ?? 0;
     const warningCount = latestReview?.warningCount ?? 0;
     const lifecycleStatus =
@@ -162,10 +284,16 @@ function buildDashboardPlanArtifactSummary(ctx: ModuleLifecycleContext): Dashboa
       openQuestionCount: summary.openQuestionCount,
       blockerCount,
       warningCount,
+      ...(summaryText.length > 0 ? { summary: summaryText } : {}),
+      ...(riskCount > 0 ? { riskCount } : {}),
       ...(latestReview?.profile ? { profile: latestReview.profile } : {}),
       ...(latestReview?.reviewSummary ? { reviewSummary: latestReview.reviewSummary } : {}),
       ...(phaseRecommendation.length > 0 ? { phaseRecommendation } : {}),
-      ...(sourceIdeaId.length > 0 ? { sourceIdeaId } : {})
+      ...(phaseKey.length > 0 ? { phaseKey } : {}),
+      ...(sourceIdeaId.length > 0 ? { sourceIdeaId } : {}),
+      tasksGenerated,
+      executed,
+      ...(wbsPreviewRows.length > 0 ? { wbsRows: wbsPreviewRows } : {})
     };
   });
   return {
@@ -364,7 +492,8 @@ export async function buildDashboardBase(
         ctx.effectiveConfig as Record<string, unknown> | undefined
       ).then(toDashboardPlanningSession)));
   const planArtifact =
-    tracer?.span("planArtifact", () => buildDashboardPlanArtifactSummary(ctx)) ?? buildDashboardPlanArtifactSummary(ctx);
+    tracer?.span("planArtifact", () => buildDashboardPlanArtifactSummary(ctx, allTasks)) ??
+    buildDashboardPlanArtifactSummary(ctx, allTasks);
 
   const dashboardPhaseTop = 15;
   const toProposedRow = (t: (typeof tasks)[0]) => projectDashboardTaskRow(t, enrich, { includePriority: false });

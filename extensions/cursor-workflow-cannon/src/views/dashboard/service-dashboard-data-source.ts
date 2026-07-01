@@ -18,9 +18,12 @@ export type ServiceDashboardDataSourceOptions = {
   readRuntimeFile?: (absPath: string) => Promise<string>;
   /** Test hook: SSE reconnect backoff (default 1000ms). */
   sseReconnectDelayMs?: number;
+  /** Test hook: bounded service health/read requests (default 1500ms). */
+  requestTimeoutMs?: number;
 };
 
 type FetchFn = typeof fetch;
+const DEFAULT_SERVICE_REQUEST_TIMEOUT_MS = 1_500;
 
 type AgentActivityUpdatedEvent = {
   type: "agentActivity.updated";
@@ -42,10 +45,25 @@ function normalizeDashboardServiceEvent(
   return event;
 }
 
+async function fetchWithTimeout(
+  fetchFn: FetchFn,
+  input: Parameters<FetchFn>[0],
+  init: Parameters<FetchFn>[1] = {},
+  timeoutMs = DEFAULT_SERVICE_REQUEST_TIMEOUT_MS
+): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetchFn(input, { ...init, signal: init?.signal ?? controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 /** Lightweight health probe for auto mode (no SSE connection). */
 export async function probeDashboardServiceHealth(
   workspacePath: string,
-  options?: Pick<ServiceDashboardDataSourceOptions, "fetchFn" | "readRuntimeFile">
+  options?: Pick<ServiceDashboardDataSourceOptions, "fetchFn" | "readRuntimeFile" | "requestTimeoutMs">
 ): Promise<boolean> {
   const fetchFn = options?.fetchFn ?? fetch;
   const readRuntimeFile = options?.readRuntimeFile ?? ((absPath) => readFile(absPath, "utf8"));
@@ -62,7 +80,7 @@ export async function probeDashboardServiceHealth(
   }
   const base = `http://${runtime.host}:${runtime.port}`;
   try {
-    const res = await fetchFn(`${base}/health`);
+    const res = await fetchWithTimeout(fetchFn, `${base}/health`, {}, options?.requestTimeoutMs);
     if (!res.ok) {
       return false;
     }
@@ -81,11 +99,13 @@ export class ServiceDashboardDataSource implements DashboardDataSource {
   private readonly fetchFn: FetchFn;
   private readonly readRuntimeFile: (absPath: string) => Promise<string>;
   private readonly sseReconnectDelayMs: number;
+  private readonly requestTimeoutMs: number;
 
   constructor(private readonly options: ServiceDashboardDataSourceOptions) {
     this.fetchFn = options.fetchFn ?? fetch;
     this.readRuntimeFile = options.readRuntimeFile ?? ((absPath) => readFile(absPath, "utf8"));
     this.sseReconnectDelayMs = options.sseReconnectDelayMs ?? 1000;
+    this.requestTimeoutMs = options.requestTimeoutMs ?? DEFAULT_SERVICE_REQUEST_TIMEOUT_MS;
   }
 
   getRuntime(): DashboardServiceRuntimeV1 | null {
@@ -117,11 +137,16 @@ export class ServiceDashboardDataSource implements DashboardDataSource {
     if (!base) {
       throw new Error("dashboard service not started");
     }
-    const res = await this.fetchFn(`${base}/dashboard/refresh`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ slices: [name] })
-    });
+    const res = await fetchWithTimeout(
+      this.fetchFn,
+      `${base}/dashboard/refresh`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slices: [name] })
+      },
+      this.requestTimeoutMs
+    );
     if (!res.ok) {
       throw new Error(`dashboard refresh failed (${res.status})`);
     }
@@ -164,7 +189,7 @@ export class ServiceDashboardDataSource implements DashboardDataSource {
       return false;
     }
     try {
-      const res = await this.fetchFn(`${base}/health`);
+      const res = await fetchWithTimeout(this.fetchFn, `${base}/health`, {}, this.requestTimeoutMs);
       if (!res.ok) {
         return false;
       }
@@ -180,7 +205,7 @@ export class ServiceDashboardDataSource implements DashboardDataSource {
     if (!base) {
       throw new Error("dashboard service not started");
     }
-    const res = await this.fetchFn(`${base}/dashboard/snapshot`);
+    const res = await fetchWithTimeout(this.fetchFn, `${base}/dashboard/snapshot`, {}, this.requestTimeoutMs);
     if (!res.ok) {
       throw new Error(`dashboard snapshot failed (${res.status})`);
     }

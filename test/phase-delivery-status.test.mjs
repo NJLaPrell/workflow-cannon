@@ -82,7 +82,7 @@ test("wasWorkspacePhaseRolledOut detects previousCurrentKitPhase on set_current_
     ) VALUES (?, 'set_current_phase', 'set-current-phase', 0, 1, ?)`
   ).run(
     "2026-01-01T00:00:00.000Z",
-    JSON.stringify({ previousCurrentKitPhase: "98", clientMutationId: "x" })
+    JSON.stringify({ previousCurrentKitPhase: "Phase 98", clientMutationId: "x" })
   );
   assert.equal(wasWorkspacePhaseRolledOut(db, "98"), true);
   assert.equal(wasWorkspacePhaseRolledOut(db, "99"), false);
@@ -97,7 +97,7 @@ test("collectRolledOutPhaseKeys gathers unique previousCurrentKitPhase values", 
     ) VALUES (?, 'set_current_phase', 'set-current-phase', 0, 1, ?)`
   ).run(
     "2026-01-01T00:00:00.000Z",
-    JSON.stringify({ previousCurrentKitPhase: "98" })
+    JSON.stringify({ previousCurrentKitPhase: "Phase 98" })
   );
   db.prepare(
     `INSERT INTO kit_workspace_status_events (
@@ -119,7 +119,7 @@ test("collectPhaseReleaseDatesByKey maps previousCurrentKitPhase to event create
     ) VALUES (?, 'set_current_phase', 'set-current-phase', 0, 1, ?)`
   ).run(
     "2026-01-01T00:00:00.000Z",
-    JSON.stringify({ previousCurrentKitPhase: "98" })
+    JSON.stringify({ previousCurrentKitPhase: "Phase 98" })
   );
   db.prepare(
     `INSERT INTO kit_workspace_status_events (

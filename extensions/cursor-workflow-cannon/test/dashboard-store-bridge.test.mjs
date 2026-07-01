@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  mergeDashboardProjectionIntoSummary,
   mergeSlicePayloadIntoSummary,
   sliceNamesForDashboardSummaryProjection
 } from "../dist/views/dashboard/dashboard-store-bridge.js";
@@ -255,4 +256,70 @@ test("mergeSlicePayloadIntoSummary preserves prior phase delivery fields when sl
   assert.deepEqual(merged.rolledOutPhaseKeys, ["113"]);
   assert.equal(merged.legacyDeliveredMaxOrdinal, 120);
   assert.equal(merged.phaseReleaseDates["130"], "2026-06-01T00:00:00.000Z");
+});
+
+test("mergeDashboardProjectionIntoSummary merges every slice for queue projection (ideas + planArtifact)", () => {
+  const prior = {
+    ideas: { schemaVersion: 1, available: true, totalCount: 2, openCount: 2, top: [{ id: "I1", title: "One" }] },
+    planArtifact: {
+      schemaVersion: 1,
+      current: { planId: "P1", planRef: "ref", version: "1", status: "draft" },
+      recent: []
+    }
+  };
+  const queueSummary = {
+    schemaVersion: 7,
+    dashboardProjection: "queue",
+    ideas: { schemaVersion: 1, available: false, totalCount: 0, openCount: 0, top: [] },
+    planArtifact: null,
+    readyQueueCount: 0,
+    readyExecutionSummary: { schemaVersion: 1, count: 0, top: [], phaseBuckets: [] },
+    readyImprovementsSummary: { schemaVersion: 1, count: 0, top: [], phaseBuckets: [] }
+  };
+  const merged = mergeDashboardProjectionIntoSummary(prior, "queue", queueSummary);
+  assert.equal(merged.ideas.available, true);
+  assert.equal(merged.ideas.top[0].id, "I1");
+  assert.equal(merged.planArtifact.current.planId, "P1");
+});
+
+test("mergeSlicePayloadIntoSummary preserves prior planArtifact when status slice returns null", () => {
+  const prior = {
+    planArtifact: {
+      schemaVersion: 1,
+      current: { planId: "P9", planRef: "ref", version: "3", status: "draft" },
+      recent: []
+    }
+  };
+  const payload = lookupDashboardSlice("planArtifact").extractPayload({
+    schemaVersion: 1,
+    dashboardProjection: "status",
+    planArtifact: null
+  });
+  const merged = mergeSlicePayloadIntoSummary(prior, "planArtifact", payload);
+  assert.equal(merged.planArtifact.current.planId, "P9");
+});
+
+test("mergeSlicePayloadIntoSummary preserves prior wbsRows when refreshed plan row drops table payload", () => {
+  const prior = {
+    planArtifact: {
+      schemaVersion: 1,
+      current: {
+        planId: "P1",
+        wbsRowCount: 2,
+        wbsRows: [{ wbsId: "W1", title: "First row", description: "Do thing" }]
+      },
+      recent: []
+    }
+  };
+  const payload = lookupDashboardSlice("planArtifact").extractPayload({
+    schemaVersion: 1,
+    dashboardProjection: "status",
+    planArtifact: {
+      schemaVersion: 1,
+      current: { planId: "P1", wbsRowCount: 2 },
+      recent: []
+    }
+  });
+  const merged = mergeSlicePayloadIntoSummary(prior, "planArtifact", payload);
+  assert.equal(merged.planArtifact.current.wbsRows[0].title, "First row");
 });

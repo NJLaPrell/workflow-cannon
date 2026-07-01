@@ -16,8 +16,6 @@ import type {
 import type { TaskStore } from "../persistence/store.js";
 import type { SqliteDualPlanningStore } from "../persistence/sqlite-dual-planning.js";
 import type { TaskEntity } from "../types.js";
-import { listPlanArtifactSummaries, readLatestPlanArtifact } from "../../../core/planning/plan-artifact-storage.js";
-
 import {
   buildDashboardSystemStatus,
   buildDashboardSystemStatusOverview
@@ -81,7 +79,8 @@ import { TRANSCRIPT_CHURN_TASK_TYPE } from "../transcript-churn.js";
 import {
   parseDashboardIncludeWishlist,
   parseDashboardWishlistPaging,
-  buildDashboardOverview
+  buildDashboardOverview,
+  buildDashboardPlanArtifactSummary
 } from "./build-dashboard-base.js";
 import type { DashboardSummaryTracer } from "./dashboard-summary-trace.js";
 import { buildDashboardIdeasSummary } from "./build-dashboard-ideas-summary.js";
@@ -105,66 +104,6 @@ function getTerminalCount(
     }
   }
   return tasks.filter((t) => t.status === status).length;
-}
-
-function buildDashboardPlanArtifactSummary(ctx: ModuleLifecycleContext): DashboardSummaryData["planArtifact"] {
-  const summaries = listPlanArtifactSummaries(
-    ctx.workspacePath,
-    ctx.effectiveConfig as Record<string, unknown> | undefined
-  );
-  if (summaries.length === 0) {
-    return null;
-  }
-  const rows = summaries.slice(0, 5).map((summary) => {
-    const latestArtifact = readLatestPlanArtifact(ctx.workspacePath, summary.planId);
-    const latestReview =
-      summary.latestReview &&
-      summary.latestReview.planRef === summary.planRef &&
-      summary.latestReview.reviewedVersion === summary.currentVersion
-        ? summary.latestReview
-        : undefined;
-    const phaseRecommendations = Array.isArray(latestArtifact?.phaseRecommendations)
-      ? latestArtifact.phaseRecommendations
-      : [];
-    const primaryPhase = phaseRecommendations.find((row) => row?.isPrimary === true) ?? phaseRecommendations[0];
-    const phaseRecommendation = primaryPhase
-      ? [primaryPhase.label?.trim(), primaryPhase.phaseKey?.trim()].filter((value) => !!value).join(" · ")
-      : "";
-    const sourceIdeaId =
-      typeof latestArtifact?.provenance?.sourceIdeaId === "string" ? latestArtifact.provenance.sourceIdeaId.trim() : "";
-    const blockerCount = latestReview?.blockerCount ?? 0;
-    const warningCount = latestReview?.warningCount ?? 0;
-    const lifecycleStatus =
-      summary.status === "reviewed"
-        ? blockerCount > 0 || latestReview?.passed === false
-          ? "needs_revision"
-          : "approval_ready"
-        : summary.status;
-    return {
-      planId: summary.planId,
-      planRef: summary.planRef,
-      version: summary.currentVersion,
-      status: summary.status,
-      lifecycleStatus,
-      title: summary.title,
-      planningType: summary.planningType,
-      updatedAt: summary.updatedAt,
-      wbsRowCount: summary.wbsRowCount,
-      openQuestionCount: summary.openQuestionCount,
-      blockerCount,
-      warningCount,
-      ...(latestReview?.profile ? { profile: latestReview.profile } : {}),
-      ...(latestReview?.reviewSummary ? { reviewSummary: latestReview.reviewSummary } : {}),
-      ...(phaseRecommendation.length > 0 ? { phaseRecommendation } : {}),
-      ...(sourceIdeaId.length > 0 ? { sourceIdeaId } : {})
-    };
-  });
-  return {
-    schemaVersion: 1,
-    count: summaries.length,
-    current: rows[0]!,
-    recent: rows
-  };
 }
 
 /** 1. buildDashboardOverviewSlice: Minimal startup-safe data. */
@@ -369,7 +308,7 @@ export async function buildDashboardQueueSlice(
       ctx.effectiveConfig as Record<string, unknown> | undefined
     )
   );
-  const planArtifact = buildDashboardPlanArtifactSummary(ctx);
+  const planArtifact = buildDashboardPlanArtifactSummary(ctx, allTasks);
 
   // Use fast/overview helpers as required: "Queue slice does not call full system status/task-state projection"
   const systemStatus = await buildDashboardSystemStatusOverview(ctx, store, dualForStatus);
@@ -591,7 +530,8 @@ export async function buildDashboardStatusSlice(
       ctx.effectiveConfig as Record<string, unknown> | undefined
     )
   );
-  const planArtifact = buildDashboardPlanArtifactSummary(ctx);
+  const tasks = store.getActiveTasks();
+  const planArtifact = buildDashboardPlanArtifactSummary(ctx, tasks);
 
   const effCfg =
     ctx.effectiveConfig && typeof ctx.effectiveConfig === "object" && !Array.isArray(ctx.effectiveConfig)
@@ -623,7 +563,6 @@ export async function buildDashboardStatusSlice(
     agentPresentation
   };
 
-  const tasks = store.getActiveTasks();
   const phaseDeliveryFields = collectPhaseDeliveryDashboardFields(
     db,
     tasks,

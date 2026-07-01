@@ -1,7 +1,9 @@
 import Ajv2020 from "ajv/dist/2020.js";
 import assert from "node:assert/strict";
+import { spawn } from "node:child_process";
 import fs from "node:fs";
 import fsPromises from "node:fs/promises";
+import { createServer } from "node:http";
 import os from "node:os";
 import path from "node:path";
 import { describe, it } from "node:test";
@@ -122,6 +124,80 @@ describe("dashboard service lifecycle", () => {
     assert.equal(stopped.ok, true);
     await assert.rejects(() => fsPromises.readFile(dashboardServiceRuntimePath(workspace), "utf8"));
     await assert.rejects(() => fsPromises.readFile(dashboardServicePidPath(workspace), "utf8"));
+  });
+
+  it("stop clears pid-only daemon artifacts", async () => {
+    const workspace = await tmpWorkspace();
+    await seedEmptySqlite(workspace);
+    const ctx = lifecycleCtx(workspace);
+    const child = spawn(process.execPath, ["-e", "setInterval(() => {}, 1000)"], {
+      stdio: "ignore"
+    });
+    await new Promise((resolve, reject) => {
+      child.once("spawn", resolve);
+      child.once("error", reject);
+    });
+    await fsPromises.mkdir(path.dirname(dashboardServicePidPath(workspace)), { recursive: true });
+    await fsPromises.writeFile(dashboardServicePidPath(workspace), `${child.pid}\n`, "utf8");
+
+    try {
+      const stopped = await runDashboardServiceStop(ctx);
+      assert.equal(stopped.ok, true);
+      await assert.rejects(() => fsPromises.readFile(dashboardServicePidPath(workspace), "utf8"));
+      if (child.exitCode === null && child.signalCode === null) {
+        await Promise.race([
+          new Promise((resolve) => child.once("exit", resolve)),
+          new Promise((_, reject) => setTimeout(() => reject(new Error("child did not exit")), 2_000))
+        ]);
+      }
+    } finally {
+      if (child.exitCode === null && child.signalCode === null) {
+        child.kill("SIGTERM");
+      }
+    }
+  });
+
+  it("status returns unhealthy instead of hanging on an unresponsive live pid", async () => {
+    const workspace = await tmpWorkspace();
+    await seedEmptySqlite(workspace);
+    const ctx = lifecycleCtx(workspace);
+    const server = createServer((_req, _res) => {
+      // Keep the socket open to model a wedged dashboard service.
+    });
+    await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const address = server.address();
+    assert.ok(address && typeof address === "object");
+    const runtime = {
+      schemaVersion: 1,
+      pid: process.pid,
+      host: "127.0.0.1",
+      port: address.port,
+      startedAt: "2026-06-30T00:00:00.000Z",
+      serviceVersion: "test",
+      generation: 1,
+      planningGeneration: null
+    };
+    await fsPromises.mkdir(path.dirname(dashboardServiceRuntimePath(workspace)), { recursive: true });
+    await fsPromises.writeFile(
+      dashboardServiceRuntimePath(workspace),
+      `${JSON.stringify(runtime, null, 2)}\n`,
+      "utf8"
+    );
+    await fsPromises.writeFile(dashboardServicePidPath(workspace), `${runtime.pid}\n`, "utf8");
+
+    try {
+      const started = Date.now();
+      const status = await runDashboardServiceStatus(ctx);
+      assert.equal(status.ok, true);
+      assert.equal(status.data?.running, true);
+      assert.equal(status.data?.health, null);
+      assert.equal(status.message, "Dashboard service is unhealthy");
+      assert.ok(Date.now() - started < 2_500);
+    } finally {
+      server.close();
+      await fsPromises.unlink(dashboardServiceRuntimePath(workspace)).catch(() => {});
+      await fsPromises.unlink(dashboardServicePidPath(workspace)).catch(() => {});
+    }
   });
 
   it("lifecycle status health probe matches runtime service status contract (T100609)", async () => {

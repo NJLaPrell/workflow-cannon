@@ -90,25 +90,23 @@ test("planner-chat prefill prompt avoids copy-paste wk run invocations", () => {
   assert.doesNotMatch(prompt, RAW_CLI_INVOCATION);
 });
 
-test("PlanArtifact rejection blocks accept while preserving planning resume", () => {
+test("PlanArtifact rejection routes needs-revision plans back to Resume planning instead of a disabled Accept", () => {
   const html = renderDashboardRootInnerHtml(
     summaryWithPlan("reviewed", {
       current: {
-        reviewFindings: [
-          {
-            severity: "blocker",
-            message: "Acceptance criteria are not tied to WBS tasks.",
-            path: "wbs[1].acceptanceCriteria"
-          }
-        ]
+        blockerCount: 1,
+        reviewSummary: "Acceptance criteria are not tied to WBS tasks."
       }
     })
   );
 
-  assert.match(html, /Review Findings/);
+  assert.match(html, /Review summary/);
   assert.match(html, /Acceptance criteria are not tied to WBS tasks\./);
-  assert.match(html, /Review blockers must be resolved before accepting this plan\./);
-  assert.match(html, /data-wc-action="plan-artifact-accept"[^>]* disabled/);
+  assert.match(html, /wc-plan-card-chip-danger[^>]*>1 blocker</);
+  assert.match(html, /wc-plan-status-pill wc-plan-status-warn">Needs revision</);
+  // With blockers outstanding the plan card offers no Accept action at all (rather than a disabled one) —
+  // the only path forward is resuming planning to resolve the review findings.
+  assert.doesNotMatch(html, /data-wc-action="plan-artifact-accept"/);
   assert.doesNotMatch(html, /data-wc-action="plan-artifact-finalize"/);
   assert.match(html, />Resume planning<\/button>/);
   assert.doesNotMatch(html, RAW_CLI_INVOCATION);

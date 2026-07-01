@@ -191,8 +191,8 @@ export class DashboardReadPathCoordinator {
     } else {
       // Service not healthy.
       if (effectiveMode === "service") {
-        this.serviceFailDetail = "Dashboard service is not running or failed health check";
-        this.activePath = null;
+        this.serviceFailDetail = "Dashboard service is not running or failed health check — using CLI polling";
+        await this.startCliBootstrapPath();
         this.emitModeChanged();
         return;
       }

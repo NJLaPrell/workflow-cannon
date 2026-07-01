@@ -9,6 +9,7 @@ import {
 test("dashboardSectionsForMutation maps task-queue to queue, overview, and planning interview", () => {
   assert.deepEqual(dashboardSectionsForMutation("task-queue"), ["queue", "overview"]);
   assert.deepEqual(dashboardSectionsForMutation("ideas"), ["ideas"]);
+  assert.deepEqual(dashboardSectionsForMutation("plan-artifact"), ["plan-artifact", "ideas"]);
   assert.deepEqual(dashboardSectionsForMutation("overview"), ["overview", "phase-roster", "plan-artifact"]);
   assert.deepEqual(dashboardSectionsForMutation("phase-journal"), ["phase-journal", "queue"]);
 });

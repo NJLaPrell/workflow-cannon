@@ -7,6 +7,31 @@ import type {
   DashboardAgentRegistrySessionSummary
 } from "@workflow-cannon/workspace-kit/contracts/dashboard-summary-run";
 
+export function planArtifactHasContent(planArtifact: unknown): boolean {
+  if (!planArtifact || typeof planArtifact !== "object") {
+    return false;
+  }
+  const summary = planArtifact as Record<string, unknown>;
+  if (summary.current && typeof summary.current === "object") {
+    return true;
+  }
+  return (
+    Array.isArray(summary.recent) &&
+    summary.recent.some((row) => row && typeof row === "object")
+  );
+}
+
+export function ideasHasContent(ideas: unknown): boolean {
+  if (!ideas || typeof ideas !== "object") {
+    return false;
+  }
+  const record = ideas as Record<string, unknown>;
+  if (record.available === true) {
+    return true;
+  }
+  return Array.isArray(record.top) && record.top.length > 0;
+}
+
 function agentActivitySummaryHasContent(summary: unknown): boolean {
   if (!summary || typeof summary !== "object") {
     return false;
@@ -27,6 +52,75 @@ function agentActivitySummaryHasContent(summary: unknown): boolean {
   return false;
 }
 
+function planArtifactRowWbsRows(row: unknown): unknown[] {
+  if (!row || typeof row !== "object") {
+    return [];
+  }
+  const wbsRows = (row as Record<string, unknown>).wbsRows;
+  return Array.isArray(wbsRows) ? wbsRows : [];
+}
+
+function planArtifactRowWbsCount(row: unknown): number {
+  if (!row || typeof row !== "object") {
+    return 0;
+  }
+  const count = (row as Record<string, unknown>).wbsRowCount;
+  return typeof count === "number" && count > 0 ? count : 0;
+}
+
+function preservePlanArtifactRowWbsRows(priorRow: unknown, nextRow: unknown): unknown {
+  if (!nextRow || typeof nextRow !== "object") {
+    return nextRow;
+  }
+  const priorWbs = planArtifactRowWbsRows(priorRow);
+  const nextWbs = planArtifactRowWbsRows(nextRow);
+  const wbsCount = planArtifactRowWbsCount(nextRow) || planArtifactRowWbsCount(priorRow);
+  if (nextWbs.length === 0 && priorWbs.length > 0 && wbsCount > 0) {
+    return { ...(nextRow as Record<string, unknown>), wbsRows: priorWbs };
+  }
+  return nextRow;
+}
+
+function preservePlanArtifactWbsRows(priorArtifact: unknown, nextArtifact: unknown): unknown {
+  if (!nextArtifact || typeof nextArtifact !== "object") {
+    return nextArtifact;
+  }
+  if (!priorArtifact || typeof priorArtifact !== "object") {
+    return nextArtifact;
+  }
+  const prior = priorArtifact as Record<string, unknown>;
+  const next = nextArtifact as Record<string, unknown>;
+  const priorByPlanId = new Map<string, unknown>();
+  const collect = (row: unknown) => {
+    if (!row || typeof row !== "object") {
+      return;
+    }
+    const planId = String((row as Record<string, unknown>).planId ?? "").trim();
+    if (planId.length > 0) {
+      priorByPlanId.set(planId, row);
+    }
+  };
+  collect(prior.current);
+  if (Array.isArray(prior.recent)) {
+    for (const row of prior.recent) {
+      collect(row);
+    }
+  }
+  const patch = (row: unknown) => {
+    if (!row || typeof row !== "object") {
+      return row;
+    }
+    const planId = String((row as Record<string, unknown>).planId ?? "").trim();
+    const priorRow = planId.length > 0 ? priorByPlanId.get(planId) : undefined;
+    return priorRow ? preservePlanArtifactRowWbsRows(priorRow, row) : row;
+  };
+  return {
+    ...next,
+    current: patch(next.current),
+    recent: Array.isArray(next.recent) ? next.recent.map(patch) : next.recent
+  };
+}
+
 /** Keys whose empty/unavailable payloads should not replace a prior populated dashboard card. */
 function preserveLastKnownDashboardFields(
   summary: Record<string, unknown>,
@@ -40,6 +134,17 @@ function preserveLastKnownDashboardFields(
     !agentActivitySummaryHasContent(nextSummary)
   ) {
     next = { ...next, agentActivitySummary: priorSummary };
+  }
+  if (planArtifactHasContent(summary.planArtifact) && !planArtifactHasContent(extracted.planArtifact)) {
+    next = { ...next, planArtifact: summary.planArtifact };
+  } else if ("planArtifact" in extracted && planArtifactHasContent(summary.planArtifact)) {
+    next = {
+      ...next,
+      planArtifact: preservePlanArtifactWbsRows(summary.planArtifact, extracted.planArtifact)
+    };
+  }
+  if (ideasHasContent(summary.ideas) && !ideasHasContent(extracted.ideas)) {
+    next = { ...next, ideas: summary.ideas };
   }
   return preservePhaseDeliveryFields(summary, next);
 }
@@ -148,6 +253,39 @@ export function mergeSlicePayloadIntoSummary(
 
   const merged = { ...summary, ...extracted };
   return applyAgentRegistryEnrichment(merged);
+}
+
+export type DashboardSummaryIngestProjection =
+  | "overview"
+  | "queue"
+  | "status"
+  | "agentActivity"
+  | "full";
+
+/** Merge every slice payload for a dashboard-summary projection (or all slices when `full`). */
+export function mergeDashboardProjectionIntoSummary(
+  summary: Record<string, unknown>,
+  projection: DashboardSummaryIngestProjection,
+  summaryData: Record<string, unknown>
+): Record<string, unknown> {
+  if (projection === "full") {
+    let merged = summary;
+    const sliceNames = new Set<DashboardSliceName>();
+    for (const desc of DASHBOARD_SLICE_REGISTRY) {
+      if (desc.command === "dashboard-summary") {
+        sliceNames.add(desc.name);
+      }
+    }
+    for (const sliceName of sliceNames) {
+      merged = mergeSlicePayloadIntoSummary(merged, sliceName, summaryData);
+    }
+    return merged;
+  }
+  let merged = summary;
+  for (const sliceName of sliceNamesForDashboardSummaryProjection(projection)) {
+    merged = mergeSlicePayloadIntoSummary(merged, sliceName, summaryData);
+  }
+  return merged;
 }
 
 export function dashboardSectionIdForSlice(sliceName: DashboardSliceName): DashboardSectionId {

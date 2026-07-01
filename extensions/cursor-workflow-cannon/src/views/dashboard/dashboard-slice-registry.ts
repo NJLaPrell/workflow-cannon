@@ -65,6 +65,8 @@ export const DASHBOARD_SLICE_REGISTRY: readonly DashboardSliceDescriptor[] = [
         "humanGatesSummary",
         "approvalQueue",
         "taskStateProjection",
+        // Overview projection still ships planArtifact for eager planning cards.
+        "planArtifact",
         // Queue rollups are owned by the `queue` slice (`projection: "queue"`). Overview
         // projection intentionally zeros these — merging them clobbers hydrated task data.
         "currentPhaseDelivery",
@@ -107,7 +109,7 @@ export const DASHBOARD_SLICE_REGISTRY: readonly DashboardSliceDescriptor[] = [
     visibleOnly: false,
     freshnessTtlMs: 10_000,
     freshnessSlaMs: 10_000,
-    staleOnMutationKinds: ["overview", "task-queue", "workspace-wide"],
+    staleOnMutationKinds: ["overview", "task-queue", "plan-artifact", "workspace-wide"],
     extractPayload: (data) => pick(data, [...SHARED_META_KEYS, "planArtifact", "workspaceStatus"])
   },
   {
@@ -186,7 +188,7 @@ export const DASHBOARD_SLICE_REGISTRY: readonly DashboardSliceDescriptor[] = [
     visibleOnly: true,
     freshnessTtlMs: 10_000,
     freshnessSlaMs: 10_000,
-    staleOnMutationKinds: ["ideas", "workspace-wide"],
+    staleOnMutationKinds: ["ideas", "plan-artifact", "workspace-wide"],
     extractPayload: (data) => pick(data, [...SHARED_META_KEYS, "ideas"])
   },
   {

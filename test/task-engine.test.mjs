@@ -2413,6 +2413,131 @@ test("taskEngineModule dashboard-summary exposes latest PlanArtifact summary", a
   assert.equal(result.data.planArtifact.recent.length, 1);
 });
 
+test("taskEngineModule dashboard-summary reports Tasks Generated/Executed for finalized plans", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, () => {});
+  const fixturePath = path.join(
+    path.dirname(fileURLToPath(import.meta.url)),
+    "..",
+    "fixtures",
+    "planning",
+    "plan-artifact-full-feature.valid.v1.json"
+  );
+  const artifact = JSON.parse(await readFile(fixturePath, "utf8"));
+  artifact.openQuestions = [];
+  artifact.status = "draft";
+  artifact.version = 1;
+  for (const row of artifact.wbs) {
+    row.generatedTaskPayload.technicalScope.push(
+      "rollback activation toggle empty first-run unit test verification coverage"
+    );
+    row.generatedTaskPayload.acceptanceCriteria.push(
+      "Observable verification with rollback and empty first-run behavior"
+    );
+  }
+
+  const ctx = sqliteTaskEngineCtx(workspace);
+
+  const draft = await planningModule.onCommand(
+    {
+      name: "draft-plan-artifact",
+      args: {
+        persist: true,
+        artifact,
+        expectedPlanningGeneration: 1,
+        policyApproval: { confirmed: true, rationale: "dashboard tasksGenerated/executed fixture" }
+      }
+    },
+    ctx
+  );
+  assert.equal(draft.ok, true, draft.message);
+
+  const review = await planningModule.onCommand(
+    {
+      name: "review-plan-artifact",
+      args: {
+        planId: draft.data.planId,
+        profile: "minimal",
+        recordReview: true,
+        expectedPlanningGeneration: draft.data.planningGeneration,
+        policyApproval: { confirmed: true, rationale: "dashboard tasksGenerated/executed review" }
+      }
+    },
+    ctx
+  );
+  assert.equal(review.ok, true, review.message);
+  assert.equal(review.data.passed, true);
+
+  const accepted = await planningModule.onCommand(
+    {
+      name: "accept-plan-artifact",
+      args: {
+        planId: draft.data.planId,
+        approvalRecord: {
+          schemaVersion: 1,
+          confirmed: true,
+          approvedVersion: review.data.version,
+          approvedAt: "2026-05-27T08:00:00.000Z",
+          approvedBy: "operator@example.com",
+          planRef: artifact.planRef
+        },
+        expectedPlanningGeneration: review.data.planningGeneration,
+        policyApproval: { confirmed: true, rationale: "dashboard tasksGenerated/executed accept" }
+      }
+    },
+    ctx
+  );
+  assert.equal(accepted.ok, true, accepted.message);
+
+  const beforeFinalize = await taskEngineModule.onCommand({ name: "dashboard-summary", args: {} }, ctx);
+  assert.equal(beforeFinalize.ok, true);
+  // Not finalized yet — tasks exist only after finalize, so both flags stay false.
+  assert.equal(beforeFinalize.data.planArtifact.current.tasksGenerated, false);
+  assert.equal(beforeFinalize.data.planArtifact.current.executed, false);
+  assert.ok(Array.isArray(beforeFinalize.data.planArtifact.current.wbsRows));
+  assert.ok(beforeFinalize.data.planArtifact.current.wbsRows.length > 0);
+
+  const finalized = await planningModule.onCommand(
+    {
+      name: "finalize-plan-to-phase",
+      args: {
+        planId: draft.data.planId,
+        dryRun: false,
+        targetPhaseKey: "110",
+        targetPhase: "Phase 110",
+        desiredStatus: "ready",
+        expectedPlanningGeneration: accepted.data.planningGeneration,
+        clientMutationId: `tasks-generated-${artifact.planId}`,
+        policyApproval: { confirmed: true, rationale: "dashboard tasksGenerated/executed finalize" }
+      }
+    },
+    ctx
+  );
+  assert.equal(finalized.ok, true, finalized.message);
+  assert.equal(finalized.data.status, "finalized");
+
+  const afterFinalize = await taskEngineModule.onCommand({ name: "dashboard-summary", args: {} }, ctx);
+  assert.equal(afterFinalize.ok, true);
+  assert.equal(afterFinalize.data.planArtifact.current.status, "finalized");
+  assert.equal(afterFinalize.data.planArtifact.current.tasksGenerated, true);
+  assert.equal(afterFinalize.data.planArtifact.current.executed, false);
+
+  // Mark the generated tasks delivered directly in the store (bypassing transition guards, which are
+  // out of scope here) to verify the projection flips Executed to Yes once all WBS tasks complete.
+  await seedSqliteStore(workspace, (store) => {
+    for (const task of store.getActiveTasks()) {
+      if (task.metadata?.planRef === artifact.planRef) {
+        store.updateTask({ ...task, status: "completed" });
+      }
+    }
+  });
+
+  const afterCompletion = await taskEngineModule.onCommand({ name: "dashboard-summary", args: {} }, ctx);
+  assert.equal(afterCompletion.ok, true);
+  assert.equal(afterCompletion.data.planArtifact.current.tasksGenerated, true);
+  assert.equal(afterCompletion.data.planArtifact.current.executed, true);
+});
+
 test("taskEngineModule dashboard-summary agentStatus falls back to awaiting instruction", async () => {
   const workspace = await tmpDir();
   await seedSqliteStore(workspace, () => {});

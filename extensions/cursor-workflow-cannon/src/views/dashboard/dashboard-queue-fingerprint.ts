@@ -148,7 +148,7 @@ export function dashboardSummaryProjectionForSectionPatch(
   if (sectionIds.length === 0) {
     return "overview";
   }
-  if (sectionIds.every((id) => id === "status")) {
+  if (sectionIds.every((id) => id === "status" || id === "plan-artifact")) {
     return "status";
   }
   if (sectionIds.some((id) => id === "queue" || id === "ideas" || id === "phase-journal")) {

@@ -370,6 +370,16 @@ export type DashboardPlanArtifactSummary = {
   recent: DashboardPlanArtifactRow[];
 };
 
+/** Human-oriented WBS row for dashboard plan cards (derived from `PlanArtifactWbsItem`). */
+export type DashboardPlanArtifactWbsRow = {
+  wbsId: string;
+  title: string;
+  description: string;
+  dependsOn: string;
+  blocks: string;
+  size: string;
+};
+
 export type DashboardPlanArtifactRow = {
   planId: string;
   planRef: string;
@@ -377,16 +387,27 @@ export type DashboardPlanArtifactRow = {
   status: string;
   lifecycleStatus?: string;
   title: string;
+  /** Truncated `identity.summary` (short description) for card/list rendering. */
+  summary?: string;
   planningType: string;
   updatedAt: string;
   wbsRowCount: number;
   openQuestionCount: number;
   blockerCount?: number;
   warningCount?: number;
+  riskCount?: number;
   profile?: string;
   reviewSummary?: string;
   phaseRecommendation?: string;
+  /** Raw recommended phaseKey (e.g. "140"), separate from the formatted `phaseRecommendation` label. */
+  phaseKey?: string;
   sourceIdeaId?: string;
+  /** Whether WBS tasks were persisted (`metadata.planRef` linkage). */
+  tasksGenerated?: boolean;
+  /** Whether all generated tasks reached `completed`. */
+  executed?: boolean;
+  /** Human-readable WBS rows for the collapsible plan-card table. */
+  wbsRows?: DashboardPlanArtifactWbsRow[];
 };
 
 /**

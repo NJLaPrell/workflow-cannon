@@ -389,7 +389,7 @@ test("renderDashboardRootInnerHtml renders fixture-shaped success payload", () =
   assert.doesNotMatch(html, /Suggested Next/i);
 });
 
-test("renderDashboardRootInnerHtml renders PlanArtifact draft panel", () => {
+test("renderDashboardRootInnerHtml renders PlanArtifact card grid for a draft plan", () => {
   const html = renderDashboardRootInnerHtml({
     ok: true,
     data: {
@@ -415,20 +415,35 @@ test("renderDashboardRootInnerHtml renders PlanArtifact draft panel", () => {
           version: 1,
           status: "draft",
           title: "Dashboard lifecycle",
+          summary: "Ship the plan draft panel redesign",
           planningType: "new-feature",
           updatedAt: "2026-05-27T17:00:00.000Z",
-          wbsRowCount: 4,
+          wbsRowCount: 2,
           blockerCount: 0,
           warningCount: 1,
           openQuestionCount: 2,
+          riskCount: 1,
           profile: "full-feature",
           phaseRecommendation: "Phase 110",
-          reviewFindings: [
-            { severity: "warning", message: "Acceptance criteria need verification detail", path: "wbs[1]" }
-          ],
-          wbsPreview: [
-            { wbsId: "WBS-1", path: "1", title: "Kit contract", recommendedPhase: "Phase 110" },
-            { wbsId: "WBS-2", path: "2", title: "Plan draft panel", recommendedPhase: "Phase 110" }
+          tasksGenerated: false,
+          executed: false,
+          wbsRows: [
+            {
+              wbsId: "WBS-1",
+              title: "Kit contract",
+              description: "Extend projection",
+              dependsOn: "—",
+              blocks: "Plan draft panel",
+              size: "Medium"
+            },
+            {
+              wbsId: "WBS-2",
+              title: "Plan draft panel",
+              description: "Read-only render",
+              dependsOn: "Kit contract",
+              blocks: "—",
+              size: "Medium"
+            }
           ]
         },
         recent: []
@@ -441,30 +456,29 @@ test("renderDashboardRootInnerHtml renders PlanArtifact draft panel", () => {
   const planningPanelIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="planning"');
   const taskEnginePanelIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="task-engine"');
   const planningPanel = html.slice(planningPanelIdx, taskEnginePanelIdx);
-  assert.match(planningPanel, /wc-plan-artifact/);
-  assert.match(planningPanel, /Current Plan/);
+  assert.match(planningPanel, /wc-plan-card/);
+  assert.match(planningPanel, /Dashboard lifecycle/);
 
-  assert.match(html, /wc-plan-artifact/);
-  assert.match(html, /Current Plan/);
+  assert.match(html, /wc-plan-card/);
   assert.match(html, /Dashboard lifecycle/);
-  assert.match(html, /New Feature/);
-  assert.match(html, /PLANNER_TASKS.md/);
-  assert.match(html, /<b>4<\/b> WBS rows/);
-  assert.match(html, /<b>0<\/b> blockers/);
-  assert.match(html, /<b>1<\/b> warnings/);
-  assert.match(html, /<b>2<\/b> open questions/);
-  assert.match(html, /Profile<\/span> Full Feature/);
-  assert.match(html, /Phase<\/span> Phase 110/);
-  assert.match(html, /Draft/);
-  assert.match(html, /Review Findings/);
-  assert.match(html, /Acceptance criteria need verification detail/);
-  assert.match(html, /wbs\[1\]/);
-  assert.match(html, /WBS Preview/);
-  assert.match(html, /WBS-1 · 1/);
+  assert.match(html, /Ship the plan draft panel redesign/);
+  assert.match(html, /<dt>Version<\/dt><dd>1<\/dd>/);
+  assert.match(html, /<dt>Tasks Generated<\/dt><dd>No<\/dd>/);
+  assert.match(html, /<dt>Executed<\/dt><dd>No<\/dd>/);
+  assert.match(html, />2 WBS Rows</);
+  assert.match(html, /wc-plan-wbs-table/);
   assert.match(html, /Kit contract/);
-  assert.match(html, /data-wc-action="plan-artifact-accept"/);
-  assert.match(html, /Review must pass before accepting this plan/);
-  assert.match(html, /<button[^>]+data-wc-action="plan-artifact-accept"[^>]+disabled/);
+  assert.match(html, />1 warning</);
+  assert.match(html, />2 open questions</);
+  assert.match(html, />1 risk</);
+  assert.match(html, /<dt>Profile<\/dt><dd>Full Feature<\/dd>/);
+  assert.match(html, /data-wc-ui-state-key="plan-123-details"/);
+  assert.match(html, /data-wc-ui-state-key="plan-123-wbs"/);
+  assert.match(html, /wc-plan-status-pill wc-plan-status-draft">Draft/);
+  assert.doesNotMatch(html, /wc-plan-card-meta/);
+  assert.doesNotMatch(html, /data-wc-action="plan-artifact-accept"/);
+  assert.match(html, /data-wc-action="plan-artifact-review"/);
+  assert.doesNotMatch(html, /data-wc-action="plan-artifact-review"[^>]*disabled/);
 });
 
 test("renderDashboardRootInnerHtml enables PlanArtifact accept after review pass", () => {
@@ -485,8 +499,7 @@ test("renderDashboardRootInnerHtml enables PlanArtifact accept after review pass
           version: 3,
           updatedAt: "2026-05-27T17:00:00.000Z",
           wbsRowCount: 2,
-          openQuestionCount: 0,
-          reviewFindings: []
+          openQuestionCount: 0
         },
         recent: []
       },
@@ -498,14 +511,14 @@ test("renderDashboardRootInnerHtml enables PlanArtifact accept after review pass
       wishlistSummary: { count: 0, top: [] }
     }
   });
-  assert.match(html, /Review Passed/);
+  assert.match(html, />Reviewed</);
   assert.match(html, /data-wc-action="plan-artifact-accept"/);
   assert.match(html, /data-plan-id="plan-accepted-ready"/);
   assert.match(html, /data-plan-ref="plan-artifact:plan-accepted-ready"/);
   assert.match(html, /data-plan-version="3"/);
   const button = html.match(/<button[^>]+data-wc-action="plan-artifact-accept"[^>]*>/)?.[0] ?? "";
   assert.doesNotMatch(button, /disabled/);
-  assert.match(html, /Approval Ready/);
+  assert.doesNotMatch(html, /wc-plan-status-pill[^>]*>Approval ready</);
 });
 
 test("renderDashboardRootInnerHtml shows PlanArtifact finalize after accept", () => {
@@ -557,6 +570,8 @@ test("renderDashboardRootInnerHtml blocks PlanArtifact accept with blockers or o
     wishlistSummary: { count: 0, top: [] }
   };
 
+  // A plan with blockers is classified as "needs_revision" — the card offers Resume planning instead
+  // of a disabled Accept, since a disabled button with no path forward is worse UX than not showing it.
   const blockerHtml = renderDashboardRootInnerHtml({
     ok: true,
     data: {
@@ -573,15 +588,14 @@ test("renderDashboardRootInnerHtml blocks PlanArtifact accept with blockers or o
           updatedAt: "2026-05-27T17:00:00.000Z",
           wbsRowCount: 1,
           openQuestionCount: 0,
-          reviewFindings: [{ severity: "error", message: "Resolve this before accept" }]
+          blockerCount: 1
         },
         recent: []
       }
     }
   });
-  const blockerButton = blockerHtml.match(/<button[^>]+data-wc-action="plan-artifact-accept"[^>]*>/)?.[0] ?? "";
-  assert.match(blockerButton, /disabled/);
-  assert.match(blockerHtml, /Review blockers must be resolved before accepting this plan/);
+  assert.doesNotMatch(blockerHtml, /data-wc-action="plan-artifact-accept"/);
+  assert.match(blockerHtml, /wc-plan-status-pill wc-plan-status-warn">Needs revision/);
 
   const openQuestionsHtml = renderDashboardRootInnerHtml({
     ok: true,
@@ -598,8 +612,7 @@ test("renderDashboardRootInnerHtml blocks PlanArtifact accept with blockers or o
           version: 6,
           updatedAt: "2026-05-27T17:00:00.000Z",
           wbsRowCount: 1,
-          openQuestionCount: 1,
-          reviewFindings: []
+          openQuestionCount: 1
         },
         recent: []
       }
@@ -647,12 +660,11 @@ test("renderDashboardRootInnerHtml shows resume action for needs-revision curren
       wishlistSummary: { count: 0, top: [] }
     }
   });
-  assert.match(html, /Needs Revision/);
-  assert.match(html, /Review Summary/);
-  assert.match(html, /2 blocker\(s\), 1 warning\(s\)/);
+  assert.match(html, /wc-plan-status-pill wc-plan-status-warn">Needs revision/);
+  assert.match(html, /<dt>Review summary<\/dt><dd>2 blocker\(s\), 1 warning\(s\)<\/dd>/);
   assert.match(html, /data-wc-action="plan-artifact-resume"/);
   assert.match(html, /data-idea-id="I-plan-99"/);
-  assert.match(html, />Resume planning &rarr;<\/button>/);
+  assert.match(html, />Resume planning<\/button>/);
 });
 
 test("renderDashboardRootInnerHtml hides PlanArtifact lifecycle actions after finalize", () => {
@@ -686,7 +698,8 @@ test("renderDashboardRootInnerHtml hides PlanArtifact lifecycle actions after fi
       wishlistSummary: { count: 0, top: [] }
     }
   });
-  assert.match(html, /Finalized/);
+  assert.match(html, /Finalized \(1\)/);
+  assert.doesNotMatch(html, /wc-plan-status-pill[^>]*>Finalized</);
   assert.doesNotMatch(html, /data-wc-action="plan-artifact-accept"/);
   assert.doesNotMatch(html, /data-wc-action="plan-artifact-finalize"/);
 });

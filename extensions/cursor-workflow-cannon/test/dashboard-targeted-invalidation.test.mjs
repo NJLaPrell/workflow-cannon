@@ -33,9 +33,9 @@ test("light refresh mode always uses executeLightSectionRefresh", () => {
   );
 });
 
-test("manual refresh still uses full pushUpdate reconciliation", () => {
+test("manual refresh still uses explicit overview pushUpdate reconciliation", () => {
   const src = fs.readFileSync(path.join(srcDir, "DashboardViewProvider.ts"), "utf8");
-  assert.match(src, /msg\?\.type === "refresh"[\s\S]*projection: "full"/);
+  assert.match(src, /msg\?\.type === "refresh"[\s\S]*projection: "overview"/);
   assert.match(src, /skipHeavyFetches: false/);
 });
 
@@ -44,6 +44,23 @@ test("wishlist paging invalidates queue section only", () => {
   const block = src.slice(src.indexOf('msg?.type === "wishlistPage"'), src.indexOf('msg?.type === "prefillWishlistChat"'));
   assert.match(block, /applyDashboardMutationInvalidation\("task-queue"\)/);
   assert.doesNotMatch(block, /await this\.pushUpdate\(\)/);
+});
+
+test("PlanArtifact mutations invalidate planning sections instead of overview-only refresh", () => {
+  const providerSrc = fs.readFileSync(path.join(srcDir, "DashboardViewProvider.ts"), "utf8");
+  const reviewBlock = providerSrc.slice(
+    providerSrc.indexOf("private async onReviewPlanArtifact"),
+    providerSrc.indexOf("private async onFinalizePlanArtifact")
+  );
+  assert.match(reviewBlock, /applyDashboardMutationInvalidation\("plan-artifact"\)/);
+  assert.doesNotMatch(reviewBlock, /projection: "overview"/);
+
+  const projectionSrc = fs.readFileSync(path.join(srcDir, "dashboard-queue-fingerprint.ts"), "utf8");
+  assert.match(projectionSrc, /id === "status" \|\| id === "plan-artifact"/);
+
+  const registrySrc = fs.readFileSync(path.join(srcDir, "dashboard-slice-registry.ts"), "utf8");
+  assert.match(registrySrc, /name: "planArtifact"[\s\S]*staleOnMutationKinds: \[[^\]]*"plan-artifact"/);
+  assert.match(registrySrc, /name: "ideas"[\s\S]*staleOnMutationKinds: \[[^\]]*"plan-artifact"/);
 });
 
 test("webview applySectionPatch surfaces stale badge without clearing content", () => {

@@ -23,6 +23,25 @@ import type { TaskEntity, TaskStatus } from "../types.js";
 
 type SqliteDb = InstanceType<typeof DatabaseCtor>;
 
+function normalizePreviousCurrentKitPhase(raw: unknown): string {
+  if (typeof raw !== "string") {
+    return "";
+  }
+  const trimmed = raw.trim();
+  if (trimmed.length === 0) {
+    return "";
+  }
+  const labeled = trimmed.match(/Phase\s*(\d+)/i);
+  if (labeled) {
+    return labeled[1]!;
+  }
+  const leading = trimmed.match(/^(\d+)\b/);
+  if (leading) {
+    return leading[1]!;
+  }
+  return trimmed;
+}
+
 export type DashboardCurrentPhaseQueue = {
   ready: number;
   proposed: number;
@@ -126,10 +145,7 @@ export function collectPhaseReleaseDatesByKey(db: SqliteDb, limit = 500): Record
   for (const row of rows) {
     try {
       const details = JSON.parse(row.details_json) as Record<string, unknown>;
-      const prior =
-        typeof details.previousCurrentKitPhase === "string"
-          ? details.previousCurrentKitPhase.trim()
-          : "";
+      const prior = normalizePreviousCurrentKitPhase(details.previousCurrentKitPhase);
       if (
         prior.length > 0 &&
         out[prior] === undefined &&
@@ -167,10 +183,7 @@ export function collectRolledOutPhaseKeys(db: SqliteDb, limit = 300): string[] {
   for (const row of rows) {
     try {
       const details = JSON.parse(row.details_json) as Record<string, unknown>;
-      const prior =
-        typeof details.previousCurrentKitPhase === "string"
-          ? details.previousCurrentKitPhase.trim()
-          : "";
+      const prior = normalizePreviousCurrentKitPhase(details.previousCurrentKitPhase);
       if (prior.length > 0) {
         out.add(prior);
       }
@@ -251,11 +264,17 @@ export function collectPhaseDeliveryDashboardFields(
 
 /** True when a live `set-current-phase` rolled workspace off this phase key. */
 export function wasWorkspacePhaseRolledOut(db: SqliteDb, phaseKey: string): boolean {
-  const key = phaseKey.trim();
+  const key = normalizePreviousCurrentKitPhase(phaseKey);
   if (!key || !workspaceStatusEventsReadable(db)) {
-    return readDeliveredPhaseKeysFromHistory(db).includes(key);
+    return readDeliveredPhaseKeysFromHistory(db).some(
+      (candidate) => normalizePreviousCurrentKitPhase(candidate) === key
+    );
   }
-  if (readDeliveredPhaseKeysFromHistory(db).includes(key)) {
+  if (
+    readDeliveredPhaseKeysFromHistory(db).some(
+      (candidate) => normalizePreviousCurrentKitPhase(candidate) === key
+    )
+  ) {
     return true;
   }
   const rows = db
@@ -270,10 +289,7 @@ export function wasWorkspacePhaseRolledOut(db: SqliteDb, phaseKey: string): bool
   for (const row of rows) {
     try {
       const details = JSON.parse(row.details_json) as Record<string, unknown>;
-      const prior =
-        typeof details.previousCurrentKitPhase === "string"
-          ? details.previousCurrentKitPhase.trim()
-          : "";
+      const prior = normalizePreviousCurrentKitPhase(details.previousCurrentKitPhase);
       if (prior.length > 0 && prior === key) {
         return true;
       }

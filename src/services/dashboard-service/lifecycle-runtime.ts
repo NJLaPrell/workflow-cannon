@@ -13,6 +13,9 @@ import {
   type DashboardServiceRuntimeV1
 } from "./lifecycle-paths.js";
 
+const DASHBOARD_SERVICE_HEALTH_TIMEOUT_MS = 1_500;
+const DASHBOARD_SERVICE_SNAPSHOT_TIMEOUT_MS = 5_000;
+
 function daemonScriptPath(): string {
   return path.resolve(
     path.dirname(fileURLToPath(import.meta.url)),
@@ -45,6 +48,16 @@ async function readRuntime(workspacePath: string): Promise<DashboardServiceRunti
   }
 }
 
+async function readPidFile(workspacePath: string): Promise<number | null> {
+  try {
+    const raw = (await readFile(dashboardServicePidPath(workspacePath), "utf8")).trim();
+    const pid = Number(raw);
+    return Number.isInteger(pid) && pid > 0 ? pid : null;
+  } catch {
+    return null;
+  }
+}
+
 async function writeRuntime(workspacePath: string, runtime: DashboardServiceRuntimeV1): Promise<void> {
   await mkdir(dashboardServiceDir(workspacePath), { recursive: true });
   await writeFile(dashboardServiceRuntimePath(workspacePath), `${JSON.stringify(runtime, null, 2)}\n`, "utf8");
@@ -61,9 +74,35 @@ async function clearRuntimeArtifacts(workspacePath: string): Promise<void> {
   }
 }
 
+async function killPidBestEffort(pid: number): Promise<void> {
+  if (!isPidAlive(pid)) {
+    return;
+  }
+  try {
+    process.kill(pid, "SIGTERM");
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  } catch {
+    // Cleanup continues even if the old daemon is already gone or wedged.
+  }
+}
+
+async function fetchWithTimeout(
+  url: string,
+  init: RequestInit = {},
+  timeoutMs = DASHBOARD_SERVICE_HEALTH_TIMEOUT_MS
+): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...init, signal: init.signal ?? controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function probeHealth(runtime: DashboardServiceRuntimeV1): Promise<Record<string, unknown> | null> {
   try {
-    const res = await fetch(`http://${runtime.host}:${runtime.port}/health`);
+    const res = await fetchWithTimeout(`http://${runtime.host}:${runtime.port}/health`);
     if (!res.ok) {
       return null;
     }
@@ -75,7 +114,7 @@ async function probeHealth(runtime: DashboardServiceRuntimeV1): Promise<Record<s
 
 async function waitForRuntime(
   workspacePath: string,
-  timeoutMs = 10_000
+  timeoutMs = 30_000
 ): Promise<DashboardServiceRuntimeV1 | null> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
@@ -137,6 +176,12 @@ export async function runDashboardServiceStart(
         data: { runtime: existing, health, idempotent: true }
       };
     }
+    await killPidBestEffort(existing.pid);
+  } else {
+    const pidOnly = await readPidFile(workspacePath);
+    if (pidOnly) {
+      await killPidBestEffort(pidOnly);
+    }
   }
   await clearRuntimeArtifacts(workspacePath);
   await mkdir(dashboardServiceDir(workspacePath), { recursive: true });
@@ -158,7 +203,7 @@ export async function runDashboardServiceStart(
     return {
       ok: false,
       code: "dashboard-service-start-timeout",
-      message: "Dashboard service did not become healthy within 10s; see .workspace-kit/dashboard-service/service.log"
+      message: "Dashboard service did not become healthy within 30s; see .workspace-kit/dashboard-service/service.log"
     };
   }
   return {
@@ -174,6 +219,11 @@ export async function runDashboardServiceStop(
 ): Promise<ModuleCommandResult> {
   const runtime = await readRuntime(ctx.workspacePath);
   if (!runtime) {
+    const pidOnly = await readPidFile(ctx.workspacePath);
+    if (pidOnly) {
+      await killPidBestEffort(pidOnly);
+    }
+    await clearRuntimeArtifacts(ctx.workspacePath);
     return {
       ok: true,
       code: "dashboard-service-not-running",
@@ -235,7 +285,11 @@ export async function runDashboardServiceSnapshot(
     };
   }
   try {
-    const res = await fetch(`http://${runtime.host}:${runtime.port}/dashboard/snapshot`);
+    const res = await fetchWithTimeout(
+      `http://${runtime.host}:${runtime.port}/dashboard/snapshot`,
+      {},
+      DASHBOARD_SERVICE_SNAPSHOT_TIMEOUT_MS
+    );
     if (!res.ok) {
       return {
         ok: false,

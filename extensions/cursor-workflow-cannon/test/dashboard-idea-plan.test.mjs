@@ -134,7 +134,10 @@ test("ideas row renders Plan this or Resume planning but never both labels", () 
   assert.doesNotMatch(activeHtml, />Plan this</);
 });
 
-test("ideas row renders Review and View plan for draft-ready ideas", () => {
+// Once a plan exists, its lifecycle actions (Review/Accept/Finalize/View tasks) live only on the plan's own
+// card in the Plans section. The Ideas row is reduced to a status chip + a single "Open plan" link so the
+// same action never appears twice on the dashboard.
+test("ideas row renders a status chip and Open plan link for draft-ready ideas", () => {
   const html = renderIdeas([
     {
       id: "I003",
@@ -155,13 +158,32 @@ test("ideas row renders Review and View plan for draft-ready ideas", () => {
       }
     }
   ]);
-  assert.match(html, /data-wc-action="plan-artifact-review"/);
-  assert.match(html, /data-plan-id="draft-ready"/);
-  assert.match(html, /data-wc-action="idea-view-plan"/);
+  assert.match(html, /wc-plan-lifecycle-chip">Draft</);
+  assert.match(html, /data-wc-action="idea-open-plan-card"[^>]*data-plan-id="draft-ready"/);
+  assert.doesNotMatch(html, /data-wc-action="plan-artifact-review"/);
   assert.doesNotMatch(html, /data-wc-action="plan-artifact-accept"/);
 });
 
-test("ideas row disables Accept when review blockers remain", () => {
+test("ideas row disables Open plan when draft-ready plan identity is missing", () => {
+  const html = renderIdeas([
+    {
+      id: "I003B",
+      title: "Draft ready without identity",
+      note: "",
+      status: "planning",
+      planningChatSession: {
+        status: "draft_ready",
+        ideaId: "I003B",
+        currentPlanRef: "plan-artifact:missing-from-summary",
+        currentPlanVersion: 1
+      }
+    }
+  ]);
+  assert.match(html, /data-wc-action="idea-open-plan-card"[^>]*disabled/);
+  assert.match(html, /Plan identity is incomplete\. Refresh the dashboard and try again\./);
+});
+
+test("ideas row shows a Needs revision chip and Open plan link (Accept lives on the plan card)", () => {
   const html = renderIdeas([
     {
       id: "I004",
@@ -189,12 +211,11 @@ test("ideas row disables Accept when review blockers remain", () => {
       }
     }
   ]);
-  assert.match(html, /Resume planning/);
-  const acceptButton = html.match(/<button[^>]+data-wc-action="plan-artifact-accept"[^>]*>/)?.[0] ?? "";
-  assert.match(acceptButton, /disabled/);
+  assert.match(html, /wc-plan-lifecycle-chip">Needs revision</);
+  assert.match(html, /data-wc-action="idea-open-plan-card"[^>]*data-plan-id="blocked-review"/);
 });
 
-test("ideas row allows Accept for warning-only approval-ready plans", () => {
+test("ideas row shows an Approval ready chip and Open plan link (Accept lives on the plan card)", () => {
   const html = renderIdeas([
     {
       id: "I005",
@@ -222,13 +243,11 @@ test("ideas row allows Accept for warning-only approval-ready plans", () => {
       }
     }
   ]);
-  const acceptButton = html.match(/<button[^>]+data-wc-action="plan-artifact-accept"[^>]*>/)?.[0] ?? "";
-  assert.doesNotMatch(acceptButton, /disabled/);
-  assert.match(html, /data-plan-id="warning-only"/);
-  assert.match(html, /View plan/);
+  assert.match(html, /wc-plan-lifecycle-chip">Approval ready</);
+  assert.match(html, /data-wc-action="idea-open-plan-card"[^>]*data-plan-id="warning-only"/);
 });
 
-test("ideas row renders Finalize plus View plan for accepted plans", () => {
+test("ideas row shows an Accepted chip and Open plan link (Finalize lives on the plan card)", () => {
   const html = renderIdeas([
     {
       id: "I006",
@@ -245,12 +264,11 @@ test("ideas row renders Finalize plus View plan for accepted plans", () => {
       }
     }
   ]);
-  assert.match(html, /data-wc-action="plan-artifact-finalize"/);
-  assert.match(html, /data-plan-id="accepted-plan"/);
-  assert.match(html, /data-wc-action="idea-view-plan"/);
+  assert.match(html, /wc-plan-lifecycle-chip">Accepted</);
+  assert.match(html, /data-wc-action="idea-open-plan-card"[^>]*data-plan-id="accepted-plan"/);
 });
 
-test("ideas row renders View tasks for finalized plans", () => {
+test("ideas row shows a Finalized chip and Open plan link (View tasks lives on the plan card)", () => {
   const html = renderIdeas([
     {
       id: "I007",
@@ -267,9 +285,12 @@ test("ideas row renders View tasks for finalized plans", () => {
       }
     }
   ]);
-  assert.match(html, /data-wc-action="open-queue-for-phase"/);
-  assert.match(html, /data-wc-phase-key="139"/);
-  assert.match(html, /View tasks/);
-  assert.match(html, /View plan/);
-  assert.doesNotMatch(html, /data-wc-action="plan-artifact-finalize"/);
+  assert.match(html, /wc-plan-lifecycle-chip">Finalized</);
+  assert.match(html, /data-wc-action="idea-open-plan-card"[^>]*data-plan-id="finalized-plan"/);
+});
+
+test("Open plan click scrolls to and highlights the matching plan card in the webview", () => {
+  assert.match(webviewClientSrc, /act === 'idea-open-plan-card'/);
+  assert.match(webviewClientSrc, /data-wc-plan-card-id="'\+jumpPlanId/);
+  assert.match(webviewClientSrc, /wc-plan-card-highlight/);
 });

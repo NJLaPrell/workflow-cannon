@@ -88,7 +88,10 @@ import {
 } from "./dashboard-read-mode-badge.js";
 import {
   dashboardSectionIdForSlice,
+  ideasHasContent,
+  mergeDashboardProjectionIntoSummary,
   mergeSlicePayloadIntoSummary,
+  planArtifactHasContent,
   sliceNamesForDashboardSummaryProjection,
   wrapSectionHtmlWithFreshness
 } from "./dashboard-store-bridge.js";
@@ -421,6 +424,9 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   /** Coalesces queue rollup upgrades so heavier queue projections stay single-flight. */
   private queueRollupHydrationInFlight?: Promise<void>;
 
+  /** Coalesces planning-tab upgrades from overview stub to queue projection. */
+  private planningHydrationInFlight?: Promise<void>;
+
   /** Sections hydrated via tab activation or eager first paint (T100398). */
   private hydratedDashboardSections = new Set<DashboardSectionId>();
 
@@ -747,6 +753,21 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       ...raw,
       data: this.overlayTaskStateSyncForRender(raw.data as Record<string, unknown>)
     };
+  }
+
+  /** Prefer merged summary cache over a partial projection response when rendering. */
+  private dashboardRenderPayload(
+    raw: DashboardSummaryCommandSuccess | Record<string, unknown>
+  ): Record<string, unknown> {
+    const merged = this.lastDashboardSummaryData;
+    if (raw.ok === true && merged && Object.keys(merged).length > 0) {
+      return this.wrapDashboardPayloadForRender({
+        ok: true,
+        data: merged,
+        code: (raw as { code?: string }).code
+      });
+    }
+    return this.wrapDashboardPayloadForRender(raw as Record<string, unknown>);
   }
 
   private isDashboardSliceVisible(name: DashboardSliceName): boolean {
@@ -1556,12 +1577,22 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
           await this.onAcceptPlanArtifact(planId, planRef, Math.floor(version));
         }
       }
+      if (msg?.type === "invalidPlanArtifactAction") {
+        const action = typeof msg.action === "string" && msg.action.trim().length > 0 ? msg.action.trim() : "plan";
+        await vscode.window.showWarningMessage(
+          `Cannot ${action} this plan because its dashboard identity is incomplete. Refresh the dashboard and try again.`
+        );
+      }
       if (msg?.type === "reviewPlanArtifact") {
         const planId = typeof msg.planId === "string" ? msg.planId.trim() : "";
         const versionRaw = typeof msg.version === "string" ? msg.version.trim() : "";
         const version = Number(versionRaw);
         if (planId && Number.isFinite(version) && version > 0) {
           await this.onReviewPlanArtifact(planId, Math.floor(version));
+        } else {
+          await vscode.window.showWarningMessage(
+            "Cannot review this plan because its dashboard identity is incomplete. Refresh the dashboard and try again."
+          );
         }
       }
       if (msg?.type === "finalizePlanArtifact") {
@@ -1691,7 +1722,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       }
       if (raw.ok === true && raw.data && typeof raw.data === "object") {
         const prior = this.lastDashboardSummaryData ?? {};
-        this.lastDashboardSummaryData = mergeSlicePayloadIntoSummary(
+        this.lastDashboardSummaryData = mergeDashboardProjectionIntoSummary(
           prior,
           "overview",
           raw.data as Record<string, unknown>
@@ -1702,7 +1733,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       }
       const editorIntegration = await resolveEditorIntegrationState();
       const rootInner = renderDashboardRootInnerHtml(
-        this.wrapDashboardPayloadForRender(raw as Record<string, unknown>),
+        this.dashboardRenderPayload(raw),
         raw.ok === true ? this.planningWizardPanel() : null,
         editorIntegration,
         undefined,
@@ -1779,6 +1810,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     if (tabId === "task-engine" || tabId === "overview") {
       await this.ensureQueueRollupsHydrated(this.refreshController.currentGeneration());
+    } else if (tabId === "planning") {
+      await this.ensurePlanningSectionsHydrated(this.refreshController.currentGeneration());
     } else if (tabId === "status" && this.staleDashboardSections.has("status")) {
       await this.ensureStatusHydrated(this.refreshController.currentGeneration());
     }
@@ -1810,6 +1843,54 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     });
     this.queueRollupHydrationInFlight = run;
     return run;
+  }
+
+  /** Upgrade planning sections from overview stub (empty ideas) to queue projection. */
+  private async ensurePlanningSectionsHydrated(updateSequence?: number): Promise<void> {
+    if (this.planningHydrationInFlight) {
+      logWc("dashboard", "planning hydration coalesced with in-flight dashboard-summary");
+      return this.planningHydrationInFlight;
+    }
+    const run = this.ensurePlanningSectionsHydratedOnce(updateSequence).finally(() => {
+      if (this.planningHydrationInFlight === run) {
+        this.planningHydrationInFlight = undefined;
+      }
+    });
+    this.planningHydrationInFlight = run;
+    return run;
+  }
+
+  private async ensurePlanningSectionsHydratedOnce(updateSequence?: number): Promise<void> {
+    if (!this.view || !this.dashboardRootHydrated) {
+      logWc("dashboard", "planning hydration deferred: root not hydrated");
+      return;
+    }
+    if (this.activeDashboardTab !== "planning") {
+      logWc("dashboard", `planning hydration deferred: tab ${this.activeDashboardTab} not visible`);
+      return;
+    }
+    const data = this.lastDashboardSummaryData;
+    const ideasOk = ideasHasContent(data?.ideas);
+    const plansOk = planArtifactHasContent(data?.planArtifact);
+    if (ideasOk && plansOk) {
+      return;
+    }
+    if (this.shouldSkipDashboardKitRefresh()) {
+      logWc("dashboard", "planning hydration deferred: refresh paused or suppressed");
+      this.refreshController.markDeferredRefreshNeeded();
+      return;
+    }
+    logWc("dashboard", "ensurePlanningSectionsHydrated: upgrading planning sections to queue projection");
+    const seq = updateSequence ?? this.refreshController.currentGeneration();
+    await this.patchDashboardSectionsFromSummary(
+      ["phase-roster", "ideas", "plan-artifact"],
+      seq,
+      {
+        projection: "queue",
+        preserveOnSummaryFailure: true,
+        source: "tab:planning planning hydration"
+      }
+    );
   }
 
   private async ensureQueueRollupsHydratedOnce(updateSequence?: number): Promise<void> {
@@ -1911,7 +1992,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       const raw = await this.runDashboardSummaryStatus({}, { source: "tab:status status hydration" });
       if (raw.ok === true && raw.data && typeof raw.data === "object") {
         const prior = this.lastDashboardSummaryData ?? {};
-        this.lastDashboardSummaryData = mergeSlicePayloadIntoSummary(
+        this.lastDashboardSummaryData = mergeDashboardProjectionIntoSummary(
           prior,
           "status",
           raw.data as Record<string, unknown>
@@ -2249,11 +2330,16 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     if (raw.ok === true && raw.data && typeof raw.data === "object") {
       const summaryData = raw.data as Record<string, unknown>;
       const prior = this.lastDashboardSummaryData ?? {};
-      const ingestProjection = summaryProjection === "full" ? "overview" : summaryProjection;
+      const ingestProjection =
+        summaryProjection === "full" ? "full" : summaryProjection === "overview" ? "overview" : summaryProjection;
       if (options?.cachedSummaryOnly !== true) {
-        this.lastDashboardSummaryData = mergeSlicePayloadIntoSummary(prior, ingestProjection, summaryData);
+        this.lastDashboardSummaryData = mergeDashboardProjectionIntoSummary(
+          prior,
+          ingestProjection,
+          summaryData
+        );
         ingestPlanningMetaFromData(summaryData);
-        this.ingestDashboardSummaryIntoStore(summaryData, ingestProjection);
+        this.ingestDashboardSummaryIntoStore(summaryData, ingestProjection === "full" ? "overview" : ingestProjection);
       }
       const contentFp = computeQueueContentFingerprint(summaryData);
       if (
@@ -2289,7 +2375,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     try {
       const editorIntegration = await resolveEditorIntegrationState();
       rootInner = renderDashboardRootInnerHtml(
-        this.wrapDashboardPayloadForRender(raw as Record<string, unknown>),
+        this.dashboardRenderPayload(raw),
         wizardPanel,
         editorIntegration,
         phaseJournal,
@@ -3872,11 +3958,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
     await vscode.window.showInformationMessage(`Accepted plan ${planId}.`);
-    await this.pushUpdate({
-      projection: "overview",
-      skipHeavyFetches: false,
-      source: "user:plan-artifact accept"
-    });
+    await this.applyDashboardMutationInvalidation("plan-artifact");
   }
 
   private async onReviewPlanArtifact(planId: string, version: number): Promise<void> {
@@ -3902,11 +3984,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     await vscode.window.showInformationMessage(
       passed ? `Reviewed plan ${planId}.` : `Reviewed plan ${planId}; findings need attention.`
     );
-    await this.pushUpdate({
-      projection: "overview",
-      skipHeavyFetches: false,
-      source: "user:plan-artifact review"
-    });
+    await this.applyDashboardMutationInvalidation("plan-artifact");
   }
 
   private async onFinalizePlanArtifact(planId: string, version: number): Promise<void> {
@@ -3953,11 +4031,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     await vscode.window.showInformationMessage(
       `Finalized plan ${planId}${Number.isFinite(count) && count > 0 ? ` into ${count} task(s)` : ""}.`
     );
-    await this.pushUpdate({
-      projection: "overview",
-      skipHeavyFetches: false,
-      source: "user:plan-artifact finalize"
-    });
+    await this.applyDashboardMutationInvalidation("plan-artifact");
     if (phaseKey.length > 0) {
       await this.view?.webview.postMessage({ type: "wcOpenQueueForPhase", phaseKey });
     }
@@ -5144,9 +5218,15 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     let embeddedCaePanelHtml: string | null = null;
     if (raw.ok === true && raw.data && typeof raw.data === "object") {
       const prior = this.lastDashboardSummaryData ?? {};
-      this.lastDashboardSummaryData = mergeSlicePayloadIntoSummary(
+      const ingestProjection =
+        summaryProjection === "full"
+          ? "full"
+          : summaryProjection === "overview"
+            ? "overview"
+            : summaryProjection;
+      this.lastDashboardSummaryData = mergeDashboardProjectionIntoSummary(
         prior,
-        "overview",
+        ingestProjection,
         raw.data as Record<string, unknown>
       );
       this.lastQueueContentFingerprint = computeQueueContentFingerprint(
@@ -5155,7 +5235,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       ingestPlanningMetaFromData(raw.data as Record<string, unknown>);
       this.ingestDashboardSummaryIntoStore(
         raw.data as Record<string, unknown>,
-        "overview"
+        ingestProjection === "full" ? "overview" : ingestProjection
       );
       try {
         if (lightRefresh) {
@@ -5299,7 +5379,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     try {
       const editorIntegration = await resolveEditorIntegrationState();
       rootInner = renderDashboardRootInnerHtml(
-        this.wrapDashboardPayloadForRender(raw as Record<string, unknown>),
+        this.dashboardRenderPayload(raw),
         wizardPanel,
         editorIntegration,
         phaseJournal,
@@ -6603,65 +6683,122 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     .dash-planning-wizard-actions {
       margin: 0;
     }
-    .wc-plan-artifact-head {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 8px;
-      flex-wrap: wrap;
-      margin: 0 0 8px 0;
+    .wc-plan-artifacts-section > p:first-child { margin: 0 0 10px 0; }
+    .wc-plan-card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 12px;
+      margin-top: 4px;
     }
-    .wc-plan-artifact-main { min-width: 0; flex: 1; }
-    .wc-plan-artifact-title { margin: 0; overflow-wrap: anywhere; }
-    .wc-plan-artifact-meta { margin: 2px 0 0 0; color: var(--vscode-descriptionForeground, var(--vscode-foreground)); font-size: 11px; overflow-wrap: anywhere; }
-    .wc-plan-artifact-status {
+    .wc-plan-card {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-width: 0;
+      padding: 10px 12px;
+      border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.35));
+      border-left: 3px solid var(--vscode-widget-border, rgba(127,127,127,.35));
+      border-radius: 6px;
+      background: var(--vscode-textCodeBlock-background);
+      scroll-margin: 16px;
+      transition: outline-color .2s ease;
+    }
+    .wc-plan-card.wc-plan-status-draft { border-left-color: var(--vscode-descriptionForeground, #888); }
+    .wc-plan-card.wc-plan-status-warn { border-left-color: var(--vscode-editorWarning-foreground, #cca700); }
+    .wc-plan-card.wc-plan-status-info { border-left-color: var(--vscode-textLink-foreground, #4fc1ff); }
+    .wc-plan-card.wc-plan-status-accent { border-left-color: var(--vscode-terminal-ansiCyan, #29b8db); }
+    .wc-plan-card.wc-plan-status-done { border-left-color: var(--vscode-testing-iconPassed, #4ec9b0); }
+    .wc-plan-card.wc-plan-status-muted { border-left-color: var(--vscode-widget-border, rgba(127,127,127,.35)); opacity: .82; }
+    .wc-plan-card-highlight { outline: 2px solid var(--vscode-focusBorder, #4fc1ff); outline-offset: 2px; }
+    .wc-plan-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+    .wc-plan-card-title-wrap { min-width: 0; flex: 1; }
+    .wc-plan-card-title { margin: 0; overflow-wrap: anywhere; }
+    .wc-plan-card-desc { margin: 2px 0 0 0; font-size: 11px; overflow-wrap: anywhere; }
+    .wc-plan-status-pill {
       display: inline-flex;
       align-items: center;
+      flex-shrink: 0;
       padding: 2px 8px;
       border-radius: 7px;
       border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.35));
-      background: var(--vscode-textCodeBlock-background);
-      color: var(--vscode-textLink-foreground, #4fc1ff);
+      background: var(--vscode-editor-background);
       font-size: 10px;
       font-weight: 600;
       line-height: 1.3;
+      white-space: nowrap;
     }
-    .wc-plan-artifact-stats { display: flex; flex-wrap: wrap; gap: 6px; align-items: stretch; }
-    .wc-plan-artifact-stat {
+    .wc-plan-status-pill.wc-plan-status-draft, .wc-plan-lifecycle-chip { color: var(--vscode-descriptionForeground, var(--vscode-foreground)); }
+    .wc-plan-status-pill.wc-plan-status-warn { color: var(--vscode-editorWarning-foreground, #cca700); }
+    .wc-plan-status-pill.wc-plan-status-info { color: var(--vscode-textLink-foreground, #4fc1ff); }
+    .wc-plan-status-pill.wc-plan-status-accent { color: var(--vscode-terminal-ansiCyan, #29b8db); }
+    .wc-plan-status-pill.wc-plan-status-done { color: var(--vscode-testing-iconPassed, #4ec9b0); }
+    .wc-plan-status-pill.wc-plan-status-muted { color: var(--vscode-descriptionForeground, var(--vscode-foreground)); text-decoration: line-through; }
+    .wc-plan-card-facts { margin: 0; font-size: 11px; }
+    .wc-plan-card-facts-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4px 12px;
+      margin: 0 0 4px 0;
+    }
+    .wc-plan-card-facts-row:last-child { margin-bottom: 0; }
+    .wc-plan-card-fact { display: grid; grid-template-columns: max-content 1fr; gap: 6px; align-items: baseline; min-width: 0; }
+    .wc-plan-card-fact dt { margin: 0; color: var(--vscode-descriptionForeground, var(--vscode-foreground)); font-weight: 600; white-space: nowrap; }
+    .wc-plan-card-fact dd { margin: 0; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+    .wc-plan-card-idea-chip {
+      display: inline;
+      margin-left: 4px;
+      padding: 0;
+      border: none;
+      background: none;
+      color: var(--vscode-textLink-foreground, #4fc1ff);
+      font-size: 11px;
+      cursor: pointer;
+      text-decoration: underline;
+    }
+    .wc-plan-card-stats { display: flex; flex-wrap: wrap; gap: 4px; margin: 0; }
+    .wc-plan-card-chip {
       display: inline-flex;
       align-items: center;
-      gap: 4px;
-      padding: 4px 6px;
-      border-radius: 6px;
-      border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.35));
-      background: var(--vscode-textCodeBlock-background);
-      font-size: 11px;
-      min-width: 0;
-    }
-    .wc-plan-artifact-stat b { font-variant-numeric: tabular-nums; }
-    .wc-plan-artifact-label { color: var(--vscode-descriptionForeground, var(--vscode-foreground)); }
-    .wc-plan-artifact-actions { display: flex; justify-content: flex-end; gap: 6px; margin-top: 8px; }
-    .wc-plan-subtitle { margin: 8px 0 4px 0; }
-    .wc-plan-review-list, .wc-plan-wbs-list { display: flex; flex-direction: column; gap: 4px; }
-    .wc-plan-review-row, .wc-plan-wbs-row {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 8px;
-      padding: 4px 6px;
-      border-radius: 4px;
-      background: var(--vscode-textCodeBlock-background);
-      min-width: 0;
-    }
-    .wc-plan-review-severity, .wc-plan-wbs-phase {
-      flex-shrink: 0;
-      color: var(--vscode-descriptionForeground, var(--vscode-foreground));
+      padding: 2px 6px;
+      border-radius: 5px;
+      border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.3));
+      background: var(--vscode-editor-background);
       font-size: 10px;
+    }
+    .wc-plan-card-chip-danger { color: var(--vscode-errorForeground); border-color: var(--vscode-errorForeground); }
+    .wc-plan-card-chip-warn { color: var(--vscode-editorWarning-foreground, #cca700); border-color: var(--vscode-editorWarning-foreground, #cca700); }
+    .wc-plan-card-chip-pass { color: var(--vscode-testing-iconPassed, #4ec9b0); border-color: var(--vscode-testing-iconPassed, #4ec9b0); }
+    .wc-plan-card-chip-muted { color: var(--vscode-descriptionForeground, var(--vscode-foreground)); }
+    .wc-plan-card-actions { display: flex; justify-content: flex-end; gap: 6px; margin-top: 2px; }
+    .wc-plan-card-wbs,
+    .wc-plan-card-details { margin-top: 2px; }
+    .wc-plan-card-wbs summary,
+    .wc-plan-card-details summary { cursor: pointer; user-select: none; font-size: 11px; font-weight: 600; color: var(--vscode-foreground); }
+    .wc-plan-wbs-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 6px;
+      font-size: 11px;
+    }
+    .wc-plan-wbs-table th,
+    .wc-plan-wbs-table td {
+      border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.35));
+      padding: 4px 6px;
+      text-align: left;
+      vertical-align: top;
+    }
+    .wc-plan-wbs-table th {
+      background: var(--vscode-editor-background);
+      color: var(--vscode-descriptionForeground, var(--vscode-foreground));
       font-weight: 600;
     }
-    .wc-plan-review-message, .wc-plan-wbs-title { min-width: 0; overflow-wrap: anywhere; }
-    .wc-plan-review-path { color: var(--vscode-descriptionForeground, var(--vscode-foreground)); font-size: 10px; }
-    .wc-plan-review-pass { margin: 8px 0 0 0; color: var(--vscode-testing-iconPassed, #4ec9b0); }
+    .wc-plan-wbs-table td { overflow-wrap: anywhere; }
+    .wc-plan-wbs-empty { margin: 6px 0 0 0; font-size: 11px; }
+    .wc-plan-card-detail-grid { margin: 6px 0 0 0; display: grid; grid-template-columns: max-content 1fr; gap: 2px 8px; font-size: 11px; }
+    .wc-plan-card-detail-grid dt { color: var(--vscode-descriptionForeground, var(--vscode-foreground)); font-weight: 600; }
+    .wc-plan-card-detail-grid dd { margin: 0; overflow-wrap: anywhere; }
+    .wc-plan-finalized-bucket { margin-top: 12px; }
+    .wc-plan-finalized-bucket > summary { cursor: pointer; user-select: none; font-weight: 600; margin-bottom: 6px; }
     .ok { color: var(--vscode-testing-iconPassed); }
     .bad { color: var(--vscode-errorForeground); }
     .phase-stack { margin: 4px 0 8px 0; }

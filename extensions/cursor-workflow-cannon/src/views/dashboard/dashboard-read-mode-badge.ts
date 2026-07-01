@@ -28,7 +28,7 @@ export function formatDashboardReadModeBadgeDetail(badge: DashboardReadModeBadge
     return badge.detail.trim();
   }
   if (badge.configured === "service" && badge.active !== "service") {
-    return "Configured for warm service; service is not reachable. Last dashboard data preserved.";
+    return "Configured for warm service; service is not reachable. Using CLI polling for live data.";
   }
   return undefined;
 }

@@ -10,6 +10,7 @@ import { lookupDashboardSection } from "./dashboard-section-registry.js";
 export type DashboardMutationKind =
   | "task-queue"
   | "ideas"
+  | "plan-artifact"
   | "overview"
   | "phase-journal"
   | "status"
@@ -20,6 +21,7 @@ export type DashboardMutationKind =
 const MUTATION_SECTIONS: Readonly<Record<DashboardMutationKind, readonly DashboardSectionId[]>> = {
   "task-queue": ["queue", "overview"],
   ideas: ["ideas"],
+  "plan-artifact": ["plan-artifact", "ideas"],
   overview: ["overview", "phase-roster", "plan-artifact"],
   "phase-journal": ["phase-journal", "queue"],
   status: ["status"],

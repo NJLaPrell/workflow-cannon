@@ -28,7 +28,7 @@ import type {
   DashboardAgentActivitySummary,
   DashboardAgentStatusKind
 } from "@workflow-cannon/workspace-kit/contracts/dashboard-summary-run";
-import { deriveIdeaPlanningLifecycleState } from "@workflow-cannon/workspace-kit/modules";
+import { deriveIdeaPlanningLifecycleState } from "./derive-idea-planning-lifecycle-state.js";
 import type { DashboardSectionId } from "./dashboard-section-registry.js";
 import { lookupDashboardSection } from "./dashboard-section-registry.js";
 import { renderDashboardReadModeBadgeHtml, renderDashboardSectionPlaceholder } from "./render-dashboard-shell.js";
@@ -2395,6 +2395,30 @@ function planArtifactLike(summary: Record<string, unknown> | null): { planRef?: 
   };
 }
 
+function ideaLifecycleChipLabel(lifecycleState: string): string {
+  switch (lifecycleState) {
+    case "draft_ready":
+      return "Draft";
+    case "needs_revision":
+      return "Needs revision";
+    case "approval_ready":
+      return "Approval ready";
+    case "accepted":
+      return "Accepted";
+    case "finalized":
+      return "Finalized";
+    case "superseded":
+      return "Superseded";
+    default:
+      return humanizePlanningToken(lifecycleState);
+  }
+}
+
+/**
+ * Once a plan exists for an idea, all lifecycle actions (Review/Accept/Finalize/View tasks) live on the
+ * plan's own card in the Plans section — one source of truth instead of duplicating buttons here. The idea
+ * row just shows a status chip and a link that jumps to the corresponding card.
+ */
 function renderIdeaLifecycleActions(args: {
   ideaId: string;
   lifecycleState: string;
@@ -2411,52 +2435,29 @@ function renderIdeaLifecycleActions(args: {
     case "planning":
       return resumeButton;
     case "draft_ready":
-      return (
-        ideaPlanButton("Review", "plan-artifact-review", planActionAttrs(args.activeDraftPlanArtifactSummary)) +
-        ideaPlanButton("View plan", "idea-view-plan", planActionAttrs(viewPlanTarget), { secondary: true })
-      );
     case "needs_revision":
-      return (
-        resumeButton +
-        ideaPlanButton("Accept", "plan-artifact-accept", planActionAttrs(args.activeDraftPlanArtifactSummary), {
-          secondary: true,
-          disabled: true,
-          title: "Resolve review blockers before accepting this plan."
-        }) +
-        ideaPlanButton("View plan", "idea-view-plan", planActionAttrs(viewPlanTarget), { secondary: true })
-      );
     case "approval_ready":
-      return (
-        ideaPlanButton("Accept", "plan-artifact-accept", planActionAttrs(args.activeDraftPlanArtifactSummary)) +
-        ideaPlanButton("View plan", "idea-view-plan", planActionAttrs(viewPlanTarget), { secondary: true })
-      );
     case "accepted":
+    case "finalized":
+    case "superseded": {
+      const planId = String(viewPlanTarget?.planId ?? "").trim();
+      const openPlanCardButton =
+        planId.length > 0
+          ? ideaPlanButton("Open plan", "idea-open-plan-card", ` data-plan-id="${escapeHtmlAttr(planId)}"`, {
+              secondary: true
+            })
+          : ideaPlanButton("Open plan", "idea-open-plan-card", "", {
+              secondary: true,
+              disabled: true,
+              title: "Plan identity is incomplete. Refresh the dashboard and try again."
+            });
       return (
-        ideaPlanButton("Finalize", "plan-artifact-finalize", planActionAttrs(args.linkedPlanArtifactSummary)) +
-        ideaPlanButton("View plan", "idea-view-plan", planActionAttrs(viewPlanTarget), { secondary: true })
-      );
-    case "finalized": {
-      const phaseKey =
-        args.linkedPlanArtifactSummary && typeof args.linkedPlanArtifactSummary.phaseKey === "string"
-          ? args.linkedPlanArtifactSummary.phaseKey.trim()
-          : "";
-      const viewTasksButton = phaseKey
-        ? ideaPlanButton(
-            "View tasks",
-            "open-queue-for-phase",
-            ` data-wc-phase-key="${escapeHtmlAttr(phaseKey)}"`
-          )
-        : ideaPlanButton("View tasks", "open-queue-for-phase", "", {
-            disabled: true,
-            title: "Phase key unavailable for this finalized plan."
-          });
-      return (
-        viewTasksButton +
-        ideaPlanButton("View plan", "idea-view-plan", planActionAttrs(viewPlanTarget), { secondary: true })
+        '<span class="wc-plan-lifecycle-chip">' +
+        escapeHtml(ideaLifecycleChipLabel(args.lifecycleState)) +
+        "</span>" +
+        openPlanCardButton
       );
     }
-    case "superseded":
-      return ideaPlanButton("View plan", "idea-view-plan", planActionAttrs(viewPlanTarget), { secondary: true });
     case "open":
     default:
       return ideaPlanButton("Plan this", "idea-plan");
@@ -3689,263 +3690,414 @@ function formatPlanningUpdatedAt(iso: string): string {
   }
 }
 
-function renderPlanArtifactDraftPanel(planArtifact: unknown): string {
-  if (!planArtifact || typeof planArtifact !== "object") {
-    return "";
-  }
-  const summary = planArtifact as Record<string, unknown>;
-  const current = summary.current;
-  if (!current || typeof current !== "object") {
-    return "";
-  }
-  const row = current as Record<string, unknown>;
-  const title = String(row.title ?? "").trim() || "Untitled Plan";
-  const planRef = String(row.planRef ?? "").trim();
-  const planId = String(row.planId ?? "").trim();
-  const statusRaw = String(row.status ?? "").trim();
-  const planningTypeRaw = String(row.planningType ?? "").trim();
-  const planningType = planningTypeRaw.length > 0 ? humanizePlanningToken(planningTypeRaw) : "Planning";
-  const version = typeof row.version === "number" ? row.version : Number(row.version ?? 0);
-  const versionText = Number.isFinite(version) && version > 0 ? "v" + String(version) : "v?";
-  const wbsRows = typeof row.wbsRowCount === "number" ? row.wbsRowCount : Number(row.wbsRowCount ?? 0);
-  const openQuestions =
-    typeof row.openQuestionCount === "number" ? row.openQuestionCount : Number(row.openQuestionCount ?? 0);
-  const blockerCount = typeof row.blockerCount === "number" ? row.blockerCount : Number(row.blockerCount ?? 0);
-  const warningCount = typeof row.warningCount === "number" ? row.warningCount : Number(row.warningCount ?? 0);
+const PLAN_ARTIFACT_FINALIZED_STATUSES = new Set(["finalized", "superseded"]);
+
+function numberOrZero(value: unknown): number {
+  const n = typeof value === "number" ? value : Number(value ?? 0);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function planArtifactEffectiveStatus(row: Record<string, unknown>): string {
   const lifecycleStatusRaw = String(row.lifecycleStatus ?? "").trim().toLowerCase();
-  const effectiveStatusRaw =
-    lifecycleStatusRaw.length > 0
-      ? lifecycleStatusRaw
-      : statusRaw === "reviewed"
-        ? blockerCount > 0
-          ? "needs_revision"
-          : "approval_ready"
-        : statusRaw;
-  const statusDisp = effectiveStatusRaw.length > 0 ? humanizePlanningToken(effectiveStatusRaw) : "Draft";
-  const profileRaw = String(row.profile ?? "").trim();
-  const profileText = profileRaw.length > 0 ? humanizePlanningToken(profileRaw) : "—";
-  const phaseRecommendation = String(row.phaseRecommendation ?? "").trim();
-  const phaseRecommendationText = phaseRecommendation.length > 0 ? phaseRecommendation : "—";
-  const sourceIdeaId = String(row.sourceIdeaId ?? "").trim();
-  const reviewSummaryText = String(row.reviewSummary ?? "").trim();
+  if (lifecycleStatusRaw.length > 0) {
+    return lifecycleStatusRaw;
+  }
+  const statusRaw = String(row.status ?? "").trim().toLowerCase();
+  if (statusRaw === "reviewed") {
+    return numberOrZero(row.blockerCount) > 0 ? "needs_revision" : "approval_ready";
+  }
+  return statusRaw;
+}
+
+function planArtifactStatusMeta(effectiveStatusRaw: string): { label: string; className: string } {
+  switch (effectiveStatusRaw) {
+    case "draft":
+      return { label: "Draft", className: "wc-plan-status-draft" };
+    case "needs_revision":
+      return { label: "Needs revision", className: "wc-plan-status-warn" };
+    case "approval_ready":
+      return { label: "Approval ready", className: "wc-plan-status-info" };
+    case "accepted":
+      return { label: "Accepted", className: "wc-plan-status-accent" };
+    case "finalized":
+      return { label: "Finalized", className: "wc-plan-status-done" };
+    case "superseded":
+      return { label: "Superseded", className: "wc-plan-status-muted" };
+    default:
+      return {
+        label: effectiveStatusRaw.length > 0 ? humanizePlanningToken(effectiveStatusRaw) : "Draft",
+        className: "wc-plan-status-draft"
+      };
+  }
+}
+
+function planArtifactStatusPillHidden(effectiveStatusRaw: string): boolean {
+  return (
+    effectiveStatusRaw === "finalized" ||
+    effectiveStatusRaw === "superseded" ||
+    effectiveStatusRaw === "approval_ready"
+  );
+}
+
+function planCardUiStateAttr(planId: string, suffix: string): string {
+  const key = (planId.trim().length > 0 ? planId.trim() : "unknown") + "-" + suffix;
+  return wcTrackAttr(key);
+}
+
+function yesNoLabel(value: unknown): string {
+  return value === true ? "Yes" : "No";
+}
+
+function renderPlanArtifactFactsMeta(row: Record<string, unknown>): string {
+  const version = typeof row.version === "number" ? row.version : Number(row.version ?? 0);
+  const versionText = Number.isFinite(version) && version > 0 ? String(Math.floor(version)) : "—";
   const updatedAt = String(row.updatedAt ?? "").trim();
   const updatedText = updatedAt.length > 0 ? formatPlanningUpdatedAt(updatedAt) : "—";
-  const refLabel = planRef.length > 0 ? planRef : planId;
-  const reviewFindings = Array.isArray(row.reviewFindings)
-    ? row.reviewFindings
-    : Array.isArray(summary.reviewFindings)
-      ? summary.reviewFindings
-      : [];
-  const wbsPreview = Array.isArray(row.wbsPreview)
-    ? row.wbsPreview
-    : Array.isArray(summary.wbsPreview)
-      ? summary.wbsPreview
-      : [];
-  const reviewHtml =
-    reviewFindings.length > 0
-      ? '<div class="wc-plan-review" aria-label="Plan review findings">' +
-        '<p class="wc-plan-subtitle"><b>Review Findings</b></p>' +
-        '<div class="wc-plan-review-list" role="list">' +
-        reviewFindings
-          .slice(0, 5)
-          .map((finding) => {
-            const findingRow = finding && typeof finding === "object" ? (finding as Record<string, unknown>) : {};
-            const severity = String(findingRow.severity ?? findingRow.level ?? "info").trim() || "info";
-            const message = String(findingRow.message ?? findingRow.title ?? findingRow.code ?? "Finding").trim();
-            const pathText = String(findingRow.path ?? findingRow.field ?? "").trim();
-            return (
-              '<div class="wc-plan-review-row" role="listitem">' +
-              '<span class="wc-plan-review-severity">' +
-              escapeHtml(humanizePlanningToken(severity)) +
-              "</span>" +
-              '<span class="wc-plan-review-message">' +
-              escapeHtml(message) +
-              (pathText.length > 0 ? ' <span class="wc-plan-review-path">' + escapeHtml(pathText) + "</span>" : "") +
-              "</span>" +
-              "</div>"
-            );
-          })
-          .join("") +
-        "</div>" +
-        "</div>"
-      : blockerCount > 0 || warningCount > 0 || reviewSummaryText.length > 0
-        ? '<div class="wc-plan-review" aria-label="Plan review summary">' +
-          '<p class="wc-plan-subtitle"><b>Review Summary</b></p>' +
-          '<div class="wc-plan-review-list" role="list">' +
-          '<div class="wc-plan-review-row" role="listitem">' +
-          '<span class="wc-plan-review-severity">' +
-          escapeHtml(String(Number.isFinite(blockerCount) ? blockerCount : 0)) +
-          "</span>" +
-          '<span class="wc-plan-review-message">blocker(s)</span>' +
-          "</div>" +
-          '<div class="wc-plan-review-row" role="listitem">' +
-          '<span class="wc-plan-review-severity">' +
-          escapeHtml(String(Number.isFinite(warningCount) ? warningCount : 0)) +
-          "</span>" +
-          '<span class="wc-plan-review-message">warning(s)</span>' +
-          "</div>" +
-          (reviewSummaryText.length > 0
-            ? '<div class="wc-plan-review-row" role="listitem">' +
-              '<span class="wc-plan-review-severity">Summary</span>' +
-              '<span class="wc-plan-review-message">' +
-              escapeHtml(reviewSummaryText) +
-              "</span>" +
-              "</div>"
-            : "") +
-          "</div>" +
-          "</div>"
-        : effectiveStatusRaw === "approval_ready" || effectiveStatusRaw === "accepted" || effectiveStatusRaw === "finalized"
-        ? '<p class="wc-plan-review-pass"><b>Review Passed</b></p>'
-        : "";
-  const wbsHtml =
-    wbsPreview.length > 0
-      ? '<div class="wc-plan-wbs" aria-label="WBS preview">' +
-        '<p class="wc-plan-subtitle"><b>WBS Preview</b></p>' +
-        '<div class="wc-plan-wbs-list" role="list">' +
-        wbsPreview
-          .slice(0, 5)
-          .map((item) => {
-            const itemRow = item && typeof item === "object" ? (item as Record<string, unknown>) : {};
-            const itemId = String(itemRow.wbsId ?? itemRow.id ?? "").trim();
-            const itemPath = String(itemRow.path ?? "").trim();
-            const itemTitle = String(itemRow.title ?? itemRow.suggestedTaskTitle ?? "Untitled WBS item").trim();
-            const itemPhase = String(itemRow.recommendedPhase ?? itemRow.phaseKey ?? "").trim();
-            const prefix = [itemId, itemPath].filter((value) => value.length > 0).join(" · ");
-            return (
-              '<div class="wc-plan-wbs-row" role="listitem">' +
-              '<span class="wc-plan-wbs-title">' +
-              (prefix.length > 0 ? '<b>' + escapeHtml(prefix) + "</b> · " : "") +
-              escapeHtml(itemTitle) +
-              "</span>" +
-              (itemPhase.length > 0 ? '<span class="wc-plan-wbs-phase">' + escapeHtml(itemPhase) + "</span>" : "") +
-              "</div>"
-            );
-          })
-          .join("") +
-        "</div>" +
-        "</div>"
-      : "";
-  const hasBlockingReviewFinding = reviewFindings.some((finding) => {
-    const findingRow = finding && typeof finding === "object" ? (finding as Record<string, unknown>) : {};
-    const severity = String(findingRow.severity ?? findingRow.level ?? "").trim().toLowerCase();
-    return severity === "blocker" || severity === "error";
-  }) || blockerCount > 0;
-  const canAccept =
-    planId.length > 0 &&
-    planRef.length > 0 &&
-    Number.isFinite(version) &&
-    version > 0 &&
-    effectiveStatusRaw === "approval_ready" &&
-    !hasBlockingReviewFinding &&
-    Number.isFinite(openQuestions) &&
-    openQuestions === 0;
-  const acceptDisabledReason =
-    effectiveStatusRaw === "draft"
-      ? "Review must pass before accepting this plan."
-      : effectiveStatusRaw === "needs_revision" || hasBlockingReviewFinding
-        ? "Review blockers must be resolved before accepting this plan."
-        : Number.isFinite(openQuestions) && openQuestions > 0
-          ? "Open questions must be resolved or deferred before accepting this plan."
-          : planId.length === 0 || planRef.length === 0 || !Number.isFinite(version) || version <= 0
-            ? "Plan identity is incomplete."
-            : "Accept this reviewed plan.";
-  const reviewActionHtml =
-    effectiveStatusRaw === "draft"
-      ? '<div class="wc-plan-artifact-actions">' +
-        '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="plan-artifact-review" data-plan-id="' +
-        escapeHtmlAttr(planId) +
-        '" data-plan-version="' +
-        escapeHtmlAttr(Number.isFinite(version) ? String(version) : "") +
-        '" title="Review this draft plan with the PlanArtifact rubric"' +
-        (planId.length > 0 && Number.isFinite(version) && version > 0 ? "" : " disabled") +
-        ">Review</button>" +
-        "</div>"
-      : "";
-  const resumeActionHtml =
-    effectiveStatusRaw === "needs_revision" && sourceIdeaId.length > 0
-      ? '<div class="wc-plan-artifact-actions">' +
-        '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="plan-artifact-resume" data-idea-id="' +
-        escapeHtmlAttr(sourceIdeaId) +
-        '" title="Resume planning for this current plan">Resume planning &rarr;</button>' +
-        "</div>"
-      : "";
-  const acceptActionHtml =
-    effectiveStatusRaw === "accepted" || effectiveStatusRaw === "finalized"
-      ? ""
-      : '<div class="wc-plan-artifact-actions">' +
-        '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="plan-artifact-accept" data-plan-id="' +
-        escapeHtmlAttr(planId) +
-        '" data-plan-ref="' +
-        escapeHtmlAttr(planRef) +
-        '" data-plan-version="' +
-        escapeHtmlAttr(Number.isFinite(version) ? String(version) : "") +
-        '" title="' +
-        escapeHtmlAttr(acceptDisabledReason) +
-        '"' +
-        (canAccept ? "" : " disabled") +
-        ">Accept</button>" +
-        "</div>";
-  const finalizeActionHtml =
-    effectiveStatusRaw === "accepted"
-      ? '<div class="wc-plan-artifact-actions">' +
-        '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="plan-artifact-finalize" data-plan-id="' +
-        escapeHtmlAttr(planId) +
-        '" data-plan-version="' +
-        escapeHtmlAttr(Number.isFinite(version) ? String(version) : "") +
-        '" title="Finalize this accepted plan into ready queue tasks">Finalize</button>' +
-        "</div>"
-      : "";
   return (
-    '<section class="dash-card wc-plan-artifact" aria-label="Plan draft">' +
-    '<div class="wc-plan-artifact-head">' +
-    '<div class="wc-plan-artifact-main">' +
-    '<p class="wc-plan-artifact-title"><b>' +
-    "Current Plan" +
-    "</b> · " +
-    escapeHtml(title) +
-    "</p>" +
-    '<p class="wc-plan-artifact-meta">' +
-    escapeHtml(planningType) +
-    " · " +
+    '<dl class="wc-plan-card-facts">' +
+    '<div class="wc-plan-card-facts-row">' +
+    '<div class="wc-plan-card-fact"><dt>Version</dt><dd>' +
     escapeHtml(versionText) +
-    (refLabel.length > 0 ? " · " + escapeHtml(refLabel) : "") +
-    "</p>" +
-    "</div>" +
-    '<span class="wc-plan-artifact-status">' +
-    escapeHtml(statusDisp) +
-    "</span>" +
-    "</div>" +
-    '<div class="wc-plan-artifact-stats" role="list">' +
-    '<span class="wc-plan-artifact-stat" role="listitem"><b>' +
-    escapeHtml(String(Number.isFinite(wbsRows) ? wbsRows : 0)) +
-    "</b> WBS rows</span>" +
-    '<span class="wc-plan-artifact-stat" role="listitem"><b>' +
-    escapeHtml(String(Number.isFinite(blockerCount) ? blockerCount : 0)) +
-    "</b> blockers</span>" +
-    '<span class="wc-plan-artifact-stat" role="listitem"><b>' +
-    escapeHtml(String(Number.isFinite(warningCount) ? warningCount : 0)) +
-    "</b> warnings</span>" +
-    '<span class="wc-plan-artifact-stat" role="listitem"><b>' +
-    escapeHtml(String(Number.isFinite(openQuestions) ? openQuestions : 0)) +
-    "</b> open questions</span>" +
-    "</div>" +
-    '<div class="wc-plan-artifact-stats" role="list">' +
-    '<span class="wc-plan-artifact-stat" role="listitem"><span class="wc-plan-artifact-label">Profile</span> ' +
-    escapeHtml(profileText) +
-    "</span>" +
-    '<span class="wc-plan-artifact-stat" role="listitem"><span class="wc-plan-artifact-label">Phase</span> ' +
-    escapeHtml(phaseRecommendationText) +
-    "</span>" +
-    '<span class="wc-plan-artifact-stat" role="listitem"><span class="wc-plan-artifact-label">Updated</span> ' +
+    "</dd></div>" +
+    '<div class="wc-plan-card-fact"><dt>Updated</dt><dd>' +
     escapeHtml(updatedText) +
-    "</span>" +
+    "</dd></div>" +
     "</div>" +
-    reviewHtml +
+    '<div class="wc-plan-card-facts-row">' +
+    '<div class="wc-plan-card-fact"><dt>Executed</dt><dd>' +
+    escapeHtml(yesNoLabel(row.executed)) +
+    "</dd></div>" +
+    '<div class="wc-plan-card-fact"><dt>Tasks Generated</dt><dd>' +
+    escapeHtml(yesNoLabel(row.tasksGenerated)) +
+    "</dd></div>" +
+    "</div>" +
+    "</dl>"
+  );
+}
+
+function renderPlanArtifactWbsTable(planId: string, wbsRows: unknown[], wbsRowCount: number): string {
+  const count = wbsRowCount > 0 ? wbsRowCount : wbsRows.length;
+  if (count <= 0) {
+    return "";
+  }
+  const tableRows = wbsRows
+    .map((entry) => {
+      const wbs = entry && typeof entry === "object" ? (entry as Record<string, unknown>) : {};
+      const title = String(wbs.title ?? "").trim() || "Work item";
+      const description = String(wbs.description ?? "").trim() || "—";
+      const dependsOn = String(wbs.dependsOn ?? "").trim() || "—";
+      const blocks = String(wbs.blocks ?? "").trim() || "—";
+      const size = String(wbs.size ?? "").trim() || "—";
+      return (
+        "<tr>" +
+        "<td>" +
+        escapeHtml(title) +
+        "</td>" +
+        "<td>" +
+        escapeHtml(description) +
+        "</td>" +
+        "<td>" +
+        escapeHtml(dependsOn) +
+        "</td>" +
+        "<td>" +
+        escapeHtml(blocks) +
+        "</td>" +
+        "<td>" +
+        escapeHtml(size) +
+        "</td>" +
+        "</tr>"
+      );
+    })
+    .join("");
+  const bodyHtml =
+    tableRows.length > 0
+      ? '<table class="wc-plan-wbs-table"><thead><tr>' +
+        "<th>Work item</th><th>Description</th><th>Depends on</th><th>Blocks</th><th>Size</th>" +
+        "</tr></thead><tbody>" +
+        tableRows +
+        "</tbody></table>"
+      : '<p class="muted wc-plan-wbs-empty">No WBS rows available for this plan.</p>';
+  return (
+    '<details class="wc-plan-card-wbs"' +
+    planCardUiStateAttr(planId, "wbs") +
+    "><summary>" +
+    escapeHtml(String(count)) +
+    " WBS Row" +
+    (count === 1 ? "" : "s") +
+    "</summary>" +
+    bodyHtml +
+    "</details>"
+  );
+}
+
+/** Reuses the same PlanArtifact lifecycle actions as the Ideas rows, keyed off the plan's own status (not an idea's). */
+function renderPlanArtifactCardActions(row: Record<string, unknown>, effectiveStatusRaw: string): string {
+  const planId = String(row.planId ?? "").trim();
+  const planRef = String(row.planRef ?? "").trim();
+  const version = typeof row.version === "number" ? row.version : Number(row.version ?? 0);
+  const hasIdentity = planId.length > 0 && planRef.length > 0 && Number.isFinite(version) && version > 0;
+  const attrs = planActionAttrs(row);
+  const identityOptions = hasIdentity
+    ? undefined
+    : { disabled: true, title: "Plan identity is incomplete. Refresh the dashboard and try again." };
+  const viewPlanButton = ideaPlanButton("View plan", "idea-view-plan", attrs, { secondary: true });
+  switch (effectiveStatusRaw) {
+    case "draft":
+      return (
+        ideaPlanButton(
+          "Review",
+          "plan-artifact-review",
+          attrs,
+          identityOptions ?? { title: "Review this draft plan with the PlanArtifact rubric" }
+        ) + viewPlanButton
+      );
+    case "needs_revision": {
+      const sourceIdeaId = String(row.sourceIdeaId ?? "").trim();
+      const resumeButton =
+        sourceIdeaId.length > 0
+          ? ideaPlanButton(
+              "Resume planning",
+              "plan-artifact-resume",
+              ` data-idea-id="${escapeHtmlAttr(sourceIdeaId)}"`,
+              { title: "Resume planning to resolve review blockers" }
+            )
+          : "";
+      return resumeButton + viewPlanButton;
+    }
+    case "approval_ready": {
+      const blockerCount = numberOrZero(row.blockerCount);
+      const openQuestions = numberOrZero(row.openQuestionCount);
+      const canAccept = hasIdentity && blockerCount === 0 && openQuestions === 0;
+      const acceptTitle =
+        blockerCount > 0
+          ? "Review blockers must be resolved before accepting this plan."
+          : openQuestions > 0
+            ? "Open questions must be resolved or deferred before accepting this plan."
+            : "Accept this reviewed plan.";
+      return (
+        ideaPlanButton(
+          "Accept",
+          "plan-artifact-accept",
+          attrs,
+          identityOptions ?? (canAccept ? undefined : { disabled: true, title: acceptTitle })
+        ) + viewPlanButton
+      );
+    }
+    case "accepted":
+      return (
+        ideaPlanButton(
+          "Finalize",
+          "plan-artifact-finalize",
+          attrs,
+          identityOptions ?? { title: "Finalize this accepted plan into ready queue tasks" }
+        ) + viewPlanButton
+      );
+    case "finalized": {
+      const phaseKey = String(row.phaseKey ?? "").trim();
+      const tasksGenerated = row.tasksGenerated === true;
+      const viewTasksButton =
+        phaseKey.length > 0 && tasksGenerated
+          ? ideaPlanButton("View tasks", "open-queue-for-phase", ` data-wc-phase-key="${escapeHtmlAttr(phaseKey)}"`)
+          : ideaPlanButton("View tasks", "open-queue-for-phase", "", {
+              disabled: true,
+              title: tasksGenerated ? "Phase key unavailable for this finalized plan." : "No tasks found for this plan yet."
+            });
+      return viewTasksButton + viewPlanButton;
+    }
+    case "superseded":
+      return viewPlanButton;
+    default:
+      return viewPlanButton;
+  }
+}
+
+/** Condensed, progressively-disclosed card for one PlanArtifact. Reused for both current and recent/finalized plans. */
+function renderPlanArtifactCard(row: Record<string, unknown>): string {
+  const title = String(row.title ?? "").trim() || "Untitled Plan";
+  const planId = String(row.planId ?? "").trim();
+  const planRef = String(row.planRef ?? "").trim();
+  const summaryText = String(row.summary ?? "").trim();
+  const wbsRowCount = numberOrZero(row.wbsRowCount);
+  const openQuestions = numberOrZero(row.openQuestionCount);
+  const blockerCount = numberOrZero(row.blockerCount);
+  const warningCount = numberOrZero(row.warningCount);
+  const riskCount = numberOrZero(row.riskCount);
+  const effectiveStatusRaw = planArtifactEffectiveStatus(row);
+  const statusMeta = planArtifactStatusMeta(effectiveStatusRaw);
+  const showStatusPill = !planArtifactStatusPillHidden(effectiveStatusRaw);
+  const profileRaw = String(row.profile ?? "").trim();
+  const profileText = profileRaw.length > 0 ? humanizePlanningToken(profileRaw) : "—";
+  const sourceIdeaId = String(row.sourceIdeaId ?? "").trim();
+  const reviewSummaryText = String(row.reviewSummary ?? "").trim();
+  const refLabel = planRef.length > 0 ? planRef : planId;
+  const wbsRows = Array.isArray(row.wbsRows) ? row.wbsRows : [];
+
+  const statChips: string[] = [];
+  if (blockerCount > 0) {
+    statChips.push(
+      '<span class="wc-plan-card-chip wc-plan-card-chip-danger" role="listitem">' +
+        escapeHtml(String(blockerCount)) +
+        " blocker" +
+        (blockerCount === 1 ? "" : "s") +
+        "</span>"
+    );
+  }
+  if (warningCount > 0) {
+    statChips.push(
+      '<span class="wc-plan-card-chip wc-plan-card-chip-warn" role="listitem">' +
+        escapeHtml(String(warningCount)) +
+        " warning" +
+        (warningCount === 1 ? "" : "s") +
+        "</span>"
+    );
+  }
+  if (openQuestions > 0) {
+    statChips.push(
+      '<span class="wc-plan-card-chip wc-plan-card-chip-warn" role="listitem">' +
+        escapeHtml(String(openQuestions)) +
+        " open question" +
+        (openQuestions === 1 ? "" : "s") +
+        "</span>"
+    );
+  }
+  if (riskCount > 0) {
+    statChips.push(
+      '<span class="wc-plan-card-chip" role="listitem">' + escapeHtml(String(riskCount)) + " risk" + (riskCount === 1 ? "" : "s") + "</span>"
+    );
+  }
+  if (
+    blockerCount === 0 &&
+    warningCount === 0 &&
+    (effectiveStatusRaw === "approval_ready" || effectiveStatusRaw === "accepted" || effectiveStatusRaw === "finalized")
+  ) {
+    statChips.push('<span class="wc-plan-card-chip wc-plan-card-chip-pass" role="listitem">Reviewed</span>');
+  }
+
+  const detailRows: string[] = [];
+  if (refLabel.length > 0) {
+    detailRows.push("<dt>Plan ref</dt><dd>" + escapeHtml(refLabel) + "</dd>");
+  }
+  detailRows.push("<dt>Profile</dt><dd>" + escapeHtml(profileText) + "</dd>");
+  if (sourceIdeaId.length > 0) {
+    detailRows.push(
+      '<dt>Source idea</dt><dd><button type="button" class="wc-plan-card-idea-chip" data-wc-action="plan-open-idea" data-idea-id="' +
+        escapeHtmlAttr(sourceIdeaId) +
+        '" title="Jump to the source idea">' +
+        escapeHtml(sourceIdeaId) +
+        "</button></dd>"
+    );
+  }
+  if (reviewSummaryText.length > 0) {
+    detailRows.push("<dt>Review summary</dt><dd>" + escapeHtml(reviewSummaryText) + "</dd>");
+  }
+
+  const actionsHtml = renderPlanArtifactCardActions(row, effectiveStatusRaw);
+  const factsHtml = renderPlanArtifactFactsMeta(row);
+  const wbsHtml = renderPlanArtifactWbsTable(planId, wbsRows, wbsRowCount);
+
+  return (
+    '<article class="wc-plan-card ' +
+    statusMeta.className +
+    '" data-wc-plan-card-id="' +
+    escapeHtmlAttr(planId) +
+    '" aria-label="Plan: ' +
+    escapeHtmlAttr(title) +
+    '">' +
+    '<div class="wc-plan-card-head">' +
+    '<div class="wc-plan-card-title-wrap">' +
+    '<p class="wc-plan-card-title"><b>' +
+    escapeHtml(title) +
+    "</b></p>" +
+    (summaryText.length > 0 ? '<p class="wc-plan-card-desc muted">' + escapeHtml(summaryText) + "</p>" : "") +
+    "</div>" +
+    (showStatusPill
+      ? '<span class="wc-plan-status-pill ' + statusMeta.className + '">' + escapeHtml(statusMeta.label) + "</span>"
+      : "") +
+    "</div>" +
+    factsHtml +
+    (statChips.length > 0 ? '<div class="wc-plan-card-stats" role="list">' + statChips.join("") + "</div>" : "") +
     wbsHtml +
-    reviewActionHtml +
-    resumeActionHtml +
-    acceptActionHtml +
-    finalizeActionHtml +
+    '<div class="wc-plan-card-actions">' +
+    actionsHtml +
+    "</div>" +
+    (detailRows.length > 0
+      ? '<details class="wc-plan-card-details"' +
+        planCardUiStateAttr(planId, "details") +
+        '><summary>More details</summary><dl class="wc-plan-card-detail-grid">' +
+        detailRows.join("") +
+        "</dl></details>"
+      : "") +
+    "</article>"
+  );
+}
+
+function renderPlanArtifactsSectionInnerHtml(planArtifact: unknown): string {
+  if (!planArtifact || typeof planArtifact !== "object") {
+    return '<section class="dash-card wc-plan-artifacts-section" aria-label="Plans"><p><b>Plans</b></p><p class="muted">No plans yet.</p></section>';
+  }
+  const summary = planArtifact as Record<string, unknown>;
+  const current =
+    summary.current && typeof summary.current === "object" ? (summary.current as Record<string, unknown>) : null;
+  const recent = Array.isArray(summary.recent)
+    ? (summary.recent.filter((row) => row && typeof row === "object") as Record<string, unknown>[])
+    : [];
+  const seenPlanIds = new Set<string>();
+  const allRows: Record<string, unknown>[] = [];
+  for (const row of [current, ...recent]) {
+    if (!row) {
+      continue;
+    }
+    const planId = String(row.planId ?? "").trim();
+    const dedupeKey = planId.length > 0 ? planId : JSON.stringify(row);
+    if (seenPlanIds.has(dedupeKey)) {
+      continue;
+    }
+    seenPlanIds.add(dedupeKey);
+    allRows.push(row);
+  }
+  if (allRows.length === 0) {
+    return '<section class="dash-card wc-plan-artifacts-section" aria-label="Plans"><p><b>Plans</b></p><p class="muted">No plans yet.</p></section>';
+  }
+  const activeRows: Record<string, unknown>[] = [];
+  const finalizedRows: Record<string, unknown>[] = [];
+  for (const row of allRows) {
+    const effectiveStatusRaw = planArtifactEffectiveStatus(row);
+    (PLAN_ARTIFACT_FINALIZED_STATUSES.has(effectiveStatusRaw) ? finalizedRows : activeRows).push(row);
+  }
+  const byUpdatedAtDesc = (a: Record<string, unknown>, b: Record<string, unknown>) =>
+    String(b.updatedAt ?? "").localeCompare(String(a.updatedAt ?? ""));
+  activeRows.sort(byUpdatedAtDesc);
+  finalizedRows.sort(byUpdatedAtDesc);
+
+  const activeCardsHtml = activeRows.map(renderPlanArtifactCard).join("");
+  const finalizedCardsHtml = finalizedRows.map(renderPlanArtifactCard).join("");
+  const finalizedBucketHtml =
+    finalizedRows.length > 0
+      ? '<details class="wc-plan-finalized-bucket" data-wc-ui-state-key="plan-artifact-finalized">' +
+        "<summary>Finalized (" +
+        escapeHtml(String(finalizedRows.length)) +
+        ")</summary>" +
+        '<div class="wc-plan-card-grid">' +
+        finalizedCardsHtml +
+        "</div>" +
+        "</details>"
+      : "";
+  const activeGridHtml =
+    activeRows.length > 0
+      ? '<div class="wc-plan-card-grid">' + activeCardsHtml + "</div>"
+      : finalizedRows.length > 0
+        ? '<p class="muted">No plans need attention right now.</p>'
+        : "";
+
+  return (
+    '<section class="dash-card wc-plan-artifacts-section" aria-label="Plans">' +
+    "<p><b>Plans</b> · " +
+    escapeHtml(String(activeRows.length)) +
+    " active · " +
+    escapeHtml(String(finalizedRows.length)) +
+    " finalized</p>" +
+    activeGridHtml +
+    finalizedBucketHtml +
     "</section>"
   );
 }
@@ -6313,7 +6465,7 @@ export function renderDashboardRootInnerHtml(
     activeQueuePhaseKeys,
     phaseReleaseDates
   );
-  const planArtifactInner = renderPlanArtifactDraftPanel(d.planArtifact);
+  const planArtifactInner = renderPlanArtifactsSectionInnerHtml(d.planArtifact);
 
   const caePanelContent =
     typeof embeddedCaePanelHtml === "string" && embeddedCaePanelHtml.trim().length > 0
