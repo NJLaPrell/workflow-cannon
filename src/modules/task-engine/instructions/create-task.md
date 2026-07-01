@@ -40,6 +40,8 @@ workspace-kit run create-task '{"id":"T400","title":"My task","status":"proposed
 
 The schema permits additional task fields; common fields include `type`, `priority`, `dependsOn`, `unblocks`, `phase`, `phaseKey`, `metadata`, `ownership`, `approach`, `summary`, `description`, `risk`, `technicalScope`, `acceptanceCriteria`, and `features` (taxonomy slugs from `feature-taxonomy.json`; unknown slugs produce advisory warnings).
 
+For user-visible work, set **`metadata.releaseNoteSummary`** (preferred) or **`metadata.userFacingSummary`** so **`generate-release-notes`** can emit human-facing copy instead of technical task titles. See **`src/modules/documentation/instructions/release-notes-authoring.md`**.
+
 **Intake preview (read-only):** run **`workspace-kit run resolve-task-intake-policy`** with the same `type` / `status` / `metadata` shape you plan to persist, or use **`get-next-actions`** / **`agent-bootstrap`** / **`list-tasks`** with **`includeTaskIntake:true`** for compact field-gap hints — see `resolve-task-intake-policy.md`.
 
 **`tasks.intakePolicy` + `status: "ready"`:** when workspace config sets **`tasks.intakePolicy.enforcementMode`** to **`enforce`**, the resolver can select the context profile **`workspace-kit-create-ready`** for **`type: "workspace-kit"`** + **`create-ready`**. Incomplete **`summary`**, **`technicalScope`**, or **`acceptanceCriteria`** then fail **`create-task`** with **`task-intake-blocked`**. Draft creates with **`status: "proposed"`** remain permissive for the same type (enforcement applies to **`create-ready`**, not **`create-proposed`**). Preflight with **`resolve-task-intake-policy`** using **`action":"create-ready"`** and **`targetStatus":"ready"`** before mutating.

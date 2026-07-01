@@ -12,9 +12,10 @@ When guidance conflicts, apply this order:
 4. `src/modules/documentation/instructions/document-project.md` (document generation workflow)
 5. `src/modules/documentation/instructions/documentation-maintainer.md` (AI-doc generation policy)
 6. `src/modules/documentation/schemas/documentation-schema.md` (record schema contract)
-7. **`src/modules/documentation/schemas/*.schema.json`** — machine JSON Schema for **`data/roadmap-data.json`** and **`data/feature-taxonomy.json`** (validated in CI and before roadmap/taxonomy doc generation; see `data-schema-validate.ts`).
-8. **`src/modules/documentation/views/*.view.yaml`** (document-type rendering contracts — each view lists **typed** `sections` with `source` + `renderer`; avoid duplicating long prose in templates when a view-model field suffices)
-9. `docs/maintainers/module-build-guide.md` (human-readable companion guidance)
+7. **`src/modules/documentation/schemas/*.schema.json`** — machine JSON Schema for **`data/roadmap-data.json`**, **`data/feature-taxonomy.json`**, and **`data/release-notes-style.json`** (validated in CI and before roadmap/taxonomy doc generation; see `data-schema-validate.ts`).
+8. **`src/modules/documentation/release-notes.ts`** + **`data/release-notes-style.json`** — deterministic human-facing release-note copy (consumed by task-engine **`generate-release-notes`**; changelog stays technical in **`docs/maintainers/CHANGELOG.md`**).
+9. **`src/modules/documentation/views/*.view.yaml`** (document-type rendering contracts — each view lists **typed** `sections` with `source` + `renderer`; avoid duplicating long prose in templates when a view-model field suffices)
+10. `docs/maintainers/module-build-guide.md` (human-readable companion guidance)
 
 ## Machine vs maintainer surfaces
 
