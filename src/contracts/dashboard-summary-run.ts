@@ -394,6 +394,22 @@ export type DashboardPlanArtifactOpenQuestionRow = {
   critical: boolean;
 };
 
+/** Human-oriented rubric finding row for dashboard plan cards. */
+export type DashboardPlanArtifactReviewFindingRow = {
+  code: string;
+  severity: string;
+  message: string;
+  location: string;
+};
+
+/** Human-oriented phase recommendation row for dashboard plan cards. */
+export type DashboardPlanArtifactPhaseRecommendationRow = {
+  phaseKey: string;
+  label: string;
+  primary: boolean;
+  rationale: string;
+};
+
 export type DashboardPlanArtifactRow = {
   planId: string;
   planRef: string;
@@ -426,6 +442,10 @@ export type DashboardPlanArtifactRow = {
   riskRows?: DashboardPlanArtifactRiskRow[];
   /** Human-readable open-question rows for the collapsible plan-card table. */
   openQuestionRows?: DashboardPlanArtifactOpenQuestionRow[];
+  /** Human-readable rubric finding rows for the collapsible plan-card table. */
+  reviewFindingRows?: DashboardPlanArtifactReviewFindingRow[];
+  /** Human-readable phase recommendation rows for the collapsible plan-card table. */
+  phaseRecommendationRows?: DashboardPlanArtifactPhaseRecommendationRow[];
 };
 
 /**

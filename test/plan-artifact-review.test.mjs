@@ -247,6 +247,7 @@ describe("review-plan-artifact session + review record (T100757)", () => {
     assert.equal(result.ok, true);
     assert.equal(result.data.passed, false);
     assert.ok(result.data.blockerCount > 0);
+    assert.ok(result.data.reviewRecord?.findings?.length > 0);
     assert.equal(result.data.planningChatSession?.status, "needs_revision");
     const stored = getPlanningChatSession(planningDb(workspace), idea.id);
     assert.equal(stored?.status, "needs_revision");
@@ -278,6 +279,7 @@ describe("review-plan-artifact session + review record (T100757)", () => {
     assert.equal(result.ok, true);
     assert.equal(result.data.passed, true);
     assert.equal(result.data.blockerCount, 0);
+    assert.equal(result.data.reviewRecord?.findings?.length ?? 0, 0);
     assert.equal(result.data.planningChatSession?.status, "approval_ready");
     const stored = getPlanningChatSession(planningDb(workspace), idea.id);
     assert.equal(stored?.status, "approval_ready");

@@ -6773,10 +6773,14 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     .wc-plan-card-wbs,
     .wc-plan-card-risks,
     .wc-plan-card-open-questions,
+    .wc-plan-card-review-findings,
+    .wc-plan-card-phase-recommendations,
     .wc-plan-card-details { margin-top: 2px; }
     .wc-plan-card-wbs summary,
     .wc-plan-card-risks summary,
     .wc-plan-card-open-questions summary,
+    .wc-plan-card-review-findings summary,
+    .wc-plan-card-phase-recommendations summary,
     .wc-plan-card-details summary { cursor: pointer; user-select: none; font-size: 11px; font-weight: 600; color: var(--vscode-foreground); }
     .wc-plan-wbs-table {
       width: 100%;
@@ -6804,6 +6808,9 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     .wc-plan-risk-severity-low { color: var(--vscode-descriptionForeground, var(--vscode-foreground)); }
     .wc-plan-open-question-priority { font-weight: 600; }
     .wc-plan-open-question-critical { color: var(--vscode-errorForeground); }
+    .wc-plan-review-finding-severity { font-weight: 600; }
+    .wc-plan-review-finding-blocker { color: var(--vscode-errorForeground); }
+    .wc-plan-review-finding-warning { color: var(--vscode-editorWarning-foreground, #cca700); }
     .wc-plan-card-detail-grid { margin: 6px 0 0 0; display: grid; grid-template-columns: max-content 1fr; gap: 2px 8px; font-size: 11px; }
     .wc-plan-card-detail-grid dt { color: var(--vscode-descriptionForeground, var(--vscode-foreground)); font-weight: 600; }
     .wc-plan-card-detail-grid dd { margin: 0; overflow-wrap: anywhere; }

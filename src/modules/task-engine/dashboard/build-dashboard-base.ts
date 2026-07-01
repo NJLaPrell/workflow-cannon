@@ -3,6 +3,8 @@ import type {
   DashboardPlanArtifactWbsRow,
   DashboardPlanArtifactRiskRow,
   DashboardPlanArtifactOpenQuestionRow,
+  DashboardPlanArtifactReviewFindingRow,
+  DashboardPlanArtifactPhaseRecommendationRow,
   DashboardSubagentRegistrySummary,
   DashboardSummaryData,
   DashboardPhaseKickoffSummary,
@@ -26,7 +28,18 @@ import { buildDashboardPhaseBucketsForTasks } from "./dashboard-phase-buckets.js
 import { readBuildPlanSession, toDashboardPlanningSession } from "../../../core/planning/build-plan-session-file.js";
 import { listPlanArtifactSummaries, readLatestPlanArtifact } from "../../../core/planning/plan-artifact-storage.js";
 import { isCriticalOpenQuestion } from "../../../core/planning/review-plan-artifact.js";
-import type { PlanArtifactRiskItem, PlanArtifactWbsItem } from "../../../core/planning/plan-artifact-v1.js";
+import { reviewPlanArtifact } from "../../../core/planning/review-plan-artifact.js";
+import {
+  buildPlanArtifactReviewFindingRecords,
+  type PlanArtifactReviewFindingRecordV1,
+  type PlanArtifactReviewRecordV1
+} from "../../../core/planning/plan-artifact-review-record.js";
+import type {
+  PlanArtifactPhaseRecommendation,
+  PlanArtifactRiskItem,
+  PlanArtifactV1,
+  PlanArtifactWbsItem
+} from "../../../core/planning/plan-artifact-v1.js";
 import { dashboardOnboardingTemperamentLabel } from "../../agent-behavior/onboarding-temperament-label.js";
 import { loadBehaviorWorkspaceState } from "../../agent-behavior/persistence.js";
 import { BehaviorProfileStore } from "../../agent-behavior/store.js";
@@ -144,6 +157,62 @@ const PLAN_ARTIFACT_WBS_DESCRIPTION_MAX_LENGTH = 140;
 const PLAN_ARTIFACT_RISK_DESCRIPTION_MAX_LENGTH = 200;
 const PLAN_ARTIFACT_RISK_MITIGATION_MAX_LENGTH = 160;
 const PLAN_ARTIFACT_OPEN_QUESTION_MAX_LENGTH = 240;
+const PLAN_ARTIFACT_PHASE_RECOMMENDATION_RATIONALE_MAX_LENGTH = 160;
+
+function buildDashboardPlanArtifactReviewFindingRows(
+  findings: readonly PlanArtifactReviewFindingRecordV1[]
+): DashboardPlanArtifactReviewFindingRow[] {
+  return findings.map((finding) => {
+    const location =
+      [finding.path?.trim(), finding.wbsId?.trim()].filter((value) => !!value).join(" · ") || "—";
+    return {
+      code: finding.code.trim() || "—",
+      severity: finding.severity === "blocker" ? "Blocker" : "Warning",
+      message: finding.message.trim() || "—",
+      location
+    };
+  });
+}
+
+function resolveDashboardPlanArtifactReviewFindingRows(
+  latestReview: PlanArtifactReviewRecordV1,
+  latestArtifact: PlanArtifactV1 | null
+): DashboardPlanArtifactReviewFindingRow[] {
+  if (latestReview.findings && latestReview.findings.length > 0) {
+    return buildDashboardPlanArtifactReviewFindingRows(latestReview.findings);
+  }
+  if (latestReview.blockerCount + latestReview.warningCount <= 0 || !latestArtifact) {
+    return [];
+  }
+  const result = reviewPlanArtifact(latestArtifact, { profile: latestReview.profile });
+  return buildDashboardPlanArtifactReviewFindingRows(buildPlanArtifactReviewFindingRecords(result));
+}
+
+function buildDashboardPlanArtifactPhaseRecommendationRows(
+  recommendations: readonly PlanArtifactPhaseRecommendation[]
+): DashboardPlanArtifactPhaseRecommendationRow[] {
+  if (recommendations.length === 0) {
+    return [];
+  }
+  return recommendations
+    .map((recommendation) => {
+      const phaseKey = recommendation.phaseKey.trim();
+      const label = recommendation.label.trim();
+      const rationaleRaw = recommendation.rationale.trim();
+      const rationale =
+        rationaleRaw.length > PLAN_ARTIFACT_PHASE_RECOMMENDATION_RATIONALE_MAX_LENGTH
+          ? rationaleRaw.slice(0, PLAN_ARTIFACT_PHASE_RECOMMENDATION_RATIONALE_MAX_LENGTH - 3).trimEnd() +
+            "..."
+          : rationaleRaw;
+      return {
+        phaseKey: phaseKey || "—",
+        label: label || phaseKey || "—",
+        primary: recommendation.isPrimary === true,
+        rationale: rationale.length > 0 ? rationale : "—"
+      };
+    })
+    .filter((row) => row.phaseKey !== "—" || row.label !== "—");
+}
 
 function buildDashboardPlanArtifactOpenQuestionRows(
   questions: readonly string[]
@@ -322,6 +391,13 @@ export function buildDashboardPlanArtifactSummary(
     const openQuestionPreviewRows = Array.isArray(latestArtifact?.openQuestions)
       ? buildDashboardPlanArtifactOpenQuestionRows(latestArtifact.openQuestions)
       : [];
+    const reviewFindingPreviewRows =
+      latestReview && summary.currentVersion === latestReview.reviewedVersion
+        ? resolveDashboardPlanArtifactReviewFindingRows(latestReview, latestArtifact)
+        : [];
+    const phaseRecommendationPreviewRows = phaseRecommendations.length > 0
+      ? buildDashboardPlanArtifactPhaseRecommendationRows(phaseRecommendations)
+      : [];
     const wbsPreviewRows = Array.isArray(latestArtifact?.wbs)
       ? buildDashboardPlanArtifactWbsRows(latestArtifact.wbs)
       : [];
@@ -367,7 +443,11 @@ export function buildDashboardPlanArtifactSummary(
       executed,
       ...(wbsPreviewRows.length > 0 ? { wbsRows: wbsPreviewRows } : {}),
       ...(riskPreviewRows.length > 0 ? { riskRows: riskPreviewRows } : {}),
-      ...(openQuestionPreviewRows.length > 0 ? { openQuestionRows: openQuestionPreviewRows } : {})
+      ...(openQuestionPreviewRows.length > 0 ? { openQuestionRows: openQuestionPreviewRows } : {}),
+      ...(reviewFindingPreviewRows.length > 0 ? { reviewFindingRows: reviewFindingPreviewRows } : {}),
+      ...(phaseRecommendationPreviewRows.length > 0
+        ? { phaseRecommendationRows: phaseRecommendationPreviewRows }
+        : {})
     };
   });
   return {

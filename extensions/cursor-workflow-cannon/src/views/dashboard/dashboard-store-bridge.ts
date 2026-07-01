@@ -100,6 +100,33 @@ function planArtifactRowOpenQuestionCount(row: unknown): number {
   return typeof count === "number" && count > 0 ? count : 0;
 }
 
+function planArtifactRowReviewFindingRows(row: unknown): unknown[] {
+  if (!row || typeof row !== "object") {
+    return [];
+  }
+  const reviewFindingRows = (row as Record<string, unknown>).reviewFindingRows;
+  return Array.isArray(reviewFindingRows) ? reviewFindingRows : [];
+}
+
+function planArtifactRowReviewFindingCount(row: unknown): number {
+  if (!row || typeof row !== "object") {
+    return 0;
+  }
+  const record = row as Record<string, unknown>;
+  const blockerCount = typeof record.blockerCount === "number" ? record.blockerCount : 0;
+  const warningCount = typeof record.warningCount === "number" ? record.warningCount : 0;
+  const total = blockerCount + warningCount;
+  return total > 0 ? total : 0;
+}
+
+function planArtifactRowPhaseRecommendationRows(row: unknown): unknown[] {
+  if (!row || typeof row !== "object") {
+    return [];
+  }
+  const phaseRecommendationRows = (row as Record<string, unknown>).phaseRecommendationRows;
+  return Array.isArray(phaseRecommendationRows) ? phaseRecommendationRows : [];
+}
+
 function preservePlanArtifactRowRollups(priorRow: unknown, nextRow: unknown): unknown {
   if (!nextRow || typeof nextRow !== "object") {
     return nextRow;
@@ -123,6 +150,18 @@ function preservePlanArtifactRowRollups(priorRow: unknown, nextRow: unknown): un
     planArtifactRowOpenQuestionCount(nextRow) || planArtifactRowOpenQuestionCount(priorRow);
   if (nextOpenQuestions.length === 0 && priorOpenQuestions.length > 0 && openQuestionCount > 0) {
     patched = { ...patched, openQuestionRows: priorOpenQuestions };
+  }
+  const priorReviewFindings = planArtifactRowReviewFindingRows(priorRow);
+  const nextReviewFindings = planArtifactRowReviewFindingRows(nextRow);
+  const reviewFindingCount =
+    planArtifactRowReviewFindingCount(nextRow) || planArtifactRowReviewFindingCount(priorRow);
+  if (nextReviewFindings.length === 0 && priorReviewFindings.length > 0 && reviewFindingCount > 0) {
+    patched = { ...patched, reviewFindingRows: priorReviewFindings };
+  }
+  const priorPhaseRecommendations = planArtifactRowPhaseRecommendationRows(priorRow);
+  const nextPhaseRecommendations = planArtifactRowPhaseRecommendationRows(nextRow);
+  if (nextPhaseRecommendations.length === 0 && priorPhaseRecommendations.length > 0) {
+    patched = { ...patched, phaseRecommendationRows: priorPhaseRecommendations };
   }
   return patched;
 }

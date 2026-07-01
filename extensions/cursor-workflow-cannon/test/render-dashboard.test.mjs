@@ -426,6 +426,22 @@ test("renderDashboardRootInnerHtml renders PlanArtifact card grid for a draft pl
             { question: "Should queue rollups stay on overview?", critical: false },
             { question: "[critical] Must accept flow block unresolved OQs?", critical: true }
           ],
+          reviewFindingRows: [
+            {
+              code: "RUBRIC-OQ-UNRESOLVED",
+              severity: "Warning",
+              message: "1 non-critical open question(s) remain",
+              location: "openQuestions"
+            }
+          ],
+          phaseRecommendationRows: [
+            {
+              phaseKey: "110",
+              label: "Phase 110",
+              primary: true,
+              rationale: "Primary delivery target for dashboard lifecycle work"
+            }
+          ],
           riskCount: 1,
           riskRows: [
             {
@@ -480,12 +496,19 @@ test("renderDashboardRootInnerHtml renders PlanArtifact card grid for a draft pl
   assert.match(html, />2 WBS Rows</);
   assert.match(html, /wc-plan-wbs-table/);
   assert.match(html, /Kit contract/);
-  assert.match(html, />1 warning</);
+  assert.doesNotMatch(html, />1 warning</);
+  assert.doesNotMatch(html, />1 blocker</);
   assert.match(html, />2 Open Questions</);
   assert.match(html, /wc-plan-open-questions-table/);
   assert.match(html, /Should queue rollups stay on overview/);
   assert.match(html, /wc-plan-open-question-critical/);
   assert.doesNotMatch(html, />2 open questions</);
+  assert.match(html, />1 Review Finding</);
+  assert.match(html, /wc-plan-review-findings-table/);
+  assert.match(html, /RUBRIC-OQ-UNRESOLVED/);
+  assert.match(html, />1 Phase Recommendation</);
+  assert.match(html, /wc-plan-phase-recommendations-table/);
+  assert.match(html, /Primary delivery target for dashboard lifecycle work/);
   assert.match(html, />1 Risk</);
   assert.match(html, /wc-plan-risk-table/);
   assert.match(html, /Dual UX with build-plan wizard/);
@@ -495,6 +518,8 @@ test("renderDashboardRootInnerHtml renders PlanArtifact card grid for a draft pl
   assert.match(html, /data-wc-ui-state-key="plan-123-wbs"/);
   assert.match(html, /data-wc-ui-state-key="plan-123-risks"/);
   assert.match(html, /data-wc-ui-state-key="plan-123-open-questions"/);
+  assert.match(html, /data-wc-ui-state-key="plan-123-review-findings"/);
+  assert.match(html, /data-wc-ui-state-key="plan-123-phase-recommendations"/);
   assert.match(html, /wc-plan-status-pill wc-plan-status-draft">Draft/);
   assert.doesNotMatch(html, /wc-plan-card-meta/);
   assert.doesNotMatch(html, /data-wc-action="plan-artifact-accept"/);

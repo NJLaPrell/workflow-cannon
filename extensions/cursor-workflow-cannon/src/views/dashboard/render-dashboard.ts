@@ -3939,6 +3939,120 @@ function renderPlanArtifactOpenQuestionsTable(
   );
 }
 
+function renderPlanArtifactReviewFindingsTable(
+  planId: string,
+  reviewFindingRows: unknown[],
+  reviewFindingCount: number
+): string {
+  const count = reviewFindingCount > 0 ? reviewFindingCount : reviewFindingRows.length;
+  if (count <= 0) {
+    return "";
+  }
+  const tableRows = reviewFindingRows
+    .map((entry) => {
+      const finding = entry && typeof entry === "object" ? (entry as Record<string, unknown>) : {};
+      const code = String(finding.code ?? "").trim() || "—";
+      const severity = String(finding.severity ?? "").trim() || "—";
+      const message = String(finding.message ?? "").trim() || "—";
+      const location = String(finding.location ?? "").trim() || "—";
+      const severityKey = severity.toLowerCase();
+      const severityClass =
+        severityKey === "blocker"
+          ? " wc-plan-review-finding-blocker"
+          : severityKey === "warning"
+            ? " wc-plan-review-finding-warning"
+            : "";
+      return (
+        "<tr>" +
+        "<td>" +
+        escapeHtml(code) +
+        "</td>" +
+        '<td class="wc-plan-review-finding-severity' +
+        severityClass +
+        '">' +
+        escapeHtml(severity) +
+        "</td>" +
+        "<td>" +
+        escapeHtml(message) +
+        "</td>" +
+        "<td>" +
+        escapeHtml(location) +
+        "</td>" +
+        "</tr>"
+      );
+    })
+    .join("");
+  const bodyHtml =
+    tableRows.length > 0
+      ? '<table class="wc-plan-wbs-table wc-plan-review-findings-table"><thead><tr>' +
+        "<th>Code</th><th>Severity</th><th>Message</th><th>Location</th>" +
+        "</tr></thead><tbody>" +
+        tableRows +
+        "</tbody></table>"
+      : '<p class="muted wc-plan-wbs-empty">No review findings available for this plan.</p>';
+  return (
+    '<details class="wc-plan-card-wbs wc-plan-card-review-findings"' +
+    planCardUiStateAttr(planId, "review-findings") +
+    "><summary>" +
+    escapeHtml(String(count)) +
+    " Review Finding" +
+    (count === 1 ? "" : "s") +
+    "</summary>" +
+    bodyHtml +
+    "</details>"
+  );
+}
+
+function renderPlanArtifactPhaseRecommendationsTable(
+  planId: string,
+  phaseRecommendationRows: unknown[]
+): string {
+  const count = phaseRecommendationRows.length;
+  if (count <= 0) {
+    return "";
+  }
+  const tableRows = phaseRecommendationRows
+    .map((entry) => {
+      const row = entry && typeof entry === "object" ? (entry as Record<string, unknown>) : {};
+      const phaseKey = String(row.phaseKey ?? "").trim() || "—";
+      const label = String(row.label ?? "").trim() || "—";
+      const primary = row.primary === true;
+      const rationale = String(row.rationale ?? "").trim() || "—";
+      return (
+        "<tr>" +
+        "<td>" +
+        escapeHtml(phaseKey) +
+        "</td>" +
+        "<td>" +
+        escapeHtml(label) +
+        "</td>" +
+        "<td>" +
+        escapeHtml(primary ? "Yes" : "No") +
+        "</td>" +
+        "<td>" +
+        escapeHtml(rationale) +
+        "</td>" +
+        "</tr>"
+      );
+    })
+    .join("");
+  return (
+    '<details class="wc-plan-card-wbs wc-plan-card-phase-recommendations"' +
+    planCardUiStateAttr(planId, "phase-recommendations") +
+    "><summary>" +
+    escapeHtml(String(count)) +
+    " Phase Recommendation" +
+    (count === 1 ? "" : "s") +
+    "</summary>" +
+    '<table class="wc-plan-wbs-table wc-plan-phase-recommendations-table"><thead><tr>' +
+    "<th>Phase</th><th>Label</th><th>Primary</th><th>Rationale</th>" +
+    "</tr></thead><tbody>" +
+    tableRows +
+    "</tbody></table>" +
+    "</details>"
+  );
+}
+
 /** Reuses the same PlanArtifact lifecycle actions as the Ideas rows, keyed off the plan's own status (not an idea's). */
 function renderPlanArtifactCardActions(row: Record<string, unknown>, effectiveStatusRaw: string): string {
   const planId = String(row.planId ?? "").trim();
@@ -4042,26 +4156,11 @@ function renderPlanArtifactCard(row: Record<string, unknown>): string {
   const wbsRows = Array.isArray(row.wbsRows) ? row.wbsRows : [];
   const riskRows = Array.isArray(row.riskRows) ? row.riskRows : [];
   const openQuestionRows = Array.isArray(row.openQuestionRows) ? row.openQuestionRows : [];
+  const reviewFindingRows = Array.isArray(row.reviewFindingRows) ? row.reviewFindingRows : [];
+  const phaseRecommendationRows = Array.isArray(row.phaseRecommendationRows) ? row.phaseRecommendationRows : [];
+  const reviewFindingCount = blockerCount + warningCount;
 
   const statChips: string[] = [];
-  if (blockerCount > 0) {
-    statChips.push(
-      '<span class="wc-plan-card-chip wc-plan-card-chip-danger" role="listitem">' +
-        escapeHtml(String(blockerCount)) +
-        " blocker" +
-        (blockerCount === 1 ? "" : "s") +
-        "</span>"
-    );
-  }
-  if (warningCount > 0) {
-    statChips.push(
-      '<span class="wc-plan-card-chip wc-plan-card-chip-warn" role="listitem">' +
-        escapeHtml(String(warningCount)) +
-        " warning" +
-        (warningCount === 1 ? "" : "s") +
-        "</span>"
-    );
-  }
   if (
     blockerCount === 0 &&
     warningCount === 0 &&
@@ -4093,6 +4192,12 @@ function renderPlanArtifactCard(row: Record<string, unknown>): string {
   const wbsHtml = renderPlanArtifactWbsTable(planId, wbsRows, wbsRowCount);
   const risksHtml = renderPlanArtifactRiskTable(planId, riskRows, riskCount);
   const openQuestionsHtml = renderPlanArtifactOpenQuestionsTable(planId, openQuestionRows, openQuestions);
+  const reviewFindingsHtml = renderPlanArtifactReviewFindingsTable(
+    planId,
+    reviewFindingRows,
+    reviewFindingCount
+  );
+  const phaseRecommendationsHtml = renderPlanArtifactPhaseRecommendationsTable(planId, phaseRecommendationRows);
 
   return (
     '<article class="wc-plan-card ' +
@@ -4118,6 +4223,8 @@ function renderPlanArtifactCard(row: Record<string, unknown>): string {
     wbsHtml +
     risksHtml +
     openQuestionsHtml +
+    reviewFindingsHtml +
+    phaseRecommendationsHtml +
     '<div class="wc-plan-card-actions">' +
     actionsHtml +
     "</div>" +

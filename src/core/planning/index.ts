@@ -157,8 +157,10 @@ export {
 export {
   buildPlanArtifactCoverageSummary,
   buildPlanArtifactReviewRecord,
+  buildPlanArtifactReviewFindingRecords,
   formatPlanArtifactReviewSummary,
   parsePlanArtifactReviewRecord,
   type PlanArtifactCoverageSummaryV1,
+  type PlanArtifactReviewFindingRecordV1,
   type PlanArtifactReviewRecordV1
 } from "./plan-artifact-review-record.js";
