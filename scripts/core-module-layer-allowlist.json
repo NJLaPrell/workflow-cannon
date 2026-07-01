@@ -101,6 +101,11 @@
       "file": "src/core/skills/task-skill-validation.ts",
       "specifier": "../../modules/skills/discovery.js",
       "rationale": "REF-004: task metadata.skillIds validation uses skill pack discovery without task-engine → skills sibling import."
+    },
+    {
+      "file": "src/core/planning/wbs-dependency-resolution.ts",
+      "specifier": "../../modules/task-engine/types.js",
+      "rationale": "WBS finalize dependency resolution correlates generated task drafts with TaskEntity status; type-only import pending planning façade."
     }
   ]
 }
