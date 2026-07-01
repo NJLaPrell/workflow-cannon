@@ -68,20 +68,66 @@ function planArtifactRowWbsCount(row: unknown): number {
   return typeof count === "number" && count > 0 ? count : 0;
 }
 
-function preservePlanArtifactRowWbsRows(priorRow: unknown, nextRow: unknown): unknown {
+function planArtifactRowRiskRows(row: unknown): unknown[] {
+  if (!row || typeof row !== "object") {
+    return [];
+  }
+  const riskRows = (row as Record<string, unknown>).riskRows;
+  return Array.isArray(riskRows) ? riskRows : [];
+}
+
+function planArtifactRowRiskCount(row: unknown): number {
+  if (!row || typeof row !== "object") {
+    return 0;
+  }
+  const count = (row as Record<string, unknown>).riskCount;
+  return typeof count === "number" && count > 0 ? count : 0;
+}
+
+function planArtifactRowOpenQuestionRows(row: unknown): unknown[] {
+  if (!row || typeof row !== "object") {
+    return [];
+  }
+  const openQuestionRows = (row as Record<string, unknown>).openQuestionRows;
+  return Array.isArray(openQuestionRows) ? openQuestionRows : [];
+}
+
+function planArtifactRowOpenQuestionCount(row: unknown): number {
+  if (!row || typeof row !== "object") {
+    return 0;
+  }
+  const count = (row as Record<string, unknown>).openQuestionCount;
+  return typeof count === "number" && count > 0 ? count : 0;
+}
+
+function preservePlanArtifactRowRollups(priorRow: unknown, nextRow: unknown): unknown {
   if (!nextRow || typeof nextRow !== "object") {
     return nextRow;
   }
+  let patched = nextRow as Record<string, unknown>;
   const priorWbs = planArtifactRowWbsRows(priorRow);
   const nextWbs = planArtifactRowWbsRows(nextRow);
   const wbsCount = planArtifactRowWbsCount(nextRow) || planArtifactRowWbsCount(priorRow);
   if (nextWbs.length === 0 && priorWbs.length > 0 && wbsCount > 0) {
-    return { ...(nextRow as Record<string, unknown>), wbsRows: priorWbs };
+    patched = { ...patched, wbsRows: priorWbs };
   }
-  return nextRow;
+  const priorRisks = planArtifactRowRiskRows(priorRow);
+  const nextRisks = planArtifactRowRiskRows(nextRow);
+  const riskCount = planArtifactRowRiskCount(nextRow) || planArtifactRowRiskCount(priorRow);
+  if (nextRisks.length === 0 && priorRisks.length > 0 && riskCount > 0) {
+    patched = { ...patched, riskRows: priorRisks };
+  }
+  const priorOpenQuestions = planArtifactRowOpenQuestionRows(priorRow);
+  const nextOpenQuestions = planArtifactRowOpenQuestionRows(nextRow);
+  const openQuestionCount =
+    planArtifactRowOpenQuestionCount(nextRow) || planArtifactRowOpenQuestionCount(priorRow);
+  if (nextOpenQuestions.length === 0 && priorOpenQuestions.length > 0 && openQuestionCount > 0) {
+    patched = { ...patched, openQuestionRows: priorOpenQuestions };
+  }
+  return patched;
 }
 
-function preservePlanArtifactWbsRows(priorArtifact: unknown, nextArtifact: unknown): unknown {
+function preservePlanArtifactRollups(priorArtifact: unknown, nextArtifact: unknown): unknown {
   if (!nextArtifact || typeof nextArtifact !== "object") {
     return nextArtifact;
   }
@@ -112,7 +158,7 @@ function preservePlanArtifactWbsRows(priorArtifact: unknown, nextArtifact: unkno
     }
     const planId = String((row as Record<string, unknown>).planId ?? "").trim();
     const priorRow = planId.length > 0 ? priorByPlanId.get(planId) : undefined;
-    return priorRow ? preservePlanArtifactRowWbsRows(priorRow, row) : row;
+    return priorRow ? preservePlanArtifactRowRollups(priorRow, row) : row;
   };
   return {
     ...next,
@@ -140,7 +186,7 @@ function preserveLastKnownDashboardFields(
   } else if ("planArtifact" in extracted && planArtifactHasContent(summary.planArtifact)) {
     next = {
       ...next,
-      planArtifact: preservePlanArtifactWbsRows(summary.planArtifact, extracted.planArtifact)
+      planArtifact: preservePlanArtifactRollups(summary.planArtifact, extracted.planArtifact)
     };
   }
   if (ideasHasContent(summary.ideas) && !ideasHasContent(extracted.ideas)) {

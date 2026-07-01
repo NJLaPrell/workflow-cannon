@@ -1,6 +1,8 @@
 import type { ModuleLifecycleContext } from "../../../contracts/module-contract.js";
 import type {
   DashboardPlanArtifactWbsRow,
+  DashboardPlanArtifactRiskRow,
+  DashboardPlanArtifactOpenQuestionRow,
   DashboardSubagentRegistrySummary,
   DashboardSummaryData,
   DashboardPhaseKickoffSummary,
@@ -23,7 +25,8 @@ import { buildDashboardDependencyOverview } from "./dashboard-dependency-overvie
 import { buildDashboardPhaseBucketsForTasks } from "./dashboard-phase-buckets.js";
 import { readBuildPlanSession, toDashboardPlanningSession } from "../../../core/planning/build-plan-session-file.js";
 import { listPlanArtifactSummaries, readLatestPlanArtifact } from "../../../core/planning/plan-artifact-storage.js";
-import type { PlanArtifactWbsItem } from "../../../core/planning/plan-artifact-v1.js";
+import { isCriticalOpenQuestion } from "../../../core/planning/review-plan-artifact.js";
+import type { PlanArtifactRiskItem, PlanArtifactWbsItem } from "../../../core/planning/plan-artifact-v1.js";
 import { dashboardOnboardingTemperamentLabel } from "../../agent-behavior/onboarding-temperament-label.js";
 import { loadBehaviorWorkspaceState } from "../../agent-behavior/persistence.js";
 import { BehaviorProfileStore } from "../../agent-behavior/store.js";
@@ -138,6 +141,69 @@ function buildPlanRefToTasksIndex(allTasks: readonly TaskEntity[]): Map<string, 
 }
 
 const PLAN_ARTIFACT_WBS_DESCRIPTION_MAX_LENGTH = 140;
+const PLAN_ARTIFACT_RISK_DESCRIPTION_MAX_LENGTH = 200;
+const PLAN_ARTIFACT_RISK_MITIGATION_MAX_LENGTH = 160;
+const PLAN_ARTIFACT_OPEN_QUESTION_MAX_LENGTH = 240;
+
+function buildDashboardPlanArtifactOpenQuestionRows(
+  questions: readonly string[]
+): DashboardPlanArtifactOpenQuestionRow[] {
+  if (questions.length === 0) {
+    return [];
+  }
+  return questions
+    .map((raw, index) => {
+      const question = truncatePlanArtifactWbsText(
+        raw.trim() || `Open question ${index + 1}`,
+        PLAN_ARTIFACT_OPEN_QUESTION_MAX_LENGTH
+      );
+      return {
+        question,
+        critical: isCriticalOpenQuestion(raw)
+      };
+    })
+    .filter((row) => row.question.length > 0);
+}
+
+function humanizePlanArtifactRiskSeverity(value: unknown): string {
+  const raw = typeof value === "string" ? value.trim().toLowerCase() : "";
+  switch (raw) {
+    case "high":
+      return "High";
+    case "medium":
+      return "Medium";
+    case "low":
+      return "Low";
+    default:
+      return raw.length > 0 ? raw.charAt(0).toUpperCase() + raw.slice(1) : "—";
+  }
+}
+
+function buildDashboardPlanArtifactRiskRows(
+  risks: readonly PlanArtifactRiskItem[]
+): DashboardPlanArtifactRiskRow[] {
+  if (risks.length === 0) {
+    return [];
+  }
+  return risks.map((risk) => {
+    const id = risk.id.trim() || "Risk";
+    const description = truncatePlanArtifactWbsText(
+      risk.description.trim() || "—",
+      PLAN_ARTIFACT_RISK_DESCRIPTION_MAX_LENGTH
+    );
+    const mitigationRaw = typeof risk.mitigation === "string" ? risk.mitigation.trim() : "";
+    const mitigation =
+      mitigationRaw.length > 0
+        ? truncatePlanArtifactWbsText(mitigationRaw, PLAN_ARTIFACT_RISK_MITIGATION_MAX_LENGTH)
+        : "—";
+    return {
+      id,
+      description,
+      severity: humanizePlanArtifactRiskSeverity(risk.severity),
+      mitigation
+    };
+  });
+}
 
 function humanizeWbsSizingConfidence(value: unknown): string {
   const raw = typeof value === "string" ? value.trim().toLowerCase() : "";
@@ -250,6 +316,12 @@ export function buildDashboardPlanArtifactSummary(
         ? summaryTextRaw.slice(0, PLAN_ARTIFACT_SUMMARY_TEXT_MAX_LENGTH - 3).trimEnd() + "..."
         : summaryTextRaw;
     const riskCount = Array.isArray(latestArtifact?.riskAssessment) ? latestArtifact.riskAssessment.length : 0;
+    const riskPreviewRows = Array.isArray(latestArtifact?.riskAssessment)
+      ? buildDashboardPlanArtifactRiskRows(latestArtifact.riskAssessment)
+      : [];
+    const openQuestionPreviewRows = Array.isArray(latestArtifact?.openQuestions)
+      ? buildDashboardPlanArtifactOpenQuestionRows(latestArtifact.openQuestions)
+      : [];
     const wbsPreviewRows = Array.isArray(latestArtifact?.wbs)
       ? buildDashboardPlanArtifactWbsRows(latestArtifact.wbs)
       : [];
@@ -293,7 +365,9 @@ export function buildDashboardPlanArtifactSummary(
       ...(sourceIdeaId.length > 0 ? { sourceIdeaId } : {}),
       tasksGenerated,
       executed,
-      ...(wbsPreviewRows.length > 0 ? { wbsRows: wbsPreviewRows } : {})
+      ...(wbsPreviewRows.length > 0 ? { wbsRows: wbsPreviewRows } : {}),
+      ...(riskPreviewRows.length > 0 ? { riskRows: riskPreviewRows } : {}),
+      ...(openQuestionPreviewRows.length > 0 ? { openQuestionRows: openQuestionPreviewRows } : {})
     };
   });
   return {

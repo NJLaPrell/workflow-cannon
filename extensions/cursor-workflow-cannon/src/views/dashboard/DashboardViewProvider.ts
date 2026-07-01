@@ -6771,8 +6771,12 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     .wc-plan-card-chip-muted { color: var(--vscode-descriptionForeground, var(--vscode-foreground)); }
     .wc-plan-card-actions { display: flex; justify-content: flex-end; gap: 6px; margin-top: 2px; }
     .wc-plan-card-wbs,
+    .wc-plan-card-risks,
+    .wc-plan-card-open-questions,
     .wc-plan-card-details { margin-top: 2px; }
     .wc-plan-card-wbs summary,
+    .wc-plan-card-risks summary,
+    .wc-plan-card-open-questions summary,
     .wc-plan-card-details summary { cursor: pointer; user-select: none; font-size: 11px; font-weight: 600; color: var(--vscode-foreground); }
     .wc-plan-wbs-table {
       width: 100%;
@@ -6794,6 +6798,12 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     .wc-plan-wbs-table td { overflow-wrap: anywhere; }
     .wc-plan-wbs-empty { margin: 6px 0 0 0; font-size: 11px; }
+    .wc-plan-risk-severity { font-weight: 600; }
+    .wc-plan-risk-severity-high { color: var(--vscode-errorForeground); }
+    .wc-plan-risk-severity-medium { color: var(--vscode-editorWarning-foreground, #cca700); }
+    .wc-plan-risk-severity-low { color: var(--vscode-descriptionForeground, var(--vscode-foreground)); }
+    .wc-plan-open-question-priority { font-weight: 600; }
+    .wc-plan-open-question-critical { color: var(--vscode-errorForeground); }
     .wc-plan-card-detail-grid { margin: 6px 0 0 0; display: grid; grid-template-columns: max-content 1fr; gap: 2px 8px; font-size: 11px; }
     .wc-plan-card-detail-grid dt { color: var(--vscode-descriptionForeground, var(--vscode-foreground)); font-weight: 600; }
     .wc-plan-card-detail-grid dd { margin: 0; overflow-wrap: anywhere; }

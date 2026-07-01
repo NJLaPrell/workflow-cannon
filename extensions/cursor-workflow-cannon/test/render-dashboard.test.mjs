@@ -422,7 +422,19 @@ test("renderDashboardRootInnerHtml renders PlanArtifact card grid for a draft pl
           blockerCount: 0,
           warningCount: 1,
           openQuestionCount: 2,
+          openQuestionRows: [
+            { question: "Should queue rollups stay on overview?", critical: false },
+            { question: "[critical] Must accept flow block unresolved OQs?", critical: true }
+          ],
           riskCount: 1,
+          riskRows: [
+            {
+              id: "R1",
+              description: "Dual UX with build-plan wizard",
+              severity: "Medium",
+              mitigation: "A-COMPAT copy"
+            }
+          ],
           profile: "full-feature",
           phaseRecommendation: "Phase 110",
           tasksGenerated: false,
@@ -469,11 +481,20 @@ test("renderDashboardRootInnerHtml renders PlanArtifact card grid for a draft pl
   assert.match(html, /wc-plan-wbs-table/);
   assert.match(html, /Kit contract/);
   assert.match(html, />1 warning</);
-  assert.match(html, />2 open questions</);
-  assert.match(html, />1 risk</);
+  assert.match(html, />2 Open Questions</);
+  assert.match(html, /wc-plan-open-questions-table/);
+  assert.match(html, /Should queue rollups stay on overview/);
+  assert.match(html, /wc-plan-open-question-critical/);
+  assert.doesNotMatch(html, />2 open questions</);
+  assert.match(html, />1 Risk</);
+  assert.match(html, /wc-plan-risk-table/);
+  assert.match(html, /Dual UX with build-plan wizard/);
+  assert.doesNotMatch(html, />1 risk</);
   assert.match(html, /<dt>Profile<\/dt><dd>Full Feature<\/dd>/);
   assert.match(html, /data-wc-ui-state-key="plan-123-details"/);
   assert.match(html, /data-wc-ui-state-key="plan-123-wbs"/);
+  assert.match(html, /data-wc-ui-state-key="plan-123-risks"/);
+  assert.match(html, /data-wc-ui-state-key="plan-123-open-questions"/);
   assert.match(html, /wc-plan-status-pill wc-plan-status-draft">Draft/);
   assert.doesNotMatch(html, /wc-plan-card-meta/);
   assert.doesNotMatch(html, /data-wc-action="plan-artifact-accept"/);

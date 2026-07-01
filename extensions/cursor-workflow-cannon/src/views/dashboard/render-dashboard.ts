@@ -3830,6 +3830,115 @@ function renderPlanArtifactWbsTable(planId: string, wbsRows: unknown[], wbsRowCo
   );
 }
 
+function renderPlanArtifactRiskTable(planId: string, riskRows: unknown[], riskCount: number): string {
+  const count = riskCount > 0 ? riskCount : riskRows.length;
+  if (count <= 0) {
+    return "";
+  }
+  const tableRows = riskRows
+    .map((entry) => {
+      const risk = entry && typeof entry === "object" ? (entry as Record<string, unknown>) : {};
+      const id = String(risk.id ?? "").trim() || "Risk";
+      const description = String(risk.description ?? "").trim() || "—";
+      const severity = String(risk.severity ?? "").trim() || "—";
+      const mitigation = String(risk.mitigation ?? "").trim() || "—";
+      const severityKey = severity.toLowerCase();
+      const severityClass =
+        severityKey === "high" || severityKey === "medium" || severityKey === "low"
+          ? ` wc-plan-risk-severity-${severityKey}`
+          : "";
+      return (
+        "<tr>" +
+        "<td>" +
+        escapeHtml(id) +
+        "</td>" +
+        "<td>" +
+        escapeHtml(description) +
+        "</td>" +
+        '<td class="wc-plan-risk-severity' +
+        severityClass +
+        '">' +
+        escapeHtml(severity) +
+        "</td>" +
+        "<td>" +
+        escapeHtml(mitigation) +
+        "</td>" +
+        "</tr>"
+      );
+    })
+    .join("");
+  const bodyHtml =
+    tableRows.length > 0
+      ? '<table class="wc-plan-wbs-table wc-plan-risk-table"><thead><tr>' +
+        "<th>ID</th><th>Description</th><th>Severity</th><th>Mitigation</th>" +
+        "</tr></thead><tbody>" +
+        tableRows +
+        "</tbody></table>"
+      : '<p class="muted wc-plan-wbs-empty">No risks available for this plan.</p>';
+  return (
+    '<details class="wc-plan-card-wbs wc-plan-card-risks"' +
+    planCardUiStateAttr(planId, "risks") +
+    "><summary>" +
+    escapeHtml(String(count)) +
+    " Risk" +
+    (count === 1 ? "" : "s") +
+    "</summary>" +
+    bodyHtml +
+    "</details>"
+  );
+}
+
+function renderPlanArtifactOpenQuestionsTable(
+  planId: string,
+  openQuestionRows: unknown[],
+  openQuestionCount: number
+): string {
+  const count = openQuestionCount > 0 ? openQuestionCount : openQuestionRows.length;
+  if (count <= 0) {
+    return "";
+  }
+  const tableRows = openQuestionRows
+    .map((entry) => {
+      const row = entry && typeof entry === "object" ? (entry as Record<string, unknown>) : {};
+      const question = String(row.question ?? "").trim() || "—";
+      const critical = row.critical === true;
+      const priorityLabel = critical ? "Critical" : "Normal";
+      const priorityClass = critical ? " wc-plan-open-question-critical" : "";
+      return (
+        "<tr>" +
+        "<td>" +
+        escapeHtml(question) +
+        "</td>" +
+        '<td class="wc-plan-open-question-priority' +
+        priorityClass +
+        '">' +
+        escapeHtml(priorityLabel) +
+        "</td>" +
+        "</tr>"
+      );
+    })
+    .join("");
+  const bodyHtml =
+    tableRows.length > 0
+      ? '<table class="wc-plan-wbs-table wc-plan-open-questions-table"><thead><tr>' +
+        "<th>Question</th><th>Priority</th>" +
+        "</tr></thead><tbody>" +
+        tableRows +
+        "</tbody></table>"
+      : '<p class="muted wc-plan-wbs-empty">No open questions available for this plan.</p>';
+  return (
+    '<details class="wc-plan-card-wbs wc-plan-card-open-questions"' +
+    planCardUiStateAttr(planId, "open-questions") +
+    "><summary>" +
+    escapeHtml(String(count)) +
+    " Open Question" +
+    (count === 1 ? "" : "s") +
+    "</summary>" +
+    bodyHtml +
+    "</details>"
+  );
+}
+
 /** Reuses the same PlanArtifact lifecycle actions as the Ideas rows, keyed off the plan's own status (not an idea's). */
 function renderPlanArtifactCardActions(row: Record<string, unknown>, effectiveStatusRaw: string): string {
   const planId = String(row.planId ?? "").trim();
@@ -3931,6 +4040,8 @@ function renderPlanArtifactCard(row: Record<string, unknown>): string {
   const reviewSummaryText = String(row.reviewSummary ?? "").trim();
   const refLabel = planRef.length > 0 ? planRef : planId;
   const wbsRows = Array.isArray(row.wbsRows) ? row.wbsRows : [];
+  const riskRows = Array.isArray(row.riskRows) ? row.riskRows : [];
+  const openQuestionRows = Array.isArray(row.openQuestionRows) ? row.openQuestionRows : [];
 
   const statChips: string[] = [];
   if (blockerCount > 0) {
@@ -3949,20 +4060,6 @@ function renderPlanArtifactCard(row: Record<string, unknown>): string {
         " warning" +
         (warningCount === 1 ? "" : "s") +
         "</span>"
-    );
-  }
-  if (openQuestions > 0) {
-    statChips.push(
-      '<span class="wc-plan-card-chip wc-plan-card-chip-warn" role="listitem">' +
-        escapeHtml(String(openQuestions)) +
-        " open question" +
-        (openQuestions === 1 ? "" : "s") +
-        "</span>"
-    );
-  }
-  if (riskCount > 0) {
-    statChips.push(
-      '<span class="wc-plan-card-chip" role="listitem">' + escapeHtml(String(riskCount)) + " risk" + (riskCount === 1 ? "" : "s") + "</span>"
     );
   }
   if (
@@ -3994,6 +4091,8 @@ function renderPlanArtifactCard(row: Record<string, unknown>): string {
   const actionsHtml = renderPlanArtifactCardActions(row, effectiveStatusRaw);
   const factsHtml = renderPlanArtifactFactsMeta(row);
   const wbsHtml = renderPlanArtifactWbsTable(planId, wbsRows, wbsRowCount);
+  const risksHtml = renderPlanArtifactRiskTable(planId, riskRows, riskCount);
+  const openQuestionsHtml = renderPlanArtifactOpenQuestionsTable(planId, openQuestionRows, openQuestions);
 
   return (
     '<article class="wc-plan-card ' +
@@ -4017,6 +4116,8 @@ function renderPlanArtifactCard(row: Record<string, unknown>): string {
     factsHtml +
     (statChips.length > 0 ? '<div class="wc-plan-card-stats" role="list">' + statChips.join("") + "</div>" : "") +
     wbsHtml +
+    risksHtml +
+    openQuestionsHtml +
     '<div class="wc-plan-card-actions">' +
     actionsHtml +
     "</div>" +

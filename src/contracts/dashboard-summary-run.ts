@@ -380,6 +380,20 @@ export type DashboardPlanArtifactWbsRow = {
   size: string;
 };
 
+/** Human-oriented risk row for dashboard plan cards (derived from `PlanArtifactRiskItem`). */
+export type DashboardPlanArtifactRiskRow = {
+  id: string;
+  description: string;
+  severity: string;
+  mitigation: string;
+};
+
+/** Human-oriented open-question row for dashboard plan cards (derived from `openQuestions[]`). */
+export type DashboardPlanArtifactOpenQuestionRow = {
+  question: string;
+  critical: boolean;
+};
+
 export type DashboardPlanArtifactRow = {
   planId: string;
   planRef: string;
@@ -408,6 +422,10 @@ export type DashboardPlanArtifactRow = {
   executed?: boolean;
   /** Human-readable WBS rows for the collapsible plan-card table. */
   wbsRows?: DashboardPlanArtifactWbsRow[];
+  /** Human-readable risk rows for the collapsible plan-card table. */
+  riskRows?: DashboardPlanArtifactRiskRow[];
+  /** Human-readable open-question rows for the collapsible plan-card table. */
+  openQuestionRows?: DashboardPlanArtifactOpenQuestionRow[];
 };
 
 /**

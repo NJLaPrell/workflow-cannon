@@ -323,3 +323,53 @@ test("mergeSlicePayloadIntoSummary preserves prior wbsRows when refreshed plan r
   const merged = mergeSlicePayloadIntoSummary(prior, "planArtifact", payload);
   assert.equal(merged.planArtifact.current.wbsRows[0].title, "First row");
 });
+
+test("mergeSlicePayloadIntoSummary preserves prior riskRows when refreshed plan row drops risk table payload", () => {
+  const prior = {
+    planArtifact: {
+      schemaVersion: 1,
+      current: {
+        planId: "P1",
+        riskCount: 2,
+        riskRows: [{ id: "R1", description: "Bad thing", severity: "High", mitigation: "Fix it" }]
+      },
+      recent: []
+    }
+  };
+  const payload = lookupDashboardSlice("planArtifact").extractPayload({
+    schemaVersion: 1,
+    dashboardProjection: "status",
+    planArtifact: {
+      schemaVersion: 1,
+      current: { planId: "P1", riskCount: 2 },
+      recent: []
+    }
+  });
+  const merged = mergeSlicePayloadIntoSummary(prior, "planArtifact", payload);
+  assert.equal(merged.planArtifact.current.riskRows[0].id, "R1");
+});
+
+test("mergeSlicePayloadIntoSummary preserves prior openQuestionRows when refreshed plan row drops question table payload", () => {
+  const prior = {
+    planArtifact: {
+      schemaVersion: 1,
+      current: {
+        planId: "P1",
+        openQuestionCount: 1,
+        openQuestionRows: [{ question: "Who owns finalize?", critical: false }]
+      },
+      recent: []
+    }
+  };
+  const payload = lookupDashboardSlice("planArtifact").extractPayload({
+    schemaVersion: 1,
+    dashboardProjection: "status",
+    planArtifact: {
+      schemaVersion: 1,
+      current: { planId: "P1", openQuestionCount: 1 },
+      recent: []
+    }
+  });
+  const merged = mergeSlicePayloadIntoSummary(prior, "planArtifact", payload);
+  assert.equal(merged.planArtifact.current.openQuestionRows[0].question, "Who owns finalize?");
+});
