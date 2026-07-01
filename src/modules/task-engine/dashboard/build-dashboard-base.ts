@@ -2158,6 +2158,7 @@ export {
   buildDashboardStatusSlice,
   buildDashboardAgentActivitySlice,
   buildDashboardAgentTypesSlice,
-  buildDashboardTerminalTasksPage
+  buildDashboardTerminalTasksPage,
+  buildDashboardOpsSlice
 } from "./focused-slice-builders.js";
 

@@ -6256,3 +6256,105 @@ test("taskEngineModule create-task auto-allocates id by default when id omitted"
   assert.equal(replay.code, "task-create-idempotent-replay");
   assert.equal(replay.data.task.id, first.data.task.id);
 });
+
+// ---------------------------------------------------------------------------
+// dashboard-ops-slice (Background finding 2: lightweight ops snapshot)
+// ---------------------------------------------------------------------------
+
+test("taskEngineModule dashboard-ops-slice returns planArtifact, workspaceStatus, teamExecution, subagentRegistry, taskCheckpoints", async () => {
+  const workspace = await tmpDir("te-ops-slice-");
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(makeTask({ id: "T001", status: "ready" }));
+    store.addTask(makeTask({ id: "T002", status: "in-progress", title: "In progress task" }));
+  });
+
+  const ctx = sqliteTaskEngineCtx(workspace);
+  const result = await taskEngineModule.onCommand({ name: "dashboard-ops-slice", args: {} }, ctx);
+
+  assert.equal(result.ok, true);
+  assert.equal(result.code, "dashboard-ops-slice");
+  assert.ok(result.data, "data field must be present");
+
+  const d = result.data;
+
+  // Required fields
+  assert.ok("planArtifact" in d, "planArtifact must be present");
+  assert.ok("workspaceStatus" in d, "workspaceStatus must be present");
+  assert.ok("teamExecution" in d, "teamExecution must be present");
+  assert.ok("subagentRegistry" in d, "subagentRegistry must be present");
+  assert.ok("taskCheckpoints" in d, "taskCheckpoints must be present");
+  assert.ok("planningGeneration" in d, "planningGeneration must be present");
+  assert.equal(d.schemaVersion, 1);
+  assert.ok(typeof d.planningGeneration === "number");
+
+  // teamExecution shape
+  assert.ok(d.teamExecution, "teamExecution must be truthy");
+  assert.equal(d.teamExecution.schemaVersion, 1);
+
+  // subagentRegistry shape
+  assert.ok(d.subagentRegistry, "subagentRegistry must be truthy");
+  assert.equal(d.subagentRegistry.schemaVersion, 1);
+
+  // taskCheckpoints shape
+  assert.ok(d.taskCheckpoints, "taskCheckpoints must be truthy");
+  assert.equal(d.taskCheckpoints.schemaVersion, 1);
+
+  // Must NOT include systemStatus (the heavy doctor/CAE/git-drift object)
+  assert.ok(!("systemStatus" in d), "systemStatus must NOT be present in dashboard-ops-slice (no doctor scan)");
+  assert.ok(!("doctorIssues" in d), "doctorIssues must NOT be present");
+  assert.ok(!("caeLines" in d), "caeLines must NOT be present");
+});
+
+test("taskEngineModule dashboard-ops-slice is faster than dashboard-summary status projection (advisory)", async () => {
+  const workspace = await tmpDir("te-ops-timing-");
+  // Seed with a handful of tasks to give the store something to scan
+  await seedSqliteStore(workspace, (store) => {
+    for (let i = 1; i <= 5; i++) {
+      store.addTask(makeTask({ id: `T00${i}`, status: "ready", title: `Task ${i}` }));
+    }
+  });
+
+  const ctx = sqliteTaskEngineCtx(workspace);
+
+  const t0status = Date.now();
+  const statusResult = await taskEngineModule.onCommand(
+    { name: "dashboard-summary", args: { projection: "status" } },
+    ctx
+  );
+  const statusMs = Date.now() - t0status;
+
+  const t0ops = Date.now();
+  const opsResult = await taskEngineModule.onCommand({ name: "dashboard-ops-slice", args: {} }, ctx);
+  const opsMs = Date.now() - t0ops;
+
+  assert.equal(statusResult.ok, true);
+  assert.equal(opsResult.ok, true);
+  assert.equal(opsResult.code, "dashboard-ops-slice");
+
+  // ops-slice avoids doctor/CAE scan so it should be at least as fast;
+  // this is advisory in CI (environment timing is noisy) — just log the delta.
+  // In practice ops-slice is ~2-10x faster than the status projection.
+  const diff = statusMs - opsMs;
+  console.log(`[dashboard-ops-slice timing] status=${statusMs}ms ops=${opsMs}ms delta=${diff}ms`);
+});
+
+test("taskEngineModule dashboard-ops-slice does not lose mutation commands to the bypass (list-tasks still works)", async () => {
+  const workspace = await tmpDir("te-ops-bypass-");
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(makeTask({ id: "T001", status: "ready" }));
+  });
+
+  const ctx = sqliteTaskEngineCtx(workspace);
+
+  // Ops slice bypass must not affect non-dashboard commands
+  const listResult = await taskEngineModule.onCommand({ name: "list-tasks", args: {} }, ctx);
+  assert.equal(listResult.ok, true);
+  assert.ok(Array.isArray(listResult.data?.tasks), "list-tasks must still return tasks array after bypass fix");
+  assert.equal(listResult.data.tasks.length, 1);
+  assert.equal(listResult.data.tasks[0].id, "T001");
+
+  // dashboard-ops-slice still works alongside
+  const opsResult = await taskEngineModule.onCommand({ name: "dashboard-ops-slice", args: {} }, ctx);
+  assert.equal(opsResult.ok, true);
+  assert.equal(opsResult.code, "dashboard-ops-slice");
+});

@@ -39,7 +39,6 @@ import type { DashboardSectionId, DashboardSectionLoadState } from "./dashboard-
 import { DASHBOARD_SECTION_REGISTRY, isEagerDashboardSection } from "./dashboard-section-registry.js";
 import {
   dashboardSectionsForMutation,
-  extractDashboardSectionInnerHtml,
   type DashboardMutationKind
 } from "./dashboard-section-invalidation.js";
 import { renderDashboardShellInnerHtml } from "./render-dashboard-shell.js";
@@ -108,6 +107,7 @@ import {
   renderDashboardCaeSectionInnerHtml,
   renderDashboardPhaseJournalSectionInnerHtml,
   renderDashboardRootInnerHtml,
+  renderDashboardSectionInnerHtml,
   renderWcDashboardBannerHtml,
   type RenderDashboardRootOptions,
   type DashboardPhaseJournalBundle,
@@ -856,16 +856,17 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       return;
     }
     const raw = { ok: true as const, data: summaryData };
-    let rootInner: string;
+    let inner: string | null;
     try {
       const editorIntegration = await resolveEditorIntegrationState();
-      rootInner = renderDashboardRootInnerHtml(
+      inner = renderDashboardSectionInnerHtml(
+        sectionId,
         this.wrapDashboardPayloadForRender(raw as Record<string, unknown>),
-        this.planningWizardPanel(),
-        editorIntegration,
-        undefined,
-        this.lastEmbeddedCaePanelHtml,
-        this.dashboardRenderRootOptions()
+        {
+          editorIntegration,
+          embeddedCaePanelHtml: this.lastEmbeddedCaePanelHtml,
+          mcpStatus: this.dashboardRenderRootOptions().mcpStatus
+        }
       );
     } catch (e) {
       logWc(
@@ -874,7 +875,6 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       );
       return;
     }
-    const inner = extractDashboardSectionInnerHtml(rootInner, sectionId);
     if (inner == null) {
       return;
     }
@@ -1762,8 +1762,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       for (const sectionId of ["queue", "status", "config", "cae", "phase-journal"] as const) {
         this.staleDashboardSections.add(sectionId);
       }
-      webview.html = this.buildHtml(webview, rootInner);
-      logWc("dashboard", "startup diagnostic direct render applied");
+      await webview.postMessage({ type: "wcReplaceRoot", html: rootInner });
+      logWc("dashboard", "startup diagnostic direct render applied via wcReplaceRoot");
       this.markDashboardRootHydrated();
       void this.ensureQueueRollupsHydrated(this.refreshController.currentGeneration());
       logWc("dashboard", "startup queue rollup hydration scheduled");
@@ -2369,18 +2369,11 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       logWcDrawerSubmitStep(patchTraceId, "patch-skipped", patchStepAt, "no sections after fingerprint");
       return;
     }
-    const wizardPanel = raw.ok === true ? this.planningWizardPanel() : null;
-    let rootInner: string;
+    let renderedBytes = 0;
+    let editorIntegration: Awaited<ReturnType<typeof resolveEditorIntegrationState>>;
+    const mcpStatus = this.dashboardRenderRootOptions().mcpStatus;
     try {
-      const editorIntegration = await resolveEditorIntegrationState();
-      rootInner = renderDashboardRootInnerHtml(
-        this.dashboardRenderPayload(raw),
-        wizardPanel,
-        editorIntegration,
-        phaseJournal,
-        embeddedCaePanelHtml,
-        this.dashboardRenderRootOptions()
-      );
+      editorIntegration = await resolveEditorIntegrationState();
     } catch (e) {
       logWc(
         "dashboard",
@@ -2389,10 +2382,16 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       return;
     }
     for (const sectionId of sectionsToPatch) {
-      const inner = extractDashboardSectionInnerHtml(rootInner, sectionId);
+      const inner = renderDashboardSectionInnerHtml(sectionId, this.dashboardRenderPayload(raw), {
+        editorIntegration,
+        phaseJournal,
+        embeddedCaePanelHtml,
+        mcpStatus
+      });
       if (inner == null) {
         continue;
       }
+      renderedBytes += inner.length;
       await this.postSectionPatch(sectionId, inner, "ready");
       this.hydratedDashboardSections.add(sectionId);
       this.staleDashboardSections.delete(sectionId);
@@ -2412,7 +2411,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       patchTraceId,
       "patch-done",
       patchStepAt,
-      `sections=${sectionsToPatch.join(",")} htmlBytes≈${rootInner.length}`
+      `sections=${sectionsToPatch.join(",")} htmlBytes≈${renderedBytes}`
     );
   }
 
@@ -5422,8 +5421,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     try {
       if (!this.dashboardRootHydrated) {
-        webview.html = this.buildHtml(webview, rootInner);
-        logWc("dashboard", "pushUpdate applied first full document render");
+        await webview.postMessage({ type: "wcReplaceRoot", html: rootInner });
+        logWc("dashboard", "pushUpdate applied first root patch over shell");
         this.markDashboardRootHydrated();
         if (useDeferredSecondary) {
           logWc("dashboard", "pushUpdate deferred secondary hydration: queue/status/full not launched");

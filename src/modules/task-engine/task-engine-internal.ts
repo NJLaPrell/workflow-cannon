@@ -4,6 +4,7 @@ import { TaskEngineError } from "./transitions.js";
 import { openPlanningStores } from "./persistence/planning-open.js";
 import { routeTaskEngineBeforeOpenPlanningStores } from "./commands/planning-independent-commands.js";
 import { dispatchTaskEnginePlanningCommands } from "./commands/task-engine-planning-dispatch.js";
+import { resolveQueueDashboardReadoutCommandsNoPriorOpen } from "./commands/queue-dashboard-readout-commands.js";
 
 export const taskEngineModule: WorkflowModule = {
   registration: {
@@ -30,6 +31,14 @@ export const taskEngineModule: WorkflowModule = {
     const beforeStores = await routeTaskEngineBeforeOpenPlanningStores(command, ctx);
     if (beforeStores) {
       return beforeStores;
+    }
+
+    // Dashboard commands self-open their own slice-scoped stores (read-only, with
+    // skipTasks/skipLogs optimisations). Bypass the full openPlanningStores to avoid
+    // opening the SQLite task table twice — once here and once inside the handler.
+    const dashboardResult = await resolveQueueDashboardReadoutCommandsNoPriorOpen(command, ctx);
+    if (dashboardResult !== null) {
+      return dashboardResult;
     }
 
     let planning;

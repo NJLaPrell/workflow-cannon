@@ -9,6 +9,7 @@
 
 import readline from "node:readline";
 import { handleRunCommand, type RunCommandExitCodes } from "./run-command.js";
+import { createCachedRegistryRouterResolver } from "./kit-run-daemon-cache.js";
 
 const EXIT_CODES: RunCommandExitCodes = {
   success: 0,
@@ -38,6 +39,10 @@ function writeResponse(response: KitRunDaemonResponse): void {
 
 export async function runKitRunDaemonMain(cwd: string): Promise<void> {
   const rl = readline.createInterface({ input: process.stdin, crlfDelay: Infinity });
+
+  // One cache per daemon process: memoizes registry/router/effective-config across
+  // requests and rebuilds only when a config input changes (see kit-run-daemon-cache.ts).
+  const resolveRegistryRouter = createCachedRegistryRouterResolver();
 
   for await (const line of rl) {
     const trimmed = line.trim();
@@ -98,7 +103,8 @@ export async function runKitRunDaemonMain(cwd: string): Promise<void> {
           writeLine: (message) => stdoutLines.push(message),
           writeError: (message) => stderrLines.push(message)
         },
-        EXIT_CODES
+        EXIT_CODES,
+        { resolveRegistryRouter }
       );
       writeResponse({
         id,

@@ -55,6 +55,13 @@ export type RenderDashboardRootOptions = {
   mcpStatus?: McpHostStatus | null;
 };
 
+export type RenderDashboardSectionOptions = {
+  editorIntegration?: EditorIntegrationRenderState | null;
+  phaseJournal?: DashboardPhaseJournalBundle | null;
+  embeddedCaePanelHtml?: string | null;
+  mcpStatus?: McpHostStatus | null;
+};
+
 export type WcDashboardStatusKind = "active" | "waiting" | "blocked" | "idle" | "done";
 export type DashboardTabId = "overview" | "planning" | "task-engine" | "status" | "config" | "cae";
 
@@ -6886,31 +6893,59 @@ function renderPhaseNotesOverviewSection(
   );
 }
 
-/** Inner HTML for #root from a `workspace-kit run dashboard-summary`–shaped payload (or extension error object). */
-export function renderDashboardRootInnerHtml(
-  payload: unknown,
-  planningWizardPanel?: PlanningInterviewWizardPanel | null,
-  editorIntegration?: EditorIntegrationRenderState | null,
-  phaseJournal?: DashboardPhaseJournalBundle | null,
-  embeddedCaePanelHtml?: string | null,
-  options?: RenderDashboardRootOptions
-): string {
-  if (payload === null || payload === undefined) {
-    return "<p>No payload</p>";
-  }
-  const p = payload as { ok?: unknown; code?: unknown; data?: Record<string, unknown> };
+type DashboardRenderBase = {
+  d: Record<string, unknown>;
+  ss: Record<string, unknown>;
+  ws: Record<string, unknown> | null;
+};
+
+type DashboardPhaseRenderContext = {
+  rosterDeliveredPhaseKeys: string[];
+  legacyDeliveredMaxOrdinal: number | null;
+  activeQueuePhaseKeys: string[];
+  phaseReleaseDates: Readonly<Record<string, string>>;
+  phaseFocus: PhaseScheduleFocus;
+  phaseSystemSlice: Record<string, unknown> | undefined;
+  phaseCatalogLookup: Map<string, PhaseCatalogListRow>;
+  phaseOrderingInputs: PhaseOrderingInputs | undefined;
+};
+
+type DashboardQueueRenderContext = {
+  humanGatesCount: number;
+  humanGatesTop: unknown[];
+  blockedTop: unknown[];
+  readyCount: number;
+  readyTop: unknown[];
+  piCount: number;
+  piTop: unknown[];
+  peCount: number;
+  peTop: unknown[];
+  tcrCount: number;
+  tcrTop: unknown[];
+  queueInner: string;
+  totalReadyCount: number;
+  totalProposedCount: number;
+  totalBlockedCount: number;
+  totalDoneCount: number;
+};
+
+function readDashboardRenderBase(payload: unknown): DashboardRenderBase | null {
+  const p = payload as { ok?: unknown; data?: Record<string, unknown> };
   if (p.ok !== true) {
-    const guidance =
-      p.code === "policy-denied"
-        ? "\n\nThis action was not approved. Try again or contact your maintainer."
-        : "";
-    return (
-      '<pre class="bad">' + escapeHtml(JSON.stringify(payload, null, 2) + guidance) + "</pre>"
-    );
+    return null;
   }
   const d = p.data ?? {};
-  const ss = (d.stateSummary as Record<string, unknown>) || {};
-  const ws = (d.workspaceStatus as Record<string, unknown> | null | undefined) ?? null;
+  return {
+    d,
+    ss: (d.stateSummary as Record<string, unknown>) || {},
+    ws: (d.workspaceStatus as Record<string, unknown> | null | undefined) ?? null
+  };
+}
+
+function createDashboardPhaseRenderContext(
+  d: Record<string, unknown>,
+  ws: Record<string, unknown> | null
+): DashboardPhaseRenderContext {
   const deliveredPhaseKeys = readDeliveredPhaseKeys(d);
   const rolledOutPhaseKeys = readRolledOutPhaseKeys(d);
   const rosterDeliveredPhaseKeys = mergePhaseKeysForRosterDelivery(
@@ -6940,6 +6975,23 @@ export function renderDashboardRootInnerHtml(
           activeQueuePhaseKeys
         }
       : undefined;
+  return {
+    rosterDeliveredPhaseKeys,
+    legacyDeliveredMaxOrdinal,
+    activeQueuePhaseKeys,
+    phaseReleaseDates,
+    phaseFocus,
+    phaseSystemSlice,
+    phaseCatalogLookup,
+    phaseOrderingInputs
+  };
+}
+
+function createDashboardQueueRenderContext(
+  d: Record<string, unknown>,
+  ws: Record<string, unknown> | null,
+  phaseCtx: DashboardPhaseRenderContext
+): DashboardQueueRenderContext {
   const wishlist = (d.wishlist as Record<string, unknown>) || {};
   const wishlistEnabled = wishlist.enabled === true;
   const wishlistOpenTop = Array.isArray(wishlist.openTop) ? wishlist.openTop : [];
@@ -7002,8 +7054,8 @@ export function renderDashboardRootInnerHtml(
     }
     const compCount = typeof cs?.count === "number" ? cs.count : 0;
     const cancCount = typeof ks?.count === "number" ? ks.count : 0;
-    const compTop = Array.isArray(cs?.top) ? (cs!.top as unknown[]).slice(0, 15) : [];
-    const cancTop = Array.isArray(ks?.top) ? (ks!.top as unknown[]).slice(0, 15) : [];
+    const compTop = Array.isArray(cs?.top) ? (cs.top as unknown[]).slice(0, 15) : [];
+    const cancTop = Array.isArray(ks?.top) ? (ks.top as unknown[]).slice(0, 15) : [];
     const inner =
       renderStatusRollup(
         "status-term-comp",
@@ -7014,8 +7066,8 @@ export function renderDashboardRootInnerHtml(
           compCount,
           "No completed tasks.",
           "term-comp",
-          phaseFocus,
-          phaseCatalogLookup,
+          phaseCtx.phaseFocus,
+          phaseCtx.phaseCatalogLookup,
           "completed"
         ),
         compCount === 0,
@@ -7031,8 +7083,8 @@ export function renderDashboardRootInnerHtml(
           cancCount,
           "No cancelled tasks.",
           "term-can",
-          phaseFocus,
-          phaseCatalogLookup,
+          phaseCtx.phaseFocus,
+          phaseCtx.phaseCatalogLookup,
           "cancelled"
         ),
         cancCount === 0,
@@ -7061,7 +7113,7 @@ export function renderDashboardRootInnerHtml(
       (d.completedSummary as Record<string, unknown> | undefined)?.phaseBuckets,
       (d.cancelledSummary as Record<string, unknown> | undefined)?.phaseBuckets
     ],
-    phaseReleaseDates
+    phaseReleaseDates: phaseCtx.phaseReleaseDates
   });
 
   const tasksBlock =
@@ -7072,14 +7124,14 @@ export function renderDashboardRootInnerHtml(
       "status-ready",
       "<b>Ready</b> (" + String(readyCount) + ")",
       renderReadyPhaseBuckets(
-          readyPhaseBuckets,
-          readyTop,
-          "No ready tasks.",
-          "rdy",
-          ws as Record<string, unknown> | null,
-          phaseFocus,
-          phaseCatalogLookup
-        ),
+        readyPhaseBuckets,
+        readyTop,
+        "No ready tasks.",
+        "rdy",
+        ws,
+        phaseCtx.phaseFocus,
+        phaseCtx.phaseCatalogLookup
+      ),
       false,
       readyCount > 0,
       "ready"
@@ -7087,7 +7139,14 @@ export function renderDashboardRootInnerHtml(
     renderStatusRollup(
       "status-prop-imp",
       "<b>Proposed · Improvements</b> (" + String(piCount) + ")",
-      renderProposedPhaseBuckets(pis.phaseBuckets, piCount, piTop, "prop-imp", phaseFocus, phaseCatalogLookup),
+      renderProposedPhaseBuckets(
+        pis.phaseBuckets,
+        piCount,
+        piTop,
+        "prop-imp",
+        phaseCtx.phaseFocus,
+        phaseCtx.phaseCatalogLookup
+      ),
       piCount === 0,
       false,
       "proposed"
@@ -7095,7 +7154,14 @@ export function renderDashboardRootInnerHtml(
     renderStatusRollup(
       "status-prop-exe",
       "<b>Proposed · Execution</b> (" + String(peCount) + ")",
-      renderProposedExecutionPhaseBuckets(pes.phaseBuckets, peCount, peTop, "prop-exe", phaseFocus, phaseCatalogLookup),
+      renderProposedExecutionPhaseBuckets(
+        pes.phaseBuckets,
+        peCount,
+        peTop,
+        "prop-exe",
+        phaseCtx.phaseFocus,
+        phaseCtx.phaseCatalogLookup
+      ),
       peCount === 0,
       false,
       "proposed"
@@ -7108,8 +7174,8 @@ export function renderDashboardRootInnerHtml(
         tcrCount,
         tcrTop,
         "tc-churn",
-        phaseFocus,
-        phaseCatalogLookup
+        phaseCtx.phaseFocus,
+        phaseCtx.phaseCatalogLookup
       ),
       false,
       false,
@@ -7123,8 +7189,8 @@ export function renderDashboardRootInnerHtml(
         blockedTop,
         Number(blockedSummary.count ?? 0),
         "blk",
-        phaseFocus,
-        phaseCatalogLookup
+        phaseCtx.phaseFocus,
+        phaseCtx.phaseCatalogLookup
       ),
       Number(blockedSummary.count ?? 0) === 0,
       false,
@@ -7159,93 +7225,146 @@ export function renderDashboardRootInnerHtml(
       "</div></details></section>"
     : "";
 
-  // ── Assemble tab content ───────────────────────────────────────────────────
+  return {
+    humanGatesCount,
+    humanGatesTop,
+    blockedTop,
+    readyCount,
+    readyTop,
+    piCount,
+    piTop,
+    peCount,
+    peTop,
+    tcrCount,
+    tcrTop,
+    queueInner: tasksBlock + wishlistSection,
+    totalReadyCount: readyCount,
+    totalProposedCount: piCount + peCount,
+    totalBlockedCount: Number(blockedSummary.count ?? 0),
+    totalDoneCount:
+      typeof (d.completedSummary as Record<string, unknown> | undefined)?.count === "number"
+        ? ((d.completedSummary as Record<string, unknown>).count as number)
+        : 0
+  };
+}
 
-  const firstWishlistOpen = wishlistEnabled ? wishlistOpenTop[0] : undefined;
+function renderOverviewSectionInnerHtml(
+  d: Record<string, unknown>,
+  ws: Record<string, unknown> | null,
+  phaseCtx: DashboardPhaseRenderContext,
+  queueCtx: DashboardQueueRenderContext
+): string {
+  const firstWishlistOpen =
+    ((d.wishlist as Record<string, unknown> | undefined)?.enabled === true &&
+      Array.isArray((d.wishlist as Record<string, unknown> | undefined)?.openTop))
+      ? (((d.wishlist as Record<string, unknown>).openTop as unknown[])[0])
+      : undefined;
   const suggestedNext = d.suggestedNext;
-  const phaseSnapshot = normalizePhaseSnapshot(d.currentPhaseDelivery, ws as Record<string, unknown> | null);
+  const phaseSnapshot = normalizePhaseSnapshot(d.currentPhaseDelivery, ws);
   const phaseWorkCandidates = [
-    ...humanGatesTop,
-    ...blockedTop,
-    ...peTop,
-    ...piTop,
-    ...tcrTop
+    ...queueCtx.humanGatesTop,
+    ...queueCtx.blockedTop,
+    ...queueCtx.peTop,
+    ...queueCtx.piTop,
+    ...queueCtx.tcrTop
   ];
   const recNextCard = renderUpNextCardHtml({
-    ws: ws as Record<string, unknown> | null,
+    ws,
     phaseSnapshot,
     suggestedNext,
-    readyTop,
-    readyCount,
+    readyTop: queueCtx.readyTop,
+    readyCount: queueCtx.readyCount,
     firstWishlistOpen,
-    humanGatesCount,
+    humanGatesCount: queueCtx.humanGatesCount,
     phaseWorkCandidates
   });
 
-  const totalReadyCount = readyCount;
-  const totalProposedCount = piCount + peCount;
-  const totalBlockedCount = Number(blockedSummary.count ?? 0);
-  const totalDoneCount =
-    typeof (d.completedSummary as Record<string, unknown> | undefined)?.count === "number"
-      ? ((d.completedSummary as Record<string, unknown>).count as number)
-      : 0;
-
-  const overviewContent =
+  return (
     renderStatPills(
-      totalReadyCount,
-      totalProposedCount,
-      totalBlockedCount,
-      totalDoneCount,
-      humanGatesCount
+      queueCtx.totalReadyCount,
+      queueCtx.totalProposedCount,
+      queueCtx.totalBlockedCount,
+      queueCtx.totalDoneCount,
+      queueCtx.humanGatesCount
     ) +
     renderAgentStatusBanner(d) +
     recNextCard +
     renderPhaseReadinessCard(
-      ws as Record<string, unknown> | null,
+      ws,
       phaseSnapshot,
-      phaseOrderingInputs,
+      phaseCtx.phaseOrderingInputs,
       (d.phaseKickoff as Record<string, unknown> | undefined) ?? null
     ) +
     renderPhaseProgressCard(
-      ws as Record<string, unknown> | null,
+      ws,
       phaseSnapshot,
-      humanGatesCount,
-      phaseOrderingInputs
+      queueCtx.humanGatesCount,
+      phaseCtx.phaseOrderingInputs
     ) +
-    renderWorkspaceBlockersPendingSection(ws as Record<string, unknown> | null) +
+    renderWorkspaceBlockersPendingSection(ws) +
     renderTeamExecutionSection(d.teamExecution) +
     renderSubagentRegistrySection(d.subagentRegistry) +
-    renderTaskCheckpointsSection(d.taskCheckpoints);
-
-  const phaseRosterInner = renderPhaseCatalogOverviewSection(
-    phaseSystemSlice,
-    ws as Record<string, unknown> | null,
-    rosterDeliveredPhaseKeys,
-    legacyDeliveredMaxOrdinal,
-    activeQueuePhaseKeys,
-    phaseReleaseDates
+    renderTaskCheckpointsSection(d.taskCheckpoints)
   );
+}
+
+function renderPhaseRosterSectionInnerHtml(
+  ws: Record<string, unknown> | null,
+  phaseCtx: DashboardPhaseRenderContext
+): string {
+  return renderPhaseCatalogOverviewSection(
+    phaseCtx.phaseSystemSlice,
+    ws,
+    phaseCtx.rosterDeliveredPhaseKeys,
+    phaseCtx.legacyDeliveredMaxOrdinal,
+    phaseCtx.activeQueuePhaseKeys,
+    phaseCtx.phaseReleaseDates
+  );
+}
+
+/** Inner HTML for #root from a `workspace-kit run dashboard-summary`–shaped payload (or extension error object). */
+export function renderDashboardRootInnerHtml(
+  payload: unknown,
+  planningWizardPanel?: PlanningInterviewWizardPanel | null,
+  editorIntegration?: EditorIntegrationRenderState | null,
+  phaseJournal?: DashboardPhaseJournalBundle | null,
+  embeddedCaePanelHtml?: string | null,
+  options?: RenderDashboardRootOptions
+): string {
+  void planningWizardPanel;
+  if (payload === null || payload === undefined) {
+    return "<p>No payload</p>";
+  }
+  const p = payload as { ok?: unknown; code?: unknown; data?: Record<string, unknown> };
+  if (p.ok !== true) {
+    const guidance =
+      p.code === "policy-denied"
+        ? "\n\nThis action was not approved. Try again or contact your maintainer."
+        : "";
+    return (
+      '<pre class="bad">' + escapeHtml(JSON.stringify(payload, null, 2) + guidance) + "</pre>"
+    );
+  }
+
+  const base = readDashboardRenderBase(payload);
+  if (!base) {
+    return "<p>No payload</p>";
+  }
+  const { d, ss, ws } = base;
+  const phaseCtx = createDashboardPhaseRenderContext(d, ws);
+  const queueCtx = createDashboardQueueRenderContext(d, ws, phaseCtx);
   const planArtifactInner = renderPlanArtifactsSectionInnerHtml(d.planArtifact);
-
-  const caePanelContent =
-    typeof embeddedCaePanelHtml === "string" && embeddedCaePanelHtml.trim().length > 0
-      ? '<div class="gp-root wc-dash-cae-host dash-cae-embedded wc-dashboard-embedded-guidance">' +
-        namespaceEmbeddedCaePanelHtml(embeddedCaePanelHtml) +
-        "</div>"
-      : '<section class="dash-card" aria-label="CAE panel placeholder">' +
-        '<p><b>CAE</b></p>' +
-        '<p class="muted">Phase Readiness is under <b>WC Agent</b> on the Dashboard shell.</p>' +
-        '<p class="muted">Embedded CAE unavailable; run <b>Workflow Cannon: Open Guidance Authoring</b> or refresh the Dashboard.</p>' +
-        '</section>';
-
-  const deferred = options?.deferredSections ?? new Set<DashboardSectionId>();
-  const queueInner = tasksBlock + wishlistSection;
   const phaseJournalInner = renderPhaseNotesOverviewSection(phaseJournal ?? null, d.phaseJournalStats);
+  const deferred = options?.deferredSections ?? new Set<DashboardSectionId>();
 
-  const overviewWrapped = wrapDashboardSection("overview", overviewContent, deferred.has("overview"));
+  const overviewWrapped = wrapDashboardSection(
+    "overview",
+    renderOverviewSectionInnerHtml(d, ws, phaseCtx, queueCtx),
+    deferred.has("overview")
+  );
   const phaseRosterWrapped = wrapDashboardSection(
     "phase-roster",
-    phaseRosterInner,
+    renderPhaseRosterSectionInnerHtml(ws, phaseCtx),
     deferred.has("phase-roster")
   );
   const ideasWrapped = wrapDashboardSection(
@@ -7258,31 +7377,29 @@ export function renderDashboardRootInnerHtml(
     planArtifactInner,
     deferred.has("plan-artifact")
   );
-  const planningContent =
-    phaseRosterWrapped + ideasWrapped + planArtifactWrapped;
-  const queueWrapped = wrapDashboardSection("queue", queueInner, deferred.has("queue"));
+  const planningContent = phaseRosterWrapped + ideasWrapped + planArtifactWrapped;
+  const queueWrapped = wrapDashboardSection("queue", queueCtx.queueInner, deferred.has("queue"));
   const phaseJournalWrapped = wrapDashboardSection(
     "phase-journal",
     phaseJournalInner,
     deferred.has("phase-journal")
   );
   const taskEngineContent = phaseJournalWrapped + queueWrapped;
-
   const statusWrapped = wrapDashboardSection(
     "status",
     renderStatusSectionHtml(d, ss, editorIntegration, options?.mcpStatus),
     deferred.has("status")
   );
-
   const configWrapped = wrapDashboardSection(
     "config",
     renderConfigPanelShellHtml(),
     deferred.has("config")
   );
-
-  const caeWrapped = wrapDashboardSection("cae", caePanelContent, deferred.has("cae"));
-
-  // ── Tab shell ──────────────────────────────────────────────────────────────
+  const caeWrapped = wrapDashboardSection(
+    "cae",
+    renderDashboardCaeSectionInnerHtml(embeddedCaePanelHtml ?? null),
+    deferred.has("cae")
+  );
 
   return (
     '<div class="wc-dashboard-tab-shell">' +
@@ -7290,8 +7407,8 @@ export function renderDashboardRootInnerHtml(
     renderWcDashboardBannerHtml(d) +
     renderDashboardTabBarHtml({
       activeTab: "overview",
-      readyCount: totalReadyCount,
-      blockedCount: totalBlockedCount,
+      readyCount: queueCtx.totalReadyCount,
+      blockedCount: queueCtx.totalBlockedCount,
       readModeBadge: options?.readModeBadge
     }) +
     '</div>' +
@@ -7313,6 +7430,50 @@ export function renderDashboardRootInnerHtml(
     "</div>" +
     "</div>"
   );
+}
+
+export function renderDashboardSectionInnerHtml(
+  sectionId: DashboardSectionId,
+  payload: unknown,
+  options?: RenderDashboardSectionOptions
+): string | null {
+  const base = readDashboardRenderBase(payload);
+  if (!base) {
+    return null;
+  }
+  const { d, ss, ws } = base;
+  switch (sectionId) {
+    case "overview": {
+      const phaseCtx = createDashboardPhaseRenderContext(d, ws);
+      const queueCtx = createDashboardQueueRenderContext(d, ws, phaseCtx);
+      return renderOverviewSectionInnerHtml(d, ws, phaseCtx, queueCtx);
+    }
+    case "phase-roster": {
+      const phaseCtx = createDashboardPhaseRenderContext(d, ws);
+      return renderPhaseRosterSectionInnerHtml(ws, phaseCtx);
+    }
+    case "ideas":
+      return renderDashboardIdeasSectionInnerHtml(d.ideas);
+    case "plan-artifact":
+      return renderPlanArtifactsSectionInnerHtml(d.planArtifact);
+    case "queue": {
+      const phaseCtx = createDashboardPhaseRenderContext(d, ws);
+      return createDashboardQueueRenderContext(d, ws, phaseCtx).queueInner;
+    }
+    case "phase-journal":
+      return renderDashboardPhaseJournalSectionInnerHtml(
+        options?.phaseJournal ?? null,
+        d.phaseJournalStats
+      );
+    case "status":
+      return renderStatusSectionHtml(d, ss, options?.editorIntegration ?? null, options?.mcpStatus ?? null);
+    case "config":
+      return renderConfigPanelShellHtml();
+    case "cae":
+      return renderDashboardCaeSectionInnerHtml(options?.embeddedCaePanelHtml ?? null);
+    default:
+      return null;
+  }
 }
 
 /** Status tab inner HTML for section patch hydration (T100398). */
