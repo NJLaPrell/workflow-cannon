@@ -7,18 +7,32 @@ import type {
   DashboardAgentRegistrySessionSummary
 } from "@workflow-cannon/workspace-kit/contracts/dashboard-summary-run";
 
+function planArtifactRowHasIdentity(row: unknown): boolean {
+  if (!row || typeof row !== "object") {
+    return false;
+  }
+  return String((row as Record<string, unknown>).planId ?? "").trim().length > 0;
+}
+
 export function planArtifactHasContent(planArtifact: unknown): boolean {
   if (!planArtifact || typeof planArtifact !== "object") {
     return false;
   }
   const summary = planArtifact as Record<string, unknown>;
-  if (summary.current && typeof summary.current === "object") {
+  if (planArtifactRowHasIdentity(summary.current)) {
     return true;
   }
-  return (
-    Array.isArray(summary.recent) &&
-    summary.recent.some((row) => row && typeof row === "object")
-  );
+  return Array.isArray(summary.recent) && summary.recent.some(planArtifactRowHasIdentity);
+}
+
+/** True when eager planning cards still need a queue projection read. */
+export function dashboardSummaryNeedsPlanningHydration(
+  data: Record<string, unknown> | null | undefined
+): boolean {
+  if (!data) {
+    return true;
+  }
+  return !planArtifactHasContent(data.planArtifact) || !ideasHasContent(data.ideas);
 }
 
 export function ideasHasContent(ideas: unknown): boolean {
@@ -302,6 +316,28 @@ function preservePlanArtifactRowRollups(priorRow: unknown, nextRow: unknown): un
   const nextLinkedTaskCount = planArtifactRowLinkedTaskCount(nextRow);
   if (nextLinkedTaskCount === 0 && priorLinkedTaskCount > 0) {
     patched = { ...patched, linkedTaskCount: priorLinkedTaskCount };
+  }
+  if (!planArtifactRowHasIdentity(patched) && planArtifactRowHasIdentity(priorRow)) {
+    const prior = priorRow as Record<string, unknown>;
+    for (const key of [
+      "planId",
+      "planRef",
+      "title",
+      "status",
+      "lifecycleStatus",
+      "version",
+      "updatedAt",
+      "planningType",
+      "summary",
+      "phaseKey",
+      "sourceIdeaId"
+    ] as const) {
+      const nextValue = String(patched[key] ?? "").trim();
+      const priorValue = prior[key];
+      if (nextValue.length === 0 && priorValue !== undefined && priorValue !== null && String(priorValue).trim().length > 0) {
+        patched = { ...patched, [key]: priorValue };
+      }
+    }
   }
   return patched;
 }

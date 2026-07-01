@@ -88,10 +88,9 @@ import {
 } from "./dashboard-read-mode-badge.js";
 import {
   dashboardSectionIdForSlice,
-  ideasHasContent,
+  dashboardSummaryNeedsPlanningHydration,
   mergeDashboardProjectionIntoSummary,
   mergeSlicePayloadIntoSummary,
-  planArtifactHasContent,
   sliceNamesForDashboardSummaryProjection,
   wrapSectionHtmlWithFreshness
 } from "./dashboard-store-bridge.js";
@@ -992,7 +991,11 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         (section) => section.tabId === "planning" && this.hydratedDashboardSections.has(section.id)
       ).map((section) => section.id);
       if (planningSections.length > 0) {
-        await this.patchDashboardSectionsFromSummary(planningSections, updateSequence, { light: true });
+        await this.patchDashboardSectionsFromSummary(planningSections, updateSequence, {
+          light: true,
+          projection: "queue",
+          source: "kit-state refresh"
+        });
       }
       return;
     }
@@ -1087,6 +1090,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         } else {
           logWc("dashboard", "webview ready: triggering background queue hydration");
           void this.ensureQueueRollupsHydrated(this.refreshController.currentGeneration());
+          void this.ensurePlanningSectionsHydrated(this.refreshController.currentGeneration());
         }
         return;
       }
@@ -1763,6 +1767,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       this.markDashboardRootHydrated();
       void this.ensureQueueRollupsHydrated(this.refreshController.currentGeneration());
       logWc("dashboard", "startup queue rollup hydration scheduled");
+      void this.ensurePlanningSectionsHydrated(this.refreshController.currentGeneration());
+      logWc("dashboard", "startup planning hydration scheduled");
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       logWc("dashboard", `startup diagnostic direct render failed: ${message}`);
@@ -1865,14 +1871,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       logWc("dashboard", "planning hydration deferred: root not hydrated");
       return;
     }
-    if (this.activeDashboardTab !== "planning") {
-      logWc("dashboard", `planning hydration deferred: tab ${this.activeDashboardTab} not visible`);
-      return;
-    }
-    const data = this.lastDashboardSummaryData;
-    const ideasOk = ideasHasContent(data?.ideas);
-    const plansOk = planArtifactHasContent(data?.planArtifact);
-    if (ideasOk && plansOk) {
+    if (!dashboardSummaryNeedsPlanningHydration(this.lastDashboardSummaryData)) {
       return;
     }
     if (this.shouldSkipDashboardKitRefresh()) {
