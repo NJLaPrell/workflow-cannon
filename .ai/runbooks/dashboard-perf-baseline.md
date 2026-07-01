@@ -62,3 +62,47 @@ refresh (see `option-b` work).
 
 Re-run both scripts on `option-a` and `option-b` (and after the final merge into
 `dashboard-fixes`) for before/after comparison.
+
+## 2026-07-01 option-a-frontend post-change note
+
+Branch/worktree: `option-a-frontend-wt` in `/home/ubuntu/wc-worktrees/option-a-frontend`.
+
+### `scripts/bench-dashboard-refresh.mjs` after frontend polling/webview changes
+
+```text
+467 ms  dashboard-summary projection=overview
+608 ms  dashboard-summary projection=queue
+3045 ms dashboard-summary projection=full
+599 ms  secondary block: list-phase-notes + get-phase-context + cae-authoring-summary
+4721 ms TOTAL
+```
+
+These numbers are **not** a direct measurement of the main Task 1 win because the
+bench script still times `dashboard-summary` projections, while the frontend pollers now
+call dedicated slice commands (`dashboard-overview-slice`, `dashboard-queue-slice`,
+`dashboard-status-slice`, `dashboard-agent-activity-slice`). The shell quoting issue that
+initially blocked the bench was in the ad-hoc shell invocation, not in the script itself.
+
+### One-off command timing spot-checks (same workspace state, single run each)
+
+```text
+dashboard-summary overview        532 ms
+dashboard-overview-slice         424 ms
+dashboard-summary queue          471 ms
+dashboard-queue-slice            448 ms
+dashboard-summary status        3004 ms
+dashboard-status-slice          2959 ms
+dashboard-summary agentActivity  454 ms
+dashboard-agent-activity-slice   435 ms
+```
+
+Interpretation:
+
+- Overview/queue/agent-activity slices are modestly cheaper than the corresponding
+  `dashboard-summary` projections in this workspace state.
+- Status remains the heavy read path; the frontend still benefits by polling the
+  dedicated `read_hot` command instead of paying mutation-class orchestration overhead.
+- The larger user-visible win in this change set is on the extension side:
+  avoiding mutation-class command execution for pollers, eliminating the second full
+  webview document load at startup, and avoiding whole-root HTML renders for section-only
+  patches.

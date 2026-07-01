@@ -22,6 +22,13 @@ function makeCoordinator(overrides = {}) {
       isDeferred: overrides.isDeferred ?? (() => false)
     });
   const runs = [];
+  const projectionByCommand = {
+    "dashboard-overview-slice": "overview",
+    "dashboard-queue-slice": "queue",
+    "dashboard-status-slice": "status",
+    "dashboard-agent-activity-slice": "agentActivity",
+    "dashboard-agent-types-slice": "agentTypes"
+  };
   const client = {
     run: overrides.run
       ? overrides.run
@@ -32,7 +39,7 @@ function makeCoordinator(overrides = {}) {
             data: {
               schemaVersion: 7,
               planningGeneration: 42,
-              dashboardProjection: args.projection ?? "full"
+              dashboardProjection: projectionByCommand[command] ?? args.projection ?? "full"
             }
           };
         }
@@ -160,10 +167,16 @@ test("DashboardPollerCoordinator only polls agentActivity while overview is visi
     assert.equal(runs.length, 0, "live poll is gated when overview is hidden");
 
     coordinator.setVisibleSections(["overview"]);
+    await Promise.resolve();
+    assert.equal(runs.length, 2, "visible-section prefetch should hydrate live overview slices when visible");
+    assert.deepEqual(
+      runs.map((run) => run.command).sort(),
+      ["dashboard-agent-activity-slice", "dashboard-agent-types-slice"]
+    );
+    runs.length = 0;
     liveTick.fn();
     await Promise.resolve();
-    assert.equal(runs.length, 1, "live poll runs when overview is visible");
-    assert.equal(runs[0].args.projection, "agentActivity");
+    assert.equal(runs.length, 0, "live tick should coalesce with in-flight visible-section prefetch");
   } finally {
     coordinator.stop();
     globalThis.setInterval = originalSetInterval;
