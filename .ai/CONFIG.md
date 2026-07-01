@@ -240,6 +240,10 @@ Generated from `src/core/config-metadata.ts`. Do not edit by hand; run `workspac
 
 **Description:** Completion behavior for phased delivery tasks missing metadata.deliveryEvidence or metadata.deliveryWaiver: off skips the guard, advisory records a structured guard result, enforce blocks completion.
 
+| tasks.releaseNotes.enforcementMode | string | "advisory" | project | task-engine | public | false | false |
+
+**Description:** Completion behavior for user-visible phased tasks missing metadata.releaseNoteSummary or metadata.releaseNoteWaiver: off skips the guard, advisory records a structured guard result, enforce blocks completion. Scope follows documentation-module release-note audience rules (pragmatic — internal/chore rows are not gated).
+
 | tasks.persistenceBackend | string | "sqlite" | project | task-engine | public | false | false |
 
 **Description:** Task + wishlist runtime persistence: sqlite only (unified planning DB).

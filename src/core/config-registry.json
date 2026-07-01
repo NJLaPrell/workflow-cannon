@@ -274,6 +274,27 @@
       "user"
     ]
   },
+  "tasks.releaseNotes.enforcementMode": {
+    "key": "tasks.releaseNotes.enforcementMode",
+    "type": "string",
+    "description": "Completion behavior for user-visible phased tasks missing metadata.releaseNoteSummary or metadata.releaseNoteWaiver: off skips the guard, advisory records a structured guard result, enforce blocks completion.",
+    "default": "advisory",
+    "allowedValues": [
+      "off",
+      "advisory",
+      "enforce"
+    ],
+    "domainScope": "project",
+    "owningModule": "task-engine",
+    "sensitive": false,
+    "requiresRestart": false,
+    "requiresApproval": false,
+    "exposure": "public",
+    "writableLayers": [
+      "project",
+      "user"
+    ]
+  },
   "tasks.phaseKickoff.enforcementMode": {
     "key": "tasks.phaseKickoff.enforcementMode",
     "type": "string",

@@ -44,6 +44,17 @@ export {
   summarizeDeliveryEvidence,
   validateDeliveryEvidenceMetadata
 } from "./delivery-evidence.js";
+export {
+  RELEASE_NOTE_SUMMARY_METADATA_KEY,
+  USER_FACING_SUMMARY_METADATA_KEY,
+  RELEASE_NOTE_WAIVER_METADATA_KEY,
+  buildPhaseReleaseNotePreflight,
+  createReleaseNoteSummaryGuard,
+  evaluateReleaseNoteSummary,
+  isPragmaticReleaseNoteAudience,
+  readReleaseNoteSummaryEnforcementMode,
+  validateReleaseNoteSummaryText
+} from "./release-note-summary-guard.js";
 export { buildStrandedWorkReport } from "./stranded-work.js";
 export {
   buildPhaseServiceSyncPreflight,

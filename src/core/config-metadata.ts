@@ -731,6 +731,20 @@ export function validatePersistedConfigDocument(
         validateValueForMetadata(REGISTRY["tasks.deliveryEvidence.enforcementMode"]!, de.enforcementMode);
       }
     }
+    if (t.releaseNotes !== undefined) {
+      if (typeof t.releaseNotes !== "object" || t.releaseNotes === null || Array.isArray(t.releaseNotes)) {
+        throw new Error(`config-invalid(${label}): tasks.releaseNotes must be an object`);
+      }
+      const rn = t.releaseNotes as Record<string, unknown>;
+      for (const k of Object.keys(rn)) {
+        if (k !== "enforcementMode") {
+          throw new Error(`config-invalid(${label}): unknown tasks.releaseNotes.${k}`);
+        }
+      }
+      if (rn.enforcementMode !== undefined) {
+        validateValueForMetadata(REGISTRY["tasks.releaseNotes.enforcementMode"]!, rn.enforcementMode);
+      }
+    }
     if (t.phaseKickoff !== undefined) {
       if (typeof t.phaseKickoff !== "object" || t.phaseKickoff === null || Array.isArray(t.phaseKickoff)) {
         throw new Error(`config-invalid(${label}): tasks.phaseKickoff must be an object`);

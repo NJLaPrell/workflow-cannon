@@ -6,6 +6,10 @@ import {
   readDeliveryEvidenceEnforcementMode
 } from "../delivery-evidence.js";
 import {
+  createReleaseNoteSummaryGuard,
+  readReleaseNoteSummaryEnforcementMode
+} from "../release-note-summary-guard.js";
+import {
   createPlanArtifactExecuteGuard,
   readPlanArtifactExecuteEnforcementMode
 } from "../plan-artifact-execute-policy.js";
@@ -143,6 +147,9 @@ export async function runTaskIntentTransition(
   const deliveryEvidenceMode = readDeliveryEvidenceEnforcementMode(
     ctx.effectiveConfig as Record<string, unknown> | undefined
   );
+  const releaseNotesMode = readReleaseNoteSummaryEnforcementMode(
+    ctx.effectiveConfig as Record<string, unknown> | undefined
+  );
   const effectiveConfig = ctx.effectiveConfig as Record<string, unknown> | undefined;
   const service = new TransitionService(
     planning.taskStore,
@@ -155,6 +162,10 @@ export async function runTaskIntentTransition(
           const resolved = resolveMaintainerDeliveryPolicy({ effectiveConfig, task });
           return buildDeliveryEvidencePolicyContext(resolved);
         }
+      }),
+      createReleaseNoteSummaryGuard({
+        enforcementMode: releaseNotesMode,
+        workspacePath: ctx.workspacePath
       })
     ],
     hookBus.isEnabled() ? hookBus : undefined
@@ -286,6 +297,9 @@ export async function runClaimNextTaskIntent(
   const deliveryEvidenceMode = readDeliveryEvidenceEnforcementMode(
     ctx.effectiveConfig as Record<string, unknown> | undefined
   );
+  const releaseNotesMode = readReleaseNoteSummaryEnforcementMode(
+    ctx.effectiveConfig as Record<string, unknown> | undefined
+  );
   const effectiveConfig = ctx.effectiveConfig as Record<string, unknown> | undefined;
   const service = new TransitionService(
     planning.taskStore,
@@ -298,6 +312,10 @@ export async function runClaimNextTaskIntent(
           const resolved = resolveMaintainerDeliveryPolicy({ effectiveConfig, task });
           return buildDeliveryEvidencePolicyContext(resolved);
         }
+      }),
+      createReleaseNoteSummaryGuard({
+        enforcementMode: releaseNotesMode,
+        workspacePath: ctx.workspacePath
       })
     ],
     hookBus.isEnabled() ? hookBus : undefined

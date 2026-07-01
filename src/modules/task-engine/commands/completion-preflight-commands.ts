@@ -9,6 +9,11 @@ import {
   readDeliveryEvidenceEnforcementMode
 } from "../delivery-evidence.js";
 import {
+  createReleaseNoteSummaryGuard,
+  evaluateReleaseNoteSummary,
+  readReleaseNoteSummaryEnforcementMode
+} from "../release-note-summary-guard.js";
+import {
   buildDeliveryEvidencePolicyContext,
   resolveMaintainerDeliveryPolicy
 } from "../maintainer-delivery-policy-resolver.js";
@@ -64,6 +69,15 @@ function guardFinding(guard: GuardResult, task: TaskEntity, planningGeneration: 
       code,
       guard.message ?? "Delivery evidence missing or invalid for complete.",
       `pnpm exec wk run update-task '{"taskId":"${task.id}","metadata":{"deliveryEvidence":{}},"expectedPlanningGeneration":${planningGeneration},"policyApproval":{"confirmed":true,"rationale":"attach delivery evidence"}}'`,
+      guard.guardName
+    );
+  }
+  if (guard.guardName === "release-note-summary" || code.startsWith("release-note-summary")) {
+    return finding(
+      "error",
+      code,
+      guard.message ?? "User-facing release note summary missing for complete.",
+      `pnpm exec wk run update-task '{"taskId":"${task.id}","updates":{"metadata":{"releaseNoteSummary":"Describe what adopters get in one sentence."}},"expectedPlanningGeneration":${planningGeneration},"policyApproval":{"confirmed":true,"rationale":"attach release note summary"}}'`,
       guard.guardName
     );
   }
@@ -157,6 +171,9 @@ export function buildCompletionPreflight(
       const deliveryEvidenceMode = readDeliveryEvidenceEnforcementMode(
         ctx.effectiveConfig as Record<string, unknown> | undefined
       );
+      const releaseNotesMode = readReleaseNoteSummaryEnforcementMode(
+        ctx.effectiveConfig as Record<string, unknown> | undefined
+      );
       const service = new TransitionService(store, [
         createTaskIntakeAcceptGuard({ effectiveConfig: ctx.effectiveConfig as Record<string, unknown> }),
         createDeliveryEvidenceGuard({
@@ -165,6 +182,10 @@ export function buildCompletionPreflight(
             const resolved = resolveMaintainerDeliveryPolicy({ effectiveConfig: ctx.effectiveConfig, task: t });
             return buildDeliveryEvidencePolicyContext(resolved);
           }
+        }),
+        createReleaseNoteSummaryGuard({
+          enforcementMode: releaseNotesMode,
+          workspacePath: ctx.workspacePath
         })
       ]);
       const validation = service.getValidator().validate(task, "completed", {
@@ -188,6 +209,21 @@ export function buildCompletionPreflight(
               violation?.code ?? "delivery-evidence-missing",
               violation?.message ?? "Delivery evidence or waiver required before complete.",
               `pnpm exec wk run update-task '{"taskId":"${task.id}","metadata":{"deliveryEvidence":{}},"expectedPlanningGeneration":${planningGeneration},"policyApproval":{"confirmed":true,"rationale":"attach delivery evidence"}}'`
+            )
+          );
+        }
+      }
+      const releaseNoteEval = evaluateReleaseNoteSummary(task, ctx.workspacePath);
+      if (!releaseNoteEval.satisfied && releaseNoteEval.required && releaseNotesMode !== "off") {
+        const violation = releaseNoteEval.violations[0];
+        if (!findings.some((f) => f.guardName === "release-note-summary")) {
+          findings.push(
+            finding(
+              releaseNotesMode === "enforce" ? "error" : "warning",
+              violation?.code ?? "release-note-summary-missing",
+              violation?.message ?? "User-facing release note summary required before complete.",
+              `pnpm exec wk run update-task '{"taskId":"${task.id}","updates":{"metadata":{"releaseNoteSummary":"Describe what adopters get in one sentence."}},"expectedPlanningGeneration":${planningGeneration},"policyApproval":{"confirmed":true,"rationale":"attach release note summary"}}'`,
+              "release-note-summary"
             )
           );
         }

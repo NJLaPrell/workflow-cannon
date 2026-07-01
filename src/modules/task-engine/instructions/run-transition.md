@@ -75,6 +75,13 @@ When a phased execution task is completed, the `delivery-evidence` guard evaluat
 - `tasks.deliveryEvidence.enforcementMode: "advisory"` allows completion and emits a structured guard result when evidence is missing.
 - `tasks.deliveryEvidence.enforcementMode: "off"` skips this guard.
 
+**Release note summary guard (user-visible phased tasks):**
+
+- `tasks.releaseNotes.enforcementMode: "advisory"` (default) records a structured guard result when **`metadata.releaseNoteSummary`** is missing for tasks that would appear in public release notes.
+- `tasks.releaseNotes.enforcementMode: "enforce"` blocks **`complete`** until summary or **`metadata.releaseNoteWaiver`** is present.
+- `tasks.releaseNotes.enforcementMode: "off"` skips this guard.
+- Scope is **pragmatic**: internal/chore/technical tasks that **`generate-release-notes`** would omit are not gated. Set **`metadata.releaseNoteRequired: false`** to opt out explicitly.
+
 Expected `metadata.deliveryEvidence` fields:
 
 ```json
