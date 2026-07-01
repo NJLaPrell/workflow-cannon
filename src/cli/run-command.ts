@@ -4,6 +4,7 @@ import {
   ModuleCommandRouter,
   ModuleCommandRouterError
 } from "../core/module-command-router.js";
+import type { ModuleRegistry } from "../core/module-registry.js";
 import { resolveRegistryAndConfig } from "../core/module-registry-resolve.js";
 import { cliPerfTracer } from "../core/cli-perf-trace.js";
 
@@ -73,8 +74,48 @@ export type RunCommandExitCodes = {
   internalError: number;
 };
 
+/**
+ * The registry + router + effective config triple that `handleRunCommand` needs before
+ * dispatching a command. Bundled so the warm `run-daemon` can memoize the whole triple
+ * (see `resolveRegistryRouter` adapter and `src/cli/kit-run-daemon-cache.ts`).
+ */
+export type ResolvedRegistryRouter = {
+  registry: ModuleRegistry;
+  router: ModuleCommandRouter;
+  effective: Record<string, unknown>;
+};
+
+/**
+ * Default (uncached) resolution used by the one-shot CLI path. Resolves the module
+ * registry + effective config from disk and constructs a fresh `ModuleCommandRouter`.
+ * The warm daemon injects a caching wrapper around this via `resolveRegistryRouter`.
+ */
+export async function resolveRegistryRouterConfig(
+  cwd: string,
+  invocationConfig: Record<string, unknown>
+): Promise<ResolvedRegistryRouter> {
+  const resolved = await resolveRegistryAndConfig(cwd, defaultRegistryModules, invocationConfig);
+  const router = new ModuleCommandRouter(resolved.registry);
+  return {
+    registry: resolved.registry,
+    router,
+    effective: resolved.effective as Record<string, unknown>
+  };
+}
+
 export type RunCommandAdapterOptions = {
   createRuntime?: typeof createCommandRegistryRuntime;
+  /**
+   * Optional override for registry/router/config resolution. Defaults to the uncached
+   * `resolveRegistryRouterConfig`. The warm `run-daemon` passes a process-lifetime cache
+   * (invalidated by config-file mtime/size changes) so repeated requests skip the full
+   * module-system bootstrap. MUST remain undefined for the one-shot CLI path so scripts,
+   * CI, and non-daemon extension fallback behave exactly as before.
+   */
+  resolveRegistryRouter?: (
+    cwd: string,
+    invocationConfig: Record<string, unknown>
+  ) => Promise<ResolvedRegistryRouter>;
 };
 
 export async function handleRunCommand(
@@ -92,6 +133,7 @@ export async function handleRunCommand(
   try {
   const { writeLine, writeError } = io;
   const createRuntime = adapters.createRuntime ?? createCommandRegistryRuntime;
+  const resolveRegistryRouter = adapters.resolveRegistryRouter ?? resolveRegistryRouterConfig;
   const invocationId = createRunInvocationId();
   const runStartedAt = new Date().toISOString();
 
@@ -162,13 +204,16 @@ export async function handleRunCommand(
   let router: ModuleCommandRouter;
   let effective: Record<string, unknown>;
   try {
+    // In the warm daemon this triple is memoized for the process lifetime and reused
+    // across requests (invalidated when config files change); the one-shot CLI path uses
+    // the uncached default resolver, so its behavior is unchanged.
     const resolved = await cliPerfTracer.spanAsync("resolveRegistryAndConfig", () =>
-      resolveRegistryAndConfig(cwd, defaultRegistryModules, invocationConfig)
+      resolveRegistryRouter(cwd, invocationConfig)
     );
     registry = resolved.registry;
-    effective = resolved.effective as Record<string, unknown>;
+    effective = resolved.effective;
     effectiveForRunLog = effective;
-    router = cliPerfTracer.span("ModuleCommandRouter:new", () => new ModuleCommandRouter(registry));
+    router = resolved.router;
     if (subcommand) {
       subcommand = router.describeCommand(subcommand)
         ? subcommand
