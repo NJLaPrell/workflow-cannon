@@ -35,6 +35,7 @@ import { runUpdateIdeaPlanningSession } from "./update-idea-planning-session-han
 import { runUpdateBrainstormSession } from "./update-brainstorm-session-handler.js";
 import { runCompleteBrainstorm } from "./complete-brainstorm-handler.js";
 import { runCheckDeliveryStatus } from "./check-delivery-status-handler.js";
+import { runMigrateIdeasToUnifiedDocument } from "./migrate-ideas-to-unified-document-handler.js";
 
 function attachPlanningMeta(
   data: Record<string, unknown>,
@@ -551,6 +552,14 @@ export const ideasModule: WorkflowModule = {
         args as Record<string, unknown>,
         ctx,
         "src/modules/ideas/instructions/complete-brainstorm.md"
+      );
+    }
+
+    if (command.name === "migrate-ideas-to-unified-document") {
+      return runMigrateIdeasToUnifiedDocument(
+        args as Record<string, unknown>,
+        ctx,
+        "src/modules/ideas/instructions/migrate-ideas-to-unified-document.md"
       );
     }
 
