@@ -8,6 +8,10 @@ This root file is intentionally pointer-only to avoid split release history.
 
 - See `docs/maintainers/CHANGELOG.md` for all release notes, migration notes, and historical entries.
 
+## [1.0.3] - 2026-07-02
+
+- **Phase 140 — Unified IdeaPlan document model:** Six-state machine, unified envelope schema, brainstorming/planning lifecycle commands, dashboard Brainstorm/Plan UI, migration from legacy Ideas/PlanArtifacts, and feature-flag rollout. See `docs/maintainers/CHANGELOG.md`.
+
 ## [1.0.2] - 2026-06-30
 
 - **Phase 139 — Idea planning system:** `start-idea-planning` / `update-idea-planning-session`, dashboard Plan-this lifecycle, PlanArtifact draft/review/finalize pipeline, and task-state metadata projection fix. See `docs/maintainers/CHANGELOG.md`.
