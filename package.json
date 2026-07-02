@@ -51,7 +51,7 @@
     "_comment_check_gates": "maintainer-gates = metadata/consistency checks; pre-merge-gates = maintainer-gates + test.",
     "check": "node scripts/run-check-stages.mjs",
     "clean": "rm -rf dist",
-    "test": "pnpm run build && pnpm run test:run",
+    "test": "pnpm run ui:prepare && pnpm run test:run",
     "test:run": "find test -name '*.test.mjs' -print0 | xargs -0 node --test",
     "test:plan-artifact-fixtures": "node scripts/check-plan-artifact-fixtures.mjs && node --test test/plan-artifact-review-fixtures.integration.test.mjs test/plan-artifact-e2e-cli.test.mjs",
     "pack:dry-run": "pnpm run build && pnpm pack --pack-destination ./artifacts/workspace-kit-pack",
