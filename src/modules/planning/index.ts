@@ -50,6 +50,10 @@ import { runReviewPlanArtifact } from "./review-plan-artifact-handler.js";
 import { runAcceptPlanArtifact } from "./accept-plan-artifact-handler.js";
 import { runFinalizePlanToPhase } from "./finalize-plan-to-phase-handler.js";
 import { runGeneratePlanDocument } from "./generate-plan-document-handler.js";
+import {
+  attachGeneratedPlanDocPath,
+  bestEffortGeneratePlanDocument
+} from "./best-effort-generate-plan-document.js";
 import { runGetPlanArtifact } from "./get-plan-artifact-handler.js";
 import { runExecutePlanArtifact } from "./execute-plan-artifact-handler.js";
 import { attachPolicyMeta } from "../task-engine/attach-planning-response-meta.js";
@@ -220,6 +224,10 @@ export const planningModule: WorkflowModule = {
             stores.sqliteDual.getPlanningGeneration(),
             pg.warnings
           );
+          attachGeneratedPlanDocPath(
+            replay.data as Record<string, unknown>,
+            await bestEffortGeneratePlanDocument(ctx, prelude.artifact.planId)
+          );
           return replay;
         }
         let committed;
@@ -257,6 +265,10 @@ export const planningModule: WorkflowModule = {
           ctx,
           stores.sqliteDual.getPlanningGeneration(),
           pg.warnings
+        );
+        attachGeneratedPlanDocPath(
+          persisted.data as Record<string, unknown>,
+          await bestEffortGeneratePlanDocument(ctx, committed!.artifact.planId)
         );
         return persisted;
       }

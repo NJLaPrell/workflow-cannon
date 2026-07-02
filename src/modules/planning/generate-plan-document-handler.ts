@@ -3,13 +3,93 @@ import path from "node:path";
 
 import type { ModuleCommandResult } from "../../contracts/module-contract.js";
 import type { ModuleLifecycleContext } from "../../contracts/module-contract.js";
-import { resolveLatestPlanArtifactVersion } from "../../core/planning/plan-artifact-storage.js";
+import { resolveLatestPlanArtifactVersion, readPlanArtifactVersion } from "../../core/planning/plan-artifact-storage.js";
+import type { PlanArtifactV1 } from "../../core/planning/plan-artifact-v1.js";
 import {
   PLAN_DOCUMENT_OUTPUT_DIR,
   renderPlanDocumentMarkdown,
   resolvePlanDocumentOutputPath
 } from "../../core/planning/render-plan-document-markdown.js";
 import { readIdeaPlanArtifactVersion } from "../ideas/idea-plan-artifact-storage.js";
+import type { IdeaPlanDocumentWithPlanningPayload } from "../ideas/idea-plan-planning-init.js";
+import type { IdeaPlanDocument, IdeaPlanStatus } from "../ideas/idea-plan-types.js";
+
+function legacyStatusToIdeaPlanStatus(status: PlanArtifactV1["status"]): IdeaPlanStatus {
+  switch (status) {
+    case "reviewed":
+      return "reviewed";
+    case "accepted":
+      return "accepted";
+    case "finalized":
+      return "delivered";
+    default:
+      return "planning";
+  }
+}
+
+function ideaPlanDocumentFromLegacyArtifact(artifact: PlanArtifactV1): IdeaPlanDocumentWithPlanningPayload {
+  const sourceIdeaId = typeof artifact.provenance.sourceIdeaId === "string" ? artifact.provenance.sourceIdeaId.trim() : "";
+  const ideaId = /^I[0-9]+$/.test(sourceIdeaId) ? sourceIdeaId : "I000";
+  return {
+    schemaVersion: 1,
+    planId: artifact.planId,
+    version: artifact.version,
+    planRef: artifact.planRef,
+    status: legacyStatusToIdeaPlanStatus(artifact.status),
+    ideaId,
+    createdAt: artifact.provenance.createdAt,
+    updatedAt: artifact.provenance.updatedAt,
+    plan: {
+      title: artifact.identity.title,
+      summary: artifact.identity.summary,
+      planningType: artifact.identity.planningType,
+      wbsRowCount: artifact.wbs.length
+    },
+    identity: artifact.identity,
+    goals: artifact.goals,
+    nonGoals: artifact.nonGoals,
+    userStories: artifact.userStories,
+    valueAssessment: artifact.valueAssessment,
+    riskAssessment: artifact.riskAssessment,
+    technicalImpact: artifact.technicalImpact,
+    architecture: artifact.architecture,
+    uiUxDirection: artifact.uiUxDirection,
+    testingStrategy: artifact.testingStrategy,
+    implementationGuidance: artifact.implementationGuidance,
+    whatNotToDo: artifact.whatNotToDo,
+    assumptions: artifact.assumptions,
+    openQuestions: artifact.openQuestions,
+    wbs: artifact.wbs,
+    phaseRecommendations: artifact.phaseRecommendations,
+    taskGenerationPayloads: artifact.taskGenerationPayloads,
+    provenance: artifact.provenance,
+    ...(artifact.approvalRecord
+      ? {
+          acceptance: {
+            acceptedAt: artifact.approvalRecord.approvedAt,
+            acceptedBy: artifact.approvalRecord.approvedBy,
+            acceptedVersion: artifact.approvalRecord.approvedVersion
+          }
+        }
+      : {})
+  };
+}
+
+function resolvePlanDocumentForRender(
+  workspacePath: string,
+  planId: string,
+  version: number
+): IdeaPlanDocument | null {
+  const ideaPlan = readIdeaPlanArtifactVersion(workspacePath, planId, version);
+  if (ideaPlan) {
+    return ideaPlan;
+  }
+  const legacy = readPlanArtifactVersion(workspacePath, planId, version);
+  if (!legacy?.identity) {
+    return null;
+  }
+  return ideaPlanDocumentFromLegacyArtifact(legacy);
+}
 
 export async function runGeneratePlanDocument(
   args: Record<string, unknown>,
@@ -34,7 +114,7 @@ export async function runGeneratePlanDocument(
     };
   }
   const targetVersion = versionArg ?? latestVersion;
-  const document = readIdeaPlanArtifactVersion(ctx.workspacePath, planId, targetVersion);
+  const document = resolvePlanDocumentForRender(ctx.workspacePath, planId, targetVersion);
   if (!document) {
     return {
       ok: false,
