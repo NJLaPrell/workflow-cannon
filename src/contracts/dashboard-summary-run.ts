@@ -70,12 +70,24 @@ export type DashboardIdeaRow = {
   };
 };
 
+/** Synthesized brainstorm scores surfaced on dashboard-summary for brainstorming-state IdeaPlan documents. */
+export type DashboardBrainstormSynthesisSummary = {
+  valueScore?: number;
+  riskScore?: number;
+  effortScore?: number;
+  confidenceScore?: number;
+  priorityScore?: number;
+  sessionCount: number;
+};
+
 export type DashboardIdeaPlanArtifactSummary = {
   planId: string;
   planRef: string;
   status: string;
   version: number;
   phaseKey?: string;
+  /** Present when the linked IdeaPlan document is in `brainstorming` status. */
+  brainstormSynthesis?: DashboardBrainstormSynthesisSummary;
   latestReview?: {
     planRef: string;
     passed: boolean | null;
@@ -83,6 +95,22 @@ export type DashboardIdeaPlanArtifactSummary = {
     warningCount: number | null;
     openQuestionCount: number | null;
   };
+};
+
+export type DashboardBrainstormingIdeaRow = {
+  ideaId: string;
+  title: string;
+  planRef: string;
+  planId: string;
+  status: "brainstorming";
+  synthesis?: DashboardBrainstormSynthesisSummary;
+};
+
+export type DashboardBrainstormingIdeasRollup = {
+  schemaVersion: 1;
+  available: boolean;
+  count: number;
+  top: DashboardBrainstormingIdeaRow[];
 };
 
 export type DashboardIdeasSummary = {
@@ -856,6 +884,8 @@ export type DashboardSummaryData = {
   };
   /** Lightweight operator ideas from `workflow_ideas`, ordered for dashboard display. */
   ideas: DashboardIdeasSummary;
+  /** Ideas whose linked IdeaPlan document is in `brainstorming` status, with synthesized scores. */
+  brainstormingIdeas: DashboardBrainstormingIdeasRollup;
   blockedSummary: {
     count: number;
     top: DashboardBlockedRow[];

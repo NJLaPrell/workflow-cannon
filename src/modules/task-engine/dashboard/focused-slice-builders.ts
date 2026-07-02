@@ -84,6 +84,7 @@ import {
 } from "./build-dashboard-base.js";
 import type { DashboardSummaryTracer } from "./dashboard-summary-trace.js";
 import { buildDashboardIdeasSummary } from "./build-dashboard-ideas-summary.js";
+import { buildDashboardBrainstormingIdeasRollup } from "./build-dashboard-brainstorming-ideas-rollup.js";
 
 function getTerminalCount(
   status: "completed" | "cancelled",
@@ -232,6 +233,7 @@ export async function buildDashboardQueueSlice(
   }
 
   const ideas = buildDashboardIdeasSummary(ctx, sqliteDual, true);
+  const brainstormingIdeas = buildDashboardBrainstormingIdeasRollup(ctx, sqliteDual, true);
 
   const slimListRow = (t: (typeof tasks)[0]) => projectDashboardTaskRow(t, enrich, { includePriority: false });
   const blockedTasks = tasks
@@ -426,6 +428,7 @@ export async function buildDashboardQueueSlice(
       openTop: wishlistOpenTop
     },
     ideas,
+    brainstormingIdeas,
     blockedSummary: {
       count: blockedTasks.length,
       top: blockedTop,
@@ -673,6 +676,12 @@ export async function buildDashboardStatusSlice(
       openCount: 0,
       planningCount: 0,
       plannedCount: 0,
+      top: []
+    },
+    brainstormingIdeas: {
+      schemaVersion: 1,
+      available: false,
+      count: 0,
       top: []
     },
     blockedSummary: { count: 0, top: [], phaseBuckets: [] },

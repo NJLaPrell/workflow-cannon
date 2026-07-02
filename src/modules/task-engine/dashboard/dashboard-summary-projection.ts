@@ -71,6 +71,13 @@ const emptyIdeas = (): DashboardSummaryData["ideas"] => ({
   top: []
 });
 
+const emptyBrainstormingIdeas = (): DashboardSummaryData["brainstormingIdeas"] => ({
+  schemaVersion: 1,
+  available: false,
+  count: 0,
+  top: []
+});
+
 const emptyPhaseJournalStats = (): DashboardSummaryData["phaseJournalStats"] => ({
   schemaVersion: 1,
   available: false,
@@ -121,6 +128,7 @@ export function finalizeDashboardSummaryProjection(
       readyQueueBreakdown: { schemaVersion: 1, improvement: 0, other: 0 },
       wishlist: emptyWishlist(10, data.wishlist?.enabled),
       ideas: emptyIdeas(),
+      brainstormingIdeas: emptyBrainstormingIdeas(),
       blockedSummary: { count: 0, top: [], phaseBuckets: [] },
       humanGatesSummary: data.humanGatesSummary,
       approvalQueue: data.approvalQueue,
@@ -200,6 +208,7 @@ export function finalizeDashboardSummaryProjection(
       readyQueueBreakdown: data.readyQueueBreakdown,
       wishlist: data.wishlist,
       ideas: data.ideas,
+      brainstormingIdeas: data.brainstormingIdeas,
       blockedSummary: data.blockedSummary,
       humanGatesSummary: data.humanGatesSummary,
       approvalQueue: data.approvalQueue,
@@ -244,6 +253,7 @@ export function finalizeDashboardSummaryProjection(
     readyQueueBreakdown: { schemaVersion: 1, improvement: 0, other: 0 },
     wishlist: emptyWishlist(10, data.wishlist?.enabled),
     ideas: emptyIdeas(),
+    brainstormingIdeas: emptyBrainstormingIdeas(),
     blockedSummary: { count: 0, top: [], phaseBuckets: [] },
     humanGatesSummary: data.humanGatesSummary,
     approvalQueue: data.approvalQueue,

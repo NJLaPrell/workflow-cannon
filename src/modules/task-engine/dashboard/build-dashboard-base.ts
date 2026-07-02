@@ -112,6 +112,7 @@ import { summarizeAgentRegistrySessions } from "../agent-registry-session-summar
 import type { DashboardSummaryTracer } from "./dashboard-summary-trace.js";
 import { TASK_ENGINE_TASKS_TABLE } from "../../../core/state/kit-sqlite/planning-sqlite-kernel.js";
 import { buildDashboardIdeasSummary } from "./build-dashboard-ideas-summary.js";
+import { buildDashboardBrainstormingIdeasRollup } from "./build-dashboard-brainstorming-ideas-rollup.js";
 
 /** Parse optional `dashboard-summary` argv for wishlist table paging (extension + CLI). */
 export function parseDashboardWishlistPaging(args?: Record<string, unknown>): {
@@ -1122,6 +1123,7 @@ export async function buildDashboardBase(
   let wishlistTotalPages = 0;
   let wishlistOpenTop: DashboardSummaryData["wishlist"]["openTop"] = [];
   let ideas = buildDashboardIdeasSummary(ctx, undefined, false);
+  let brainstormingIdeas = buildDashboardBrainstormingIdeasRollup(ctx, undefined, false);
 
   const buildWishlistAndIdeas = () => {
     if (needsQueueRollups && includeWishlist) {
@@ -1146,6 +1148,7 @@ export async function buildDashboardBase(
       });
     }
     ideas = buildDashboardIdeasSummary(ctx, sqliteDual, needsQueueRollups);
+    brainstormingIdeas = buildDashboardBrainstormingIdeasRollup(ctx, sqliteDual, needsQueueRollups);
   };
   if (tracer) {
     tracer.span("wishlist/ideas", buildWishlistAndIdeas);
@@ -1719,6 +1722,7 @@ export async function buildDashboardBase(
       openTop: wishlistOpenTop
     },
     ideas,
+    brainstormingIdeas,
     blockedSummary: {
       count: blockedTasks.length,
       top: blockedTop,
@@ -1996,6 +2000,13 @@ export async function buildDashboardOverview(
     top: []
   });
 
+  const emptyBrainstormingIdeas = (): DashboardSummaryData["brainstormingIdeas"] => ({
+    schemaVersion: 1,
+    available: false,
+    count: 0,
+    top: []
+  });
+
   const emptyPhaseJournalStats = (): DashboardSummaryData["phaseJournalStats"] => ({
     schemaVersion: 1,
     available: false,
@@ -2057,6 +2068,7 @@ export async function buildDashboardOverview(
     executionPlanningScope: "tasks-only" as const,
     wishlist: emptyWishlist(10, includeWishlist),
     ideas: emptyIdeas(),
+    brainstormingIdeas: emptyBrainstormingIdeas(),
     blockedSummary: { count: 0, top: [], phaseBuckets: [] },
     humanGatesSummary,
     approvalQueue,
