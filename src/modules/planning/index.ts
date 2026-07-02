@@ -221,7 +221,7 @@ export const planningModule: WorkflowModule = {
           stores.sqliteDual.withTransaction(() => {
             committed = commitPlanArtifactDraftPersist({
               workspacePath: ctx.workspacePath,
-              artifact: validation.artifact,
+              artifact: prelude.kind === "commit" ? prelude.artifact : validation.artifact,
               clientMutationId,
               digest: prelude.digest,
               effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined,

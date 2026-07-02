@@ -4,6 +4,8 @@ agentCapsule|v=1|command=start-idea-planning|module=ideas|schema_only=pnpm exec 
 
 Start or resume a durable planner-chat session for a lightweight operator idea. Loads canonical idea context, detects an active session, generates a compact planner-chat prompt, persists session state, and returns dashboard-ready planning data.
 
+When the idea links a **unified IdeaPlan document** (`linkedPlanArtifact` or active draft), this command initializes the document **`plan` section** (title, summary, `wbsRowCount`) and transitions the document to **`planning`** status when allowed — without creating a new artifact identity.
+
 ## Required args
 
 - `ideaId` — idea id such as `I001`. `id` is accepted as an alias.
