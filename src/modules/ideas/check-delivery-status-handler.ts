@@ -10,6 +10,7 @@ import {
 } from "./idea-plan-artifact-storage.js";
 import { enforceIdeaPlanStatusTransition, IdeaPlanStatusTransitionError } from "./idea-plan-status-machine.js";
 import { loadIdeaPlanStateSchema } from "./idea-plan-state-schema-loader.js";
+import { guardIdeaPlanStateSchemaLoad } from "./idea-plan-state-schema-guard.js";
 import type { IdeaPlanDocument } from "./idea-plan-types.js";
 
 export type DeliveryStatusSummaryV1 = {
@@ -209,7 +210,17 @@ export async function runCheckDeliveryStatus(
     throw err;
   }
 
-  const deliveredDirective = loadIdeaPlanStateSchema("delivered", workspacePath).agentDirective;
+  const schemaLoad = loadIdeaPlanStateSchema("delivered", workspacePath);
+  const schemaGuard = guardIdeaPlanStateSchemaLoad(schemaLoad);
+  if (!schemaGuard.ok) {
+    return {
+      ok: false,
+      code: schemaGuard.code,
+      message: schemaGuard.message,
+      data: { responseSchemaVersion: 1, planRef, ...schemaGuard.data }
+    };
+  }
+  const deliveredDirective = schemaGuard.agentDirective;
   const phaseKey = cleanString(existing.delivery?.phaseKey) ?? "";
   const updated: IdeaPlanDocument = {
     ...existing,

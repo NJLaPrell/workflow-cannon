@@ -119,7 +119,7 @@ test("renderDashboardRootInnerHtml shows Brainstorming rollup instead of New pla
         recent: []
       }
     }
-  });
+  }, null, null, null, null, { ideasUnifiedModelEnabled: true });
   assert.match(html, /wc-brainstorming-ideas-section/);
   assert.match(html, /Unified IdeaPlan document/);
   assert.doesNotMatch(html, /<summary>New \(/);
@@ -156,7 +156,7 @@ test("idea detail panel renders brainstorm session history from linkedPlanArtifa
         ]
       }
     }
-  });
+  }, null, null, null, null, { ideasUnifiedModelEnabled: true });
   assert.match(html, /wc-idea-brainstorm-detail-panel/);
   assert.match(html, /Brainstorm session history/);
   assert.match(html, /Session 1/);

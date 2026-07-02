@@ -7,6 +7,7 @@
 import type { AgentDirective } from "./idea-plan-types.js";
 import type { BrainstormScoreInputs, BrainstormSession, BrainstormTShirtSize } from "./idea-plan-types.js";
 import { loadIdeaPlanStateSchema, resolveIdeaPlanStateSchemaRoot } from "./idea-plan-state-schema-loader.js";
+import { requireIdeaPlanAgentDirective } from "./idea-plan-state-schema-guard.js";
 
 export const BRAINSTORM_SCORING_SUB_INPUT_FIELDS = [
   "valueImpact",
@@ -159,7 +160,8 @@ export function loadBrainstormScoringWeights(
   workspacePath?: string,
   directive?: AgentDirective
 ): BrainstormScoringWeights {
-  const agentDirective = directive ?? loadIdeaPlanStateSchema("brainstorming", workspacePath).agentDirective;
+  const agentDirective =
+    directive ?? requireIdeaPlanAgentDirective(loadIdeaPlanStateSchema("brainstorming", workspacePath));
   const priorityFormula = resolveComputeStepFormula(agentDirective, "priorityScore");
   return {
     value: parseWeightedTerms(resolveComputeStepFormula(agentDirective, "valueScore")),

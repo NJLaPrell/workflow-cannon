@@ -68,4 +68,5 @@ test("loadIdeaPlanStateSchema caches repeated reads", () => {
   assert.notEqual(first.agentDirective, second.agentDirective);
   assert.deepEqual(first.agentDirective, second.agentDirective);
   assert.equal(first.schemaPath, second.schemaPath);
+  assert.equal(first.degraded, false);
 });

@@ -11,6 +11,7 @@ import {
   writeNextIdeaPlanArtifactVersion
 } from "./idea-plan-artifact-storage.js";
 import { loadIdeaPlanStateSchema } from "./idea-plan-state-schema-loader.js";
+import { guardIdeaPlanStateSchemaLoad } from "./idea-plan-state-schema-guard.js";
 import type { IdeaPlanDocument } from "./idea-plan-types.js";
 import { getIdea } from "./idea-store.js";
 import { validateBrainstormSectionForPlanning } from "./validate-brainstorm-section.js";
@@ -192,7 +193,17 @@ export async function runCompleteBrainstorm(
   }
 
   const brainstorm = applyBrainstormSectionSynthesis(existing.brainstorm!);
-  const planningDirective = loadIdeaPlanStateSchema("planning", workspacePath).agentDirective;
+  const schemaLoad = loadIdeaPlanStateSchema("planning", workspacePath);
+  const schemaGuard = guardIdeaPlanStateSchemaLoad(schemaLoad);
+  if (!schemaGuard.ok) {
+    return {
+      ok: false,
+      code: schemaGuard.code,
+      message: schemaGuard.message,
+      data: { responseSchemaVersion: 1, planRef, ...schemaGuard.data }
+    };
+  }
+  const planningDirective = schemaGuard.agentDirective;
 
   const updated: IdeaPlanDocument = {
     ...existing,

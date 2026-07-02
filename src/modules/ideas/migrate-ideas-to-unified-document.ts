@@ -28,6 +28,7 @@ import {
   type IdeaPlanDocumentWithPlanningPayload
 } from "./idea-plan-planning-init.js";
 import { loadIdeaPlanStateSchema } from "./idea-plan-state-schema-loader.js";
+import { requireIdeaPlanAgentDirective } from "./idea-plan-state-schema-guard.js";
 import type {
   IdeaPlanAcceptanceSection,
   IdeaPlanDeliverySection,
@@ -189,7 +190,7 @@ export function buildIdeaOnlyUnifiedDocument(
   nowIso: string,
   planId = crypto.randomUUID()
 ): IdeaPlanDocument {
-  const agentDirective = loadIdeaPlanStateSchema("idea", workspacePath).agentDirective;
+  const agentDirective = requireIdeaPlanAgentDirective(loadIdeaPlanStateSchema("idea", workspacePath));
   return {
     schemaVersion: 1,
     planId,
@@ -252,7 +253,7 @@ export function buildUnifiedDocumentFromLegacy(
     latestReview: index?.latestReview ?? null
   });
   const status = resolveUnifiedStatusForMigration(idea, planArtifact, index?.latestReview ?? null, lifecycle);
-  const agentDirective = loadIdeaPlanStateSchema(status, workspacePath).agentDirective;
+  const agentDirective = requireIdeaPlanAgentDirective(loadIdeaPlanStateSchema(status, workspacePath));
 
   const base: IdeaPlanDocument = {
     schemaVersion: 1,

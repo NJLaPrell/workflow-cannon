@@ -202,7 +202,7 @@ test("renderDashboardRootInnerHtml places planning cards on the Planning tab", (
         top: [{ id: "I1", title: "Draft a better dashboard", status: "open", previousPlanArtifacts: [] }]
       }
     }
-  });
+  }, null, null, null, null, { ideasUnifiedModelEnabled: true });
   const overviewPanelIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="overview"');
   const planningPanelIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="planning"');
   const taskEnginePanelIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="task-engine"');
