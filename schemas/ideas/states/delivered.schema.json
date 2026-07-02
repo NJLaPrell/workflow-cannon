@@ -1,0 +1,159 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workflow-cannon.dev/schemas/ideas/states/delivered.schema.json",
+  "title": "IdeaPlan delivered state",
+  "description": "Unified IdeaPlan document shape and agent contract when status is delivered. Execution handoff is complete; delivery refs attach materialized tasks and phase linkage. Terminal state — only self-transitions are valid.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "planId",
+    "version",
+    "planRef",
+    "status",
+    "ideaId",
+    "createdAt",
+    "updatedAt",
+    "brainstorm",
+    "plan",
+    "review",
+    "acceptance",
+    "delivery",
+    "agentDirective"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "planId": { "type": "string", "minLength": 1 },
+    "version": { "type": "integer", "minimum": 1 },
+    "planRef": { "type": "string", "minLength": 1 },
+    "status": { "const": "delivered" },
+    "ideaId": { "type": "string", "pattern": "^I[0-9]+$" },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "updatedAt": { "type": "string", "format": "date-time" },
+    "brainstorm": { "$ref": "#/$defs/brainstormSection" },
+    "plan": { "$ref": "#/$defs/planSection" },
+    "review": { "$ref": "#/$defs/reviewSection" },
+    "acceptance": { "$ref": "#/$defs/acceptanceSection" },
+    "delivery": { "$ref": "#/$defs/deliverySection" },
+    "agentDirective": { "$ref": "#/$defs/agentDirective" }
+  },
+  "x-validTransitions": ["delivered"],
+  "x-canonicalAgentDirective": { "$ref": "#/$defs/canonicalAgentDirective" },
+  "$defs": {
+    "brainstormSession": {
+      "$ref": "https://workflow-cannon.dev/schemas/ideas/brainstorm-session.schema.json"
+    },
+    "brainstormSection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sessions"],
+      "properties": {
+        "sessions": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/brainstormSession" }
+        },
+        "activeSessionId": { "type": "string", "minLength": 1 }
+      }
+    },
+    "planSection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["title", "summary"],
+      "properties": {
+        "title": { "type": "string", "minLength": 1 },
+        "summary": { "type": "string", "minLength": 1 },
+        "planningType": { "type": "string", "minLength": 1 },
+        "wbsRowCount": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "reviewSection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["passed", "reviewedAt"],
+      "properties": {
+        "passed": { "type": "boolean" },
+        "blockerCount": { "type": "integer", "minimum": 0 },
+        "openQuestionCount": { "type": "integer", "minimum": 0 },
+        "warningCount": { "type": "integer", "minimum": 0 },
+        "reviewedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "acceptanceSection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["acceptedAt", "acceptedBy", "acceptedVersion"],
+      "properties": {
+        "acceptedAt": { "type": "string", "format": "date-time" },
+        "acceptedBy": { "type": "string", "minLength": 1 },
+        "acceptedVersion": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "deliverySection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["deliveredAt", "phaseKey"],
+      "properties": {
+        "deliveredAt": { "type": "string", "format": "date-time" },
+        "taskCount": { "type": "integer", "minimum": 0 },
+        "phaseKey": { "type": "string", "minLength": 1 }
+      }
+    },
+    "agentDirectiveQuestion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["phase", "fieldName", "prompt", "type"],
+      "properties": {
+        "phase": {
+          "type": "string",
+          "enum": ["context", "session-notes"]
+        },
+        "fieldName": { "type": "string", "minLength": 1 },
+        "prompt": { "type": "string", "minLength": 1 },
+        "type": { "type": "string", "enum": ["text"] },
+        "guidance": { "type": "string", "minLength": 1 }
+      }
+    },
+    "agentDirective": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "state", "questions"],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "state": { "const": "delivered" },
+        "questions": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/agentDirectiveQuestion" }
+        }
+      }
+    },
+    "canonicalAgentDirective": {
+      "schemaVersion": 1,
+      "state": "delivered",
+      "questions": [
+        {
+          "phase": "context",
+          "fieldName": "deliverySummary",
+          "prompt": "Summarize the delivery handoff for the operator.",
+          "type": "text",
+          "guidance": "Present delivery.deliveredAt, delivery.phaseKey, and delivery.taskCount from the delivery section."
+        },
+        {
+          "phase": "context",
+          "fieldName": "taskLinkage",
+          "prompt": "Which materialized tasks were created from the accepted WBS?",
+          "type": "text",
+          "guidance": "Attach delivery refs that link accepted WBS rows to task-engine drafts or ready tasks."
+        },
+        {
+          "phase": "session-notes",
+          "fieldName": "terminalStateNote",
+          "prompt": "Confirm no further IdeaPlan status transitions are expected.",
+          "type": "text",
+          "guidance": "Delivered is terminal. Document updates may occur in place but status must remain delivered."
+        }
+      ]
+    }
+  }
+}
