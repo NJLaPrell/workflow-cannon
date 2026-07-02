@@ -87,6 +87,8 @@ function parseViewModelYaml(text: string): ViewModelDefinition {
     docType: String(root["doc_type"] ?? ""),
     target: String(root["target"] ?? ""),
     profile: root["source_profile"] as ViewModelDefinition["profile"],
+    batchInclude:
+      root["batch_include"] === false || root["batch_include"] === "false" ? false : true,
     sections: sections.map(
       (s) =>
         ({

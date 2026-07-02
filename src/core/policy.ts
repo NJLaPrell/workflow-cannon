@@ -67,7 +67,8 @@ export type PolicyOperationId =
   | "planning.review-plan-artifact"
   | "planning.accept-plan-artifact"
   | "planning.finalize-plan-to-phase"
-  | "planning.execute-plan-artifact";
+  | "planning.execute-plan-artifact"
+  | "planning.generate-plan-document";
 
 function buildBuiltinCommandToOperation(): Record<string, PolicyOperationId | undefined> {
   const out: Record<string, PolicyOperationId | undefined> = {};
@@ -148,6 +149,12 @@ export function isSensitiveModuleCommand(
       return false;
     }
     if (canonical === "finalize-plan-to-phase" && args.dryRun !== false) {
+      return false;
+    }
+    if (canonical === "generate-plan-document" && args.dryRun === true) {
+      return false;
+    }
+    if (canonical === "generate-plan-document" && args.dryRun === true) {
       return false;
     }
     if (canonical === "prepare-release-artifacts" && args.dryRun !== false) {

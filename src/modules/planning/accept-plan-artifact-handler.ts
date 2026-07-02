@@ -6,11 +6,19 @@ import type { PlanArtifactReviewRecordV1 } from "../../core/planning/plan-artifa
 import {
   getPlanArtifactStoragePaths,
   readPlanArtifactIndex,
-  readPlanArtifactVersion,
   resolveLatestPlanArtifactVersion,
   writeNextPlanArtifactVersion
 } from "../../core/planning/plan-artifact-storage.js";
 import { openPlanningStores } from "../../core/planning/index.js";
+import { readIdeaPlanArtifactVersion } from "../ideas/idea-plan-artifact-storage.js";
+import type { IdeaPlanDocumentWithPlanningPayload } from "../ideas/idea-plan-planning-init.js";
+import {
+  persistUnifiedIdeaPlanAccept,
+  readLatestStoredPlanArtifact,
+  readStoredPlanArtifactVersion,
+  resolveUnifiedIdeaPlanReviewGate,
+  unifiedIdeaPlanStoragePath
+} from "./unified-idea-plan-review-accept.js";
 import { UnifiedStateDb } from "../../core/state/unified-state-db.js";
 import { persistModuleStateRow } from "../../core/state/module-state-sidecar-migration.js";
 import { planningSqliteDatabaseRelativePath } from "../task-engine/planning-config.js";
@@ -21,6 +29,10 @@ import { digestPayload, planningConcurrencySaveOpts, readIdempotencyValue, stabl
 import { promoteAcceptedPlanArtifactFromAcceptedDraft } from "../ideas/idea-planning-metadata.js";
 import { completePlanningSessionAfterPlanAccept } from "../ideas/planning-session-completed-after-accept.js";
 import { toPlanningChatSessionResponse } from "../ideas/planning-chat-session.js";
+import {
+  attachGeneratedPlanDocPath,
+  bestEffortGeneratePlanDocument
+} from "./best-effort-generate-plan-document.js";
 
 const ACCEPT_IDEMPOTENCY_MODULE_PREFIX = "planning-plan-artifact-accept-idempotency:";
 
@@ -100,8 +112,13 @@ function parseVersion(raw: unknown): number | undefined {
   return undefined;
 }
 
-/** Version the approval record refers to (draft row), not the storage row after accept bumps version. */
-function resolveApprovalTargetVersion(loaded: PlanArtifactV1): number {
+function resolveApprovalTargetVersion(
+  loaded: PlanArtifactV1,
+  unifiedDocument?: IdeaPlanDocumentWithPlanningPayload
+): number {
+  if (unifiedDocument?.acceptance?.acceptedVersion !== undefined) {
+    return unifiedDocument.acceptance.acceptedVersion;
+  }
   if (loaded.status === "accepted" && loaded.approvalRecord?.approvedVersion !== undefined) {
     return loaded.approvalRecord.approvedVersion;
   }
@@ -221,6 +238,21 @@ function acceptSuccessResult(args: {
       ...(args.planningChatSession ? { planningChatSession: args.planningChatSession } : {})
     }
   };
+}
+
+async function finishAcceptSuccess(
+  ctx: ModuleLifecycleContext,
+  planId: string,
+  args: Parameters<typeof acceptSuccessResult>[0],
+  extras: Record<string, unknown> = {}
+): Promise<ModuleCommandResult> {
+  const result = acceptSuccessResult(args);
+  Object.assign(result.data as Record<string, unknown>, extras);
+  attachGeneratedPlanDocPath(
+    result.data as Record<string, unknown>,
+    await bestEffortGeneratePlanDocument(ctx, planId)
+  );
+  return result;
 }
 
 function mergeOpenQuestionsAccepted(
@@ -368,8 +400,34 @@ export async function runAcceptPlanArtifact(
   }
 
   const targetVersion = requestedVersion ?? latestVersion;
-  const loaded = readPlanArtifactVersion(ctx.workspacePath, planId, targetVersion);
-  if (!loaded) {
+  const fallback: PlanArtifactV1 = {
+    schemaVersion: 1,
+    planId,
+    version: targetVersion,
+    planRef: `plan-artifact:${planId}`,
+    status: "draft",
+    identity: { title: "Plan", planningType: "new-feature" },
+    goals: [],
+    nonGoals: [],
+    valueAssessment: { impact: "", confidence: "medium" },
+    riskAssessment: [],
+    technicalImpact: { systemsTouched: [] },
+    testingStrategy: { layers: [], criticalPaths: [] },
+    implementationGuidance: [],
+    whatNotToDo: [],
+    assumptions: [],
+    openQuestions: [],
+    wbs: [],
+    phaseRecommendations: [],
+    provenance: {
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      createdBy: "agent",
+      source: "draft-plan-artifact"
+    }
+  };
+  const stored = readStoredPlanArtifactVersion(ctx.workspacePath, planId, targetVersion, fallback);
+  if (!stored) {
     return {
       ok: false,
       code: "plan-artifact-not-found",
@@ -377,6 +435,8 @@ export async function runAcceptPlanArtifact(
       data: { schemaVersion: 1, responseSchemaVersion: 1, planId, version: targetVersion }
     };
   }
+  const loaded = stored.artifact;
+  const unifiedDocument = stored.kind === "idea-plan" ? stored.document : undefined;
 
   if (requestedVersion !== undefined && requestedVersion !== latestVersion) {
     return {
@@ -387,7 +447,7 @@ export async function runAcceptPlanArtifact(
     };
   }
 
-  const approvalTargetVersion = resolveApprovalTargetVersion(loaded);
+  const approvalTargetVersion = resolveApprovalTargetVersion(loaded, unifiedDocument);
   if (approvalRecord.approvedVersion !== approvalTargetVersion) {
     return {
       ok: false,
@@ -431,10 +491,11 @@ export async function runAcceptPlanArtifact(
           message: `clientMutationId '${clientMutationId}' was already used for a different accept-plan-artifact payload`
         };
       }
-      const stored = readPlanArtifactVersion(ctx.workspacePath, prior.planId, prior.version) ?? loaded;
-      return acceptSuccessResult({
+      const replayStored =
+        readStoredPlanArtifactVersion(ctx.workspacePath, prior.planId, prior.version, loaded)?.artifact ?? loaded;
+      return finishAcceptSuccess(ctx, planId, {
         code: "plan-artifact-accept-idempotent-replay",
-        artifact: stored,
+        artifact: replayStored,
         storagePath: prior.storagePath,
         replayed: true
       });
@@ -442,6 +503,7 @@ export async function runAcceptPlanArtifact(
   }
 
   if (
+    !unifiedDocument &&
     loaded.status === "accepted" &&
     loaded.approvalRecord?.confirmed === true &&
     loaded.approvalRecord.approvedVersion === approvalRecord.approvedVersion &&
@@ -459,7 +521,7 @@ export async function runAcceptPlanArtifact(
     }) === digest
   ) {
     const paths = getPlanArtifactStoragePaths(ctx.workspacePath, planId);
-    return acceptSuccessResult({
+    return finishAcceptSuccess(ctx, planId, {
       code: "plan-artifact-accept-idempotent-replay",
       artifact: loaded,
       storagePath: paths.artifactFileRelative(loaded.version),
@@ -467,12 +529,29 @@ export async function runAcceptPlanArtifact(
     });
   }
 
-  const reviewedVersionGate = resolveReviewedVersionGate({
-    workspacePath: ctx.workspacePath,
-    planId,
-    loaded,
-    effectiveConfig
-  });
+  if (
+    unifiedDocument &&
+    unifiedDocument.status === "accepted" &&
+    unifiedDocument.acceptance?.acceptedVersion === approvalRecord.approvedVersion &&
+    unifiedDocument.acceptance.acceptedAt === approvalRecord.approvedAt &&
+    unifiedDocument.acceptance.acceptedBy === approvalRecord.approvedBy
+  ) {
+    return finishAcceptSuccess(ctx, planId, {
+      code: "plan-artifact-accept-idempotent-replay",
+      artifact: loaded,
+      storagePath: unifiedIdeaPlanStoragePath(ctx.workspacePath, planId, unifiedDocument.version),
+      replayed: true
+    });
+  }
+
+  const reviewedVersionGate = unifiedDocument
+    ? resolveUnifiedIdeaPlanReviewGate(unifiedDocument, ctx.workspacePath, planId, effectiveConfig)
+    : resolveReviewedVersionGate({
+        workspacePath: ctx.workspacePath,
+        planId,
+        loaded,
+        effectiveConfig
+      });
   if (!reviewedVersionGate.ok) {
     return reviewedVersionGate.result;
   }
@@ -509,35 +588,65 @@ export async function runAcceptPlanArtifact(
     ...(approvalRecord.openQuestionsAccepted ? { openQuestionsAccepted: approvalRecord.openQuestionsAccepted } : {})
   };
 
-  const acceptedBody: PlanArtifactV1 = {
-    ...loaded,
-    status: "accepted",
-    approvalRecord: approvalPersisted,
-    provenance: {
-      ...loaded.provenance,
-      updatedAt: now
-    }
-  };
-
   let written;
   let linkedIdea: Record<string, unknown> | undefined;
   let planningChatSession: ReturnType<typeof toPlanningChatSessionResponse> | undefined;
+  let storagePath: string;
+  let responseArtifact: PlanArtifactV1;
   try {
     stores.sqliteDual.withTransaction(() => {
-      written = writeNextPlanArtifactVersion(ctx.workspacePath, acceptedBody, {
-        effectiveConfig,
-        sqliteDb
-      });
-      const promoted = promoteAcceptedPlanArtifactFromAcceptedDraft(sqliteDb, written!.artifact, now);
+      if (unifiedDocument) {
+        const persisted = persistUnifiedIdeaPlanAccept({
+          workspacePath: ctx.workspacePath,
+          document: unifiedDocument,
+          approvedAt: approvalRecord.approvedAt,
+          approvedBy: approvalRecord.approvedBy,
+          approvedVersion: approvalRecord.approvedVersion,
+          sqliteDb
+        });
+        responseArtifact = {
+          ...loaded,
+          planId: persisted.planId,
+          version: persisted.version,
+          planRef: persisted.planRef,
+          status: "accepted",
+          approvalRecord: approvalPersisted,
+          provenance: {
+            ...loaded.provenance,
+            updatedAt: now,
+            sourceIdeaId: persisted.ideaId
+          }
+        };
+        storagePath = unifiedIdeaPlanStoragePath(ctx.workspacePath, persisted.planId, persisted.version);
+        written = { artifact: responseArtifact, paths: getPlanArtifactStoragePaths(ctx.workspacePath, planId) };
+      } else {
+        const acceptedBody: PlanArtifactV1 = {
+          ...loaded,
+          status: "accepted",
+          approvalRecord: approvalPersisted,
+          provenance: {
+            ...loaded.provenance,
+            updatedAt: now
+          }
+        };
+        written = writeNextPlanArtifactVersion(ctx.workspacePath, acceptedBody, {
+          effectiveConfig,
+          sqliteDb
+        });
+        responseArtifact = written.artifact;
+        storagePath = written.paths.artifactFileRelative(written.artifact.version);
+      }
+      const promoted = promoteAcceptedPlanArtifactFromAcceptedDraft(sqliteDb, responseArtifact!, now);
       if (promoted.idea) {
         linkedIdea = promoted.idea as unknown as Record<string, unknown>;
       }
-      const completedSession = completePlanningSessionAfterPlanAccept(sqliteDb, written!.artifact, now);
+      const completedSession = completePlanningSessionAfterPlanAccept(sqliteDb, responseArtifact!, now);
       if (completedSession) {
         planningChatSession = toPlanningChatSessionResponse(completedSession);
       }
       if (clientMutationId) {
-        const storagePath = written!.paths.artifactFileRelative(written!.artifact.version);
+        const idemStoragePath =
+          storagePath ?? written!.paths.artifactFileRelative(written!.artifact.version);
         writeAcceptIdempotencyRecord(
           ctx.workspacePath,
           clientMutationId,
@@ -545,9 +654,9 @@ export async function runAcceptPlanArtifact(
             schemaVersion: 1,
             payloadDigest: digest,
             planId,
-            version: written!.artifact.version,
-            planRef: written!.artifact.planRef,
-            storagePath
+            version: responseArtifact!.version,
+            planRef: responseArtifact!.planRef,
+            storagePath: idemStoragePath
           },
           effectiveConfig,
           sqliteDb
@@ -565,15 +674,19 @@ export async function runAcceptPlanArtifact(
     throw err;
   }
 
-  const storagePath = written!.paths.artifactFileRelative(written!.artifact.version);
-  const result = acceptSuccessResult({
-    code: "plan-artifact-accepted",
-    artifact: written!.artifact,
-    storagePath,
-    replayed: false,
-    ...(linkedIdea ? { idea: linkedIdea } : {}),
-    ...(planningChatSession ? { planningChatSession } : {})
-  });
+  const result = await finishAcceptSuccess(
+    ctx,
+    planId,
+    {
+      code: "plan-artifact-accepted",
+      artifact: responseArtifact!,
+      storagePath: storagePath!,
+      replayed: false,
+      ...(linkedIdea ? { idea: linkedIdea } : {}),
+      ...(planningChatSession ? { planningChatSession } : {}),
+      ...(unifiedDocument ? { ideaPlanStatus: "accepted" } : {})
+    }
+  );
   attachPolicyMeta(
     result.data as Record<string, unknown>,
     ctx,

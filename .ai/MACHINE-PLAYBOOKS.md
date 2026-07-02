@@ -63,11 +63,17 @@ Investigate **`transcript_churn` / `research`** rows from transcript pipelines, 
 
 Full checklist: **`.ai/playbooks/transcript-churn-research.md`**.
 
-## Planner chat (Ideas → PlanArtifact)
+## Planner chat (Ideas → unified plan)
 
-Use **`planner-chat`** when an Ideas row should become a draft/reviewed/accepted PlanArtifact and, optionally, executable phase tasks. Preserve Ideas provenance (`sourceIdeaId`, `previousPlanArtifacts`), ask one planning decision at a time, keep CLI details out of normal user-facing chat, and leave the session resumable on rejection or partial progress.
+Use **`planner-chat`** when an Ideas row should advance the unified IdeaPlan document through draft, review, acceptance, and optional executable phase tasks. Preserve Ideas provenance (`sourceIdeaId`, `previousPlanArtifacts`), ask one planning decision at a time, keep CLI details out of normal user-facing chat, and leave the session resumable on rejection or partial progress.
 
 Full checklist: **`.ai/playbooks/planner-chat.md`**.
+
+## Brainstorm session (Ideas → scored synthesis)
+
+Use **`brainstorm-session`** when an operator should run the agent-led scoring session on a unified IdeaPlan document in `brainstorming` state. The schema `agentDirective` is machine-authoritative; the playbook adds human tone and score-summary guidance only.
+
+Full checklist: **`.ai/playbooks/brainstorm-session.md`**.
 
 Agents attach the **`.ai/playbooks/...`** path; rendered copies under **`docs/maintainers/playbooks/`** are for humans after **`pnpm run generate-maintainer-docs-from-ai`** (see playbook **Agent paths vs maintainer-rendered mirrors**).
 

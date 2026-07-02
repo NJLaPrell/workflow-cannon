@@ -8,6 +8,28 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [1.0.3] - 2026-07-02
+
+Patch — **Phase 140 Unified IdeaPlan document model** (single envelope for idea → brainstorm → plan → review → accept → deliver).
+
+### Added
+
+- **Unified IdeaPlan document types and storage ADR** — six state machine enums, envelope types, and file-based artifact pattern for idea-to-delivery tracking.
+- **State schemas** — `brainstorming`, `idea`, `planning`, `reviewed`, `accepted`, and `delivered` with progressive validation fixtures.
+- **Brainstorming lifecycle** — `start-brainstorm-session`, `update-brainstorm-session`, and `complete-brainstorm` with scoring engine and session synthesis.
+- **Delivery check** — `check-delivery-status` transitions accepted ideas to delivered when linked tasks complete; dashboard Check delivery button.
+- **Planning module adaptation** — `draft-plan-artifact`, `start-idea-planning`, `review-plan-artifact`, `accept-plan-artifact`, and `finalize-plan-to-phase` operate on unified IdeaPlan documents.
+- **Plan document generation** — `generate-plan-document` writes rendered markdown; hooked into all four planning lifecycle commands.
+- **Dashboard** — Brainstorm and Plan buttons on idea cards; Brainstorming rollup with scoring display and session history in detail panels.
+- **Migration** — `migrate-ideas-to-unified-document` promotes legacy Ideas and PlanArtifact rows with dry-run and pre-write snapshot safety.
+- **Feature flag** — gates new UI; legacy UI rendered when flag is off.
+
+### Changed
+
+- Review/accept plan artifact commands now use unified document `plan` section within the existing artifact file (no new standalone artifact identities).
+- Dashboard summary projection exposes `brainstorm.synthesis` fields for brainstorming-state ideas.
+- Planner-chat playbook and instruction files reference the unified model.
+
 ## [1.0.2] - 2026-06-30
 
 Patch — **Phase 139 Idea planning system** (end-to-end idea → plan → review → finalize → task drafts, with dashboard lifecycle UI and canonical session commands).

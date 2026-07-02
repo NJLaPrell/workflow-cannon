@@ -119,6 +119,23 @@ export {
   summarizePlanArtifactLineage, type PlanArtifactLineageSummary, type PlanArtifactVersionSummary
 } from "./plan-artifact-immutability.js";
 export { renderPlanArtifactMarkdown } from "./render-plan-artifact-markdown.js";
+export { derivePlanDocumentBasename, derivePlanDocumentSlug } from "./plan-document-slug.js";
+export {
+  formatScoreWithBand,
+  scoreBandForKind,
+  scoreBandForNormalizedScore,
+  type BrainstormScoreBand,
+  type BrainstormScoreKind
+} from "./brainstorm-score-bands.js";
+export {
+  PLAN_DOCUMENT_OUTPUT_DIR,
+  PLAN_DOCUMENT_TEMPLATE_FILE,
+  PLAN_DOCUMENT_VIEW_FILE,
+  applyPlanDocumentTemplate,
+  renderPlanDocumentMarkdown,
+  resolvePlanDocumentOutputPath,
+  type PlanDocumentRenderSummary
+} from "./render-plan-document-markdown.js";
 export {
   formatPlanArtifactInstancePath,
   isIdeaOriginatedPlanArtifactDraft,

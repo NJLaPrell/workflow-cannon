@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workflow-cannon.dev/schemas/ideas/states/idea.schema.json",
+  "title": "IdeaPlan idea state",
+  "description": "Unified IdeaPlan document shape and agent contract when status is idea. The idea is captured but brainstorming has not started; progressive sections must be absent.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "planId",
+    "version",
+    "planRef",
+    "status",
+    "ideaId",
+    "createdAt",
+    "updatedAt",
+    "agentDirective"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "planId": { "type": "string", "minLength": 1 },
+    "version": { "type": "integer", "minimum": 1 },
+    "planRef": { "type": "string", "minLength": 1 },
+    "status": { "const": "idea" },
+    "ideaId": { "type": "string", "pattern": "^I[0-9]+$" },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "updatedAt": { "type": "string", "format": "date-time" },
+    "agentDirective": { "$ref": "#/$defs/agentDirective" },
+    "brainstorm": false,
+    "plan": false,
+    "review": false,
+    "acceptance": false,
+    "delivery": false
+  },
+  "x-validTransitions": ["brainstorming", "planning"],
+  "x-canonicalAgentDirective": { "$ref": "#/$defs/canonicalAgentDirective" },
+  "$defs": {
+    "agentDirectiveQuestion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["phase", "fieldName", "prompt", "type"],
+      "properties": {
+        "phase": {
+          "type": "string",
+          "enum": ["context", "session-notes"]
+        },
+        "fieldName": { "type": "string", "minLength": 1 },
+        "prompt": { "type": "string", "minLength": 1 },
+        "type": { "type": "string", "enum": ["text", "enum"] },
+        "validValues": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "minItems": 1
+        },
+        "guidance": { "type": "string", "minLength": 1 }
+      }
+    },
+    "agentDirective": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "state", "questions"],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "state": { "const": "idea" },
+        "questions": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/agentDirectiveQuestion" }
+        }
+      }
+    },
+    "canonicalAgentDirective": {
+      "schemaVersion": 1,
+      "state": "idea",
+      "questions": [
+        {
+          "phase": "context",
+          "fieldName": "ideaTitle",
+          "prompt": "What short title captures this idea?",
+          "type": "text",
+          "guidance": "Use a concise operator-facing title. Detailed scoring and WBS authoring belong in later states."
+        },
+        {
+          "phase": "context",
+          "fieldName": "ideaSummary",
+          "prompt": "Summarize the idea in one or two sentences before brainstorming begins.",
+          "type": "text",
+          "guidance": "Capture intent and desired outcome only — do not draft plan sections or run scoring here."
+        },
+        {
+          "phase": "session-notes",
+          "fieldName": "readinessNote",
+          "prompt": "Is the idea ready to enter brainstorming?",
+          "type": "text",
+          "guidance": "No active agent scoring session runs in idea state. When ready, transition to brainstorming and run start-brainstorm-session."
+        }
+      ]
+    }
+  }
+}

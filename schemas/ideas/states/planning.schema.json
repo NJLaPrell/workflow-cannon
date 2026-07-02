@@ -1,0 +1,128 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workflow-cannon.dev/schemas/ideas/states/planning.schema.json",
+  "title": "IdeaPlan planning state",
+  "description": "Unified IdeaPlan document shape and agent contract when status is planning. Brainstorm sessions are complete; the plan section is required and must be initialized before invoking planner-chat to author structured WBS content.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "planId",
+    "version",
+    "planRef",
+    "status",
+    "ideaId",
+    "createdAt",
+    "updatedAt",
+    "brainstorm",
+    "plan",
+    "agentDirective"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "planId": { "type": "string", "minLength": 1 },
+    "version": { "type": "integer", "minimum": 1 },
+    "planRef": { "type": "string", "minLength": 1 },
+    "status": { "const": "planning" },
+    "ideaId": { "type": "string", "pattern": "^I[0-9]+$" },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "updatedAt": { "type": "string", "format": "date-time" },
+    "brainstorm": { "$ref": "#/$defs/brainstormSection" },
+    "plan": { "$ref": "#/$defs/planSection" },
+    "agentDirective": { "$ref": "#/$defs/agentDirective" },
+    "review": false,
+    "acceptance": false,
+    "delivery": false
+  },
+  "x-validTransitions": ["planning", "reviewed"],
+  "x-canonicalAgentDirective": { "$ref": "#/$defs/canonicalAgentDirective" },
+  "$defs": {
+    "brainstormSession": {
+      "$ref": "https://workflow-cannon.dev/schemas/ideas/brainstorm-session.schema.json"
+    },
+    "brainstormScoreInputs": {
+      "$ref": "https://workflow-cannon.dev/schemas/ideas/brainstorm-session.schema.json#/$defs/brainstormScoreInputs"
+    },
+    "brainstormSection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sessions"],
+      "properties": {
+        "sessions": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/brainstormSession" }
+        },
+        "activeSessionId": { "type": "string", "minLength": 1 },
+        "synthesis": { "$ref": "#/$defs/brainstormScoreInputs" }
+      }
+    },
+    "planSection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["title", "summary"],
+      "properties": {
+        "title": { "type": "string", "minLength": 1 },
+        "summary": { "type": "string", "minLength": 1 },
+        "planningType": { "type": "string", "minLength": 1 },
+        "wbsRowCount": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "agentDirectiveQuestion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["phase", "fieldName", "prompt", "type"],
+      "properties": {
+        "phase": {
+          "type": "string",
+          "enum": ["context", "session-notes"]
+        },
+        "fieldName": { "type": "string", "minLength": 1 },
+        "prompt": { "type": "string", "minLength": 1 },
+        "type": { "type": "string", "enum": ["text"] },
+        "guidance": { "type": "string", "minLength": 1 }
+      }
+    },
+    "agentDirective": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "state", "questions"],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "state": { "const": "planning" },
+        "questions": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/agentDirectiveQuestion" }
+        }
+      }
+    },
+    "canonicalAgentDirective": {
+      "schemaVersion": 1,
+      "state": "planning",
+      "questions": [
+        {
+          "phase": "context",
+          "fieldName": "planTitle",
+          "prompt": "What title should the structured plan use?",
+          "type": "text",
+          "guidance": "Initialize the plan section title before invoking planner-chat."
+        },
+        {
+          "phase": "context",
+          "fieldName": "planSummary",
+          "prompt": "Summarize the plan scope that planner-chat should expand into WBS rows.",
+          "type": "text",
+          "guidance": "Ground the summary in synthesized brainstorm scores; do not re-run brainstorming scoring here."
+        },
+        {
+          "phase": "session-notes",
+          "fieldName": "plannerChatInvocation",
+          "prompt": "Invoke planner-chat to author structured plan sections and WBS from the brainstorm synthesis.",
+          "type": "text",
+          "guidance": "Follow the planner-chat playbook after plan.title and plan.summary are set. Transition to reviewed when rubric review is recorded."
+        }
+      ]
+    }
+  }
+}

@@ -122,7 +122,7 @@ test("Ideas row resume requires the matching active planning-chat session", () =
       }
     })
   );
-  assert.match(inactiveHtml, />Plan this<\/button>/);
+  assert.match(inactiveHtml, />Plan<\/button>/);
   assert.doesNotMatch(inactiveHtml, />Resume planning &rarr;<\/button>/);
 
   const mismatchedHtml = renderDashboardRootInnerHtml(
@@ -135,6 +135,6 @@ test("Ideas row resume requires the matching active planning-chat session", () =
       }
     })
   );
-  assert.match(mismatchedHtml, />Plan this<\/button>/);
+  assert.match(mismatchedHtml, />Plan<\/button>/);
   assert.doesNotMatch(mismatchedHtml, />Resume planning &rarr;<\/button>/);
 });

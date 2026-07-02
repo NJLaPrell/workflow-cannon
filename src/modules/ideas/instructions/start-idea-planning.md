@@ -4,6 +4,10 @@ agentCapsule|v=1|command=start-idea-planning|module=ideas|schema_only=pnpm exec 
 
 Start or resume a durable planner-chat session for a lightweight operator idea. Loads canonical idea context, detects an active session, generates a compact planner-chat prompt, persists session state, and returns dashboard-ready planning data.
 
+When the idea links a **unified IdeaPlan document** (`linkedPlanArtifact` or active draft), this command initializes the document **`plan` section** (title, summary, `wbsRowCount`) and transitions the document to **`planning`** status when allowed — without creating a new document identity.
+
+**Agent behavior:** Follow the **`agentDirective`** in [`schemas/ideas/states/planning.schema.json`](../../../schemas/ideas/states/planning.schema.json) for planning-state questions. Human companion playbook: [`.ai/playbooks/planner-chat.md`](../../../.ai/playbooks/planner-chat.md). Plan-section field contract: [`PLANNER_SCHEMA.md`](../../../PLANNER_SCHEMA.md).
+
 ## Required args
 
 - `ideaId` — idea id such as `I001`. `id` is accepted as an alias.
@@ -20,4 +24,4 @@ This command writes kit SQLite and is policy-sensitive. Pass JSON `policyApprova
 pnpm exec wk run start-idea-planning '{"ideaId":"I001","expectedPlanningGeneration":31,"policyApproval":{"confirmed":true,"rationale":"start idea planning session"}}'
 ```
 
-Returns `data.mode` of `started` or `resumed`, `data.planningChatPrompt`, `data.planningChatSession`, and plan lineage fields (`linkedPlanArtifact`, `activeDraftPlanArtifact`, `previousPlanArtifacts`).
+Returns `data.mode` of `started` or `resumed`, `data.planningChatPrompt`, `data.planningChatSession`, and plan lineage fields (`linkedPlanArtifact`, `activeDraftPlanArtifact`, `previousPlanArtifacts`) pointing at the unified IdeaPlan document `planRef`.

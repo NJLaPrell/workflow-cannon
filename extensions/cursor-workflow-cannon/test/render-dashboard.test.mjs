@@ -202,7 +202,7 @@ test("renderDashboardRootInnerHtml places planning cards on the Planning tab", (
         top: [{ id: "I1", title: "Draft a better dashboard", status: "open", previousPlanArtifacts: [] }]
       }
     }
-  });
+  }, null, null, null, null, { ideasUnifiedModelEnabled: true });
   const overviewPanelIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="overview"');
   const planningPanelIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="planning"');
   const taskEnginePanelIdx = html.indexOf('<div class="wc-tab-panel" data-wc-tab="task-engine"');
@@ -225,7 +225,9 @@ test("renderDashboardRootInnerHtml places planning cards on the Planning tab", (
   assert.match(planningPanel, /data-wc-action="idea-delete"/);
   assert.match(planningPanel, /data-wc-action="idea-update"/);
   assert.match(planningPanel, /data-wc-action="idea-plan"/);
-  assert.match(planningPanel, /Plan this/);
+  assert.match(planningPanel, /data-wc-action="idea-brainstorm"/);
+  assert.match(planningPanel, />Brainstorm</);
+  assert.match(planningPanel, />Plan</);
   assert.match(planningPanel, /data-wc-ideas-toast="1"/);
   assert.match(planningPanel, /data-wc-ideas-edit-form="1"/);
   assert.match(planningPanel, /data-wc-ideas-list="1"/);
@@ -689,7 +691,7 @@ test("renderDashboardRootInnerHtml renders PlanArtifact card grid for a draft pl
   assert.match(html, />1 Execution Linkage</);
   assert.match(html, /wc-plan-execution-linkages-table/);
   assert.match(html, /data-wc-ui-state-key="plan-123-execution-linkages"/);
-  assert.match(html, /wc-plan-status-pill wc-plan-status-draft">New/);
+  assert.match(html, /wc-plan-status-pill wc-plan-status-draft">Draft/);
   assert.match(html, /data-wc-ui-state-key="plan-state-new"/);
   assert.match(html, /<details class="wc-plan-state-bucket"[^>]*data-wc-ui-state-key="plan-state-new"[^>]*open/);
   assert.match(html, /Plans<\/b> · 1 total/);

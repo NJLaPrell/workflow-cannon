@@ -159,6 +159,41 @@ export function buildPlanningInterviewResumePrompt(resumeCli: string): string {
 }
 
 /** Dashboard / README — collaboration profiles hub (chat + CLI); advisory-only. */
+export type BrainstormSessionPromptInput = {
+  ideaId: string;
+  title?: string;
+  note?: string;
+  sessionIndex: number;
+  planRef?: string;
+};
+
+/** Dashboard Ideas **Brainstorm** — agent-led scoring session on a unified IdeaPlan document. */
+export function buildBrainstormSessionPrompt(input: BrainstormSessionPromptInput): string {
+  const ideaId = input.ideaId?.trim();
+  const title = input.title?.trim();
+  const note = input.note?.trim();
+  const planRef = input.planRef?.trim();
+  const sessionIndex = input.sessionIndex;
+
+  const lines = [
+    "Run an **agent-led brainstorm session** for this Workflow Cannon Ideas row.",
+    "",
+    ideaId ? `Source idea id: **${ideaId}**` : undefined,
+    title ? `Idea title: **${title}**` : undefined,
+    note ? `Idea note: ${note}` : undefined,
+    planRef ? `Unified document: **${planRef}**` : undefined,
+    Number.isFinite(sessionIndex) ? `Brainstorm session index: **${sessionIndex}**` : undefined,
+    "",
+    "Load **`schemas/ideas/states/brainstorming.schema.json`** and follow its **`agentDirective`** for scoring inputs, computed scores, and session completion.",
+    "",
+    "Use **`update-brainstorm-session`** to fill session inputs progressively. When the session is complete, use **`complete-brainstorm`** to transition toward planning.",
+    "",
+    "Use **`.ai/AGENT-CLI-MAP.md`** and **`.ai/POLICY-APPROVAL.md`** for gated `workspace-kit run` commands. Keep normal user-facing chat focused on brainstorm decisions, not raw CLI choreography."
+  ].filter((line): line is string => line !== undefined);
+
+  return lines.join("\n");
+}
+
 export function buildCollaborationProfilesHubPrompt(): string {
   return (
     "The operator opened **Collaboration profiles** from the Workflow Cannon dashboard.\n\n" +

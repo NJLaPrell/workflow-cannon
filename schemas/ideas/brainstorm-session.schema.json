@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workflow-cannon.dev/schemas/ideas/brainstorm-session.schema.json",
+  "title": "Brainstorm session record",
+  "description": "Mutable brainstorm session record. start-brainstorm-session creates the slot; update-brainstorm-session fills it progressively.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["sessionId", "startedAt", "updatedAt"],
+  "properties": {
+    "sessionId": { "type": "string", "minLength": 1 },
+    "startedAt": { "type": "string", "format": "date-time" },
+    "updatedAt": { "type": "string", "format": "date-time" },
+    "completedAt": { "type": "string", "format": "date-time" },
+    "inputs": { "$ref": "#/$defs/brainstormSessionInputs" },
+    "scores": { "$ref": "#/$defs/brainstormScoreInputs" },
+    "synthesized": { "$ref": "#/$defs/brainstormScoreInputs" },
+    "notes": { "type": "string" }
+  },
+  "$defs": {
+    "score1to10": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 10
+    },
+    "score0to100": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100
+    },
+    "tShirtSize": {
+      "type": "string",
+      "enum": ["XS", "S", "M", "L", "XL"]
+    },
+    "brainstormScoreInputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "value": { "$ref": "#/$defs/score1to10" },
+        "risk": { "$ref": "#/$defs/score1to10" },
+        "effort": { "$ref": "#/$defs/score1to10" },
+        "confidence": { "$ref": "#/$defs/score1to10" },
+        "priority": { "$ref": "#/$defs/score0to100" },
+        "tShirtSize": { "$ref": "#/$defs/tShirtSize" },
+        "complexity": { "$ref": "#/$defs/score1to10" }
+      }
+    },
+    "brainstormSessionInputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "valueImpact": { "$ref": "#/$defs/score1to10" },
+        "valueReach": { "$ref": "#/$defs/score1to10" },
+        "valueUrgency": { "$ref": "#/$defs/score1to10" },
+        "valueStrategicFit": { "$ref": "#/$defs/score1to10" },
+        "riskTechnical": { "$ref": "#/$defs/score1to10" },
+        "riskOperational": { "$ref": "#/$defs/score1to10" },
+        "riskUnknowns": { "$ref": "#/$defs/score1to10" },
+        "riskReversibility": { "$ref": "#/$defs/score1to10" },
+        "tShirtSize": { "$ref": "#/$defs/tShirtSize" },
+        "complexity": { "$ref": "#/$defs/score1to10" },
+        "confidenceEvidence": { "$ref": "#/$defs/score1to10" },
+        "confidenceExpertise": { "$ref": "#/$defs/score1to10" },
+        "confidenceClarity": { "$ref": "#/$defs/score1to10" },
+        "contextProblem": { "type": "string", "minLength": 1 },
+        "contextAudience": { "type": "string", "minLength": 1 },
+        "unknownsNotes": { "type": "string" },
+        "alternativesConsidered": { "type": "string" },
+        "sessionNotes": { "type": "string" }
+      }
+    }
+  }
+}

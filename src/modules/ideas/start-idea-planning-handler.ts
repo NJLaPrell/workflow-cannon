@@ -7,6 +7,7 @@ import { planningGenPolicyGate } from "../task-engine/planning-generation-gate.j
 import { digestPayload, readIdempotencyValue } from "../task-engine/mutation-utils.js";
 import { TaskEngineError } from "../task-engine/transitions.js";
 import { buildIdeaPlanningPrompt } from "./build-idea-planning-prompt.js";
+import { initializeIdeaPlanPlanningSectionForStart } from "./idea-plan-planning-init.js";
 import { getIdea, isIdeaId, updateIdea, type IdeaRecord } from "./idea-store.js";
 import { readActiveDraftPlanArtifact } from "./idea-planning-metadata.js";
 import {
@@ -223,25 +224,28 @@ export async function runStartIdeaPlanning(
     };
   }
 
-  const lineage = collectPlanLineage(db, idea);
-  const existingSession = getPlanningChatSession(db, ideaIdRaw);
+  const workspacePath = ctx.workspacePath ?? process.cwd();
   const nowIso = new Date().toISOString();
+  const initialized = initializeIdeaPlanPlanningSectionForStart(workspacePath, db, idea, nowIso);
+  const workingIdea = initialized.idea;
+  const lineage = collectPlanLineage(db, workingIdea);
+  const existingSession = getPlanningChatSession(db, ideaIdRaw);
 
   if (existingSession) {
     const prompt =
       existingSession.resumePrompt ??
       buildIdeaPlanningPrompt({
-        ideaId: idea.id,
-        title: idea.title,
-        note: idea.note,
+        ideaId: workingIdea.id,
+        title: workingIdea.title,
+        note: workingIdea.note,
         planningSessionId: existingSession.sessionId,
         ...lineage
       });
-    let updatedIdea = idea;
+    let updatedIdea = workingIdea;
     let session = existingSession;
     db.transaction(() => {
-      if (idea.status !== "planning") {
-        const next = updateIdea(db, idea.id, { status: "planning" }, nowIso);
+      if (workingIdea.status !== "planning") {
+        const next = updateIdea(db, workingIdea.id, { status: "planning" }, nowIso);
         if (next) {
           updatedIdea = next;
         }
@@ -269,7 +273,7 @@ export async function runStartIdeaPlanning(
     }
     return successResult(
       "idea-planning-resumed",
-      `Idea ${idea.id} planning resumed`,
+      `Idea ${workingIdea.id} planning resumed`,
       result,
       ctx,
       planningGeneration,
@@ -279,16 +283,16 @@ export async function runStartIdeaPlanning(
 
   const sessionId = `pcs-${crypto.randomUUID()}`;
   const prompt = buildIdeaPlanningPrompt({
-    ideaId: idea.id,
-    title: idea.title,
-    note: idea.note,
+    ideaId: workingIdea.id,
+    title: workingIdea.title,
+    note: workingIdea.note,
     planningSessionId: sessionId,
     ...lineage
   });
 
-  let updatedIdea = idea;
+  let updatedIdea = workingIdea;
   db.transaction(() => {
-    const next = updateIdea(db, idea.id, { status: "planning" }, nowIso);
+    const next = updateIdea(db, workingIdea.id, { status: "planning" }, nowIso);
     if (next) {
       updatedIdea = next;
     }
@@ -305,7 +309,7 @@ export async function runStartIdeaPlanning(
     );
   })();
 
-  const session = getPlanningChatSession(db, idea.id);
+  const session = getPlanningChatSession(db, workingIdea.id);
   if (!session) {
     return {
       ok: false,
@@ -333,7 +337,7 @@ export async function runStartIdeaPlanning(
 
   return successResult(
     "idea-planning-started",
-    `Idea ${idea.id} planning started`,
+    `Idea ${workingIdea.id} planning started`,
     result,
     ctx,
     planning.sqliteDual.getPlanningGeneration(),

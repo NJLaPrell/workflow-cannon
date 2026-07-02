@@ -1,0 +1,36 @@
+{
+  "sessionId": "bsess-20260702-idea-unified-doc",
+  "startedAt": "2026-07-02T10:00:00.000Z",
+  "updatedAt": "2026-07-02T10:45:00.000Z",
+  "completedAt": "2026-07-02T10:45:00.000Z",
+  "inputs": {
+    "contextProblem": "Operators need one durable IdeaPlan document instead of parallel session and plan entities that can drift.",
+    "contextAudience": "Workflow Cannon maintainers and planning agents driving Ideas rows through brainstorming.",
+    "valueImpact": 8,
+    "valueReach": 7,
+    "valueUrgency": 6,
+    "valueStrategicFit": 9,
+    "riskTechnical": 5,
+    "riskOperational": 4,
+    "riskUnknowns": 6,
+    "riskReversibility": 3,
+    "tShirtSize": "M",
+    "complexity": 9,
+    "confidenceEvidence": 7,
+    "confidenceExpertise": 8,
+    "confidenceClarity": 6,
+    "unknownsNotes": "Exact command names for start/update brainstorm session may evolve in WBS-2B.",
+    "alternativesConsidered": "Keep separate SQLite entities for brainstorm sessions; rejected due to drift risk called out in ADR.",
+    "sessionNotes": "Proceed to planning once envelope schema and loader land in WBS-1D/WBS-2A."
+  },
+  "scores": {
+    "value": 7.6,
+    "risk": 4.7,
+    "effort": 7.8,
+    "confidence": 6.95,
+    "priority": 61,
+    "tShirtSize": "M",
+    "complexity": 9
+  },
+  "notes": "Fixture session for brainstorming.schema.json validation and scoring formula tests."
+}

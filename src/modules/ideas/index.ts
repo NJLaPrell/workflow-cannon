@@ -25,10 +25,17 @@ import {
   type IdeaRecord,
   type IdeaStatus
 } from "./idea-store.js";
+import { readActiveDraftPlanArtifact } from "./idea-planning-metadata.js";
 import { publishIdeasPlanningEvents } from "./ideas-planning-events-runtime.js";
+import { readIdeaPlanArtifact } from "./idea-plan-artifact-storage.js";
 import { persistPlanningChatSession } from "./planning-chat-session.js";
 import { runStartIdeaPlanning } from "./start-idea-planning-handler.js";
+import { runStartBrainstormSession } from "./start-brainstorm-session-handler.js";
 import { runUpdateIdeaPlanningSession } from "./update-idea-planning-session-handler.js";
+import { runUpdateBrainstormSession } from "./update-brainstorm-session-handler.js";
+import { runCompleteBrainstorm } from "./complete-brainstorm-handler.js";
+import { runCheckDeliveryStatus } from "./check-delivery-status-handler.js";
+import { runMigrateIdeasToUnifiedDocument } from "./migrate-ideas-to-unified-document-handler.js";
 
 function attachPlanningMeta(
   data: Record<string, unknown>,
@@ -257,7 +264,13 @@ export const ideasModule: WorkflowModule = {
       if (!idea) {
         return { ok: false, code: "idea-not-found", message: `Idea ${ideaId} was not found` };
       }
-      const data: Record<string, unknown> = { responseSchemaVersion: 1, idea };
+      const planRef = idea.linkedPlanArtifact ?? readActiveDraftPlanArtifact(db, ideaId);
+      const ideaPlan = planRef ? readIdeaPlanArtifact(ctx.workspacePath ?? process.cwd(), planRef) : null;
+      const data: Record<string, unknown> = {
+        responseSchemaVersion: 1,
+        idea,
+        ...(ideaPlan ? { ideaPlan } : {})
+      };
       attachPlanningMeta(data, ctx, planningGeneration);
       return { ok: true, code: "idea-retrieved", message: `Idea ${idea.id}`, data };
     }
@@ -507,6 +520,46 @@ export const ideasModule: WorkflowModule = {
         args as Record<string, unknown>,
         ctx,
         "src/modules/ideas/instructions/update-idea-planning-session.md"
+      );
+    }
+
+    if (command.name === "check-delivery-status") {
+      return runCheckDeliveryStatus(
+        args as Record<string, unknown>,
+        ctx,
+        "src/modules/ideas/instructions/check-delivery-status.md"
+      );
+    }
+
+    if (command.name === "start-brainstorm-session") {
+      return runStartBrainstormSession(
+        args as Record<string, unknown>,
+        ctx,
+        "src/modules/ideas/instructions/start-brainstorm-session.md"
+      );
+    }
+
+    if (command.name === "update-brainstorm-session") {
+      return runUpdateBrainstormSession(
+        args as Record<string, unknown>,
+        ctx,
+        "src/modules/ideas/instructions/update-brainstorm-session.md"
+      );
+    }
+
+    if (command.name === "complete-brainstorm") {
+      return runCompleteBrainstorm(
+        args as Record<string, unknown>,
+        ctx,
+        "src/modules/ideas/instructions/complete-brainstorm.md"
+      );
+    }
+
+    if (command.name === "migrate-ideas-to-unified-document") {
+      return runMigrateIdeasToUnifiedDocument(
+        args as Record<string, unknown>,
+        ctx,
+        "src/modules/ideas/instructions/migrate-ideas-to-unified-document.md"
       );
     }
 

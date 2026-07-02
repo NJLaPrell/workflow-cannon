@@ -1,9 +1,16 @@
 import type Sqlite from "better-sqlite3";
 import { readKitSqliteUserVersion } from "../../core/state/workspace-kit-sqlite.js";
+import { isIdeaPlanStatusInput, parseIdeaPlanStatus, type IdeaPlanStatus } from "./idea-plan-types.js";
 
 export const IDEAS_KIT_MIN_USER_VERSION = 29;
 
 export type IdeaStatus = "open" | "planning" | "planned";
+
+const IDEA_PLAN_STATUS_TO_SQLITE_HINT: Partial<Record<IdeaPlanStatus, IdeaStatus>> = {
+  idea: "open",
+  planning: "planning",
+  accepted: "planned"
+};
 
 export type IdeaRecord = {
   id: string;
@@ -47,7 +54,18 @@ export function isIdeaId(raw: string): boolean {
 }
 
 export function parseIdeaStatus(raw: unknown): IdeaStatus | undefined {
-  return raw === "open" || raw === "planning" || raw === "planned" ? raw : undefined;
+  if (raw === "open" || raw === "planning" || raw === "planned") {
+    return raw;
+  }
+  const canonical = parseIdeaPlanStatus(raw);
+  if (!canonical) {
+    return undefined;
+  }
+  return IDEA_PLAN_STATUS_TO_SQLITE_HINT[canonical];
+}
+
+export function isIdeaStatusInput(raw: unknown): raw is string {
+  return typeof raw === "string" && isIdeaPlanStatusInput(raw);
 }
 
 export function readStringArray(raw: string): string[] {

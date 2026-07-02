@@ -41,10 +41,21 @@ import {
 } from "./plan-artifact-display-state.js";
 import type { DashboardSectionId } from "./dashboard-section-registry.js";
 import { lookupDashboardSection } from "./dashboard-section-registry.js";
+import {
+  renderBrainstormingIdeasRollupSection,
+  renderIdeaPlanBrainstormDetailPanel
+} from "./render-brainstorming-rollup.js";
 import { renderDashboardReadModeBadgeHtml, renderDashboardSectionPlaceholder } from "./render-dashboard-shell.js";
 import type { DashboardReadModeBadge } from "./dashboard-read-mode-badge.js";
 import type { McpHostStatus } from "../../mcp/mcp-status-types.js";
 import { renderMcpStatusSectionHtml } from "./render-mcp-status.js";
+
+const IDEAS_UNIFIED_MODEL_ENV_VAR = "IDEAS_UNIFIED_MODEL_ENABLED";
+
+function parseIdeasUnifiedModelEnv(): boolean {
+  const env = process.env[IDEAS_UNIFIED_MODEL_ENV_VAR]?.trim().toLowerCase();
+  return env === "1" || env === "true" || env === "yes" || env === "on";
+}
 
 export type RenderDashboardRootOptions = {
   /** Sections that stay as loading placeholders until tab activation (T100398). */
@@ -53,6 +64,8 @@ export type RenderDashboardRootOptions = {
   readModeBadge?: DashboardReadModeBadge | null;
   /** MCP host configuration posture for the Status tab (T100725). */
   mcpStatus?: McpHostStatus | null;
+  /** When true, render unified IdeaPlan Brainstorm UI and rollup (T100795). Default false. */
+  ideasUnifiedModelEnabled?: boolean;
 };
 
 export type RenderDashboardSectionOptions = {
@@ -60,6 +73,8 @@ export type RenderDashboardSectionOptions = {
   phaseJournal?: DashboardPhaseJournalBundle | null;
   embeddedCaePanelHtml?: string | null;
   mcpStatus?: McpHostStatus | null;
+  /** When true, render unified IdeaPlan Brainstorm UI and rollup (T100795). Default false. */
+  ideasUnifiedModelEnabled?: boolean;
 };
 
 export type WcDashboardStatusKind = "active" | "waiting" | "blocked" | "idle" | "done";
@@ -2433,6 +2448,89 @@ function ideaLifecycleChipLabel(lifecycleState: string): string {
   }
 }
 
+function resolveIdeaRowPlanRef(args: {
+  activeDraftPlanArtifactSummary: Record<string, unknown> | null;
+  linkedPlanArtifactSummary: Record<string, unknown> | null;
+  linkedPlanArtifact?: unknown;
+  activeDraftPlanArtifact?: unknown;
+}): string {
+  const fromActive =
+    typeof args.activeDraftPlanArtifactSummary?.planRef === "string"
+      ? args.activeDraftPlanArtifactSummary.planRef.trim()
+      : "";
+  if (fromActive.length > 0) {
+    return fromActive;
+  }
+  const fromLinked =
+    typeof args.linkedPlanArtifactSummary?.planRef === "string"
+      ? args.linkedPlanArtifactSummary.planRef.trim()
+      : "";
+  if (fromLinked.length > 0) {
+    return fromLinked;
+  }
+  const fromDraftField =
+    typeof args.activeDraftPlanArtifact === "string" ? args.activeDraftPlanArtifact.trim() : "";
+  if (fromDraftField.length > 0) {
+    return fromDraftField;
+  }
+  return typeof args.linkedPlanArtifact === "string" ? args.linkedPlanArtifact.trim() : "";
+}
+
+function resolveDashboardIdeasUnifiedModelEnabled(
+  options?: Pick<RenderDashboardRootOptions, "ideasUnifiedModelEnabled">
+): boolean {
+  if (options?.ideasUnifiedModelEnabled !== undefined) {
+    return options.ideasUnifiedModelEnabled;
+  }
+  return parseIdeasUnifiedModelEnv();
+}
+
+function renderIdeaBrainstormPlanButtons(planRef: string, unifiedModelEnabled: boolean): string {
+  if (!unifiedModelEnabled) {
+    return ideaPlanButton("Plan", "idea-plan", "", {
+      title: "Resume or start planning (start-idea-planning)"
+    });
+  }
+  const refAttrs = planRef.length > 0 ? ` data-plan-ref="${escapeHtmlAttr(planRef)}"` : "";
+  const brainstormBtn = ideaPlanButton("Brainstorm", "idea-brainstorm", refAttrs, {
+    secondary: true,
+    disabled: planRef.length === 0,
+    title:
+      planRef.length > 0
+        ? "Start or append a brainstorm session on the unified IdeaPlan document"
+        : "No unified IdeaPlan document is linked yet. Link or create one before brainstorming."
+  });
+  const planBtn = ideaPlanButton("Plan", "idea-plan", "", {
+    title: "Skip brainstorming and start planning (start-idea-planning)"
+  });
+  return brainstormBtn + planBtn;
+}
+
+function planCardSecondaryBrainstormButton(
+  row: Record<string, unknown>,
+  effectiveStatusRaw: string,
+  unifiedModelEnabled: boolean
+): string {
+  if (!unifiedModelEnabled) {
+    return "";
+  }
+  if (effectiveStatusRaw === "idea" || effectiveStatusRaw === "brainstorming" || effectiveStatusRaw === "superseded") {
+    return "";
+  }
+  const planRef = String(row.planRef ?? "").trim();
+  if (planRef.length === 0) {
+    return "";
+  }
+  const sourceIdeaId = String(row.sourceIdeaId ?? "").trim();
+  const attrs =
+    ` data-plan-ref="${escapeHtmlAttr(planRef)}"` +
+    (sourceIdeaId.length > 0 ? ` data-idea-id="${escapeHtmlAttr(sourceIdeaId)}"` : "");
+  return ideaPlanButton("Brainstorm", "plan-artifact-brainstorm", attrs, {
+    secondary: true,
+    title: "Append a new brainstorm session without changing document status"
+  });
+}
+
 /**
  * Once a plan exists for an idea, all lifecycle actions (Review/Accept/Finalize/View tasks) live on the
  * plan's own card in the Plans section — one source of truth instead of duplicating buttons here. The idea
@@ -2444,11 +2542,17 @@ function renderIdeaLifecycleActions(args: {
   hasPlanningChatSession: boolean;
   activeDraftPlanArtifactSummary: Record<string, unknown> | null;
   linkedPlanArtifactSummary: Record<string, unknown> | null;
+  linkedPlanArtifact?: unknown;
+  activeDraftPlanArtifact?: unknown;
+  ideasUnifiedModelEnabled: boolean;
 }): string {
   const viewPlanTarget = args.activeDraftPlanArtifactSummary ?? args.linkedPlanArtifactSummary;
+  const planRef = resolveIdeaRowPlanRef(args);
   const resumeButton = ideaPlanButton(
-    args.hasPlanningChatSession || args.lifecycleState === "needs_revision" ? "Resume planning" : "Plan this",
-    "idea-plan"
+    args.hasPlanningChatSession || args.lifecycleState === "needs_revision" ? "Resume planning" : "Plan",
+    "idea-plan",
+    "",
+    { title: "Resume or start planning (start-idea-planning)" }
   );
   switch (args.lifecycleState) {
     case "planning":
@@ -2457,7 +2561,36 @@ function renderIdeaLifecycleActions(args: {
     case "needs_revision":
     case "approval_ready":
     case "accepted":
-    case "finalized":
+    case "finalized": {
+      const planId = String(viewPlanTarget?.planId ?? "").trim();
+      const planRef = String(viewPlanTarget?.planRef ?? "").trim();
+      const openPlanCardButton =
+        planId.length > 0
+          ? ideaPlanButton("Open plan", "idea-open-plan-card", ` data-plan-id="${escapeHtmlAttr(planId)}"`, {
+              secondary: true
+            })
+          : ideaPlanButton("Open plan", "idea-open-plan-card", "", {
+              secondary: true,
+              disabled: true,
+              title: "Plan identity is incomplete. Refresh the dashboard and try again."
+            });
+      const checkDeliveryButton =
+        args.lifecycleState === "accepted" && planRef.length > 0
+          ? ideaPlanButton(
+              "Check delivery",
+              "idea-check-delivery",
+              ` data-plan-ref="${escapeHtmlAttr(planRef)}"`,
+              { title: "Check delivery task refs and transition to delivered when complete" }
+            )
+          : "";
+      return (
+        '<span class="wc-plan-lifecycle-chip">' +
+        escapeHtml(ideaLifecycleChipLabel(args.lifecycleState)) +
+        "</span>" +
+        openPlanCardButton +
+        checkDeliveryButton
+      );
+    }
     case "superseded": {
       const planId = String(viewPlanTarget?.planId ?? "").trim();
       const openPlanCardButton =
@@ -2479,11 +2612,14 @@ function renderIdeaLifecycleActions(args: {
     }
     case "open":
     default:
-      return ideaPlanButton("Plan this", "idea-plan");
+      return renderIdeaBrainstormPlanButtons(planRef, args.ideasUnifiedModelEnabled);
   }
 }
 
-function renderDashboardIdeasSectionInnerHtml(rawIdeas: unknown): string {
+function renderDashboardIdeasSectionInnerHtml(
+  rawIdeas: unknown,
+  ideasUnifiedModelEnabled: boolean
+): string {
   const ideas = rawIdeas && typeof rawIdeas === "object" ? (rawIdeas as Record<string, unknown>) : {};
   const available = ideas.available === true;
   const top = Array.isArray(ideas.top) ? ideas.top.slice(0, 5) : [];
@@ -2539,8 +2675,16 @@ function renderDashboardIdeasSectionInnerHtml(rawIdeas: unknown): string {
         lifecycleState,
         hasPlanningChatSession,
         activeDraftPlanArtifactSummary,
-        linkedPlanArtifactSummary
+        linkedPlanArtifactSummary,
+        linkedPlanArtifact: row.linkedPlanArtifact,
+        activeDraftPlanArtifact: row.activeDraftPlanArtifact,
+        ideasUnifiedModelEnabled
       });
+      const brainstormDetailPanel = ideasUnifiedModelEnabled
+        ? renderIdeaPlanBrainstormDetailPanel(
+            activeDraftPlanArtifactSummary ?? linkedPlanArtifactSummary
+          )
+        : "";
       return (
         '<div class="wc-ideas-row" draggable="true" data-wc-idea-id="' +
         idAttr +
@@ -2566,6 +2710,9 @@ function renderDashboardIdeasSectionInnerHtml(rawIdeas: unknown): string {
         '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="idea-delete">Delete</button>' +
         "</span>" +
         "</div>" +
+        (brainstormDetailPanel
+          ? '<div class="wc-idea-brainstorm-detail-panel">' + brainstormDetailPanel + "</div>"
+          : "") +
         '<div class="wc-ideas-edit-form" data-wc-ideas-edit-form="1" hidden>' +
         '<input class="wc-input" data-wc-idea-edit-title="1" type="text" maxlength="180" value="' +
         titleAttr +
@@ -4534,7 +4681,11 @@ function renderPlanArtifactExecutionLinkagesTable(
 }
 
 /** Reuses the same PlanArtifact lifecycle actions as the Ideas rows, keyed off the plan's own status (not an idea's). */
-function renderPlanArtifactCardActions(row: Record<string, unknown>, effectiveStatusRaw: string): string {
+function renderPlanArtifactCardActions(
+  row: Record<string, unknown>,
+  effectiveStatusRaw: string,
+  ideasUnifiedModelEnabled: boolean
+): string {
   const planId = String(row.planId ?? "").trim();
   const planRef = String(row.planRef ?? "").trim();
   const version = typeof row.version === "number" ? row.version : Number(row.version ?? 0);
@@ -4544,6 +4695,7 @@ function renderPlanArtifactCardActions(row: Record<string, unknown>, effectiveSt
     ? undefined
     : { disabled: true, title: "Plan identity is incomplete. Refresh the dashboard and try again." };
   const viewPlanButton = ideaPlanButton("View plan", "idea-view-plan", attrs, { secondary: true });
+  const secondaryBrainstorm = planCardSecondaryBrainstormButton(row, effectiveStatusRaw, ideasUnifiedModelEnabled);
   switch (effectiveStatusRaw) {
     case "draft":
       return (
@@ -4552,7 +4704,9 @@ function renderPlanArtifactCardActions(row: Record<string, unknown>, effectiveSt
           "plan-artifact-review",
           attrs,
           identityOptions ?? { title: "Review this draft plan with the PlanArtifact rubric" }
-        ) + viewPlanButton
+        ) +
+        viewPlanButton +
+        secondaryBrainstorm
       );
     case "needs_revision": {
       const sourceIdeaId = String(row.sourceIdeaId ?? "").trim();
@@ -4565,7 +4719,7 @@ function renderPlanArtifactCardActions(row: Record<string, unknown>, effectiveSt
               { title: "Resume planning to resolve review blockers" }
             )
           : "";
-      return resumeButton + viewPlanButton;
+      return resumeButton + viewPlanButton + secondaryBrainstorm;
     }
     case "approval_ready": {
       const blockerCount = numberOrZero(row.blockerCount);
@@ -4583,7 +4737,9 @@ function renderPlanArtifactCardActions(row: Record<string, unknown>, effectiveSt
           "plan-artifact-accept",
           attrs,
           identityOptions ?? (canAccept ? undefined : { disabled: true, title: acceptTitle })
-        ) + viewPlanButton
+        ) +
+        viewPlanButton +
+        secondaryBrainstorm
       );
     }
     case "accepted":
@@ -4593,7 +4749,9 @@ function renderPlanArtifactCardActions(row: Record<string, unknown>, effectiveSt
           "plan-artifact-finalize",
           attrs,
           identityOptions ?? { title: "Finalize this accepted plan into ready queue tasks" }
-        ) + viewPlanButton
+        ) +
+        viewPlanButton +
+        secondaryBrainstorm
       );
     case "finalized": {
       const phaseKey = String(row.phaseKey ?? "").trim();
@@ -4605,17 +4763,21 @@ function renderPlanArtifactCardActions(row: Record<string, unknown>, effectiveSt
               disabled: true,
               title: tasksGenerated ? "Phase key unavailable for this finalized plan." : "No tasks found for this plan yet."
             });
-      return viewTasksButton + viewPlanButton;
+      return viewTasksButton + viewPlanButton + secondaryBrainstorm;
     }
     case "superseded":
       return viewPlanButton;
+    case "planning":
+    case "delivered":
+    case "reviewed":
+      return viewPlanButton + secondaryBrainstorm;
     default:
-      return viewPlanButton;
+      return viewPlanButton + secondaryBrainstorm;
   }
 }
 
 /** Condensed, progressively-disclosed card for one PlanArtifact. Reused for both current and recent/finalized plans. */
-function renderPlanArtifactCard(row: Record<string, unknown>): string {
+function renderPlanArtifactCard(row: Record<string, unknown>, ideasUnifiedModelEnabled: boolean): string {
   const title = String(row.title ?? "").trim() || "Untitled Plan";
   const planId = String(row.planId ?? "").trim();
   const planRef = String(row.planRef ?? "").trim();
@@ -4680,7 +4842,7 @@ function renderPlanArtifactCard(row: Record<string, unknown>): string {
     detailRows.push("<dt>Review summary</dt><dd>" + escapeHtml(reviewSummaryText) + "</dd>");
   }
 
-  const actionsHtml = renderPlanArtifactCardActions(row, effectiveStatusRaw);
+  const actionsHtml = renderPlanArtifactCardActions(row, effectiveStatusRaw, ideasUnifiedModelEnabled);
   const factsHtml = renderPlanArtifactFactsMeta(row);
   const wbsHtml = renderPlanArtifactWbsTable(planId, wbsRows, wbsRowCount, phaseKey);
   const risksHtml = renderPlanArtifactRiskTable(planId, riskRows, riskCount);
@@ -4781,12 +4943,13 @@ function renderPlanArtifactCard(row: Record<string, unknown>): string {
 
 function renderPlanTitleGroupsInStateBucket(
   stateKey: PlanArtifactDisplayState,
-  rows: Record<string, unknown>[]
+  rows: Record<string, unknown>[],
+  ideasUnifiedModelEnabled: boolean
 ): string {
   const groups = groupPlanRowsByTitle(rows);
   return groups
     .map((group) => {
-      const cardsHtml = group.rows.map(renderPlanArtifactCard).join("");
+      const cardsHtml = group.rows.map((row) => renderPlanArtifactCard(row, ideasUnifiedModelEnabled)).join("");
       const gridHtml = '<div class="wc-plan-card-grid">' + cardsHtml + "</div>";
       if (group.rows.length <= 1) {
         return gridHtml;
@@ -4808,7 +4971,43 @@ function renderPlanTitleGroupsInStateBucket(
     .join("");
 }
 
-function renderPlanArtifactsSectionInnerHtml(planArtifact: unknown): string {
+function isBrainstormingPlanArtifactRow(row: Record<string, unknown>): boolean {
+  const status = String(row.status ?? row.lifecycleStatus ?? "").trim().toLowerCase();
+  return status === "brainstorming" || status === "idea";
+}
+
+function renderPlanningPlansSectionInnerHtml(
+  d: Record<string, unknown>,
+  ideasUnifiedModelEnabled: boolean
+): string {
+  if (!ideasUnifiedModelEnabled) {
+    return renderPlanArtifactsSectionInnerHtml(d.planArtifact, false);
+  }
+  const brainstormingHtml = renderBrainstormingIdeasRollupSection(d.brainstormingIdeas);
+  const planArtifact = d.planArtifact;
+  if (!planArtifact || typeof planArtifact !== "object") {
+    return brainstormingHtml + renderPlanArtifactsSectionInnerHtml(planArtifact);
+  }
+  const summary = planArtifact as Record<string, unknown>;
+  const current =
+    summary.current && typeof summary.current === "object" ? (summary.current as Record<string, unknown>) : null;
+  const recent = Array.isArray(summary.recent)
+    ? (summary.recent.filter((row) => row && typeof row === "object") as Record<string, unknown>[])
+    : [];
+  const filteredRecent = recent.filter((row) => !isBrainstormingPlanArtifactRow(row));
+  const filteredCurrent = current && !isBrainstormingPlanArtifactRow(current) ? current : null;
+  const filteredPlanArtifact = {
+    ...summary,
+    current: filteredCurrent,
+    recent: filteredRecent
+  };
+  return brainstormingHtml + renderPlanArtifactsSectionInnerHtml(filteredPlanArtifact, ideasUnifiedModelEnabled);
+}
+
+function renderPlanArtifactsSectionInnerHtml(
+  planArtifact: unknown,
+  ideasUnifiedModelEnabled = false
+): string {
   if (!planArtifact || typeof planArtifact !== "object") {
     return '<section class="dash-card wc-plan-artifacts-section" aria-label="Plans"><p><b>Plans</b></p><p class="muted">No plans yet.</p></section>';
   }
@@ -4842,7 +5041,7 @@ function renderPlanArtifactsSectionInnerHtml(planArtifact: unknown): string {
     if (rows.length === 0) {
       return "";
     }
-    const bodyHtml = renderPlanTitleGroupsInStateBucket(bucket.key, rows);
+    const bodyHtml = renderPlanTitleGroupsInStateBucket(bucket.key, rows, ideasUnifiedModelEnabled);
     const openAttr = bucket.defaultOpen ? " open" : "";
     return (
       '<details class="wc-plan-state-bucket"' +
@@ -7351,9 +7550,10 @@ export function renderDashboardRootInnerHtml(
     return "<p>No payload</p>";
   }
   const { d, ss, ws } = base;
+  const ideasUnifiedModelEnabled = resolveDashboardIdeasUnifiedModelEnabled(options);
   const phaseCtx = createDashboardPhaseRenderContext(d, ws);
   const queueCtx = createDashboardQueueRenderContext(d, ws, phaseCtx);
-  const planArtifactInner = renderPlanArtifactsSectionInnerHtml(d.planArtifact);
+  const planArtifactInner = renderPlanningPlansSectionInnerHtml(d, ideasUnifiedModelEnabled);
   const phaseJournalInner = renderPhaseNotesOverviewSection(phaseJournal ?? null, d.phaseJournalStats);
   const deferred = options?.deferredSections ?? new Set<DashboardSectionId>();
 
@@ -7369,7 +7569,7 @@ export function renderDashboardRootInnerHtml(
   );
   const ideasWrapped = wrapDashboardSection(
     "ideas",
-    renderDashboardIdeasSectionInnerHtml(d.ideas),
+    renderDashboardIdeasSectionInnerHtml(d.ideas, ideasUnifiedModelEnabled),
     deferred.has("ideas")
   );
   const planArtifactWrapped = wrapDashboardSection(
@@ -7442,6 +7642,10 @@ export function renderDashboardSectionInnerHtml(
     return null;
   }
   const { d, ss, ws } = base;
+  const ideasUnifiedModelEnabled =
+    options?.ideasUnifiedModelEnabled !== undefined
+      ? options.ideasUnifiedModelEnabled
+      : parseIdeasUnifiedModelEnv();
   switch (sectionId) {
     case "overview": {
       const phaseCtx = createDashboardPhaseRenderContext(d, ws);
@@ -7453,9 +7657,9 @@ export function renderDashboardSectionInnerHtml(
       return renderPhaseRosterSectionInnerHtml(ws, phaseCtx);
     }
     case "ideas":
-      return renderDashboardIdeasSectionInnerHtml(d.ideas);
+      return renderDashboardIdeasSectionInnerHtml(d.ideas, ideasUnifiedModelEnabled);
     case "plan-artifact":
-      return renderPlanArtifactsSectionInnerHtml(d.planArtifact);
+      return renderPlanningPlansSectionInnerHtml(d, ideasUnifiedModelEnabled);
     case "queue": {
       const phaseCtx = createDashboardPhaseRenderContext(d, ws);
       return createDashboardQueueRenderContext(d, ws, phaseCtx).queueInner;

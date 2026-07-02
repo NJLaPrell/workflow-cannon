@@ -49,6 +49,11 @@ import {
 import { runReviewPlanArtifact } from "./review-plan-artifact-handler.js";
 import { runAcceptPlanArtifact } from "./accept-plan-artifact-handler.js";
 import { runFinalizePlanToPhase } from "./finalize-plan-to-phase-handler.js";
+import { runGeneratePlanDocument } from "./generate-plan-document-handler.js";
+import {
+  attachGeneratedPlanDocPath,
+  bestEffortGeneratePlanDocument
+} from "./best-effort-generate-plan-document.js";
 import { runGetPlanArtifact } from "./get-plan-artifact-handler.js";
 import { runExecutePlanArtifact } from "./execute-plan-artifact-handler.js";
 import { attachPolicyMeta } from "../task-engine/attach-planning-response-meta.js";
@@ -60,6 +65,7 @@ const REVIEW_PLAN_ARTIFACT_INSTRUCTION = "src/modules/planning/instructions/revi
 const ACCEPT_PLAN_ARTIFACT_INSTRUCTION = "src/modules/planning/instructions/accept-plan-artifact.md";
 const FINALIZE_PLAN_TO_PHASE_INSTRUCTION =
   "src/modules/planning/instructions/finalize-plan-to-phase.md";
+const GENERATE_PLAN_DOCUMENT_INSTRUCTION = "src/modules/planning/instructions/generate-plan-document.md";
 const EXECUTE_PLAN_ARTIFACT_INSTRUCTION = "src/modules/planning/instructions/execute-plan-artifact.md";
 
 async function recordBuildPlanActivity(
@@ -141,6 +147,10 @@ export const planningModule: WorkflowModule = {
       return runGetPlanArtifact((command.args ?? {}) as Record<string, unknown>, ctx);
     }
 
+    if (command.name === "generate-plan-document") {
+      return runGeneratePlanDocument((command.args ?? {}) as Record<string, unknown>, ctx);
+    }
+
     if (command.name === "draft-plan-artifact") {
       const args = command.args ?? {};
       const artifactRaw = args.artifact;
@@ -214,6 +224,10 @@ export const planningModule: WorkflowModule = {
             stores.sqliteDual.getPlanningGeneration(),
             pg.warnings
           );
+          attachGeneratedPlanDocPath(
+            replay.data as Record<string, unknown>,
+            await bestEffortGeneratePlanDocument(ctx, prelude.artifact.planId)
+          );
           return replay;
         }
         let committed;
@@ -221,7 +235,7 @@ export const planningModule: WorkflowModule = {
           stores.sqliteDual.withTransaction(() => {
             committed = commitPlanArtifactDraftPersist({
               workspacePath: ctx.workspacePath,
-              artifact: validation.artifact,
+              artifact: prelude.kind === "commit" ? prelude.artifact : validation.artifact,
               clientMutationId,
               digest: prelude.digest,
               effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined,
@@ -251,6 +265,10 @@ export const planningModule: WorkflowModule = {
           ctx,
           stores.sqliteDual.getPlanningGeneration(),
           pg.warnings
+        );
+        attachGeneratedPlanDocPath(
+          persisted.data as Record<string, unknown>,
+          await bestEffortGeneratePlanDocument(ctx, committed!.artifact.planId)
         );
         return persisted;
       }

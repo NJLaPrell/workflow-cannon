@@ -20,6 +20,7 @@ import {
   buildTeamExecutionSupervisorPrompt,
   buildPlanningInterviewPrompt,
   buildPlanningInterviewResumePrompt,
+  buildBrainstormSessionPrompt,
   buildTaskToPhaseBranchPrompt,
   buildTranscriptChurnResearchPrompt
 } from "../../playbook-chat-prompts.js";
@@ -114,6 +115,7 @@ import {
   type PhaseJournalKitPayload,
   type PlanningInterviewWizardPanel
 } from "./render-dashboard.js";
+import { isIdeasUnifiedModelEnabledForDashboard } from "../../ideas-unified-model-feature-flag.js";
 import { renderConfigPanelShellHtml } from "../config/config-panel-shell.js";
 import {
   buildPhaseKeySuggestion,
@@ -498,6 +500,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   private readonly originalRunForPaint: CommandClient["runForDashboardPaint"];
   private inFlightStatusHydration: Promise<KitRunResult> | null = null;
   private readonly inFlightIdeaPlan = new Map<string, Promise<void>>();
+  private readonly inFlightIdeaBrainstorm = new Map<string, Promise<void>>();
 
   constructor(
     private readonly extensionUri: vscode.Uri,
@@ -638,7 +641,18 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     return {
       ...extra,
       readModeBadge: this.readPath.getModeBadge(),
-      mcpStatus: resolveMcpHostStatus(this.client.getWorkspaceRoot())
+      mcpStatus: resolveMcpHostStatus(this.client.getWorkspaceRoot()),
+      ideasUnifiedModelEnabled: isIdeasUnifiedModelEnabledForDashboard()
+    };
+  }
+
+  private dashboardRenderSectionOptions(
+    extra?: Parameters<typeof renderDashboardSectionInnerHtml>[2]
+  ): Parameters<typeof renderDashboardSectionInnerHtml>[2] {
+    return {
+      ...extra,
+      mcpStatus: extra?.mcpStatus ?? resolveMcpHostStatus(this.client.getWorkspaceRoot()),
+      ideasUnifiedModelEnabled: isIdeasUnifiedModelEnabledForDashboard()
     };
   }
 
@@ -867,11 +881,10 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       inner = renderDashboardSectionInnerHtml(
         sectionId,
         this.wrapDashboardPayloadForRender(raw as Record<string, unknown>),
-        {
+        this.dashboardRenderSectionOptions({
           editorIntegration,
-          embeddedCaePanelHtml: this.lastEmbeddedCaePanelHtml,
-          mcpStatus: this.dashboardRenderRootOptions().mcpStatus
-        }
+          embeddedCaePanelHtml: this.lastEmbeddedCaePanelHtml
+        })
       );
     } catch (e) {
       logWc(
@@ -1212,6 +1225,19 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         const title = typeof msg.title === "string" ? msg.title.trim() : "";
         const note = typeof msg.note === "string" ? msg.note.trim() : "";
         await this.onPrefillIdeaPlanningChat(ideaId, title, note);
+      }
+      if (msg?.type === "prefillIdeaBrainstormChat") {
+        const ideaId = typeof msg.ideaId === "string" ? msg.ideaId.trim() : "";
+        const planRef = typeof msg.planRef === "string" ? msg.planRef.trim() : "";
+        const title = typeof msg.title === "string" ? msg.title.trim() : "";
+        const note = typeof msg.note === "string" ? msg.note.trim() : "";
+        await this.onPrefillIdeaBrainstormChat(ideaId, planRef, title, note);
+      }
+      if (msg?.type === "checkIdeaDelivery") {
+        const planRef = typeof msg.planRef === "string" ? msg.planRef.trim() : "";
+        if (planRef.length > 0) {
+          await this.onCheckIdeaDelivery(planRef);
+        }
       }
       if (msg?.type === "prefillImprovementTriageChat") {
         const raw = msg?.taskId;
@@ -2388,10 +2414,11 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     for (const sectionId of sectionsToPatch) {
       const inner = renderDashboardSectionInnerHtml(sectionId, this.dashboardRenderPayload(raw), {
-        editorIntegration,
-        phaseJournal,
-        embeddedCaePanelHtml,
-        mcpStatus
+        ...this.dashboardRenderSectionOptions({
+          editorIntegration,
+          phaseJournal,
+          embeddedCaePanelHtml
+        })
       });
       if (inner == null) {
         continue;
@@ -3608,6 +3635,28 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
   }
 
+  private async onPrefillIdeaBrainstormChat(
+    ideaId: string,
+    planRef: string,
+    title: string,
+    note: string
+  ): Promise<void> {
+    const flightKey = `${ideaId}:${planRef}`;
+    const existing = this.inFlightIdeaBrainstorm.get(flightKey);
+    if (existing) {
+      return existing;
+    }
+    const work = this.runPrefillIdeaBrainstormChat(ideaId, planRef, title, note);
+    this.inFlightIdeaBrainstorm.set(flightKey, work);
+    try {
+      await work;
+    } finally {
+      if (this.inFlightIdeaBrainstorm.get(flightKey) === work) {
+        this.inFlightIdeaBrainstorm.delete(flightKey);
+      }
+    }
+  }
+
   private async runPrefillIdeaPlanningChat(ideaId: string, _title: string, _note: string): Promise<void> {
     if (ideaId.length === 0) {
       await this.view?.webview.postMessage({
@@ -3672,6 +3721,103 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       type: "wcIdeaMutationResult",
       operation: "plan",
       ideaId,
+      ok: true,
+      message
+    });
+  }
+
+  private async runPrefillIdeaBrainstormChat(
+    ideaId: string,
+    planRef: string,
+    title: string,
+    note: string
+  ): Promise<void> {
+    if (planRef.length === 0) {
+      await this.view?.webview.postMessage({
+        type: "wcIdeaMutationResult",
+        operation: "brainstorm",
+        ideaId,
+        ok: false,
+        message: "Unified IdeaPlan planRef required for brainstorming."
+      });
+      return;
+    }
+    const out = await this.runMutationWithGenerationRetry("start-brainstorm-session", {
+      planRef,
+      ...(ideaId.length > 0 ? { ideaId } : {}),
+      clientMutationId: this.dashboardIdeaBrainstormMutationId(ideaId, planRef),
+      policyApproval: dashboardPolicyApproval(
+        { workflowId: "ideas", action: "brainstorm", command: "start-brainstorm-session" },
+        {}
+      )
+    });
+    if (!out.ok) {
+      const message = this.formatStartBrainstormSessionError(out);
+      await this.view?.webview.postMessage({
+        type: "wcIdeaMutationResult",
+        operation: "brainstorm",
+        ideaId,
+        ok: false,
+        message
+      });
+      return;
+    }
+    const data = out.data && typeof out.data === "object" ? (out.data as Record<string, unknown>) : {};
+    const sessionIndex = typeof data.sessionIndex === "number" ? data.sessionIndex : Number(data.sessionIndex ?? NaN);
+    if (!Number.isFinite(sessionIndex)) {
+      await this.view?.webview.postMessage({
+        type: "wcIdeaMutationResult",
+        operation: "brainstorm",
+        ideaId,
+        ok: false,
+        message: "start-brainstorm-session succeeded but returned no sessionIndex. Refresh and try again."
+      });
+      return;
+    }
+    const resolvedIdeaId =
+      typeof data.ideaId === "string" && data.ideaId.trim().length > 0 ? data.ideaId.trim() : ideaId;
+    const resolvedPlanRef =
+      typeof data.planRef === "string" && data.planRef.trim().length > 0 ? data.planRef.trim() : planRef;
+    const promptFromResponse =
+      typeof data.brainstormChatPrompt === "string" ? data.brainstormChatPrompt.trim() : "";
+    const brainstormChatPrompt =
+      promptFromResponse.length > 0
+        ? promptFromResponse
+        : buildBrainstormSessionPrompt({
+            ideaId: resolvedIdeaId,
+            title,
+            note,
+            sessionIndex,
+            planRef: resolvedPlanRef
+          });
+    ingestPlanningMetaFromData(data);
+    await this.applyDashboardMutationInvalidation("ideas");
+
+    const prefill = await prefillCursorChat(brainstormChatPrompt, { newChat: true });
+    const appended = data.transitioned !== true;
+    const message = prefill.opened
+      ? appended
+        ? prefill.route === "vscode-chat-command"
+          ? "Brainstorm session appended in chat."
+          : "Brainstorm session appended."
+        : prefill.route === "vscode-chat-command"
+          ? "Brainstorm prompt opened in chat."
+          : "Brainstorm prompt opened."
+      : prefill.openedDraft
+        ? appended
+          ? "Brainstorm session prompt opened in an editor and copied to clipboard."
+          : "Brainstorm prompt opened in an editor and copied to clipboard."
+        : prefill.copiedToClipboard
+          ? appended
+            ? "Brainstorm session prompt copied to clipboard. Paste it into chat."
+            : "Brainstorm prompt copied to clipboard. Paste it into chat."
+          : appended
+            ? "Brainstorm session prepared."
+            : "Brainstorm prompt prepared.";
+    await this.view?.webview.postMessage({
+      type: "wcIdeaMutationResult",
+      operation: "brainstorm",
+      ideaId: resolvedIdeaId,
       ok: true,
       message
     });
@@ -3824,6 +3970,27 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
 
   private dashboardIdeaPlanMutationId(ideaId: string): string {
     return `dashboard-idea-plan-${ideaId}`;
+  }
+
+  private dashboardIdeaBrainstormMutationId(ideaId: string, planRef: string): string {
+    const ideaKey = ideaId.length > 0 ? ideaId : "plan";
+    const planKey = planRef.replace(/[^a-zA-Z0-9._:-]+/g, "-");
+    return `dashboard-idea-brainstorm-${ideaKey}-${planKey}`;
+  }
+
+  private formatStartBrainstormSessionError(out: KitRunResult): string {
+    const code = String(out.code ?? "start-brainstorm-session-failed");
+    const base = (out.message ?? code).slice(0, 900);
+    if (code === "idea-plan-not-found") {
+      return `${base} Refresh the dashboard or link a unified IdeaPlan document first.`;
+    }
+    if (code === "invalid-args") {
+      return `${base} Verify planRef is shaped like plan-artifact:<planId>.`;
+    }
+    if (code === "planning-generation-mismatch") {
+      return `${base} Refresh the dashboard and try again.`;
+    }
+    return base;
   }
 
   private formatStartIdeaPlanningError(out: KitRunResult): string {
@@ -4038,6 +4205,51 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     if (phaseKey.length > 0) {
       await this.view?.webview.postMessage({ type: "wcOpenQueueForPhase", phaseKey });
     }
+  }
+
+  private async onCheckIdeaDelivery(planRef: string): Promise<void> {
+    await this.ingestPlanningGenFromDashboard();
+    const r = await this.runMutationWithGenerationRetry("check-delivery-status", {
+      planRef,
+      policyApproval: dashboardPolicyApproval(
+        { workflowId: "ideas", action: "check-delivery", command: "check-delivery-status" },
+        { humanRationale: "Check IdeaPlan delivery from Dashboard", phaseKey: null, taskId: null }
+      )
+    });
+    if (!r.ok) {
+      await vscode.window.showErrorMessage(
+        `Check delivery failed: ${(r.message ?? r.code ?? JSON.stringify(r)).slice(0, 520)}`
+      );
+      await this.view?.webview.postMessage({
+        type: "wcIdeaMutationResult",
+        operation: "check-delivery",
+        ok: false,
+        message: String(r.message ?? r.code ?? "check-delivery-status failed")
+      });
+      return;
+    }
+    ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
+    const data = r.data && typeof r.data === "object" ? (r.data as Record<string, unknown>) : {};
+    const transitioned = data.transitioned === true;
+    const deliveryStatus =
+      data.deliveryStatus && typeof data.deliveryStatus === "object"
+        ? (data.deliveryStatus as Record<string, unknown>)
+        : {};
+    const completed = Number(deliveryStatus.completed ?? 0);
+    const total = Number(deliveryStatus.total ?? 0);
+    const pending = Number(deliveryStatus.pending ?? 0);
+    await vscode.window.showInformationMessage(
+      transitioned
+        ? `IdeaPlan delivered (${completed}/${total} tasks complete).`
+        : `Delivery in progress: ${completed}/${total} complete, ${pending} pending.`
+    );
+    await this.applyDashboardMutationInvalidation("ideas");
+    await this.view?.webview.postMessage({
+      type: "wcIdeaMutationResult",
+      operation: "check-delivery",
+      ok: true,
+      message: transitioned ? "delivered" : "pending"
+    });
   }
 
   private async onViewPlanArtifact(planId: string, version: number): Promise<void> {
@@ -6897,6 +7109,36 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       overflow-wrap: anywhere;
     }
     .wc-plan-text-rollup li { margin: 0 0 4px 0; }
+    .wc-brainstorming-ideas-section { margin-top: 10px; }
+    .wc-brainstorming-ideas-list { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
+    .wc-brainstorming-idea-row {
+      border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.35));
+      border-radius: 6px;
+      padding: 8px 10px;
+      background: var(--vscode-editor-background);
+    }
+    .wc-brainstorming-idea-head { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: flex-start; justify-content: space-between; }
+    .wc-brainstorming-idea-title { margin: 0; font-size: 12px; }
+    .wc-brainstorming-idea-id { margin-left: 6px; font-size: 11px; }
+    .wc-brainstorm-score-pills { display: flex; flex-wrap: wrap; gap: 6px; }
+    .wc-brainstorm-score-pill {
+      display: inline-flex;
+      gap: 4px;
+      align-items: center;
+      padding: 2px 6px;
+      border-radius: 999px;
+      font-size: 10px;
+      background: var(--vscode-badge-background, rgba(127,127,127,.2));
+      color: var(--vscode-badge-foreground, inherit);
+    }
+    .wc-brainstorm-score-label { opacity: 0.85; }
+    .wc-brainstorm-score-value { font-weight: 600; }
+    .wc-brainstorm-session-history { margin-top: 8px; font-size: 11px; }
+    .wc-brainstorm-session-history-body { margin-top: 6px; overflow-x: auto; }
+    .wc-brainstorm-session-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+    .wc-brainstorm-session-table th,
+    .wc-brainstorm-session-table td { border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.35)); padding: 4px 6px; text-align: left; }
+    .wc-idea-brainstorm-detail-panel { margin: 6px 0 0 28px; }
     .wc-plan-value-rationale-text { margin: 6px 0 0 0; font-size: 11px; overflow-wrap: anywhere; }
     .wc-plan-architecture-overview-text { margin: 6px 0 0 0; font-size: 11px; overflow-wrap: anywhere; }
     .wc-plan-wbs-table-extended { display: block; overflow-x: auto; max-width: 100%; }

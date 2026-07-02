@@ -12,15 +12,24 @@ import {
 } from "../../core/planning/plan-artifact-review-record.js";
 import {
   applyLatestReviewToPlanArtifactIndex,
-  readLatestPlanArtifact,
   readPlanArtifactIndex,
-  readPlanArtifactVersion,
   writeNextPlanArtifactVersion
 } from "../../core/planning/plan-artifact-storage.js";
 import { validatePlanArtifactDraftInput } from "../../core/planning/validate-plan-artifact.js";
 import { openPlanningStores } from "../../core/planning/index.js";
+import {
+  ideaPlanStatusInvalidResult,
+  persistUnifiedIdeaPlanReview,
+  readLatestStoredPlanArtifact,
+  readStoredPlanArtifactVersion,
+  unifiedIdeaPlanStoragePath
+} from "./unified-idea-plan-review-accept.js";
 import { promotePlanningSessionAfterReview } from "../ideas/planning-session-after-review.js";
 import { toPlanningChatSessionResponse } from "../ideas/planning-chat-session.js";
+import {
+  attachGeneratedPlanDocPath,
+  bestEffortGeneratePlanDocument
+} from "./best-effort-generate-plan-document.js";
 import { planningGenPolicyGate } from "../task-engine/planning-generation-gate.js";
 import { attachPolicyMeta } from "../task-engine/attach-planning-response-meta.js";
 import { TaskEngineError } from "../task-engine/transitions.js";
@@ -125,7 +134,7 @@ async function resolveArtifact(
   args: Record<string, unknown>,
   ctx: ModuleLifecycleContext
 ): Promise<
-  | { ok: true; artifact: PlanArtifactV1; planId: string }
+  | { ok: true; artifact: PlanArtifactV1; planId: string; unifiedDocument?: import("../ideas/idea-plan-types.js").IdeaPlanDocument }
   | { ok: false; result: ModuleCommandResult }
 > {
   const artifactRaw = args.artifact;
@@ -171,10 +180,36 @@ async function resolveArtifact(
   }
 
   const version = parseVersion(args.version);
+  const fallback: PlanArtifactV1 = {
+    schemaVersion: 1,
+    planId: planIdRaw,
+    version: version ?? 1,
+    planRef: `plan-artifact:${planIdRaw}`,
+    status: "draft",
+    identity: { title: "Plan", planningType: "new-feature" },
+    goals: [],
+    nonGoals: [],
+    valueAssessment: { impact: "", confidence: "medium" },
+    riskAssessment: [],
+    technicalImpact: { systemsTouched: [] },
+    testingStrategy: { layers: [], criticalPaths: [] },
+    implementationGuidance: [],
+    whatNotToDo: [],
+    assumptions: [],
+    openQuestions: [],
+    wbs: [],
+    phaseRecommendations: [],
+    provenance: {
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      createdBy: "agent",
+      source: "draft-plan-artifact"
+    }
+  };
   const loaded =
     version !== undefined
-      ? readPlanArtifactVersion(ctx.workspacePath, planIdRaw, version)
-      : readLatestPlanArtifact(ctx.workspacePath, planIdRaw);
+      ? readStoredPlanArtifactVersion(ctx.workspacePath, planIdRaw, version, fallback)
+      : readLatestStoredPlanArtifact(ctx.workspacePath, planIdRaw, fallback);
 
   if (!loaded) {
     return {
@@ -196,7 +231,12 @@ async function resolveArtifact(
     };
   }
 
-  return { ok: true, artifact: loaded, planId: planIdRaw };
+  return {
+    ok: true,
+    artifact: loaded.artifact,
+    planId: planIdRaw,
+    ...(loaded.kind === "idea-plan" ? { unifiedDocument: loaded.document } : {})
+  };
 }
 
 export async function runReviewPlanArtifact(
@@ -235,37 +275,85 @@ export async function runReviewPlanArtifact(
   }
 
   const now = new Date().toISOString();
-  const reviewedBody: PlanArtifactV1 = {
-    ...resolved.artifact,
-    status: "reviewed",
-    provenance: {
-      ...resolved.artifact.provenance,
-      updatedAt: now
-    }
-  };
+  const unifiedDocument = resolved.unifiedDocument;
 
-  let written;
+  if (unifiedDocument && unifiedDocument.status !== "planning") {
+    return ideaPlanStatusInvalidResult(
+      "idea-plan-status-invalid",
+      `review-plan-artifact with recordReview requires unified document status planning (current: ${unifiedDocument.status})`,
+      resolved.planId,
+      unifiedDocument.status,
+      "planning"
+    );
+  }
+
+  let writtenArtifact!: PlanArtifactV1;
+  let storagePath!: string;
+  let responseStatus: string = resolved.artifact.status;
   let planningChatSession: ReturnType<typeof toPlanningChatSessionResponse> | undefined;
   try {
     stores.sqliteDual.withTransaction(() => {
       const sqliteDb = stores.sqliteDual.getDatabase();
-      written = writeNextPlanArtifactVersion(ctx.workspacePath, reviewedBody, {
-        effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined,
-        sqliteDb
-      });
-      const reviewRecord = buildPlanArtifactReviewRecord({
-        artifact: written!.artifact,
-        result: review,
-        reviewedAt: now
-      });
-      applyLatestReviewToPlanArtifactIndex(sqliteDb, written!.artifact.planId, reviewRecord);
+      let reviewRecord: ReturnType<typeof buildPlanArtifactReviewRecord>;
+
+      if (unifiedDocument) {
+        const persisted = persistUnifiedIdeaPlanReview({
+          workspacePath: ctx.workspacePath,
+          document: unifiedDocument,
+          review,
+          reviewedAt: now,
+          sqliteDb,
+          artifactForReview: resolved.artifact
+        });
+        reviewRecord = persisted.reviewRecord;
+        writtenArtifact = {
+          ...resolved.artifact,
+          planId: persisted.document.planId,
+          version: persisted.document.version,
+          planRef: persisted.document.planRef,
+          status: "reviewed",
+          provenance: {
+            ...resolved.artifact.provenance,
+            updatedAt: now
+          }
+        };
+        storagePath = unifiedIdeaPlanStoragePath(
+          ctx.workspacePath,
+          persisted.document.planId,
+          persisted.document.version
+        );
+        responseStatus = persisted.document.status;
+      } else {
+        const reviewedBody: PlanArtifactV1 = {
+          ...resolved.artifact,
+          status: "reviewed",
+          provenance: {
+            ...resolved.artifact.provenance,
+            updatedAt: now
+          }
+        };
+        const written = writeNextPlanArtifactVersion(ctx.workspacePath, reviewedBody, {
+          effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined,
+          sqliteDb
+        });
+        reviewRecord = buildPlanArtifactReviewRecord({
+          artifact: written.artifact,
+          result: review,
+          reviewedAt: now
+        });
+        applyLatestReviewToPlanArtifactIndex(sqliteDb, written.artifact.planId, reviewRecord);
+        writtenArtifact = written.artifact;
+        storagePath = written.paths.artifactFileRelative(written.artifact.version);
+        responseStatus = written.artifact.status;
+      }
+
       const promoted = promotePlanningSessionAfterReview(
         sqliteDb,
-        written!.artifact,
+        writtenArtifact!,
         reviewRecord,
         now,
         {
-          ideaId: cleanIdeaId(args.ideaId),
+          ideaId: cleanIdeaId(args.ideaId) ?? unifiedDocument?.ideaId,
           sessionId: cleanSessionId(args.sessionId)
         }
       );
@@ -284,27 +372,31 @@ export async function runReviewPlanArtifact(
     throw err;
   }
 
-  const storagePath = written!.paths.artifactFileRelative(written!.artifact.version);
   const index = readPlanArtifactIndex(
     ctx.workspacePath,
-    written!.artifact.planId,
+    writtenArtifact!.planId,
     ctx.effectiveConfig as Record<string, unknown> | undefined
   );
-  const result = reviewSuccessResult(review, written!.artifact, {
-    planId: written!.artifact.planId,
-    version: written!.artifact.version,
-    planRef: written!.artifact.planRef,
-    status: written!.artifact.status,
-    storagePath,
+  const result = reviewSuccessResult(review, writtenArtifact!, {
+    planId: writtenArtifact!.planId,
+    version: writtenArtifact!.version,
+    planRef: writtenArtifact!.planRef,
+    status: responseStatus!,
+    storagePath: storagePath!,
     recordReview: true,
     ...(index?.latestReview ? { persistedReview: index.latestReview } : {}),
-    ...(planningChatSession ? { planningChatSession } : {})
+    ...(planningChatSession ? { planningChatSession } : {}),
+    ...(unifiedDocument ? { ideaPlanStatus: responseStatus } : {})
   });
   attachPolicyMeta(
     result.data as Record<string, unknown>,
     ctx,
     stores.sqliteDual.getPlanningGeneration(),
     pg.warnings
+  );
+  attachGeneratedPlanDocPath(
+    result.data as Record<string, unknown>,
+    await bestEffortGeneratePlanDocument(ctx, writtenArtifact!.planId)
   );
   return result;
 }

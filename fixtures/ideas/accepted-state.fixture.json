@@ -1,0 +1,96 @@
+{
+  "schemaVersion": 1,
+  "planId": "f7a3b891-c5d2-4e6f-9a08-1b2c3d4e5f60",
+  "version": 3,
+  "planRef": "plan-artifact:f7a3b891-c5d2-4e6f-9a08-1b2c3d4e5f60",
+  "status": "accepted",
+  "ideaId": "I005",
+  "createdAt": "2026-07-02T09:00:00.000Z",
+  "updatedAt": "2026-07-02T13:00:00.000Z",
+  "brainstorm": {
+    "sessions": [
+      {
+        "sessionId": "bsess-20260702-idea-unified-doc",
+        "startedAt": "2026-07-02T10:00:00.000Z",
+        "updatedAt": "2026-07-02T10:45:00.000Z",
+        "completedAt": "2026-07-02T10:45:00.000Z",
+        "inputs": {
+          "contextProblem": "Operators need one durable IdeaPlan document instead of parallel session and plan entities that can drift.",
+          "contextAudience": "Workflow Cannon maintainers and planning agents driving Ideas rows through brainstorming.",
+          "valueImpact": 8,
+          "valueReach": 7,
+          "valueUrgency": 6,
+          "valueStrategicFit": 9,
+          "riskTechnical": 5,
+          "riskOperational": 4,
+          "riskUnknowns": 6,
+          "riskReversibility": 3,
+          "tShirtSize": "M",
+          "complexity": 9,
+          "confidenceEvidence": 7,
+          "confidenceExpertise": 8,
+          "confidenceClarity": 6,
+          "unknownsNotes": "Exact command names for start/update brainstorm session may evolve in WBS-2B.",
+          "alternativesConsidered": "Keep separate SQLite entities for brainstorm sessions; rejected due to drift risk called out in ADR.",
+          "sessionNotes": "Proceed to planning once envelope schema and loader land in WBS-1D/WBS-2A."
+        },
+        "scores": {
+          "value": 7.6,
+          "risk": 4.7,
+          "effort": 7.8,
+          "confidence": 6.95,
+          "priority": 61,
+          "tShirtSize": "M",
+          "complexity": 9
+        },
+        "notes": "Fixture session for brainstorming.schema.json validation and scoring formula tests."
+      }
+    ],
+    "activeSessionId": "bsess-20260702-idea-unified-doc"
+  },
+  "plan": {
+    "title": "Unified IdeaPlan lifecycle",
+    "summary": "Structured plan with WBS rows authored from brainstorm synthesis.",
+    "planningType": "new-feature",
+    "wbsRowCount": 5
+  },
+  "review": {
+    "passed": true,
+    "blockerCount": 0,
+    "openQuestionCount": 1,
+    "warningCount": 2,
+    "reviewedAt": "2026-07-02T12:00:00.000Z"
+  },
+  "acceptance": {
+    "acceptedAt": "2026-07-02T13:00:00.000Z",
+    "acceptedBy": "operator@example.com",
+    "acceptedVersion": 3
+  },
+  "agentDirective": {
+    "schemaVersion": 1,
+    "state": "accepted",
+    "questions": [
+      {
+        "phase": "context",
+        "fieldName": "acceptanceConfirmation",
+        "prompt": "Confirm the acceptance record pins the reviewed plan version.",
+        "type": "text",
+        "guidance": "Present acceptance.acceptedAt, acceptance.acceptedBy, and acceptance.acceptedVersion. The accepted version must match the current document version."
+      },
+      {
+        "phase": "context",
+        "fieldName": "linkedPlanPromotion",
+        "prompt": "Has the accepted plan been promoted to linkedPlanArtifact on the source idea?",
+        "type": "text",
+        "guidance": "Acceptance is durable only when the plan-artifact version is pinned and the ideas row linked_plan_artifact pointer is updated per ADR."
+      },
+      {
+        "phase": "session-notes",
+        "fieldName": "deliveryReadiness",
+        "prompt": "Is the plan ready for delivery handoff (task materialization)?",
+        "type": "text",
+        "guidance": "Transition to delivered after execution linkage and delivery metadata are recorded."
+      }
+    ]
+  }
+}
