@@ -34,6 +34,7 @@
         "risk": { "$ref": "#/$defs/score1to10" },
         "effort": { "$ref": "#/$defs/score1to10" },
         "confidence": { "$ref": "#/$defs/score1to10" },
+        "priority": { "$ref": "#/$defs/score1to10" },
         "tShirtSize": { "$ref": "#/$defs/tShirtSize" },
         "complexity": { "$ref": "#/$defs/score1to10" }
       }
