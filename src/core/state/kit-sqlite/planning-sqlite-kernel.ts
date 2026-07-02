@@ -81,31 +81,55 @@ function columnNames(db: SqliteDatabase, table: string): Set<string> {
   return new Set(rows.map((r) => r.name));
 }
 
-function migrateV1ToV2(db: SqliteDatabase): void {
-  db.exec(TASK_ENGINE_TASKS_DDL);
-  const cols = columnNames(db, "workspace_planning_state");
-  if (!cols.has("transition_log_json")) {
-    db.exec(
-      "ALTER TABLE workspace_planning_state ADD COLUMN transition_log_json TEXT NOT NULL DEFAULT '[]'"
-    );
+/** Concurrent test runs can race the same migration; tolerate duplicate-column errors. */
+function addColumnIfMissing(
+  db: SqliteDatabase,
+  table: string,
+  column: string,
+  alterSql: string
+): void {
+  if (columnNames(db, table).has(column)) {
+    return;
   }
-  if (!cols.has("mutation_log_json")) {
-    db.exec(
-      "ALTER TABLE workspace_planning_state ADD COLUMN mutation_log_json TEXT NOT NULL DEFAULT '[]'"
-    );
-  }
-  if (!cols.has("relational_tasks")) {
-    db.exec("ALTER TABLE workspace_planning_state ADD COLUMN relational_tasks INTEGER NOT NULL DEFAULT 0");
+  try {
+    db.exec(alterSql);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (!message.includes("duplicate column name") || columnNames(db, table).has(column)) {
+      throw err;
+    }
   }
 }
 
+function migrateV1ToV2(db: SqliteDatabase): void {
+  db.exec(TASK_ENGINE_TASKS_DDL);
+  addColumnIfMissing(
+    db,
+    "workspace_planning_state",
+    "transition_log_json",
+    "ALTER TABLE workspace_planning_state ADD COLUMN transition_log_json TEXT NOT NULL DEFAULT '[]'"
+  );
+  addColumnIfMissing(
+    db,
+    "workspace_planning_state",
+    "mutation_log_json",
+    "ALTER TABLE workspace_planning_state ADD COLUMN mutation_log_json TEXT NOT NULL DEFAULT '[]'"
+  );
+  addColumnIfMissing(
+    db,
+    "workspace_planning_state",
+    "relational_tasks",
+    "ALTER TABLE workspace_planning_state ADD COLUMN relational_tasks INTEGER NOT NULL DEFAULT 0"
+  );
+}
+
 function migrateV2ToV3(db: SqliteDatabase): void {
-  const cols = columnNames(db, "workspace_planning_state");
-  if (!cols.has("planning_generation")) {
-    db.exec(
-      "ALTER TABLE workspace_planning_state ADD COLUMN planning_generation INTEGER NOT NULL DEFAULT 0"
-    );
-  }
+  addColumnIfMissing(
+    db,
+    "workspace_planning_state",
+    "planning_generation",
+    "ALTER TABLE workspace_planning_state ADD COLUMN planning_generation INTEGER NOT NULL DEFAULT 0"
+  );
 }
 
 function migrateV3ToV4(db: SqliteDatabase): void {
