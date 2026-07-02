@@ -4,7 +4,9 @@ agentCapsule|v=1|command=accept-plan-artifact|module=planning|schema_only=pnpm e
 
 # accept-plan-artifact
 
-Record explicit operator acceptance of a PlanArtifact v1; pin `approvedVersion` and set `status: accepted`. Acceptance requires the latest version to have a recorded review with zero blockers; warnings alone do not block.
+Record explicit operator acceptance of a PlanArtifact v1 or unified IdeaPlan document; pin `approvedVersion` and set `status: accepted`. Acceptance requires the latest version to have a recorded review with zero blockers; warnings alone do not block.
+
+For unified IdeaPlan documents, the latest stored version must be in `reviewed` status with a populated `review` section. Acceptance transitions `reviewed` → `accepted` and writes the `acceptance` section while preserving external argv shapes.
 
 **Contract:** repo-root **`PLANNER_COMMANDS.md`** §4 · **Schema:** **`PLANNER_SCHEMA.md`** §2.14 · **Agent runbook:** **`.ai/runbooks/plan-artifact-workflow.md`**
 
@@ -44,7 +46,8 @@ pnpm exec wk run accept-plan-artifact '{"planId":"550e8400-e29b-41d4-a716-446655
 | --- | --- | --- |
 | `plan-artifact-accepted` | true | `status` → `accepted`; `approvalRecord` persisted. |
 | `plan-artifact-accept-idempotent-replay` | true | Already accepted same version with same payload. |
-| `plan-artifact-accept-blocked` | false | Latest version is not a reviewed version, reviewed version has blockers, or open questions are not fully resolved/deferred. |
+| `plan-artifact-accept-blocked` | false | Latest version is not a reviewed version, reviewed version has blockers, open questions are not fully resolved/deferred, or unified document is not in `reviewed` status. |
+| `idea-plan-status-invalid` | false | Unified document is not in `reviewed` when accepting. |
 | `plan-artifact-version-mismatch` | false | `version` or `approvalRecord.approvedVersion` ≠ latest. |
 | `plan-artifact-not-found` | false | Unknown `planId` / `version`. |
 | `plan-artifact-schema-invalid` | false | Malformed `approvalRecord`. |
