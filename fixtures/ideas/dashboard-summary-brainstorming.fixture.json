@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "description": "Expected dashboard-summary brainstormingIdeas rollup slice for a single brainstorming-state IdeaPlan linked to an open idea.",
+  "brainstormingIdeas": {
+    "schemaVersion": 1,
+    "available": true,
+    "count": 1,
+    "top": [
+      {
+        "ideaId": "I005",
+        "title": "Unified IdeaPlan document",
+        "planRef": "plan-artifact:f7a3b891-c5d2-4e6f-9a08-1b2c3d4e5f60",
+        "planId": "f7a3b891-c5d2-4e6f-9a08-1b2c3d4e5f60",
+        "status": "brainstorming",
+        "synthesis": {
+          "valueScore": 7.6,
+          "riskScore": 4.7,
+          "effortScore": 7.8,
+          "confidenceScore": 6.95,
+          "priorityScore": 61,
+          "sessionCount": 1
+        }
+      }
+    ]
+  },
+  "ideasTopPlanSummary": {
+    "planId": "f7a3b891-c5d2-4e6f-9a08-1b2c3d4e5f60",
+    "planRef": "plan-artifact:f7a3b891-c5d2-4e6f-9a08-1b2c3d4e5f60",
+    "status": "brainstorming",
+    "version": 1,
+    "brainstormSynthesis": {
+      "valueScore": 7.6,
+      "riskScore": 4.7,
+      "effortScore": 7.8,
+      "confidenceScore": 6.95,
+      "priorityScore": 61,
+      "sessionCount": 1
+    }
+  }
+}

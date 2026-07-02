@@ -6,10 +6,12 @@ import type {
 } from "../../../contracts/dashboard-summary-run.js";
 import { readLatestPlanArtifact, readPlanArtifactIndex } from "../../../core/planning/plan-artifact-storage.js";
 import { readActiveDraftPlanArtifact } from "../../ideas/idea-planning-metadata.js";
+import { readIdeaPlanArtifact } from "../../ideas/idea-plan-artifact-storage.js";
 import { listIdeas } from "../../ideas/idea-store.js";
 import { listPlanningChatSessions } from "../../ideas/planning-chat-session.js";
 import { parsePlanIdFromPlanArtifactRef } from "../plan-artifact-execute-policy.js";
 import type { SqliteDualPlanningStore } from "../persistence/sqlite-dual-planning.js";
+import { mapBrainstormSynthesisForDashboard } from "./build-dashboard-brainstorm-synthesis.js";
 
 function emptyIdeasSummary(): DashboardIdeasSummary {
   return {
@@ -59,34 +61,50 @@ function buildIdeaPlanArtifactSummary(
     planId,
     ctx.effectiveConfig as Record<string, unknown> | undefined
   );
-  if (!index || index.planRef !== normalizedRef) {
-    cache.set(normalizedRef, null);
-    return undefined;
+  if (index && index.planRef === normalizedRef) {
+    const latestArtifact = readLatestPlanArtifact(ctx.workspacePath, planId);
+    const latestReview =
+      index.latestReview &&
+      index.latestReview.planRef === index.planRef &&
+      index.latestReview.reviewedVersion === index.currentVersion
+        ? {
+            planRef: index.latestReview.planRef,
+            passed: index.latestReview.passed,
+            blockerCount: index.latestReview.blockerCount,
+            warningCount: index.latestReview.warningCount,
+            openQuestionCount: index.latestReview.openQuestionCount
+          }
+        : undefined;
+    const phaseKey = normalizePhaseKey(latestArtifact);
+    const summary: DashboardIdeaPlanArtifactSummary = {
+      planId,
+      planRef: index.planRef,
+      status: index.status,
+      version: index.currentVersion,
+      ...(latestReview ? { latestReview } : {}),
+      ...(phaseKey ? { phaseKey } : {})
+    };
+    cache.set(normalizedRef, summary);
+    return summary;
   }
-  const latestArtifact = readLatestPlanArtifact(ctx.workspacePath, planId);
-  const latestReview =
-    index.latestReview &&
-    index.latestReview.planRef === index.planRef &&
-    index.latestReview.reviewedVersion === index.currentVersion
-      ? {
-          planRef: index.latestReview.planRef,
-          passed: index.latestReview.passed,
-          blockerCount: index.latestReview.blockerCount,
-          warningCount: index.latestReview.warningCount,
-          openQuestionCount: index.latestReview.openQuestionCount
-        }
-      : undefined;
-  const phaseKey = normalizePhaseKey(latestArtifact);
-  const summary: DashboardIdeaPlanArtifactSummary = {
-    planId,
-    planRef: index.planRef,
-    status: index.status,
-    version: index.currentVersion,
-    ...(latestReview ? { latestReview } : {}),
-    ...(phaseKey ? { phaseKey } : {})
-  };
-  cache.set(normalizedRef, summary);
-  return summary;
+  const ideaPlan = readIdeaPlanArtifact(ctx.workspacePath, normalizedRef);
+  if (ideaPlan) {
+    const brainstormSynthesis =
+      ideaPlan.status === "brainstorming"
+        ? mapBrainstormSynthesisForDashboard(ideaPlan.brainstorm)
+        : undefined;
+    const summary: DashboardIdeaPlanArtifactSummary = {
+      planId: ideaPlan.planId,
+      planRef: ideaPlan.planRef,
+      status: ideaPlan.status,
+      version: ideaPlan.version,
+      ...(brainstormSynthesis ? { brainstormSynthesis } : {})
+    };
+    cache.set(normalizedRef, summary);
+    return summary;
+  }
+  cache.set(normalizedRef, null);
+  return undefined;
 }
 
 function buildDashboardIdeaRow(
