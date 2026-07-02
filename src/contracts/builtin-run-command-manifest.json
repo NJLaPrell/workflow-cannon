@@ -1676,6 +1676,33 @@
     "policySensitivity": "sensitive"
   },
   {
+    "moduleId": "ideas",
+    "name": "start-brainstorm-session",
+    "file": "start-brainstorm-session.md",
+    "description": "Start or append a brainstorm session on a unified IdeaPlan artifact with idea→brainstorming transition on first call.",
+    "policyOperationId": "ideas.persist",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "ideas",
+    "name": "update-brainstorm-session",
+    "file": "update-brainstorm-session.md",
+    "description": "Merge partial brainstorm session fields and compute schema-weighted scores at a session index.",
+    "policyOperationId": "ideas.persist",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "ideas",
+    "name": "complete-brainstorm",
+    "file": "complete-brainstorm.md",
+    "description": "Validate brainstorm section and transition unified IdeaPlan from brainstorming to planning.",
+    "policyOperationId": "ideas.persist",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
     "moduleId": "team-execution",
     "name": "list-assignments",
     "file": "list-assignments.md",
