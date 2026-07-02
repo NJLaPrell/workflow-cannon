@@ -106,6 +106,16 @@
       "file": "src/core/planning/wbs-dependency-resolution.ts",
       "specifier": "../../modules/task-engine/types.js",
       "rationale": "WBS finalize dependency resolution correlates generated task drafts with TaskEntity status; type-only import pending planning façade."
+    },
+    {
+      "file": "src/core/planning/render-plan-document-markdown.ts",
+      "specifier": "../../modules/ideas/idea-plan-planning-init.js",
+      "rationale": "Plan document renderer types unified IdeaPlan planning payload sections; type-only import pending ideas façade."
+    },
+    {
+      "file": "src/core/planning/render-plan-document-markdown.ts",
+      "specifier": "../../modules/ideas/idea-plan-types.js",
+      "rationale": "Plan document renderer types unified IdeaPlan envelope; type-only import pending ideas façade."
     }
   ]
 }
