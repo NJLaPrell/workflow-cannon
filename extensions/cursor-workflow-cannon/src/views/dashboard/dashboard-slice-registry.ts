@@ -113,7 +113,8 @@ export const DASHBOARD_SLICE_REGISTRY: readonly DashboardSliceDescriptor[] = [
     freshnessTtlMs: 10_000,
     freshnessSlaMs: 10_000,
     staleOnMutationKinds: ["overview", "task-queue", "plan-artifact", "workspace-wide"],
-    extractPayload: (data) => pick(data, [...SHARED_META_KEYS, "planArtifact", "workspaceStatus"])
+    extractPayload: (data) =>
+      pick(data, [...SHARED_META_KEYS, "planArtifact", "workspaceStatus", "brainstormingIdeas"])
   },
   {
     name: "agent",
@@ -192,7 +193,7 @@ export const DASHBOARD_SLICE_REGISTRY: readonly DashboardSliceDescriptor[] = [
     freshnessTtlMs: 10_000,
     freshnessSlaMs: 10_000,
     staleOnMutationKinds: ["ideas", "plan-artifact", "workspace-wide"],
-    extractPayload: (data) => pick(data, [...SHARED_META_KEYS, "ideas"])
+    extractPayload: (data) => pick(data, [...SHARED_META_KEYS, "ideas", "brainstormingIdeas"])
   },
   {
     name: "team",

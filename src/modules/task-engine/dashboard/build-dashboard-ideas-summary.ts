@@ -12,6 +12,7 @@ import { listPlanningChatSessions } from "../../ideas/planning-chat-session.js";
 import { parsePlanIdFromPlanArtifactRef } from "../plan-artifact-execute-policy.js";
 import type { SqliteDualPlanningStore } from "../persistence/sqlite-dual-planning.js";
 import { mapBrainstormSynthesisForDashboard } from "./build-dashboard-brainstorm-synthesis.js";
+import { mapBrainstormSessionsForDashboard } from "./map-dashboard-brainstorm-sessions.js";
 
 function emptyIdeasSummary(): DashboardIdeasSummary {
   return {
@@ -89,16 +90,15 @@ function buildIdeaPlanArtifactSummary(
   }
   const ideaPlan = readIdeaPlanArtifact(ctx.workspacePath, normalizedRef);
   if (ideaPlan) {
-    const brainstormSynthesis =
-      ideaPlan.status === "brainstorming"
-        ? mapBrainstormSynthesisForDashboard(ideaPlan.brainstorm)
-        : undefined;
+    const brainstormSynthesis = mapBrainstormSynthesisForDashboard(ideaPlan.brainstorm);
+    const brainstormSessions = mapBrainstormSessionsForDashboard(ideaPlan.brainstorm?.sessions);
     const summary: DashboardIdeaPlanArtifactSummary = {
       planId: ideaPlan.planId,
       planRef: ideaPlan.planRef,
       status: ideaPlan.status,
       version: ideaPlan.version,
-      ...(brainstormSynthesis ? { brainstormSynthesis } : {})
+      ...(brainstormSynthesis ? { brainstormSynthesis } : {}),
+      ...(brainstormSessions.length > 0 ? { brainstormSessions } : {})
     };
     cache.set(normalizedRef, summary);
     return summary;
