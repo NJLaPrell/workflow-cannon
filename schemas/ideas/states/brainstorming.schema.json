@@ -1,0 +1,388 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://workflow-cannon.dev/schemas/ideas/states/brainstorming.schema.json",
+  "title": "IdeaPlan brainstorming state",
+  "description": "Unified IdeaPlan document shape and agent contract when status is brainstorming. The brainstorm section is required; the plan section must be absent. Session records are mutable in place: start-brainstorm-session creates the slot; update-brainstorm-session fills inputs and scores progressively until completedAt is set.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "planId",
+    "version",
+    "planRef",
+    "status",
+    "ideaId",
+    "createdAt",
+    "updatedAt",
+    "brainstorm",
+    "agentDirective"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "planId": { "type": "string", "minLength": 1 },
+    "version": { "type": "integer", "minimum": 1 },
+    "planRef": { "type": "string", "minLength": 1 },
+    "status": { "const": "brainstorming" },
+    "ideaId": { "type": "string", "pattern": "^I[0-9]+$" },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "updatedAt": { "type": "string", "format": "date-time" },
+    "brainstorm": { "$ref": "#/$defs/brainstormSection" },
+    "agentDirective": { "$ref": "#/$defs/agentDirective" },
+    "review": { "$ref": "#/$defs/reviewSection" },
+    "acceptance": { "$ref": "#/$defs/acceptanceSection" },
+    "delivery": { "$ref": "#/$defs/deliverySection" },
+    "plan": false
+  },
+  "x-validTransitions": ["brainstorming", "planning"],
+  "x-sessionMutability": {
+    "model": "mutable-in-place",
+    "createCommand": "start-brainstorm-session",
+    "updateCommand": "update-brainstorm-session",
+    "description": "start-brainstorm-session allocates a sessionId and timestamps; update-brainstorm-session progressively fills inputs, computes scores, and may set completedAt without replacing the session row."
+  },
+  "x-canonicalAgentDirective": { "$ref": "#/$defs/canonicalAgentDirective" },
+  "$defs": {
+    "score1to10": {
+      "type": "number",
+      "minimum": 1,
+      "maximum": 10
+    },
+    "tShirtSize": {
+      "type": "string",
+      "enum": ["XS", "S", "M", "L", "XL"]
+    },
+    "brainstormScoreInputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "value": { "$ref": "#/$defs/score1to10" },
+        "risk": { "$ref": "#/$defs/score1to10" },
+        "effort": { "$ref": "#/$defs/score1to10" },
+        "confidence": { "$ref": "#/$defs/score1to10" },
+        "tShirtSize": { "$ref": "#/$defs/tShirtSize" },
+        "complexity": { "$ref": "#/$defs/score1to10" }
+      }
+    },
+    "brainstormSessionInputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "valueImpact": { "$ref": "#/$defs/score1to10" },
+        "valueReach": { "$ref": "#/$defs/score1to10" },
+        "valueUrgency": { "$ref": "#/$defs/score1to10" },
+        "valueStrategicFit": { "$ref": "#/$defs/score1to10" },
+        "riskTechnical": { "$ref": "#/$defs/score1to10" },
+        "riskOperational": { "$ref": "#/$defs/score1to10" },
+        "riskUnknowns": { "$ref": "#/$defs/score1to10" },
+        "riskReversibility": { "$ref": "#/$defs/score1to10" },
+        "tShirtSize": { "$ref": "#/$defs/tShirtSize" },
+        "complexity": { "$ref": "#/$defs/score1to10" },
+        "confidenceEvidence": { "$ref": "#/$defs/score1to10" },
+        "confidenceExpertise": { "$ref": "#/$defs/score1to10" },
+        "confidenceClarity": { "$ref": "#/$defs/score1to10" },
+        "contextProblem": { "type": "string", "minLength": 1 },
+        "contextAudience": { "type": "string", "minLength": 1 },
+        "unknownsNotes": { "type": "string" },
+        "alternativesConsidered": { "type": "string" },
+        "sessionNotes": { "type": "string" }
+      }
+    },
+    "brainstormSession": {
+      "$ref": "https://workflow-cannon.dev/schemas/ideas/brainstorm-session.schema.json"
+    },
+    "brainstormSection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sessions"],
+      "properties": {
+        "sessions": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/brainstormSession" }
+        },
+        "activeSessionId": { "type": "string", "minLength": 1 }
+      }
+    },
+    "reviewSection": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "passed": { "type": "boolean" },
+        "blockerCount": { "type": "integer", "minimum": 0 },
+        "openQuestionCount": { "type": "integer", "minimum": 0 },
+        "warningCount": { "type": "integer", "minimum": 0 },
+        "reviewedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "acceptanceSection": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "acceptedAt": { "type": "string", "format": "date-time" },
+        "acceptedBy": { "type": "string", "minLength": 1 },
+        "acceptedVersion": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "deliverySection": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "deliveredAt": { "type": "string", "format": "date-time" },
+        "taskCount": { "type": "integer", "minimum": 0 },
+        "phaseKey": { "type": "string", "minLength": 1 }
+      }
+    },
+    "agentDirectiveQuestion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["phase", "fieldName", "prompt", "type"],
+      "properties": {
+        "phase": {
+          "type": "string",
+          "enum": [
+            "context",
+            "value-scoring",
+            "risk-scoring",
+            "effort-scoring",
+            "confidence-scoring",
+            "unknowns",
+            "alternatives",
+            "session-notes"
+          ]
+        },
+        "fieldName": { "type": "string", "minLength": 1 },
+        "prompt": { "type": "string", "minLength": 1 },
+        "type": { "type": "string", "enum": ["score-1-10", "text", "enum"] },
+        "validRange": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["min", "max"],
+          "properties": {
+            "min": { "type": "number" },
+            "max": { "type": "number" }
+          }
+        },
+        "validValues": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "minItems": 1
+        },
+        "guidance": { "type": "string", "minLength": 1 }
+      }
+    },
+    "agentDirectiveComputeStep": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "formula"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "formula": { "type": "string", "minLength": 1 },
+        "description": { "type": "string" }
+      }
+    },
+    "agentDirectiveSynthesisStep": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["formula"],
+      "properties": {
+        "formula": { "type": "string", "minLength": 1 },
+        "description": { "type": "string" }
+      }
+    },
+    "agentDirective": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "state", "questions"],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "state": { "const": "brainstorming" },
+        "questions": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/agentDirectiveQuestion" }
+        },
+        "computeSteps": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/agentDirectiveComputeStep" }
+        },
+        "synthesisStep": { "$ref": "#/$defs/agentDirectiveSynthesisStep" }
+      }
+    },
+    "canonicalAgentDirective": {
+      "schemaVersion": 1,
+      "state": "brainstorming",
+      "questions": [
+        {
+          "phase": "context",
+          "fieldName": "contextProblem",
+          "prompt": "In one or two sentences, what problem or opportunity does this idea address?",
+          "type": "text",
+          "guidance": "Restate the operator's idea in plain language before scoring. Capture the core pain or opportunity, not implementation details."
+        },
+        {
+          "phase": "context",
+          "fieldName": "contextAudience",
+          "prompt": "Who benefits first if this idea succeeds?",
+          "type": "text",
+          "guidance": "Name the primary user or operator persona. Secondary audiences can be noted in session notes later."
+        },
+        {
+          "phase": "value-scoring",
+          "fieldName": "valueImpact",
+          "prompt": "How strong is the expected impact if this idea succeeds (1=minimal, 10=transformative)?",
+          "type": "score-1-10",
+          "validRange": { "min": 1, "max": 10 },
+          "guidance": "Score the magnitude of outcome improvement, not confidence that it will happen."
+        },
+        {
+          "phase": "value-scoring",
+          "fieldName": "valueReach",
+          "prompt": "How many users, workflows, or systems would materially benefit (1=narrow, 10=broad)?",
+          "type": "score-1-10",
+          "validRange": { "min": 1, "max": 10 },
+          "guidance": "Count durable beneficiaries across the workspace, not one-off convenience."
+        },
+        {
+          "phase": "value-scoring",
+          "fieldName": "valueUrgency",
+          "prompt": "How time-sensitive is pursuing this idea now (1=can wait, 10=blocking now)?",
+          "type": "score-1-10",
+          "validRange": { "min": 1, "max": 10 },
+          "guidance": "Higher scores mean delay has clear cost or risk; lower scores mean the idea is valuable but not urgent."
+        },
+        {
+          "phase": "value-scoring",
+          "fieldName": "valueStrategicFit",
+          "prompt": "How well does this idea align with current roadmap and strategic goals (1=orthogonal, 10=core)?",
+          "type": "score-1-10",
+          "validRange": { "min": 1, "max": 10 },
+          "guidance": "Score alignment with active phase goals and maintainer priorities, not generic importance."
+        },
+        {
+          "phase": "risk-scoring",
+          "fieldName": "riskTechnical",
+          "prompt": "How high is the technical execution risk (1=well understood, 10=high unknowns)?",
+          "type": "score-1-10",
+          "validRange": { "min": 1, "max": 10 },
+          "guidance": "Consider architecture novelty, dependency risk, and verification difficulty."
+        },
+        {
+          "phase": "risk-scoring",
+          "fieldName": "riskOperational",
+          "prompt": "How high is the operational or rollout risk (1=low blast radius, 10=wide blast radius)?",
+          "type": "score-1-10",
+          "validRange": { "min": 1, "max": 10 },
+          "guidance": "Include support burden, migration pain, and failure impact on active workflows."
+        },
+        {
+          "phase": "risk-scoring",
+          "fieldName": "riskUnknowns",
+          "prompt": "How many unresolved unknowns remain (1=few, 10=many critical gaps)?",
+          "type": "score-1-10",
+          "validRange": { "min": 1, "max": 10 },
+          "guidance": "Score open questions that could invalidate the approach if left unanswered."
+        },
+        {
+          "phase": "risk-scoring",
+          "fieldName": "riskReversibility",
+          "prompt": "If this idea fails or must roll back, how hard is recovery (1=easy rollback, 10=hard to unwind)?",
+          "type": "score-1-10",
+          "validRange": { "min": 1, "max": 10 },
+          "guidance": "Higher scores mean partial delivery or bad assumptions would be costly to reverse."
+        },
+        {
+          "phase": "effort-scoring",
+          "fieldName": "tShirtSize",
+          "prompt": "What T-shirt size best fits the first shippable slice?",
+          "type": "enum",
+          "validValues": ["XS", "S", "M", "L", "XL"],
+          "guidance": "Estimate relative delivery size for a focused implementation slice, not the entire multi-phase vision."
+        },
+        {
+          "phase": "effort-scoring",
+          "fieldName": "complexity",
+          "prompt": "How complex is the work independent of calendar time (1=straightforward, 10=deeply complex)?",
+          "type": "score-1-10",
+          "validRange": { "min": 1, "max": 10 },
+          "guidance": "T-shirt size and complexity are weighted independently in effortScore — a high-complexity M item intentionally scores higher than a low-complexity L item because complexity carries 60% of the effort blend."
+        },
+        {
+          "phase": "confidence-scoring",
+          "fieldName": "confidenceEvidence",
+          "prompt": "How strong is the supporting evidence (1=anecdotal, 10=strong proof)?",
+          "type": "score-1-10",
+          "validRange": { "min": 1, "max": 10 },
+          "guidance": "Include prior art, operator feedback, telemetry, or prior experiments."
+        },
+        {
+          "phase": "confidence-scoring",
+          "fieldName": "confidenceExpertise",
+          "prompt": "How available is the expertise needed to execute (1=scarce, 10=ready now)?",
+          "type": "score-1-10",
+          "validRange": { "min": 1, "max": 10 },
+          "guidance": "Consider team familiarity with affected modules and required review depth."
+        },
+        {
+          "phase": "confidence-scoring",
+          "fieldName": "confidenceClarity",
+          "prompt": "How clear is the problem and solution boundary (1=vague, 10=crisp)?",
+          "type": "score-1-10",
+          "validRange": { "min": 1, "max": 10 },
+          "guidance": "Higher clarity means acceptance criteria and scope boundaries are already obvious."
+        },
+        {
+          "phase": "unknowns",
+          "fieldName": "unknownsNotes",
+          "prompt": "List the top unknowns that could change the scores or scope.",
+          "type": "text",
+          "guidance": "Prefer concrete questions over generic risk statements. Unknowns here inform planning, not session scoring."
+        },
+        {
+          "phase": "alternatives",
+          "fieldName": "alternativesConsidered",
+          "prompt": "What alternatives did you consider and why is this approach preferred?",
+          "type": "text",
+          "guidance": "Capture at least one credible alternative, including doing nothing, and why it was deprioritized."
+        },
+        {
+          "phase": "session-notes",
+          "fieldName": "sessionNotes",
+          "prompt": "Add any session notes, assumptions, or follow-ups for the planning phase.",
+          "type": "text",
+          "guidance": "Keep notes concise and actionable. Do not duplicate computed scores here."
+        }
+      ],
+      "computeSteps": [
+        {
+          "id": "valueScore",
+          "formula": "valueScore = (valueImpact × 0.30) + (valueReach × 0.25) + (valueUrgency × 0.20) + (valueStrategicFit × 0.25)",
+          "description": "Weighted average of value sub-inputs."
+        },
+        {
+          "id": "riskScore",
+          "formula": "riskScore = (riskTechnical × 0.35) + (riskOperational × 0.25) + (riskUnknowns × 0.25) + (riskReversibility × 0.15)",
+          "description": "Weighted average of risk sub-inputs."
+        },
+        {
+          "id": "effortScore",
+          "formula": "effortScore = (tShirtSizeScore × 0.40) + (complexity × 0.60); tShirtSizeScore map: XS=2, S=4, M=6, L=8, XL=10",
+          "description": "Blend of T-shirt size and complexity. High-complexity M intentionally scores higher than low-complexity L."
+        },
+        {
+          "id": "confidenceScore",
+          "formula": "confidenceScore = (confidenceEvidence × 0.35) + (confidenceExpertise × 0.30) + (confidenceClarity × 0.35)",
+          "description": "Weighted average of confidence sub-inputs."
+        },
+        {
+          "id": "priorityScore",
+          "formula": "priorityScore = (valueScore × 0.35) + ((10 − riskScore) × 0.20) + ((10 − effortScore) × 0.25) + (confidenceScore × 0.20)",
+          "description": "Priority blends upside, inverted risk, inverted effort, and confidence."
+        }
+      ],
+      "synthesisStep": {
+        "formula": "if sessions.length===1 then synthesized=session.scores else for each score field synthesized[field]=latest[field]×0.60+mean(prior[field])×0.40",
+        "description": "N=1 edge case: when sessions.length===1, synthesized=session scores; else synthesized=latest×0.60+mean(prior)×0.40."
+      }
+    }
+  }
+}
