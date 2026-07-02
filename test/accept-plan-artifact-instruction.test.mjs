@@ -3,6 +3,8 @@
  */
 import assert from "node:assert/strict";
 import fs from "node:fs";
+import { mkdir, mkdtemp } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
@@ -20,6 +22,13 @@ const instructionPath = path.join(
   root,
   "src/modules/planning/instructions/accept-plan-artifact.md"
 );
+const SQLITE_CFG = { tasks: { persistenceBackend: "sqlite" } };
+
+async function tmpWorkspace() {
+  const workspace = await mkdtemp(path.join(os.tmpdir(), "wk-accept-plan-artifact-"));
+  await mkdir(path.join(workspace, ".workspace-kit", "tasks"), { recursive: true });
+  return workspace;
+}
 
 const SAMPLE_APPROVAL = {
   schemaVersion: 1,
@@ -65,9 +74,10 @@ describe("accept-plan-artifact instruction (T100465)", () => {
   });
 
   it("stub handler validates planId and approvalRecord argv", async () => {
+    const workspace = await tmpWorkspace();
     const missingPlan = await planningModule.onCommand(
       { name: "accept-plan-artifact", args: { approvalRecord: SAMPLE_APPROVAL } },
-      { runtimeVersion: "0.1", workspacePath: root }
+      { runtimeVersion: "0.1", workspacePath: workspace }
     );
     assert.equal(missingPlan.ok, false);
     assert.equal(missingPlan.code, "invalid-run-args");
@@ -77,7 +87,7 @@ describe("accept-plan-artifact instruction (T100465)", () => {
         name: "accept-plan-artifact",
         args: { planId: "550e8400-e29b-41d4-a716-446655440000" }
       },
-      { runtimeVersion: "0.1", workspacePath: root }
+      { runtimeVersion: "0.1", workspacePath: workspace }
     );
     assert.equal(missingRecord.ok, false);
     assert.equal(missingRecord.code, "plan-artifact-schema-invalid");
@@ -92,7 +102,7 @@ describe("accept-plan-artifact instruction (T100465)", () => {
           policyApproval: { confirmed: true, rationale: "instruction test" }
         }
       },
-      { runtimeVersion: "0.1", workspacePath: root, effectiveConfig: { tasks: { persistenceBackend: "sqlite" } } }
+      { runtimeVersion: "0.1", workspacePath: workspace, effectiveConfig: SQLITE_CFG }
     );
     assert.equal(notFound.ok, false);
     assert.equal(notFound.code, "plan-artifact-not-found");
