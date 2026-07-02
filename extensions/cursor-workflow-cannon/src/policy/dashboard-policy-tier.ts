@@ -44,6 +44,7 @@ export const DASHBOARD_POLICY_TIER_MATRIX: readonly DashboardPolicyTierRow[] = [
   { workflowId: "ideas", action: "plan", command: "start-idea-planning", tier: "routine" },
   { workflowId: "ideas", action: "delete", command: "delete-idea", tier: "routine" },
   { workflowId: "ideas", action: "reorder", command: "reorder-ideas", tier: "routine" },
+  { workflowId: "ideas", action: "check-delivery", command: "check-delivery-status", tier: "routine" },
   { workflowId: "palette-run-transition", action: "start", command: "run-transition", tier: "routine" },
   { workflowId: "palette-run-transition", action: "complete", command: "run-transition", tier: "routine" },
   { workflowId: "palette-run-transition", action: "accept", command: "run-transition", tier: "routine" },
