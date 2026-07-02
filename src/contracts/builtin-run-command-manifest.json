@@ -1712,6 +1712,15 @@
     "policySensitivity": "sensitive"
   },
   {
+    "moduleId": "ideas",
+    "name": "migrate-ideas-to-unified-document",
+    "file": "migrate-ideas-to-unified-document.md",
+    "description": "Promote legacy Ideas rows and PlanArtifact files into unified IdeaPlan documents with dry-run and snapshot safety.",
+    "policyOperationId": "ideas.persist",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
     "moduleId": "team-execution",
     "name": "list-assignments",
     "file": "list-assignments.md",
