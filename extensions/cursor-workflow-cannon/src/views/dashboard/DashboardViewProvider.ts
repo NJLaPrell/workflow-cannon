@@ -1213,6 +1213,12 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         const note = typeof msg.note === "string" ? msg.note.trim() : "";
         await this.onPrefillIdeaPlanningChat(ideaId, title, note);
       }
+      if (msg?.type === "checkIdeaDelivery") {
+        const planRef = typeof msg.planRef === "string" ? msg.planRef.trim() : "";
+        if (planRef.length > 0) {
+          await this.onCheckIdeaDelivery(planRef);
+        }
+      }
       if (msg?.type === "prefillImprovementTriageChat") {
         const raw = msg?.taskId;
         const taskId = typeof raw === "string" ? raw.trim() : "";
@@ -4038,6 +4044,51 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     if (phaseKey.length > 0) {
       await this.view?.webview.postMessage({ type: "wcOpenQueueForPhase", phaseKey });
     }
+  }
+
+  private async onCheckIdeaDelivery(planRef: string): Promise<void> {
+    await this.ingestPlanningGenFromDashboard();
+    const r = await this.runMutationWithGenerationRetry("check-delivery-status", {
+      planRef,
+      policyApproval: dashboardPolicyApproval(
+        { workflowId: "ideas", action: "check-delivery", command: "check-delivery-status" },
+        { humanRationale: "Check IdeaPlan delivery from Dashboard", phaseKey: null, taskId: null }
+      )
+    });
+    if (!r.ok) {
+      await vscode.window.showErrorMessage(
+        `Check delivery failed: ${(r.message ?? r.code ?? JSON.stringify(r)).slice(0, 520)}`
+      );
+      await this.view?.webview.postMessage({
+        type: "wcIdeaMutationResult",
+        operation: "check-delivery",
+        ok: false,
+        message: String(r.message ?? r.code ?? "check-delivery-status failed")
+      });
+      return;
+    }
+    ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
+    const data = r.data && typeof r.data === "object" ? (r.data as Record<string, unknown>) : {};
+    const transitioned = data.transitioned === true;
+    const deliveryStatus =
+      data.deliveryStatus && typeof data.deliveryStatus === "object"
+        ? (data.deliveryStatus as Record<string, unknown>)
+        : {};
+    const completed = Number(deliveryStatus.completed ?? 0);
+    const total = Number(deliveryStatus.total ?? 0);
+    const pending = Number(deliveryStatus.pending ?? 0);
+    await vscode.window.showInformationMessage(
+      transitioned
+        ? `IdeaPlan delivered (${completed}/${total} tasks complete).`
+        : `Delivery in progress: ${completed}/${total} complete, ${pending} pending.`
+    );
+    await this.applyDashboardMutationInvalidation("ideas");
+    await this.view?.webview.postMessage({
+      type: "wcIdeaMutationResult",
+      operation: "check-delivery",
+      ok: true,
+      message: transitioned ? "delivered" : "pending"
+    });
   }
 
   private async onViewPlanArtifact(planId: string, version: number): Promise<void> {

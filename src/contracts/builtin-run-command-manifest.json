@@ -1703,6 +1703,15 @@
     "policySensitivity": "sensitive"
   },
   {
+    "moduleId": "ideas",
+    "name": "check-delivery-status",
+    "file": "check-delivery-status.md",
+    "description": "Query delivery task refs on an accepted IdeaPlan and transition to delivered when all tasks are terminal.",
+    "policyOperationId": "ideas.persist",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
     "moduleId": "team-execution",
     "name": "list-assignments",
     "file": "list-assignments.md",

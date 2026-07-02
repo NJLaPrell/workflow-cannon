@@ -268,6 +268,45 @@ test("ideas row shows an Accepted chip and Open plan link (Finalize lives on the
   assert.match(html, /data-wc-action="idea-open-plan-card"[^>]*data-plan-id="accepted-plan"/);
 });
 
+test("ideas row shows Check delivery for accepted-state ideas with planRef", () => {
+  const html = renderIdeas([
+    {
+      id: "I006B",
+      title: "Accepted delivery check",
+      note: "",
+      status: "planned",
+      linkedPlanArtifact: "plan-artifact:accepted-delivery",
+      linkedPlanArtifactSummary: {
+        planId: "accepted-delivery",
+        planRef: "plan-artifact:accepted-delivery",
+        status: "accepted",
+        version: 2,
+        phaseKey: "140"
+      }
+    }
+  ]);
+  assert.match(html, /data-wc-action="idea-check-delivery"[^>]*data-plan-ref="plan-artifact:accepted-delivery"/);
+  assert.match(html, />Check delivery</);
+});
+
+test("Ideas Check delivery posts checkIdeaDelivery from the webview", () => {
+  assert.match(webviewClientSrc, /act === 'idea-check-delivery'/);
+  assert.match(webviewClientSrc, /type:'checkIdeaDelivery'/);
+});
+
+test("Ideas Check delivery host action calls check-delivery-status with policy approval", () => {
+  assert.match(providerSrc, /if \(msg\?\.type === "checkIdeaDelivery"\)/);
+  assert.match(providerSrc, /private async onCheckIdeaDelivery/);
+  assert.match(providerSrc, /runMutationWithGenerationRetry\("check-delivery-status"/);
+});
+
+test("resolveDashboardPolicyTierRow maps Ideas check-delivery to check-delivery-status", () => {
+  const row = tierMod.resolveDashboardPolicyTierRow("ideas", "check-delivery");
+  assert.ok(row);
+  assert.equal(row.tier, "routine");
+  assert.equal(row.command, "check-delivery-status");
+});
+
 test("ideas row shows a Finalized chip and Open plan link (View tasks lives on the plan card)", () => {
   const html = renderIdeas([
     {

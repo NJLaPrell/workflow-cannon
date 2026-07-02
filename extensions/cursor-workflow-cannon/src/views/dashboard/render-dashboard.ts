@@ -2457,7 +2457,36 @@ function renderIdeaLifecycleActions(args: {
     case "needs_revision":
     case "approval_ready":
     case "accepted":
-    case "finalized":
+    case "finalized": {
+      const planId = String(viewPlanTarget?.planId ?? "").trim();
+      const planRef = String(viewPlanTarget?.planRef ?? "").trim();
+      const openPlanCardButton =
+        planId.length > 0
+          ? ideaPlanButton("Open plan", "idea-open-plan-card", ` data-plan-id="${escapeHtmlAttr(planId)}"`, {
+              secondary: true
+            })
+          : ideaPlanButton("Open plan", "idea-open-plan-card", "", {
+              secondary: true,
+              disabled: true,
+              title: "Plan identity is incomplete. Refresh the dashboard and try again."
+            });
+      const checkDeliveryButton =
+        args.lifecycleState === "accepted" && planRef.length > 0
+          ? ideaPlanButton(
+              "Check delivery",
+              "idea-check-delivery",
+              ` data-plan-ref="${escapeHtmlAttr(planRef)}"`,
+              { title: "Check delivery task refs and transition to delivered when complete" }
+            )
+          : "";
+      return (
+        '<span class="wc-plan-lifecycle-chip">' +
+        escapeHtml(ideaLifecycleChipLabel(args.lifecycleState)) +
+        "</span>" +
+        openPlanCardButton +
+        checkDeliveryButton
+      );
+    }
     case "superseded": {
       const planId = String(viewPlanTarget?.planId ?? "").trim();
       const openPlanCardButton =
