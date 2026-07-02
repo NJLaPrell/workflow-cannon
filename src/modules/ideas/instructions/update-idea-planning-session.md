@@ -4,6 +4,8 @@ agentCapsule|v=1|command=update-idea-planning-session|module=ideas|schema_only=p
 
 Update durable planning session state for an idea. Owns session transitions through the approved state machine and returns dashboard-ready session data.
 
+Session `currentPlanRef` / `currentPlanVersion` refer to the **unified IdeaPlan document** (`plan-artifact:<planId>`) and its monotonic version — not a separate standalone artifact file. Per-state agent contracts live under [`schemas/ideas/states/`](../../../schemas/ideas/states/); planning-state behavior: [`schemas/ideas/states/planning.schema.json`](../../../schemas/ideas/states/planning.schema.json).
+
 ## Required args
 
 - `ideaId` — idea id such as `I001`. `id` is accepted as an alias.
@@ -12,8 +14,8 @@ Update durable planning session state for an idea. Owns session transitions thro
 
 ## Optional args
 
-- `currentPlanRef` — `plan-artifact:<planId>` for the active draft or reviewed plan.
-- `currentPlanVersion` — positive integer plan version.
+- `currentPlanRef` — unified IdeaPlan `planRef` (e.g. `plan-artifact:<planId>`) for the active draft or reviewed plan.
+- `currentPlanVersion` — positive integer document version.
 - `summary` — short operator-facing session summary.
 - `clientMutationId` — idempotency key for repeated updates.
 
