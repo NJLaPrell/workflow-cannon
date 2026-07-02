@@ -1,7 +1,16 @@
 name: Publish NPM
-# Maintainer dispatch from clone: `pnpm run publish:npm` (runs `gh workflow run publish-npm.yml`).
+# Triggers:
+# - `workflow_dispatch` from clone: `pnpm run publish:npm` (needs `gh` + workflow dispatch permission)
+# - `push` of version tags `v*` (phase closeout tag)
+# - `release` published (GitHub Releases UI — no manual "Run workflow" required)
 
 on:
+  push:
+    tags:
+      - "v*"
+  release:
+    types:
+      - published
   workflow_dispatch:
     inputs:
       tag:
@@ -51,6 +60,6 @@ jobs:
         run: pnpm run parity
 
       - name: Publish package to npm
-        run: npm publish --access public --tag "${{ inputs.tag }}"
+        run: npm publish --access public --tag "${{ github.event_name == 'workflow_dispatch' && inputs.tag || 'latest' }}"
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
