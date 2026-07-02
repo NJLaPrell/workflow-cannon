@@ -21,12 +21,33 @@ export const IDEA_PLAN_STATUSES = [
 
 export type IdeaPlanStatus = (typeof IDEA_PLAN_STATUSES)[number];
 
+/** Legacy workflow_ideas.status values and aliases accepted at API boundaries. */
+export const IDEA_PLAN_STATUS_LEGACY_ALIASES = ["open", "planning", "planned"] as const;
+
+export type IdeaPlanStatusLegacyAlias = (typeof IDEA_PLAN_STATUS_LEGACY_ALIASES)[number];
+
+/** Nine accepted status strings: six canonical states plus three legacy aliases. */
+export const IDEA_PLAN_STATUS_INPUTS = [
+  ...IDEA_PLAN_STATUSES,
+  "open",
+  "planned"
+] as const;
+
+export type IdeaPlanStatusInput = (typeof IDEA_PLAN_STATUS_INPUTS)[number];
+
+const IDEA_PLAN_STATUS_LEGACY_TO_CANONICAL: Record<IdeaPlanStatusLegacyAlias, IdeaPlanStatus> = {
+  open: "idea",
+  planning: "planning",
+  planned: "accepted"
+};
+
 /**
  * Allowed status transitions for the unified IdeaPlan document.
  * Same-state entries support idempotent updates and in-place session mutation.
+ * `idea` may skip brainstorming and advance directly to `planning`.
  */
 export const IDEA_PLAN_STATUS_TRANSITIONS: Record<IdeaPlanStatus, readonly IdeaPlanStatus[]> = {
-  idea: ["brainstorming"],
+  idea: ["brainstorming", "planning"],
   brainstorming: ["brainstorming", "planning"],
   planning: ["planning", "reviewed"],
   reviewed: ["reviewed", "planning", "accepted"],
@@ -36,6 +57,24 @@ export const IDEA_PLAN_STATUS_TRANSITIONS: Record<IdeaPlanStatus, readonly IdeaP
 
 export function isIdeaPlanStatus(value: string): value is IdeaPlanStatus {
   return (IDEA_PLAN_STATUSES as readonly string[]).includes(value);
+}
+
+export function isIdeaPlanStatusInput(value: string): value is IdeaPlanStatusInput {
+  return (IDEA_PLAN_STATUS_INPUTS as readonly string[]).includes(value);
+}
+
+export function normalizeIdeaPlanStatus(value: string): IdeaPlanStatus | undefined {
+  if (isIdeaPlanStatus(value)) {
+    return value;
+  }
+  if (value === "open" || value === "planning" || value === "planned") {
+    return IDEA_PLAN_STATUS_LEGACY_TO_CANONICAL[value];
+  }
+  return undefined;
+}
+
+export function parseIdeaPlanStatus(raw: unknown): IdeaPlanStatus | undefined {
+  return typeof raw === "string" ? normalizeIdeaPlanStatus(raw) : undefined;
 }
 
 export function isIdeaPlanStatusTransitionAllowed(from: IdeaPlanStatus, to: IdeaPlanStatus): boolean {

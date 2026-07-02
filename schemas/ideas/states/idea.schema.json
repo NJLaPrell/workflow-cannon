@@ -32,7 +32,7 @@
     "acceptance": false,
     "delivery": false
   },
-  "x-validTransitions": ["brainstorming"],
+  "x-validTransitions": ["brainstorming", "planning"],
   "x-canonicalAgentDirective": { "$ref": "#/$defs/canonicalAgentDirective" },
   "$defs": {
     "agentDirectiveQuestion": {

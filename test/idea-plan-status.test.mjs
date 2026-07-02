@@ -31,6 +31,7 @@ test("isIdeaPlanStatus accepts known states and rejects unknown values", () => {
 
 test("isIdeaPlanStatusTransitionAllowed accepts documented valid transitions", () => {
   assert.equal(isIdeaPlanStatusTransitionAllowed("idea", "brainstorming"), true);
+  assert.equal(isIdeaPlanStatusTransitionAllowed("idea", "planning"), true);
   assert.equal(isIdeaPlanStatusTransitionAllowed("brainstorming", "planning"), true);
   assert.equal(isIdeaPlanStatusTransitionAllowed("brainstorming", "brainstorming"), true);
   assert.equal(isIdeaPlanStatusTransitionAllowed("planning", "reviewed"), true);
@@ -42,7 +43,6 @@ test("isIdeaPlanStatusTransitionAllowed accepts documented valid transitions", (
 
 test("isIdeaPlanStatusTransitionAllowed rejects invalid transitions", () => {
   const invalidPairs = [
-    ["idea", "planning"],
     ["idea", "delivered"],
     ["brainstorming", "reviewed"],
     ["planning", "accepted"],
