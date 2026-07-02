@@ -1,5 +1,6 @@
 {
   "workflowCannon.nodeExecutable": "",
+  "workflowCannon.ideas.unifiedModelEnabled": true,
   "snyk.advanced.autoSelectOrganization": true,
   "terminal.integrated.env.osx": {
     "WORKSPACE_KIT_POLICY_APPROVAL": "{\"confirmed\":true,\"rationale\":\"Local workspace: post-completion transcript ingest hook and kit config mutations\"}"
