@@ -202,6 +202,10 @@ export function deriveIdeaPlanningLifecycleState(
     return "superseded";
   }
 
+  if (linkedPlan.status === "idea" || linkedPlan.status === "brainstorming") {
+    return linkedPlan.status === "brainstorming" ? "open" : "open";
+  }
+
   if (linkedPlan.status === "accepted" || linkedPlan.planRef.length > 0) {
     return "accepted";
   }
@@ -218,6 +222,10 @@ export function deriveIdeaPlanningLifecycleState(
 
   if (activeDraft.status === "superseded") {
     return "superseded";
+  }
+
+  if (activeDraft.status === "idea" || activeDraft.status === "brainstorming") {
+    return "open";
   }
 
   if (activeDraft.present) {

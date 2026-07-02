@@ -210,9 +210,11 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
     var save = row.querySelector('[data-wc-action="idea-update"]');
     var del = row.querySelector('[data-wc-action="idea-delete"]');
     var plan = row.querySelector('[data-wc-action="idea-plan"]');
+    var brainstorm = row.querySelector('[data-wc-action="idea-brainstorm"]');
     if (save) setButtonBusy(save, !!busy, label || 'Saving...');
     if (del) del.disabled = !!busy;
     if (plan) setButtonBusy(plan, !!busy, label || 'Saving...');
+    if (brainstorm) setButtonBusy(brainstorm, !!busy, label || 'Saving...');
     row.querySelectorAll('[data-wc-ideas-edit-form] input, [data-wc-ideas-edit-form] textarea, [data-wc-ideas-edit-form] button').forEach(function(el) {
       el.disabled = !!busy;
     });
@@ -226,6 +228,27 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
     if (planBtn && planBtn.disabled) return;
     setIdeaRowBusy(row, true, 'Opening...');
     vscode.postMessage({type:'prefillIdeaPlanningChat',ideaId:ideaId,title:row.getAttribute('data-wc-idea-title')||'',note:row.getAttribute('data-wc-idea-note')||''});
+  }
+
+  function submitIdeaBrainstorm(row, trigger) {
+    if (!row) return;
+    var ideaId = (row.getAttribute('data-wc-idea-id') || '').trim();
+    var planRef = trigger && trigger.getAttribute ? (trigger.getAttribute('data-plan-ref') || '').trim() : '';
+    if (!planRef) return;
+    var brainstormBtn = row.querySelector('[data-wc-action="idea-brainstorm"]');
+    if (brainstormBtn && brainstormBtn.disabled) return;
+    setIdeaRowBusy(row, true, 'Opening...');
+    vscode.postMessage({type:'prefillIdeaBrainstormChat',ideaId:ideaId,planRef:planRef,title:row.getAttribute('data-wc-idea-title')||'',note:row.getAttribute('data-wc-idea-note')||''});
+  }
+
+  function submitPlanBrainstorm(trigger) {
+    if (!trigger) return;
+    var planRef = (trigger.getAttribute('data-plan-ref') || '').trim();
+    if (!planRef) return;
+    if (trigger.disabled) return;
+    setButtonBusy(trigger, true, 'Opening...');
+    var ideaId = (trigger.getAttribute('data-idea-id') || '').trim();
+    vscode.postMessage({type:'prefillIdeaBrainstormChat',ideaId:ideaId,planRef:planRef,title:'',note:''});
   }
 
   function setIdeaEditMode(row, editing) {
@@ -1584,6 +1607,9 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
       var op = typeof m.operation === 'string' ? m.operation : '';
       var mutRow = typeof m.ideaId === 'string' ? document.querySelector('[data-wc-idea-id="' + m.ideaId.replace(/"/g, '\\"') + '"]') : null;
       if (mutRow) setIdeaRowBusy(mutRow, false);
+      document.querySelectorAll('[data-wc-action="plan-artifact-brainstorm"]').forEach(function(btn) {
+        setButtonBusy(btn, false);
+      });
       if (m.ok !== true) {
         if (mutRow) setIdeaRowStatus(mutRow, typeof m.message === 'string' ? m.message : 'Unable to save idea.', true);
         else showIdeasToast(typeof m.message === 'string' ? m.message : 'Unable to save idea.', false);
@@ -1593,6 +1619,7 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
       else if (op === 'undo-delete') showIdeasToast('Idea restored.', false);
       else if (op === 'reorder') showIdeasToast('Ideas reordered.', false);
       else if (op === 'plan') showIdeasToast(typeof m.message === 'string' && m.message ? m.message : 'Planning prompt opened.', false);
+      else if (op === 'brainstorm') showIdeasToast(typeof m.message === 'string' && m.message ? m.message : 'Brainstorm prompt opened.', false);
       return;
     }
     if (m && m.type === 'wcPhaseDeliverablesSaved') {
@@ -2049,6 +2076,8 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
     if (act === 'idea-update') { submitIdeaUpdate(ideaRowFor(t)); return; }
     if (act === 'idea-delete') { submitIdeaDelete(ideaRowFor(t)); return; }
     if (act === 'idea-plan') { submitIdeaPlan(ideaRowFor(t)); return; }
+    if (act === 'idea-brainstorm') { submitIdeaBrainstorm(ideaRowFor(t), t); return; }
+    if (act === 'plan-artifact-brainstorm') { submitPlanBrainstorm(t); return; }
     if (act === 'idea-check-delivery') { var deliveryPlanRef=(t.getAttribute('data-plan-ref')||'').trim(); if(deliveryPlanRef){setButtonBusy(t,true,'Checking...');vscode.postMessage({type:'checkIdeaDelivery',planRef:deliveryPlanRef});} return; }
     if (act === 'idea-undo-delete') { vscode.postMessage({type:'undoDeleteIdea'}); return; }
     if (act === 'planning-new-plan') { vscode.postMessage({type:'prefillPlanningInterviewChat'}); return; }
