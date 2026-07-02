@@ -32,7 +32,7 @@ pnpm exec wk run finalize-plan-to-phase '{"planId":"550e8400-e29b-41d4-a716-4466
 | --- | --- | --- |
 | `planId` | Yes | Load accepted plan from `.workspace-kit/planning/plan-artifacts/`. |
 | `version` | No | Artifact storage version; default latest. Must match `approvalRecord.approvedVersion` on accepted row. |
-| `dryRun` | No | Default **`true`** (agent-safe preview). **`false`** writes tasks and updates plan `status: finalized`. |
+| `dryRun` | No | Default **`true`** (agent-safe preview). **`false`** writes tasks; unified IdeaPlan documents keep `status: accepted` and populate `delivery.taskRefs`; standalone PlanArtifact rows become `status: finalized`. |
 | `targetPhaseKey` | No | Overrides automatic phase resolution; when omitted, uses workspace **nextKitPhase**, else next numeric phase with zero tasks. |
 | `targetPhase` | No | Label; default `Phase <targetPhaseKey>` or recommendation label when auto-resolved. |
 | `desiredStatus` | No | `proposed` \| `ready`; default `ready`. |
@@ -45,7 +45,7 @@ pnpm exec wk run finalize-plan-to-phase '{"planId":"550e8400-e29b-41d4-a716-4466
 
 ## Preconditions (normative)
 
-1. Latest (or requested) artifact row has **`status: accepted`**.
+1. Latest (or requested) artifact row has **`status: accepted`** (unified IdeaPlan document) or standalone PlanArtifact **`status: accepted`**.
 2. **`approvalRecord.confirmed === true`** and **`approvalRecord.approvedVersion`** matches the draft version being materialized (see **PLANNER_COMMANDS.md** §5.3 step 1).
 3. Run **`accept-plan-artifact`** before finalize; do not skip acceptance.
 
@@ -57,7 +57,7 @@ pnpm exec wk run finalize-plan-to-phase '{"planId":"550e8400-e29b-41d4-a716-4466
 4. For each selected WBS row: `normalizeWbsItemToTaskDraft()` → exactly one task row with title, synthesized body/description, acceptance criteria, verification context, dependencies, phase/status, and plan/WBS provenance metadata.
 5. Call **`review-planning-execution-drafts`** (or equivalent) on `tasks[]`.
 6. **`dryRun: true`** — return `taskPreview`, embedded `review`, optional `taskGenerationPayloads`; no task writes.
-7. **`dryRun: false`** — call **`persist-planning-execution-drafts`** with `planRef`, `planningType` from `identity`, provenance, `clientMutationId`, `expectedPlanningGeneration`, and `policyApproval`; set plan `status: finalized` after successful task persistence.
+7. **`dryRun: false`** — call **`persist-planning-execution-drafts`** with `planRef`, `planningType` from `identity`, provenance, `clientMutationId`, `expectedPlanningGeneration`, and `policyApproval`. For **unified IdeaPlan** documents, write `delivery.taskRefs`, `delivery.phaseKey`, and `delivery.taskCount` on the existing artifact file and **keep** `status: accepted` (the `accepted` → `delivered` transition is owned by **`check-delivery-status`**). For standalone PlanArtifact rows, set plan `status: finalized` after successful task persistence.
 
 ## Response codes (normative)
 
@@ -66,7 +66,8 @@ pnpm exec wk run finalize-plan-to-phase '{"planId":"550e8400-e29b-41d4-a716-4466
 | `plan-artifact-finalize-preview` | true | `dryRun: true`; `data.taskPreview[]`, `data.review`. |
 | `plan-artifact-finalize-persisted` | true | Tasks created; `data.createdTasks`, `data.count`. |
 | `plan-artifact-finalize-idempotent-replay` | true | Same `clientMutationId` + digest replay. |
-| `plan-artifact-not-accepted` | false | Plan not in `accepted` state (includes draft/reviewed). |
+| `plan-artifact-not-accepted` | false | Standalone PlanArtifact not in `accepted` state (includes draft/reviewed). |
+| `idea-plan-status-invalid` | false | Unified IdeaPlan document not in `accepted` state when finalizing. |
 | `plan-artifact-finalize-review-failed` | false | Task-batch review blockers. |
 | `plan-artifact-not-found` | false | Unknown `planId` / `version`. |
 | `plan-artifact-version-mismatch` | false | Requested version not latest or approval pin mismatch. |
@@ -90,7 +91,8 @@ pnpm exec wk run finalize-plan-to-phase '{"planId":"550e8400-e29b-41d4-a716-4466
 | --- | --- |
 | `createdTasks` | Tasks created by delegated `persist-planning-execution-drafts`. |
 | `count` | Number of materialized tasks. |
-| `status` | Final PlanArtifact lifecycle status (`finalized`). |
+| `status` | Final lifecycle status (`accepted` on unified IdeaPlan; `finalized` on standalone PlanArtifact). |
+| `delivery` | Unified IdeaPlan delivery section (`taskRefs`, `phaseKey`, `taskCount`) when applicable. |
 | `storagePath` | Relative path to the new finalized artifact version. |
 | `delegatedCode` | Task-engine persist response code. |
 
