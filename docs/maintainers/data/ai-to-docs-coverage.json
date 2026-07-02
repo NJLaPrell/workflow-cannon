@@ -27,6 +27,10 @@
       "output": "docs/maintainers/playbooks/planner-chat.md"
     },
     {
+      "source": ".ai/playbooks/brainstorm-session.md",
+      "output": "docs/maintainers/playbooks/brainstorm-session.md"
+    },
+    {
       "source": ".ai/playbooks/skill-attachments.md",
       "output": "docs/maintainers/playbooks/skill-attachments.md"
     },
@@ -229,6 +233,10 @@
     {
       "source": ".ai/runbooks/transcript-ingestion-operations.md",
       "output": "docs/maintainers/runbooks/transcript-ingestion-operations.md"
+    },
+    {
+      "source": ".ai/runbooks/unified-model-rollback.md",
+      "output": "docs/maintainers/runbooks/unified-model-rollback.md"
     },
     {
       "source": ".ai/runbooks/workspace-status-sqlite.md",

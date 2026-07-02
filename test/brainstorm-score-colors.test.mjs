@@ -11,7 +11,7 @@ import {
   normalizeScore1to10ForBands,
   scoreBandForKind,
   scoreBandForNormalizedScore
-} from "../extensions/cursor-workflow-cannon/src/views/shared/brainstorm-score-colors.ts";
+} from "../dist/core/planning/brainstorm-score-bands.js";
 
 test("score bands follow 0-33 red, 34-66 amber, 67-100 green", () => {
   assert.equal(BRAINSTORM_SCORE_BAND_RED_MAX, 33);

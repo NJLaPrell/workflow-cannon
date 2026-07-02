@@ -3,11 +3,13 @@
 # Playbook: planner-chat idea to plan artifact
 
 **Playbook id:** `planner-chat`  
-**Use when:** An operator clicks **Plan this** for an Ideas row, asks to turn an idea into a plan, or resumes a planning-chat session. Guide the conversation from idea context to a persisted PlanArtifact, review, acceptance, phase proposal, and executable tasks without exposing raw CLI choreography in user-facing chat.
+**Use when:** An operator clicks **Plan this** for an Ideas row, asks to turn an idea into a plan, or resumes a planning-chat session. Guide the conversation from idea context through the unified IdeaPlan document's **`plan` section** (structured WBS content), review, acceptance, phase proposal, and executable tasks without exposing raw CLI choreography in user-facing chat.
 
 **Tone:** Calm product-planner collaborator. Ask one useful question at a time, name tradeoffs plainly, and keep the operator focused on decisions. User-facing text should talk about plans, scope, risks, and next steps; do not show command names, JSON payloads, policy tiers, or internal ids unless the operator asks for power-user detail.
 
-**Does not replace:** [`PLANNER_SCHEMA.md`](../../PLANNER_SCHEMA.md), [`PLANNER_COMMANDS.md`](../../PLANNER_COMMANDS.md), [`POLICY-APPROVAL.md`](../POLICY-APPROVAL.md), or task-engine delivery playbooks. This playbook sequences the chat workflow and points at the canonical command instructions.
+**Unified document model:** A single **IdeaPlan document** (`planRef` like `plan-artifact:<planId>`) traces an idea from inception through brainstorming, planning, review, acceptance, and delivery. Planner-chat operates on the **`plan` section** inside that document when `status` is `planning` (or later states). Per-state behavior is prescribed by each state's schema **`agentDirective`** — agents read [`schemas/ideas/states/planning.schema.json`](../../schemas/ideas/states/planning.schema.json) for planning-state questions; this playbook sequences the chat workflow on top of those contracts.
+
+**Does not replace:** [`PLANNER_SCHEMA.md`](../../PLANNER_SCHEMA.md) (plan-section field contract), per-state schemas under [`schemas/ideas/states/`](../../schemas/ideas/states/), [`PLANNER_COMMANDS.md`](../../PLANNER_COMMANDS.md), [`POLICY-APPROVAL.md`](../POLICY-APPROVAL.md), or task-engine delivery playbooks. For brainstorming before planning, attach [`.ai/playbooks/brainstorm-session.md`](./brainstorm-session.md).
 
 ## 0) Bootstrap
 
@@ -15,11 +17,12 @@
 2. When the prompt or dashboard already includes `ideaId`, `planningChatSession.sessionId`, and plan lineage, continue from that durable state instead of starting a competing session.
 3. If context is incomplete, use **`get-idea`** before asking the operator to restate data that already exists. Command contract: [`src/modules/ideas/instructions/get-idea.md`](../../src/modules/ideas/instructions/get-idea.md).
 4. On resume, treat the last durable plan draft, review result, or session row as the source of truth — not chat memory.
-5. Keep Ideas provenance attached through the whole workflow:
-   - PlanArtifact `provenance.sourceIdeaId` is the Ideas row id.
-   - PlanArtifact `provenance.source` is `"planner-chat"` for chat-originated plans.
-   - PlanArtifact `provenance.previousPlanArtifacts` carries prior plan artifact refs for the same idea.
-   - When a new artifact supersedes or advances the idea, update the Ideas row with `linkedPlanArtifact` and `previousPlanArtifacts` as appropriate.
+5. Keep Ideas provenance attached through the whole workflow on the **unified IdeaPlan document**:
+   - `ideaId` on the document is the Ideas row id.
+   - Plan-section `provenance.sourceIdeaId` is the Ideas row id when present.
+   - Plan-section `provenance.source` is `"planner-chat"` for chat-originated plans.
+   - Plan-section `provenance.previousPlanArtifacts` carries prior plan refs for the same idea lineage.
+   - When the document advances, update the Ideas row with `linkedPlanArtifact` (the document `planRef`) and `previousPlanArtifacts` as appropriate.
 
 ## 1) Frame The Planning Session
 
@@ -38,17 +41,17 @@ If the note adds meaningful scope, add one short sentence. Then ask the first mi
 
 Stop after each question. Do not stack a survey unless the operator asks for a fast form.
 
-## 2) Draft PlanArtifact
+## 2) Draft Plan Content
 
-1. Build a PlanArtifact v1 object that satisfies [`PLANNER_SCHEMA.md`](../../PLANNER_SCHEMA.md). Prefer the smallest coherent plan that can become executable work.
+1. Build plan-section content that satisfies [`PLANNER_SCHEMA.md`](../../PLANNER_SCHEMA.md) (embedded in the unified IdeaPlan document). Prefer the smallest coherent plan that can become executable work.
 2. **Default planning profile:** `minimal`. Set `identity.planningType` to `"minimal"` when unspecified. The agent may recommend `refactor` or `full-feature`; the operator may override before acceptance.
 3. Include provenance:
    - `source: "planner-chat"` for chat-originated drafts.
    - `sourceIdeaId: "<ideaId>"` when planning from an Ideas row (required for idea-originated drafts).
    - `previousPlanArtifacts: [...]` when the idea already has prior artifact refs.
 4. **WBS v1 rules:** each WBS row should include `wbsId`, `path`, `title`, approach, technical scope, acceptance criteria, testing/verification, dependencies, recommended phase/order, sizing confidence, risk notes, and enough payload to materialize one focused execution task. Size rows for one agent/coding session where possible.
-5. Run **`draft-plan-artifact`** first as validate-only (`persist: false`) while the plan is still being shaped, then persist once the operator agrees the draft is worth saving. Command contract: [`src/modules/planning/instructions/draft-plan-artifact.md`](../../src/modules/planning/instructions/draft-plan-artifact.md).
-6. After a persisted draft is linked as `activeDraftPlanArtifact`, call **`update-idea-planning-session`** with `status: "draft_ready"`, the `sessionId` from bootstrap, and `currentPlanRef` / `currentPlanVersion` when known. Command contract: [`src/modules/ideas/instructions/update-idea-planning-session.md`](../../src/modules/ideas/instructions/update-idea-planning-session.md).
+5. Run **`draft-plan-artifact`** first as validate-only (`persist: false`) while the plan is still being shaped, then persist into the unified document once the operator agrees the draft is worth saving. Command contract: [`src/modules/planning/instructions/draft-plan-artifact.md`](../../src/modules/planning/instructions/draft-plan-artifact.md).
+6. After a persisted draft is linked as `activeDraftPlanArtifact` on the Ideas row, call **`update-idea-planning-session`** with `status: "draft_ready"`, the `sessionId` from bootstrap, and `currentPlanRef` / `currentPlanVersion` (the unified document ref and version) when known. Command contract: [`src/modules/ideas/instructions/update-idea-planning-session.md`](../../src/modules/ideas/instructions/update-idea-planning-session.md).
 7. **Do not** move the session to `completed` after draft persistence alone. Draft persistence means `draft_ready`, not that planning is done.
 8. When persistence is enabled and the planning generation policy requires a token, use the latest `planningGeneration` from the preceding read or command response.
 
@@ -91,7 +94,7 @@ Durable session state is owned by **`start-idea-planning`** (bootstrap/resume) a
 | Status | Meaning | Typical next step |
 | --- | --- | --- |
 | `active` | Planning chat started; no saved draft yet | Continue brainstorming |
-| `draft_ready` | Draft PlanArtifact exists and is linked as `activeDraftPlanArtifact` | Run review; do **not** mark `completed` |
+| `draft_ready` | Draft plan content exists on the unified document and is linked as `activeDraftPlanArtifact` | Run review; do **not** mark `completed` |
 | `needs_revision` | Review found blockers or unresolved critical questions | Repair draft and re-review |
 | `approval_ready` | Review passed or is warning-only; explicit user approval still needed | Accept plan or revise first |
 | `completed` | Operator approved; **`accept-plan-artifact`** pinned the accepted version | Offer finalize preview (separate confirmation) |
@@ -113,7 +116,7 @@ On resume, continue from the latest durable state and summarize only the current
 
 A planner-chat run is complete when:
 
-1. the operator has an **accepted** PlanArtifact with complete WBS, or explicitly abandons the attempt;
+1. the operator has an **accepted** plan on the unified IdeaPlan document with complete WBS, or explicitly abandons the attempt;
 2. the session row is `completed` only after acceptance — not after draft persistence;
 3. the Ideas row reflects the current status and artifact linkage;
 4. any generated execution tasks were created only after a separate finalize confirmation;
@@ -122,6 +125,9 @@ A planner-chat run is complete when:
 ## Related
 
 - Ideas commands: [`src/modules/ideas/instructions`](../../src/modules/ideas/instructions)
-- PlanArtifact schema: [`PLANNER_SCHEMA.md`](../../PLANNER_SCHEMA.md)
+- Unified IdeaPlan per-state schemas: [`schemas/ideas/states/`](../../schemas/ideas/states/)
+- Planning state agentDirective: [`schemas/ideas/states/planning.schema.json`](../../schemas/ideas/states/planning.schema.json)
+- Plan section field contract: [`PLANNER_SCHEMA.md`](../../PLANNER_SCHEMA.md)
+- Brainstorm handoff: [`.ai/playbooks/brainstorm-session.md`](./brainstorm-session.md)
 - Planner commands: [`PLANNER_COMMANDS.md`](../../PLANNER_COMMANDS.md)
 - Delivery loop for generated execution tasks: [`task-to-phase-branch.md`](./task-to-phase-branch.md)

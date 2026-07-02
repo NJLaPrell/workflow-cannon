@@ -51,3 +51,22 @@ export function scoreBandForKind(score: number, kind: BrainstormScoreKind): Brai
 export function formatScoreWithBand(score: number, kind: BrainstormScoreKind): string {
   return `${score} (**${scoreBandForKind(score, kind)}**)`;
 }
+
+/** Inclusive lower bound for the green band on a 0–100 scale. */
+export const BRAINSTORM_SCORE_BAND_GREEN_MIN = 67;
+
+export const BRAINSTORM_SCORE_BAND_CSS_CLASS: Record<BrainstormScoreBand, string> = {
+  red: "wc-brainstorm-score-red",
+  amber: "wc-brainstorm-score-amber",
+  green: "wc-brainstorm-score-green"
+};
+
+/** Rollup sort field for brainstorming ideas queue (highest priority first). */
+export const BRAINSTORM_ROLLUP_SORT_FIELD = "priorityScore" as const;
+
+/** Rollup sort direction for brainstorming ideas queue. */
+export const BRAINSTORM_ROLLUP_SORT_DIRECTION = "desc" as const;
+
+export function brainstormScoreBandCssClass(score: number, kind: BrainstormScoreKind): string {
+  return BRAINSTORM_SCORE_BAND_CSS_CLASS[scoreBandForKind(score, kind)];
+}

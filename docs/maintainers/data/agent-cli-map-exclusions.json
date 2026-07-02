@@ -18,6 +18,7 @@
     "dashboard-terminal-tasks-page",
     "export-workspace-status",
     "generate-release-notes",
+    "generate-plan-document",
     "get-blocked-summary",
     "get-dependency-graph",
     "get-kit-persistence-map",
@@ -33,6 +34,7 @@
     "list-module-states",
     "list-session-grants",
     "migrate-task-persistence",
+    "migrate-ideas-to-unified-document",
     "persist-planning-execution-drafts",
     "planning-state-migrate-baseline",
     "propose-release-version",
@@ -58,6 +60,8 @@
     "task-sync-verify": "Phase 125 T100622; machine canon via .ai/agent-cli-snippets and task-sync-*.md",
     "get-plan-artifact": "Phase 139; read-only planning command; instruction at src/modules/planning/instructions/get-plan-artifact.md",
     "start-idea-planning": "Phase 139; ideas module instruction src/modules/ideas/instructions/start-idea-planning.md",
-    "update-idea-planning-session": "Phase 139; ideas module instruction src/modules/ideas/instructions/update-idea-planning-session.md"
+    "update-idea-planning-session": "Phase 139; ideas module instruction src/modules/ideas/instructions/update-idea-planning-session.md",
+    "generate-plan-document": "Phase 140 T100793; planning module instruction src/modules/planning/instructions/generate-plan-document.md",
+    "migrate-ideas-to-unified-document": "Phase 140 T100792; ideas module instruction src/modules/ideas/instructions/migrate-ideas-to-unified-document.md"
   }
 }

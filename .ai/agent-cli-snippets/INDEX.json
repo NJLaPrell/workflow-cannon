@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-02T08:22:47.002Z",
+  "generatedAt": "2026-07-02T10:43:47.468Z",
   "commands": [
     {
       "name": "accept-improvement",
@@ -668,6 +668,11 @@
       "moduleId": "documentation"
     },
     {
+      "name": "generate-plan-document",
+      "path": ".ai/agent-cli-snippets/by-command/generate-plan-document.json",
+      "moduleId": "planning"
+    },
+    {
       "name": "generate-recommendations",
       "path": ".ai/agent-cli-snippets/by-command/generate-recommendations.json",
       "moduleId": "improvement"
@@ -926,6 +931,11 @@
       "name": "message-subagent",
       "path": ".ai/agent-cli-snippets/by-command/message-subagent.json",
       "moduleId": "subagents"
+    },
+    {
+      "name": "migrate-ideas-to-unified-document",
+      "path": ".ai/agent-cli-snippets/by-command/migrate-ideas-to-unified-document.json",
+      "moduleId": "ideas"
     },
     {
       "name": "migrate-task-persistence",
