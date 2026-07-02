@@ -101,7 +101,8 @@
           "minItems": 1,
           "items": { "$ref": "#/$defs/brainstormSession" }
         },
-        "activeSessionId": { "type": "string", "minLength": 1 }
+        "activeSessionId": { "type": "string", "minLength": 1 },
+        "synthesis": { "$ref": "#/$defs/brainstormScoreInputs" }
       }
     },
     "reviewSection": {

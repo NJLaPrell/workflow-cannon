@@ -130,14 +130,37 @@ export type AgentDirective = {
 
 export type BrainstormTShirtSize = "XS" | "S" | "M" | "L" | "XL";
 
-/** Scoring sub-inputs for a single brainstorm session. */
+/** Computed aggregate scores for a brainstorm session. */
 export type BrainstormScoreInputs = {
   value?: number;
   risk?: number;
   effort?: number;
   confidence?: number;
+  priority?: number;
   tShirtSize?: BrainstormTShirtSize;
   complexity?: number;
+};
+
+/** Progressive session inputs (scoring sub-inputs plus context text fields). */
+export type BrainstormSessionInputs = {
+  valueImpact?: number;
+  valueReach?: number;
+  valueUrgency?: number;
+  valueStrategicFit?: number;
+  riskTechnical?: number;
+  riskOperational?: number;
+  riskUnknowns?: number;
+  riskReversibility?: number;
+  tShirtSize?: BrainstormTShirtSize;
+  complexity?: number;
+  confidenceEvidence?: number;
+  confidenceExpertise?: number;
+  confidenceClarity?: number;
+  contextProblem?: string;
+  contextAudience?: string;
+  unknownsNotes?: string;
+  alternativesConsidered?: string;
+  sessionNotes?: string;
 };
 
 /**
@@ -148,7 +171,7 @@ export type BrainstormSession = {
   startedAt: string;
   updatedAt: string;
   completedAt?: string;
-  inputs?: Partial<BrainstormScoreInputs>;
+  inputs?: Partial<BrainstormSessionInputs>;
   scores?: BrainstormScoreInputs;
   synthesized?: BrainstormScoreInputs;
   notes?: string;
@@ -157,6 +180,7 @@ export type BrainstormSession = {
 export type IdeaPlanBrainstormSection = {
   sessions: BrainstormSession[];
   activeSessionId?: string;
+  synthesis?: BrainstormScoreInputs;
 };
 
 export type IdeaPlanPlanSection = {
@@ -184,6 +208,8 @@ export type IdeaPlanDeliverySection = {
   deliveredAt?: string;
   taskCount?: number;
   phaseKey?: string;
+  /** Task-engine ids materialized from the accepted WBS (written by finalize-plan-to-phase). */
+  taskRefs?: string[];
 };
 
 /**

@@ -126,6 +126,27 @@ export function computeBrainstormSessionScores(inputs: BrainstormScoringInputs):
 
 export type BrainstormScoreKey = "value" | "risk" | "effort" | "confidence";
 
+export function hasCompleteBrainstormScoringInputs(
+  inputs: Record<string, unknown> | undefined
+): inputs is BrainstormScoringInputs {
+  if (!inputs) {
+    return false;
+  }
+  for (const field of BRAINSTORM_SCORING_SUB_INPUT_FIELDS) {
+    const value = inputs[field];
+    if (field === "tShirtSize") {
+      if (typeof value !== "string" || !(value in BRAINSTORM_T_SHIRT_SIZE_SCORES)) {
+        return false;
+      }
+      continue;
+    }
+    if (typeof value !== "number" || !Number.isFinite(value)) {
+      return false;
+    }
+  }
+  return true;
+}
+
 function roundScore(score: number): number {
   return Math.round(score * 1000) / 1000;
 }
