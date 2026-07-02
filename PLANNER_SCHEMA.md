@@ -6,7 +6,28 @@
 **Product direction:** [`PLANNER.md`](./PLANNER.md)  
 **Implementation target:** `schemas/planning/plan-artifact.v1.schema.json`, `src/core/planning/plan-artifact-v1.ts` (WP-1)
 
-This document is the **field-level contract** for PlanArtifact v1. JSON Schema (WP-1.2) and TypeScript types (WP-1.1) must match this spec after **A-SCHEMA** approval.
+This document is the **field-level contract** for PlanArtifact v1 **plan-section content** embedded in the **unified IdeaPlan document** (Phase 140). JSON Schema (WP-1.2) and TypeScript types (WP-1.1) must match this spec after **A-SCHEMA** approval.
+
+---
+
+## Unified IdeaPlan document (Phase 140)
+
+A single persisted **IdeaPlan document** (`planRef` like `plan-artifact:<planId>`) traces an idea from inception through delivery. The document envelope and per-state sections are defined by **per-state schema files** under [`schemas/ideas/states/`](./schemas/ideas/states/). Each file includes an **`agentDirective`** section that is **machine-authoritative** for agent behavior in that state.
+
+| State | Schema file | Active section(s) |
+| --- | --- | --- |
+| `idea` | [`schemas/ideas/states/idea.schema.json`](./schemas/ideas/states/idea.schema.json) | envelope only |
+| `brainstorming` | [`schemas/ideas/states/brainstorming.schema.json`](./schemas/ideas/states/brainstorming.schema.json) | `brainstorm` |
+| `planning` | [`schemas/ideas/states/planning.schema.json`](./schemas/ideas/states/planning.schema.json) | `brainstorm`, `plan` |
+| `reviewed` | [`schemas/ideas/states/reviewed.schema.json`](./schemas/ideas/states/reviewed.schema.json) | `brainstorm`, `plan`, `review` |
+| `accepted` | [`schemas/ideas/states/accepted.schema.json`](./schemas/ideas/states/accepted.schema.json) | + `acceptance` |
+| `delivered` | [`schemas/ideas/states/delivered.schema.json`](./schemas/ideas/states/delivered.schema.json) | + `delivery` |
+
+**Storage:** `.workspace-kit/planning/plan-artifacts/{planId}/artifact.v{version}.json` — one versioned file per document write, not separate artifact identities per lifecycle stage.
+
+**Human companion playbooks:** [`.ai/playbooks/brainstorm-session.md`](./.ai/playbooks/brainstorm-session.md) (brainstorming), [`.ai/playbooks/planner-chat.md`](./.ai/playbooks/planner-chat.md) (planning). Playbooks defer to each state's `agentDirective`; they do not redefine question sequences or formulas.
+
+The sections below (§1 onward) describe the **`plan` section** fields (PlanArtifact v1 content) that `draft-plan-artifact`, `review-plan-artifact`, and `accept-plan-artifact` read and write on the unified document during `planning` and later states.
 
 ---
 
@@ -28,7 +49,7 @@ Every persisted document is a **PlanArtifact document** with a fixed envelope:
 
 \* `approvalRecord` may be present as an empty stub in `draft`; `accept-plan-artifact` must populate `confirmed`, `approvedVersion`, and actor fields.
 
-**File layout (per A-ARCH):** `.workspace-kit/planning/plan-artifacts/{planId}/artifact.v{version}.json`
+**File layout (per A-ARCH):** `.workspace-kit/planning/plan-artifacts/{planId}/artifact.v{version}.json` — unified IdeaPlan document versions; the `plan` section carries PlanArtifact v1 fields when `status` is `planning` or later.
 
 ---
 
@@ -435,6 +456,9 @@ Truncated for review — shows optional sections and multiple WBS rows:
 
 | Resource | Purpose |
 | --- | --- |
+| [`schemas/ideas/states/`](./schemas/ideas/states/) | Unified IdeaPlan per-state schemas and `agentDirective` |
+| [`.ai/playbooks/brainstorm-session.md`](./.ai/playbooks/brainstorm-session.md) | Human companion for brainstorming |
+| [`.ai/playbooks/planner-chat.md`](./.ai/playbooks/planner-chat.md) | Human companion for planning chat |
 | [`PLANNER_ARCHITECTURE.md`](./PLANNER_ARCHITECTURE.md) | Storage, commands |
 | [`PLANNER_TASKS.md`](./PLANNER_TASKS.md) | WBS T-1.1–T-1.3 |
 | `src/modules/planning/artifact.ts` | Legacy wishlist artifact |

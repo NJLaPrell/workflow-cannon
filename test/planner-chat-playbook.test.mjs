@@ -36,4 +36,6 @@ test("planner-chat playbook documents locked session and command decisions", () 
   assert.match(playbook, /Approval and finalization are separate/i);
   assert.match(playbook, /Dry-run first/i);
   assert.match(playbook, /one WBS row to one task draft/i);
+  assert.match(playbook, /unified IdeaPlan document/i);
+  assert.match(playbook, /schemas\/ideas\/states/);
 });
