@@ -2049,6 +2049,7 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
     if (act === 'idea-update') { submitIdeaUpdate(ideaRowFor(t)); return; }
     if (act === 'idea-delete') { submitIdeaDelete(ideaRowFor(t)); return; }
     if (act === 'idea-plan') { submitIdeaPlan(ideaRowFor(t)); return; }
+    if (act === 'idea-check-delivery') { var deliveryPlanRef=(t.getAttribute('data-plan-ref')||'').trim(); if(deliveryPlanRef){setButtonBusy(t,true,'Checking...');vscode.postMessage({type:'checkIdeaDelivery',planRef:deliveryPlanRef});} return; }
     if (act === 'idea-undo-delete') { vscode.postMessage({type:'undoDeleteIdea'}); return; }
     if (act === 'planning-new-plan') { vscode.postMessage({type:'prefillPlanningInterviewChat'}); return; }
     if (act === 'planning-resume-chat') { var rc = (t.getAttribute('data-resume-cli') || '').trim(); vscode.postMessage({type:'prefillPlanningResumeChat',resumeCli:rc}); return; }

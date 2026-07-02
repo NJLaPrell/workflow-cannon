@@ -1,9 +1,12 @@
 /**
  * Canonical brainstorm session scoring formulas.
- * Verbatim formulas are authored in `schemas/ideas/states/brainstorming.schema.json` agentDirective.computeSteps.
+ * Weights and priority normalization are authored in
+ * `schemas/ideas/states/brainstorming.schema.json` agentDirective.computeSteps.
  */
 
+import type { AgentDirective } from "./idea-plan-types.js";
 import type { BrainstormScoreInputs, BrainstormSession, BrainstormTShirtSize } from "./idea-plan-types.js";
+import { loadIdeaPlanStateSchema, resolveIdeaPlanStateSchemaRoot } from "./idea-plan-state-schema-loader.js";
 
 export const BRAINSTORM_SCORING_SUB_INPUT_FIELDS = [
   "valueImpact",
@@ -47,81 +50,261 @@ export const BRAINSTORM_T_SHIRT_SIZE_SCORES: Record<BrainstormTShirtSize, number
   XL: 10
 };
 
-/** valueScore = (valueImpact × 0.30) + (valueReach × 0.25) + (valueUrgency × 0.20) + (valueStrategicFit × 0.25) */
+export type BrainstormScoringWeightTerm = {
+  field: string;
+  weight: number;
+};
+
+export type BrainstormPriorityWeightTerm = {
+  score: string;
+  weight: number;
+  sign: "+" | "-";
+};
+
+export type BrainstormScoringWeights = {
+  value: BrainstormScoringWeightTerm[];
+  risk: BrainstormScoringWeightTerm[];
+  effort: BrainstormScoringWeightTerm[];
+  confidence: BrainstormScoringWeightTerm[];
+  priority: BrainstormPriorityWeightTerm[];
+  priorityNormalization: {
+    offset: number;
+    divisor: number;
+  };
+};
+
+export type BrainstormScoringEngine = {
+  weights: BrainstormScoringWeights;
+  computeValueScore: (
+    inputs: Pick<BrainstormScoringInputs, "valueImpact" | "valueReach" | "valueUrgency" | "valueStrategicFit">
+  ) => number;
+  computeRiskScore: (
+    inputs: Pick<
+      BrainstormScoringInputs,
+      "riskTechnical" | "riskOperational" | "riskUnknowns" | "riskReversibility"
+    >
+  ) => number;
+  computeEffortScore: (inputs: Pick<BrainstormScoringInputs, "tShirtSize" | "complexity">) => number;
+  computeConfidenceScore: (
+    inputs: Pick<BrainstormScoringInputs, "confidenceEvidence" | "confidenceExpertise" | "confidenceClarity">
+  ) => number;
+  computePriorityScore: (scores: {
+    valueScore: number;
+    riskScore: number;
+    effortScore: number;
+    confidenceScore: number;
+  }) => number;
+  computeBrainstormSessionScores: (
+    inputs: BrainstormScoringInputs
+  ) => Required<Pick<BrainstormScoreInputs, "value" | "risk" | "effort" | "confidence">> & {
+    priority: number;
+    tShirtSize: BrainstormTShirtSize;
+    complexity: number;
+  };
+};
+
+const WEIGHTED_TERM_PATTERN = /\(([a-zA-Z][a-zA-Z0-9]*) [×x] ([0-9.]+)\)/g;
+const PRIORITY_NORMALIZATION_PATTERN = /rawPriority \+ ([0-9.]+)\) \/ ([0-9.]+)/;
+
+function parseWeightedTerms(formula: string): BrainstormScoringWeightTerm[] {
+  const terms: BrainstormScoringWeightTerm[] = [];
+  for (const match of formula.matchAll(WEIGHTED_TERM_PATTERN)) {
+    const field = match[1]!;
+    const weight = Number(match[2]);
+    if (!Number.isFinite(weight)) {
+      continue;
+    }
+    terms.push({ field, weight });
+  }
+  return terms;
+}
+
+function parsePriorityTerms(formula: string): BrainstormPriorityWeightTerm[] {
+  const rawSection = (formula.split(";")[0] ?? formula).replace(/×\s*10.*$/, "");
+  const terms: BrainstormPriorityWeightTerm[] = [];
+  for (const match of rawSection.matchAll(/\(([a-zA-Z][a-zA-Z0-9]*) [×x] ([0-9.]+)\)/g)) {
+    const index = match.index ?? 0;
+    const prefix = rawSection.slice(0, index).trimEnd();
+    const sign: "+" | "-" =
+      prefix.endsWith("−") || prefix.endsWith("-") || /[−-]\s*$/.test(prefix) ? "-" : "+";
+    terms.push({
+      score: match[1]!,
+      weight: Number(match[2]),
+      sign
+    });
+  }
+  return terms;
+}
+
+function parsePriorityNormalization(formula: string): { offset: number; divisor: number } {
+  const match = formula.match(PRIORITY_NORMALIZATION_PATTERN);
+  if (!match) {
+    throw new Error("priorityScore computeStep is missing rawPriority normalization constants");
+  }
+  return {
+    offset: Number(match[1]),
+    divisor: Number(match[2])
+  };
+}
+
+function resolveComputeStepFormula(directive: AgentDirective, stepId: string): string {
+  const step = directive.computeSteps?.find((entry) => entry.id === stepId);
+  if (!step?.formula) {
+    throw new Error(`Missing agentDirective.computeSteps entry '${stepId}'`);
+  }
+  return step.formula;
+}
+
+export function loadBrainstormScoringWeights(
+  workspacePath?: string,
+  directive?: AgentDirective
+): BrainstormScoringWeights {
+  const agentDirective = directive ?? loadIdeaPlanStateSchema("brainstorming", workspacePath).agentDirective;
+  const priorityFormula = resolveComputeStepFormula(agentDirective, "priorityScore");
+  return {
+    value: parseWeightedTerms(resolveComputeStepFormula(agentDirective, "valueScore")),
+    risk: parseWeightedTerms(resolveComputeStepFormula(agentDirective, "riskScore")),
+    effort: parseWeightedTerms(resolveComputeStepFormula(agentDirective, "effortScore")),
+    confidence: parseWeightedTerms(resolveComputeStepFormula(agentDirective, "confidenceScore")),
+    priority: parsePriorityTerms(priorityFormula),
+    priorityNormalization: parsePriorityNormalization(priorityFormula)
+  };
+}
+
+function weightedSum(
+  terms: BrainstormScoringWeightTerm[],
+  values: Record<string, number>
+): number {
+  return terms.reduce((sum, term) => sum + (values[term.field] ?? 0) * term.weight, 0);
+}
+
+function buildScoringEngine(weights: BrainstormScoringWeights): BrainstormScoringEngine {
+  const computeValueScore: BrainstormScoringEngine["computeValueScore"] = (inputs) =>
+    weightedSum(weights.value, inputs);
+
+  const computeRiskScore: BrainstormScoringEngine["computeRiskScore"] = (inputs) =>
+    weightedSum(weights.risk, inputs);
+
+  const computeEffortScore: BrainstormScoringEngine["computeEffortScore"] = (inputs) => {
+    const values: Record<string, number> = {
+      tShirtSizeScore: BRAINSTORM_T_SHIRT_SIZE_SCORES[inputs.tShirtSize],
+      complexity: inputs.complexity
+    };
+    return weightedSum(weights.effort, values);
+  };
+
+  const computeConfidenceScore: BrainstormScoringEngine["computeConfidenceScore"] = (inputs) =>
+    weightedSum(weights.confidence, inputs);
+
+  const computePriorityScore: BrainstormScoringEngine["computePriorityScore"] = (scores) => {
+    const values = {
+      valueScore: scores.valueScore,
+      riskScore: scores.riskScore,
+      effortScore: scores.effortScore,
+      confidenceScore: scores.confidenceScore
+    };
+    let rawPriority = 0;
+    for (const term of weights.priority) {
+      const contribution = (values[term.score as keyof typeof values] ?? 0) * term.weight;
+      rawPriority += term.sign === "-" ? -contribution : contribution;
+    }
+    if (weights.priorityNormalization.divisor === 0) {
+      throw new Error("priorityScore normalization divisor must be non-zero");
+    }
+    rawPriority *= 10;
+    return Math.round(
+      ((rawPriority + weights.priorityNormalization.offset) / weights.priorityNormalization.divisor) * 100
+    );
+  };
+
+  const computeBrainstormSessionScores: BrainstormScoringEngine["computeBrainstormSessionScores"] = (inputs) => {
+    const valueScore = computeValueScore(inputs);
+    const riskScore = computeRiskScore(inputs);
+    const effortScore = computeEffortScore(inputs);
+    const confidenceScore = computeConfidenceScore(inputs);
+    const priority = computePriorityScore({ valueScore, riskScore, effortScore, confidenceScore });
+    return {
+      value: roundScore(valueScore),
+      risk: roundScore(riskScore),
+      effort: roundScore(effortScore),
+      confidence: roundScore(confidenceScore),
+      priority,
+      tShirtSize: inputs.tShirtSize,
+      complexity: roundScore(inputs.complexity)
+    };
+  };
+
+  return {
+    weights,
+    computeValueScore,
+    computeRiskScore,
+    computeEffortScore,
+    computeConfidenceScore,
+    computePriorityScore,
+    computeBrainstormSessionScores
+  };
+}
+
+export function createBrainstormScoringEngine(
+  workspacePath?: string,
+  directive?: AgentDirective
+): BrainstormScoringEngine {
+  const weights = loadBrainstormScoringWeights(workspacePath, directive);
+  return buildScoringEngine(weights);
+}
+
+let defaultEngine: BrainstormScoringEngine | undefined;
+
+function getDefaultEngine(): BrainstormScoringEngine {
+  if (!defaultEngine) {
+    defaultEngine = createBrainstormScoringEngine(resolveIdeaPlanStateSchemaRoot());
+  }
+  return defaultEngine;
+}
+
+/** valueScore = weighted average of value sub-inputs (weights from brainstorming schema). */
 export function computeValueScore(
   inputs: Pick<BrainstormScoringInputs, "valueImpact" | "valueReach" | "valueUrgency" | "valueStrategicFit">
 ): number {
-  return (
-    inputs.valueImpact * 0.3 +
-    inputs.valueReach * 0.25 +
-    inputs.valueUrgency * 0.2 +
-    inputs.valueStrategicFit * 0.25
-  );
+  return getDefaultEngine().computeValueScore(inputs);
 }
 
-/** riskScore = (riskTechnical × 0.35) + (riskOperational × 0.25) + (riskUnknowns × 0.25) + (riskReversibility × 0.15) */
+/** riskScore = weighted average of risk sub-inputs (weights from brainstorming schema). */
 export function computeRiskScore(
   inputs: Pick<
     BrainstormScoringInputs,
     "riskTechnical" | "riskOperational" | "riskUnknowns" | "riskReversibility"
   >
 ): number {
-  return (
-    inputs.riskTechnical * 0.35 +
-    inputs.riskOperational * 0.25 +
-    inputs.riskUnknowns * 0.25 +
-    inputs.riskReversibility * 0.15
-  );
+  return getDefaultEngine().computeRiskScore(inputs);
 }
 
-/**
- * effortScore = (tShirtSizeScore × 0.40) + (complexity × 0.60)
- * tShirtSizeScore map: XS=2, S=4, M=6, L=8, XL=10
- */
+/** effortScore = blend of T-shirt size score and complexity (weights from brainstorming schema). */
 export function computeEffortScore(inputs: Pick<BrainstormScoringInputs, "tShirtSize" | "complexity">): number {
-  const tShirtSizeScore = BRAINSTORM_T_SHIRT_SIZE_SCORES[inputs.tShirtSize];
-  return tShirtSizeScore * 0.4 + inputs.complexity * 0.6;
+  return getDefaultEngine().computeEffortScore(inputs);
 }
 
-/** confidenceScore = (confidenceEvidence × 0.35) + (confidenceExpertise × 0.30) + (confidenceClarity × 0.35) */
+/** confidenceScore = weighted average of confidence sub-inputs (weights from brainstorming schema). */
 export function computeConfidenceScore(
   inputs: Pick<BrainstormScoringInputs, "confidenceEvidence" | "confidenceExpertise" | "confidenceClarity">
 ): number {
-  return inputs.confidenceEvidence * 0.35 + inputs.confidenceExpertise * 0.3 + inputs.confidenceClarity * 0.35;
+  return getDefaultEngine().computeConfidenceScore(inputs);
 }
 
-/**
- * priorityScore = (valueScore × 0.35) + ((10 − riskScore) × 0.20) + ((10 − effortScore) × 0.25) + (confidenceScore × 0.20)
- */
+/** priorityScore = schema-weighted blend normalized to 0–100. */
 export function computePriorityScore(scores: {
   valueScore: number;
   riskScore: number;
   effortScore: number;
   confidenceScore: number;
 }): number {
-  return (
-    scores.valueScore * 0.35 +
-    (10 - scores.riskScore) * 0.2 +
-    (10 - scores.effortScore) * 0.25 +
-    scores.confidenceScore * 0.2
-  );
+  return getDefaultEngine().computePriorityScore(scores);
 }
 
-export function computeBrainstormSessionScores(inputs: BrainstormScoringInputs): Required<
-  Pick<BrainstormScoreInputs, "value" | "risk" | "effort" | "confidence">
-> & { priority: number } {
-  const valueScore = computeValueScore(inputs);
-  const riskScore = computeRiskScore(inputs);
-  const effortScore = computeEffortScore(inputs);
-  const confidenceScore = computeConfidenceScore(inputs);
-  const priorityScore = computePriorityScore({ valueScore, riskScore, effortScore, confidenceScore });
-  return {
-    value: roundScore(valueScore),
-    risk: roundScore(riskScore),
-    effort: roundScore(effortScore),
-    confidence: roundScore(confidenceScore),
-    priority: roundScore(priorityScore)
-  };
+export function computeBrainstormSessionScores(inputs: BrainstormScoringInputs): ReturnType<
+  BrainstormScoringEngine["computeBrainstormSessionScores"]
+> {
+  return getDefaultEngine().computeBrainstormSessionScores(inputs);
 }
 
 export type BrainstormScoreKey = "value" | "risk" | "effort" | "confidence";

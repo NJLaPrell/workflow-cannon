@@ -1,0 +1,42 @@
+{
+  "ok": true,
+  "code": "run-args-schema",
+  "command": "start-brainstorm-session",
+  "schema": {
+    "type": "object",
+    "additionalProperties": true,
+    "description": "Permissive fallback args schema for 'start-brainstorm-session'. Use instructionPath for command-specific field guidance until a stricter schema is added."
+  },
+  "schemaSource": "manifest-permissive-fallback",
+  "sampleArgs": {},
+  "examples": [
+    {
+      "description": "Minimal argv example",
+      "argv": "workspace-kit run start-brainstorm-session '{}'"
+    }
+  ],
+  "instructionPath": "src/modules/ideas/instructions/start-brainstorm-session.md",
+  "moduleId": "ideas",
+  "description": "Start or append a brainstorm session on a unified IdeaPlan artifact with idea→brainstorming transition on first call.",
+  "policy": {
+    "sensitivity": "sensitive",
+    "operationId": "ideas.persist",
+    "jsonApprovalRequired": true
+  },
+  "planningGeneration": {
+    "cliPrelude": false,
+    "expectedPlanningGeneration": "not required by CLI prelude"
+  },
+  "idempotency": {
+    "clientMutationId": false
+  },
+  "responseTemplate": {
+    "defaultResponseTemplateId": "default"
+  },
+  "remediationContract": ".ai/runbooks/agent-task-engine-ergonomics.md",
+  "discovery": {
+    "listCommands": "pnpm exec wk run --list-commands",
+    "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
+  },
+  "invocationId": "c7eadc25-6175-43c5-ab9b-c769611bde89"
+}

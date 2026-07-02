@@ -40,6 +40,9 @@
     "brainstormSession": {
       "$ref": "https://workflow-cannon.dev/schemas/ideas/brainstorm-session.schema.json"
     },
+    "brainstormScoreInputs": {
+      "$ref": "https://workflow-cannon.dev/schemas/ideas/brainstorm-session.schema.json#/$defs/brainstormScoreInputs"
+    },
     "brainstormSection": {
       "type": "object",
       "additionalProperties": false,
