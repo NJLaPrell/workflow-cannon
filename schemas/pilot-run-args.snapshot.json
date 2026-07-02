@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "sourceSchemaPackageVersion": "1.0.2",
+  "sourceSchemaPackageVersion": "1.0.3",
   "pilotCommands": [
     "accept-improvement",
     "add-dependency",
@@ -34,6 +34,7 @@
     "dashboard-agent-activity-slice",
     "dashboard-agent-types-slice",
     "dashboard-bootstrap-slices",
+    "dashboard-ops-slice",
     "dashboard-overview-slice",
     "dashboard-queue-slice",
     "dashboard-service-snapshot",
@@ -722,6 +723,9 @@
       "type": "object"
     },
     "dashboard-bootstrap-slices": {
+      "type": "object"
+    },
+    "dashboard-ops-slice": {
       "type": "object"
     },
     "dashboard-overview-slice": {
