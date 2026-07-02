@@ -23,6 +23,9 @@ export async function runGenerateAllDocuments(
     const viewFiles = await listViewModels(ctx.workspacePath);
     for (const viewFile of viewFiles) {
       const view = await loadViewModel(ctx.workspacePath, viewFile);
+      if (view.batchInclude === false) {
+        continue;
+      }
       workItems.push({ documentType: view.target });
     }
   } else {

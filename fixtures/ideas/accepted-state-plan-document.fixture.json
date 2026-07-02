@@ -1,0 +1,155 @@
+{
+  "schemaVersion": 1,
+  "planId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "version": 4,
+  "planRef": "plan-artifact:a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "status": "accepted",
+  "ideaId": "I042",
+  "createdAt": "2026-07-02T09:00:00.000Z",
+  "updatedAt": "2026-07-02T14:00:00.000Z",
+  "brainstorm": {
+    "sessions": [
+      {
+        "sessionId": "bsess-plan-doc-fixture",
+        "startedAt": "2026-07-02T10:00:00.000Z",
+        "updatedAt": "2026-07-02T10:45:00.000Z",
+        "completedAt": "2026-07-02T10:45:00.000Z",
+        "scores": {
+          "value": 9,
+          "risk": 2,
+          "effort": 3,
+          "confidence": 8,
+          "priority": 80,
+          "tShirtSize": "S",
+          "complexity": 4
+        }
+      }
+    ],
+    "activeSessionId": "bsess-plan-doc-fixture",
+    "synthesis": {
+      "value": 9,
+      "risk": 2,
+      "effort": 3,
+      "confidence": 8,
+      "priority": 80,
+      "tShirtSize": "S",
+      "complexity": 4
+    }
+  },
+  "plan": {
+    "title": "My Great Plan: Phase 140!",
+    "summary": "Fixture for generate-plan-document rendering tests.",
+    "planningType": "new-feature",
+    "wbsRowCount": 2
+  },
+  "identity": {
+    "title": "My Great Plan: Phase 140!",
+    "planningType": "new-feature",
+    "summary": "Fixture for generate-plan-document rendering tests."
+  },
+  "goals": ["Render human-readable plan documents from unified IdeaPlan artifacts"],
+  "nonGoals": ["Replace PlanArtifact JSON as source of truth"],
+  "valueAssessment": {
+    "impact": "High",
+    "confidence": "high"
+  },
+  "riskAssessment": [
+    {
+      "id": "R1",
+      "description": "Template drift from view contract",
+      "severity": "low",
+      "mitigation": "Unit tests lock section rendering"
+    }
+  ],
+  "technicalImpact": {
+    "systemsTouched": ["src/modules/planning", "src/modules/documentation"]
+  },
+  "testingStrategy": {
+    "layers": ["unit"],
+    "criticalPaths": ["generate-plan-document writes markdown"]
+  },
+  "implementationGuidance": ["Use plan-document view and template"],
+  "whatNotToDo": ["Hand-edit generated plan docs"],
+  "assumptions": ["Unified document fixture is accepted state"],
+  "openQuestions": ["Should we also mirror to .ai/plans/?"],
+  "wbs": [
+    {
+      "wbsId": "WBS-7A",
+      "path": "7.1",
+      "title": "Plan document view and template",
+      "goalMapping": ["Render human-readable plan documents from unified IdeaPlan artifacts"],
+      "suggestedTaskTitle": "Author plan-document view and generate-plan-document",
+      "approach": "Documentation module view + planning command",
+      "technicalScope": ["src/modules/documentation/views/plan-document.view.yaml"],
+      "acceptanceCriteria": ["generate-plan-document writes markdown"],
+      "testingVerification": ["test/generate-plan-document.test.mjs"],
+      "dependsOn": [],
+      "sizingConfidence": "medium",
+      "doneMeans": "T100793 complete",
+      "generatedTaskPayload": {
+        "title": "Plan document view and generate-plan-document",
+        "approach": "Documentation module view + planning command",
+        "technicalScope": ["src/modules/documentation/views/plan-document.view.yaml"],
+        "acceptanceCriteria": ["generate-plan-document writes markdown"]
+      }
+    },
+    {
+      "wbsId": "WBS-7B",
+      "path": "7.2",
+      "title": "Wire lifecycle regeneration",
+      "goalMapping": ["Render human-readable plan documents from unified IdeaPlan artifacts"],
+      "suggestedTaskTitle": "Regenerate plan doc on lifecycle events",
+      "approach": "Hook draft/review/accept/finalize",
+      "technicalScope": ["src/modules/planning"],
+      "acceptanceCriteria": ["Docs refresh on persist"],
+      "testingVerification": ["integration tests"],
+      "dependsOn": ["WBS-7A"],
+      "sizingConfidence": "medium",
+      "doneMeans": "T100794 complete",
+      "generatedTaskPayload": {
+        "title": "Regenerate plan doc on lifecycle events",
+        "approach": "Hook draft/review/accept/finalize",
+        "technicalScope": ["src/modules/planning"],
+        "acceptanceCriteria": ["Docs refresh on persist"]
+      }
+    }
+  ],
+  "phaseRecommendations": [
+    {
+      "phaseKey": "140",
+      "label": "Phase 140",
+      "rationale": "Unified IdeaPlan document train",
+      "isPrimary": true
+    }
+  ],
+  "provenance": {
+    "createdAt": "2026-07-02T09:00:00.000Z",
+    "updatedAt": "2026-07-02T14:00:00.000Z",
+    "createdBy": "fixture",
+    "source": "generate-plan-document.test"
+  },
+  "review": {
+    "passed": true,
+    "blockerCount": 0,
+    "openQuestionCount": 1,
+    "warningCount": 0,
+    "reviewedAt": "2026-07-02T13:00:00.000Z"
+  },
+  "acceptance": {
+    "acceptedAt": "2026-07-02T14:00:00.000Z",
+    "acceptedBy": "operator@example.com",
+    "acceptedVersion": 4
+  },
+  "agentDirective": {
+    "schemaVersion": 1,
+    "state": "accepted",
+    "questions": [
+      {
+        "phase": "context",
+        "fieldName": "acceptanceConfirmation",
+        "prompt": "Confirm acceptance.",
+        "type": "text"
+      }
+    ]
+  }
+}

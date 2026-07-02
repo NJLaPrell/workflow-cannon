@@ -57,7 +57,8 @@ const KNOWN_POLICY_OPERATION_IDS = new Set([
   "planning.review-plan-artifact",
   "planning.accept-plan-artifact",
   "planning.finalize-plan-to-phase",
-  "planning.execute-plan-artifact"
+  "planning.execute-plan-artifact",
+  "planning.generate-plan-document"
 ]);
 
 const ALLOWED_SENSITIVITY = new Set(["non-sensitive", "sensitive", "sensitive-with-dryrun"]);
@@ -120,10 +121,11 @@ for (const row of manifest) {
       id !== "planning.draft-plan-artifact" &&
       id !== "planning.review-plan-artifact" &&
       id !== "planning.finalize-plan-to-phase" &&
+      id !== "planning.generate-plan-document" &&
       id !== "task-engine.prepare-release-artifacts"
     ) {
       fail(
-        `Command '${row.name}': sensitive-with-dryrun is only valid for doc commands, skills.apply-skill, planning.draft-plan-artifact, planning.review-plan-artifact, planning.finalize-plan-to-phase, and task-engine.prepare-release-artifacts (matches policy.ts dry-run / Tier C exceptions).`
+        `Command '${row.name}': sensitive-with-dryrun is only valid for doc commands, skills.apply-skill, planning.draft-plan-artifact, planning.review-plan-artifact, planning.finalize-plan-to-phase, planning.generate-plan-document, and task-engine.prepare-release-artifacts (matches policy.ts dry-run / Tier C exceptions).`
       );
     }
   }

@@ -1,0 +1,58 @@
+id: plan-document
+version: 1
+doc_type: plan-document
+target: plans/plan-document.md
+source_profile: planning
+batch_include: false
+sections:
+  - id: header
+    source: idea_plan
+    renderer: renderPlanDocumentHeader
+    title: Document header
+  - id: brainstorm_synthesis
+    source: idea_plan
+    renderer: renderPlanDocumentBrainstormSynthesis
+    title: Brainstorm synthesis
+  - id: brainstorm_sessions
+    source: idea_plan
+    renderer: renderPlanDocumentBrainstormSessions
+    title: Brainstorm session history
+  - id: plan_goals
+    source: idea_plan
+    renderer: renderPlanDocumentPlanGoals
+    title: Goals and non-goals
+  - id: wbs_summary
+    source: idea_plan
+    renderer: renderPlanDocumentWbsSummary
+    title: WBS summary
+  - id: risk_register
+    source: idea_plan
+    renderer: renderPlanDocumentRiskRegister
+    title: Risk register
+  - id: assumptions
+    source: idea_plan
+    renderer: renderPlanDocumentAssumptions
+    title: Assumptions
+  - id: open_questions
+    source: idea_plan
+    renderer: renderPlanDocumentOpenQuestions
+    title: Open questions
+  - id: review
+    source: idea_plan
+    renderer: renderPlanDocumentReview
+    title: Review
+  - id: acceptance
+    source: idea_plan
+    renderer: renderPlanDocumentAcceptance
+    title: Acceptance
+  - id: delivery_refs
+    source: idea_plan
+    renderer: renderPlanDocumentDeliveryRefs
+    title: Delivery references
+  - id: provenance
+    source: idea_plan
+    renderer: renderPlanDocumentProvenance
+    title: Provenance
+render_policies:
+  - id: default
+    mode: append

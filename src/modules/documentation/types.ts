@@ -294,6 +294,8 @@ export type ViewModelDefinition = {
   docType: string;
   target: string;
   profile?: "core" | "runbook" | "workbook";
+  /** When false, `document-project` skips this view (command-driven docs such as plan-document). */
+  batchInclude?: boolean;
   sections: ViewModelSection[];
   renderPolicies?: ViewRenderPolicy[];
 };
