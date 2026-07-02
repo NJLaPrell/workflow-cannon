@@ -115,6 +115,7 @@ import {
   type PhaseJournalKitPayload,
   type PlanningInterviewWizardPanel
 } from "./render-dashboard.js";
+import { isIdeasUnifiedModelEnabledForDashboard } from "../../ideas-unified-model-feature-flag.js";
 import { renderConfigPanelShellHtml } from "../config/config-panel-shell.js";
 import {
   buildPhaseKeySuggestion,
@@ -640,7 +641,18 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     return {
       ...extra,
       readModeBadge: this.readPath.getModeBadge(),
-      mcpStatus: resolveMcpHostStatus(this.client.getWorkspaceRoot())
+      mcpStatus: resolveMcpHostStatus(this.client.getWorkspaceRoot()),
+      ideasUnifiedModelEnabled: isIdeasUnifiedModelEnabledForDashboard()
+    };
+  }
+
+  private dashboardRenderSectionOptions(
+    extra?: Parameters<typeof renderDashboardSectionInnerHtml>[2]
+  ): Parameters<typeof renderDashboardSectionInnerHtml>[2] {
+    return {
+      ...extra,
+      mcpStatus: extra?.mcpStatus ?? resolveMcpHostStatus(this.client.getWorkspaceRoot()),
+      ideasUnifiedModelEnabled: isIdeasUnifiedModelEnabledForDashboard()
     };
   }
 
@@ -869,11 +881,10 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       inner = renderDashboardSectionInnerHtml(
         sectionId,
         this.wrapDashboardPayloadForRender(raw as Record<string, unknown>),
-        {
+        this.dashboardRenderSectionOptions({
           editorIntegration,
-          embeddedCaePanelHtml: this.lastEmbeddedCaePanelHtml,
-          mcpStatus: this.dashboardRenderRootOptions().mcpStatus
-        }
+          embeddedCaePanelHtml: this.lastEmbeddedCaePanelHtml
+        })
       );
     } catch (e) {
       logWc(
@@ -2403,10 +2414,11 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     for (const sectionId of sectionsToPatch) {
       const inner = renderDashboardSectionInnerHtml(sectionId, this.dashboardRenderPayload(raw), {
-        editorIntegration,
-        phaseJournal,
-        embeddedCaePanelHtml,
-        mcpStatus
+        ...this.dashboardRenderSectionOptions({
+          editorIntegration,
+          phaseJournal,
+          embeddedCaePanelHtml
+        })
       });
       if (inner == null) {
         continue;

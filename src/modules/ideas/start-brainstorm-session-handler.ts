@@ -11,6 +11,7 @@ import {
 } from "./idea-plan-artifact-storage.js";
 import { enforceIdeaPlanStatusTransition, IdeaPlanStatusTransitionError } from "./idea-plan-status-machine.js";
 import { loadIdeaPlanStateSchema } from "./idea-plan-state-schema-loader.js";
+import { guardIdeaPlanStateSchemaLoad } from "./idea-plan-state-schema-guard.js";
 import type { BrainstormSession, IdeaPlanDocument } from "./idea-plan-types.js";
 
 const IDEMPOTENCY_MODULE_PREFIX = "ideas-start-brainstorm-session-idempotency:";
@@ -179,7 +180,17 @@ export async function runStartBrainstormSession(
     throw err;
   }
 
-  const brainstormingDirective = loadIdeaPlanStateSchema("brainstorming", workspacePath).agentDirective;
+  const schemaLoad = loadIdeaPlanStateSchema("brainstorming", workspacePath);
+  const schemaGuard = guardIdeaPlanStateSchemaLoad(schemaLoad);
+  if (!schemaGuard.ok) {
+    return {
+      ok: false,
+      code: schemaGuard.code,
+      message: schemaGuard.message,
+      data: { responseSchemaVersion: 1, planRef, ...schemaGuard.data }
+    };
+  }
+  const brainstormingDirective = schemaGuard.agentDirective;
   const withSection = ensureBrainstormSection(existing);
   const sessions = [...(withSection.brainstorm?.sessions ?? []), session];
   const sessionIndex = sessions.length - 1;

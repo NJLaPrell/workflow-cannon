@@ -84,6 +84,11 @@
           "default": false,
           "description": "Stop wishlist from adding dashboard cost by default. When enabled, dashboard loads and renders the wishlist."
         },
+        "workflowCannon.ideas.unifiedModelEnabled": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "Enable unified IdeaPlan dashboard UI (Brainstorm button, brainstorming rollup, six-state plan cards). When false, the dashboard keeps legacy Plan-only affordances. Overrides `IDEAS_UNIFIED_MODEL_ENABLED` only when set in User or Workspace settings; otherwise the env var applies."
+        },
         "workflowCannon.agentActivity.enabled": {
           "type": "boolean",
           "default": true,

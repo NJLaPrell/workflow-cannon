@@ -128,6 +128,20 @@ export type AgentDirective = {
   synthesisStep?: AgentDirectiveSynthesisStep;
 };
 
+/** Returned when a state schema file is missing or cannot be parsed. */
+export type DegradedAgentDirective = {
+  degraded: true;
+  reason: string;
+  requiredFields: [];
+  validTransitions: [];
+};
+
+export type AgentDirectiveLoadValue = AgentDirective | DegradedAgentDirective;
+
+export function isDegradedAgentDirective(value: AgentDirectiveLoadValue): value is DegradedAgentDirective {
+  return (value as DegradedAgentDirective).degraded === true;
+}
+
 export type BrainstormTShirtSize = "XS" | "S" | "M" | "L" | "XL";
 
 /** Computed aggregate scores for a brainstorm session. */

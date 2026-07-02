@@ -8,6 +8,7 @@ import {
   writeNextIdeaPlanArtifactVersion
 } from "./idea-plan-artifact-storage.js";
 import { loadIdeaPlanStateSchema } from "./idea-plan-state-schema-loader.js";
+import { requireIdeaPlanAgentDirective } from "./idea-plan-state-schema-guard.js";
 import type { IdeaPlanDocument, IdeaPlanPlanSection } from "./idea-plan-types.js";
 import { getIdea, isIdeaId, updateIdea, type IdeaRecord } from "./idea-store.js";
 import { readActiveDraftPlanArtifact } from "./idea-planning-metadata.js";
@@ -51,7 +52,7 @@ export function ensureIdeaPlanPlanningSection(
   workspacePath: string,
   nowIso: string
 ): IdeaPlanDocument {
-  const planningDirective = loadIdeaPlanStateSchema("planning", workspacePath).agentDirective;
+  const planningDirective = requireIdeaPlanAgentDirective(loadIdeaPlanStateSchema("planning", workspacePath));
   const initial = buildInitialIdeaPlanPlanSection(idea);
   const plan: IdeaPlanPlanSection = document.plan?.title && document.plan?.summary
     ? {
@@ -85,7 +86,7 @@ export function mergePlanArtifactIntoIdeaPlanDocument(
   workspacePath: string,
   nowIso: string
 ): IdeaPlanDocumentWithPlanningPayload {
-  const planningDirective = loadIdeaPlanStateSchema("planning", workspacePath).agentDirective;
+  const planningDirective = requireIdeaPlanAgentDirective(loadIdeaPlanStateSchema("planning", workspacePath));
   const plan: IdeaPlanPlanSection = {
     title: artifact.identity.title,
     summary: artifact.identity.summary ?? document.plan?.summary ?? "Author structured plan sections from planner-chat.",

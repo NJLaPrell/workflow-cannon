@@ -2,8 +2,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import type { AgentDirective, IdeaPlanStatus } from "./idea-plan-types.js";
-import { isIdeaPlanStatus, normalizeIdeaPlanStatus } from "./idea-plan-types.js";
+import type { AgentDirective, AgentDirectiveLoadValue, IdeaPlanStatus } from "./idea-plan-types.js";
+import { isDegradedAgentDirective, isIdeaPlanStatus, normalizeIdeaPlanStatus } from "./idea-plan-types.js";
 
 export const IDEA_PLAN_STATE_SCHEMA_FILE_NAMES: Record<IdeaPlanStatus, string> = {
   idea: "idea.schema.json",
@@ -24,12 +24,16 @@ export type IdeaPlanStateSchemaDocument = {
 export type IdeaPlanStateSchemaLoadResult = {
   status: IdeaPlanStatus;
   schemaPath: string;
-  agentDirective: AgentDirective;
+  agentDirective: AgentDirectiveLoadValue;
+  degraded: boolean;
+  degradedReason?: string;
 };
 
 type CachedStateSchema = {
   schemaPath: string;
-  agentDirective: AgentDirective;
+  agentDirective: AgentDirectiveLoadValue;
+  degraded: boolean;
+  degradedReason?: string;
 };
 
 const schemaCache = new Map<string, Map<IdeaPlanStatus, CachedStateSchema>>();
@@ -52,27 +56,66 @@ function resolveCanonicalStatus(status: IdeaPlanStatus | string): IdeaPlanStatus
   return canonical;
 }
 
+function buildDegradedDirective(reason: string): AgentDirectiveLoadValue {
+  return {
+    degraded: true,
+    reason,
+    requiredFields: [],
+    validTransitions: []
+  };
+}
+
 function readStateSchemaFile(schemaRoot: string, status: IdeaPlanStatus): CachedStateSchema {
   const fileName = IDEA_PLAN_STATE_SCHEMA_FILE_NAMES[status];
   const schemaPath = path.join(schemaRoot, "schemas", "ideas", "states", fileName);
   if (!fs.existsSync(schemaPath)) {
-    throw new Error(`IdeaPlan state schema not found for ${status}: ${schemaPath}`);
+    const reason = `IdeaPlan state schema not found for ${status}: ${schemaPath}`;
+    return {
+      schemaPath,
+      agentDirective: buildDegradedDirective(reason),
+      degraded: true,
+      degradedReason: reason
+    };
   }
 
-  const document = JSON.parse(fs.readFileSync(schemaPath, "utf8")) as IdeaPlanStateSchemaDocument;
+  let document: IdeaPlanStateSchemaDocument;
+  try {
+    document = JSON.parse(fs.readFileSync(schemaPath, "utf8")) as IdeaPlanStateSchemaDocument;
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    const reason = `IdeaPlan state schema for ${status} is not valid JSON (${schemaPath}): ${detail}`;
+    return {
+      schemaPath,
+      agentDirective: buildDegradedDirective(reason),
+      degraded: true,
+      degradedReason: reason
+    };
+  }
+
   const agentDirective = document.$defs?.canonicalAgentDirective;
   if (!agentDirective) {
-    throw new Error(`IdeaPlan state schema for ${status} is missing $defs.canonicalAgentDirective`);
+    const reason = `IdeaPlan state schema for ${status} is missing $defs.canonicalAgentDirective (${schemaPath})`;
+    return {
+      schemaPath,
+      agentDirective: buildDegradedDirective(reason),
+      degraded: true,
+      degradedReason: reason
+    };
   }
   if (agentDirective.state !== status) {
-    throw new Error(
-      `IdeaPlan state schema agentDirective.state mismatch for ${status}: ${agentDirective.state}`
-    );
+    const reason = `IdeaPlan state schema agentDirective.state mismatch for ${status}: ${agentDirective.state} (${schemaPath})`;
+    return {
+      schemaPath,
+      agentDirective: buildDegradedDirective(reason),
+      degraded: true,
+      degradedReason: reason
+    };
   }
 
   return {
     schemaPath,
-    agentDirective: structuredClone(agentDirective)
+    agentDirective: structuredClone(agentDirective),
+    degraded: false
   };
 }
 
@@ -99,11 +142,16 @@ export function loadIdeaPlanStateSchema(
 ): IdeaPlanStateSchemaLoadResult {
   const canonical = resolveCanonicalStatus(status);
   const schemaRoot = resolveIdeaPlanStateSchemaRoot(workspacePath);
-  const { schemaPath, agentDirective } = getCachedStateSchema(schemaRoot, canonical);
+  const { schemaPath, agentDirective, degraded, degradedReason } = getCachedStateSchema(schemaRoot, canonical);
+  const clonedDirective = isDegradedAgentDirective(agentDirective)
+    ? { ...agentDirective }
+    : structuredClone(agentDirective);
   return {
     status: canonical,
     schemaPath,
-    agentDirective: structuredClone(agentDirective)
+    agentDirective: clonedDirective,
+    degraded,
+    ...(degradedReason ? { degradedReason } : {})
   };
 }
 
@@ -112,4 +160,9 @@ export function resolveIdeaPlanStateSchemaPath(
   workspacePath?: string
 ): string {
   return loadIdeaPlanStateSchema(status, workspacePath).schemaPath;
+}
+
+/** Clear in-process schema cache (tests). */
+export function clearIdeaPlanStateSchemaCache(): void {
+  schemaCache.clear();
 }

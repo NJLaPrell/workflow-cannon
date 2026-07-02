@@ -23,6 +23,7 @@ import {
   synthesizePlanArtifactFromStoredDocument
 } from "../ideas/idea-plan-planning-init.js";
 import { loadIdeaPlanStateSchema } from "../ideas/idea-plan-state-schema-loader.js";
+import { requireIdeaPlanAgentDirective } from "../ideas/idea-plan-state-schema-guard.js";
 import type { IdeaPlanDocument, IdeaPlanReviewSection } from "../ideas/idea-plan-types.js";
 import { buildPlanArtifactReviewRecord } from "../../core/planning/plan-artifact-review-record.js";
 
@@ -127,7 +128,7 @@ export function persistUnifiedIdeaPlanReview(args: {
     throw new IdeaPlanStatusTransitionError(document.status, "reviewed");
   }
   const nextStatus = enforceIdeaPlanStatusTransition(document.status, "reviewed");
-  const reviewedDirective = loadIdeaPlanStateSchema("reviewed", workspacePath).agentDirective;
+  const reviewedDirective = requireIdeaPlanAgentDirective(loadIdeaPlanStateSchema("reviewed", workspacePath));
   const updated: IdeaPlanDocumentWithPlanningPayload = {
     ...document,
     status: nextStatus,
@@ -275,7 +276,7 @@ export function persistUnifiedIdeaPlanAccept(args: {
     throw new IdeaPlanStatusTransitionError(document.status, "accepted");
   }
   const nextStatus = enforceIdeaPlanStatusTransition(document.status, "accepted");
-  const acceptedDirective = loadIdeaPlanStateSchema("accepted", workspacePath).agentDirective;
+  const acceptedDirective = requireIdeaPlanAgentDirective(loadIdeaPlanStateSchema("accepted", workspacePath));
   const updated: IdeaPlanDocumentWithPlanningPayload = {
     ...document,
     status: nextStatus,
