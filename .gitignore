@@ -30,3 +30,4 @@ artifacts/
 agent-transcripts/
 # Extension VSIX builds (publish via vsce / attach to release locally)
 extensions/cursor-workflow-cannon/*.vsix
+.workspace-kit/migration-backups/**/.workspace-kit/tasks/*.db
