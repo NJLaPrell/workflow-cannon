@@ -26,6 +26,10 @@ import {
 } from "./unified-idea-plan-review-accept.js";
 import { promotePlanningSessionAfterReview } from "../ideas/planning-session-after-review.js";
 import { toPlanningChatSessionResponse } from "../ideas/planning-chat-session.js";
+import {
+  attachGeneratedPlanDocPath,
+  bestEffortGeneratePlanDocument
+} from "./best-effort-generate-plan-document.js";
 import { planningGenPolicyGate } from "../task-engine/planning-generation-gate.js";
 import { attachPolicyMeta } from "../task-engine/attach-planning-response-meta.js";
 import { TaskEngineError } from "../task-engine/transitions.js";
@@ -389,6 +393,10 @@ export async function runReviewPlanArtifact(
     ctx,
     stores.sqliteDual.getPlanningGeneration(),
     pg.warnings
+  );
+  attachGeneratedPlanDocPath(
+    result.data as Record<string, unknown>,
+    await bestEffortGeneratePlanDocument(ctx, writtenArtifact!.planId)
   );
   return result;
 }

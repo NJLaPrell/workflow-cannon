@@ -33,6 +33,10 @@ import { buildTaskFromConversionPayload } from "../task-engine/mutation-utils.js
 import type { TaskEntity, TaskStatus } from "../task-engine/types.js";
 import { attachPolicyMeta } from "../task-engine/attach-planning-response-meta.js";
 import { planningGenPolicyGate } from "../task-engine/planning-generation-gate.js";
+import {
+  attachGeneratedPlanDocPath,
+  bestEffortGeneratePlanDocument
+} from "./best-effort-generate-plan-document.js";
 
 const ACTIVE_PHASE_TASK_STATUSES = new Set<TaskStatus>([
   "ready",
@@ -631,6 +635,10 @@ export async function runFinalizePlanToPhase(
         stores.sqliteDual.getPlanningGeneration(),
         pg.warnings
       );
+      attachGeneratedPlanDocPath(
+        result.data as Record<string, unknown>,
+        await bestEffortGeneratePlanDocument(ctx, planId)
+      );
       return result;
     }
 
@@ -701,6 +709,10 @@ export async function runFinalizePlanToPhase(
       ctx,
       stores.sqliteDual.getPlanningGeneration(),
       pg.warnings
+    );
+    attachGeneratedPlanDocPath(
+      result.data as Record<string, unknown>,
+      await bestEffortGeneratePlanDocument(ctx, planId)
     );
     return result;
   }

@@ -29,6 +29,10 @@ import { digestPayload, planningConcurrencySaveOpts, readIdempotencyValue, stabl
 import { promoteAcceptedPlanArtifactFromAcceptedDraft } from "../ideas/idea-planning-metadata.js";
 import { completePlanningSessionAfterPlanAccept } from "../ideas/planning-session-completed-after-accept.js";
 import { toPlanningChatSessionResponse } from "../ideas/planning-chat-session.js";
+import {
+  attachGeneratedPlanDocPath,
+  bestEffortGeneratePlanDocument
+} from "./best-effort-generate-plan-document.js";
 
 const ACCEPT_IDEMPOTENCY_MODULE_PREFIX = "planning-plan-artifact-accept-idempotency:";
 
@@ -234,6 +238,21 @@ function acceptSuccessResult(args: {
       ...(args.planningChatSession ? { planningChatSession: args.planningChatSession } : {})
     }
   };
+}
+
+async function finishAcceptSuccess(
+  ctx: ModuleLifecycleContext,
+  planId: string,
+  args: Parameters<typeof acceptSuccessResult>[0],
+  extras: Record<string, unknown> = {}
+): Promise<ModuleCommandResult> {
+  const result = acceptSuccessResult(args);
+  Object.assign(result.data as Record<string, unknown>, extras);
+  attachGeneratedPlanDocPath(
+    result.data as Record<string, unknown>,
+    await bestEffortGeneratePlanDocument(ctx, planId)
+  );
+  return result;
 }
 
 function mergeOpenQuestionsAccepted(
@@ -474,7 +493,7 @@ export async function runAcceptPlanArtifact(
       }
       const replayStored =
         readStoredPlanArtifactVersion(ctx.workspacePath, prior.planId, prior.version, loaded)?.artifact ?? loaded;
-      return acceptSuccessResult({
+      return finishAcceptSuccess(ctx, planId, {
         code: "plan-artifact-accept-idempotent-replay",
         artifact: replayStored,
         storagePath: prior.storagePath,
@@ -502,7 +521,7 @@ export async function runAcceptPlanArtifact(
     }) === digest
   ) {
     const paths = getPlanArtifactStoragePaths(ctx.workspacePath, planId);
-    return acceptSuccessResult({
+    return finishAcceptSuccess(ctx, planId, {
       code: "plan-artifact-accept-idempotent-replay",
       artifact: loaded,
       storagePath: paths.artifactFileRelative(loaded.version),
@@ -517,7 +536,7 @@ export async function runAcceptPlanArtifact(
     unifiedDocument.acceptance.acceptedAt === approvalRecord.approvedAt &&
     unifiedDocument.acceptance.acceptedBy === approvalRecord.approvedBy
   ) {
-    return acceptSuccessResult({
+    return finishAcceptSuccess(ctx, planId, {
       code: "plan-artifact-accept-idempotent-replay",
       artifact: loaded,
       storagePath: unifiedIdeaPlanStoragePath(ctx.workspacePath, planId, unifiedDocument.version),
@@ -655,15 +674,19 @@ export async function runAcceptPlanArtifact(
     throw err;
   }
 
-  const result = acceptSuccessResult({
-    code: "plan-artifact-accepted",
-    artifact: responseArtifact!,
-    storagePath: storagePath!,
-    replayed: false,
-    ...(linkedIdea ? { idea: linkedIdea } : {}),
-    ...(planningChatSession ? { planningChatSession } : {}),
-    ...(unifiedDocument ? { ideaPlanStatus: "accepted" } : {})
-  });
+  const result = await finishAcceptSuccess(
+    ctx,
+    planId,
+    {
+      code: "plan-artifact-accepted",
+      artifact: responseArtifact!,
+      storagePath: storagePath!,
+      replayed: false,
+      ...(linkedIdea ? { idea: linkedIdea } : {}),
+      ...(planningChatSession ? { planningChatSession } : {}),
+      ...(unifiedDocument ? { ideaPlanStatus: "accepted" } : {})
+    }
+  );
   attachPolicyMeta(
     result.data as Record<string, unknown>,
     ctx,
