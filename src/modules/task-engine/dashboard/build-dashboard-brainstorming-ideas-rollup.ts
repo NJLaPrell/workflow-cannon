@@ -9,6 +9,7 @@ import { listIdeas } from "../../ideas/idea-store.js";
 import { listPlanningChatSessions } from "../../ideas/planning-chat-session.js";
 import type { SqliteDualPlanningStore } from "../persistence/sqlite-dual-planning.js";
 import { mapBrainstormSynthesisForDashboard } from "./build-dashboard-brainstorm-synthesis.js";
+import { mapBrainstormSessionsForDashboard } from "./map-dashboard-brainstorm-sessions.js";
 
 function emptyBrainstormingIdeasRollup(): DashboardBrainstormingIdeasRollup {
   return {
@@ -75,13 +76,15 @@ export function buildDashboardBrainstormingIdeasRollup(
         continue;
       }
       const synthesis = mapBrainstormSynthesisForDashboard(document.brainstorm);
+      const brainstormSessions = mapBrainstormSessionsForDashboard(document.brainstorm?.sessions);
       rows.push({
         ideaId: idea.id,
         title: idea.title,
         planRef: document.planRef,
         planId: document.planId,
         status: "brainstorming",
-        ...(synthesis ? { synthesis } : {})
+        ...(synthesis ? { synthesis } : {}),
+        ...(brainstormSessions.length > 0 ? { sessions: brainstormSessions } : {})
       });
     }
 

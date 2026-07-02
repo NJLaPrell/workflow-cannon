@@ -2671,6 +2671,9 @@ function renderDashboardIdeasSectionInnerHtml(rawIdeas: unknown): string {
         '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="idea-delete">Delete</button>' +
         "</span>" +
         "</div>" +
+        (brainstormDetailPanel
+          ? '<div class="wc-idea-brainstorm-detail-panel">' + brainstormDetailPanel + "</div>"
+          : "") +
         '<div class="wc-ideas-edit-form" data-wc-ideas-edit-form="1" hidden>' +
         '<input class="wc-input" data-wc-idea-edit-title="1" type="text" maxlength="180" value="' +
         titleAttr +
@@ -4922,6 +4925,33 @@ function renderPlanTitleGroupsInStateBucket(
       );
     })
     .join("");
+}
+
+function isBrainstormingPlanArtifactRow(row: Record<string, unknown>): boolean {
+  const status = String(row.status ?? row.lifecycleStatus ?? "").trim().toLowerCase();
+  return status === "brainstorming" || status === "idea";
+}
+
+function renderPlanningPlansSectionInnerHtml(d: Record<string, unknown>): string {
+  const brainstormingHtml = renderBrainstormingIdeasRollupSection(d.brainstormingIdeas);
+  const planArtifact = d.planArtifact;
+  if (!planArtifact || typeof planArtifact !== "object") {
+    return brainstormingHtml + renderPlanArtifactsSectionInnerHtml(planArtifact);
+  }
+  const summary = planArtifact as Record<string, unknown>;
+  const current =
+    summary.current && typeof summary.current === "object" ? (summary.current as Record<string, unknown>) : null;
+  const recent = Array.isArray(summary.recent)
+    ? (summary.recent.filter((row) => row && typeof row === "object") as Record<string, unknown>[])
+    : [];
+  const filteredRecent = recent.filter((row) => !isBrainstormingPlanArtifactRow(row));
+  const filteredCurrent = current && !isBrainstormingPlanArtifactRow(current) ? current : null;
+  const filteredPlanArtifact = {
+    ...summary,
+    current: filteredCurrent,
+    recent: filteredRecent
+  };
+  return brainstormingHtml + renderPlanArtifactsSectionInnerHtml(filteredPlanArtifact);
 }
 
 function renderPlanArtifactsSectionInnerHtml(planArtifact: unknown): string {
@@ -7469,7 +7499,7 @@ export function renderDashboardRootInnerHtml(
   const { d, ss, ws } = base;
   const phaseCtx = createDashboardPhaseRenderContext(d, ws);
   const queueCtx = createDashboardQueueRenderContext(d, ws, phaseCtx);
-  const planArtifactInner = renderPlanArtifactsSectionInnerHtml(d.planArtifact);
+  const planArtifactInner = renderPlanningPlansSectionInnerHtml(d);
   const phaseJournalInner = renderPhaseNotesOverviewSection(phaseJournal ?? null, d.phaseJournalStats);
   const deferred = options?.deferredSections ?? new Set<DashboardSectionId>();
 
@@ -7571,7 +7601,7 @@ export function renderDashboardSectionInnerHtml(
     case "ideas":
       return renderDashboardIdeasSectionInnerHtml(d.ideas);
     case "plan-artifact":
-      return renderPlanArtifactsSectionInnerHtml(d.planArtifact);
+      return renderPlanningPlansSectionInnerHtml(d);
     case "queue": {
       const phaseCtx = createDashboardPhaseRenderContext(d, ws);
       return createDashboardQueueRenderContext(d, ws, phaseCtx).queueInner;

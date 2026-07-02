@@ -56,7 +56,7 @@ test("delivered wins over scheduled when executed is true", () => {
 });
 
 test("planArtifactDisplayStateMeta returns user-facing labels", () => {
-  assert.equal(planArtifactDisplayStateMeta("new").label, "New");
+  assert.equal(planArtifactDisplayStateMeta("new").label, "Draft");
   assert.equal(planArtifactDisplayStateMeta("reviewed").label, "Reviewed");
   assert.equal(planArtifactDisplayStateMeta("scheduled").label, "Scheduled");
   assert.equal(planArtifactDisplayStateMeta("delivered").label, "Delivered");

@@ -15,7 +15,7 @@ export type PlanArtifactStateBucket = {
 };
 
 export const PLAN_STATE_BUCKETS: readonly PlanArtifactStateBucket[] = [
-  { key: "new", label: "New", defaultOpen: true },
+  { key: "new", label: "Draft", defaultOpen: true },
   { key: "needs_revision", label: "Needs revision", defaultOpen: false },
   { key: "reviewed", label: "Reviewed", defaultOpen: true },
   { key: "accepted", label: "Accepted", defaultOpen: true },
@@ -94,7 +94,7 @@ export function planArtifactDisplayStateMeta(
       return { label: "Needs revision", className: "wc-plan-status-warn" };
     case "new":
     default:
-      return { label: "New", className: "wc-plan-status-draft" };
+      return { label: "Draft", className: "wc-plan-status-draft" };
   }
 }
 

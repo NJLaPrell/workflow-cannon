@@ -80,6 +80,19 @@ export type DashboardBrainstormSynthesisSummary = {
   sessionCount: number;
 };
 
+/** Per-session brainstorm scores for dashboard detail panels. */
+export type DashboardBrainstormSessionSummary = {
+  sessionId: string;
+  sessionIndex: number;
+  startedAt?: string;
+  completedAt?: string;
+  valueScore?: number;
+  riskScore?: number;
+  effortScore?: number;
+  confidenceScore?: number;
+  priorityScore?: number;
+};
+
 export type DashboardIdeaPlanArtifactSummary = {
   planId: string;
   planRef: string;
@@ -88,6 +101,8 @@ export type DashboardIdeaPlanArtifactSummary = {
   phaseKey?: string;
   /** Present when the linked IdeaPlan document is in `brainstorming` status. */
   brainstormSynthesis?: DashboardBrainstormSynthesisSummary;
+  /** Ordered brainstorm sessions when the linked IdeaPlan document has session history. */
+  brainstormSessions?: DashboardBrainstormSessionSummary[];
   latestReview?: {
     planRef: string;
     passed: boolean | null;
@@ -104,6 +119,7 @@ export type DashboardBrainstormingIdeaRow = {
   planId: string;
   status: "brainstorming";
   synthesis?: DashboardBrainstormSynthesisSummary;
+  sessions?: DashboardBrainstormSessionSummary[];
 };
 
 export type DashboardBrainstormingIdeasRollup = {
