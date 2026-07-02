@@ -48,6 +48,13 @@ jobs:
       - name: Build and typecheck
         run: pnpm run build && pnpm check
 
+      # Compile the extension BEFORE tests: some unit tests import compiled
+      # artifacts from extensions/cursor-workflow-cannon/dist (e.g.
+      # test/ideas-unified-model-flag-rollback.test.mjs imports render-dashboard.js).
+      # Running test:run before this step causes ERR_MODULE_NOT_FOUND.
+      - name: Cursor extension (pnpm workspace)
+        run: pnpm --filter cursor-workflow-cannon run check && pnpm --filter cursor-workflow-cannon run compile
+
       - name: Test
         run: pnpm run test:run
 
@@ -56,9 +63,6 @@ jobs:
 
       - name: Plugin fixture smoke (list-plugins / inspect-plugin)
         run: node scripts/ci-plugin-fixture-smoke.mjs
-
-      - name: Cursor extension (pnpm workspace)
-        run: pnpm --filter cursor-workflow-cannon run check && pnpm --filter cursor-workflow-cannon run compile
 
       - name: Advisory task-state hand-edit check
         continue-on-error: true
