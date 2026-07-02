@@ -15,5 +15,6 @@ Architecture decisions live under `.ai/adrs/` / `docs/maintainers/adrs/`. Agents
 | MCP remote transport and auth non-goals (Phase 134 explicit out-of-scope) | `.ai/adrs/ADR-mcp-remote-transport-auth-non-goals-phase-134-v1.md` |
 | Cursor background-agent remote execution handoff (Phase 1 design; Phase 2 via Cursor SDK) | `.ai/adrs/ADR-cursor-remote-agent-handoff-v1.md` |
 | Workflow Cannon state backend merge surface (snapshot/event exports + SQLite cache boundary) | `.ai/adrs/ADR-workflow-cannon-state-backend-v1.md` |
+| Unified IdeaPlan document storage (file-based artifact, six-state machine) | `.ai/adrs/ADR-idea-plan-unified-document-storage-v1.md` |
 
 When a row points only to `docs/maintainers/`, the machine original may be absent — read that single file and stop (see **`.cursor/rules/agent-doc-routing.mdc`** exception list).
