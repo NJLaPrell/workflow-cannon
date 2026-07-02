@@ -106,7 +106,7 @@ test("scoring formulas produce correct outputs for known inputs", () => {
   assert.equal(riskScore, 4.7);
   assert.equal(effortScore, 7.8);
   assert.equal(confidenceScore, 6.95);
-  assert.equal(priorityScore, 5.66);
+  assert.equal(priorityScore, 61);
 
   const highComplexityMedium = computeEffortScore({ tShirtSize: "M", complexity: 9 });
   const lowComplexityLarge = computeEffortScore({ tShirtSize: "L", complexity: 2 });
@@ -117,7 +117,7 @@ test("scoring formulas produce correct outputs for known inputs", () => {
   assert.equal(computed.risk, 4.7);
   assert.equal(computed.effort, 7.8);
   assert.equal(computed.confidence, 6.95);
-  assert.equal(computed.priority, 5.66);
+  assert.equal(computed.priority, 61);
 });
 
 test("N=1 synthesis returns session scores directly", () => {

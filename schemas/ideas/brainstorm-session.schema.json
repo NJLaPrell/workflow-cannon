@@ -22,6 +22,11 @@
       "minimum": 1,
       "maximum": 10
     },
+    "score0to100": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100
+    },
     "tShirtSize": {
       "type": "string",
       "enum": ["XS", "S", "M", "L", "XL"]
@@ -34,7 +39,7 @@
         "risk": { "$ref": "#/$defs/score1to10" },
         "effort": { "$ref": "#/$defs/score1to10" },
         "confidence": { "$ref": "#/$defs/score1to10" },
-        "priority": { "$ref": "#/$defs/score1to10" },
+        "priority": { "$ref": "#/$defs/score0to100" },
         "tShirtSize": { "$ref": "#/$defs/tShirtSize" },
         "complexity": { "$ref": "#/$defs/score1to10" }
       }

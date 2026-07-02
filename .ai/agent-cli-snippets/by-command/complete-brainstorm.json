@@ -1,27 +1,27 @@
 {
   "ok": true,
   "code": "run-args-schema",
-  "command": "cae-update-activation",
+  "command": "complete-brainstorm",
   "schema": {
     "type": "object",
     "additionalProperties": true,
-    "description": "Permissive fallback args schema for 'cae-update-activation'. Use instructionPath for command-specific field guidance until a stricter schema is added."
+    "description": "Permissive fallback args schema for 'complete-brainstorm'. Use instructionPath for command-specific field guidance until a stricter schema is added."
   },
   "schemaSource": "manifest-permissive-fallback",
   "sampleArgs": {},
   "examples": [
     {
       "description": "Minimal argv example",
-      "argv": "workspace-kit run cae-update-activation '{}'"
+      "argv": "workspace-kit run complete-brainstorm '{}'"
     }
   ],
-  "instructionPath": "src/modules/context-activation/instructions/cae-update-activation.md",
-  "moduleId": "context-activation",
-  "description": "Update fields on a non-retired CAE activation row.",
+  "instructionPath": "src/modules/ideas/instructions/complete-brainstorm.md",
+  "moduleId": "ideas",
+  "description": "Validate brainstorm section and transition unified IdeaPlan from brainstorming to planning.",
   "policy": {
-    "sensitivity": "non-sensitive",
-    "operationId": null,
-    "jsonApprovalRequired": false
+    "sensitivity": "sensitive",
+    "operationId": "ideas.persist",
+    "jsonApprovalRequired": true
   },
   "planningGeneration": {
     "cliPrelude": false,
@@ -31,12 +31,12 @@
     "clientMutationId": false
   },
   "responseTemplate": {
-    "defaultResponseTemplateId": null
+    "defaultResponseTemplateId": "default"
   },
   "remediationContract": ".ai/runbooks/agent-task-engine-ergonomics.md",
   "discovery": {
     "listCommands": "pnpm exec wk run --list-commands",
     "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
   },
-  "invocationId": "3fbcb5bc-7121-4b6b-ab8f-5f274db3b6ba"
+  "invocationId": "f0c5fddb-dd33-40cc-8635-31753ffa9469"
 }

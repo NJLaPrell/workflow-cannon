@@ -169,6 +169,8 @@ test("update-brainstorm-session computes all five scores when sub-inputs are com
     risk: 4.7,
     effort: 7.8,
     confidence: 6.95,
-    priority: 5.66
+    priority: 61,
+    tShirtSize: "M",
+    complexity: 9
   });
 });

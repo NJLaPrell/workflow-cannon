@@ -1,23 +1,23 @@
 {
   "ok": true,
   "code": "run-args-schema",
-  "command": "start-idea-planning",
+  "command": "start-brainstorm-session",
   "schema": {
     "type": "object",
     "additionalProperties": true,
-    "description": "Permissive fallback args schema for 'start-idea-planning'. Use instructionPath for command-specific field guidance until a stricter schema is added."
+    "description": "Permissive fallback args schema for 'start-brainstorm-session'. Use instructionPath for command-specific field guidance until a stricter schema is added."
   },
   "schemaSource": "manifest-permissive-fallback",
   "sampleArgs": {},
   "examples": [
     {
       "description": "Minimal argv example",
-      "argv": "workspace-kit run start-idea-planning '{}'"
+      "argv": "workspace-kit run start-brainstorm-session '{}'"
     }
   ],
-  "instructionPath": "src/modules/ideas/instructions/start-idea-planning.md",
+  "instructionPath": "src/modules/ideas/instructions/start-brainstorm-session.md",
   "moduleId": "ideas",
-  "description": "Start or resume a durable planner-chat session for an idea with compact prompt generation.",
+  "description": "Start or append a brainstorm session on a unified IdeaPlan artifact with idea→brainstorming transition on first call.",
   "policy": {
     "sensitivity": "sensitive",
     "operationId": "ideas.persist",
@@ -38,5 +38,5 @@
     "listCommands": "pnpm exec wk run --list-commands",
     "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
   },
-  "invocationId": "c73662c7-f429-478c-b25f-17cd55eda932"
+  "invocationId": "c7eadc25-6175-43c5-ab9b-c769611bde89"
 }
