@@ -41,6 +41,10 @@ import {
 } from "./plan-artifact-display-state.js";
 import type { DashboardSectionId } from "./dashboard-section-registry.js";
 import { lookupDashboardSection } from "./dashboard-section-registry.js";
+import {
+  renderBrainstormingIdeasRollupSection,
+  renderIdeaPlanBrainstormDetailPanel
+} from "./render-brainstorming-rollup.js";
 import { renderDashboardReadModeBadgeHtml, renderDashboardSectionPlaceholder } from "./render-dashboard-shell.js";
 import type { DashboardReadModeBadge } from "./dashboard-read-mode-badge.js";
 import type { McpHostStatus } from "../../mcp/mcp-status-types.js";
@@ -2433,6 +2437,68 @@ function ideaLifecycleChipLabel(lifecycleState: string): string {
   }
 }
 
+function resolveIdeaRowPlanRef(args: {
+  activeDraftPlanArtifactSummary: Record<string, unknown> | null;
+  linkedPlanArtifactSummary: Record<string, unknown> | null;
+  linkedPlanArtifact?: unknown;
+  activeDraftPlanArtifact?: unknown;
+}): string {
+  const fromActive =
+    typeof args.activeDraftPlanArtifactSummary?.planRef === "string"
+      ? args.activeDraftPlanArtifactSummary.planRef.trim()
+      : "";
+  if (fromActive.length > 0) {
+    return fromActive;
+  }
+  const fromLinked =
+    typeof args.linkedPlanArtifactSummary?.planRef === "string"
+      ? args.linkedPlanArtifactSummary.planRef.trim()
+      : "";
+  if (fromLinked.length > 0) {
+    return fromLinked;
+  }
+  const fromDraftField =
+    typeof args.activeDraftPlanArtifact === "string" ? args.activeDraftPlanArtifact.trim() : "";
+  if (fromDraftField.length > 0) {
+    return fromDraftField;
+  }
+  return typeof args.linkedPlanArtifact === "string" ? args.linkedPlanArtifact.trim() : "";
+}
+
+function renderIdeaBrainstormPlanButtons(planRef: string): string {
+  const refAttrs = planRef.length > 0 ? ` data-plan-ref="${escapeHtmlAttr(planRef)}"` : "";
+  const brainstormBtn = ideaPlanButton("Brainstorm", "idea-brainstorm", refAttrs, {
+    secondary: true,
+    disabled: planRef.length === 0,
+    title:
+      planRef.length > 0
+        ? "Start or append a brainstorm session on the unified IdeaPlan document"
+        : "No unified IdeaPlan document is linked yet. Link or create one before brainstorming."
+  });
+  const planBtn = ideaPlanButton("Plan", "idea-plan", "", {
+    title: "Skip brainstorming and start planning (start-idea-planning)"
+  });
+  return brainstormBtn + planBtn;
+}
+
+function planCardSecondaryBrainstormButton(row: Record<string, unknown>, effectiveStatusRaw: string): string {
+  if (effectiveStatusRaw === "idea" || effectiveStatusRaw === "brainstorming" || effectiveStatusRaw === "superseded") {
+    return "";
+  }
+  const planRef = String(row.planRef ?? "").trim();
+  if (planRef.length === 0) {
+    return "";
+  }
+  const sourceIdeaId = String(row.sourceIdeaId ?? "").trim();
+  const attrs =
+    ` data-plan-ref="${escapeHtmlAttr(planRef)}"` +
+    (sourceIdeaId.length > 0 ? ` data-idea-id="${escapeHtmlAttr(sourceIdeaId)}"` : "");
+  return ideaPlanButton("Brainstorm", "plan-artifact-brainstorm", attrs, {
+    secondary: true,
+    title: "Append a new brainstorm session without changing document status"
+  });
+}
+
 /**
  * Once a plan exists for an idea, all lifecycle actions (Review/Accept/Finalize/View tasks) live on the
  * plan's own card in the Plans section — one source of truth instead of duplicating buttons here. The idea
@@ -2444,11 +2510,16 @@ function renderIdeaLifecycleActions(args: {
   hasPlanningChatSession: boolean;
   activeDraftPlanArtifactSummary: Record<string, unknown> | null;
   linkedPlanArtifactSummary: Record<string, unknown> | null;
+  linkedPlanArtifact?: unknown;
+  activeDraftPlanArtifact?: unknown;
 }): string {
   const viewPlanTarget = args.activeDraftPlanArtifactSummary ?? args.linkedPlanArtifactSummary;
+  const planRef = resolveIdeaRowPlanRef(args);
   const resumeButton = ideaPlanButton(
-    args.hasPlanningChatSession || args.lifecycleState === "needs_revision" ? "Resume planning" : "Plan this",
-    "idea-plan"
+    args.hasPlanningChatSession || args.lifecycleState === "needs_revision" ? "Resume planning" : "Plan",
+    "idea-plan",
+    "",
+    { title: "Resume or start planning (start-idea-planning)" }
   );
   switch (args.lifecycleState) {
     case "planning":
@@ -2508,7 +2579,7 @@ function renderIdeaLifecycleActions(args: {
     }
     case "open":
     default:
-      return ideaPlanButton("Plan this", "idea-plan");
+      return renderIdeaBrainstormPlanButtons(planRef);
   }
 }
 
@@ -2568,8 +2639,13 @@ function renderDashboardIdeasSectionInnerHtml(rawIdeas: unknown): string {
         lifecycleState,
         hasPlanningChatSession,
         activeDraftPlanArtifactSummary,
-        linkedPlanArtifactSummary
+        linkedPlanArtifactSummary,
+        linkedPlanArtifact: row.linkedPlanArtifact,
+        activeDraftPlanArtifact: row.activeDraftPlanArtifact
       });
+      const brainstormDetailPanel = renderIdeaPlanBrainstormDetailPanel(
+        activeDraftPlanArtifactSummary ?? linkedPlanArtifactSummary
+      );
       return (
         '<div class="wc-ideas-row" draggable="true" data-wc-idea-id="' +
         idAttr +
@@ -4573,6 +4649,7 @@ function renderPlanArtifactCardActions(row: Record<string, unknown>, effectiveSt
     ? undefined
     : { disabled: true, title: "Plan identity is incomplete. Refresh the dashboard and try again." };
   const viewPlanButton = ideaPlanButton("View plan", "idea-view-plan", attrs, { secondary: true });
+  const secondaryBrainstorm = planCardSecondaryBrainstormButton(row, effectiveStatusRaw);
   switch (effectiveStatusRaw) {
     case "draft":
       return (
@@ -4581,7 +4658,9 @@ function renderPlanArtifactCardActions(row: Record<string, unknown>, effectiveSt
           "plan-artifact-review",
           attrs,
           identityOptions ?? { title: "Review this draft plan with the PlanArtifact rubric" }
-        ) + viewPlanButton
+        ) +
+        viewPlanButton +
+        secondaryBrainstorm
       );
     case "needs_revision": {
       const sourceIdeaId = String(row.sourceIdeaId ?? "").trim();
@@ -4594,7 +4673,7 @@ function renderPlanArtifactCardActions(row: Record<string, unknown>, effectiveSt
               { title: "Resume planning to resolve review blockers" }
             )
           : "";
-      return resumeButton + viewPlanButton;
+      return resumeButton + viewPlanButton + secondaryBrainstorm;
     }
     case "approval_ready": {
       const blockerCount = numberOrZero(row.blockerCount);
@@ -4612,7 +4691,9 @@ function renderPlanArtifactCardActions(row: Record<string, unknown>, effectiveSt
           "plan-artifact-accept",
           attrs,
           identityOptions ?? (canAccept ? undefined : { disabled: true, title: acceptTitle })
-        ) + viewPlanButton
+        ) +
+        viewPlanButton +
+        secondaryBrainstorm
       );
     }
     case "accepted":
@@ -4622,7 +4703,9 @@ function renderPlanArtifactCardActions(row: Record<string, unknown>, effectiveSt
           "plan-artifact-finalize",
           attrs,
           identityOptions ?? { title: "Finalize this accepted plan into ready queue tasks" }
-        ) + viewPlanButton
+        ) +
+        viewPlanButton +
+        secondaryBrainstorm
       );
     case "finalized": {
       const phaseKey = String(row.phaseKey ?? "").trim();
@@ -4634,12 +4717,16 @@ function renderPlanArtifactCardActions(row: Record<string, unknown>, effectiveSt
               disabled: true,
               title: tasksGenerated ? "Phase key unavailable for this finalized plan." : "No tasks found for this plan yet."
             });
-      return viewTasksButton + viewPlanButton;
+      return viewTasksButton + viewPlanButton + secondaryBrainstorm;
     }
     case "superseded":
       return viewPlanButton;
+    case "planning":
+    case "delivered":
+    case "reviewed":
+      return viewPlanButton + secondaryBrainstorm;
     default:
-      return viewPlanButton;
+      return viewPlanButton + secondaryBrainstorm;
   }
 }
 

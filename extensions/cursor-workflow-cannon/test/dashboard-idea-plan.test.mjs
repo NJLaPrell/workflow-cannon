@@ -20,6 +20,13 @@ const tierMod = await import("../dist/policy/dashboard-policy-tier.js");
 function ideaPlanHostBlock() {
   return providerSrc.slice(
     providerSrc.indexOf("private async runPrefillIdeaPlanningChat"),
+    providerSrc.indexOf("private async runPrefillIdeaBrainstormChat")
+  );
+}
+
+function ideaBrainstormHostBlock() {
+  return providerSrc.slice(
+    providerSrc.indexOf("private async runPrefillIdeaBrainstormChat"),
     providerSrc.indexOf("private async onTaskCommentsComingSoon")
   );
 }
@@ -52,9 +59,19 @@ function renderIdeas(top) {
   });
 }
 
-test("Ideas Plan this posts prefillIdeaPlanningChat from the webview", () => {
+test("Ideas Plan posts prefillIdeaPlanningChat from the webview", () => {
   assert.match(webviewClientSrc, /act === 'idea-plan'/);
   assert.match(webviewClientSrc, /type:'prefillIdeaPlanningChat'/);
+});
+
+test("Ideas Brainstorm posts prefillIdeaBrainstormChat from the webview", () => {
+  assert.match(webviewClientSrc, /act === 'idea-brainstorm'/);
+  assert.match(webviewClientSrc, /type:'prefillIdeaBrainstormChat'/);
+});
+
+test("Plan card secondary Brainstorm posts prefillIdeaBrainstormChat from the webview", () => {
+  assert.match(webviewClientSrc, /act === 'plan-artifact-brainstorm'/);
+  assert.match(webviewClientSrc, /submitPlanBrainstorm/);
 });
 
 test("Ideas View plan posts viewPlanArtifact from the webview", () => {
@@ -62,16 +79,25 @@ test("Ideas View plan posts viewPlanArtifact from the webview", () => {
   assert.match(webviewClientSrc, /type:'viewPlanArtifact'/);
 });
 
-test("Ideas Plan this webview ignores repeat clicks while plan button is busy", () => {
+test("Ideas Plan webview ignores repeat clicks while plan button is busy", () => {
   const block = webviewClientSrc.slice(
     webviewClientSrc.indexOf("function submitIdeaPlan"),
-    webviewClientSrc.indexOf("function setIdeaEditMode")
+    webviewClientSrc.indexOf("function submitIdeaBrainstorm")
   );
   assert.match(block, /planBtn\.disabled/);
   assert.match(block, /setIdeaRowBusy\(row, true, 'Opening\.\.\.'\)/);
 });
 
-test("Ideas Plan this host action calls start-idea-planning with policy approval", () => {
+test("Ideas Brainstorm webview ignores repeat clicks while brainstorm button is busy", () => {
+  const block = webviewClientSrc.slice(
+    webviewClientSrc.indexOf("function submitIdeaBrainstorm"),
+    webviewClientSrc.indexOf("function submitPlanBrainstorm")
+  );
+  assert.match(block, /brainstormBtn\.disabled/);
+  assert.match(block, /setIdeaRowBusy\(row, true, 'Opening\.\.\.'\)/);
+});
+
+test("Ideas Plan host action calls start-idea-planning with policy approval", () => {
   const block = ideaPlanHostBlock();
   assert.match(block, /runMutationWithGenerationRetry\("start-idea-planning"/);
   assert.match(block, /command: "start-idea-planning"/);
@@ -82,17 +108,35 @@ test("Ideas Plan this host action calls start-idea-planning with policy approval
   assert.doesNotMatch(block, /update-idea/);
 });
 
-test("Ideas Plan this uses stable per-idea clientMutationId for command replay", () => {
+test("Ideas Brainstorm host action calls start-brainstorm-session then prefillCursorChat", () => {
+  const block = ideaBrainstormHostBlock();
+  assert.match(block, /runMutationWithGenerationRetry\("start-brainstorm-session"/);
+  assert.match(block, /command: "start-brainstorm-session"/);
+  assert.match(block, /clientMutationId: this\.dashboardIdeaBrainstormMutationId/);
+  assert.match(block, /buildBrainstormSessionPrompt/);
+  assert.match(block, /prefillCursorChat\(brainstormChatPrompt/);
+});
+
+test("Ideas Plan uses stable per-idea clientMutationId for command replay", () => {
   const mutationBlock = providerSrc.slice(
     providerSrc.indexOf("private dashboardIdeaPlanMutationId"),
-    providerSrc.indexOf("private formatStartIdeaPlanningError")
+    providerSrc.indexOf("private dashboardIdeaBrainstormMutationId")
   );
   assert.match(mutationBlock, /dashboard-idea-plan-\$\{ideaId\}/);
   assert.doesNotMatch(mutationBlock, /Date\.now\(\)/);
   assert.doesNotMatch(mutationBlock, /dashboardDrawerMutationId\("dashboard-idea-plan"/);
 });
 
-test("Ideas Plan this host single-flights concurrent Plan this for the same idea", () => {
+test("Ideas Brainstorm uses stable per-idea clientMutationId for command replay", () => {
+  const mutationBlock = providerSrc.slice(
+    providerSrc.indexOf("private dashboardIdeaBrainstormMutationId"),
+    providerSrc.indexOf("private formatStartBrainstormSessionError")
+  );
+  assert.match(mutationBlock, /dashboard-idea-brainstorm-/);
+  assert.doesNotMatch(mutationBlock, /Date\.now\(\)/);
+});
+
+test("Ideas Plan host single-flights concurrent Plan for the same idea", () => {
   const block = providerSrc.slice(
     providerSrc.indexOf("private async onPrefillIdeaPlanningChat"),
     providerSrc.indexOf("private async runPrefillIdeaPlanningChat")
@@ -102,11 +146,28 @@ test("Ideas Plan this host single-flights concurrent Plan this for the same idea
   assert.match(block, /inFlightIdeaPlan\.delete\(ideaId\)/);
 });
 
+test("Ideas Brainstorm host single-flights concurrent Brainstorm for the same idea and planRef", () => {
+  const block = providerSrc.slice(
+    providerSrc.indexOf("private async onPrefillIdeaBrainstormChat"),
+    providerSrc.indexOf("private async runPrefillIdeaBrainstormChat")
+  );
+  assert.match(block, /inFlightIdeaBrainstorm\.get\(flightKey\)/);
+  assert.match(block, /inFlightIdeaBrainstorm\.set\(flightKey, work\)/);
+  assert.match(block, /inFlightIdeaBrainstorm\.delete\(flightKey\)/);
+});
+
 test("Ideas View plan host opens persisted plan artifact file", () => {
   assert.match(providerSrc, /if \(msg\?\.type === "viewPlanArtifact"\)/);
   assert.match(providerSrc, /private async onViewPlanArtifact/);
   assert.match(providerSrc, /client\.run\("get-plan-artifact"/);
   assert.match(providerSrc, /openTextDocument/);
+});
+
+test("resolveDashboardPolicyTierRow maps Ideas brainstorm to start-brainstorm-session", () => {
+  const row = tierMod.resolveDashboardPolicyTierRow("ideas", "brainstorm");
+  assert.ok(row);
+  assert.equal(row.tier, "routine");
+  assert.equal(row.command, "start-brainstorm-session");
 });
 
 test("resolveDashboardPolicyTierRow maps Ideas plan to start-idea-planning", () => {
@@ -116,10 +177,31 @@ test("resolveDashboardPolicyTierRow maps Ideas plan to start-idea-planning", () 
   assert.equal(row.command, "start-idea-planning");
 });
 
-test("ideas row renders Plan this or Resume planning but never both labels", () => {
-  const openHtml = renderIdeas([{ id: "I001", title: "New idea", note: "", status: "open" }]);
-  assert.match(openHtml, /Plan this/);
+test("ideas row renders Brainstorm and Plan buttons for open ideas", () => {
+  const openHtml = renderIdeas([
+    {
+      id: "I001",
+      title: "New idea",
+      note: "",
+      status: "open",
+      activeDraftPlanArtifact: "plan-artifact:idea-state-plan",
+      activeDraftPlanArtifactSummary: {
+        planId: "idea-state-plan",
+        planRef: "plan-artifact:idea-state-plan",
+        status: "idea",
+        version: 1
+      }
+    }
+  ]);
+  assert.match(openHtml, /data-wc-action="idea-brainstorm"/);
+  assert.match(openHtml, />Brainstorm</);
+  assert.match(openHtml, /data-wc-action="idea-plan"/);
+  assert.match(openHtml, />Plan</);
+  assert.doesNotMatch(openHtml, /Plan this/);
   assert.doesNotMatch(openHtml, /Resume planning/);
+
+  const openWithoutPlanHtml = renderIdeas([{ id: "I001B", title: "No plan ref", note: "", status: "open" }]);
+  assert.match(openWithoutPlanHtml, /data-wc-action="idea-brainstorm"[^>]*disabled/);
 
   const activeHtml = renderIdeas([
     {
@@ -131,12 +213,9 @@ test("ideas row renders Plan this or Resume planning but never both labels", () 
     }
   ]);
   assert.match(activeHtml, /Resume planning/);
-  assert.doesNotMatch(activeHtml, />Plan this</);
+  assert.doesNotMatch(activeHtml, /data-wc-action="idea-brainstorm"/);
 });
 
-// Once a plan exists, its lifecycle actions (Review/Accept/Finalize/View tasks) live only on the plan's own
-// card in the Plans section. The Ideas row is reduced to a status chip + a single "Open plan" link so the
-// same action never appears twice on the dashboard.
 test("ideas row renders a status chip and Open plan link for draft-ready ideas", () => {
   const html = renderIdeas([
     {
@@ -326,6 +405,34 @@ test("ideas row shows a Finalized chip and Open plan link (View tasks lives on t
   ]);
   assert.match(html, /wc-plan-lifecycle-chip">Finalized</);
   assert.match(html, /data-wc-action="idea-open-plan-card"[^>]*data-plan-id="finalized-plan"/);
+});
+
+test("plan card renders secondary Brainstorm for post-brainstorming planning state", () => {
+  const html = renderDashboardRootInnerHtml({
+    ok: true,
+    data: {
+      stateSummary: {},
+      workspaceStatus: {},
+      planArtifact: {
+        schemaVersion: 1,
+        count: 1,
+        current: {
+          planId: "planning-doc",
+          planRef: "plan-artifact:planning-doc",
+          version: 3,
+          status: "planning",
+          title: "In planning",
+          sourceIdeaId: "I010",
+          updatedAt: "2026-07-02T00:00:00.000Z",
+          wbsRowCount: 0,
+          openQuestionCount: 0
+        },
+        recent: []
+      }
+    }
+  });
+  assert.match(html, /data-wc-action="plan-artifact-brainstorm"/);
+  assert.match(html, /data-plan-ref="plan-artifact:planning-doc"/);
 });
 
 test("Open plan click scrolls to and highlights the matching plan card in the webview", () => {
