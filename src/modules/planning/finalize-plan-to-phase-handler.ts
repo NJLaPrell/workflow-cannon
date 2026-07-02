@@ -10,11 +10,18 @@ import {
 } from "../../core/planning/index.js";
 import { allocateNextTaskNumericId } from "../task-engine/id-allocation.js";
 import {
-  readPlanArtifactVersion,
   resolveLatestPlanArtifactVersion,
   writeNextPlanArtifactVersion
 } from "../../core/planning/plan-artifact-storage.js";
+import type { IdeaPlanDocumentWithPlanningPayload } from "../ideas/idea-plan-planning-init.js";
+import type { IdeaPlanDocument } from "../ideas/idea-plan-types.js";
 import { openPlanningStores } from "../../core/planning/index.js";
+import {
+  ideaPlanStatusInvalidResult,
+  persistUnifiedIdeaPlanDeliveryRefs,
+  readStoredPlanArtifactVersion,
+  unifiedIdeaPlanStoragePath
+} from "./unified-idea-plan-review-accept.js";
 import { inferTaskPhaseKey } from "../task-engine/phase-resolution.js";
 import { reviewPlanningExecutionDraftGaps } from "../task-engine/planning-execution-draft-review.js";
 import { runTaskRowMutationCommands } from "../task-engine/commands/task-row-mutation-commands.js";
@@ -134,11 +141,46 @@ async function ensurePhaseCatalogEntryForFinalize(args: {
   return { ok: true, created: true, skipped: false, catalogResult };
 }
 
-function resolveApprovalTargetVersion(loaded: PlanArtifactV1): number {
+function resolveApprovalTargetVersion(
+  loaded: PlanArtifactV1,
+  unifiedDocument?: IdeaPlanDocument
+): number {
+  if (unifiedDocument?.acceptance?.acceptedVersion !== undefined) {
+    return unifiedDocument.acceptance.acceptedVersion;
+  }
   if (loaded.status === "accepted" && loaded.approvalRecord?.approvedVersion !== undefined) {
     return loaded.approvalRecord.approvedVersion;
   }
-  return loaded.version;
+  return unifiedDocument?.version ?? loaded.version;
+}
+
+function planArtifactFallback(planId: string): PlanArtifactV1 {
+  return {
+    schemaVersion: 1,
+    planId,
+    version: 1,
+    planRef: `plan-artifact:${planId}`,
+    status: "draft",
+    identity: { title: "Plan", planningType: "new-feature" },
+    goals: [],
+    nonGoals: [],
+    valueAssessment: { impact: "", confidence: "medium" },
+    riskAssessment: [],
+    technicalImpact: { systemsTouched: [] },
+    testingStrategy: { layers: [], criticalPaths: [] },
+    implementationGuidance: [],
+    whatNotToDo: [],
+    assumptions: [],
+    openQuestions: [],
+    wbs: [],
+    phaseRecommendations: [],
+    provenance: {
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      createdBy: "agent",
+      source: "draft-plan-artifact"
+    }
+  };
 }
 
 function buildFinalizeTasks(
@@ -220,8 +262,13 @@ export async function runFinalizePlanToPhase(
 
   const requestedVersion = parseVersion(args.version);
   const targetVersion = requestedVersion ?? latestVersion;
-  const loaded = readPlanArtifactVersion(ctx.workspacePath, planId, targetVersion);
-  if (!loaded) {
+  const stored = readStoredPlanArtifactVersion(
+    ctx.workspacePath,
+    planId,
+    targetVersion,
+    planArtifactFallback(planId)
+  );
+  if (!stored) {
     return {
       ok: false,
       code: "plan-artifact-not-found",
@@ -229,6 +276,10 @@ export async function runFinalizePlanToPhase(
       data: { schemaVersion: 1, responseSchemaVersion: 1, planId, version: targetVersion }
     };
   }
+  const loaded = stored.artifact;
+  const unifiedDocument =
+    stored.kind === "idea-plan" ? (stored.document as IdeaPlanDocumentWithPlanningPayload) : undefined;
+  const artifactVersion = unifiedDocument?.version ?? loaded.version;
 
   if (requestedVersion !== undefined && requestedVersion !== latestVersion) {
     return {
@@ -245,7 +296,17 @@ export async function runFinalizePlanToPhase(
     };
   }
 
-  if (loaded.status !== "accepted") {
+  if (unifiedDocument) {
+    if (unifiedDocument.status !== "accepted") {
+      return ideaPlanStatusInvalidResult(
+        "idea-plan-status-invalid",
+        `finalize-plan-to-phase requires unified document status accepted (current: ${unifiedDocument.status})`,
+        planId,
+        unifiedDocument.status,
+        "accepted"
+      );
+    }
+  } else if (loaded.status !== "accepted") {
     return {
       ok: false,
       code: "plan-artifact-not-accepted",
@@ -254,19 +315,23 @@ export async function runFinalizePlanToPhase(
         schemaVersion: 1,
         responseSchemaVersion: 1,
         planId,
-        version: loaded.version,
+        version: artifactVersion,
         status: loaded.status
       }
     };
   }
 
-  const approvalTarget = resolveApprovalTargetVersion(loaded);
-  if (loaded.approvalRecord?.approvedVersion !== undefined && loaded.approvalRecord.approvedVersion !== approvalTarget) {
+  const approvalTarget = resolveApprovalTargetVersion(loaded, unifiedDocument);
+  if (
+    !unifiedDocument &&
+    loaded.approvalRecord?.approvedVersion !== undefined &&
+    loaded.approvalRecord.approvedVersion !== approvalTarget
+  ) {
     return {
       ok: false,
       code: "plan-artifact-not-accepted",
       message: `PlanArtifact ${planId} approval pin is inconsistent`,
-      data: { schemaVersion: 1, responseSchemaVersion: 1, planId, version: loaded.version }
+      data: { schemaVersion: 1, responseSchemaVersion: 1, planId, version: artifactVersion }
     };
   }
 
@@ -509,6 +574,66 @@ export async function runFinalizePlanToPhase(
     }
 
     const now = new Date().toISOString();
+    const taskRefs = built.tasks.map((task) => task.id);
+
+    if (unifiedDocument) {
+      const persisted = persistUnifiedIdeaPlanDeliveryRefs({
+        workspacePath: ctx.workspacePath,
+        document: unifiedDocument,
+        taskRefs,
+        phaseKey: proposal.phaseKey,
+        taskCount: built.tasks.length,
+        updatedAt: now,
+        sqliteDb: stores.sqliteDual.getDatabase()
+      });
+      const persistData = (persist.data ?? {}) as Record<string, unknown>;
+      const result: ModuleCommandResult = {
+        ok: true,
+        code:
+          persist.code === "planning-execution-drafts-idempotent-replay"
+            ? "plan-artifact-finalize-idempotent-replay"
+            : "plan-artifact-finalize-persisted",
+        message: `Finalized plan ${planId} into ${built.tasks.length} task(s) for phase ${proposal.phaseKey}`,
+        data: {
+          schemaVersion: 1,
+          responseSchemaVersion: 1,
+          planId,
+          version: persisted.version,
+          planRef: loaded.planRef,
+          status: persisted.status,
+          ideaPlanStatus: persisted.status,
+          dryRun: false,
+          phaseKey: proposal.phaseKey,
+          phaseProposal: proposal,
+          phaseResolutionSource: phaseResolved.source,
+          createdTasks: persistData.createdTasks,
+          count: persistData.count ?? built.tasks.length,
+          replayed: persistData.replayed === true,
+          storagePath: unifiedIdeaPlanStoragePath(ctx.workspacePath, persisted.planId, persisted.version),
+          delegatedCode: persist.code,
+          phaseCatalog: phaseCatalogMeta,
+          delivery: persisted.delivery,
+          review: {
+            passed: true,
+            errorCount: 0,
+            warningCount: warningCount + phaseWarningCount,
+            findings: [...phaseFindings, ...batchFindings],
+            reviewProfile: "ux-cae-pre-persist-v1",
+            taskCount: built.tasks.length
+          },
+          planningGeneration: persistData.planningGeneration,
+          planningGenerationPolicy: persistData.planningGenerationPolicy
+        }
+      };
+      attachPolicyMeta(
+        result.data as Record<string, unknown>,
+        ctx,
+        stores.sqliteDual.getPlanningGeneration(),
+        pg.warnings
+      );
+      return result;
+    }
+
     const finalized: PlanArtifactV1 = {
       ...loaded,
       status: "finalized",

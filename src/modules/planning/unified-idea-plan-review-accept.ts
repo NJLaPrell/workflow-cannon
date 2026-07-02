@@ -302,3 +302,30 @@ export function isUnifiedIdeaPlanStoredDocument(
 export function unifiedIdeaPlanStoragePath(workspacePath: string, planId: string, version: number): string {
   return getPlanArtifactStoragePaths(workspacePath, planId).artifactFileRelative(version);
 }
+
+export function persistUnifiedIdeaPlanDeliveryRefs(args: {
+  workspacePath: string;
+  document: IdeaPlanDocumentWithPlanningPayload;
+  taskRefs: string[];
+  phaseKey: string;
+  taskCount: number;
+  updatedAt: string;
+  sqliteDb?: Database.Database;
+}): IdeaPlanDocument {
+  const { workspacePath, document, taskRefs, phaseKey, taskCount, updatedAt, sqliteDb } = args;
+  if (document.status !== "accepted") {
+    throw new IdeaPlanStatusTransitionError(document.status, "delivered");
+  }
+  const updated: IdeaPlanDocumentWithPlanningPayload = {
+    ...document,
+    status: "accepted",
+    updatedAt,
+    delivery: {
+      ...document.delivery,
+      phaseKey,
+      taskCount,
+      taskRefs
+    }
+  };
+  return writeNextIdeaPlanArtifactVersion(workspacePath, updated, { sqliteDb });
+}
