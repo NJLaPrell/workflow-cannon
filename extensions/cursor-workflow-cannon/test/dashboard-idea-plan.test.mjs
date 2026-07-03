@@ -216,7 +216,7 @@ test("ideas row renders Brainstorm and Plan buttons for open ideas", () => {
   assert.doesNotMatch(activeHtml, /data-wc-action="idea-brainstorm"/);
 });
 
-test("ideas row renders a status chip and Open plan link for draft-ready ideas", () => {
+test("draft-ready ideas (active plan in draft state) are filtered from the Ideas section", () => {
   const html = renderIdeas([
     {
       id: "I003",
@@ -237,8 +237,9 @@ test("ideas row renders a status chip and Open plan link for draft-ready ideas",
       }
     }
   ]);
-  assert.match(html, /wc-plan-lifecycle-chip">Draft</);
-  assert.match(html, /data-wc-action="idea-open-plan-card"[^>]*data-plan-id="draft-ready"/);
+  // idea has an active plan in draft state → filtered from Ideas, only visible as a plan card
+  assert.doesNotMatch(html, /wc-plan-lifecycle-chip">Draft/);
+  assert.doesNotMatch(html, /data-wc-action="idea-open-plan-card"[^>]*data-plan-id="draft-ready"/);
   assert.doesNotMatch(html, /data-wc-action="plan-artifact-review"/);
   assert.doesNotMatch(html, /data-wc-action="plan-artifact-accept"/);
 });
@@ -262,7 +263,7 @@ test("ideas row disables Open plan when draft-ready plan identity is missing", (
   assert.match(html, /Plan identity is incomplete\. Refresh the dashboard and try again\./);
 });
 
-test("ideas row shows a Needs revision chip and Open plan link (Accept lives on the plan card)", () => {
+test("needs-revision ideas (active plan in reviewed state) are filtered from the Ideas section", () => {
   const html = renderIdeas([
     {
       id: "I004",
@@ -290,11 +291,14 @@ test("ideas row shows a Needs revision chip and Open plan link (Accept lives on 
       }
     }
   ]);
-  assert.match(html, /wc-plan-lifecycle-chip">Needs revision</);
-  assert.match(html, /data-wc-action="idea-open-plan-card"[^>]*data-plan-id="blocked-review"/);
+  // idea has an active plan in reviewed state → filtered from Ideas, visible only as a plan card
+  assert.doesNotMatch(html, /wc-plan-lifecycle-chip">Needs revision/);
+  assert.doesNotMatch(html, /data-wc-action="idea-open-plan-card"[^>]*data-plan-id="blocked-review"/);
+  assert.doesNotMatch(html, /data-wc-action="plan-artifact-review"/);
+  assert.doesNotMatch(html, /data-wc-action="plan-artifact-accept"/);
 });
 
-test("ideas row shows an Approval ready chip and Open plan link (Accept lives on the plan card)", () => {
+test("approval-ready ideas (active plan in reviewed+passed state) are filtered from the Ideas section", () => {
   const html = renderIdeas([
     {
       id: "I005",
@@ -322,11 +326,14 @@ test("ideas row shows an Approval ready chip and Open plan link (Accept lives on
       }
     }
   ]);
-  assert.match(html, /wc-plan-lifecycle-chip">Approval ready</);
-  assert.match(html, /data-wc-action="idea-open-plan-card"[^>]*data-plan-id="warning-only"/);
+  // idea has an active plan in reviewed (passed) state → filtered from Ideas, visible only as a plan card
+  assert.doesNotMatch(html, /wc-plan-lifecycle-chip">Approval ready/);
+  assert.doesNotMatch(html, /data-wc-action="idea-open-plan-card"[^>]*data-plan-id="warning-only"/);
+  assert.doesNotMatch(html, /data-wc-action="plan-artifact-review"/);
+  assert.doesNotMatch(html, /data-wc-action="plan-artifact-accept"/);
 });
 
-test("ideas row shows an Accepted chip and Open plan link (Finalize lives on the plan card)", () => {
+test("accepted-plan ideas are filtered from the Ideas section (only shown as a plan card)", () => {
   const html = renderIdeas([
     {
       id: "I006",
@@ -343,11 +350,12 @@ test("ideas row shows an Accepted chip and Open plan link (Finalize lives on the
       }
     }
   ]);
-  assert.match(html, /wc-plan-lifecycle-chip">Accepted</);
-  assert.match(html, /data-wc-action="idea-open-plan-card"[^>]*data-plan-id="accepted-plan"/);
+  // idea has an accepted linked plan → advanced to plans, filtered from Ideas section
+  assert.doesNotMatch(html, /wc-plan-lifecycle-chip">Accepted/);
+  assert.doesNotMatch(html, /data-wc-action="idea-open-plan-card"[^>]*data-plan-id="accepted-plan"/);
 });
 
-test("ideas row shows Check delivery for accepted-state ideas with planRef", () => {
+test("accepted-plan ideas with planRef are filtered from the Ideas section (no check-delivery row)", () => {
   const html = renderIdeas([
     {
       id: "I006B",
@@ -364,8 +372,9 @@ test("ideas row shows Check delivery for accepted-state ideas with planRef", () 
       }
     }
   ]);
-  assert.match(html, /data-wc-action="idea-check-delivery"[^>]*data-plan-ref="plan-artifact:accepted-delivery"/);
-  assert.match(html, />Check delivery</);
+  // idea advanced to plans via accepted link → filtered from Ideas section entirely
+  assert.doesNotMatch(html, /data-wc-action="idea-check-delivery"[^>]*data-plan-ref="plan-artifact:accepted-delivery"/);
+  assert.doesNotMatch(html, />Check delivery</);
 });
 
 test("Ideas Check delivery posts checkIdeaDelivery from the webview", () => {
@@ -386,7 +395,7 @@ test("resolveDashboardPolicyTierRow maps Ideas check-delivery to check-delivery-
   assert.equal(row.command, "check-delivery-status");
 });
 
-test("ideas row shows a Finalized chip and Open plan link (View tasks lives on the plan card)", () => {
+test("finalized ideas are filtered from the Ideas section (only shown as a plan card)", () => {
   const html = renderIdeas([
     {
       id: "I007",
@@ -403,8 +412,9 @@ test("ideas row shows a Finalized chip and Open plan link (View tasks lives on t
       }
     }
   ]);
-  assert.match(html, /wc-plan-lifecycle-chip">Finalized</);
-  assert.match(html, /data-wc-action="idea-open-plan-card"[^>]*data-plan-id="finalized-plan"/);
+  // idea has a finalized linked plan → fully advanced, filtered from Ideas section
+  assert.doesNotMatch(html, /wc-plan-lifecycle-chip">Finalized/);
+  assert.doesNotMatch(html, /data-wc-action="idea-open-plan-card"[^>]*data-plan-id="finalized-plan"/);
 });
 
 test("plan card renders secondary Brainstorm for post-brainstorming planning state", () => {

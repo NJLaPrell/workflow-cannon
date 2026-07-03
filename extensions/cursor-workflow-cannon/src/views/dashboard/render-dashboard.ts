@@ -2622,7 +2622,36 @@ function renderDashboardIdeasSectionInnerHtml(
 ): string {
   const ideas = rawIdeas && typeof rawIdeas === "object" ? (rawIdeas as Record<string, unknown>) : {};
   const available = ideas.available === true;
-  const top = Array.isArray(ideas.top) ? ideas.top.slice(0, 5) : [];
+  const rawTop = Array.isArray(ideas.top) ? ideas.top : [];
+  const top = rawTop
+    .filter((item) => {
+      if (!item || typeof item !== "object") return true;
+      const row = item as Record<string, unknown>;
+      const status = String(row.status ?? "open").trim().toLowerCase();
+      if (status === "brainstorming") return false;
+      const linkedPlan =
+        row.linkedPlanArtifactSummary && typeof row.linkedPlanArtifactSummary === "object"
+          ? (row.linkedPlanArtifactSummary as Record<string, unknown>)
+          : null;
+      if (linkedPlan) {
+        const linkedStatus = String(linkedPlan.status ?? "").trim().toLowerCase();
+        if (linkedStatus.length > 0 && linkedStatus !== "brainstorming" && linkedStatus !== "idea") {
+          return false;
+        }
+      }
+      const activeDraft =
+        row.activeDraftPlanArtifactSummary && typeof row.activeDraftPlanArtifactSummary === "object"
+          ? (row.activeDraftPlanArtifactSummary as Record<string, unknown>)
+          : null;
+      if (activeDraft) {
+        const draftStatus = String(activeDraft.status ?? "").trim().toLowerCase();
+        if (draftStatus.length > 0 && draftStatus !== "brainstorming" && draftStatus !== "idea") {
+          return false;
+        }
+      }
+      return true;
+    })
+    .slice(0, 5);
   const openCount = Number(ideas.openCount ?? 0);
   const planningCount = Number(ideas.planningCount ?? 0);
   const plannedCount = Number(ideas.plannedCount ?? 0);
@@ -4767,8 +4796,9 @@ function renderPlanArtifactCardActions(
     }
     case "superseded":
       return viewPlanButton;
-    case "planning":
     case "delivered":
+      return viewPlanButton;
+    case "planning":
     case "reviewed":
       return viewPlanButton + secondaryBrainstorm;
     default:
@@ -4887,12 +4917,27 @@ function renderPlanArtifactCard(row: Record<string, unknown>, ideasUnifiedModelE
   );
 
   return (
-    '<article class="wc-plan-card ' +
+    '<details class="wc-plan-card-rollup ' +
     statusMeta.className +
     '" data-wc-plan-card-id="' +
     escapeHtmlAttr(planId) +
     '" aria-label="Plan: ' +
     escapeHtmlAttr(title) +
+    '"' +
+    planCardUiStateAttr(planId, "rollup") +
+    ">" +
+    '<summary class="wc-plan-card-rollup-summary">' +
+    '<span class="wc-plan-card-rollup-title"><b>' +
+    escapeHtml(title) +
+    "</b></span>" +
+    '<span class="wc-plan-status-pill ' +
+    statusMeta.className +
+    '">' +
+    escapeHtml(statusMeta.label) +
+    "</span>" +
+    "</summary>" +
+    '<article class="wc-plan-card ' +
+    statusMeta.className +
     '">' +
     '<div class="wc-plan-card-head">' +
     '<div class="wc-plan-card-title-wrap">' +
@@ -4937,7 +4982,8 @@ function renderPlanArtifactCard(row: Record<string, unknown>, ideasUnifiedModelE
         detailRows.join("") +
         "</dl></details>"
       : "") +
-    "</article>"
+    "</article>" +
+    "</details>"
   );
 }
 
