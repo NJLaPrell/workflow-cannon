@@ -200,8 +200,10 @@ test("ideas row renders Brainstorm and Plan buttons for open ideas", () => {
   assert.doesNotMatch(openHtml, /Plan this/);
   assert.doesNotMatch(openHtml, /Resume planning/);
 
+  // No planRef = no data-plan-ref attr, but button is still enabled (host auto-creates IdeaPlan doc on click)
   const openWithoutPlanHtml = renderIdeas([{ id: "I001B", title: "No plan ref", note: "", status: "open" }]);
-  assert.match(openWithoutPlanHtml, /data-wc-action="idea-brainstorm"[^>]*disabled/);
+  assert.match(openWithoutPlanHtml, /data-wc-action="idea-brainstorm"/);
+  assert.doesNotMatch(openWithoutPlanHtml, /data-wc-action="idea-brainstorm"[^>]*disabled/);
 
   const activeHtml = renderIdeas([
     {
