@@ -50,7 +50,7 @@ export function resolveNextPlanArtifactVersion(workspacePath: string, planId: st
   return latest === null ? 1 : latest + 1;
 }
 
-/** Digest for idempotency per PLANNER_COMMANDS §7 (normalized body, planId, target version). */
+/** Digest for idempotency (normalized body, planId, target version). */
 export function planArtifactDraftPersistDigest(
   artifact: PlanArtifactV1,
   targetVersion: number

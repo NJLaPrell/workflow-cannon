@@ -6,7 +6,7 @@ Start or resume a durable planner-chat session for a lightweight operator idea. 
 
 When the idea links a **unified IdeaPlan document** (`linkedPlanArtifact` or active draft), this command initializes the document **`plan` section** (title, summary, `wbsRowCount`) and transitions the document to **`planning`** status when allowed — without creating a new document identity.
 
-**Agent behavior:** Follow the **`agentDirective`** in [`schemas/ideas/states/planning.schema.json`](../../../schemas/ideas/states/planning.schema.json) for planning-state questions. Human companion playbook: [`.ai/playbooks/planner-chat.md`](../../../.ai/playbooks/planner-chat.md). Plan-section field contract: [`PLANNER_SCHEMA.md`](../../../PLANNER_SCHEMA.md).
+**Agent behavior:** Follow the **`agentDirective`** in [`schemas/ideas/states/planning.schema.json`](../../../schemas/ideas/states/planning.schema.json) for planning-state questions. Human companion playbook: [`.ai/playbooks/planner-chat.md`](../../../.ai/playbooks/planner-chat.md). Plan-section field contract: [`schemas/planning/plan-artifact.v1.schema.json`](../../../schemas/planning/plan-artifact.v1.schema.json).
 
 ## Required args
 

@@ -22,4 +22,4 @@ Capture session-fit confidence without false precision (no calendar estimates in
 
 ## Maps to rubric
 
-- `RUBRIC-SIZE-*` codes in `PLANNER_REVIEW_RUBRIC.md`.
+- `RUBRIC-SIZE-*` codes enforced by `review-plan-artifact`.

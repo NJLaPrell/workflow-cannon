@@ -1,7 +1,6 @@
 /**
  * Shared orchestration contract enums, profile refs, and AgentDefinition v1.
  * Mirror: schemas/agent-orchestration/agent-definition.v1.json
- * Normative field notes: AGENT_ORCHESTRATION_CONTRACTS.md §2–3.
  */
 
 export const AGENT_DEFINITION_SCHEMA_VERSION = 1 as const;

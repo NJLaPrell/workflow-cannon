@@ -5,7 +5,7 @@ import type { TeamAssignmentMetadataV1 } from "../../../contracts/team-execution
 import type { TeamExecutionHandoffV2 } from "../../../contracts/team-execution-handoff.v2.js";
 import type { ModelSelectionMapV1 } from "../../../contracts/model-selection-map.v1.js";
 
-/** Stable codes from AGENT_ORCHESTRATION_CONTRACTS.md §8.2. */
+/** Stable validation codes for orchestration contract violations. */
 export const ORCHESTRATION_VALIDATION_CODES = [
   "invalid-orchestration-schema",
   "unknown-orchestration-field",

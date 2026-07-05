@@ -1,5 +1,5 @@
 /**
- * Deterministic PlanArtifact v1 review engine (A-RUBRIC / PLANNER_REVIEW_RUBRIC.md).
+ * Deterministic PlanArtifact v1 review engine.
  */
 import type {
   PlanArtifactReviewProfile,
@@ -250,7 +250,7 @@ function buildMinimalCoverageMap(artifact: PlanArtifactV1): PlanArtifactCoverage
 }
 
 /**
- * Minimal profile blockers per IDEA_PLAN §9 — core completeness only.
+ * Minimal profile blockers — core completeness only.
  */
 function reviewMinimalBlockers(
   artifact: PlanArtifactV1,

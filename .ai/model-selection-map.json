@@ -1,0 +1,502 @@
+{
+  "schemaVersion": "1",
+  "updatedAt": "2026-06-18",
+  "description": "Model selection map for orchestrated coding tasks. Used by recommend-model CLI command and orchestrator agents to select the cheapest adequate model for a given purpose.",
+  "costTiers": {
+    "budget":   { "stars": [1, 2],   "description": "High-volume, cheap tasks — completions, summaries, quick fixes" },
+    "balanced": { "stars": [2, 3],   "description": "Daily coding, moderate agents, interactive edits" },
+    "premium":  { "stars": [3, 4],   "description": "Large refactors, multi-file planning, long-running agents" },
+    "frontier": { "stars": [4.5, 5], "description": "Architecture, security audits, deep reasoning, creative" }
+  },
+  "taskTags": {
+    "quick-completion":   "Tiny patches, small completions, speed-critical sub-agent calls",
+    "general-coding":     "Everyday coding, general-purpose tasks",
+    "interactive-edit":   "Interactive edits, small changes in a running session",
+    "summarization":      "File or document summaries, explanations",
+    "debugging":          "Debugging, simple bug fixes",
+    "small-refactor":     "Small refactors, classification, retrieval-augmented tasks",
+    "medium-refactor":    "Medium-complexity refactoring, analysis",
+    "large-refactor":     "Large refactors, cross-file operations",
+    "multi-file-planning":"Cross-file planning, system design reviews",
+    "agent-subagent":     "Sub-agent orchestration, tool-use loops",
+    "agent-orchestration":"Multi-agent orchestration, long-horizon agent tasks",
+    "long-context":       "Tasks requiring >200k token context",
+    "reasoning-deep":     "Deep reasoning, complex analysis, architecture decisions",
+    "security-audit":     "Security audits, compliance reviews",
+    "creative":           "Creative reasoning, narrative generation, fiction",
+    "build-compile":      "Generating build artefacts, compile tasks"
+  },
+  "providers": {
+    "cursor": {
+      "name": "Cursor IDE",
+      "models": [
+        {
+          "id": "gpt-5.4-nano",
+          "name": "GPT-5.4-nano",
+          "provider": "OpenAI (via Cursor)",
+          "tasks": ["quick-completion", "agent-subagent"],
+          "costTier": "budget",
+          "avgCostPerMTokens": 0.73,
+          "costStars": 1.5,
+          "contextWindow": 400000,
+          "notes": "Smallest, fastest; ideal for speed-critical sub-agent calls"
+        },
+        {
+          "id": "composer-2.5-standard",
+          "name": "Composer 2.5 Standard",
+          "provider": "Cursor (Moonshot Kimi K2.5)",
+          "tasks": ["general-coding", "summarization", "interactive-edit"],
+          "costTier": "balanced",
+          "avgCostPerMTokens": 1.50,
+          "costStars": 2,
+          "contextWindow": null,
+          "notes": "Default Cursor model; mixture-of-experts; recommended for routine edits"
+        },
+        {
+          "id": "grok-build-0.1",
+          "name": "Grok Build 0.1",
+          "provider": "xAI (via Cursor)",
+          "tasks": ["build-compile", "general-coding"],
+          "costTier": "balanced",
+          "avgCostPerMTokens": 1.50,
+          "costStars": 2,
+          "contextWindow": null,
+          "notes": "Fast build-and-compile; good for generating code artefacts"
+        },
+        {
+          "id": "grok-code-fast-1",
+          "name": "Grok Code Fast 1",
+          "provider": "xAI (via Cursor)",
+          "tasks": ["agent-subagent", "interactive-edit", "quick-completion"],
+          "costTier": "budget",
+          "avgCostPerMTokens": 0.85,
+          "costStars": 1.5,
+          "contextWindow": null,
+          "notes": "Cost-effective reasoning with visible chain-of-thought; ideal for iterative agentic loops"
+        },
+        {
+          "id": "grok-4.3",
+          "name": "Grok 4.3",
+          "provider": "xAI (via Cursor)",
+          "tasks": ["medium-refactor", "general-coding", "agent-subagent"],
+          "costTier": "balanced",
+          "avgCostPerMTokens": 1.88,
+          "costStars": 2.5,
+          "contextWindow": 1000000,
+          "notes": "1M context; balanced reasoning"
+        },
+        {
+          "id": "gpt-5.4-mini",
+          "name": "GPT-5.4-mini",
+          "provider": "OpenAI (via Cursor)",
+          "tasks": ["general-coding", "interactive-edit", "agent-subagent"],
+          "costTier": "balanced",
+          "avgCostPerMTokens": 2.63,
+          "costStars": 2.5,
+          "contextWindow": 200000,
+          "notes": "Budget GPT-5.4; good for sub-agents and everyday coding"
+        },
+        {
+          "id": "claude-haiku-4.5",
+          "name": "Claude Haiku 4.5",
+          "provider": "Anthropic (via Cursor)",
+          "tasks": ["summarization", "debugging", "general-coding"],
+          "costTier": "balanced",
+          "avgCostPerMTokens": 3.00,
+          "costStars": 3,
+          "contextWindow": null,
+          "notes": "Fast Anthropic model; good for summarisation and explanations"
+        },
+        {
+          "id": "grok-4.20",
+          "name": "Grok 4.20",
+          "provider": "xAI (via Cursor)",
+          "tasks": ["reasoning-deep", "summarization", "medium-refactor"],
+          "costTier": "balanced",
+          "avgCostPerMTokens": 4.00,
+          "costStars": 3,
+          "contextWindow": null,
+          "notes": "More powerful Grok; deeper reasoning and planning"
+        },
+        {
+          "id": "gpt-5.3-codex",
+          "name": "GPT-5.3-Codex",
+          "provider": "OpenAI (via Cursor)",
+          "tasks": ["agent-subagent", "agent-orchestration", "long-context"],
+          "costTier": "premium",
+          "avgCostPerMTokens": 7.88,
+          "costStars": 3.5,
+          "contextWindow": 200000,
+          "notes": "Coding-centric; long-running tool chains; reasoning-effort settings; 25% faster than prior Codex"
+        },
+        {
+          "id": "gpt-5.4",
+          "name": "GPT-5.4",
+          "provider": "OpenAI (via Cursor)",
+          "tasks": ["large-refactor", "multi-file-planning", "agent-orchestration"],
+          "costTier": "premium",
+          "avgCostPerMTokens": 8.75,
+          "costStars": 4,
+          "contextWindow": 1000000,
+          "notes": "Full-size; large-scale refactoring, cross-file planning, complex agent workflows"
+        },
+        {
+          "id": "composer-2.5-fast",
+          "name": "Composer 2.5 Fast",
+          "provider": "Cursor (Moonshot Kimi K2.5)",
+          "tasks": ["general-coding", "interactive-edit", "large-refactor"],
+          "costTier": "premium",
+          "avgCostPerMTokens": 9.00,
+          "costStars": 4,
+          "contextWindow": null,
+          "notes": "Same weights as Standard on faster hardware; use when latency matters"
+        },
+        {
+          "id": "claude-sonnet-4.6",
+          "name": "Claude Sonnet 4.6",
+          "provider": "Anthropic (via Cursor)",
+          "tasks": ["large-refactor", "multi-file-planning", "reasoning-deep"],
+          "costTier": "premium",
+          "avgCostPerMTokens": 9.00,
+          "costStars": 4,
+          "contextWindow": null,
+          "notes": "Balanced reasoning; high-quality multi-file work"
+        },
+        {
+          "id": "claude-opus-4.8",
+          "name": "Claude Opus 4.8",
+          "provider": "Anthropic (via Cursor)",
+          "tasks": ["reasoning-deep", "large-refactor", "security-audit", "multi-file-planning"],
+          "costTier": "frontier",
+          "avgCostPerMTokens": 15.00,
+          "costStars": 4.5,
+          "contextWindow": null,
+          "notes": "High-end reasoning; large migrations and system-level design"
+        },
+        {
+          "id": "gpt-5.5",
+          "name": "GPT-5.5",
+          "provider": "OpenAI (via Cursor)",
+          "tasks": ["agent-orchestration", "reasoning-deep", "multi-file-planning", "long-context"],
+          "costTier": "frontier",
+          "avgCostPerMTokens": 17.50,
+          "costStars": 4.5,
+          "contextWindow": 1000000,
+          "notes": "Flagship; 1M context; best for complex multi-step agent flows"
+        },
+        {
+          "id": "claude-fable-5",
+          "name": "Claude Fable 5",
+          "provider": "Anthropic (via Cursor)",
+          "tasks": ["creative", "reasoning-deep", "long-context"],
+          "costTier": "frontier",
+          "avgCostPerMTokens": 30.00,
+          "costStars": 5,
+          "contextWindow": 1000000,
+          "notes": "Mythos-class creative reasoning; 1M context; use only for narrative or unique creative tasks"
+        }
+      ]
+    },
+    "codex": {
+      "name": "OpenAI Codex",
+      "models": [
+        {
+          "id": "gpt-5.4-nano",
+          "name": "GPT-5.4-nano",
+          "provider": "OpenAI",
+          "tasks": ["quick-completion", "agent-subagent"],
+          "costTier": "budget",
+          "avgCostPerMTokens": 0.73,
+          "costStars": 1.5,
+          "contextWindow": 400000,
+          "notes": "Smallest; 400k context; ideal for speed-critical tasks"
+        },
+        {
+          "id": "gpt-5.4-mini",
+          "name": "GPT-5.4-mini",
+          "provider": "OpenAI",
+          "tasks": ["general-coding", "interactive-edit", "agent-subagent", "small-refactor"],
+          "costTier": "balanced",
+          "avgCostPerMTokens": 2.63,
+          "costStars": 2,
+          "contextWindow": 200000,
+          "notes": "Budget GPT-5.4; 200k context; everyday coding"
+        },
+        {
+          "id": "gpt-5.3-codex",
+          "name": "GPT-5.3-Codex",
+          "provider": "OpenAI",
+          "tasks": ["agent-subagent", "agent-orchestration", "long-context", "large-refactor"],
+          "costTier": "premium",
+          "avgCostPerMTokens": 7.88,
+          "costStars": 3.5,
+          "contextWindow": 200000,
+          "notes": "Coding-centric agents; recommended for API-key workflows; reasoning-effort settings"
+        },
+        {
+          "id": "gpt-5.4",
+          "name": "GPT-5.4",
+          "provider": "OpenAI",
+          "tasks": ["large-refactor", "multi-file-planning", "agent-orchestration"],
+          "costTier": "premium",
+          "avgCostPerMTokens": 8.75,
+          "costStars": 4,
+          "contextWindow": 1000000,
+          "notes": "1M context; large-scale refactoring and cross-file planning"
+        },
+        {
+          "id": "gpt-5.5",
+          "name": "GPT-5.5",
+          "provider": "OpenAI",
+          "tasks": ["agent-orchestration", "reasoning-deep", "multi-file-planning", "long-context"],
+          "costTier": "frontier",
+          "avgCostPerMTokens": 17.50,
+          "costStars": 4.5,
+          "contextWindow": 1000000,
+          "notes": "Flagship; default for ChatGPT-authenticated Codex; most challenging multi-step tasks"
+        }
+      ]
+    },
+    "antigravity": {
+      "name": "Google Antigravity IDE",
+      "models": [
+        {
+          "id": "gemini-2.5-flash-lite",
+          "name": "Gemini 2.5 Flash-Lite",
+          "provider": "Google",
+          "tasks": ["quick-completion", "summarization"],
+          "costTier": "budget",
+          "avgCostPerMTokens": 0.25,
+          "costStars": 1.5,
+          "contextWindow": null,
+          "notes": "Ultra-cheap; lightweight completions and file summaries"
+        },
+        {
+          "id": "gemini-3.1-flash-lite",
+          "name": "Gemini 3.1 Flash-Lite",
+          "provider": "Google",
+          "tasks": ["small-refactor", "debugging", "summarization"],
+          "costTier": "budget",
+          "avgCostPerMTokens": 0.88,
+          "costStars": 2,
+          "contextWindow": null,
+          "notes": "Cost-efficient; retrieval-augmented classification"
+        },
+        {
+          "id": "gemini-2.5-flash",
+          "name": "Gemini 2.5 Flash",
+          "provider": "Google",
+          "tasks": ["general-coding", "debugging", "interactive-edit"],
+          "costTier": "balanced",
+          "avgCostPerMTokens": 1.40,
+          "costStars": 2.5,
+          "contextWindow": null,
+          "notes": "Balanced speed/cost for everyday coding with moderate context"
+        },
+        {
+          "id": "gemini-3-flash",
+          "name": "Gemini 3 Flash",
+          "provider": "Google",
+          "tasks": ["general-coding", "interactive-edit", "agent-subagent"],
+          "costTier": "balanced",
+          "avgCostPerMTokens": 1.75,
+          "costStars": 2.5,
+          "contextWindow": null,
+          "notes": "Balanced throughput vs cost; legacy but still used"
+        },
+        {
+          "id": "gemini-3.5-flash",
+          "name": "Gemini 3.5 Flash",
+          "provider": "Google",
+          "tasks": ["agent-subagent", "agent-orchestration", "multi-file-planning"],
+          "costTier": "premium",
+          "avgCostPerMTokens": 5.25,
+          "costStars": 4,
+          "contextWindow": null,
+          "notes": "Default Antigravity model; excels at multi-step tool use and long-horizon agent tasks"
+        },
+        {
+          "id": "gemini-2.5-pro-short",
+          "name": "Gemini 2.5 Pro (≤200k)",
+          "provider": "Google",
+          "tasks": ["reasoning-deep", "medium-refactor", "multi-file-planning"],
+          "costTier": "premium",
+          "avgCostPerMTokens": 5.63,
+          "costStars": 4,
+          "contextWindow": 200000,
+          "notes": "Prior flagship; deeper reasoning and compaction; up to 1M tokens"
+        },
+        {
+          "id": "gemini-3.1-pro-short",
+          "name": "Gemini 3.1 Pro (≤200k)",
+          "provider": "Google",
+          "tasks": ["reasoning-deep", "multi-file-planning", "security-audit", "long-context"],
+          "costTier": "premium",
+          "avgCostPerMTokens": 7.00,
+          "costStars": 4.5,
+          "contextWindow": 2000000,
+          "notes": "Current flagship reasoning; up to 2M context"
+        },
+        {
+          "id": "gemini-2.5-pro-long",
+          "name": "Gemini 2.5 Pro (>200k)",
+          "provider": "Google",
+          "tasks": ["long-context", "reasoning-deep"],
+          "costTier": "frontier",
+          "avgCostPerMTokens": 8.75,
+          "costStars": 4.5,
+          "contextWindow": 1000000,
+          "notes": "Extended context pricing tier for 2.5 Pro"
+        },
+        {
+          "id": "gemini-3.1-pro-long",
+          "name": "Gemini 3.1 Pro (>200k)",
+          "provider": "Google",
+          "tasks": ["long-context", "reasoning-deep", "security-audit"],
+          "costTier": "frontier",
+          "avgCostPerMTokens": 11.00,
+          "costStars": 5,
+          "contextWindow": 2000000,
+          "notes": "Highest reasoning/cost tier; 2M context"
+        }
+      ]
+    },
+    "copilot": {
+      "name": "VS Code / GitHub Copilot",
+      "models": [
+        {
+          "id": "grok-code-fast-1",
+          "name": "Grok Code Fast 1",
+          "provider": "xAI (via Copilot)",
+          "tasks": ["agent-subagent", "interactive-edit", "quick-completion"],
+          "costTier": "budget",
+          "avgCostPerMTokens": 0.85,
+          "costStars": 1.5,
+          "contextWindow": null,
+          "notes": "Cheapest; good for coding loops and tool calls"
+        },
+        {
+          "id": "gpt-5-mini",
+          "name": "GPT-5 mini / Raptor mini",
+          "provider": "OpenAI (via Copilot)",
+          "tasks": ["general-coding", "debugging", "summarization"],
+          "costTier": "budget",
+          "avgCostPerMTokens": 1.13,
+          "costStars": 2,
+          "contextWindow": null,
+          "notes": "General chat, debugging and simple edits"
+        },
+        {
+          "id": "gemini-3-flash",
+          "name": "Gemini 3 Flash",
+          "provider": "Google (via Copilot)",
+          "tasks": ["general-coding", "interactive-edit", "agent-subagent"],
+          "costTier": "balanced",
+          "avgCostPerMTokens": 1.75,
+          "costStars": 2.5,
+          "contextWindow": null,
+          "notes": "Balanced interactive sessions and moderate agents"
+        },
+        {
+          "id": "claude-haiku-4.5",
+          "name": "Claude Haiku 4.5",
+          "provider": "Anthropic (via Copilot)",
+          "tasks": ["summarization", "debugging", "small-refactor"],
+          "costTier": "balanced",
+          "avgCostPerMTokens": 3.00,
+          "costStars": 3,
+          "contextWindow": null,
+          "notes": "Summarisation, explanation, basic refactoring"
+        },
+        {
+          "id": "gemini-2.5-pro",
+          "name": "Gemini 2.5 Pro",
+          "provider": "Google (via Copilot)",
+          "tasks": ["reasoning-deep", "medium-refactor", "long-context"],
+          "costTier": "premium",
+          "avgCostPerMTokens": 5.63,
+          "costStars": 3.5,
+          "contextWindow": null,
+          "notes": "Stronger reasoning, larger context"
+        },
+        {
+          "id": "gemini-3.5-flash",
+          "name": "Gemini 3.5 Flash",
+          "provider": "Google (via Copilot)",
+          "tasks": ["agent-subagent", "agent-orchestration", "long-context"],
+          "costTier": "premium",
+          "avgCostPerMTokens": 5.25,
+          "costStars": 3.5,
+          "contextWindow": 1000000,
+          "notes": "Agent-oriented tasks with 1M context"
+        },
+        {
+          "id": "gpt-5.2",
+          "name": "GPT-5.2",
+          "provider": "OpenAI (via Copilot)",
+          "tasks": ["large-refactor", "agent-subagent", "general-coding"],
+          "costTier": "premium",
+          "avgCostPerMTokens": 7.88,
+          "costStars": 4,
+          "contextWindow": null,
+          "notes": "Advanced coding, long refactors"
+        },
+        {
+          "id": "gpt-5.4",
+          "name": "GPT-5.4",
+          "provider": "OpenAI (via Copilot)",
+          "tasks": ["large-refactor", "multi-file-planning", "agent-orchestration"],
+          "costTier": "premium",
+          "avgCostPerMTokens": 8.75,
+          "costStars": 4,
+          "contextWindow": null,
+          "notes": "Complex planning, multi-file design"
+        },
+        {
+          "id": "claude-sonnet-4.x",
+          "name": "Claude Sonnet 4.x",
+          "provider": "Anthropic (via Copilot)",
+          "tasks": ["large-refactor", "multi-file-planning", "reasoning-deep"],
+          "costTier": "premium",
+          "avgCostPerMTokens": 9.00,
+          "costStars": 4,
+          "contextWindow": null,
+          "notes": "High-quality reasoning, multi-file refactors"
+        },
+        {
+          "id": "claude-opus-4.x",
+          "name": "Claude Opus 4.x",
+          "provider": "Anthropic (via Copilot)",
+          "tasks": ["reasoning-deep", "security-audit", "multi-file-planning"],
+          "costTier": "frontier",
+          "avgCostPerMTokens": 15.00,
+          "costStars": 4.5,
+          "contextWindow": null,
+          "notes": "Deep reasoning, system-level design"
+        },
+        {
+          "id": "gpt-5.5",
+          "name": "GPT-5.5",
+          "provider": "OpenAI (via Copilot)",
+          "tasks": ["agent-orchestration", "reasoning-deep", "long-context", "multi-file-planning"],
+          "costTier": "frontier",
+          "avgCostPerMTokens": 17.50,
+          "costStars": 4.5,
+          "contextWindow": 1000000,
+          "notes": "Flagship; 1M context; multi-step workflows"
+        },
+        {
+          "id": "claude-fable-5",
+          "name": "Claude Fable 5",
+          "provider": "Anthropic (via Copilot)",
+          "tasks": ["creative", "reasoning-deep", "long-context"],
+          "costTier": "frontier",
+          "avgCostPerMTokens": 30.00,
+          "costStars": 5,
+          "contextWindow": 1000000,
+          "notes": "Currently unavailable in Copilot; listed for completeness"
+        }
+      ]
+    }
+  }
+}

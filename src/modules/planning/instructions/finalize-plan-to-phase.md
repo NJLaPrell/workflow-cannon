@@ -6,7 +6,7 @@ agentCapsule|v=1|command=finalize-plan-to-phase|module=planning|schema_only=pnpm
 
 Materialize an **accepted** PlanArtifact v1 WBS into task-engine execution rows for a target phase. Preview with `dryRun: true` (default); persist with `dryRun: false` via **`persist-planning-execution-drafts`**.
 
-**Contract:** repo-root **`PLANNER_COMMANDS.md`** §5 · **Schema:** **`PLANNER_SCHEMA.md`** §2.15–2.16 · **Agent runbook:** **`.ai/runbooks/plan-artifact-workflow.md`**
+**Contract:** `--schema-only` flag is authoritative for arg shape · **Agent runbook:** **`.ai/runbooks/plan-artifact-workflow.md`**
 
 **Handler status:** dry-run preview ships in **WP-6.4** (T100471); persist/finalize path ships in **WP-6.5** (T100472).
 
@@ -46,7 +46,7 @@ pnpm exec wk run finalize-plan-to-phase '{"planId":"550e8400-e29b-41d4-a716-4466
 ## Preconditions (normative)
 
 1. Latest (or requested) artifact row has **`status: accepted`** (unified IdeaPlan document) or standalone PlanArtifact **`status: accepted`**.
-2. **`approvalRecord.confirmed === true`** and **`approvalRecord.approvedVersion`** matches the draft version being materialized (see **PLANNER_COMMANDS.md** §5.3 step 1).
+2. **`approvalRecord.confirmed === true`** and **`approvalRecord.approvedVersion`** matches the draft version being materialized.
 3. Run **`accept-plan-artifact`** before finalize; do not skip acceptance.
 
 ## Internal steps (handler)

@@ -40,8 +40,8 @@ Session statuses: `active` → `draft_ready` → (`needs_revision` \| `approval_
 | Topic | Path |
 | --- | --- |
 | Playbook workflow | [`.ai/playbooks/planner-chat.md`](../playbooks/planner-chat.md) |
-| PlanArtifact schema | [`PLANNER_SCHEMA.md`](../../PLANNER_SCHEMA.md) |
-| Planner commands | [`PLANNER_COMMANDS.md`](../../PLANNER_COMMANDS.md) |
+| PlanArtifact schema | [`schemas/planning/plan-artifact.v1.schema.json`](../../schemas/planning/plan-artifact.v1.schema.json) |
+| Planner commands | `wk run <cmd> --schema-only` for arg shapes |
 | Policy approval | [`.ai/POLICY-APPROVAL.md`](../POLICY-APPROVAL.md) |
 | Default planning profile | **`minimal`** when unspecified |
 | Idea provenance | `provenance.source: "planner-chat"`, required `sourceIdeaId` for idea-originated drafts |

@@ -8,7 +8,7 @@ Record explicit operator acceptance of a PlanArtifact v1 or unified IdeaPlan doc
 
 For unified IdeaPlan documents, the latest stored version must be in `reviewed` status with a populated `review` section. Acceptance transitions `reviewed` → `accepted` and writes the `acceptance` section while preserving external argv shapes.
 
-**Contract:** repo-root **`PLANNER_COMMANDS.md`** §4 · **Schema:** **`PLANNER_SCHEMA.md`** §2.14 · **Agent runbook:** **`.ai/runbooks/plan-artifact-workflow.md`**
+**Contract:** `--schema-only` flag is authoritative for arg shape · **Agent runbook:** **`.ai/runbooks/plan-artifact-workflow.md`**
 
 **Handler status:** acceptance persistence ships in **WP-5** (`accept-plan-artifact` handler, T100466+).
 
@@ -31,7 +31,7 @@ pnpm exec wk run accept-plan-artifact '{"planId":"550e8400-e29b-41d4-a716-446655
 | --- | --- | --- |
 | `planId` | Yes | Load stored artifact from `.workspace-kit/planning/plan-artifacts/`. |
 | `version` | No | Version to accept; default latest. Must match `approvalRecord.approvedVersion` and the latest recorded reviewed version. |
-| `approvalRecord` | Yes | `{ schemaVersion: 1, confirmed: true, approvedVersion, approvedAt, approvedBy, planRef }` per **PLANNER_SCHEMA** §2.14. |
+| `approvalRecord` | Yes | `{ schemaVersion: 1, confirmed: true, approvedVersion, approvedAt, approvedBy, planRef }` |
 | `strict` | No | Retained for argv compatibility; recorded review blockers always block acceptance. |
 | `openQuestionsAccepted` | No | Copied into `approvalRecord` when deferring open questions. Every remaining open question must be resolved or listed here. |
 | `expectedPlanningGeneration` | When policy `require` | Copy from `get-task` / `list-tasks`. |

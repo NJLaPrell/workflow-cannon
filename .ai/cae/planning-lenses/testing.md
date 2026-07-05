@@ -22,4 +22,4 @@ Align plan claims with test layers that will actually run in CI.
 
 ## Reference
 
-- `PLANNER_TEST_STRATEGY.md` for golden/blocked paths.
+- `review-plan-artifact` rubric for golden/blocked paths.

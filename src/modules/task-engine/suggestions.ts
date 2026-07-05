@@ -67,7 +67,7 @@ export function isImprovementLikeTask(t: TaskEntity): boolean {
   return typeof t.id === "string" && IMPROVEMENT_ID_RE.test(t.id);
 }
 
-/** Retro imports from RETROSPECTIVE_TASKS.md are phased execution backlog, not governance review items. */
+/** Retro imports are phased execution backlog, not governance review items. */
 export function isRetrospectiveExecutionImport(task: TaskEntity): boolean {
   const meta = task.metadata;
   if (meta === null || typeof meta !== "object" || Array.isArray(meta)) {

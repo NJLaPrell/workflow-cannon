@@ -23,4 +23,4 @@ Ensure the plan answers "what", "why", and "how we know we're done" before execu
 
 ## Maps to rubric
 
-- `RUBRIC-GOALS-*`, `RUBRIC-OQ-*`, profile-specific section requirements in `PLANNER_SCHEMA.md` §3.
+- `RUBRIC-GOALS-*`, `RUBRIC-OQ-*`, profile-specific section requirements in `schemas/planning/plan-artifact.v1.schema.json`.

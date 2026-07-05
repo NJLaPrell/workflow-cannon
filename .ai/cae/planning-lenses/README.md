@@ -2,7 +2,7 @@
 
 **Status:** Draft for human review (**A-CAE**).  
 **Applies during:** `build-plan`, `draft-plan-artifact`, `review-plan-artifact`, planning interview sessions.  
-**Canonical rubric (deterministic):** `PLANNER_REVIEW_RUBRIC.md` — lenses are **advisory**; review command enforces blockers.
+**Canonical rubric (deterministic):** `review-plan-artifact` command — lenses are **advisory**; review command enforces blockers.
 
 | Lens | File (under `.ai/cae/planning-lenses/`) | When to activate |
 | --- | --- | --- |

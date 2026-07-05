@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "createdAt": "2026-07-04T01:09:30.667Z",
+  "copiedPaths": [
+    ".workspace-kit/tasks/workspace-kit.db",
+    ".workspace-kit/planning",
+    "ideas-export.json"
+  ]
+}

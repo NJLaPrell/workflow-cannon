@@ -8,7 +8,7 @@ Validate and optionally persist a **PlanArtifact v1** document (new `planId` or 
 
 When the source idea links a **unified IdeaPlan document** (`linkedPlanArtifact` or active draft), persist merges structured plan content into that document’s **`plan` section** and top-level planning payload on the **existing** `planId` — no new standalone artifact identity is created.
 
-**Contract:** repo-root **`PLANNER_COMMANDS.md`** §2 · **Schema:** **`PLANNER_SCHEMA.md`** · **Agent runbook:** **`.ai/runbooks/plan-artifact-workflow.md`**
+**Contract:** `--schema-only` flag is authoritative for arg shape · **Agent runbook:** **`.ai/runbooks/plan-artifact-workflow.md`**
 
 **Handler status:** validate-only (`persist: false`) and persist (`persist: true`) are implemented (WP-3.2–3.3). **`--schema-only`** and **`list-commands`** remain authoritative for argv shape.
 
