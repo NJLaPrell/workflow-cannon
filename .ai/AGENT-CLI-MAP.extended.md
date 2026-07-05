@@ -536,7 +536,7 @@ workspace-kit run build-plan '{"planningType":"new-feature","outputMode":"tasks"
 workspace-kit run persist-planning-execution-drafts '{"tasks":[...],"expectedPlanningGeneration":<n>,"planRef":"planning:new-feature:...","planningType":"new-feature","clientMutationId":"agent-bulk-1"}'
 workspace-kit run review-planning-execution-drafts '{"targetPhaseKey":"73","targetPhase":"Phase 73","desiredStatus":"ready","tasks":[...]}'
 workspace-kit run persist-planning-execution-drafts '{"targetPhaseKey":"73","targetPhase":"Phase 73","desiredStatus":"ready","tasks":[...],"expectedPlanningGeneration":<n>,"planRef":"planning:new-feature:phase-73","clientMutationId":"phase-73-task-open"}'
-# PlanArtifact lifecycle (contracts in PLANNER_COMMANDS.md; runbook .ai/runbooks/plan-artifact-workflow.md):
+# PlanArtifact lifecycle (runbook .ai/runbooks/plan-artifact-workflow.md; use --schema-only for arg shapes):
 workspace-kit run draft-plan-artifact '{"persist":false,"artifact":{...}}'
 workspace-kit run draft-plan-artifact '{"persist":true,"artifact":{...},"expectedPlanningGeneration":<n>,"policyApproval":{"confirmed":true,"rationale":"persist plan draft"}}'
 workspace-kit run review-plan-artifact '{"planId":"<uuid>","profile":"full-feature"}'

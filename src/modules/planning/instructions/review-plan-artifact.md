@@ -4,11 +4,11 @@ agentCapsule|v=1|command=review-plan-artifact|module=planning|schema_only=pnpm e
 
 # review-plan-artifact
 
-Run deterministic rubric checks (**A-RUBRIC** / **`PLANNER_REVIEW_RUBRIC.md`**) on a PlanArtifact v1 or unified IdeaPlan planning payload; return blockers, warnings, and coverage map. Does not change plan `status` unless `recordReview: true`.
+Run deterministic rubric checks on a PlanArtifact v1 or unified IdeaPlan planning payload; return blockers, warnings, and coverage map. Does not change plan `status` unless `recordReview: true`.
 
 When loading by `planId`, if the stored artifact file is a unified IdeaPlan document, the handler synthesizes a PlanArtifact-shaped payload from the document's top-level `goals`, `userStories`, and `wbs` arrays for rubric checks. With `recordReview: true`, the unified document must be in `planning` status and transitions to `reviewed` with a populated `review` section.
 
-**Contract:** repo-root **`PLANNER_COMMANDS.md`** §3 · **Rubric:** **`PLANNER_REVIEW_RUBRIC.md`** · **Agent runbook:** **`.ai/runbooks/plan-artifact-workflow.md`**
+**Contract:** `--schema-only` flag is authoritative for arg shape · **Agent runbook:** **`.ai/runbooks/plan-artifact-workflow.md`**
 
 **Handler status:** review engine and CLI handler ship in **WP-4** (core `reviewPlanArtifact` + this command).
 
@@ -33,7 +33,7 @@ pnpm exec wk run review-plan-artifact '{"planId":"<uuid>","recordReview":true,"e
 | `version` | No | Default latest on disk / index. |
 | `artifact` | Yes* | Inline PlanArtifact v1 instead of load (*one of `planId` or `artifact`*). |
 | `profile` | No | `minimal` \| `refactor` \| `full-feature` \| `sprint-phase`; default `minimal` when omitted. |
-| `waivers` | No | `{ code, rationale }[]` per **PLANNER_REVIEW_RUBRIC.md** §5.2 (slice coverage codes). |
+| `waivers` | No | `{ code, rationale }[]` (slice coverage codes). |
 | `recordReview` | No | Default `false`. `true` writes `status: reviewed` as next artifact version, persists `latestReview` on the plan index, and may update the planning session (Tier B). For unified IdeaPlan documents, transitions `planning` → `reviewed` and writes the `review` section. |
 | `ideaId` | No | Optional explicit idea id when promoting session state after `recordReview`. |
 | `sessionId` | No | Optional explicit session id; must match the active planning session when set. |

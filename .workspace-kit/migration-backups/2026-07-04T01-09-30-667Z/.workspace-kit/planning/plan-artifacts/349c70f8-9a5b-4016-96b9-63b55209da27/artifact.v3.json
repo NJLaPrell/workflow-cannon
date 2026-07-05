@@ -1,0 +1,306 @@
+{
+  "schemaVersion": 1,
+  "planRef": "plan-artifact:349c70f8-9a5b-4016-96b9-63b55209da27",
+  "status": "accepted",
+  "identity": {
+    "title": "Phase Work Tree Diagram",
+    "planningType": "new-feature",
+    "summary": "Add a read-only dependency graph to the Overview tab that visualizes current-phase tasks color-coded by readiness state: blue (ready), yellow (blocked by in-phase tasks), red (terminally blocked by out-of-phase dependencies).",
+    "tags": [
+      "dashboard",
+      "visualization",
+      "phase",
+      "dependency-graph"
+    ]
+  },
+  "goals": [
+    "Operators can see at a glance which phase tasks are ready, blocked, or terminally blocked",
+    "Dependency relationships between tasks are rendered as a graph with directional edges",
+    "Color coding (blue/yellow/red) correctly reflects each task's readiness classification"
+  ],
+  "nonGoals": [
+    "Interactive nodes (clicking to navigate to task drawers) — read-only only in v1",
+    "Historical or cross-phase dependency views",
+    "Editing task dependencies from the diagram",
+    "Mobile or non-Cursor webview rendering"
+  ],
+  "userStories": [
+    {
+      "id": "US-1",
+      "asA": "maintainer",
+      "iWant": "to see a dependency graph of my current phase tasks on the Overview tab",
+      "soThat": "I can quickly identify which tasks are ready to start and what is blocking progress",
+      "priority": "must"
+    },
+    {
+      "id": "US-2",
+      "asA": "maintainer",
+      "iWant": "tasks color-coded by readiness state",
+      "soThat": "I can triage blocked work without reading each task's dependency list individually",
+      "priority": "must"
+    }
+  ],
+  "valueAssessment": {
+    "impact": "High — reduces cognitive overhead when managing phase execution; blocked work is immediately visible without drilling into individual tasks",
+    "confidence": "high",
+    "rationale": "Dependency data already exists in the task engine; the primary work is projection extension and rendering"
+  },
+  "riskAssessment": [
+    {
+      "id": "R1",
+      "description": "Graph layout may be poor for large phases with many tasks and complex dependencies",
+      "severity": "medium",
+      "mitigation": "Use dagre hierarchical auto-layout; add a scrollable container in the webview"
+    },
+    {
+      "id": "R2",
+      "description": "dashboard-summary projection performance impact from dependency traversal on large phase task sets",
+      "severity": "low",
+      "mitigation": "Compute readiness classification in a single pass; cache per planning generation"
+    },
+    {
+      "id": "R3",
+      "description": "Adding a JS graph library increases the webview bundle size",
+      "severity": "low",
+      "mitigation": "Prefer a lightweight library (cytoscape ~200KB); lazy-load or tree-shake where possible"
+    }
+  ],
+  "technicalImpact": {
+    "systemsTouched": [
+      "src/modules/task-engine (dashboard-summary projection)",
+      "extensions/cursor-workflow-cannon (webview Overview tab)",
+      "extensions/cursor-workflow-cannon (PhaseWorkTree graph component)"
+    ],
+    "compatibilityNotes": "New phaseTaskGraph field on dashboard-summary is additive; existing consumers unaffected",
+    "migrationImpact": "None — no task store schema changes"
+  },
+  "architecture": {
+    "overview": "Server side: extend dashboard-summary to compute a phaseTaskGraph payload with nodes (taskId, title, readinessState) and edges (dependsOn pairs). Client side: the webview Overview tab reads phaseTaskGraph from the dashboard message and renders it using cytoscape.js with dagre layout. Readiness classification is computed server-side using a single-pass dependency check against the current phase task set.",
+    "decisions": [
+      {
+        "id": "D1",
+        "decision": "Readiness classification is computed server-side in dashboard-summary, not client-side",
+        "rationale": "Keeps classification logic colocated with task-engine data; avoids re-implementing dependency resolution in the webview"
+      },
+      {
+        "id": "D2",
+        "decision": "Use cytoscape.js with dagre layout plugin for rendering",
+        "rationale": "Operator requires high-quality visuals; Mermaid offers insufficient styling control for the three-state color UX"
+      },
+      {
+        "id": "D3",
+        "decision": "Graph is read-only in v1",
+        "rationale": "Explicitly confirmed by operator; interactive navigation deferred to a future iteration"
+      }
+    ]
+  },
+  "uiUxDirection": {
+    "hasUiChanges": true,
+    "summary": "A new diagram section is added to the Overview tab. Nodes represent phase tasks with title labels; directed edges show dependency flow. Node fill color: blue (#3B82F6) = ready, yellow (#EAB308) = blocked by in-phase tasks, red (#EF4444) = terminally blocked by out-of-phase dependencies. A color legend appears near the diagram. Empty state message shown when no graph data is available."
+  },
+  "testingStrategy": {
+    "layers": [
+      "unit",
+      "integration",
+      "extension"
+    ],
+    "criticalPaths": [
+      "Readiness classification: correct three-state output for in-phase vs out-of-phase blocker detection",
+      "dashboard-summary phaseTaskGraph field shape and schema validation",
+      "Webview PhaseWorkTree component renders correct node colors for each readiness state"
+    ],
+    "outOfScopeTesting": [
+      "Visual regression / pixel-perfect screenshot tests in v1"
+    ]
+  },
+  "implementationGuidance": [
+    "Extend dashboard-summary projection with phaseTaskGraph: { nodes: [{id, title, readinessState}], edges: [{source, target}] }",
+    "Readiness algorithm (server-side): 'terminally-blocked' if any dependsOn id is absent from the current phase task set or points to a cancelled task; 'blocked' if all blockers are in-phase incomplete tasks; 'ready' if no incomplete blockers",
+    "Install cytoscape and cytoscape-dagre in the extension webview package; scope to Overview tab only",
+    "Wire PhaseWorkTree component to phaseTaskGraph field from dashboard-summary message; show empty-state when nodes array is empty",
+    "Define node color constants in a single theme file rather than inline per node"
+  ],
+  "whatNotToDo": [
+    "Do not compute readiness classification client-side — keep it in dashboard-summary server-side",
+    "Do not add click handlers or navigation to task drawers in this v1 task",
+    "Do not hard-code hex color values in multiple places — use named constants",
+    "Do not include the graph library in the shared webview bundle without scoping to the Overview tab"
+  ],
+  "assumptions": [
+    "dashboard-summary currently exposes the current phase task list with dependsOn arrays accessible to the projection layer",
+    "The Overview tab webview is a React component that can accept new fields from the dashboard message",
+    "cytoscape.js is acceptable to add as an extension dependency given the quality requirement"
+  ],
+  "openQuestions": [],
+  "wbs": [
+    {
+      "wbsId": "WBS-1",
+      "path": "1",
+      "title": "Extend dashboard-summary projection with phaseTaskGraph",
+      "goalMapping": [
+        "Operators can see at a glance which phase tasks are ready, blocked, or terminally blocked",
+        "Dependency relationships between tasks are rendered as a graph with directional edges"
+      ],
+      "suggestedTaskTitle": "Add phaseTaskGraph field to dashboard-summary projection",
+      "approach": "Extend the dashboard-summary command projection to compute and return a phaseTaskGraph field. Implement the three-state readiness classification algorithm (ready / blocked / terminally-blocked) using a single pass over the current phase task set and their dependsOn arrays.",
+      "technicalScope": [
+        "src/modules/task-engine (dashboard-summary projection)",
+        "Type definitions for phaseTaskGraph node and edge shapes"
+      ],
+      "acceptanceCriteria": [
+        "dashboard-summary response includes phaseTaskGraph with nodes[] and edges[]",
+        "Each node has id, title, and readinessState (ready | blocked | terminally-blocked)",
+        "Readiness classification correctly identifies in-phase vs out-of-phase blockers",
+        "Unit tests cover all three readiness states and edge cases (no dependencies, tasks with no blockers, mixed in/out-of-phase)"
+      ],
+      "testingVerification": [
+        "Unit tests for readiness classification function using fixture task sets",
+        "Integration test: dashboard-summary response shape validates against expected schema"
+      ],
+      "dependsOn": [],
+      "recommendedPhase": "140",
+      "recommendedOrder": 1,
+      "sizingConfidence": "high",
+      "riskNotes": "If dashboard-summary projection does not currently expose dependsOn arrays for phase tasks, that gap must be addressed first within this task",
+      "doneMeans": "dashboard-summary returns phaseTaskGraph with correct node/edge data and all unit tests pass",
+      "generatedTaskPayload": {
+        "title": "Add phaseTaskGraph field to dashboard-summary projection",
+        "approach": "Extend dashboard-summary command projection with phaseTaskGraph field and three-state readiness classification algorithm",
+        "technicalScope": [
+          "src/modules/task-engine (dashboard-summary projection)",
+          "Type definitions for phaseTaskGraph node and edge shapes"
+        ],
+        "acceptanceCriteria": [
+          "dashboard-summary response includes phaseTaskGraph.nodes[] and phaseTaskGraph.edges[]",
+          "Each node includes id, title, readinessState (ready | blocked | terminally-blocked)",
+          "Readiness classification correctly distinguishes in-phase vs out-of-phase blockers",
+          "Unit tests cover all three states and edge cases"
+        ],
+        "status": "ready"
+      }
+    },
+    {
+      "wbsId": "WBS-2",
+      "path": "2",
+      "title": "Build PhaseWorkTree graph rendering component",
+      "goalMapping": [
+        "Dependency relationships between tasks are rendered as a graph with directional edges",
+        "Color coding (blue/yellow/red) correctly reflects each task's readiness classification"
+      ],
+      "suggestedTaskTitle": "Build PhaseWorkTree component with cytoscape.js color-coded nodes",
+      "approach": "Add cytoscape.js with the cytoscape-dagre layout plugin to the extension webview. Build a read-only PhaseWorkTree React component that accepts phaseTaskGraph data and renders a directed graph with color-coded nodes and a color legend.",
+      "technicalScope": [
+        "extensions/cursor-workflow-cannon (new PhaseWorkTree React component)",
+        "extensions/cursor-workflow-cannon package.json (cytoscape, cytoscape-dagre dependencies)",
+        "Node color constants / theme file"
+      ],
+      "acceptanceCriteria": [
+        "PhaseWorkTree component renders a node for each task in phaseTaskGraph.nodes",
+        "Node colors: blue (#3B82F6) for ready, yellow (#EAB308) for blocked, red (#EF4444) for terminally-blocked",
+        "Directed edges render with arrowheads showing dependency flow",
+        "Dagre hierarchical layout applied automatically",
+        "Color legend rendered adjacent to the diagram",
+        "Empty state placeholder rendered when nodes array is empty",
+        "No click handlers or navigation wired to nodes"
+      ],
+      "testingVerification": [
+        "Component tests with fixture phaseTaskGraph data verify correct node count and color class assignment",
+        "Manual visual check against Overview tab with a real phase data set"
+      ],
+      "dependsOn": [
+        "WBS-1"
+      ],
+      "recommendedPhase": "140",
+      "recommendedOrder": 2,
+      "sizingConfidence": "medium",
+      "riskNotes": "cytoscape.js bundle size; verify tree-shaking or lazy-load path in the extension build before committing",
+      "doneMeans": "Component renders correct color-coded graph from fixture phaseTaskGraph data with passing tests; legend and empty state work",
+      "generatedTaskPayload": {
+        "title": "Build PhaseWorkTree component with cytoscape.js color-coded nodes",
+        "approach": "Add cytoscape.js + dagre layout to extension webview; build read-only PhaseWorkTree React component with blue/yellow/red node color coding and color legend",
+        "technicalScope": [
+          "extensions/cursor-workflow-cannon (new PhaseWorkTree React component)",
+          "extensions/cursor-workflow-cannon package.json (cytoscape, cytoscape-dagre)",
+          "Node color constants / theme file"
+        ],
+        "acceptanceCriteria": [
+          "Renders all nodes from phaseTaskGraph with correct colors",
+          "Directed edges show dependency flow with arrowheads",
+          "Dagre layout applied; color legend shown; empty state handled",
+          "No click or navigation handlers"
+        ],
+        "status": "ready"
+      }
+    },
+    {
+      "wbsId": "WBS-3",
+      "path": "3",
+      "title": "Integrate PhaseWorkTree into Overview tab",
+      "goalMapping": [
+        "Operators can see at a glance which phase tasks are ready, blocked, or terminally blocked"
+      ],
+      "suggestedTaskTitle": "Wire PhaseWorkTree diagram into the Overview tab",
+      "approach": "Add the PhaseWorkTree component to the Overview tab layout. Wire it to receive phaseTaskGraph from the dashboard message. Ensure graceful degradation when phaseTaskGraph is absent from the message (older kit versions).",
+      "technicalScope": [
+        "extensions/cursor-workflow-cannon (Overview tab layout / parent component)"
+      ],
+      "acceptanceCriteria": [
+        "PhaseWorkTree diagram section appears on the Overview tab",
+        "Diagram renders live data from phaseTaskGraph in the dashboard message",
+        "Tab renders without errors when phaseTaskGraph is absent or undefined",
+        "Section has a descriptive heading (e.g. 'Phase Work Tree')"
+      ],
+      "testingVerification": [
+        "Extension integration test: Overview tab with fixture dashboard message containing phaseTaskGraph renders the diagram section",
+        "Manual smoke test against live workspace with Phase 109 data"
+      ],
+      "dependsOn": [
+        "WBS-2"
+      ],
+      "recommendedPhase": "140",
+      "recommendedOrder": 3,
+      "sizingConfidence": "high",
+      "riskNotes": "Minimal risk — primarily wiring; main concern is layout spacing with existing Overview tab content",
+      "doneMeans": "Diagram visible on Overview tab with live phaseTaskGraph data, section heading shown, graceful empty/absent state handled",
+      "generatedTaskPayload": {
+        "title": "Wire PhaseWorkTree diagram into the Overview tab",
+        "approach": "Integrate PhaseWorkTree component into Overview tab layout; wire to phaseTaskGraph dashboard message field; add section heading and graceful empty-state handling",
+        "technicalScope": [
+          "extensions/cursor-workflow-cannon (Overview tab layout / parent component)"
+        ],
+        "acceptanceCriteria": [
+          "Diagram renders on Overview tab from live phaseTaskGraph data",
+          "Section heading shown; graceful degradation when data absent"
+        ],
+        "status": "ready"
+      }
+    }
+  ],
+  "phaseRecommendations": [
+    {
+      "phaseKey": "140",
+      "label": "Phase 140",
+      "rationale": "Current active phase; feature is self-contained with no cross-phase dependencies. Fits within a single focused sprint.",
+      "isPrimary": true
+    }
+  ],
+  "provenance": {
+    "createdAt": "2026-06-30T22:47:00.000Z",
+    "updatedAt": "2026-07-01T05:17:08.312Z",
+    "createdBy": "agent",
+    "source": "draft-plan-artifact",
+    "chatSessionRef": "pcs-b75f9d29-59f0-4c7f-b453-75cc083aad33",
+    "sourceIdeaId": "I004"
+  },
+  "planId": "349c70f8-9a5b-4016-96b9-63b55209da27",
+  "approvalRecord": {
+    "schemaVersion": 1,
+    "confirmed": true,
+    "approvedVersion": 2,
+    "approvedAt": "2026-07-01T05:16:50.314Z",
+    "approvedBy": "nicklaprell",
+    "planRef": "plan-artifact:349c70f8-9a5b-4016-96b9-63b55209da27",
+    "reviewSummary": "0 blockers, 0 warnings"
+  },
+  "version": 3
+}

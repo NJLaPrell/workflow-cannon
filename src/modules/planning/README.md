@@ -18,7 +18,7 @@ For the system-level diagram and naming rules, see **`docs/maintainers/ARCHITECT
 - Command surface:
   - `list-planning-types`
   - `build-plan` (Phase 17 scaffold response)
-- **PlanArtifact v1** foundations in **`src/core/planning/`** (types, storage, render, WBS normalize). Agent runbook: **`.ai/runbooks/plan-artifact-workflow.md`**. Lifecycle commands (`draft-plan-artifact`, `review-plan-artifact`, `accept-plan-artifact`, `finalize-plan-to-phase`) are specified in repo-root **`PLANNER_COMMANDS.md`** and exposed through `wk run`. `finalize-plan-to-phase` supports Tier C dry-run preview and Tier B task persistence/finalization through task-engine draft persistence.
+- **PlanArtifact v1** foundations in **`src/core/planning/`** (types, storage, render, WBS normalize). Agent runbook: **`.ai/runbooks/plan-artifact-workflow.md`**. Lifecycle commands (`draft-plan-artifact`, `review-plan-artifact`, `accept-plan-artifact`, `finalize-plan-to-phase`) are exposed through `wk run` (`--schema-only` is authoritative for arg shapes). `finalize-plan-to-phase` supports Tier C dry-run preview and Tier B task persistence/finalization through task-engine draft persistence.
 
 Later Phase 17 tasks add adaptive guided questioning, rule-driven flow defaults, hard critical-unknown gating, and wishlist artifact generation.
 

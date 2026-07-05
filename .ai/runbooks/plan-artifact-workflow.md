@@ -17,9 +17,9 @@ Machine operator guide for **PlanArtifact v1** — brainstorm → draft → revi
 | --- | --- |
 | Types, schema, storage, render, WBS normalize | **Shipped** (`src/core/planning/`, `schemas/planning/`, `fixtures/planning/`) |
 | CAE lenses + activations + session scope hook | **Shipped** (`.ai/cae/planning-lenses/`, `activations.v1.json`, `planning-session-scope.ts`) |
-| `draft-plan-artifact` / `review-plan-artifact` / `accept-plan-artifact` / `finalize-plan-to-phase` CLI handlers | **Contract only** until WP-3+ lands — argv/response codes in repo-root **`PLANNER_COMMANDS.md`** (A-CONTRACTS). Confirm with **`pnpm exec wk run --list-commands`** before assuming a handler exists. |
+| `draft-plan-artifact` / `review-plan-artifact` / `accept-plan-artifact` / `finalize-plan-to-phase` CLI handlers | **Shipped** — use `--schema-only` flag for authoritative arg shapes |
 
-Human-reviewed contracts (repo root, not `docs/`): **`PLANNER_COMMANDS.md`**, **`PLANNER_SCHEMA.md`**, **`PLANNER_REVIEW_RUBRIC.md`**, **`PLANNER_ARCHITECTURE.md`**.
+Use **`pnpm exec wk run <command> --schema-only '{}'`** for authoritative argv JSON Schema.
 
 ## Golden path (agent ladder)
 
@@ -117,11 +117,11 @@ JSON **`policyApproval`** on argv for Tier B — not chat-only ([`.ai/POLICY-APP
 | `invalid-run-args` | `wk run <cmd> --schema-only '{}'` |
 | `planning-generation-mismatch` | Re-read `planningGeneration`, retry |
 | `policy-denied` | Add `policyApproval` on argv |
-| `plan-artifact-schema-invalid` | Fix artifact vs `PLANNER_SCHEMA.md` / JSON Schema |
+| `plan-artifact-schema-invalid` | Fix artifact vs JSON Schema (`schemas/planning/plan-artifact.v1.schema.json`) |
 | `plan-artifact-not-accepted` | Run accept before finalize |
 | `plan-artifact-accept-blocked` | Clear review blockers or defer OQs explicitly |
 
-Full index: repo-root **`PLANNER_COMMANDS.md`** §8.
+Use `wk run <cmd> --schema-only '{}'` for full arg/response schema.
 
 ## Compatibility
 

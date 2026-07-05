@@ -7,7 +7,7 @@ epic|id=skill-pack-first-party-v1|phase=109|status=active
 
 Machine backlog for **Claude-shaped** skill trees under **`.claude/skills/<id>/SKILL.md`**. Kit discovery uses **`skills.discoveryRoots`** (default **`.claude/skills`**). Cursor agents also benefit when the same trees exist under **`.cursor/skills/`** (copy, symlink, or extra discovery root).
 
-**Related canon:** `.ai/runbooks/skill-packs-dual-install.md`, `.ai/playbooks/skill-attachments.md`, `PROJECT_TOOLS.md` (§ Workflow Cannon Skill Pack).
+**Related canon:** `.ai/runbooks/skill-packs-dual-install.md`, `.ai/playbooks/skill-attachments.md`.
 
 ## Goals
 
@@ -375,7 +375,7 @@ pnpm exec wk run recommend-skills '{"tags":["workflow-cannon","task"],"taskType"
 - [ ] `recommend-skills` returns expected packs for delivery/release/improvement queries above
 - [ ] Unknown `metadata.skillIds` still fail closed on create/update
 - [ ] `.ai/playbooks/task-to-phase-branch.md` documents `Suggested skillIds: wc-task-delivery, wc-policy-cli`
-- [ ] `PROJECT_TOOLS.md` skill pack section points to this backlog as source of truth
+- [ ] Skill pack discovery section points to this backlog as source of truth
 
 ---
 

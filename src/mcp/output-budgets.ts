@@ -16,7 +16,6 @@ export interface McpExpansionRef {
 
 /**
  * Explicit per-tool output byte budgets. Every MCP tool must appear here.
- * Values align with MCP_PLAN.md section 11 starting targets.
  */
 export const MCP_TOOL_OUTPUT_BYTE_BUDGETS: Readonly<Record<string, number>> = {
   "workflow-cannon.agent_start": 6 * 1024,

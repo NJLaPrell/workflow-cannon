@@ -1,0 +1,1972 @@
+{
+  "schemaVersion": 1,
+  "planId": "idea-planning-system-plan",
+  "planRef": "plan-artifact:idea-planning-system-plan",
+  "status": "draft",
+  "identity": {
+    "title": "Workflow Cannon Idea Planning System",
+    "planningType": "new-feature",
+    "summary": "Implement a command-backed dashboard flow that turns an Ideas row into a planner-chat session, a reviewed and accepted PlanArtifact with WBS, and optionally finalized Task Engine tasks.",
+    "tags": [
+      "planner",
+      "ideas",
+      "dashboard",
+      "plan-artifact",
+      "wbs",
+      "task-engine"
+    ]
+  },
+  "goals": [
+    "G1: Clicking Plan this starts or resumes exactly one durable planning session for the selected idea.",
+    "G2: start-idea-planning owns canonical idea loading, idempotency, session start/resume, and small prompt generation.",
+    "G3: update-idea-planning-session owns durable planning session transitions.",
+    "G4: PlanArtifact drafts are linked to ideas as activeDraftPlanArtifact and do not overwrite accepted linkedPlanArtifact until acceptance.",
+    "G5: Review is profile-aware, warnings do not block acceptance, and blockers prevent acceptance.",
+    "G6: Dashboard actions are derived from one tested lifecycle-state helper.",
+    "G7: Accepted WBS rows finalize into one task draft each with dependency resolution and provenance.",
+    "G8: Legacy build-plan remains compatibility-only and does not confuse the primary dashboard flow."
+  ],
+  "nonGoals": [
+    "Do not make chat transcripts the source of truth.",
+    "Do not auto-finalize tasks immediately after plan acceptance.",
+    "Do not let the dashboard own planning business logic.",
+    "Do not replace Task Engine with PlanArtifact.",
+    "Do not implement legacy build-plan import before the primary planner-chat path is stable."
+  ],
+  "userStories": [
+    {
+      "id": "US-1",
+      "asA": "Workflow Cannon operator",
+      "iWant": "to click Plan this on an idea",
+      "soThat": "I can start a focused brainstorming session without manually composing commands or prompts",
+      "priority": "must"
+    },
+    {
+      "id": "US-2",
+      "asA": "Workflow Cannon operator",
+      "iWant": "the planning session to produce a reviewed PlanArtifact with WBS",
+      "soThat": "I can approve a durable plan before execution tasks are created",
+      "priority": "must"
+    },
+    {
+      "id": "US-3",
+      "asA": "Workflow Cannon operator",
+      "iWant": "the dashboard to show the idea's planning lifecycle state",
+      "soThat": "I always know whether to resume, review, accept, finalize, or view tasks",
+      "priority": "must"
+    },
+    {
+      "id": "US-4",
+      "asA": "Workflow Cannon agent",
+      "iWant": "one WBS row to map predictably to one task draft",
+      "soThat": "I can finalize accepted plans reliably with traceable provenance",
+      "priority": "should"
+    }
+  ],
+  "valueAssessment": {
+    "impact": "High: creates the core idea-to-plan-to-WBS workflow and removes ambiguity between planner-chat, PlanArtifact, dashboard, and legacy build-plan paths.",
+    "confidence": "high",
+    "rationale": "The plan locks command ownership, session state transitions, derived dashboard lifecycle state, acceptance gating, and finalize-to-task provenance."
+  },
+  "riskAssessment": [
+    {
+      "id": "R-1",
+      "description": "State drift between idea status, session status, plan status, review result, and finalize result.",
+      "severity": "high",
+      "mitigation": "Implement deriveIdeaPlanningLifecycleState and invariant tests before broad UI rendering."
+    },
+    {
+      "id": "R-2",
+      "description": "Prompt behavior is treated as enforcement rather than UX guidance.",
+      "severity": "medium",
+      "mitigation": "Back every critical prompt instruction with command validation and review/accept/finalize gates."
+    },
+    {
+      "id": "R-3",
+      "description": "Replanning could overwrite the current accepted plan too early.",
+      "severity": "high",
+      "mitigation": "Use both linkedPlanArtifact and activeDraftPlanArtifact, promoting only on acceptance."
+    },
+    {
+      "id": "R-4",
+      "description": "Finalize dependency mapping could produce broken task dependencies.",
+      "severity": "high",
+      "mitigation": "Use two-pass dependency resolution and block subset finalization when dependencies are unselected."
+    }
+  ],
+  "technicalImpact": {
+    "systemsTouched": [
+      "src/modules/planning",
+      "src/modules/ideas",
+      "extensions/cursor-workflow-cannon/src/views/dashboard",
+      "extensions/cursor-workflow-cannon/src/planner-chat-prompt.ts",
+      ".ai/playbooks/planner-chat.md",
+      "PlanArtifact schema/review/finalize pipeline",
+      "Task Engine draft persistence integration"
+    ],
+    "compatibilityNotes": "Legacy build-plan remains available but is demoted from the primary Ideas dashboard path. Legacy import is documented/deferred.",
+    "migrationImpact": "Ideas need fields or equivalent metadata for linkedPlanArtifact, activeDraftPlanArtifact, previousPlanArtifacts, and planningChatSession. Existing ideas without these fields should derive open state."
+  },
+  "architecture": {
+    "overview": "Command-layer ownership should sit behind a thin dashboard. start-idea-planning starts/resumes durable sessions and returns a compact prompt. update-idea-planning-session owns session transitions. PlanArtifact commands own draft, review, accept, and finalize. Dashboard renders actions from deriveIdeaPlanningLifecycleState.",
+    "decisions": [
+      {
+        "id": "D-1",
+        "decision": "start-idea-planning is a real command.",
+        "rationale": "Keeps dashboard prompts small and centralizes lifecycle logic."
+      },
+      {
+        "id": "D-2",
+        "decision": "update-idea-planning-session is a real command.",
+        "rationale": "Makes session transitions durable, inspectable, and reusable."
+      },
+      {
+        "id": "D-3",
+        "decision": "Dashboard uses a derived lifecycle-state reducer.",
+        "rationale": "Prevents contradictory actions while preserving flexible persistence."
+      },
+      {
+        "id": "D-4",
+        "decision": "Use both linkedPlanArtifact and activeDraftPlanArtifact.",
+        "rationale": "Protects accepted plan lineage during replanning."
+      },
+      {
+        "id": "D-5",
+        "decision": "One WBS row maps to one task draft in v1.",
+        "rationale": "Maximizes traceability and simplifies finalize behavior."
+      }
+    ],
+    "diagrams": [
+      {
+        "title": "Idea planning lifecycle",
+        "mermaid": "flowchart TD\n  A[Ideas row] --> B[start-idea-planning]\n  B --> C[planner-chat]\n  C --> D[draft-plan-artifact]\n  D --> E[review-plan-artifact]\n  E -->|blockers| C\n  E -->|passed/warnings| F[accept-plan-artifact]\n  F --> G[linkedPlanArtifact accepted]\n  G --> H[finalize-plan-to-phase dry-run]\n  H --> I[finalize persist]\n  I --> J[Task Engine tasks]",
+        "caption": "Command-backed flow from idea to accepted plan and optional task creation."
+      }
+    ]
+  },
+  "uiUxDirection": {
+    "hasUiChanges": true,
+    "summary": "The Ideas row should expose Plan this, Resume planning, Review, Accept, Finalize, View tasks, or View plan based only on deriveIdeaPlanningLifecycleState. Plan this opens a compact command-backed planner-chat prompt. Legacy wizard is moved behind Advanced/Legacy.",
+    "mockupRefs": []
+  },
+  "testingStrategy": {
+    "layers": [
+      "unit",
+      "integration",
+      "extension",
+      "e2e-cli"
+    ],
+    "criticalPaths": [
+      "Plan this creates or resumes one session",
+      "Session progresses active -> draft_ready -> needs_revision/approval_ready -> completed",
+      "Draft plan is linked as activeDraftPlanArtifact",
+      "Acceptance promotes activeDraftPlanArtifact to linkedPlanArtifact",
+      "Derived lifecycle state prevents contradictory dashboard actions",
+      "Finalize maps one WBS row to one task with dependency resolution and provenance"
+    ],
+    "outOfScopeTesting": [
+      "Visual design polish beyond required dashboard state/action rendering"
+    ]
+  },
+  "implementationGuidance": [
+    "Implement start-idea-planning and update-idea-planning-session before broad dashboard changes.",
+    "Keep dashboard logic thin; it should call commands and render derived state.",
+    "Use the current PlanArtifact schema enum for identity.planningType: new-feature.",
+    "Pass review profile full-feature when reviewing this plan; do not put full-feature into identity.planningType unless schema changes.",
+    "Do not store the full chat transcript as plan truth.",
+    "Use clientMutationId on mutating commands for idempotency."
+  ],
+  "whatNotToDo": [
+    "Do not mark a planning session completed when a draft is merely saved.",
+    "Do not auto-finalize tasks after acceptance.",
+    "Do not overwrite linkedPlanArtifact during replanning before acceptance.",
+    "Do not let warnings block acceptance.",
+    "Do not let selected WBS rows finalize when they depend on unselected WBS rows.",
+    "Do not implement legacy import before the primary path is stable."
+  ],
+  "assumptions": [
+    "Workspace-kit commands can be added to the planning/ideas command surface.",
+    "The dashboard can call these commands and open/prefill Cursor chat with returned prompt text.",
+    "Existing PlanArtifact lifecycle commands can be extended without replacing Task Engine.",
+    "Review profile can be supplied separately as full-feature even though identity.planningType is new-feature."
+  ],
+  "openQuestions": [],
+  "wbs": [
+    {
+      "wbsId": "WBS-0.1",
+      "path": "0.1",
+      "title": "Run baseline health checks and identify planner test surface",
+      "goalMapping": [
+        "G1: Clicking Plan this starts or resumes exactly one durable planning session for the selected idea."
+      ],
+      "suggestedTaskTitle": "Run baseline health checks and identify planner test surface",
+      "approach": "Run pnpm exec wk doctor, pnpm run build, pnpm run test; record existing failures; list planner/dashboard tests.",
+      "technicalScope": [
+        "Run pnpm exec wk doctor, pnpm run build, pnpm run test; record existing failures; list planner/dashboard tests."
+      ],
+      "acceptanceCriteria": [
+        "Baseline command results recorded",
+        "Planner-related unit and integration tests are listed with file paths"
+      ],
+      "testingVerification": [
+        "Manual command output or CI output"
+      ],
+      "dependsOn": [],
+      "recommendedPhase": "111",
+      "recommendedOrder": 1,
+      "sizingConfidence": "medium",
+      "riskNotes": "Keep the change bounded to this WBS item; avoid expanding into adjacent lifecycle work.",
+      "doneMeans": "This WBS is complete when run baseline health checks and identify planner test surface is delivered and baseline command results recorded is demonstrated via manual command output or ci output.",
+      "generatedTaskPayload": {
+        "title": "Run baseline health checks and identify planner test surface",
+        "type": "workspace-kit",
+        "priority": "P2",
+        "phaseKey": "111",
+        "approach": "Run pnpm exec wk doctor, pnpm run build, pnpm run test; record existing failures; list planner/dashboard tests.",
+        "technicalScope": [
+          "Run pnpm exec wk doctor, pnpm run build, pnpm run test; record existing failures; list planner/dashboard tests."
+        ],
+        "acceptanceCriteria": [
+          "Baseline command results recorded",
+          "Planner-related unit and integration tests are listed with file paths"
+        ],
+        "dependsOn": [],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-1.1",
+      "path": "1.1",
+      "title": "Implement start-idea-planning command contract",
+      "goalMapping": [
+        "G1: Clicking Plan this starts or resumes exactly one durable planning session for the selected idea.",
+        "G2: start-idea-planning owns canonical idea loading, idempotency, session start/resume, and small prompt generation.",
+        "G3: update-idea-planning-session owns durable planning session transitions.",
+        "US-1"
+      ],
+      "suggestedTaskTitle": "Implement start-idea-planning command contract",
+      "approach": "Add real workspace-kit command for canonical idea fetch, active session detection, idempotent start/resume, prompt generation, session persistence, dashboard-ready result.",
+      "technicalScope": [
+        "Add real workspace-kit command for canonical idea fetch, active session detection, idempotent start/resume, prompt generation, session persistence, dashboard-ready result."
+      ],
+      "acceptanceCriteria": [
+        "Works with ideaId only",
+        "Missing idea actionable error",
+        "Active session returns resumed",
+        "Open idea returns started and prompt",
+        "Includes linked/active draft/previous plan data",
+        "First-run open idea with no active session starts planning and returns compact prompt"
+      ],
+      "testingVerification": [
+        "Unit tests for missing idea, open idea, active session, repeated mutation id",
+        "Unit and integration tests verify implement start-idea-planning command contract"
+      ],
+      "dependsOn": [
+        "WBS-0.1"
+      ],
+      "recommendedPhase": "111",
+      "recommendedOrder": 2,
+      "sizingConfidence": "medium",
+      "riskNotes": "Keep the change bounded to this WBS item; avoid expanding into adjacent lifecycle work.",
+      "doneMeans": "This WBS is complete when implement start-idea-planning command contract is delivered and works with ideaid only is demonstrated via unit tests for missing idea, open idea, active session, repeated mutation id.",
+      "generatedTaskPayload": {
+        "title": "Implement start-idea-planning command contract",
+        "type": "workspace-kit",
+        "priority": "P1",
+        "phaseKey": "111",
+        "approach": "Add real workspace-kit command for canonical idea fetch, active session detection, idempotent start/resume, prompt generation, session persistence, dashboard-ready result.",
+        "technicalScope": [
+          "Add real workspace-kit command for canonical idea fetch, active session detection, idempotent start/resume, prompt generation, session persistence, dashboard-ready result."
+        ],
+        "acceptanceCriteria": [
+          "Works with ideaId only",
+          "Missing idea actionable error",
+          "Active session returns resumed",
+          "Open idea returns started and prompt",
+          "Includes linked/active draft/previous plan data",
+          "First-run open idea with no active session starts planning and returns compact prompt"
+        ],
+        "dependsOn": [
+          "WBS-0.1"
+        ],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-1.2",
+      "path": "1.2",
+      "title": "Implement update-idea-planning-session command contract",
+      "goalMapping": [
+        "G1: Clicking Plan this starts or resumes exactly one durable planning session for the selected idea.",
+        "G2: start-idea-planning owns canonical idea loading, idempotency, session start/resume, and small prompt generation.",
+        "G3: update-idea-planning-session owns durable planning session transitions."
+      ],
+      "suggestedTaskTitle": "Implement update-idea-planning-session command contract",
+      "approach": "Add real command for planning session state transitions with idea/session/version validation.",
+      "technicalScope": [
+        "Add real command for planning session state transitions with idea/session/version validation."
+      ],
+      "acceptanceCriteria": [
+        "Updates status, summary, currentPlanRef, currentPlanVersion",
+        "Command rejects mismatched idea and session identifiers with actionable errors",
+        "Returns dashboard-ready session state",
+        "Idempotent for repeated mutation ids"
+      ],
+      "testingVerification": [
+        "Unit tests for state transitions and mismatched session rejection",
+        "Unit and integration tests verify implement update-idea-planning-session command contract"
+      ],
+      "dependsOn": [
+        "WBS-1.1"
+      ],
+      "recommendedPhase": "111",
+      "recommendedOrder": 3,
+      "sizingConfidence": "medium",
+      "riskNotes": "Keep the change bounded to this WBS item; avoid expanding into adjacent lifecycle work.",
+      "doneMeans": "This WBS is complete when implement update-idea-planning-session command contract is delivered and updates status, summary, currentplanref, currentplanversion is demonstrated via unit tests for state transitions and mismatched session rejection.",
+      "generatedTaskPayload": {
+        "title": "Implement update-idea-planning-session command contract",
+        "type": "workspace-kit",
+        "priority": "P1",
+        "phaseKey": "111",
+        "approach": "Add real command for planning session state transitions with idea/session/version validation.",
+        "technicalScope": [
+          "Add real command for planning session state transitions with idea/session/version validation."
+        ],
+        "acceptanceCriteria": [
+          "Updates status, summary, currentPlanRef, currentPlanVersion",
+          "Command rejects mismatched idea and session identifiers with actionable errors",
+          "Returns dashboard-ready session state",
+          "Idempotent for repeated mutation ids"
+        ],
+        "dependsOn": [
+          "WBS-1.1"
+        ],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-2.1",
+      "path": "2.1",
+      "title": "Generate a small command-backed planner-chat prompt",
+      "goalMapping": [
+        "G1: Clicking Plan this starts or resumes exactly one durable planning session for the selected idea.",
+        "G2: start-idea-planning owns canonical idea loading, idempotency, session start/resume, and small prompt generation.",
+        "G3: update-idea-planning-session owns durable planning session transitions."
+      ],
+      "suggestedTaskTitle": "Generate a small command-backed planner-chat prompt",
+      "approach": "Update prompt generation to return compact prompt referencing idea/session/lineage and planner-chat playbook.",
+      "technicalScope": [
+        "Update prompt generation to return compact prompt referencing idea/session/lineage and planner-chat playbook."
+      ],
+      "acceptanceCriteria": [
+        "Prompt includes source idea id and lineage summary",
+        "Prompt targets accepted PlanArtifact + WBS",
+        "Prompt tells agent to use command transitions",
+        "No raw CLI choreography leakage"
+      ],
+      "testingVerification": [
+        "Unit tests for no plan, active draft, linked accepted plan, previous plans, active session summary",
+        "Unit and integration tests verify generate a small command-backed planner-chat prompt"
+      ],
+      "dependsOn": [
+        "WBS-1.1"
+      ],
+      "recommendedPhase": "111",
+      "recommendedOrder": 4,
+      "sizingConfidence": "medium",
+      "riskNotes": "Keep the change bounded to this WBS item; avoid expanding into adjacent lifecycle work.",
+      "doneMeans": "This WBS is complete when generate a small command-backed planner-chat prompt is delivered and prompt includes source idea id and lineage summary is demonstrated via unit tests for no plan, active draft, linked accepted plan, previous plans, active session summary.",
+      "generatedTaskPayload": {
+        "title": "Generate a small command-backed planner-chat prompt",
+        "type": "workspace-kit",
+        "priority": "P1",
+        "phaseKey": "111",
+        "approach": "Update prompt generation to return compact prompt referencing idea/session/lineage and planner-chat playbook.",
+        "technicalScope": [
+          "Update prompt generation to return compact prompt referencing idea/session/lineage and planner-chat playbook."
+        ],
+        "acceptanceCriteria": [
+          "Prompt includes source idea id and lineage summary",
+          "Prompt targets accepted PlanArtifact + WBS",
+          "Prompt tells agent to use command transitions",
+          "No raw CLI choreography leakage"
+        ],
+        "dependsOn": [
+          "WBS-1.1"
+        ],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-1.3",
+      "path": "1.3",
+      "title": "Wire dashboard Plan this to start-idea-planning",
+      "goalMapping": [
+        "G1: Clicking Plan this starts or resumes exactly one durable planning session for the selected idea.",
+        "G2: start-idea-planning owns canonical idea loading, idempotency, session start/resume, and small prompt generation.",
+        "G3: update-idea-planning-session owns durable planning session transitions."
+      ],
+      "suggestedTaskTitle": "Wire dashboard Plan this to start-idea-planning",
+      "approach": "Replace direct dashboard Plan this logic with command call and returned prompt handling.",
+      "technicalScope": [
+        "Replace direct dashboard Plan this logic with command call and returned prompt handling."
+      ],
+      "acceptanceCriteria": [
+        "Open idea Plan this invokes command",
+        "Returned prompt opens/prefills Cursor chat",
+        "Dashboard row refreshes into planning/resume state",
+        "Validation errors are clear, actionable, and include remediation hints"
+      ],
+      "testingVerification": [
+        "Dashboard test for Plan this happy path"
+      ],
+      "dependsOn": [
+        "WBS-1.1"
+      ],
+      "recommendedPhase": "112",
+      "recommendedOrder": 5,
+      "sizingConfidence": "medium",
+      "riskNotes": "Keep the change bounded to this WBS item; avoid expanding into adjacent lifecycle work.",
+      "doneMeans": "This WBS is complete when wire dashboard plan this to start-idea-planning is delivered and open idea plan this invokes command is demonstrated via dashboard test for plan this happy path.",
+      "generatedTaskPayload": {
+        "title": "Wire dashboard Plan this to start-idea-planning",
+        "type": "workspace-kit",
+        "priority": "P1",
+        "phaseKey": "112",
+        "approach": "Replace direct dashboard Plan this logic with command call and returned prompt handling.",
+        "technicalScope": [
+          "Replace direct dashboard Plan this logic with command call and returned prompt handling."
+        ],
+        "acceptanceCriteria": [
+          "Open idea Plan this invokes command",
+          "Returned prompt opens/prefills Cursor chat",
+          "Dashboard row refreshes into planning/resume state",
+          "Validation errors are clear, actionable, and include remediation hints"
+        ],
+        "dependsOn": [
+          "WBS-1.1"
+        ],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-1.4",
+      "path": "1.4",
+      "title": "Verify Plan this idempotency from dashboard",
+      "goalMapping": [
+        "G1: Clicking Plan this starts or resumes exactly one durable planning session for the selected idea.",
+        "G2: start-idea-planning owns canonical idea loading, idempotency, session start/resume, and small prompt generation.",
+        "G3: update-idea-planning-session owns durable planning session transitions.",
+        "US-1"
+      ],
+      "suggestedTaskTitle": "Verify Plan this idempotency from dashboard",
+      "approach": "Add dashboard-level tests for repeated Plan this clicks and command replay behavior.",
+      "technicalScope": [
+        "Add dashboard-level tests for repeated Plan this clicks and command replay behavior."
+      ],
+      "acceptanceCriteria": [
+        "Double click creates one session",
+        "Repeated mutation returns same prompt/session",
+        "Dashboard never shows Plan this and Resume simultaneously"
+      ],
+      "testingVerification": [
+        "Dashboard/integration test for repeated click"
+      ],
+      "dependsOn": [
+        "WBS-1.1",
+        "WBS-1.3"
+      ],
+      "recommendedPhase": "112",
+      "recommendedOrder": 6,
+      "sizingConfidence": "medium",
+      "riskNotes": "Keep the change bounded to this WBS item; avoid expanding into adjacent lifecycle work.",
+      "doneMeans": "This WBS is complete when verify plan this idempotency from dashboard is delivered and double click creates one session is demonstrated via dashboard/integration test for repeated click.",
+      "generatedTaskPayload": {
+        "title": "Verify Plan this idempotency from dashboard",
+        "type": "workspace-kit",
+        "priority": "P1",
+        "phaseKey": "112",
+        "approach": "Add dashboard-level tests for repeated Plan this clicks and command replay behavior.",
+        "technicalScope": [
+          "Add dashboard-level tests for repeated Plan this clicks and command replay behavior."
+        ],
+        "acceptanceCriteria": [
+          "Double click creates one session",
+          "Repeated mutation returns same prompt/session",
+          "Dashboard never shows Plan this and Resume simultaneously"
+        ],
+        "dependsOn": [
+          "WBS-1.1",
+          "WBS-1.3"
+        ],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-2.2",
+      "path": "2.2",
+      "title": "Update planner-chat playbook with locked decisions",
+      "goalMapping": [
+        "G1: Clicking Plan this starts or resumes exactly one durable planning session for the selected idea.",
+        "G2: start-idea-planning owns canonical idea loading, idempotency, session start/resume, and small prompt generation.",
+        "G3: update-idea-planning-session owns durable planning session transitions."
+      ],
+      "suggestedTaskTitle": "Update planner-chat playbook with locked decisions",
+      "approach": "Update playbook with real commands, session states, default minimal profile, warnings behavior, approval/finalize separation, v1 WBS/task mapping.",
+      "technicalScope": [
+        "Update playbook with real commands, session states, default minimal profile, warnings behavior, approval/finalize separation, v1 WBS/task mapping."
+      ],
+      "acceptanceCriteria": [
+        "Distinguishes draft_ready, needs_revision, approval_ready, completed",
+        "Does not mark complete on draft persistence",
+        "Warnings do not block acceptance",
+        "Finalization requires separate confirmation"
+      ],
+      "testingVerification": [
+        "Documentation review and prompt/playbook fixture test if available"
+      ],
+      "dependsOn": [
+        "WBS-2.1"
+      ],
+      "recommendedPhase": "112",
+      "recommendedOrder": 7,
+      "sizingConfidence": "medium",
+      "riskNotes": "Keep the change bounded to this WBS item; avoid expanding into adjacent lifecycle work.",
+      "doneMeans": "This WBS is complete when update planner-chat playbook with locked decisions is delivered and distinguishes draft_ready, needs_revision, approval_ready, completed is demonstrated via documentation review and prompt/playbook fixture test if available.",
+      "generatedTaskPayload": {
+        "title": "Update planner-chat playbook with locked decisions",
+        "type": "workspace-kit",
+        "priority": "P2",
+        "phaseKey": "112",
+        "approach": "Update playbook with real commands, session states, default minimal profile, warnings behavior, approval/finalize separation, v1 WBS/task mapping.",
+        "technicalScope": [
+          "Update playbook with real commands, session states, default minimal profile, warnings behavior, approval/finalize separation, v1 WBS/task mapping."
+        ],
+        "acceptanceCriteria": [
+          "Distinguishes draft_ready, needs_revision, approval_ready, completed",
+          "Does not mark complete on draft persistence",
+          "Warnings do not block acceptance",
+          "Finalization requires separate confirmation"
+        ],
+        "dependsOn": [
+          "WBS-2.1"
+        ],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-2.3",
+      "path": "2.3",
+      "title": "Add explicit Planning Agent contract or registry entry",
+      "goalMapping": [
+        "G1: Clicking Plan this starts or resumes exactly one durable planning session for the selected idea.",
+        "G2: start-idea-planning owns canonical idea loading, idempotency, session start/resume, and small prompt generation.",
+        "G3: update-idea-planning-session owns durable planning session transitions.",
+        "US-2"
+      ],
+      "suggestedTaskTitle": "Add explicit Planning Agent contract or registry entry",
+      "approach": "Add named Planning Agent profile/registry or documented equivalent referencing planner-chat, schema, commands, policy rules, locked decisions.",
+      "technicalScope": [
+        "Add named Planning Agent profile/registry or documented equivalent referencing planner-chat, schema, commands, policy rules, locked decisions."
+      ],
+      "acceptanceCriteria": [
+        "Done state is accepted PlanArtifact with WBS",
+        "References start/update session commands",
+        "User-facing tone avoids raw command noise"
+      ],
+      "testingVerification": [
+        "Static/doc test if available or prompt fixture review"
+      ],
+      "dependsOn": [
+        "WBS-2.2"
+      ],
+      "recommendedPhase": "112",
+      "recommendedOrder": 8,
+      "sizingConfidence": "medium",
+      "riskNotes": "Keep the change bounded to this WBS item; avoid expanding into adjacent lifecycle work.",
+      "doneMeans": "This WBS is complete when add explicit planning agent contract or registry entry is delivered and done state is accepted planartifact with wbs is demonstrated via static/doc test if available or prompt fixture review.",
+      "generatedTaskPayload": {
+        "title": "Add explicit Planning Agent contract or registry entry",
+        "type": "workspace-kit",
+        "priority": "P2",
+        "phaseKey": "112",
+        "approach": "Add named Planning Agent profile/registry or documented equivalent referencing planner-chat, schema, commands, policy rules, locked decisions.",
+        "technicalScope": [
+          "Add named Planning Agent profile/registry or documented equivalent referencing planner-chat, schema, commands, policy rules, locked decisions."
+        ],
+        "acceptanceCriteria": [
+          "Done state is accepted PlanArtifact with WBS",
+          "References start/update session commands",
+          "User-facing tone avoids raw command noise"
+        ],
+        "dependsOn": [
+          "WBS-2.2"
+        ],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-3.1",
+      "path": "3.1",
+      "title": "Enforce source idea provenance on idea-originated drafts",
+      "goalMapping": [
+        "G4: PlanArtifact drafts are linked to ideas as activeDraftPlanArtifact and do not overwrite accepted linkedPlanArtifact until acceptance.",
+        "US-2"
+      ],
+      "suggestedTaskTitle": "Enforce source idea provenance on idea-originated drafts",
+      "approach": "Update draft validation so planner-chat drafts require sourceIdeaId and preserve previous plan refs.",
+      "technicalScope": [
+        "Update draft validation so planner-chat drafts require sourceIdeaId and preserve previous plan refs."
+      ],
+      "acceptanceCriteria": [
+        "Idea-originated draft without sourceIdeaId fails",
+        "Previous plan refs persist",
+        "Non-idea drafts remain supported if allowed"
+      ],
+      "testingVerification": [
+        "Unit tests for draft validation",
+        "Unit and integration tests verify enforce source idea provenance on idea-originated drafts"
+      ],
+      "dependsOn": [
+        "WBS-2.1"
+      ],
+      "recommendedPhase": "113",
+      "recommendedOrder": 9,
+      "sizingConfidence": "medium",
+      "riskNotes": "Keep the change bounded to this WBS item; avoid expanding into adjacent lifecycle work.",
+      "doneMeans": "This WBS is complete when enforce source idea provenance on idea-originated drafts is delivered and idea-originated draft without sourceideaid fails is demonstrated via unit tests for draft validation.",
+      "generatedTaskPayload": {
+        "title": "Enforce source idea provenance on idea-originated drafts",
+        "type": "workspace-kit",
+        "priority": "P1",
+        "phaseKey": "113",
+        "approach": "Update draft validation so planner-chat drafts require sourceIdeaId and preserve previous plan refs.",
+        "technicalScope": [
+          "Update draft validation so planner-chat drafts require sourceIdeaId and preserve previous plan refs."
+        ],
+        "acceptanceCriteria": [
+          "Idea-originated draft without sourceIdeaId fails",
+          "Previous plan refs persist",
+          "Non-idea drafts remain supported if allowed"
+        ],
+        "dependsOn": [
+          "WBS-2.1"
+        ],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-3.2",
+      "path": "3.2",
+      "title": "Link draft PlanArtifact as activeDraftPlanArtifact",
+      "goalMapping": [
+        "G4: PlanArtifact drafts are linked to ideas as activeDraftPlanArtifact and do not overwrite accepted linkedPlanArtifact until acceptance."
+      ],
+      "suggestedTaskTitle": "Link draft PlanArtifact as activeDraftPlanArtifact",
+      "approach": "Update idea-plan linking so persisted drafts become activeDraftPlanArtifact, not linkedPlanArtifact.",
+      "technicalScope": [
+        "Update idea-plan linking so persisted drafts become activeDraftPlanArtifact, not linkedPlanArtifact."
+      ],
+      "acceptanceCriteria": [
+        "New draft links as active draft",
+        "Existing accepted plan unchanged during replanning",
+        "Previous plan artifact references are preserved on acceptance promotion"
+      ],
+      "testingVerification": [
+        "Unit test for first draft and replan accepted idea"
+      ],
+      "dependsOn": [
+        "WBS-3.1"
+      ],
+      "recommendedPhase": "113",
+      "recommendedOrder": 10,
+      "sizingConfidence": "medium",
+      "riskNotes": "Keep the change bounded to this WBS item; avoid expanding into adjacent lifecycle work.",
+      "doneMeans": "This WBS is complete when link draft planartifact as activedraftplanartifact is delivered and new draft links as active draft is demonstrated via unit test for first draft and replan accepted idea.",
+      "generatedTaskPayload": {
+        "title": "Link draft PlanArtifact as activeDraftPlanArtifact",
+        "type": "workspace-kit",
+        "priority": "P1",
+        "phaseKey": "113",
+        "approach": "Update idea-plan linking so persisted drafts become activeDraftPlanArtifact, not linkedPlanArtifact.",
+        "technicalScope": [
+          "Update idea-plan linking so persisted drafts become activeDraftPlanArtifact, not linkedPlanArtifact."
+        ],
+        "acceptanceCriteria": [
+          "New draft links as active draft",
+          "Existing accepted plan unchanged during replanning",
+          "Previous plan artifact references are preserved on acceptance promotion"
+        ],
+        "dependsOn": [
+          "WBS-3.1"
+        ],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-3.3",
+      "path": "3.3",
+      "title": "Move session to draft_ready after draft persistence",
+      "goalMapping": [
+        "G4: PlanArtifact drafts are linked to ideas as activeDraftPlanArtifact and do not overwrite accepted linkedPlanArtifact until acceptance."
+      ],
+      "suggestedTaskTitle": "Move session to draft_ready after draft persistence",
+      "approach": "After draft persistence call/update session to draft_ready with currentPlanRef/version.",
+      "technicalScope": [
+        "After draft persistence call/update session to draft_ready with currentPlanRef/version."
+      ],
+      "acceptanceCriteria": [
+        "Draft persistence updates session to draft_ready",
+        "Session not marked completed",
+        "Dashboard can resume from draft_ready"
+      ],
+      "testingVerification": [
+        "Unit test and dashboard state test"
+      ],
+      "dependsOn": [
+        "WBS-1.2",
+        "WBS-3.2"
+      ],
+      "recommendedPhase": "113",
+      "recommendedOrder": 11,
+      "sizingConfidence": "medium",
+      "riskNotes": "Keep the change bounded to this WBS item; avoid expanding into adjacent lifecycle work.",
+      "doneMeans": "This WBS is complete when move session to draft_ready after draft persistence is delivered and draft persistence updates session to draft_ready is demonstrated via unit test and dashboard state test.",
+      "generatedTaskPayload": {
+        "title": "Move session to draft_ready after draft persistence",
+        "type": "workspace-kit",
+        "priority": "P1",
+        "phaseKey": "113",
+        "approach": "After draft persistence call/update session to draft_ready with currentPlanRef/version.",
+        "technicalScope": [
+          "After draft persistence call/update session to draft_ready with currentPlanRef/version."
+        ],
+        "acceptanceCriteria": [
+          "Draft persistence updates session to draft_ready",
+          "Session not marked completed",
+          "Dashboard can resume from draft_ready"
+        ],
+        "dependsOn": [
+          "WBS-1.2",
+          "WBS-3.2"
+        ],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-3.4",
+      "path": "3.4",
+      "title": "Add PlanArtifact version immutability checks",
+      "goalMapping": [
+        "G4: PlanArtifact drafts are linked to ideas as activeDraftPlanArtifact and do not overwrite accepted linkedPlanArtifact until acceptance.",
+        "US-2"
+      ],
+      "suggestedTaskTitle": "Add PlanArtifact version immutability checks",
+      "approach": "Ensure new edits produce versions and accepted/finalized versions remain immutable.",
+      "technicalScope": [
+        "Ensure new edits produce versions and accepted/finalized versions remain immutable."
+      ],
+      "acceptanceCriteria": [
+        "Draft update increments version when required",
+        "Accepted version cannot be overwritten",
+        "Plan lineage metadata is inspectable via kit read commands"
+      ],
+      "testingVerification": [
+        "Unit tests for draft update, accepted rejection, new version",
+        "Unit and integration tests verify add planartifact version immutability checks"
+      ],
+      "dependsOn": [
+        "WBS-3.2"
+      ],
+      "recommendedPhase": "113",
+      "recommendedOrder": 12,
+      "sizingConfidence": "medium",
+      "riskNotes": "Keep the change bounded to this WBS item; avoid expanding into adjacent lifecycle work.",
+      "doneMeans": "This WBS is complete when add planartifact version immutability checks is delivered and draft update increments version when required is demonstrated via unit tests for draft update, accepted rejection, new version.",
+      "generatedTaskPayload": {
+        "title": "Add PlanArtifact version immutability checks",
+        "type": "workspace-kit",
+        "priority": "P1",
+        "phaseKey": "113",
+        "approach": "Ensure new edits produce versions and accepted/finalized versions remain immutable.",
+        "technicalScope": [
+          "Ensure new edits produce versions and accepted/finalized versions remain immutable."
+        ],
+        "acceptanceCriteria": [
+          "Draft update increments version when required",
+          "Accepted version cannot be overwritten",
+          "Plan lineage metadata is inspectable via kit read commands"
+        ],
+        "dependsOn": [
+          "WBS-3.2"
+        ],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-4.1",
+      "path": "4.1",
+      "title": "Implement profile-aware core review rules",
+      "goalMapping": [
+        "G5: Review is profile-aware, warnings do not block acceptance, and blockers prevent acceptance.",
+        "US-3"
+      ],
+      "suggestedTaskTitle": "Implement profile-aware core review rules",
+      "approach": "Implement minimal blockers and default unspecified profile to minimal.",
+      "technicalScope": [
+        "Implement minimal blockers and default unspecified profile to minimal."
+      ],
+      "acceptanceCriteria": [
+        "Minimal validates core completeness",
+        "Review default profile resolves to minimal when unspecified",
+        "Review blockers include JSON path and wbsId for each finding",
+        "Review warnings are distinct from blockers in response payload"
+      ],
+      "testingVerification": [
+        "Unit tests for missing WBS, missing criteria, missing verification, unresolved critical question, unspecified profile",
+        "Unit and integration tests verify implement profile-aware core review rules"
+      ],
+      "dependsOn": [
+        "WBS-3.1"
+      ],
+      "recommendedPhase": "114",
+      "recommendedOrder": 13,
+      "sizingConfidence": "medium",
+      "riskNotes": "Keep the change bounded to this WBS item; avoid expanding into adjacent lifecycle work.",
+      "doneMeans": "This WBS is complete when implement profile-aware core review rules is delivered and minimal validates core completeness is demonstrated via unit tests for missing wbs, missing criteria, missing verification, unresolved critical question, unspecified profile.",
+      "generatedTaskPayload": {
+        "title": "Implement profile-aware core review rules",
+        "type": "workspace-kit",
+        "priority": "P1",
+        "phaseKey": "114",
+        "approach": "Implement minimal blockers and default unspecified profile to minimal.",
+        "technicalScope": [
+          "Implement minimal blockers and default unspecified profile to minimal."
+        ],
+        "acceptanceCriteria": [
+          "Minimal validates core completeness",
+          "Review default profile resolves to minimal when unspecified",
+          "Review blockers include JSON path and wbsId for each finding",
+          "Review warnings are distinct from blockers in response payload"
+        ],
+        "dependsOn": [
+          "WBS-3.1"
+        ],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-4.2",
+      "path": "4.2",
+      "title": "Add refactor/full-feature conditional review rules",
+      "goalMapping": [
+        "G5: Review is profile-aware, warnings do not block acceptance, and blockers prevent acceptance.",
+        "US-3"
+      ],
+      "suggestedTaskTitle": "Add refactor/full-feature conditional review rules",
+      "approach": "Add conditional blockers/warnings for affected systems, migration, architecture, UI/UX, rollout/rollback, task payload sufficiency.",
+      "technicalScope": [
+        "Add conditional blockers/warnings for affected systems, migration, architecture, UI/UX, rollout/rollback, task payload sufficiency."
+      ],
+      "acceptanceCriteria": [
+        "Refactor requires affected systems and tests",
+        "Full-feature requires architecture and UI/UX when relevant",
+        "Persistence/task-generation changes require rollout/rollback"
+      ],
+      "testingVerification": [
+        "Unit tests for refactor and full-feature profiles",
+        "Unit and integration tests verify add refactor/full-feature conditional review rules"
+      ],
+      "dependsOn": [
+        "WBS-4.1"
+      ],
+      "recommendedPhase": "114",
+      "recommendedOrder": 14,
+      "sizingConfidence": "medium",
+      "riskNotes": "Keep the change bounded to this WBS item; avoid expanding into adjacent lifecycle work.",
+      "doneMeans": "This WBS is complete when add refactor/full-feature conditional review rules is delivered and refactor requires affected systems and tests is demonstrated via unit tests for refactor and full-feature profiles.",
+      "generatedTaskPayload": {
+        "title": "Add refactor/full-feature conditional review rules",
+        "type": "workspace-kit",
+        "priority": "P2",
+        "phaseKey": "114",
+        "approach": "Add conditional blockers/warnings for affected systems, migration, architecture, UI/UX, rollout/rollback, task payload sufficiency.",
+        "technicalScope": [
+          "Add conditional blockers/warnings for affected systems, migration, architecture, UI/UX, rollout/rollback, task payload sufficiency."
+        ],
+        "acceptanceCriteria": [
+          "Refactor requires affected systems and tests",
+          "Full-feature requires architecture and UI/UX when relevant",
+          "Persistence/task-generation changes require rollout/rollback"
+        ],
+        "dependsOn": [
+          "WBS-4.1"
+        ],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-4.3",
+      "path": "4.3",
+      "title": "Persist/expose review records and update session state",
+      "goalMapping": [
+        "G5: Review is profile-aware, warnings do not block acceptance, and blockers prevent acceptance."
+      ],
+      "suggestedTaskTitle": "Persist/expose review records and update session state",
+      "approach": "Return/store review status, blockers, warnings, WBS count, open question count, coverage summary; update session state when context exists.",
+      "technicalScope": [
+        "Return/store review status, blockers, warnings, WBS count, open question count, coverage summary; update session state when context exists."
+      ],
+      "acceptanceCriteria": [
+        "Stable review output shape",
+        "Dashboard can show counts directly",
+        "Blocked review moves needs_revision",
+        "Passed or warning-only review moves session to approval_ready state"
+      ],
+      "testingVerification": [
+        "Unit test for review output and session status update"
+      ],
+      "dependsOn": [
+        "WBS-1.2",
+        "WBS-4.1"
+      ],
+      "recommendedPhase": "114",
+      "recommendedOrder": 15,
+      "sizingConfidence": "medium",
+      "riskNotes": "Keep the change bounded to this WBS item; avoid expanding into adjacent lifecycle work.",
+      "doneMeans": "This WBS is complete when persist/expose review records and update session state is delivered and stable review output shape is demonstrated via unit test for review output and session status update.",
+      "generatedTaskPayload": {
+        "title": "Persist/expose review records and update session state",
+        "type": "workspace-kit",
+        "priority": "P1",
+        "phaseKey": "114",
+        "approach": "Return/store review status, blockers, warnings, WBS count, open question count, coverage summary; update session state when context exists.",
+        "technicalScope": [
+          "Return/store review status, blockers, warnings, WBS count, open question count, coverage summary; update session state when context exists."
+        ],
+        "acceptanceCriteria": [
+          "Stable review output shape",
+          "Dashboard can show counts directly",
+          "Blocked review moves needs_revision",
+          "Passed or warning-only review moves session to approval_ready state"
+        ],
+        "dependsOn": [
+          "WBS-1.2",
+          "WBS-4.1"
+        ],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-5.1",
+      "path": "5.1",
+      "title": "Enforce accept-plan-artifact gate conditions",
+      "goalMapping": [
+        "G5: Review is profile-aware, warnings do not block acceptance, and blockers prevent acceptance.",
+        "US-4"
+      ],
+      "suggestedTaskTitle": "Enforce accept-plan-artifact gate conditions",
+      "approach": "Ensure accept requires reviewed version, no blockers, resolved/deferred open questions, user metadata, current version. Warnings do not block.",
+      "technicalScope": [
+        "Ensure accept requires reviewed version, no blockers, resolved/deferred open questions, user metadata, current version. Warnings do not block."
+      ],
+      "acceptanceCriteria": [
+        "Cannot accept unreviewed plan",
+        "Cannot accept blocked plan",
+        "Can accept warning-only plan",
+        "Cannot accept stale version",
+        "Acceptance writes durable approval record with version pin"
+      ],
+      "testingVerification": [
+        "Unit tests for unreviewed, blocked, warning-only, stale, successful acceptance",
+        "Unit and integration tests verify enforce accept-plan-artifact gate conditions"
+      ],
+      "dependsOn": [
+        "WBS-4.3"
+      ],
+      "recommendedPhase": "115",
+      "recommendedOrder": 16,
+      "sizingConfidence": "medium",
+      "riskNotes": "Keep the change bounded to this WBS item; avoid expanding into adjacent lifecycle work.",
+      "doneMeans": "This WBS is complete when enforce accept-plan-artifact gate conditions is delivered and cannot accept unreviewed plan is demonstrated via unit tests for unreviewed, blocked, warning-only, stale, successful acceptance.",
+      "generatedTaskPayload": {
+        "title": "Enforce accept-plan-artifact gate conditions",
+        "type": "workspace-kit",
+        "priority": "P1",
+        "phaseKey": "115",
+        "approach": "Ensure accept requires reviewed version, no blockers, resolved/deferred open questions, user metadata, current version. Warnings do not block.",
+        "technicalScope": [
+          "Ensure accept requires reviewed version, no blockers, resolved/deferred open questions, user metadata, current version. Warnings do not block."
+        ],
+        "acceptanceCriteria": [
+          "Cannot accept unreviewed plan",
+          "Cannot accept blocked plan",
+          "Can accept warning-only plan",
+          "Cannot accept stale version",
+          "Acceptance writes durable approval record with version pin"
+        ],
+        "dependsOn": [
+          "WBS-4.3"
+        ],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-5.2",
+      "path": "5.2",
+      "title": "Promote accepted draft to linked plan and complete session",
+      "goalMapping": [
+        "G5: Review is profile-aware, warnings do not block acceptance, and blockers prevent acceptance.",
+        "US-4"
+      ],
+      "suggestedTaskTitle": "Promote accepted draft to linked plan and complete session",
+      "approach": "On acceptance promote activeDraftPlanArtifact to linkedPlanArtifact, preserve previous refs, set session completed, update idea lifecycle.",
+      "technicalScope": [
+        "On acceptance promote activeDraftPlanArtifact to linkedPlanArtifact, preserve previous refs, set session completed, update idea lifecycle."
+      ],
+      "acceptanceCriteria": [
+        "Accepted plan becomes linked plan",
+        "Active draft cleared or marked accepted",
+        "Session completed through update command",
+        "Accepted plan lineage remains intact across replanning attempts"
+      ],
+      "testingVerification": [
+        "Unit tests for first acceptance and replan acceptance",
+        "Unit and integration tests verify promote accepted draft to linked plan and complete session"
+      ],
+      "dependsOn": [
+        "WBS-1.2",
+        "WBS-5.1",
+        "WBS-3.2"
+      ],
+      "recommendedPhase": "115",
+      "recommendedOrder": 17,
+      "sizingConfidence": "medium",
+      "riskNotes": "Keep the change bounded to this WBS item; avoid expanding into adjacent lifecycle work.",
+      "doneMeans": "This WBS is complete when promote accepted draft to linked plan and complete session is delivered and accepted plan becomes linked plan is demonstrated via unit tests for first acceptance and replan acceptance.",
+      "generatedTaskPayload": {
+        "title": "Promote accepted draft to linked plan and complete session",
+        "type": "workspace-kit",
+        "priority": "P1",
+        "phaseKey": "115",
+        "approach": "On acceptance promote activeDraftPlanArtifact to linkedPlanArtifact, preserve previous refs, set session completed, update idea lifecycle.",
+        "technicalScope": [
+          "On acceptance promote activeDraftPlanArtifact to linkedPlanArtifact, preserve previous refs, set session completed, update idea lifecycle."
+        ],
+        "acceptanceCriteria": [
+          "Accepted plan becomes linked plan",
+          "Active draft cleared or marked accepted",
+          "Session completed through update command",
+          "Accepted plan lineage remains intact across replanning attempts"
+        ],
+        "dependsOn": [
+          "WBS-1.2",
+          "WBS-5.1",
+          "WBS-3.2"
+        ],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-6.1",
+      "path": "6.1",
+      "title": "Implement deriveIdeaPlanningLifecycleState",
+      "goalMapping": [
+        "G6: Dashboard actions are derived from one tested lifecycle-state helper."
+      ],
+      "suggestedTaskTitle": "Implement deriveIdeaPlanningLifecycleState",
+      "approach": "Add pure reducer deriving UI state from idea, session, linked plan, active draft, review, finalize result using locked precedence.",
+      "technicalScope": [
+        "Add pure reducer deriving UI state from idea, session, linked plan, active draft, review, finalize result using locked precedence."
+      ],
+      "acceptanceCriteria": [
+        "Returns one lifecycle state",
+        "Precedence finalized > accepted > review > active draft > session > idea",
+        "Derived lifecycle state prevents impossible action combinations",
+        "Lifecycle state matrix unit tests cover precedence rules",
+        "Empty plan refs and fresh workspace with no data derive open lifecycle without errors"
+      ],
+      "testingVerification": [
+        "Unit tests for state matrix and precedence conflicts",
+        "Unit and integration tests verify implement deriveideaplanninglifecyclestate"
+      ],
+      "dependsOn": [
+        "WBS-1.2",
+        "WBS-4.3",
+        "WBS-5.2"
+      ],
+      "recommendedPhase": "116",
+      "recommendedOrder": 18,
+      "sizingConfidence": "medium",
+      "riskNotes": "Keep the change bounded to this WBS item; avoid expanding into adjacent lifecycle work.",
+      "doneMeans": "This WBS is complete when implement deriveideaplanninglifecyclestate is delivered and returns one lifecycle state is demonstrated via unit tests for state matrix and precedence conflicts.",
+      "generatedTaskPayload": {
+        "title": "Implement deriveIdeaPlanningLifecycleState",
+        "type": "workspace-kit",
+        "priority": "P1",
+        "phaseKey": "116",
+        "approach": "Add pure reducer deriving UI state from idea, session, linked plan, active draft, review, finalize result using locked precedence.",
+        "technicalScope": [
+          "Add pure reducer deriving UI state from idea, session, linked plan, active draft, review, finalize result using locked precedence."
+        ],
+        "acceptanceCriteria": [
+          "Returns one lifecycle state",
+          "Precedence finalized > accepted > review > active draft > session > idea",
+          "Derived lifecycle state prevents impossible action combinations",
+          "Lifecycle state matrix unit tests cover precedence rules",
+          "Empty plan refs and fresh workspace with no data derive open lifecycle without errors"
+        ],
+        "dependsOn": [
+          "WBS-1.2",
+          "WBS-4.3",
+          "WBS-5.2"
+        ],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-6.2",
+      "path": "6.2",
+      "title": "Render Ideas row actions from derived lifecycle state",
+      "goalMapping": [
+        "G6: Dashboard actions are derived from one tested lifecycle-state helper."
+      ],
+      "suggestedTaskTitle": "Render Ideas row actions from derived lifecycle state",
+      "approach": "Use derived helper to show Plan this, Resume, Review, Accept, Finalize, View tasks, or View plan.",
+      "technicalScope": [
+        "Use derived helper to show Plan this, Resume, Review, Accept, Finalize, View tasks, or View plan."
+      ],
+      "acceptanceCriteria": [
+        "Open and first-run ideas show Plan this without Resume simultaneously",
+        "Active planning session shows Resume planning dashboard action",
+        "Blocked review state disables Accept action on dashboard",
+        "Warning-only review state still allows Accept when strict is false",
+        "Accepted plan shows Finalize and finalized plan shows View tasks only"
+      ],
+      "testingVerification": [
+        "Dashboard tests for each state",
+        "Unit and integration tests verify render ideas row actions from derived lifecycle state"
+      ],
+      "dependsOn": [
+        "WBS-6.1"
+      ],
+      "recommendedPhase": "116",
+      "recommendedOrder": 19,
+      "sizingConfidence": "medium",
+      "riskNotes": "Keep the change bounded to this WBS item; avoid expanding into adjacent lifecycle work.",
+      "doneMeans": "This WBS is complete when render ideas row actions from derived lifecycle state is delivered and open shows plan this is demonstrated via dashboard tests for each state.",
+      "generatedTaskPayload": {
+        "title": "Render Ideas row actions from derived lifecycle state",
+        "type": "workspace-kit",
+        "priority": "P1",
+        "phaseKey": "116",
+        "approach": "Use derived helper to show Plan this, Resume, Review, Accept, Finalize, View tasks, or View plan.",
+        "technicalScope": [
+          "Use derived helper to show Plan this, Resume, Review, Accept, Finalize, View tasks, or View plan."
+        ],
+        "acceptanceCriteria": [
+          "Open and first-run ideas show Plan this without Resume simultaneously",
+          "Active planning session shows Resume planning dashboard action",
+          "Blocked review state disables Accept action on dashboard",
+          "Warning-only review state still allows Accept when strict is false",
+          "Accepted plan shows Finalize and finalized plan shows View tasks only"
+        ],
+        "dependsOn": [
+          "WBS-6.1"
+        ],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-6.3",
+      "path": "6.3",
+      "title": "Render current plan card and review summary",
+      "goalMapping": [
+        "G6: Dashboard actions are derived from one tested lifecycle-state helper."
+      ],
+      "suggestedTaskTitle": "Render current plan card and review summary",
+      "approach": "Add current plan card with title, ref, version, status, WBS count, blocker/warning/open-question counts, profile, phase recommendation.",
+      "technicalScope": [
+        "Add current plan card with title, ref, version, status, WBS count, blocker/warning/open-question counts, profile, phase recommendation."
+      ],
+      "acceptanceCriteria": [
+        "Draft card shows Review",
+        "Needs-revision card shows blockers and Resume",
+        "Approval-ready card shows Accept",
+        "Accepted card shows Finalize"
+      ],
+      "testingVerification": [
+        "Dashboard rendering tests",
+        "Unit and integration tests verify render current plan card and review summary"
+      ],
+      "dependsOn": [
+        "WBS-6.1",
+        "WBS-4.3"
+      ],
+      "recommendedPhase": "116",
+      "recommendedOrder": 20,
+      "sizingConfidence": "medium",
+      "riskNotes": "Keep the change bounded to this WBS item; avoid expanding into adjacent lifecycle work.",
+      "doneMeans": "This WBS is complete when render current plan card and review summary is delivered and draft card shows review is demonstrated via dashboard rendering tests.",
+      "generatedTaskPayload": {
+        "title": "Render current plan card and review summary",
+        "type": "workspace-kit",
+        "priority": "P2",
+        "phaseKey": "116",
+        "approach": "Add current plan card with title, ref, version, status, WBS count, blocker/warning/open-question counts, profile, phase recommendation.",
+        "technicalScope": [
+          "Add current plan card with title, ref, version, status, WBS count, blocker/warning/open-question counts, profile, phase recommendation."
+        ],
+        "acceptanceCriteria": [
+          "Draft card shows Review",
+          "Needs-revision card shows blockers and Resume",
+          "Approval-ready card shows Accept",
+          "Accepted card shows Finalize"
+        ],
+        "dependsOn": [
+          "WBS-6.1",
+          "WBS-4.3"
+        ],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-6.4",
+      "path": "6.4",
+      "title": "Render WBS preview",
+      "goalMapping": [
+        "G6: Dashboard actions are derived from one tested lifecycle-state helper."
+      ],
+      "suggestedTaskTitle": "Render WBS preview",
+      "approach": "Display WBS path, title, phase, dependencies, acceptance criteria summary, verification summary, generated task title.",
+      "technicalScope": [
+        "Display WBS path, title, phase, dependencies, acceptance criteria summary, verification summary, generated task title."
+      ],
+      "acceptanceCriteria": [
+        "WBS preview renders for draft/reviewed/accepted",
+        "WBS dependency edges are visible in dashboard preview",
+        "Missing acceptance/verification flagged if review found it"
+      ],
+      "testingVerification": [
+        "Dashboard rendering tests with sample WBS",
+        "Unit and integration tests verify render wbs preview"
+      ],
+      "dependsOn": [
+        "WBS-6.3"
+      ],
+      "recommendedPhase": "116",
+      "recommendedOrder": 21,
+      "sizingConfidence": "medium",
+      "riskNotes": "Keep the change bounded to this WBS item; avoid expanding into adjacent lifecycle work.",
+      "doneMeans": "This WBS is complete when render wbs preview is delivered and wbs preview renders for draft/reviewed/accepted is demonstrated via dashboard rendering tests with sample wbs.",
+      "generatedTaskPayload": {
+        "title": "Render WBS preview",
+        "type": "workspace-kit",
+        "priority": "P2",
+        "phaseKey": "116",
+        "approach": "Display WBS path, title, phase, dependencies, acceptance criteria summary, verification summary, generated task title.",
+        "technicalScope": [
+          "Display WBS path, title, phase, dependencies, acceptance criteria summary, verification summary, generated task title."
+        ],
+        "acceptanceCriteria": [
+          "WBS preview renders for draft/reviewed/accepted",
+          "WBS dependency edges are visible in dashboard preview",
+          "Missing acceptance/verification flagged if review found it"
+        ],
+        "dependsOn": [
+          "WBS-6.3"
+        ],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-7.1",
+      "path": "7.1",
+      "title": "Implement one-WBS-row-to-one-task draft normalization",
+      "goalMapping": [
+        "G7: Accepted WBS rows finalize into one task draft each with dependency resolution and provenance."
+      ],
+      "suggestedTaskTitle": "Implement one-WBS-row-to-one-task draft normalization",
+      "approach": "Map each selected WBS row to exactly one task draft with title, body, acceptance criteria, verification, phase, status, dependencies, metadata.",
+      "technicalScope": [
+        "Map each selected WBS row to exactly one task draft with title, body, acceptance criteria, verification, phase, status, dependencies, metadata."
+      ],
+      "acceptanceCriteria": [
+        "Each selected row produces exactly one draft",
+        "Draft body has implementation context",
+        "Metadata includes planRef, planId, version, wbsId, path, sourceIdeaId"
+      ],
+      "testingVerification": [
+        "Unit tests for basic row, dependency row, missing optional fields",
+        "Unit and integration tests verify implement one-wbs-row-to-one-task draft normalization"
+      ],
+      "dependsOn": [
+        "WBS-5.1"
+      ],
+      "recommendedPhase": "117",
+      "recommendedOrder": 22,
+      "sizingConfidence": "medium",
+      "riskNotes": "Keep the change bounded to this WBS item; avoid expanding into adjacent lifecycle work.",
+      "doneMeans": "This WBS is complete when implement one-wbs-row-to-one-task draft normalization is delivered and each selected row produces exactly one draft is demonstrated via unit tests for basic row, dependency row, missing optional fields.",
+      "generatedTaskPayload": {
+        "title": "Implement one-WBS-row-to-one-task draft normalization",
+        "type": "workspace-kit",
+        "priority": "P1",
+        "phaseKey": "117",
+        "approach": "Map each selected WBS row to exactly one task draft with title, body, acceptance criteria, verification, phase, status, dependencies, metadata.",
+        "technicalScope": [
+          "Map each selected WBS row to exactly one task draft with title, body, acceptance criteria, verification, phase, status, dependencies, metadata."
+        ],
+        "acceptanceCriteria": [
+          "Each selected row produces exactly one draft",
+          "Draft body has implementation context",
+          "Metadata includes planRef, planId, version, wbsId, path, sourceIdeaId"
+        ],
+        "dependsOn": [
+          "WBS-5.1"
+        ],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-7.2",
+      "path": "7.2",
+      "title": "Add two-pass dependency resolution for finalize",
+      "goalMapping": [
+        "G7: Accepted WBS rows finalize into one task draft each with dependency resolution and provenance."
+      ],
+      "suggestedTaskTitle": "Add two-pass dependency resolution for finalize",
+      "approach": "Create deterministic draft identities first, then resolve WBS dependency references to task draft IDs or persisted task IDs.",
+      "technicalScope": [
+        "Create deterministic draft identities first, then resolve WBS dependency references to task draft IDs or persisted task IDs."
+      ],
+      "acceptanceCriteria": [
+        "Selected WBS row dependencies resolve to task draft identifiers",
+        "Dependency on unselected row blocks in v1",
+        "Invalid dependency clear error"
+      ],
+      "testingVerification": [
+        "Unit tests for internal, unselected, invalid dependencies",
+        "Unit and integration tests verify add two-pass dependency resolution for finalize"
+      ],
+      "dependsOn": [
+        "WBS-7.1"
+      ],
+      "recommendedPhase": "117",
+      "recommendedOrder": 23,
+      "sizingConfidence": "medium",
+      "riskNotes": "Keep the change bounded to this WBS item; avoid expanding into adjacent lifecycle work.",
+      "doneMeans": "This WBS is complete when add two-pass dependency resolution for finalize is delivered and selected wbs row dependencies resolve to task draft identifiers is demonstrated via unit tests for internal, unselected, invalid dependencies.",
+      "generatedTaskPayload": {
+        "title": "Add two-pass dependency resolution for finalize",
+        "type": "workspace-kit",
+        "priority": "P1",
+        "phaseKey": "117",
+        "approach": "Create deterministic draft identities first, then resolve WBS dependency references to task draft IDs or persisted task IDs.",
+        "technicalScope": [
+          "Create deterministic draft identities first, then resolve WBS dependency references to task draft IDs or persisted task IDs."
+        ],
+        "acceptanceCriteria": [
+          "Selected WBS row dependencies resolve to task draft identifiers",
+          "Dependency on unselected row blocks in v1",
+          "Invalid dependency clear error"
+        ],
+        "dependsOn": [
+          "WBS-7.1"
+        ],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-7.3",
+      "path": "7.3",
+      "title": "Integrate task draft review into finalize dry-run",
+      "goalMapping": [
+        "G7: Accepted WBS rows finalize into one task draft each with dependency resolution and provenance."
+      ],
+      "suggestedTaskTitle": "Integrate task draft review into finalize dry-run",
+      "approach": "Make finalize dry-run run task draft review and return preview plus review findings.",
+      "technicalScope": [
+        "Make finalize dry-run run task draft review and return preview plus review findings."
+      ],
+      "acceptanceCriteria": [
+        "Dry-run does not mutate tasks",
+        "Failing review blocks persistence",
+        "Warning-only can proceed after confirmation"
+      ],
+      "testingVerification": [
+        "Unit/E2E test for dry-run preview and blocked draft review"
+      ],
+      "dependsOn": [
+        "WBS-7.2"
+      ],
+      "recommendedPhase": "117",
+      "recommendedOrder": 24,
+      "sizingConfidence": "medium",
+      "riskNotes": "Keep the change bounded to this WBS item; avoid expanding into adjacent lifecycle work.",
+      "doneMeans": "This WBS is complete when integrate task draft review into finalize dry-run is delivered and dry-run does not mutate tasks is demonstrated via unit/e2e test for dry-run preview and blocked draft review.",
+      "generatedTaskPayload": {
+        "title": "Integrate task draft review into finalize dry-run",
+        "type": "workspace-kit",
+        "priority": "P1",
+        "phaseKey": "117",
+        "approach": "Make finalize dry-run run task draft review and return preview plus review findings.",
+        "technicalScope": [
+          "Make finalize dry-run run task draft review and return preview plus review findings."
+        ],
+        "acceptanceCriteria": [
+          "Dry-run does not mutate tasks",
+          "Failing review blocks persistence",
+          "Warning-only can proceed after confirmation"
+        ],
+        "dependsOn": [
+          "WBS-7.2"
+        ],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-7.4",
+      "path": "7.4",
+      "title": "Persist finalized tasks idempotently",
+      "goalMapping": [
+        "G7: Accepted WBS rows finalize into one task draft each with dependency resolution and provenance."
+      ],
+      "suggestedTaskTitle": "Persist finalized tasks idempotently",
+      "approach": "Persist task batch after explicit confirmation, use client mutation id, write task ids back to finalize result and plan/idea metadata.",
+      "technicalScope": [
+        "Persist task batch after explicit confirmation, use client mutation id, write task ids back to finalize result and plan/idea metadata."
+      ],
+      "acceptanceCriteria": [
+        "Accepted plan persists tasks",
+        "Same mutation id returns same batch",
+        "Already-finalized plan blocks duplicate persist or returns existing batch",
+        "Plan finalized only after persistence"
+      ],
+      "testingVerification": [
+        "E2E test for finalize persist and duplicate finalize"
+      ],
+      "dependsOn": [
+        "WBS-7.3"
+      ],
+      "recommendedPhase": "117",
+      "recommendedOrder": 25,
+      "sizingConfidence": "medium",
+      "riskNotes": "Keep the change bounded to this WBS item; avoid expanding into adjacent lifecycle work.",
+      "doneMeans": "This WBS is complete when persist finalized tasks idempotently is delivered and accepted plan persists tasks is demonstrated via e2e test for finalize persist and duplicate finalize.",
+      "generatedTaskPayload": {
+        "title": "Persist finalized tasks idempotently",
+        "type": "workspace-kit",
+        "priority": "P1",
+        "phaseKey": "117",
+        "approach": "Persist task batch after explicit confirmation, use client mutation id, write task ids back to finalize result and plan/idea metadata.",
+        "technicalScope": [
+          "Persist task batch after explicit confirmation, use client mutation id, write task ids back to finalize result and plan/idea metadata."
+        ],
+        "acceptanceCriteria": [
+          "Accepted plan persists tasks",
+          "Same mutation id returns same batch",
+          "Already-finalized plan blocks duplicate persist or returns existing batch",
+          "Plan finalized only after persistence"
+        ],
+        "dependsOn": [
+          "WBS-7.3"
+        ],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-7.5",
+      "path": "7.5",
+      "title": "Render finalize preview and confirm-persist UI",
+      "goalMapping": [
+        "G7: Accepted WBS rows finalize into one task draft each with dependency resolution and provenance."
+      ],
+      "suggestedTaskTitle": "Render finalize preview and confirm-persist UI",
+      "approach": "Show dry-run preview first; require explicit confirmation to persist.",
+      "technicalScope": [
+        "Show dry-run preview first; require explicit confirmation to persist."
+      ],
+      "acceptanceCriteria": [
+        "Finalize dashboard action opens dry-run preview before persist",
+        "Persist tasks button appears after preview",
+        "Preview shows count, titles, phases, dependencies, provenance",
+        "Confirmed persist refreshes sections"
+      ],
+      "testingVerification": [
+        "Dashboard tests for preview and confirm persistence",
+        "Unit and integration tests verify render finalize preview and confirm-persist ui"
+      ],
+      "dependsOn": [
+        "WBS-7.3",
+        "WBS-7.4"
+      ],
+      "recommendedPhase": "117",
+      "recommendedOrder": 26,
+      "sizingConfidence": "medium",
+      "riskNotes": "Keep the change bounded to this WBS item; avoid expanding into adjacent lifecycle work.",
+      "doneMeans": "This WBS is complete when render finalize preview and confirm-persist ui is delivered and finalize dashboard action opens dry-run preview before persist is demonstrated via dashboard tests for preview and confirm persistence.",
+      "generatedTaskPayload": {
+        "title": "Render finalize preview and confirm-persist UI",
+        "type": "workspace-kit",
+        "priority": "P2",
+        "phaseKey": "117",
+        "approach": "Show dry-run preview first; require explicit confirmation to persist.",
+        "technicalScope": [
+          "Show dry-run preview first; require explicit confirmation to persist."
+        ],
+        "acceptanceCriteria": [
+          "Finalize dashboard action opens dry-run preview before persist",
+          "Persist tasks button appears after preview",
+          "Preview shows count, titles, phases, dependencies, provenance",
+          "Confirmed persist refreshes sections"
+        ],
+        "dependsOn": [
+          "WBS-7.3",
+          "WBS-7.4"
+        ],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-8.1",
+      "path": "8.1",
+      "title": "Demote dashboard planning wizard from primary idea flow",
+      "goalMapping": [
+        "G8: Legacy build-plan remains compatibility-only and does not confuse the primary dashboard flow."
+      ],
+      "suggestedTaskTitle": "Demote dashboard planning wizard from primary idea flow",
+      "approach": "Move old wizard behind Advanced/Legacy or remove from Ideas primary action.",
+      "technicalScope": [
+        "Move old wizard behind Advanced/Legacy or remove from Ideas primary action."
+      ],
+      "acceptanceCriteria": [
+        "Main action routes to planner-chat path",
+        "Legacy wizard clearly labeled if retained",
+        "Legacy cannot be mistaken for PlanArtifact planning"
+      ],
+      "testingVerification": [
+        "Dashboard test/snapshot for labels"
+      ],
+      "dependsOn": [
+        "WBS-6.2"
+      ],
+      "recommendedPhase": "118",
+      "recommendedOrder": 27,
+      "sizingConfidence": "medium",
+      "riskNotes": "Keep the change bounded to this WBS item; avoid expanding into adjacent lifecycle work.",
+      "doneMeans": "This WBS is complete when demote dashboard planning wizard from primary idea flow is delivered and main action routes to planner-chat path is demonstrated via dashboard test/snapshot for labels.",
+      "generatedTaskPayload": {
+        "title": "Demote dashboard planning wizard from primary idea flow",
+        "type": "workspace-kit",
+        "priority": "P2",
+        "phaseKey": "118",
+        "approach": "Move old wizard behind Advanced/Legacy or remove from Ideas primary action.",
+        "technicalScope": [
+          "Move old wizard behind Advanced/Legacy or remove from Ideas primary action."
+        ],
+        "acceptanceCriteria": [
+          "Main action routes to planner-chat path",
+          "Legacy wizard clearly labeled if retained",
+          "Legacy cannot be mistaken for PlanArtifact planning"
+        ],
+        "dependsOn": [
+          "WBS-6.2"
+        ],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-8.2",
+      "path": "8.2",
+      "title": "Mark direct build-plan task creation as legacy/preview",
+      "goalMapping": [
+        "G8: Legacy build-plan remains compatibility-only and does not confuse the primary dashboard flow."
+      ],
+      "suggestedTaskTitle": "Mark direct build-plan task creation as legacy/preview",
+      "approach": "Update docs/UI labels/messages around build-plan direct task output.",
+      "technicalScope": [
+        "Update docs/UI labels/messages around build-plan direct task output."
+      ],
+      "acceptanceCriteria": [
+        "Existing build-plan command remains compatible as legacy path",
+        "Serious planning docs point to PlanArtifact",
+        "Direct output labeled preview/legacy"
+      ],
+      "testingVerification": [
+        "Existing tests and doc/static check"
+      ],
+      "dependsOn": [
+        "WBS-8.1"
+      ],
+      "recommendedPhase": "118",
+      "recommendedOrder": 28,
+      "sizingConfidence": "medium",
+      "riskNotes": "Keep the change bounded to this WBS item; avoid expanding into adjacent lifecycle work.",
+      "doneMeans": "This WBS is complete when mark direct build-plan task creation as legacy/preview is delivered and existing build-plan command remains compatible as legacy path is demonstrated via existing tests and doc/static check.",
+      "generatedTaskPayload": {
+        "title": "Mark direct build-plan task creation as legacy/preview",
+        "type": "workspace-kit",
+        "priority": "P3",
+        "phaseKey": "118",
+        "approach": "Update docs/UI labels/messages around build-plan direct task output.",
+        "technicalScope": [
+          "Update docs/UI labels/messages around build-plan direct task output."
+        ],
+        "acceptanceCriteria": [
+          "Existing build-plan command remains compatible as legacy path",
+          "Serious planning docs point to PlanArtifact",
+          "Direct output labeled preview/legacy"
+        ],
+        "dependsOn": [
+          "WBS-8.1"
+        ],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-8.3",
+      "path": "8.3",
+      "title": "Document legacy import path but defer implementation",
+      "goalMapping": [
+        "G8: Legacy build-plan remains compatibility-only and does not confuse the primary dashboard flow."
+      ],
+      "suggestedTaskTitle": "Document legacy import path but defer implementation",
+      "approach": "Document future conversion from build-plan/wishlist output into PlanArtifact draft with provenance.",
+      "technicalScope": [
+        "Document future conversion from build-plan/wishlist output into PlanArtifact draft with provenance."
+      ],
+      "acceptanceCriteria": [
+        "Docs describe future import flow",
+        "Docs state implementation deferred",
+        "No primary WBS depends on import implementation"
+      ],
+      "testingVerification": [
+        "Documentation review",
+        "Unit and integration tests verify document legacy import path but defer implementation"
+      ],
+      "dependsOn": [
+        "WBS-8.2"
+      ],
+      "recommendedPhase": "118",
+      "recommendedOrder": 29,
+      "sizingConfidence": "medium",
+      "riskNotes": "Keep the change bounded to this WBS item; avoid expanding into adjacent lifecycle work.",
+      "doneMeans": "This WBS is complete when document legacy import path but defer implementation is delivered and docs describe future import flow is demonstrated via documentation review.",
+      "generatedTaskPayload": {
+        "title": "Document legacy import path but defer implementation",
+        "type": "workspace-kit",
+        "priority": "P3",
+        "phaseKey": "118",
+        "approach": "Document future conversion from build-plan/wishlist output into PlanArtifact draft with provenance.",
+        "technicalScope": [
+          "Document future conversion from build-plan/wishlist output into PlanArtifact draft with provenance."
+        ],
+        "acceptanceCriteria": [
+          "Docs describe future import flow",
+          "Docs state implementation deferred",
+          "No primary WBS depends on import implementation"
+        ],
+        "dependsOn": [
+          "WBS-8.2"
+        ],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-9.1",
+      "path": "9.1",
+      "title": "Add lifecycle invariant tests",
+      "goalMapping": [
+        "G1: Clicking Plan this starts or resumes exactly one durable planning session for the selected idea.",
+        "G5: Review is profile-aware, warnings do not block acceptance, and blockers prevent acceptance.",
+        "G6: Dashboard actions are derived from one tested lifecycle-state helper.",
+        "G7: Accepted WBS rows finalize into one task draft each with dependency resolution and provenance."
+      ],
+      "suggestedTaskTitle": "Add lifecycle invariant tests",
+      "approach": "Add tests for impossible states and action combinations.",
+      "technicalScope": [
+        "Add tests for impossible states and action combinations."
+      ],
+      "acceptanceCriteria": [
+        "No Plan this and Resume simultaneously",
+        "Blocked review result cannot proceed to accept-plan-artifact",
+        "Warning-only review result can proceed to accept with operator confirmation",
+        "Accepted plan WBS immutable and finalized cannot reopen as draft",
+        "Task provenance resolves to WBS row identifiers"
+      ],
+      "testingVerification": [
+        "Unit tests for invariants",
+        "Unit and integration tests verify add lifecycle invariant tests"
+      ],
+      "dependsOn": [
+        "WBS-6.1",
+        "WBS-7.4"
+      ],
+      "recommendedPhase": "119",
+      "recommendedOrder": 30,
+      "sizingConfidence": "medium",
+      "riskNotes": "Keep the change bounded to this WBS item; avoid expanding into adjacent lifecycle work.",
+      "doneMeans": "This WBS is complete when add lifecycle invariant tests is delivered and no plan this and resume simultaneously is demonstrated via unit tests for invariants.",
+      "generatedTaskPayload": {
+        "title": "Add lifecycle invariant tests",
+        "type": "workspace-kit",
+        "priority": "P1",
+        "phaseKey": "119",
+        "approach": "Add tests for impossible states and action combinations.",
+        "technicalScope": [
+          "Add tests for impossible states and action combinations."
+        ],
+        "acceptanceCriteria": [
+          "No Plan this and Resume simultaneously",
+          "Blocked review result cannot proceed to accept-plan-artifact",
+          "Warning-only review result can proceed to accept with operator confirmation",
+          "Accepted plan WBS immutable and finalized cannot reopen as draft",
+          "Task provenance resolves to WBS row identifiers"
+        ],
+        "dependsOn": [
+          "WBS-6.1",
+          "WBS-7.4"
+        ],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-9.2",
+      "path": "9.2",
+      "title": "Add stale generation and retry handling for planning mutations",
+      "goalMapping": [
+        "G1: Clicking Plan this starts or resumes exactly one durable planning session for the selected idea.",
+        "G5: Review is profile-aware, warnings do not block acceptance, and blockers prevent acceptance.",
+        "G6: Dashboard actions are derived from one tested lifecycle-state helper.",
+        "G7: Accepted WBS rows finalize into one task draft each with dependency resolution and provenance."
+      ],
+      "suggestedTaskTitle": "Add stale generation and retry handling for planning mutations",
+      "approach": "Apply generation handling to start, session update, draft persistence, acceptance, finalize persistence.",
+      "technicalScope": [
+        "Apply generation handling to start, session update, draft persistence, acceptance, finalize persistence."
+      ],
+      "acceptanceCriteria": [
+        "Stale generation retries once",
+        "Repeated mismatch clear error",
+        "Mutating commands never silently overwrite accepted or finalized artifacts"
+      ],
+      "testingVerification": [
+        "Unit tests for stale generation on Plan this and accept/finalize if supported",
+        "Unit and integration tests verify add stale generation and retry handling for planning mutations"
+      ],
+      "dependsOn": [
+        "WBS-1.1",
+        "WBS-1.2",
+        "WBS-5.1",
+        "WBS-7.4"
+      ],
+      "recommendedPhase": "119",
+      "recommendedOrder": 31,
+      "sizingConfidence": "medium",
+      "riskNotes": "Keep the change bounded to this WBS item; avoid expanding into adjacent lifecycle work.",
+      "doneMeans": "This WBS is complete when add stale generation and retry handling for planning mutations is delivered and stale generation retries once is demonstrated via unit tests for stale generation on plan this and accept/finalize if supported.",
+      "generatedTaskPayload": {
+        "title": "Add stale generation and retry handling for planning mutations",
+        "type": "workspace-kit",
+        "priority": "P2",
+        "phaseKey": "119",
+        "approach": "Apply generation handling to start, session update, draft persistence, acceptance, finalize persistence.",
+        "technicalScope": [
+          "Apply generation handling to start, session update, draft persistence, acceptance, finalize persistence."
+        ],
+        "acceptanceCriteria": [
+          "Stale generation retries once",
+          "Repeated mismatch clear error",
+          "Mutating commands never silently overwrite accepted or finalized artifacts"
+        ],
+        "dependsOn": [
+          "WBS-1.1",
+          "WBS-1.2",
+          "WBS-5.1",
+          "WBS-7.4"
+        ],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-9.3",
+      "path": "9.3",
+      "title": "Add actionable error messages for blocked transitions",
+      "goalMapping": [
+        "G1: Clicking Plan this starts or resumes exactly one durable planning session for the selected idea.",
+        "G5: Review is profile-aware, warnings do not block acceptance, and blockers prevent acceptance.",
+        "G6: Dashboard actions are derived from one tested lifecycle-state helper.",
+        "G7: Accepted WBS rows finalize into one task draft each with dependency resolution and provenance."
+      ],
+      "suggestedTaskTitle": "Add actionable error messages for blocked transitions",
+      "approach": "Normalize errors for missing idea, duplicate session, blocked acceptance, unaccepted finalize, invalid/unselected dependency, duplicate finalize.",
+      "technicalScope": [
+        "Normalize errors for missing idea, duplicate session, blocked acceptance, unaccepted finalize, invalid/unselected dependency, duplicate finalize."
+      ],
+      "acceptanceCriteria": [
+        "No raw stack traces",
+        "Error says blocked and repair path",
+        "Blocked states remain resumable"
+      ],
+      "testingVerification": [
+        "Unit/dashboard tests for representative blocked errors",
+        "Unit and integration tests verify add actionable error messages for blocked transitions"
+      ],
+      "dependsOn": [
+        "WBS-4.3",
+        "WBS-5.1",
+        "WBS-7.2"
+      ],
+      "recommendedPhase": "119",
+      "recommendedOrder": 32,
+      "sizingConfidence": "medium",
+      "riskNotes": "Keep the change bounded to this WBS item; avoid expanding into adjacent lifecycle work.",
+      "doneMeans": "This WBS is complete when add actionable error messages for blocked transitions is delivered and no raw stack traces is demonstrated via unit/dashboard tests for representative blocked errors.",
+      "generatedTaskPayload": {
+        "title": "Add actionable error messages for blocked transitions",
+        "type": "workspace-kit",
+        "priority": "P2",
+        "phaseKey": "119",
+        "approach": "Normalize errors for missing idea, duplicate session, blocked acceptance, unaccepted finalize, invalid/unselected dependency, duplicate finalize.",
+        "technicalScope": [
+          "Normalize errors for missing idea, duplicate session, blocked acceptance, unaccepted finalize, invalid/unselected dependency, duplicate finalize."
+        ],
+        "acceptanceCriteria": [
+          "No raw stack traces",
+          "Error says blocked and repair path",
+          "Blocked states remain resumable"
+        ],
+        "dependsOn": [
+          "WBS-4.3",
+          "WBS-5.1",
+          "WBS-7.2"
+        ],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-9.4",
+      "path": "9.4",
+      "title": "Add audit trail metadata for major transitions",
+      "goalMapping": [
+        "G1: Clicking Plan this starts or resumes exactly one durable planning session for the selected idea.",
+        "G5: Review is profile-aware, warnings do not block acceptance, and blockers prevent acceptance.",
+        "G6: Dashboard actions are derived from one tested lifecycle-state helper.",
+        "G7: Accepted WBS rows finalize into one task draft each with dependency resolution and provenance."
+      ],
+      "suggestedTaskTitle": "Add audit trail metadata for major transitions",
+      "approach": "Record status changes, session start/resume/complete, plan versions, reviews, approvals, previews, task batch ids.",
+      "technicalScope": [
+        "Record status changes, session start/resume/complete, plan versions, reviews, approvals, previews, task batch ids."
+      ],
+      "acceptanceCriteria": [
+        "Each planning session transition is inspectable in SQLite session row",
+        "Provenance supports drift detection",
+        "Audit metadata does not leak raw chat transcript"
+      ],
+      "testingVerification": [
+        "Unit/E2E test for metadata after golden path"
+      ],
+      "dependsOn": [
+        "WBS-3.3",
+        "WBS-4.3",
+        "WBS-5.2",
+        "WBS-7.4"
+      ],
+      "recommendedPhase": "119",
+      "recommendedOrder": 33,
+      "sizingConfidence": "medium",
+      "riskNotes": "Keep the change bounded to this WBS item; avoid expanding into adjacent lifecycle work.",
+      "doneMeans": "This WBS is complete when add audit trail metadata for major transitions is delivered and each planning session transition is inspectable in sqlite session row is demonstrated via unit/e2e test for metadata after golden path.",
+      "generatedTaskPayload": {
+        "title": "Add audit trail metadata for major transitions",
+        "type": "workspace-kit",
+        "priority": "P2",
+        "phaseKey": "119",
+        "approach": "Record status changes, session start/resume/complete, plan versions, reviews, approvals, previews, task batch ids.",
+        "technicalScope": [
+          "Record status changes, session start/resume/complete, plan versions, reviews, approvals, previews, task batch ids."
+        ],
+        "acceptanceCriteria": [
+          "Each planning session transition is inspectable in SQLite session row",
+          "Provenance supports drift detection",
+          "Audit metadata does not leak raw chat transcript"
+        ],
+        "dependsOn": [
+          "WBS-3.3",
+          "WBS-4.3",
+          "WBS-5.2",
+          "WBS-7.4"
+        ],
+        "status": "proposed"
+      }
+    }
+  ],
+  "phaseRecommendations": [
+    {
+      "phaseKey": "111",
+      "label": "Phase 111 — Command-backed planning entry",
+      "rationale": "Establish real command ownership for Plan this and session start/update, then generate a small prompt.",
+      "isPrimary": true
+    },
+    {
+      "phaseKey": "112",
+      "label": "Phase 112 — Planner chat and dashboard entry",
+      "rationale": "Wire dashboard and prompt/playbook behavior after command contracts exist.",
+      "isPrimary": false
+    },
+    {
+      "phaseKey": "113",
+      "label": "Phase 113 — PlanArtifact draft and lineage",
+      "rationale": "Persist drafts with idea provenance and protect accepted-plan lineage.",
+      "isPrimary": false
+    },
+    {
+      "phaseKey": "114",
+      "label": "Phase 114 — Review gate",
+      "rationale": "Make review deterministic and profile-aware before acceptance UI is completed.",
+      "isPrimary": false
+    },
+    {
+      "phaseKey": "115",
+      "label": "Phase 115 — Acceptance gate",
+      "rationale": "Promote active drafts to accepted linked plans only after explicit acceptance.",
+      "isPrimary": false
+    },
+    {
+      "phaseKey": "116",
+      "label": "Phase 116 — Dashboard lifecycle",
+      "rationale": "Render lifecycle actions from the derived-state helper and display plan/WBS details.",
+      "isPrimary": false
+    },
+    {
+      "phaseKey": "117",
+      "label": "Phase 117 — Finalize to tasks",
+      "rationale": "Compile accepted WBS into task drafts with dependency resolution and idempotent persistence.",
+      "isPrimary": false
+    },
+    {
+      "phaseKey": "118",
+      "label": "Phase 118 — Legacy cleanup",
+      "rationale": "Demote legacy planning and document migration without blocking the primary path.",
+      "isPrimary": false
+    },
+    {
+      "phaseKey": "119",
+      "label": "Phase 119 — Reliability and audit",
+      "rationale": "Add invariant tests, generation handling, actionable errors, and audit metadata.",
+      "isPrimary": false
+    }
+  ],
+  "provenance": {
+    "createdAt": "2026-06-27T00:00:00.000-07:00",
+    "updatedAt": "2026-06-28T06:34:58.980Z",
+    "createdBy": "operator",
+    "source": "draft-plan-artifact",
+    "sourceIdeaId": "idea-planning-system",
+    "previousPlanArtifacts": []
+  },
+  "version": 5
+}

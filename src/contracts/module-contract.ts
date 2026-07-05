@@ -13,7 +13,8 @@ export type ModuleCapability =
   | "ideas"
   | "team-execution"
   | "checkpoints"
-  | "project-memory";
+  | "project-memory"
+  | "model-selection";
 
 export type ModuleDocumentContract = {
   path: string;

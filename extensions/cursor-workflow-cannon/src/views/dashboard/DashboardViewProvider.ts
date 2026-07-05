@@ -3732,20 +3732,56 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     title: string,
     note: string
   ): Promise<void> {
+    let resolvedPlanRefForSession = planRef;
     if (planRef.length === 0) {
-      await this.view?.webview.postMessage({
-        type: "wcIdeaMutationResult",
-        operation: "brainstorm",
-        ideaId,
-        ok: false,
-        message: "Unified IdeaPlan planRef required for brainstorming."
+      if (ideaId.length === 0) {
+        await this.view?.webview.postMessage({
+          type: "wcIdeaMutationResult",
+          operation: "brainstorm",
+          ideaId,
+          ok: false,
+          message: "Idea id required to create an IdeaPlan document."
+        });
+        return;
+      }
+      // No IdeaPlan doc yet — create one on-the-fly via migration (idempotent for existing ideas).
+      // Use an inline policyApproval rather than dashboardPolicyApproval because this command
+      // is an internal step of the brainstorm flow and is not in the tier matrix on its own.
+      const migrateOut = await this.runMutationWithGenerationRetry("migrate-ideas-to-unified-document", {
+        dryRun: false,
+        policyApproval: { confirmed: true as const, rationale: "dashboard|workflow=ideas|command=migrate-ideas-to-unified-document|action=brainstorm-init|tier=routine" }
       });
-      return;
+      if (!migrateOut.ok) {
+        await this.view?.webview.postMessage({
+          type: "wcIdeaMutationResult",
+          operation: "brainstorm",
+          ideaId,
+          ok: false,
+          message: `Could not create IdeaPlan document: ${String(migrateOut.message ?? migrateOut.code ?? "unknown error")}`
+        });
+        return;
+      }
+      const migrateData = migrateOut.data && typeof migrateOut.data === "object" ? (migrateOut.data as Record<string, unknown>) : {};
+      const outcomes = Array.isArray(migrateData.outcomes) ? (migrateData.outcomes as Record<string, unknown>[]) : [];
+      const myOutcome = outcomes.find((o) => typeof o === "object" && o !== null && o.ideaId === ideaId);
+      const createdRef = myOutcome && typeof myOutcome.planRef === "string" ? myOutcome.planRef.trim() : "";
+      if (createdRef.length === 0) {
+        await this.view?.webview.postMessage({
+          type: "wcIdeaMutationResult",
+          operation: "brainstorm",
+          ideaId,
+          ok: false,
+          message: "IdeaPlan document creation succeeded but no planRef was returned. Refresh and try again."
+        });
+        return;
+      }
+      resolvedPlanRefForSession = createdRef;
+      await this.applyDashboardMutationInvalidation("ideas");
     }
     const out = await this.runMutationWithGenerationRetry("start-brainstorm-session", {
-      planRef,
+      planRef: resolvedPlanRefForSession,
       ...(ideaId.length > 0 ? { ideaId } : {}),
-      clientMutationId: this.dashboardIdeaBrainstormMutationId(ideaId, planRef),
+      clientMutationId: this.dashboardIdeaBrainstormMutationId(ideaId, resolvedPlanRefForSession),
       policyApproval: dashboardPolicyApproval(
         { workflowId: "ideas", action: "brainstorm", command: "start-brainstorm-session" },
         {}
@@ -3777,7 +3813,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     const resolvedIdeaId =
       typeof data.ideaId === "string" && data.ideaId.trim().length > 0 ? data.ideaId.trim() : ideaId;
     const resolvedPlanRef =
-      typeof data.planRef === "string" && data.planRef.trim().length > 0 ? data.planRef.trim() : planRef;
+      typeof data.planRef === "string" && data.planRef.trim().length > 0 ? data.planRef.trim() : resolvedPlanRefForSession;
     const promptFromResponse =
       typeof data.brainstormChatPrompt === "string" ? data.brainstormChatPrompt.trim() : "";
     const brainstormChatPrompt =

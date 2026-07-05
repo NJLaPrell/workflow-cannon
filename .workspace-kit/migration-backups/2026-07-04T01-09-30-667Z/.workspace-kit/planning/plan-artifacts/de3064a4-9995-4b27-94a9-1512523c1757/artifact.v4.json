@@ -1,0 +1,1184 @@
+{
+  "schemaVersion": 1,
+  "planId": "de3064a4-9995-4b27-94a9-1512523c1757",
+  "planRef": "plan-artifact:de3064a4-9995-4b27-94a9-1512523c1757",
+  "status": "reviewed",
+  "identity": {
+    "title": "Workflow Cannon Backend Sync Evolution",
+    "planningType": "sprint-phase",
+    "summary": "Three-phase evolution from Git-hot-path task sync to local-first outbox, service-backed dashboard reads, and pluggable canonical backends.",
+    "tags": [
+      "backend",
+      "task-state",
+      "sync",
+      "dashboard",
+      "service"
+    ]
+  },
+  "goals": [
+    "Phase 1: local-first mutations with outbox and background Git sync",
+    "Phase 2: local runtime service owns dashboard reads and sync worker",
+    "Phase 3: pluggable CanonicalStateSyncBackend with Git as one adapter",
+    "Dashboard and agents read local state without Git on the hot path",
+    "Multi-agent parallel work with explicit sync posture and conflict handling"
+  ],
+  "nonGoals": [
+    "Replace Git event-log branch format in Phase 1",
+    "Fully implement hosted/Postgres backends in Phase 3",
+    "Remove hydrate/publish recovery commands",
+    "Commit SQLite projections to feature branches"
+  ],
+  "valueAssessment": {
+    "impact": "High — removes manual sync chores, speeds dashboard, unlocks team/multi-agent backends",
+    "confidence": "high",
+    "rationale": "BACKEND.md maps to existing task-state-git machinery with incremental phases"
+  },
+  "riskAssessment": [
+    {
+      "id": "R1",
+      "description": "Local projection diverges from canonical Git head",
+      "severity": "high",
+      "mitigation": "Outbox status, conflict rows, closeout drain gates"
+    },
+    {
+      "id": "R2",
+      "description": "Background sync hides failures from operators",
+      "severity": "medium",
+      "mitigation": "Dashboard sync badge, doctor warnings, failed/conflict counts"
+    },
+    {
+      "id": "R3",
+      "description": "Agents bypass service/outbox and use legacy Git paths",
+      "severity": "medium",
+      "mitigation": "Update .ai runbooks; doctor detects legacy paths"
+    }
+  ],
+  "technicalImpact": {
+    "systemsTouched": [
+      "src/modules/task-engine/persistence",
+      "src/modules/task-engine/task-state-git",
+      "src/services",
+      "extensions/cursor-workflow-cannon",
+      "src/contracts"
+    ],
+    "compatibilityNotes": "Git workflow-cannon/task-state branch remains compatible; tasks.canonicalAuthority git-event-log maps forward",
+    "migrationImpact": "Phased rollout: outbox first, then service opt-in, then backend abstraction"
+  },
+  "architecture": {
+    "overview": "Local mutation → SQLite projection + outbox → background sync adapter → optional Git/hosted backend; dashboard reads service snapshots.",
+    "decisions": [
+      {
+        "id": "D1",
+        "decision": "Keep Git event log as Phase 1 backend",
+        "rationale": "Preserves audit trail while demoting Git from hot path"
+      },
+      {
+        "id": "D2",
+        "decision": "Introduce local runtime service in Phase 2",
+        "rationale": "Avoid repeated wk child processes for dashboard reads"
+      },
+      {
+        "id": "D3",
+        "decision": "CanonicalStateSyncBackend interface in Phase 3",
+        "rationale": "Git becomes one adapter, not the architecture"
+      }
+    ],
+    "diagrams": [
+      {
+        "title": "Target runtime flow",
+        "mermaid": "flowchart TD\n  A[Agent/CLI/Dashboard] --> B[Local runtime service]\n  B --> C[SQLite projection + outbox]\n  C --> D[Background sync adapter]\n  D --> E[Git backend]\n  D --> F[Future hosted backend]"
+      }
+    ]
+  },
+  "uiUxDirection": {
+    "hasUiChanges": true,
+    "summary": "Dashboard sync badge and data-source mode; service-backed slice refresh",
+    "mockupRefs": [
+      "BACKEND.md"
+    ]
+  },
+  "testingStrategy": {
+    "layers": [
+      "unit",
+      "integration",
+      "extension",
+      "e2e-cli"
+    ],
+    "criticalPaths": [
+      "Local mutation when Git unavailable",
+      "Outbox batch publish and conflict handling",
+      "Dashboard service vs CLI fallback",
+      "Backend conformance harness"
+    ],
+    "outOfScopeTesting": [
+      "Full hosted API load testing"
+    ]
+  },
+  "implementationGuidance": [
+    "Follow maintainer delivery loop: branch from release/phase-N, run-transition start/complete",
+    "Do not hand-edit workspace-kit.db or task-state-events.jsonl",
+    "Preserve expectedHeadSha and expectedTaskVersions semantics",
+    "Source spec: BACKEND.md at repo root"
+  ],
+  "whatNotToDo": [
+    "Do not remove task-state-publish — it stays admin/recovery",
+    "Do not commit SQLite blobs to feature branches",
+    "Do not block mutations on Git publication in Phase 1",
+    "Do not bake Git terminology into generic backend types"
+  ],
+  "assumptions": [
+    "Phases 119–121 will be registered in kit_phase_catalog before finalize-to-phase",
+    "Current git-event-log authority remains default through Phase 1",
+    "HostedApiBackend full implementation stays out of scope until design (T-BE-205) is approved"
+  ],
+  "openQuestions": [],
+  "wbs": [
+    {
+      "wbsId": "WBS-P1-001",
+      "path": "1.1",
+      "title": "Inventory existing task-state sync paths",
+      "goalMapping": [
+        "Phase 1: local-first mutations with outbox and background Git sync"
+      ],
+      "suggestedTaskTitle": "Inventory existing task-state sync paths",
+      "approach": "Trace task-state-publish, hydrate, status, snapshot, and mutation publish paths; document sync vs deferred publish and expectedHeadSha usage.",
+      "technicalScope": [
+        "src/modules/task-engine/persistence/task-state-*-runtime.ts",
+        "src/modules/task-engine/task-state-git/publish-task-state-events.ts",
+        "src/modules/task-engine/task-state-events/**"
+      ],
+      "acceptanceCriteria": [
+        "Implementation note maps every mutation path to publish behavior",
+        "Identifies commands that block on Git publication",
+        "Lists test files protecting existing behavior"
+      ],
+      "testingVerification": [
+        "Manual trace + existing test inventory"
+      ],
+      "dependsOn": [],
+      "recommendedPhase": "119",
+      "sizingConfidence": "high",
+      "doneMeans": "T-BE-001 complete — sync path inventory published; operators can verify via CLI or dashboard evidence",
+      "generatedTaskPayload": {
+        "title": "Inventory existing task-state sync paths",
+        "type": "workspace-kit",
+        "priority": "P1",
+        "phaseKey": "119",
+        "phase": "Phase 119",
+        "approach": "Trace task-state-publish, hydrate, status, snapshot, and mutation publish paths; document sync vs deferred publish and expectedHeadSha usage.",
+        "technicalScope": [
+          "src/modules/task-engine/persistence/task-state-*-runtime.ts",
+          "src/modules/task-engine/task-state-git/publish-task-state-events.ts",
+          "src/modules/task-engine/task-state-events/**"
+        ],
+        "acceptanceCriteria": [
+          "Implementation note maps every mutation path to publish behavior",
+          "Identifies commands that block on Git publication",
+          "Lists test files protecting existing behavior"
+        ],
+        "dependsOn": [],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-P1-002",
+      "path": "1.2",
+      "title": "Add canonical event outbox schema",
+      "goalMapping": [
+        "Phase 1: local-first mutations with outbox and background Git sync"
+      ],
+      "suggestedTaskTitle": "Add canonical event outbox schema",
+      "approach": "Add kit_canonical_event_outbox SQLite table with idempotent migration and status index.",
+      "technicalScope": [
+        "src/core/state/kit-sqlite/**",
+        "src/core/state/workspace-kit-sqlite.ts",
+        "test/**"
+      ],
+      "acceptanceCriteria": [
+        "Migration is idempotent",
+        "Outbox absent-safe for older workspaces",
+        "Tests cover migration and basic CRUD"
+      ],
+      "testingVerification": [
+        "Migration tests",
+        "pnpm run check"
+      ],
+      "dependsOn": [
+        "WBS-P1-001"
+      ],
+      "recommendedPhase": "119",
+      "sizingConfidence": "high",
+      "doneMeans": "T-BE-002 complete — outbox schema migrated; operators can verify via CLI or dashboard evidence",
+      "generatedTaskPayload": {
+        "title": "Add canonical event outbox schema",
+        "type": "workspace-kit",
+        "priority": "P1",
+        "phaseKey": "119",
+        "phase": "Phase 119",
+        "approach": "Add kit_canonical_event_outbox SQLite table with idempotent migration and status index.",
+        "technicalScope": [
+          "src/core/state/kit-sqlite/**",
+          "src/core/state/workspace-kit-sqlite.ts",
+          "test/**"
+        ],
+        "acceptanceCriteria": [
+          "Migration is idempotent",
+          "Outbox absent-safe for older workspaces",
+          "Tests cover migration and basic CRUD"
+        ],
+        "dependsOn": [],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-P1-003",
+      "path": "1.3",
+      "title": "Add outbox repository/runtime API",
+      "goalMapping": [
+        "Phase 1: local-first mutations with outbox and background Git sync"
+      ],
+      "suggestedTaskTitle": "Add outbox repository/runtime API",
+      "approach": "Implement enqueue, list pending, mark publishing/published/failed/conflict, stale reset, and status repository API.",
+      "technicalScope": [
+        "src/modules/task-engine/persistence/canonical-event-outbox-store.ts",
+        "src/modules/task-engine/persistence/canonical-event-outbox-runtime.ts",
+        "test/canonical-event-outbox-store.test.mjs"
+      ],
+      "acceptanceCriteria": [
+        "Events idempotent by event_id",
+        "Pending events returned in deterministic order",
+        "Stale publishing rows reset safely"
+      ],
+      "testingVerification": [
+        "Unit tests for CRUD and status"
+      ],
+      "dependsOn": [
+        "WBS-P1-002"
+      ],
+      "recommendedPhase": "119",
+      "sizingConfidence": "high",
+      "doneMeans": "T-BE-003 complete — outbox API stable; operators can verify via CLI or dashboard evidence",
+      "generatedTaskPayload": {
+        "title": "Add outbox repository/runtime API",
+        "type": "workspace-kit",
+        "priority": "P1",
+        "phaseKey": "119",
+        "phase": "Phase 119",
+        "approach": "Implement enqueue, list pending, mark publishing/published/failed/conflict, stale reset, and status repository API.",
+        "technicalScope": [
+          "src/modules/task-engine/persistence/canonical-event-outbox-store.ts",
+          "src/modules/task-engine/persistence/canonical-event-outbox-runtime.ts",
+          "test/canonical-event-outbox-store.test.mjs"
+        ],
+        "acceptanceCriteria": [
+          "Events idempotent by event_id",
+          "Pending events returned in deterministic order",
+          "Stale publishing rows reset safely"
+        ],
+        "dependsOn": [],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-P1-004",
+      "path": "1.4",
+      "title": "Queue events locally from mutation commands",
+      "goalMapping": [
+        "Phase 1: local-first mutations with outbox and background Git sync",
+        "Dashboard and agents read local state without Git on the hot path"
+      ],
+      "suggestedTaskTitle": "Queue events locally from mutation commands",
+      "approach": "Mutations write local SQLite and enqueue canonical events instead of blocking on Git publish; preserve versions and policy gates.",
+      "technicalScope": [
+        "src/modules/task-engine/persistence/**",
+        "src/modules/task-engine/task-state-events/**",
+        "test/**"
+      ],
+      "acceptanceCriteria": [
+        "Mutating commands update local SQLite immediately",
+        "Canonical events queued in outbox",
+        "Tests prove mutation works when Git unavailable"
+      ],
+      "testingVerification": [
+        "Mocked Git unavailable tests",
+        "Existing suite still passes"
+      ],
+      "dependsOn": [
+        "WBS-P1-003"
+      ],
+      "recommendedPhase": "119",
+      "sizingConfidence": "medium",
+      "doneMeans": "T-BE-004 complete — local-first mutations; operators can verify via CLI or dashboard evidence",
+      "generatedTaskPayload": {
+        "title": "Queue events locally from mutation commands",
+        "type": "workspace-kit",
+        "priority": "P1",
+        "phaseKey": "119",
+        "phase": "Phase 119",
+        "approach": "Mutations write local SQLite and enqueue canonical events instead of blocking on Git publish; preserve versions and policy gates.",
+        "technicalScope": [
+          "src/modules/task-engine/persistence/**",
+          "src/modules/task-engine/task-state-events/**",
+          "test/**"
+        ],
+        "acceptanceCriteria": [
+          "Mutating commands update local SQLite immediately",
+          "Canonical events queued in outbox",
+          "Tests prove mutation works when Git unavailable"
+        ],
+        "dependsOn": [],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-P1-005",
+      "path": "1.5",
+      "title": "Add background outbox publisher",
+      "goalMapping": [
+        "Phase 1: local-first mutations with outbox and background Git sync",
+        "Multi-agent parallel work with explicit sync posture and conflict handling"
+      ],
+      "suggestedTaskTitle": "Add background outbox publisher",
+      "approach": "Background batch publisher with retry/backoff, conflict detection, and configurable canonicalPublishQueue settings.",
+      "technicalScope": [
+        "src/modules/task-engine/persistence/canonical-event-outbox-publisher.ts",
+        "src/modules/task-engine/persistence/task-state-canonical-authority.ts",
+        "src/core/config-registry.json",
+        "test/canonical-event-outbox-publisher.test.mjs"
+      ],
+      "acceptanceCriteria": [
+        "Pending rows publish in batches",
+        "Conflicts do not spin forever",
+        "Publisher can be disabled"
+      ],
+      "testingVerification": [
+        "Simulated push failure",
+        "Simulated conflict tests"
+      ],
+      "dependsOn": [
+        "WBS-P1-004"
+      ],
+      "recommendedPhase": "119",
+      "sizingConfidence": "medium",
+      "doneMeans": "T-BE-005 complete — background publisher shipping; operators can verify via CLI or dashboard evidence",
+      "generatedTaskPayload": {
+        "title": "Add background outbox publisher",
+        "type": "workspace-kit",
+        "priority": "P1",
+        "phaseKey": "119",
+        "phase": "Phase 119",
+        "approach": "Background batch publisher with retry/backoff, conflict detection, and configurable canonicalPublishQueue settings.",
+        "technicalScope": [
+          "src/modules/task-engine/persistence/canonical-event-outbox-publisher.ts",
+          "src/modules/task-engine/persistence/task-state-canonical-authority.ts",
+          "src/core/config-registry.json",
+          "test/canonical-event-outbox-publisher.test.mjs"
+        ],
+        "acceptanceCriteria": [
+          "Pending rows publish in batches",
+          "Conflicts do not spin forever",
+          "Publisher can be disabled"
+        ],
+        "dependsOn": [],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-P1-006",
+      "path": "1.6",
+      "title": "Add sync status command and dashboard slice",
+      "goalMapping": [
+        "Phase 1: local-first mutations with outbox and background Git sync",
+        "Dashboard and agents read local state without Git on the hot path",
+        "Multi-agent parallel work with explicit sync posture and conflict handling"
+      ],
+      "suggestedTaskTitle": "Add sync status command and dashboard slice",
+      "approach": "Extend task-state-status or add task-sync-status with outbox/remote posture and dashboard sync badge.",
+      "technicalScope": [
+        "src/modules/task-engine/persistence/task-state-status-runtime.ts",
+        "src/modules/task-engine/dashboard/build-dashboard-task-state-projection.ts",
+        "extensions/cursor-workflow-cannon/src/views/dashboard/**"
+      ],
+      "acceptanceCriteria": [
+        "CLI exposes localProjection and outbox counts",
+        "Dashboard shows pending/failed/conflict status",
+        "Doctor surfaces recovery only when needed"
+      ],
+      "testingVerification": [
+        "CLI JSON sample tests",
+        "Dashboard render test"
+      ],
+      "dependsOn": [
+        "WBS-P1-005"
+      ],
+      "recommendedPhase": "119",
+      "sizingConfidence": "medium",
+      "doneMeans": "T-BE-006 complete — sync posture visible; operators can verify via CLI or dashboard evidence",
+      "generatedTaskPayload": {
+        "title": "Add sync status command and dashboard slice",
+        "type": "workspace-kit",
+        "priority": "P2",
+        "phaseKey": "119",
+        "phase": "Phase 119",
+        "approach": "Extend task-state-status or add task-sync-status with outbox/remote posture and dashboard sync badge.",
+        "technicalScope": [
+          "src/modules/task-engine/persistence/task-state-status-runtime.ts",
+          "src/modules/task-engine/dashboard/build-dashboard-task-state-projection.ts",
+          "extensions/cursor-workflow-cannon/src/views/dashboard/**"
+        ],
+        "acceptanceCriteria": [
+          "CLI exposes localProjection and outbox counts",
+          "Dashboard shows pending/failed/conflict status",
+          "Doctor surfaces recovery only when needed"
+        ],
+        "dependsOn": [],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-P1-007",
+      "path": "1.7",
+      "title": "Update runbooks to hide routine sync mechanics",
+      "goalMapping": [
+        "Phase 1: local-first mutations with outbox and background Git sync"
+      ],
+      "suggestedTaskTitle": "Update runbooks to hide routine sync mechanics",
+      "approach": "Agent runbooks: hydrate/publish are recovery-only; closeout verifies outbox drained.",
+      "technicalScope": [
+        ".ai/runbooks/task-state-git-operator.md",
+        ".ai/WORKSPACE-KIT-SESSION.md",
+        ".ai/MACHINE-PLAYBOOKS.md"
+      ],
+      "acceptanceCriteria": [
+        "Docs mark hydrate/publish as recovery/admin paths",
+        "Closeout requires outbox drained or explicit waiver",
+        "Maintainer docs regenerated"
+      ],
+      "testingVerification": [
+        "pnpm run generate-maintainer-docs-from-ai",
+        "docs parity check",
+        "Unit and integration tests in CI"
+      ],
+      "dependsOn": [
+        "WBS-P1-006"
+      ],
+      "recommendedPhase": "119",
+      "sizingConfidence": "high",
+      "doneMeans": "T-BE-007 complete — agent guidance updated; operators can verify via CLI or dashboard evidence",
+      "generatedTaskPayload": {
+        "title": "Update runbooks to hide routine sync mechanics",
+        "type": "workspace-kit",
+        "priority": "P2",
+        "phaseKey": "119",
+        "phase": "Phase 119",
+        "approach": "Agent runbooks: hydrate/publish are recovery-only; closeout verifies outbox drained.",
+        "technicalScope": [
+          ".ai/runbooks/task-state-git-operator.md",
+          ".ai/WORKSPACE-KIT-SESSION.md",
+          ".ai/MACHINE-PLAYBOOKS.md"
+        ],
+        "acceptanceCriteria": [
+          "Docs mark hydrate/publish as recovery/admin paths",
+          "Closeout requires outbox drained or explicit waiver",
+          "Maintainer docs regenerated"
+        ],
+        "dependsOn": [],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-P2-101",
+      "path": "2.1",
+      "title": "Define local service contract",
+      "goalMapping": [
+        "Phase 2: local runtime service owns dashboard reads and sync worker"
+      ],
+      "suggestedTaskTitle": "Define local service contract",
+      "approach": "Versioned runtime-service, dashboard-snapshot, and task-sync-status contracts with health/status/snapshot endpoints.",
+      "technicalScope": [
+        "src/contracts/runtime-service.ts",
+        "src/contracts/dashboard-snapshot.ts",
+        "src/contracts/task-sync-status.ts"
+      ],
+      "acceptanceCriteria": [
+        "Contracts are schema-versioned",
+        "Distinguish service health, task sync, and dashboard freshness"
+      ],
+      "testingVerification": [
+        "Contract tests",
+        "JSON fixture examples"
+      ],
+      "dependsOn": [
+        "WBS-P1-005"
+      ],
+      "recommendedPhase": "120",
+      "sizingConfidence": "high",
+      "doneMeans": "T-BE-101 complete — service contracts landed; operators can verify via CLI or dashboard evidence",
+      "generatedTaskPayload": {
+        "title": "Define local service contract",
+        "type": "workspace-kit",
+        "priority": "P1",
+        "phaseKey": "120",
+        "phase": "Phase 120",
+        "approach": "Versioned runtime-service, dashboard-snapshot, and task-sync-status contracts with health/status/snapshot endpoints.",
+        "technicalScope": [
+          "src/contracts/runtime-service.ts",
+          "src/contracts/dashboard-snapshot.ts",
+          "src/contracts/task-sync-status.ts"
+        ],
+        "acceptanceCriteria": [
+          "Contracts are schema-versioned",
+          "Distinguish service health, task sync, and dashboard freshness"
+        ],
+        "dependsOn": [],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-P2-102",
+      "path": "2.2",
+      "title": "Implement service process lifecycle",
+      "goalMapping": [
+        "Phase 2: local runtime service owns dashboard reads and sync worker"
+      ],
+      "suggestedTaskTitle": "Implement service process lifecycle",
+      "approach": "Add start/stop/status/restart commands with pid file, port, uptime, and stale pid recovery.",
+      "technicalScope": [
+        "src/services/**",
+        ".workspace-kit/runtime/service.json"
+      ],
+      "acceptanceCriteria": [
+        "Service starts from attached project runtime",
+        "Stale pid files handled",
+        "Status reports port, pid, uptime, workspace root"
+      ],
+      "testingVerification": [
+        "Start/stop/status command tests"
+      ],
+      "dependsOn": [
+        "WBS-P2-101"
+      ],
+      "recommendedPhase": "120",
+      "sizingConfidence": "medium",
+      "doneMeans": "T-BE-102 complete — service lifecycle reliable; operators can verify via CLI or dashboard evidence",
+      "generatedTaskPayload": {
+        "title": "Implement service process lifecycle",
+        "type": "workspace-kit",
+        "priority": "P1",
+        "phaseKey": "120",
+        "phase": "Phase 120",
+        "approach": "Add start/stop/status/restart commands with pid file, port, uptime, and stale pid recovery.",
+        "technicalScope": [
+          "src/services/**",
+          ".workspace-kit/runtime/service.json"
+        ],
+        "acceptanceCriteria": [
+          "Service starts from attached project runtime",
+          "Stale pid files handled",
+          "Status reports port, pid, uptime, workspace root"
+        ],
+        "dependsOn": [],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-P2-103",
+      "path": "2.3",
+      "title": "Add local dashboard snapshot store",
+      "goalMapping": [
+        "Phase 2: local runtime service owns dashboard reads and sync worker",
+        "Dashboard and agents read local state without Git on the hot path"
+      ],
+      "suggestedTaskTitle": "Add local dashboard snapshot store",
+      "approach": "Service maintains versioned DashboardSnapshot with slice freshness and last-good fallback.",
+      "technicalScope": [
+        "src/services/**",
+        "src/contracts/dashboard-snapshot.ts"
+      ],
+      "acceptanceCriteria": [
+        "Warm snapshot available within 1 second",
+        "Failed refresh preserves last good slice data"
+      ],
+      "testingVerification": [
+        "Snapshot endpoint tests",
+        "slice refresh timing"
+      ],
+      "dependsOn": [
+        "WBS-P2-102"
+      ],
+      "recommendedPhase": "120",
+      "sizingConfidence": "medium",
+      "doneMeans": "T-BE-103 complete — snapshot store warm; operators can verify via CLI or dashboard evidence",
+      "generatedTaskPayload": {
+        "title": "Add local dashboard snapshot store",
+        "type": "workspace-kit",
+        "priority": "P1",
+        "phaseKey": "120",
+        "phase": "Phase 120",
+        "approach": "Service maintains versioned DashboardSnapshot with slice freshness and last-good fallback.",
+        "technicalScope": [
+          "src/services/**",
+          "src/contracts/dashboard-snapshot.ts"
+        ],
+        "acceptanceCriteria": [
+          "Warm snapshot available within 1 second",
+          "Failed refresh preserves last good slice data"
+        ],
+        "dependsOn": [],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-P2-104",
+      "path": "2.4",
+      "title": "Move dashboard refresh to service-backed source",
+      "goalMapping": [
+        "Phase 2: local runtime service owns dashboard reads and sync worker",
+        "Dashboard and agents read local state without Git on the hot path"
+      ],
+      "suggestedTaskTitle": "Move dashboard refresh to service-backed source",
+      "approach": "Add ServiceDashboardDataSource with auto/service/cli-polling modes in Cursor extension.",
+      "technicalScope": [
+        "extensions/cursor-workflow-cannon/src/views/dashboard/**",
+        "extensions/cursor-workflow-cannon/src/runtime/**"
+      ],
+      "acceptanceCriteria": [
+        "Warm service returns dashboard under 1 second",
+        "CLI polling fallback still works",
+        "Dashboard shows active data source mode"
+      ],
+      "testingVerification": [
+        "Service mode trace",
+        "Fallback mode trace",
+        "Unit and integration tests in CI"
+      ],
+      "dependsOn": [
+        "WBS-P2-103"
+      ],
+      "recommendedPhase": "120",
+      "sizingConfidence": "medium",
+      "doneMeans": "T-BE-104 complete — dashboard service-backed; operators can verify via CLI or dashboard evidence",
+      "generatedTaskPayload": {
+        "title": "Move dashboard refresh to service-backed source",
+        "type": "workspace-kit",
+        "priority": "P1",
+        "phaseKey": "120",
+        "phase": "Phase 120",
+        "approach": "Add ServiceDashboardDataSource with auto/service/cli-polling modes in Cursor extension.",
+        "technicalScope": [
+          "extensions/cursor-workflow-cannon/src/views/dashboard/**",
+          "extensions/cursor-workflow-cannon/src/runtime/**"
+        ],
+        "acceptanceCriteria": [
+          "Warm service returns dashboard under 1 second",
+          "CLI polling fallback still works",
+          "Dashboard shows active data source mode"
+        ],
+        "dependsOn": [],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-P2-105",
+      "path": "2.5",
+      "title": "Move background sync worker into service",
+      "goalMapping": [
+        "Phase 2: local runtime service owns dashboard reads and sync worker",
+        "Multi-agent parallel work with explicit sync posture and conflict handling"
+      ],
+      "suggestedTaskTitle": "Move background sync worker into service",
+      "approach": "Service owns outbox polling, batch publish, hydrate schedule, conflict detection, and flush on demand.",
+      "technicalScope": [
+        "src/services/**",
+        "src/modules/task-engine/persistence/**"
+      ],
+      "acceptanceCriteria": [
+        "Sync worker starts with service",
+        "Worker can pause/resume and flush on demand",
+        "CLI still works without service as fallback"
+      ],
+      "testingVerification": [
+        "Service logs",
+        "mocked Git backend tests"
+      ],
+      "dependsOn": [
+        "WBS-P2-102",
+        "WBS-P1-005"
+      ],
+      "recommendedPhase": "120",
+      "sizingConfidence": "medium",
+      "doneMeans": "T-BE-105 complete — sync centralized in service; operators can verify via CLI or dashboard evidence",
+      "generatedTaskPayload": {
+        "title": "Move background sync worker into service",
+        "type": "workspace-kit",
+        "priority": "P1",
+        "phaseKey": "120",
+        "phase": "Phase 120",
+        "approach": "Service owns outbox polling, batch publish, hydrate schedule, conflict detection, and flush on demand.",
+        "technicalScope": [
+          "src/services/**",
+          "src/modules/task-engine/persistence/**"
+        ],
+        "acceptanceCriteria": [
+          "Sync worker starts with service",
+          "Worker can pause/resume and flush on demand",
+          "CLI still works without service as fallback"
+        ],
+        "dependsOn": [],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-P2-106",
+      "path": "2.6",
+      "title": "Add event stream for dashboard and agents",
+      "goalMapping": [
+        "Phase 2: local runtime service owns dashboard reads and sync worker",
+        "Dashboard and agents read local state without Git on the hot path"
+      ],
+      "suggestedTaskTitle": "Add event stream for dashboard and agents",
+      "approach": "SSE or local IPC stream for dashboard.slice.updated, task-sync.status.changed, and reconnect after restart.",
+      "technicalScope": [
+        "src/services/**",
+        "extensions/cursor-workflow-cannon/src/runtime/**"
+      ],
+      "acceptanceCriteria": [
+        "Dashboard receives slice updates without manual refresh",
+        "Event stream reconnects after service restart"
+      ],
+      "testingVerification": [
+        "Event stream test",
+        "Reconnect test"
+      ],
+      "dependsOn": [
+        "WBS-P2-104",
+        "WBS-P2-105"
+      ],
+      "recommendedPhase": "120",
+      "sizingConfidence": "medium",
+      "doneMeans": "T-BE-106 complete — event stream live; operators can verify via CLI or dashboard evidence",
+      "generatedTaskPayload": {
+        "title": "Add event stream for dashboard and agents",
+        "type": "workspace-kit",
+        "priority": "P2",
+        "phaseKey": "120",
+        "phase": "Phase 120",
+        "approach": "SSE or local IPC stream for dashboard.slice.updated, task-sync.status.changed, and reconnect after restart.",
+        "technicalScope": [
+          "src/services/**",
+          "extensions/cursor-workflow-cannon/src/runtime/**"
+        ],
+        "acceptanceCriteria": [
+          "Dashboard receives slice updates without manual refresh",
+          "Event stream reconnects after service restart"
+        ],
+        "dependsOn": [],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-P2-107",
+      "path": "2.7",
+      "title": "Update closeout and delivery gates for service mode",
+      "goalMapping": [
+        "Phase 2: local runtime service owns dashboard reads and sync worker",
+        "Multi-agent parallel work with explicit sync posture and conflict handling"
+      ],
+      "suggestedTaskTitle": "Update closeout and delivery gates for service mode",
+      "approach": "phase-delivery-preflight checks service health, drained outbox, fresh projection, and conflict rows.",
+      "technicalScope": [
+        "src/modules/task-engine/**",
+        ".ai/playbooks/phase-closeout-and-release.md"
+      ],
+      "acceptanceCriteria": [
+        "Preflight fails or warns when outbox not drained",
+        "Closeout playbook includes service sync gate"
+      ],
+      "testingVerification": [
+        "Preflight output tests",
+        "Playbook doc review"
+      ],
+      "dependsOn": [
+        "WBS-P2-105",
+        "WBS-P1-007"
+      ],
+      "recommendedPhase": "120",
+      "sizingConfidence": "high",
+      "doneMeans": "T-BE-107 complete — closeout gates service-aware; operators can verify via CLI or dashboard evidence",
+      "generatedTaskPayload": {
+        "title": "Update closeout and delivery gates for service mode",
+        "type": "workspace-kit",
+        "priority": "P2",
+        "phaseKey": "120",
+        "phase": "Phase 120",
+        "approach": "phase-delivery-preflight checks service health, drained outbox, fresh projection, and conflict rows.",
+        "technicalScope": [
+          "src/modules/task-engine/**",
+          ".ai/playbooks/phase-closeout-and-release.md"
+        ],
+        "acceptanceCriteria": [
+          "Preflight fails or warns when outbox not drained",
+          "Closeout playbook includes service sync gate"
+        ],
+        "dependsOn": [],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-P3-201",
+      "path": "3.1",
+      "title": "Define canonical sync backend interface",
+      "goalMapping": [
+        "Phase 3: pluggable CanonicalStateSyncBackend with Git as one adapter",
+        "Multi-agent parallel work with explicit sync posture and conflict handling"
+      ],
+      "suggestedTaskTitle": "Define canonical sync backend interface",
+      "approach": "CanonicalStateSyncBackend interface covering readHead, fetchEvents, publishEvents, verify, compact, snapshot.",
+      "technicalScope": [
+        "src/modules/task-engine/sync-backends/**",
+        "src/contracts/task-sync-*.ts"
+      ],
+      "acceptanceCriteria": [
+        "Interface covers current Git backend needs",
+        "Generic types avoid Git-specific concepts"
+      ],
+      "testingVerification": [
+        "Type tests",
+        "Git method compatibility note"
+      ],
+      "dependsOn": [
+        "WBS-P2-105"
+      ],
+      "recommendedPhase": "121",
+      "sizingConfidence": "high",
+      "doneMeans": "T-BE-201 complete — backend interface defined; operators can verify via CLI or dashboard evidence",
+      "generatedTaskPayload": {
+        "title": "Define canonical sync backend interface",
+        "type": "workspace-kit",
+        "priority": "P1",
+        "phaseKey": "121",
+        "phase": "Phase 121",
+        "approach": "CanonicalStateSyncBackend interface covering readHead, fetchEvents, publishEvents, verify, compact, snapshot.",
+        "technicalScope": [
+          "src/modules/task-engine/sync-backends/**",
+          "src/contracts/task-sync-*.ts"
+        ],
+        "acceptanceCriteria": [
+          "Interface covers current Git backend needs",
+          "Generic types avoid Git-specific concepts"
+        ],
+        "dependsOn": [],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-P3-202",
+      "path": "3.2",
+      "title": "Wrap Git implementation as GitEventLogBackend",
+      "goalMapping": [
+        "Phase 3: pluggable CanonicalStateSyncBackend with Git as one adapter"
+      ],
+      "suggestedTaskTitle": "Wrap Git implementation as GitEventLogBackend",
+      "approach": "Adapt publishTaskStateEvents, hydrate, status, verify, snapshots behind GitEventLogBackend.",
+      "technicalScope": [
+        "src/modules/task-engine/sync-backends/**",
+        "src/modules/task-engine/task-state-git/**"
+      ],
+      "acceptanceCriteria": [
+        "Existing CLI commands behave the same",
+        "Service and outbox call backend interface"
+      ],
+      "testingVerification": [
+        "Full test suite",
+        "Command output parity"
+      ],
+      "dependsOn": [
+        "WBS-P3-201"
+      ],
+      "recommendedPhase": "121",
+      "sizingConfidence": "medium",
+      "doneMeans": "T-BE-202 complete — Git backend wrapped; operators can verify via CLI or dashboard evidence",
+      "generatedTaskPayload": {
+        "title": "Wrap Git implementation as GitEventLogBackend",
+        "type": "workspace-kit",
+        "priority": "P1",
+        "phaseKey": "121",
+        "phase": "Phase 121",
+        "approach": "Adapt publishTaskStateEvents, hydrate, status, verify, snapshots behind GitEventLogBackend.",
+        "technicalScope": [
+          "src/modules/task-engine/sync-backends/**",
+          "src/modules/task-engine/task-state-git/**"
+        ],
+        "acceptanceCriteria": [
+          "Existing CLI commands behave the same",
+          "Service and outbox call backend interface"
+        ],
+        "dependsOn": [],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-P3-203",
+      "path": "3.3",
+      "title": "Add backend selection config",
+      "goalMapping": [
+        "Phase 3: pluggable CanonicalStateSyncBackend with Git as one adapter"
+      ],
+      "suggestedTaskTitle": "Add backend selection config",
+      "approach": "canonicalBackend config with git-event-log compatibility mapping; doctor and dashboard report active backend.",
+      "technicalScope": [
+        "src/core/config-registry.json",
+        "src/modules/task-engine/persistence/**"
+      ],
+      "acceptanceCriteria": [
+        "Existing tasks.canonicalAuthority config still works",
+        "Doctor reports active backend"
+      ],
+      "testingVerification": [
+        "Config compat tests",
+        "Doctor output sample"
+      ],
+      "dependsOn": [
+        "WBS-P3-202"
+      ],
+      "recommendedPhase": "121",
+      "sizingConfidence": "high",
+      "doneMeans": "T-BE-203 complete — backend selection config; operators can verify via CLI or dashboard evidence",
+      "generatedTaskPayload": {
+        "title": "Add backend selection config",
+        "type": "workspace-kit",
+        "priority": "P2",
+        "phaseKey": "121",
+        "phase": "Phase 121",
+        "approach": "canonicalBackend config with git-event-log compatibility mapping; doctor and dashboard report active backend.",
+        "technicalScope": [
+          "src/core/config-registry.json",
+          "src/modules/task-engine/persistence/**"
+        ],
+        "acceptanceCriteria": [
+          "Existing tasks.canonicalAuthority config still works",
+          "Doctor reports active backend"
+        ],
+        "dependsOn": [],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-P3-204",
+      "path": "3.4",
+      "title": "Add LocalOnlyBackend",
+      "goalMapping": [
+        "Phase 3: pluggable CanonicalStateSyncBackend with Git as one adapter"
+      ],
+      "suggestedTaskTitle": "Add LocalOnlyBackend",
+      "approach": "Local-only canonical events for tests, offline mode, and demos without Git repository.",
+      "technicalScope": [
+        "src/modules/task-engine/sync-backends/**",
+        "test/**"
+      ],
+      "acceptanceCriteria": [
+        "No Git repository required",
+        "Status clearly says local-only",
+        "Closeout warns when remote publication expected"
+      ],
+      "testingVerification": [
+        "Non-git workspace test",
+        "Mutation test"
+      ],
+      "dependsOn": [
+        "WBS-P3-201"
+      ],
+      "recommendedPhase": "121",
+      "sizingConfidence": "medium",
+      "doneMeans": "T-BE-204 complete — LocalOnlyBackend shipping; operators can verify via CLI or dashboard evidence",
+      "generatedTaskPayload": {
+        "title": "Add LocalOnlyBackend",
+        "type": "workspace-kit",
+        "priority": "P2",
+        "phaseKey": "121",
+        "phase": "Phase 121",
+        "approach": "Local-only canonical events for tests, offline mode, and demos without Git repository.",
+        "technicalScope": [
+          "src/modules/task-engine/sync-backends/**",
+          "test/**"
+        ],
+        "acceptanceCriteria": [
+          "No Git repository required",
+          "Status clearly says local-only",
+          "Closeout warns when remote publication expected"
+        ],
+        "dependsOn": [],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-P3-205",
+      "path": "3.5",
+      "title": "Design HostedApiBackend contract",
+      "goalMapping": [
+        "Phase 3: pluggable CanonicalStateSyncBackend with Git as one adapter"
+      ],
+      "suggestedTaskTitle": "Design HostedApiBackend contract",
+      "approach": "Design hosted API for publish/fetch/head/snapshots with auth, idempotency, and conflict semantics.",
+      "technicalScope": [
+        ".ai/adrs/**",
+        "src/contracts/**"
+      ],
+      "acceptanceCriteria": [
+        "Design supports current Git semantics and batching",
+        "Privacy and security notes included"
+      ],
+      "testingVerification": [
+        "ADR or design doc review",
+        "Example payloads",
+        "Unit and integration tests in CI"
+      ],
+      "dependsOn": [
+        "WBS-P3-201"
+      ],
+      "recommendedPhase": "121",
+      "sizingConfidence": "medium",
+      "doneMeans": "T-BE-205 complete — hosted backend design approved; operators can verify via CLI or dashboard evidence",
+      "generatedTaskPayload": {
+        "title": "Design HostedApiBackend contract",
+        "type": "workspace-kit",
+        "priority": "P3",
+        "phaseKey": "121",
+        "phase": "Phase 121",
+        "approach": "Design hosted API for publish/fetch/head/snapshots with auth, idempotency, and conflict semantics.",
+        "technicalScope": [
+          ".ai/adrs/**",
+          "src/contracts/**"
+        ],
+        "acceptanceCriteria": [
+          "Design supports current Git semantics and batching",
+          "Privacy and security notes included"
+        ],
+        "dependsOn": [],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-P3-206",
+      "path": "3.6",
+      "title": "Add backend conformance test suite",
+      "goalMapping": [
+        "Phase 3: pluggable CanonicalStateSyncBackend with Git as one adapter",
+        "Multi-agent parallel work with explicit sync posture and conflict handling"
+      ],
+      "suggestedTaskTitle": "Add backend conformance test suite",
+      "approach": "Shared harness: read head, publish batch, fetch, stale version reject, idempotent retry, conflict, recovery.",
+      "technicalScope": [
+        "test/*backend*",
+        "src/modules/task-engine/sync-backends/**"
+      ],
+      "acceptanceCriteria": [
+        "Git backend passes harness",
+        "LocalOnly backend passes harness"
+      ],
+      "testingVerification": [
+        "Conformance test output in CI"
+      ],
+      "dependsOn": [
+        "WBS-P3-202",
+        "WBS-P3-204"
+      ],
+      "recommendedPhase": "121",
+      "sizingConfidence": "high",
+      "doneMeans": "T-BE-206 complete — conformance harness green; operators can verify via CLI or dashboard evidence",
+      "generatedTaskPayload": {
+        "title": "Add backend conformance test suite",
+        "type": "workspace-kit",
+        "priority": "P2",
+        "phaseKey": "121",
+        "phase": "Phase 121",
+        "approach": "Shared harness: read head, publish batch, fetch, stale version reject, idempotent retry, conflict, recovery.",
+        "technicalScope": [
+          "test/*backend*",
+          "src/modules/task-engine/sync-backends/**"
+        ],
+        "acceptanceCriteria": [
+          "Git backend passes harness",
+          "LocalOnly backend passes harness"
+        ],
+        "dependsOn": [],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-P3-207",
+      "path": "3.7",
+      "title": "Migrate command surfaces to backend-neutral names",
+      "goalMapping": [
+        "Phase 3: pluggable CanonicalStateSyncBackend with Git as one adapter"
+      ],
+      "suggestedTaskTitle": "Migrate command surfaces to backend-neutral names",
+      "approach": "Add task-sync-* commands as preferred aliases; keep task-state-* as recovery aliases; update agent CLI map.",
+      "technicalScope": [
+        "src/modules/task-engine/instructions/**",
+        ".ai/AGENT-CLI-MAP.md"
+      ],
+      "acceptanceCriteria": [
+        "Old commands continue working",
+        "Agent playbooks use backend-neutral names"
+      ],
+      "testingVerification": [
+        "Command schema snippets",
+        "Docs generation parity",
+        "Unit and integration tests in CI"
+      ],
+      "dependsOn": [
+        "WBS-P3-202"
+      ],
+      "recommendedPhase": "121",
+      "sizingConfidence": "medium",
+      "doneMeans": "T-BE-207 complete — backend-neutral CLI surface; operators can verify via CLI or dashboard evidence",
+      "generatedTaskPayload": {
+        "title": "Migrate command surfaces to backend-neutral names",
+        "type": "workspace-kit",
+        "priority": "P3",
+        "phaseKey": "121",
+        "phase": "Phase 121",
+        "approach": "Add task-sync-* commands as preferred aliases; keep task-state-* as recovery aliases; update agent CLI map.",
+        "technicalScope": [
+          "src/modules/task-engine/instructions/**",
+          ".ai/AGENT-CLI-MAP.md"
+        ],
+        "acceptanceCriteria": [
+          "Old commands continue working",
+          "Agent playbooks use backend-neutral names"
+        ],
+        "dependsOn": [],
+        "status": "proposed"
+      }
+    }
+  ],
+  "phaseRecommendations": [
+    {
+      "phaseKey": "119",
+      "label": "Phase 119",
+      "rationale": "Phase 1 — Local-first outbox + background Git sync (T-BE-001–007)",
+      "isPrimary": true
+    },
+    {
+      "phaseKey": "120",
+      "label": "Phase 120",
+      "rationale": "Phase 2 — Local runtime service for dashboard and sync (T-BE-101–107)",
+      "isPrimary": false
+    },
+    {
+      "phaseKey": "121",
+      "label": "Phase 121",
+      "rationale": "Phase 3 — Pluggable remote backend abstraction (T-BE-201–207)",
+      "isPrimary": false
+    }
+  ],
+  "provenance": {
+    "createdAt": "2026-05-30T05:13:49.229Z",
+    "updatedAt": "2026-05-30T05:13:52.226Z",
+    "createdBy": "agent@workflow-cannon",
+    "source": "draft-plan-artifact",
+    "chatSessionRef": "backend-md-planner-import"
+  },
+  "version": 4
+}

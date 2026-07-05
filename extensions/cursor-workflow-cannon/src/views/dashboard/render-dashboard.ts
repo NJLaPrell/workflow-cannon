@@ -2494,11 +2494,10 @@ function renderIdeaBrainstormPlanButtons(planRef: string, unifiedModelEnabled: b
   const refAttrs = planRef.length > 0 ? ` data-plan-ref="${escapeHtmlAttr(planRef)}"` : "";
   const brainstormBtn = ideaPlanButton("Brainstorm", "idea-brainstorm", refAttrs, {
     secondary: true,
-    disabled: planRef.length === 0,
     title:
       planRef.length > 0
         ? "Start or append a brainstorm session on the unified IdeaPlan document"
-        : "No unified IdeaPlan document is linked yet. Link or create one before brainstorming."
+        : "Start a brainstorm session (creates a new IdeaPlan document)"
   });
   const planBtn = ideaPlanButton("Plan", "idea-plan", "", {
     title: "Skip brainstorming and start planning (start-idea-planning)"

@@ -233,8 +233,8 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
   function submitIdeaBrainstorm(row, trigger) {
     if (!row) return;
     var ideaId = (row.getAttribute('data-wc-idea-id') || '').trim();
+    if (!ideaId) return;
     var planRef = trigger && trigger.getAttribute ? (trigger.getAttribute('data-plan-ref') || '').trim() : '';
-    if (!planRef) return;
     var brainstormBtn = row.querySelector('[data-wc-action="idea-brainstorm"]');
     if (brainstormBtn && brainstormBtn.disabled) return;
     setIdeaRowBusy(row, true, 'Opening...');

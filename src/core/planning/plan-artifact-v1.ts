@@ -1,7 +1,6 @@
 /**
  * PlanArtifact v1 — structured planning document types.
  *
- * Field-level spec: repo-root `PLANNER_SCHEMA.md` (A-SCHEMA).
  * JSON Schema (WP-1.2): `schemas/planning/plan-artifact.v1.schema.json`.
  */
 
@@ -29,7 +28,7 @@ export type PlanArtifactPlanningType =
   | "new-feature"
   | "change";
 
-/** Review rubric profile selection (see PLANNER_SCHEMA.md §3). */
+/** Review rubric profile selection. */
 export type PlanArtifactReviewProfile = "minimal" | "refactor" | "full-feature" | "sprint-phase";
 
 export type PlanArtifactConfidence = "high" | "medium" | "low";

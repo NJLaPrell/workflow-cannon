@@ -7,7 +7,7 @@
 
 **Unified document model:** A single **IdeaPlan document** (`planRef` like `plan-artifact:<planId>`) traces an idea from inception through brainstorming, planning, review, acceptance, and delivery. Planner-chat operates on the **`plan` section** inside that document when `status` is `planning` (or later states). Per-state behavior is prescribed by each state's schema **`agentDirective`** — agents read [`schemas/ideas/states/planning.schema.json`](../../schemas/ideas/states/planning.schema.json) for planning-state questions; this playbook sequences the chat workflow on top of those contracts.
 
-**Does not replace:** [`PLANNER_SCHEMA.md`](../../PLANNER_SCHEMA.md) (plan-section field contract), per-state schemas under [`schemas/ideas/states/`](../../schemas/ideas/states/), [`PLANNER_COMMANDS.md`](../../PLANNER_COMMANDS.md), [`POLICY-APPROVAL.md`](../POLICY-APPROVAL.md), or task-engine delivery playbooks. For brainstorming before planning, attach [`.ai/playbooks/brainstorm-session.md`](./brainstorm-session.md).
+**Does not replace:** per-state schemas under [`schemas/ideas/states/`](../../schemas/ideas/states/), [`POLICY-APPROVAL.md`](../POLICY-APPROVAL.md), or task-engine delivery playbooks. For brainstorming before planning, attach [`.ai/playbooks/brainstorm-session.md`](./brainstorm-session.md).
 
 ## 0) Bootstrap
 
@@ -41,7 +41,7 @@ Stop after each question. Do not stack a survey unless the operator asks for a f
 
 ## 2) Draft Plan Content
 
-1. Build plan-section content that satisfies [`PLANNER_SCHEMA.md`](../../PLANNER_SCHEMA.md) (embedded in the unified IdeaPlan document). Prefer the smallest coherent plan that can become executable work.
+1. Build plan-section content that satisfies [`schemas/planning/plan-artifact.v1.schema.json`](../../schemas/planning/plan-artifact.v1.schema.json) (embedded in the unified IdeaPlan document). Prefer the smallest coherent plan that can become executable work.
 2. **Default planning profile:** `minimal`. Set `identity.planningType` to `"minimal"` when unspecified. The agent may recommend `refactor` or `full-feature`; the operator may override before acceptance.
 3. Include provenance:
    - `source: "planner-chat"` for chat-originated drafts.
@@ -125,7 +125,7 @@ A planner-chat run is complete when:
 - Ideas commands: [`src/modules/ideas/instructions`](../../src/modules/ideas/instructions)
 - Unified IdeaPlan per-state schemas: [`schemas/ideas/states/`](../../schemas/ideas/states/)
 - Planning state agentDirective: [`schemas/ideas/states/planning.schema.json`](../../schemas/ideas/states/planning.schema.json)
-- Plan section field contract: [`PLANNER_SCHEMA.md`](../../PLANNER_SCHEMA.md)
+- Plan section field contract: [`schemas/planning/plan-artifact.v1.schema.json`](../../schemas/planning/plan-artifact.v1.schema.json)
 - Brainstorm handoff: [`.ai/playbooks/brainstorm-session.md`](./brainstorm-session.md)
-- Planner commands: [`PLANNER_COMMANDS.md`](../../PLANNER_COMMANDS.md)
+- Planner commands: `wk run <cmd> --schema-only` for arg shapes
 - Delivery loop for generated execution tasks: [`task-to-phase-branch.md`](./task-to-phase-branch.md)

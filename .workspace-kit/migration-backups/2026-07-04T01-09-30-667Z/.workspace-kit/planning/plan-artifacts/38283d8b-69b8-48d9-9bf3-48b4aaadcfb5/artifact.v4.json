@@ -1,0 +1,1874 @@
+{
+  "schemaVersion": 1,
+  "planId": "38283d8b-69b8-48d9-9bf3-48b4aaadcfb5",
+  "planRef": "plan-artifact:38283d8b-69b8-48d9-9bf3-48b4aaadcfb5",
+  "status": "draft",
+  "identity": {
+    "title": "Workflow Cannon MCP Server, Agent Adoption, and Shared Runtime",
+    "planningType": "sprint-phase",
+    "summary": "Add a read-first Model Context Protocol access layer for Workflow Cannon packets, CAE guidance, memory, resources, and prompts while preserving the CLI as the default mutation and execution path. Phase 134 covers read-only MCP, agent adoption, and integration hardening; Phase 135 moves CLI and MCP onto a shared command runtime; later work can expose selected mutation tools behind policy controls.",
+    "tags": [
+      "mcp",
+      "agent-adoption",
+      "shared-runtime",
+      "phase-134",
+      "phase-135"
+    ]
+  },
+  "goals": [
+    "Deliver read-only MCP access for high-value Workflow Cannon context packets.",
+    "Teach agents to prefer MCP for read and context flows while preserving CLI for mutation and policy-gated work.",
+    "Harden MCP with audit logging, trust boundaries, freshness metadata, bounded output, schema policy, and prompt-injection controls.",
+    "Make MCP setup, status, fallback, and platform instructions visible to operators and agent hosts.",
+    "Move CLI and MCP toward one shared command runtime with adapter parity tests.",
+    "Prepare selected MCP mutation tools only after shared runtime, audit, and policy controls are proven."
+  ],
+  "nonGoals": [
+    "Replace the Workflow Cannon CLI.",
+    "Expose mutation tools by default in Phase 134.",
+    "Bypass Workflow Cannon policy approval, task lifecycle, assignment lifecycle, release gates, git/package safety, publish safeguards, workspace trust, or path boundaries.",
+    "Treat MCP memory or static resources as current-state truth unless a live tool result explicitly proves freshness.",
+    "Build a second implementation of command behavior for MCP."
+  ],
+  "userStories": [
+    {
+      "id": "US-1",
+      "asA": "agent running in Cursor, Claude, OpenAI, VS Code, or a future host",
+      "iWant": "a structured MCP startup and capabilities surface",
+      "soThat": "I can choose the right Workflow Cannon read/context tool without broad file discovery.",
+      "priority": "must"
+    },
+    {
+      "id": "US-2",
+      "asA": "maintainer",
+      "iWant": "the CLI to remain the canonical mutation and release automation surface",
+      "soThat": "MCP adoption does not weaken policy, audit, or deterministic behavior.",
+      "priority": "must"
+    },
+    {
+      "id": "US-3",
+      "asA": "operator",
+      "iWant": "dashboard and setup affordances showing MCP availability and fallback mode",
+      "soThat": "agents launched from the dashboard receive accurate guidance.",
+      "priority": "should"
+    },
+    {
+      "id": "US-4",
+      "asA": "platform integrator",
+      "iWant": "stable tool descriptions, schemas, freshness metadata, and output budgets",
+      "soThat": "agent hosts can consume Workflow Cannon safely and predictably.",
+      "priority": "must"
+    }
+  ],
+  "valueAssessment": {
+    "impact": "High - portable structured agent access reduces context bloat, narrows runbook discovery, and gives multiple agent hosts a common Workflow Cannon integration surface.",
+    "confidence": "medium",
+    "rationale": "The plan has a detailed staged breakdown, but depends on Phase 131 packet command corrections, Phase 132 simulation harness work, and Phase 133 memory readiness for the full read-only surface."
+  },
+  "riskAssessment": [
+    {
+      "id": "R1",
+      "description": "MCP becomes a second command implementation that drifts from CLI behavior.",
+      "severity": "high",
+      "mitigation": "Start with wrappers and move to a shared CommandRegistry runtime in Phase 135; add adapter parity tests."
+    },
+    {
+      "id": "R2",
+      "description": "Agents treat MCP resources or memory recall as authoritative current state.",
+      "severity": "high",
+      "mitigation": "Require freshness metadata, cache policy, source/confidence markers, and explicit non-authoritative memory labeling."
+    },
+    {
+      "id": "R3",
+      "description": "MCP exposes unsafe workspace paths, secrets, prompts, or mutation behavior.",
+      "severity": "high",
+      "mitigation": "Default read-only, enforce workspace trust and path boundaries, redact audit logs, and keep mutation tools disabled until later policy-controlled work."
+    },
+    {
+      "id": "R4",
+      "description": "Tool outputs become a new context-bloat path.",
+      "severity": "medium",
+      "mitigation": "Apply per-tool budgets, bounded summaries, expansion refs, and compact descriptions."
+    }
+  ],
+  "technicalImpact": {
+    "systemsTouched": [
+      "src/modules/task-engine packet/read commands",
+      "src/modules/context-activation CAE guidance",
+      "src/modules/project-memory",
+      "CLI command registry/runtime",
+      "Dashboard prompt/status surfaces",
+      "agent instruction projections",
+      "user simulation harness",
+      "schemas and command manifests",
+      "workspace trust/path boundary enforcement",
+      "audit logging"
+    ],
+    "compatibilityNotes": "CLI remains essential for humans, CI, scripts, local debugging, shell workflows, release automation, non-MCP hosts, and all default mutation/execution work.",
+    "migrationImpact": "Phase 134 should not break existing CLI flows. Phase 135 refactors adapter internals but must preserve CLI behavior and response contracts."
+  },
+  "architecture": {
+    "overview": "Workflow Cannon should converge on one canonical command/runtime core with CLI, MCP, Dashboard, and future HTTP or automation adapters layered over it. Phase 134 can wrap existing handlers or CLI execution where necessary for read-only tools. Phase 135 should define and adopt a shared CommandRegistry runtime so adapters do not duplicate behavior.",
+    "decisions": [
+      {
+        "id": "D1",
+        "decision": "MCP does not replace the CLI.",
+        "rationale": "CLI remains required for mutation, validation, git, npm publish, release automation, policy approval, and non-MCP hosts."
+      },
+      {
+        "id": "D2",
+        "decision": "Read-only MCP first; mutation tools disabled by default.",
+        "rationale": "This preserves policy and audit safety while proving the agent integration surface."
+      },
+      {
+        "id": "D3",
+        "decision": "MCP memory uses Workflow Cannon memory adapters, not third-party backends directly.",
+        "rationale": "Memory governance, source confidence, and approval state must remain under Workflow Cannon control."
+      }
+    ]
+  },
+  "uiUxDirection": {
+    "hasUiChanges": true,
+    "summary": "Dashboard and extension surfaces should show MCP availability, setup state, workspace binding, MCP-first versus CLI fallback mode, and prompt guidance that is consistent with platform instruction projections.",
+    "mockupRefs": []
+  },
+  "testingStrategy": {
+    "layers": [
+      "unit",
+      "integration",
+      "e2e-cli",
+      "dashboard",
+      "extension",
+      "harness",
+      "parity"
+    ],
+    "criticalPaths": [
+      "MCP server starts and proves workspace binding.",
+      "Read-only MCP tools return bounded, versioned, freshness-aware outputs equivalent to CLI reads.",
+      "Mutation tools remain disabled by default in Phase 134.",
+      "Workspace trust and path boundary enforcement block outside-root access.",
+      "Dashboard-launched agents receive MCP-first read/context guidance with CLI fallback.",
+      "CLI, MCP, and Dashboard adapters remain contract-compatible after shared runtime work."
+    ],
+    "outOfScopeTesting": [
+      "Remote authenticated MCP transports until transport/auth scope is explicitly approved.",
+      "Policy-gated mutation tools until later shared-runtime and audit confidence is established."
+    ]
+  },
+  "implementationGuidance": [
+    "Keep one canonical command/runtime core and treat MCP as an adapter.",
+    "Prefer MCP for read/context packet calls when available; prefer CLI for mutation, execution, validation, git, npm publish, and policyApproval-gated commands.",
+    "Include freshness metadata on every state-like MCP result and cache policy on resource-like outputs.",
+    "Give each MCP tool compact descriptions with purpose, when to use, when not to use, required args, output shape, read-only/mutation classification, CLI fallback, common mistakes, freshness behavior, and schema/tool version.",
+    "Use bounded summaries and expansion refs instead of dumping oversized outputs.",
+    "Wrap untrusted resource text as data, not instructions.",
+    "Decision applied: Gate memory recall on Phase 133 readiness and return MEMORY_BACKEND_DISABLED when memory is not safely available.",
+    "Decision applied: Keep Phase 134 MCP transport local-only and require explicit future security design for remote/network transports.",
+    "Decision applied: Prioritize Cursor, Claude, and VS Code setup docs first, with generic MCP host guidance for OpenAI/ChatGPT-style agents and future platforms.",
+    "Decision applied: When materializing tasks, Phase 134 rows should be ready; Phase 135 and later mutation rows should be proposed."
+  ],
+  "whatNotToDo": [
+    "Do not build separate MCP command implementations that drift from CLI handlers.",
+    "Do not expose mutation tools in Phase 134 by default.",
+    "Do not let MCP bypass policy approval, task lifecycle, assignment lifecycle, release gates, git/package safety, publish safeguards, workspace trust, or path boundaries.",
+    "Do not let memory recall or static resources masquerade as live task state.",
+    "Do not log secrets, full prompts, or full file dumps in MCP audit logs by default.",
+    "Do not enable remote or network MCP transports accidentally without a security design."
+  ],
+  "assumptions": [
+    "Phase 134 is the primary phase for read-only MCP server work, agent adoption, and integration hardening.",
+    "Phase 135 is the primary phase for shared command runtime cleanup.",
+    "Selected MCP mutation tools belong in a later phase unless explicitly approved earlier.",
+    "Phase 131 packet command corrections are available before packet read tools are completed.",
+    "Phase 132 user simulation harness work is available before MCP mode scenario coverage is completed.",
+    "Phase 133 memory readiness is available before memory recall becomes part of the initial MCP surface.",
+    "Decision: Include memory recall in Phase 134 only if Phase 133 is complete or safe enough; otherwise expose it as unavailable/disabled with a clear MEMORY_BACKEND_DISABLED response.",
+    "Decision: Phase 134 MCP transport scope is local-only, bound to the trusted workspace; remote/network transports are explicitly out of scope and cannot be accidentally enabled.",
+    "Decision: First-pass setup docs cover Cursor, Claude, and VS Code with generic MCP host guidance for OpenAI/ChatGPT-style and future hosts.",
+    "Decision: Operator acceptance identity is NJLaPrell@gmail.com.",
+    "Decision: Materialize all Phase 134 rows as ready tasks and Phase 135/later rows as proposed tasks."
+  ],
+  "openQuestions": [],
+  "wbs": [
+    {
+      "wbsId": "P134-T001",
+      "path": "134.1",
+      "title": "Define MCP architecture and adapter boundary",
+      "goalMapping": [
+        "Deliver read-only MCP access for high-value Workflow Cannon context packets.",
+        "Move CLI and MCP toward one shared command runtime with adapter parity tests.",
+        "US-2"
+      ],
+      "suggestedTaskTitle": "Define MCP architecture and adapter boundary",
+      "approach": "Document MCP as an adapter beside CLI and Dashboard, including read-only-first scope and mutation policy boundaries.",
+      "technicalScope": [
+        "MCP architecture notes",
+        "adapter boundary docs",
+        "CLI/MCP/Dashboard runtime direction"
+      ],
+      "acceptanceCriteria": [
+        "Architecture states MCP does not replace CLI.",
+        "Read-only-first and mutation policy are documented.",
+        "Agent adoption and integration-hardening layers are explicit."
+      ],
+      "testingVerification": [
+        "Review architecture docs and run documentation/link checks where available."
+      ],
+      "dependsOn": [],
+      "recommendedPhase": "134",
+      "recommendedOrder": 1,
+      "sizingConfidence": "medium",
+      "riskNotes": "Foundation task; many Phase 134 and Phase 135 rows depend on it.",
+      "doneMeans": "The repository has an accepted architecture boundary that prevents MCP from becoming a second command implementation.",
+      "generatedTaskPayload": {
+        "title": "Define MCP architecture and adapter boundary",
+        "type": "execution",
+        "priority": "P1",
+        "phase": "Phase 134",
+        "phaseKey": "134",
+        "approach": "Document MCP as an adapter beside CLI and Dashboard, including read-only-first scope and mutation policy boundaries.",
+        "technicalScope": [
+          "MCP architecture notes",
+          "adapter boundary docs",
+          "CLI/MCP/Dashboard runtime direction"
+        ],
+        "acceptanceCriteria": [
+          "Architecture states MCP does not replace CLI.",
+          "Read-only-first and mutation policy are documented.",
+          "Agent adoption and integration-hardening layers are explicit."
+        ],
+        "dependsOn": [],
+        "status": "ready"
+      }
+    },
+    {
+      "wbsId": "P134-T002",
+      "path": "134.2",
+      "title": "Add minimal read-only MCP server scaffold",
+      "goalMapping": [
+        "Deliver read-only MCP access for high-value Workflow Cannon context packets."
+      ],
+      "suggestedTaskTitle": "Add minimal read-only MCP server scaffold",
+      "approach": "Add a local MCP server process/module with a minimal safe surface and no broad tool exposure.",
+      "technicalScope": [
+        "MCP server module",
+        "local startup command",
+        "minimal tool registration",
+        "build/test integration"
+      ],
+      "acceptanceCriteria": [
+        "MCP server starts locally.",
+        "Server exposes only minimal safe surface.",
+        "Build and test remain green."
+      ],
+      "testingVerification": [
+        "Run server startup check and unit/integration tests for registration."
+      ],
+      "dependsOn": [
+        "P134-T001"
+      ],
+      "recommendedPhase": "134",
+      "recommendedOrder": 2,
+      "sizingConfidence": "medium",
+      "doneMeans": "A local read-only MCP server scaffold exists and can start without exposing unsafe tools.",
+      "generatedTaskPayload": {
+        "title": "Add minimal read-only MCP server scaffold",
+        "type": "execution",
+        "priority": "P1",
+        "phase": "Phase 134",
+        "phaseKey": "134",
+        "approach": "Add a local MCP server process/module with a minimal safe surface and no broad tool exposure.",
+        "technicalScope": [
+          "MCP server module",
+          "local startup command",
+          "minimal tool registration",
+          "build/test integration"
+        ],
+        "acceptanceCriteria": [
+          "MCP server starts locally.",
+          "Server exposes only minimal safe surface.",
+          "Build and test remain green."
+        ],
+        "dependsOn": [
+          "P134-T001"
+        ],
+        "status": "ready"
+      }
+    },
+    {
+      "wbsId": "P134-T003",
+      "path": "134.3",
+      "title": "Expose packet read commands as MCP tools",
+      "goalMapping": [
+        "Deliver read-only MCP access for high-value Workflow Cannon context packets.",
+        "US-1"
+      ],
+      "suggestedTaskTitle": "Expose packet read commands as MCP tools",
+      "approach": "Expose high-value read/context commands such as phase orchestration state, execution packet, reconciliation preflight, drain delta, release state, and closeout result.",
+      "technicalScope": [
+        "workflow_cannon.phase_release_orchestration_state",
+        "workflow_cannon.agent_execution_packet",
+        "workflow_cannon.assignment_reconciliation_preflight",
+        "workflow_cannon.phase_drain_delta",
+        "workflow_cannon.phase_release_state",
+        "workflow_cannon.release_closeout_result"
+      ],
+      "acceptanceCriteria": [
+        "MCP tools return equivalent structured results to CLI reads.",
+        "Explicit phaseKey is required where appropriate.",
+        "Tool outputs enforce the documented byte budget and return expansion refs when oversized.",
+        "No mutation tools are exposed."
+      ],
+      "testingVerification": [
+        "Run integration comparisons against CLI read command outputs and output-budget checks."
+      ],
+      "dependsOn": [
+        "P134-T002"
+      ],
+      "recommendedPhase": "134",
+      "recommendedOrder": 3,
+      "sizingConfidence": "low",
+      "riskNotes": "Blocked by Phase 131 packet command corrections.",
+      "doneMeans": "Core packet read commands are available through bounded read-only MCP tools with CLI-equivalent structured output.",
+      "generatedTaskPayload": {
+        "title": "Expose packet read commands as MCP tools",
+        "type": "execution",
+        "priority": "P1",
+        "phase": "Phase 134",
+        "phaseKey": "134",
+        "approach": "Expose high-value read/context commands as read-only MCP tools.",
+        "technicalScope": [
+          "MCP packet tools",
+          "CLI-equivalence mapping",
+          "phaseKey validation",
+          "output budgets"
+        ],
+        "acceptanceCriteria": [
+          "MCP tools return equivalent structured results to CLI reads.",
+          "Explicit phaseKey is required where appropriate.",
+          "Tool outputs enforce the documented byte budget and return expansion refs when oversized.",
+          "No mutation tools are exposed."
+        ],
+        "dependsOn": [
+          "P134-T002"
+        ],
+        "status": "ready"
+      }
+    },
+    {
+      "wbsId": "P134-T004",
+      "path": "134.4",
+      "title": "Expose CAE guidance and memory recall through MCP",
+      "goalMapping": [
+        "Deliver read-only MCP access for high-value Workflow Cannon context packets.",
+        "Harden MCP with audit logging, trust boundaries, freshness metadata, bounded output, schema policy, and prompt-injection controls."
+      ],
+      "suggestedTaskTitle": "Expose CAE guidance and memory recall through MCP",
+      "approach": "Add bounded CAE guidance and governed memory recall tools through Workflow Cannon adapters.",
+      "technicalScope": [
+        "workflow_cannon.cae_guidance",
+        "workflow_cannon.recall_memory",
+        "WorkflowMemory interface",
+        "source/confidence/freshness markers"
+      ],
+      "acceptanceCriteria": [
+        "CAE guidance is bounded.",
+        "Memory recall is governed and source-cited.",
+        "MCP does not bypass memory governance."
+      ],
+      "testingVerification": [
+        "Run CAE guidance tests and memory recall governance tests with disabled-backend behavior."
+      ],
+      "dependsOn": [
+        "P134-T002"
+      ],
+      "recommendedPhase": "134",
+      "recommendedOrder": 4,
+      "sizingConfidence": "medium",
+      "riskNotes": "Memory recall depends on Memory Phase 133 readiness if included.",
+      "doneMeans": "Agents can retrieve compact CAE guidance and governed memory recall through MCP without direct backend bypass.",
+      "generatedTaskPayload": {
+        "title": "Expose CAE guidance and memory recall through MCP",
+        "type": "execution",
+        "priority": "P2",
+        "phase": "Phase 134",
+        "phaseKey": "134",
+        "approach": "Add bounded CAE guidance and governed memory recall tools through Workflow Cannon adapters.",
+        "technicalScope": [
+          "workflow_cannon.cae_guidance",
+          "workflow_cannon.recall_memory",
+          "WorkflowMemory interface"
+        ],
+        "acceptanceCriteria": [
+          "CAE guidance is bounded.",
+          "Memory recall is governed and source-cited.",
+          "MCP does not bypass memory governance."
+        ],
+        "dependsOn": [
+          "P134-T002"
+        ],
+        "status": "ready"
+      }
+    },
+    {
+      "wbsId": "P134-T005",
+      "path": "134.5",
+      "title": "Add MCP audit log and security controls",
+      "goalMapping": [
+        "Harden MCP with audit logging, trust boundaries, freshness metadata, bounded output, schema policy, and prompt-injection controls."
+      ],
+      "suggestedTaskTitle": "Add MCP audit log and security controls",
+      "approach": "Add read-only defaults, allowlisted tools, rejection of unknown tools, bounded logging, and secret redaction.",
+      "technicalScope": [
+        "MCP audit log",
+        "tool allowlist",
+        "read-only defaults",
+        "secret redaction",
+        "security controls"
+      ],
+      "acceptanceCriteria": [
+        "Default MCP configuration exposes only read-only tools until mutation mode is explicitly enabled.",
+        "Unknown tools are rejected.",
+        "Each MCP call records an audit event with tool name, result classification, and redacted metadata.",
+        "Tool outputs enforce the documented byte budget and return expansion refs when oversized.",
+        "Logs redact secrets and full dumps by default."
+      ],
+      "testingVerification": [
+        "Run unit tests for audit events, unknown-tool rejection, and redaction fixtures."
+      ],
+      "dependsOn": [
+        "P134-T002"
+      ],
+      "recommendedPhase": "134",
+      "recommendedOrder": 5,
+      "sizingConfidence": "medium",
+      "doneMeans": "Every MCP call is auditable and the default server posture is safe and read-only.",
+      "generatedTaskPayload": {
+        "title": "Add MCP audit log and security controls",
+        "type": "execution",
+        "priority": "P2",
+        "phase": "Phase 134",
+        "phaseKey": "134",
+        "approach": "Add read-only defaults, allowlisted tools, rejection of unknown tools, bounded logging, and secret redaction.",
+        "technicalScope": [
+          "MCP audit log",
+          "tool allowlist",
+          "read-only defaults",
+          "secret redaction"
+        ],
+        "acceptanceCriteria": [
+          "Default MCP configuration exposes only read-only tools until mutation mode is explicitly enabled.",
+          "Unknown tools are rejected.",
+          "Each MCP call records an audit event with tool name, result classification, and redacted metadata.",
+          "Tool outputs enforce the documented byte budget and return expansion refs when oversized.",
+          "Logs redact secrets and full dumps by default."
+        ],
+        "dependsOn": [
+          "P134-T002"
+        ],
+        "status": "ready"
+      }
+    },
+    {
+      "wbsId": "P134-T006",
+      "path": "134.6",
+      "title": "Add MCP setup docs for agent platforms",
+      "goalMapping": [
+        "Teach agents to prefer MCP for read and context flows while preserving CLI for mutation and policy-gated work.",
+        "Make MCP setup, status, fallback, and platform instructions visible to operators and agent hosts.",
+        "US-3"
+      ],
+      "suggestedTaskTitle": "Add MCP setup docs for agent platforms",
+      "approach": "Document MCP vs CLI policy, setup, example calls, memory caveats, platform-specific verification, and fallback behavior.",
+      "technicalScope": [
+        "agent platform setup docs",
+        "MCP vs CLI usage policy",
+        "verification commands",
+        "fallback examples"
+      ],
+      "acceptanceCriteria": [
+        "Docs explain MCP vs CLI.",
+        "Docs include setup and example calls.",
+        "Docs warn memory is advisory.",
+        "Docs include platform-specific setup and verification."
+      ],
+      "testingVerification": [
+        "Run docs/link checks and verify documented commands against local server startup where possible."
+      ],
+      "dependsOn": [
+        "P134-T003",
+        "P134-T005",
+        "P134-T009",
+        "P134-T010",
+        "P134-T016"
+      ],
+      "recommendedPhase": "134",
+      "recommendedOrder": 12,
+      "sizingConfidence": "medium",
+      "doneMeans": "Supported agent hosts have clear setup and verification docs for MCP-first read/context use with CLI fallback.",
+      "generatedTaskPayload": {
+        "title": "Add MCP setup docs for agent platforms",
+        "type": "execution",
+        "priority": "P2",
+        "phase": "Phase 134",
+        "phaseKey": "134",
+        "approach": "Document MCP vs CLI policy, setup, example calls, memory caveats, platform-specific verification, and fallback behavior.",
+        "technicalScope": [
+          "agent platform setup docs",
+          "MCP vs CLI usage policy",
+          "verification commands",
+          "fallback examples"
+        ],
+        "acceptanceCriteria": [
+          "Docs explain MCP vs CLI.",
+          "Docs include setup and example calls.",
+          "Docs warn memory is advisory.",
+          "Docs include platform-specific setup and verification."
+        ],
+        "dependsOn": [
+          "P134-T003",
+          "P134-T005",
+          "P134-T009",
+          "P134-T010",
+          "P134-T016"
+        ],
+        "status": "ready"
+      }
+    },
+    {
+      "wbsId": "P134-T007",
+      "path": "134.7",
+      "title": "Add user simulation scenarios for MCP mode",
+      "goalMapping": [
+        "Teach agents to prefer MCP for read and context flows while preserving CLI for mutation and policy-gated work.",
+        "US-1"
+      ],
+      "suggestedTaskTitle": "Add user simulation scenarios for MCP mode",
+      "approach": "Extend the user simulation harness to compare CLI mode, MCP mode, and MCP fallback behavior.",
+      "technicalScope": [
+        "user simulation harness",
+        "MCP mode scenario",
+        "CLI fallback scenario",
+        "Complete and Release flow",
+        "PM and expert personas"
+      ],
+      "acceptanceCriteria": [
+        "Harness runs at least one Complete and Release scenario in MCP mode.",
+        "CLI and MCP modes are comparable.",
+        "MCP mode avoids broad runbook context.",
+        "Fallback behavior is tested.",
+        "PM and expert personas are covered."
+      ],
+      "testingVerification": [
+        "Run harness scenarios for CLI mode, MCP mode, and MCP unavailable fallback.; verify with applicable tests or CI checks."
+      ],
+      "dependsOn": [
+        "P134-T003",
+        "P134-T004",
+        "P134-T006",
+        "P134-T011",
+        "P134-T013",
+        "P134-T015",
+        "P134-T017"
+      ],
+      "recommendedPhase": "134",
+      "recommendedOrder": 20,
+      "sizingConfidence": "low",
+      "riskNotes": "Depends on Phase 132 harness readiness and multiple MCP adoption surfaces.",
+      "doneMeans": "Simulation evidence proves agents can use MCP mode and recover to CLI fallback without broad context loading.",
+      "generatedTaskPayload": {
+        "title": "Add user simulation scenarios for MCP mode",
+        "type": "execution",
+        "priority": "P3",
+        "phase": "Phase 134",
+        "phaseKey": "134",
+        "approach": "Extend the user simulation harness to compare CLI mode, MCP mode, and MCP fallback behavior.",
+        "technicalScope": [
+          "user simulation harness",
+          "MCP mode scenario",
+          "CLI fallback scenario"
+        ],
+        "acceptanceCriteria": [
+          "Harness runs at least one Complete and Release scenario in MCP mode.",
+          "CLI and MCP modes are comparable.",
+          "MCP mode avoids broad runbook context.",
+          "Fallback behavior is tested.",
+          "PM and expert personas are covered."
+        ],
+        "dependsOn": [
+          "P134-T003",
+          "P134-T004",
+          "P134-T006",
+          "P134-T011",
+          "P134-T013",
+          "P134-T015",
+          "P134-T017"
+        ],
+        "status": "ready"
+      }
+    },
+    {
+      "wbsId": "P134-T008",
+      "path": "134.8",
+      "title": "Design mutation-tool policy, keep disabled by default",
+      "goalMapping": [
+        "Prepare selected MCP mutation tools only after shared runtime, audit, and policy controls are proven.",
+        "US-2"
+      ],
+      "suggestedTaskTitle": "Design mutation-tool policy, keep disabled by default",
+      "approach": "Document how future MCP mutation tools can exist without bypassing CLI-equivalent policy, audit, and lifecycle controls.",
+      "technicalScope": [
+        "mutation policy",
+        "disabled-by-default config",
+        "policyApproval rules",
+        "audit requirements"
+      ],
+      "acceptanceCriteria": [
+        "Mutation policy is documented.",
+        "Tools are disabled by default.",
+        "Future guardrails are clear."
+      ],
+      "testingVerification": [
+        "Review policy docs and add config/manifest tests for disabled-by-default behavior where available."
+      ],
+      "dependsOn": [
+        "P134-T005"
+      ],
+      "recommendedPhase": "134",
+      "recommendedOrder": 18,
+      "sizingConfidence": "medium",
+      "doneMeans": "Future mutation tools have a documented safety model without enabling them in Phase 134.",
+      "generatedTaskPayload": {
+        "title": "Design mutation-tool policy, keep disabled by default",
+        "type": "execution",
+        "priority": "P3",
+        "phase": "Phase 134",
+        "phaseKey": "134",
+        "approach": "Document how future MCP mutation tools can exist without bypassing CLI-equivalent policy, audit, and lifecycle controls.",
+        "technicalScope": [
+          "mutation policy",
+          "disabled-by-default config",
+          "policyApproval rules",
+          "audit requirements"
+        ],
+        "acceptanceCriteria": [
+          "Mutation policy is documented.",
+          "Tools are disabled by default.",
+          "Future guardrails are clear."
+        ],
+        "dependsOn": [
+          "P134-T005"
+        ],
+        "status": "ready"
+      }
+    },
+    {
+      "wbsId": "P134-T009",
+      "path": "134.9",
+      "title": "Add agent MCP usage rules and fallback policy",
+      "goalMapping": [
+        "Teach agents to prefer MCP for read and context flows while preserving CLI for mutation and policy-gated work.",
+        "US-1",
+        "US-2"
+      ],
+      "suggestedTaskTitle": "Add agent MCP usage rules and fallback policy",
+      "approach": "Teach agents MCP-first for read/context, CLI-first for mutation/execution/policy work, and explicit fallback when MCP is unavailable.",
+      "technicalScope": [
+        "agent MCP usage rules",
+        "fallback policy",
+        "agent guidance projections"
+      ],
+      "acceptanceCriteria": [
+        "Agents know MCP-first for read/context.",
+        "CLI remains required for mutation/execution/policy work.",
+        "Fallback is safe and explicit."
+      ],
+      "testingVerification": [
+        "Run generated guidance checks and scenario prompt inspections."
+      ],
+      "dependsOn": [
+        "P134-T001"
+      ],
+      "recommendedPhase": "134",
+      "recommendedOrder": 6,
+      "sizingConfidence": "medium",
+      "doneMeans": "Agent-facing guidance consistently routes read/context to MCP when available and mutation/policy work to CLI.",
+      "generatedTaskPayload": {
+        "title": "Add agent MCP usage rules and fallback policy",
+        "type": "execution",
+        "priority": "P1",
+        "phase": "Phase 134",
+        "phaseKey": "134",
+        "approach": "Teach agents MCP-first for read/context, CLI-first for mutation/execution/policy work, and explicit fallback when MCP is unavailable.",
+        "technicalScope": [
+          "agent MCP usage rules",
+          "fallback policy",
+          "agent guidance projections"
+        ],
+        "acceptanceCriteria": [
+          "Agents know MCP-first for read/context.",
+          "CLI remains required for mutation/execution/policy work.",
+          "Fallback is safe and explicit."
+        ],
+        "dependsOn": [
+          "P134-T001"
+        ],
+        "status": "ready"
+      }
+    },
+    {
+      "wbsId": "P134-T010",
+      "path": "134.10",
+      "title": "Define MCP tool description and discovery contract",
+      "goalMapping": [
+        "Make MCP setup, status, fallback, and platform instructions visible to operators and agent hosts.",
+        "US-4"
+      ],
+      "suggestedTaskTitle": "Define MCP tool description and discovery contract",
+      "approach": "Define compact, agent-usable descriptions for each MCP tool with fallback commands and common mistakes.",
+      "technicalScope": [
+        "tool descriptions",
+        "discovery contract",
+        "CLI fallback strings",
+        "common mistakes",
+        "schema/tool version fields"
+      ],
+      "acceptanceCriteria": [
+        "Each MCP tool has a compact agent-usable description.",
+        "Descriptions include CLI fallback and common mistakes.",
+        "Discovery contract is stable enough for agents and tests."
+      ],
+      "testingVerification": [
+        "Run manifest/schema tests for required description fields."
+      ],
+      "dependsOn": [
+        "P134-T003",
+        "P134-T004"
+      ],
+      "recommendedPhase": "134",
+      "recommendedOrder": 8,
+      "sizingConfidence": "medium",
+      "doneMeans": "Agents can choose the right MCP tool from descriptions without extra coaching.",
+      "generatedTaskPayload": {
+        "title": "Define MCP tool description and discovery contract",
+        "type": "execution",
+        "priority": "P1",
+        "phase": "Phase 134",
+        "phaseKey": "134",
+        "approach": "Define compact, agent-usable descriptions for each MCP tool with fallback commands and common mistakes.",
+        "technicalScope": [
+          "tool descriptions",
+          "discovery contract",
+          "CLI fallback strings",
+          "common mistakes",
+          "schema/tool version fields"
+        ],
+        "acceptanceCriteria": [
+          "Each MCP tool has a compact agent-usable description.",
+          "Descriptions include CLI fallback and common mistakes.",
+          "Discovery contract is stable enough for agents and tests."
+        ],
+        "dependsOn": [
+          "P134-T003",
+          "P134-T004"
+        ],
+        "status": "ready"
+      }
+    },
+    {
+      "wbsId": "P134-T011",
+      "path": "134.11",
+      "title": "Add MCP agent bootstrap and capabilities tool",
+      "goalMapping": [
+        "Deliver read-only MCP access for high-value Workflow Cannon context packets.",
+        "Make MCP setup, status, fallback, and platform instructions visible to operators and agent hosts.",
+        "US-1"
+      ],
+      "suggestedTaskTitle": "Add MCP agent bootstrap and capabilities tool",
+      "approach": "Add agent_start and capabilities tools that describe tool availability, read-only mode, recommended next action, and CLI fallback.",
+      "technicalScope": [
+        "workflow_cannon.agent_start",
+        "workflow_cannon.capabilities",
+        "recommended next action",
+        "read-only mode reporting"
+      ],
+      "acceptanceCriteria": [
+        "agent_start and capabilities tools exist.",
+        "Complete and Release recommends phase_release_orchestration_state.",
+        "CLI fallback is included.",
+        "Tool availability and read-only mode are explicit."
+      ],
+      "testingVerification": [
+        "Run MCP startup/capabilities integration tests and snapshot output budget tests."
+      ],
+      "dependsOn": [
+        "P134-T003",
+        "P134-T010"
+      ],
+      "recommendedPhase": "134",
+      "recommendedOrder": 9,
+      "sizingConfidence": "medium",
+      "doneMeans": "Agents have one obvious first MCP call that returns compact, actionable Workflow Cannon capabilities.",
+      "generatedTaskPayload": {
+        "title": "Add MCP agent bootstrap and capabilities tool",
+        "type": "execution",
+        "priority": "P1",
+        "phase": "Phase 134",
+        "phaseKey": "134",
+        "approach": "Add agent_start and capabilities tools that describe tool availability, read-only mode, recommended next action, and CLI fallback.",
+        "technicalScope": [
+          "workflow_cannon.agent_start",
+          "workflow_cannon.capabilities",
+          "recommended next action",
+          "read-only mode reporting"
+        ],
+        "acceptanceCriteria": [
+          "agent_start and capabilities tools exist.",
+          "Complete and Release recommends phase_release_orchestration_state.",
+          "CLI fallback is included.",
+          "Tool availability and read-only mode are explicit."
+        ],
+        "dependsOn": [
+          "P134-T003",
+          "P134-T010"
+        ],
+        "status": "ready"
+      }
+    },
+    {
+      "wbsId": "P134-T012",
+      "path": "134.12",
+      "title": "Define MCP resource freshness and cache policy",
+      "goalMapping": [
+        "Harden MCP with audit logging, trust boundaries, freshness metadata, bounded output, schema policy, and prompt-injection controls.",
+        "US-4"
+      ],
+      "suggestedTaskTitle": "Define MCP resource freshness and cache policy",
+      "approach": "Define cache policy and authority rules for state-like tools and resource-like outputs.",
+      "technicalScope": [
+        "freshness contract",
+        "cachePolicy fields",
+        "validForMs fields",
+        "sourceGeneration fields",
+        "resource authority documentation"
+      ],
+      "acceptanceCriteria": [
+        "Resources disclose cache and freshness policy.",
+        "State-like resources are not authoritative without freshness metadata.",
+        "Tool/resource boundary is documented and tested."
+      ],
+      "testingVerification": [
+        "Run schema tests for freshness/cache metadata and stale-resource fixtures."
+      ],
+      "dependsOn": [
+        "P134-T004"
+      ],
+      "recommendedPhase": "134",
+      "recommendedOrder": 10,
+      "sizingConfidence": "medium",
+      "doneMeans": "Agents can tell whether MCP resource output is static, generated, live, fresh, or stale.",
+      "generatedTaskPayload": {
+        "title": "Define MCP resource freshness and cache policy",
+        "type": "execution",
+        "priority": "P2",
+        "phase": "Phase 134",
+        "phaseKey": "134",
+        "approach": "Define cache policy and authority rules for state-like tools and resource-like outputs.",
+        "technicalScope": [
+          "freshness contract",
+          "cachePolicy fields",
+          "validForMs fields",
+          "sourceGeneration fields"
+        ],
+        "acceptanceCriteria": [
+          "Resources disclose cache and freshness policy.",
+          "State-like resources are not authoritative without freshness metadata.",
+          "Tool/resource boundary is documented and tested."
+        ],
+        "dependsOn": [
+          "P134-T004"
+        ],
+        "status": "ready"
+      }
+    },
+    {
+      "wbsId": "P134-T013",
+      "path": "134.13",
+      "title": "Add MCP freshness metadata and stale-result handling",
+      "goalMapping": [
+        "Harden MCP with audit logging, trust boundaries, freshness metadata, bounded output, schema policy, and prompt-injection controls.",
+        "US-4"
+      ],
+      "suggestedTaskTitle": "Add MCP freshness metadata and stale-result handling",
+      "approach": "Add generatedAt, workspaceRoot, workspaceTrusted, task/planning generation, gitHead, and stale status to state-like MCP outputs.",
+      "technicalScope": [
+        "freshness metadata",
+        "stale result detection",
+        "taskStoreGeneration",
+        "planningGeneration",
+        "workspace trust metadata",
+        "gitHead capture"
+      ],
+      "acceptanceCriteria": [
+        "State-like results include freshness.",
+        "Stale or missing freshness is explicit.",
+        "Agents can recover using CLI fallback where appropriate."
+      ],
+      "testingVerification": [
+        "Run freshness metadata tests and stale-result fixture tests."
+      ],
+      "dependsOn": [
+        "P134-T003",
+        "P134-T005",
+        "P134-T012"
+      ],
+      "recommendedPhase": "134",
+      "recommendedOrder": 13,
+      "sizingConfidence": "medium",
+      "doneMeans": "State-like MCP results are freshness-aware and make stale context visible to agents.",
+      "generatedTaskPayload": {
+        "title": "Add MCP freshness metadata and stale-result handling",
+        "type": "execution",
+        "priority": "P2",
+        "phase": "Phase 134",
+        "phaseKey": "134",
+        "approach": "Add generatedAt, workspaceRoot, workspaceTrusted, task/planning generation, gitHead, and stale status to state-like MCP outputs.",
+        "technicalScope": [
+          "freshness metadata",
+          "stale result detection",
+          "taskStoreGeneration",
+          "planningGeneration",
+          "workspace trust metadata"
+        ],
+        "acceptanceCriteria": [
+          "State-like results include freshness.",
+          "Stale or missing freshness is explicit.",
+          "Agents can recover using CLI fallback where appropriate."
+        ],
+        "dependsOn": [
+          "P134-T003",
+          "P134-T005",
+          "P134-T012"
+        ],
+        "status": "ready"
+      }
+    },
+    {
+      "wbsId": "P134-T014",
+      "path": "134.14",
+      "title": "Add MCP tool/version/schema policy",
+      "goalMapping": [
+        "Harden MCP with audit logging, trust boundaries, freshness metadata, bounded output, schema policy, and prompt-injection controls.",
+        "US-4"
+      ],
+      "suggestedTaskTitle": "Add MCP tool/version/schema policy",
+      "approach": "Add schema and tool version metadata plus migration/deprecation policy for MCP contracts.",
+      "technicalScope": [
+        "toolVersion fields",
+        "schemaVersion fields",
+        "migration policy",
+        "deprecation policy",
+        "contract assertions"
+      ],
+      "acceptanceCriteria": [
+        "Every MCP tool output includes schema/tool version.",
+        "Migration and deprecation strategy exists.",
+        "Harnesses can assert versions."
+      ],
+      "testingVerification": [
+        "Run contract tests asserting version fields and schema compatibility."
+      ],
+      "dependsOn": [
+        "P134-T003"
+      ],
+      "recommendedPhase": "134",
+      "recommendedOrder": 11,
+      "sizingConfidence": "medium",
+      "doneMeans": "MCP contracts are versioned well enough for agents, tests, and future migrations.",
+      "generatedTaskPayload": {
+        "title": "Add MCP tool/version/schema policy",
+        "type": "execution",
+        "priority": "P2",
+        "phase": "Phase 134",
+        "phaseKey": "134",
+        "approach": "Add schema and tool version metadata plus migration/deprecation policy for MCP contracts.",
+        "technicalScope": [
+          "toolVersion fields",
+          "schemaVersion fields",
+          "migration policy",
+          "deprecation policy"
+        ],
+        "acceptanceCriteria": [
+          "Every MCP tool output includes schema/tool version.",
+          "Migration and deprecation strategy exists.",
+          "Harnesses can assert versions."
+        ],
+        "dependsOn": [
+          "P134-T003"
+        ],
+        "status": "ready"
+      }
+    },
+    {
+      "wbsId": "P134-T015",
+      "path": "134.15",
+      "title": "Update dashboard prompts for MCP-first read/context flow",
+      "goalMapping": [
+        "Teach agents to prefer MCP for read and context flows while preserving CLI for mutation and policy-gated work.",
+        "Make MCP setup, status, fallback, and platform instructions visible to operators and agent hosts.",
+        "US-3"
+      ],
+      "suggestedTaskTitle": "Update dashboard prompts for MCP-first read/context flow",
+      "approach": "Update dashboard-launched agent prompts to prefer MCP read/context flows when tools are available and include CLI fallback.",
+      "technicalScope": [
+        "dashboard prompts",
+        "Complete and Release prompt",
+        "MCP-first guidance",
+        "CLI fallback language"
+      ],
+      "acceptanceCriteria": [
+        "Complete and Release prompt directs MCP-first when available.",
+        "Prompt includes CLI fallback.",
+        "Prompt does not encourage broad runbook-first behavior."
+      ],
+      "testingVerification": [
+        "Run dashboard prompt snapshot tests and manual prompt inspection."
+      ],
+      "dependsOn": [
+        "P134-T006",
+        "P134-T009",
+        "P134-T011",
+        "P134-T013"
+      ],
+      "recommendedPhase": "134",
+      "recommendedOrder": 16,
+      "sizingConfidence": "medium",
+      "doneMeans": "Dashboard-launched agents receive MCP-first read/context instructions that match the system policy.",
+      "generatedTaskPayload": {
+        "title": "Update dashboard prompts for MCP-first read/context flow",
+        "type": "execution",
+        "priority": "P2",
+        "phase": "Phase 134",
+        "phaseKey": "134",
+        "approach": "Update dashboard-launched agent prompts to prefer MCP read/context flows when tools are available and include CLI fallback.",
+        "technicalScope": [
+          "dashboard prompts",
+          "Complete and Release prompt",
+          "MCP-first guidance",
+          "CLI fallback language"
+        ],
+        "acceptanceCriteria": [
+          "Complete and Release prompt directs MCP-first when available.",
+          "Prompt includes CLI fallback.",
+          "Prompt does not encourage broad runbook-first behavior."
+        ],
+        "dependsOn": [
+          "P134-T006",
+          "P134-T009",
+          "P134-T011",
+          "P134-T013"
+        ],
+        "status": "ready"
+      }
+    },
+    {
+      "wbsId": "P134-T016",
+      "path": "134.16",
+      "title": "Define MCP server launch and workspace binding",
+      "goalMapping": [
+        "Make MCP setup, status, fallback, and platform instructions visible to operators and agent hosts.",
+        "Harden MCP with audit logging, trust boundaries, freshness metadata, bounded output, schema policy, and prompt-injection controls."
+      ],
+      "suggestedTaskTitle": "Define MCP server launch and workspace binding",
+      "approach": "Make startup, workspace binding, multi-root behavior, and verification explicit and reliable.",
+      "technicalScope": [
+        "server launch command",
+        "workspace binding verification",
+        "multi-root behavior",
+        "setup verification docs"
+      ],
+      "acceptanceCriteria": [
+        "The MCP server starts from the documented command and returns a healthy startup response.",
+        "Server proves workspace binding.",
+        "Multiple workspace behavior is documented.",
+        "Setup docs have concrete commands."
+      ],
+      "testingVerification": [
+        "Run server launch tests and workspace binding/multi-root fixtures."
+      ],
+      "dependsOn": [
+        "P134-T002",
+        "P134-T005"
+      ],
+      "recommendedPhase": "134",
+      "recommendedOrder": 7,
+      "sizingConfidence": "medium",
+      "doneMeans": "MCP startup reliably binds to the intended trusted workspace and exposes verifiable status.",
+      "generatedTaskPayload": {
+        "title": "Define MCP server launch and workspace binding",
+        "type": "execution",
+        "priority": "P1",
+        "phase": "Phase 134",
+        "phaseKey": "134",
+        "approach": "Make startup, workspace binding, multi-root behavior, and verification explicit and reliable.",
+        "technicalScope": [
+          "server launch command",
+          "workspace binding verification",
+          "multi-root behavior",
+          "setup verification docs"
+        ],
+        "acceptanceCriteria": [
+          "The MCP server starts from the documented command and returns a healthy startup response.",
+          "Server proves workspace binding.",
+          "Multiple workspace behavior is documented.",
+          "Setup docs have concrete commands."
+        ],
+        "dependsOn": [
+          "P134-T002",
+          "P134-T005"
+        ],
+        "status": "ready"
+      }
+    },
+    {
+      "wbsId": "P134-T017",
+      "path": "134.17",
+      "title": "Add dashboard/extension MCP status and setup affordance",
+      "goalMapping": [
+        "Make MCP setup, status, fallback, and platform instructions visible to operators and agent hosts.",
+        "US-3"
+      ],
+      "suggestedTaskTitle": "Add dashboard/extension MCP status and setup affordance",
+      "approach": "Display MCP availability, configuration, workspace match, and active MCP-first/CLI fallback mode in dashboard or extension surfaces.",
+      "technicalScope": [
+        "dashboard MCP status",
+        "extension setup affordance",
+        "wrong-workspace state",
+        "prompt mode display"
+      ],
+      "acceptanceCriteria": [
+        "Dashboard shows MCP available, unavailable, not configured, or wrong workspace.",
+        "Dashboard shows MCP-first or CLI fallback mode.",
+        "Prompt is not misleading."
+      ],
+      "testingVerification": [
+        "Run dashboard/extension render tests for each status state."
+      ],
+      "dependsOn": [
+        "P134-T006",
+        "P134-T016"
+      ],
+      "recommendedPhase": "134",
+      "recommendedOrder": 17,
+      "sizingConfidence": "medium",
+      "doneMeans": "Operators and dashboard-launched agents can see whether MCP is available and bound to the right workspace.",
+      "generatedTaskPayload": {
+        "title": "Add dashboard/extension MCP status and setup affordance",
+        "type": "execution",
+        "priority": "P2",
+        "phase": "Phase 134",
+        "phaseKey": "134",
+        "approach": "Display MCP availability, configuration, workspace match, and active MCP-first/CLI fallback mode in dashboard or extension surfaces.",
+        "technicalScope": [
+          "dashboard MCP status",
+          "extension setup affordance",
+          "wrong-workspace state",
+          "prompt mode display"
+        ],
+        "acceptanceCriteria": [
+          "Dashboard shows MCP available, unavailable, not configured, or wrong workspace.",
+          "Dashboard shows MCP-first or CLI fallback mode.",
+          "Prompt is not misleading."
+        ],
+        "dependsOn": [
+          "P134-T006",
+          "P134-T016"
+        ],
+        "status": "ready"
+      }
+    },
+    {
+      "wbsId": "P134-T018",
+      "path": "134.18",
+      "title": "Add workspace trust, path boundary, and multi-root enforcement",
+      "goalMapping": [
+        "Harden MCP with audit logging, trust boundaries, freshness metadata, bounded output, schema policy, and prompt-injection controls."
+      ],
+      "suggestedTaskTitle": "Add workspace trust, path boundary, and multi-root enforcement",
+      "approach": "Prevent MCP from exposing files outside the trusted workspace and make multi-root behavior explicit.",
+      "technicalScope": [
+        "workspace trust checks",
+        "path boundary enforcement",
+        "multi-root tests",
+        "capability/freshness workspace metadata"
+      ],
+      "acceptanceCriteria": [
+        "MCP cannot expose files outside trusted workspace.",
+        "Multi-root behavior is explicit and tested.",
+        "Bound workspace is included in capability and freshness output."
+      ],
+      "testingVerification": [
+        "Run path traversal, wrong-root, and multi-root enforcement tests."
+      ],
+      "dependsOn": [
+        "P134-T002",
+        "P134-T005",
+        "P134-T016"
+      ],
+      "recommendedPhase": "134",
+      "recommendedOrder": 14,
+      "sizingConfidence": "medium",
+      "doneMeans": "MCP refuses untrusted or outside-workspace access and exposes binding metadata to agents.",
+      "generatedTaskPayload": {
+        "title": "Add workspace trust, path boundary, and multi-root enforcement",
+        "type": "execution",
+        "priority": "P1",
+        "phase": "Phase 134",
+        "phaseKey": "134",
+        "approach": "Prevent MCP from exposing files outside the trusted workspace and make multi-root behavior explicit.",
+        "technicalScope": [
+          "workspace trust checks",
+          "path boundary enforcement",
+          "multi-root tests",
+          "capability/freshness workspace metadata"
+        ],
+        "acceptanceCriteria": [
+          "MCP cannot expose files outside trusted workspace.",
+          "Multi-root behavior is explicit and tested.",
+          "Bound workspace is included in capability and freshness output."
+        ],
+        "dependsOn": [
+          "P134-T002",
+          "P134-T005",
+          "P134-T016"
+        ],
+        "status": "ready"
+      }
+    },
+    {
+      "wbsId": "P134-T019",
+      "path": "134.19",
+      "title": "Add prompt-injection handling for MCP resources and memory",
+      "goalMapping": [
+        "Harden MCP with audit logging, trust boundaries, freshness metadata, bounded output, schema policy, and prompt-injection controls."
+      ],
+      "suggestedTaskTitle": "Add prompt-injection handling for MCP resources and memory",
+      "approach": "Mark untrusted content, separate instructions from evidence/data, and add malicious resource fixtures.",
+      "technicalScope": [
+        "untrusted content markers",
+        "resource wrapping",
+        "memory recall safety",
+        "malicious resource fixtures"
+      ],
+      "acceptanceCriteria": [
+        "Untrusted content is explicitly marked.",
+        "Instructions are separated from evidence/data.",
+        "Malicious resource fixtures do not alter tool guidance or lifecycle authority."
+      ],
+      "testingVerification": [
+        "Run prompt-injection fixture tests for resources and memory recall."
+      ],
+      "dependsOn": [
+        "P134-T004"
+      ],
+      "recommendedPhase": "134",
+      "recommendedOrder": 15,
+      "sizingConfidence": "medium",
+      "doneMeans": "MCP resources and memory outputs cannot be mistaken for authoritative instructions.",
+      "generatedTaskPayload": {
+        "title": "Add prompt-injection handling for MCP resources and memory",
+        "type": "execution",
+        "priority": "P2",
+        "phase": "Phase 134",
+        "phaseKey": "134",
+        "approach": "Mark untrusted content, separate instructions from evidence/data, and add malicious resource fixtures.",
+        "technicalScope": [
+          "untrusted content markers",
+          "resource wrapping",
+          "memory recall safety",
+          "malicious resource fixtures"
+        ],
+        "acceptanceCriteria": [
+          "Untrusted content is explicitly marked.",
+          "Instructions are separated from evidence/data.",
+          "Malicious resource fixtures do not alter tool guidance or lifecycle authority."
+        ],
+        "dependsOn": [
+          "P134-T004"
+        ],
+        "status": "ready"
+      }
+    },
+    {
+      "wbsId": "P134-T020",
+      "path": "134.20",
+      "title": "Add per-tool output budgets and expansion refs",
+      "goalMapping": [
+        "Harden MCP with audit logging, trust boundaries, freshness metadata, bounded output, schema policy, and prompt-injection controls.",
+        "US-4"
+      ],
+      "suggestedTaskTitle": "Add per-tool output budgets and expansion refs",
+      "approach": "Apply explicit output budgets for every MCP tool/resource and return bounded summaries with expansion refs for oversized data.",
+      "technicalScope": [
+        "output budgets",
+        "bounded summaries",
+        "expansion refs",
+        "oversized-result handling"
+      ],
+      "acceptanceCriteria": [
+        "Every MCP tool/resource has explicit budget.",
+        "Oversized results are summarized.",
+        "Expansion refs are provided."
+      ],
+      "testingVerification": [
+        "Run output-budget tests for each tool and resource class."
+      ],
+      "dependsOn": [
+        "P134-T003",
+        "P134-T010"
+      ],
+      "recommendedPhase": "134",
+      "recommendedOrder": 19,
+      "sizingConfidence": "medium",
+      "doneMeans": "MCP cannot become a context dump path because every output has a bounded budget and expansion path.",
+      "generatedTaskPayload": {
+        "title": "Add per-tool output budgets and expansion refs",
+        "type": "execution",
+        "priority": "P2",
+        "phase": "Phase 134",
+        "phaseKey": "134",
+        "approach": "Apply explicit output budgets for every MCP tool/resource and return bounded summaries with expansion refs for oversized data.",
+        "technicalScope": [
+          "output budgets",
+          "bounded summaries",
+          "expansion refs",
+          "oversized-result handling"
+        ],
+        "acceptanceCriteria": [
+          "Every MCP tool/resource has explicit budget.",
+          "Oversized results are summarized.",
+          "Expansion refs are provided."
+        ],
+        "dependsOn": [
+          "P134-T003",
+          "P134-T010"
+        ],
+        "status": "ready"
+      }
+    },
+    {
+      "wbsId": "P134-T021",
+      "path": "134.21",
+      "title": "Define schema source-of-truth and generation pipeline",
+      "goalMapping": [
+        "Harden MCP with audit logging, trust boundaries, freshness metadata, bounded output, schema policy, and prompt-injection controls.",
+        "Move CLI and MCP toward one shared command runtime with adapter parity tests.",
+        "US-4"
+      ],
+      "suggestedTaskTitle": "Define schema source-of-truth and generation pipeline",
+      "approach": "Prevent drift between TypeScript contracts, JSON schemas, CLI args, MCP schemas, and manifests.",
+      "technicalScope": [
+        "schema generation pipeline",
+        "TypeScript contracts",
+        "JSON schemas",
+        "CLI args",
+        "MCP tool schemas",
+        "manifests"
+      ],
+      "acceptanceCriteria": [
+        "MCP schemas are not hand-maintained duplicates.",
+        "Schema drift is caught by tests.",
+        "CLI/MCP/dashboard adapters agree on command shape."
+      ],
+      "testingVerification": [
+        "Run schema-generation and drift-detection tests."
+      ],
+      "dependsOn": [
+        "P134-T003",
+        "P134-T014"
+      ],
+      "recommendedPhase": "134",
+      "recommendedOrder": 21,
+      "sizingConfidence": "medium",
+      "doneMeans": "Schema contracts are generated or verified from a single source of truth across adapters.",
+      "generatedTaskPayload": {
+        "title": "Define schema source-of-truth and generation pipeline",
+        "type": "execution",
+        "priority": "P2",
+        "phase": "Phase 134",
+        "phaseKey": "134",
+        "approach": "Prevent drift between TypeScript contracts, JSON schemas, CLI args, MCP schemas, and manifests.",
+        "technicalScope": [
+          "schema generation pipeline",
+          "TypeScript contracts",
+          "JSON schemas",
+          "CLI args",
+          "MCP tool schemas",
+          "manifests"
+        ],
+        "acceptanceCriteria": [
+          "MCP schemas are not hand-maintained duplicates.",
+          "Schema drift is caught by tests.",
+          "CLI/MCP/dashboard adapters agree on command shape."
+        ],
+        "dependsOn": [
+          "P134-T003",
+          "P134-T014"
+        ],
+        "status": "ready"
+      }
+    },
+    {
+      "wbsId": "P134-T022",
+      "path": "134.22",
+      "title": "Add privacy-safe logging and redaction rules",
+      "goalMapping": [
+        "Harden MCP with audit logging, trust boundaries, freshness metadata, bounded output, schema policy, and prompt-injection controls."
+      ],
+      "suggestedTaskTitle": "Add privacy-safe logging and redaction rules",
+      "approach": "Make audit logs useful while omitting secrets, full prompts, and full file content by default.",
+      "technicalScope": [
+        "audit redaction",
+        "privacy-safe logging",
+        "debug logging controls",
+        "redaction tests"
+      ],
+      "acceptanceCriteria": [
+        "Audit logs omit secrets, full prompt dumps, and full file dumps by default.",
+        "Debug logging is explicit and bounded.",
+        "Redaction fixtures cover secrets, prompt bodies, and full file content before logging."
+      ],
+      "testingVerification": [
+        "Run redaction fixture tests covering secrets, prompts, and file content."
+      ],
+      "dependsOn": [
+        "P134-T005"
+      ],
+      "recommendedPhase": "134",
+      "recommendedOrder": 22,
+      "sizingConfidence": "medium",
+      "doneMeans": "MCP audit logs are operationally useful without leaking sensitive material by default.",
+      "generatedTaskPayload": {
+        "title": "Add privacy-safe logging and redaction rules",
+        "type": "execution",
+        "priority": "P2",
+        "phase": "Phase 134",
+        "phaseKey": "134",
+        "approach": "Make audit logs useful while omitting secrets, full prompts, and full file content by default.",
+        "technicalScope": [
+          "audit redaction",
+          "privacy-safe logging",
+          "debug logging controls",
+          "redaction tests"
+        ],
+        "acceptanceCriteria": [
+          "Audit logs omit secrets, full prompt dumps, and full file dumps by default.",
+          "Debug logging is explicit and bounded.",
+          "Redaction fixtures cover secrets, prompt bodies, and full file content before logging."
+        ],
+        "dependsOn": [
+          "P134-T005"
+        ],
+        "status": "ready"
+      }
+    },
+    {
+      "wbsId": "P134-T023",
+      "path": "134.23",
+      "title": "Align generated platform instruction projections with MCP-first policy",
+      "goalMapping": [
+        "Teach agents to prefer MCP for read and context flows while preserving CLI for mutation and policy-gated work.",
+        "Make MCP setup, status, fallback, and platform instructions visible to operators and agent hosts."
+      ],
+      "suggestedTaskTitle": "Align generated platform instruction projections with MCP-first policy",
+      "approach": "Ensure generated platform instruction files do not conflict with MCP-first read/context guidance.",
+      "technicalScope": [
+        ".cursor/rules",
+        "AGENTS-style projections",
+        "CLAUDE/Copilot-style projections",
+        "platform instruction generation"
+      ],
+      "acceptanceCriteria": [
+        "Platform instructions align with MCP-first read/context policy.",
+        "Generated instructions do not conflict with dashboard prompts.",
+        "Agents receive consistent guidance."
+      ],
+      "testingVerification": [
+        "Run instruction generation tests and diff generated projections for consistent MCP language."
+      ],
+      "dependsOn": [
+        "P134-T009"
+      ],
+      "recommendedPhase": "134",
+      "recommendedOrder": 23,
+      "sizingConfidence": "medium",
+      "doneMeans": "Generated platform instructions and dashboard prompts agree on MCP-first read/context routing.",
+      "generatedTaskPayload": {
+        "title": "Align generated platform instruction projections with MCP-first policy",
+        "type": "execution",
+        "priority": "P2",
+        "phase": "Phase 134",
+        "phaseKey": "134",
+        "approach": "Ensure generated platform instruction files do not conflict with MCP-first read/context guidance.",
+        "technicalScope": [
+          ".cursor/rules",
+          "AGENTS-style projections",
+          "CLAUDE/Copilot-style projections",
+          "platform instruction generation"
+        ],
+        "acceptanceCriteria": [
+          "Platform instructions align with MCP-first read/context policy.",
+          "Generated instructions do not conflict with dashboard prompts.",
+          "Agents receive consistent guidance."
+        ],
+        "dependsOn": [
+          "P134-T009"
+        ],
+        "status": "ready"
+      }
+    },
+    {
+      "wbsId": "P134-T024",
+      "path": "134.24",
+      "title": "Decide remote transport/auth non-goals for Phase 134",
+      "goalMapping": [
+        "Harden MCP with audit logging, trust boundaries, freshness metadata, bounded output, schema policy, and prompt-injection controls.",
+        "Prepare selected MCP mutation tools only after shared runtime, audit, and policy controls are proven."
+      ],
+      "suggestedTaskTitle": "Decide remote transport/auth non-goals for Phase 134",
+      "approach": "Document supported local transport scope and prevent accidental unauthenticated remote MCP enablement.",
+      "technicalScope": [
+        "transport scope",
+        "auth non-goals",
+        "remote transport safeguards",
+        "setup docs alignment"
+      ],
+      "acceptanceCriteria": [
+        "Transport scope is explicit.",
+        "Remote/network transports cannot be accidentally enabled without security design.",
+        "Docs match supported transports."
+      ],
+      "testingVerification": [
+        "Run config tests proving remote transports are disabled unless explicitly supported."
+      ],
+      "dependsOn": [
+        "P134-T016"
+      ],
+      "recommendedPhase": "134",
+      "recommendedOrder": 24,
+      "sizingConfidence": "medium",
+      "doneMeans": "Phase 134 has an explicit transport/auth boundary that prevents unsafe scope creep.",
+      "generatedTaskPayload": {
+        "title": "Decide remote transport/auth non-goals for Phase 134",
+        "type": "execution",
+        "priority": "P2",
+        "phase": "Phase 134",
+        "phaseKey": "134",
+        "approach": "Document supported local transport scope and prevent accidental unauthenticated remote MCP enablement.",
+        "technicalScope": [
+          "transport scope",
+          "auth non-goals",
+          "remote transport safeguards",
+          "setup docs alignment"
+        ],
+        "acceptanceCriteria": [
+          "Transport scope is explicit.",
+          "Remote/network transports cannot be accidentally enabled without security design.",
+          "Docs match supported transports."
+        ],
+        "dependsOn": [
+          "P134-T016"
+        ],
+        "status": "ready"
+      }
+    },
+    {
+      "wbsId": "P135-T001",
+      "path": "135.1",
+      "title": "Define shared CommandRegistry runtime",
+      "goalMapping": [
+        "Move CLI and MCP toward one shared command runtime with adapter parity tests.",
+        "US-2",
+        "US-4"
+      ],
+      "suggestedTaskTitle": "Define shared CommandRegistry runtime",
+      "approach": "Establish one canonical command execution path used by CLI, MCP, and Dashboard adapters.",
+      "technicalScope": [
+        "CommandRegistry runtime",
+        "adapter invocation API",
+        "CLI compatibility contract"
+      ],
+      "acceptanceCriteria": [
+        "Commands can be invoked through shared runtime without shelling out.",
+        "CLI behavior remains compatible."
+      ],
+      "testingVerification": [
+        "Run runtime unit tests and CLI compatibility checks."
+      ],
+      "dependsOn": [
+        "P134-T001"
+      ],
+      "recommendedPhase": "135",
+      "recommendedOrder": 1,
+      "sizingConfidence": "medium",
+      "doneMeans": "A shared command runtime API exists for adapters without changing user-visible CLI behavior.",
+      "generatedTaskPayload": {
+        "title": "Define shared CommandRegistry runtime",
+        "type": "execution",
+        "priority": "P1",
+        "phase": "Phase 135",
+        "phaseKey": "135",
+        "approach": "Establish one canonical command execution path used by CLI, MCP, and Dashboard adapters.",
+        "technicalScope": [
+          "CommandRegistry runtime",
+          "adapter invocation API",
+          "CLI compatibility contract"
+        ],
+        "acceptanceCriteria": [
+          "Commands can be invoked through shared runtime without shelling out.",
+          "CLI behavior remains compatible."
+        ],
+        "dependsOn": [
+          "P134-T001"
+        ],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "P135-T002",
+      "path": "135.2",
+      "title": "Move CLI onto shared runtime",
+      "goalMapping": [
+        "Move CLI and MCP toward one shared command runtime with adapter parity tests."
+      ],
+      "suggestedTaskTitle": "Move CLI onto shared runtime",
+      "approach": "Make the CLI adapter call the shared command runtime while preserving current command behavior.",
+      "technicalScope": [
+        "CLI adapter",
+        "shared runtime invocation",
+        "CLI response compatibility"
+      ],
+      "acceptanceCriteria": [
+        "Existing CLI command behavior remains stable.",
+        "CLI and runtime outputs are equivalent."
+      ],
+      "testingVerification": [
+        "Run CLI regression tests and runtime equivalence checks."
+      ],
+      "dependsOn": [
+        "P135-T001"
+      ],
+      "recommendedPhase": "135",
+      "recommendedOrder": 2,
+      "sizingConfidence": "medium",
+      "doneMeans": "CLI commands run through the shared runtime without observable contract regressions.",
+      "generatedTaskPayload": {
+        "title": "Move CLI onto shared runtime",
+        "type": "execution",
+        "priority": "P1",
+        "phase": "Phase 135",
+        "phaseKey": "135",
+        "approach": "Make the CLI adapter call the shared command runtime while preserving current command behavior.",
+        "technicalScope": [
+          "CLI adapter",
+          "shared runtime invocation",
+          "CLI response compatibility"
+        ],
+        "acceptanceCriteria": [
+          "Existing CLI command behavior remains stable.",
+          "CLI and runtime outputs are equivalent."
+        ],
+        "dependsOn": [
+          "P135-T001"
+        ],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "P135-T003",
+      "path": "135.3",
+      "title": "Move MCP onto shared runtime",
+      "goalMapping": [
+        "Move CLI and MCP toward one shared command runtime with adapter parity tests."
+      ],
+      "suggestedTaskTitle": "Move MCP onto shared runtime",
+      "approach": "Make MCP tools call the shared runtime instead of shelling out or duplicating command logic.",
+      "technicalScope": [
+        "MCP adapter",
+        "shared runtime invocation",
+        "command result mapping"
+      ],
+      "acceptanceCriteria": [
+        "MCP no longer duplicates command logic.",
+        "MCP and CLI produce equivalent core results."
+      ],
+      "testingVerification": [
+        "Run MCP/CLI equivalence tests for packet commands."
+      ],
+      "dependsOn": [
+        "P135-T001",
+        "P135-T002"
+      ],
+      "recommendedPhase": "135",
+      "recommendedOrder": 3,
+      "sizingConfidence": "medium",
+      "doneMeans": "MCP tools invoke the same command runtime used by CLI and do not own duplicate command behavior.",
+      "generatedTaskPayload": {
+        "title": "Move MCP onto shared runtime",
+        "type": "execution",
+        "priority": "P1",
+        "phase": "Phase 135",
+        "phaseKey": "135",
+        "approach": "Make MCP tools call the shared runtime instead of shelling out or duplicating command logic.",
+        "technicalScope": [
+          "MCP adapter",
+          "shared runtime invocation",
+          "command result mapping"
+        ],
+        "acceptanceCriteria": [
+          "MCP no longer duplicates command logic.",
+          "MCP and CLI produce equivalent core results."
+        ],
+        "dependsOn": [
+          "P135-T001",
+          "P135-T002"
+        ],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "P135-T004",
+      "path": "135.4",
+      "title": "Add adapter parity tests",
+      "goalMapping": [
+        "Move CLI and MCP toward one shared command runtime with adapter parity tests.",
+        "US-4"
+      ],
+      "suggestedTaskTitle": "Add adapter parity tests",
+      "approach": "Ensure CLI, MCP, and Dashboard adapters remain consistent over time.",
+      "technicalScope": [
+        "adapter parity tests",
+        "packet command parity",
+        "CLI/MCP/Dashboard contract fixtures"
+      ],
+      "acceptanceCriteria": [
+        "Parity tests catch adapter drift.",
+        "Packet commands behave consistently across CLI and MCP."
+      ],
+      "testingVerification": [
+        "Run parity test suite across representative packet commands."
+      ],
+      "dependsOn": [
+        "P135-T003"
+      ],
+      "recommendedPhase": "135",
+      "recommendedOrder": 4,
+      "sizingConfidence": "medium",
+      "doneMeans": "Automated parity coverage detects contract drift between CLI, MCP, and Dashboard adapters.",
+      "generatedTaskPayload": {
+        "title": "Add adapter parity tests",
+        "type": "execution",
+        "priority": "P2",
+        "phase": "Phase 135",
+        "phaseKey": "135",
+        "approach": "Ensure CLI, MCP, and Dashboard adapters remain consistent over time.",
+        "technicalScope": [
+          "adapter parity tests",
+          "packet command parity",
+          "CLI/MCP/Dashboard contract fixtures"
+        ],
+        "acceptanceCriteria": [
+          "Parity tests catch adapter drift.",
+          "Packet commands behave consistently across CLI and MCP."
+        ],
+        "dependsOn": [
+          "P135-T003"
+        ],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "P135-T005",
+      "path": "135.5",
+      "title": "Expose selected MCP mutation tools behind policy controls",
+      "goalMapping": [
+        "Prepare selected MCP mutation tools only after shared runtime, audit, and policy controls are proven."
+      ],
+      "suggestedTaskTitle": "Expose selected MCP mutation tools behind policy controls",
+      "approach": "Add carefully selected mutation tools after shared runtime and audit controls are proven, disabled unless explicitly enabled.",
+      "technicalScope": [
+        "selected MCP mutation tools",
+        "policyApproval enforcement",
+        "audit parity",
+        "disabled-by-default configuration"
+      ],
+      "acceptanceCriteria": [
+        "Mutation tools remain disabled unless explicitly enabled.",
+        "Policy and audit behavior matches CLI expectations."
+      ],
+      "testingVerification": [
+        "Run disabled-by-default tests, policyApproval tests, and audit parity tests."
+      ],
+      "dependsOn": [
+        "P134-T008",
+        "P135-T004"
+      ],
+      "recommendedPhase": "later",
+      "recommendedOrder": 1,
+      "sizingConfidence": "medium",
+      "doneMeans": "Selected mutation tools can be enabled only under explicit policy controls with CLI-equivalent audit behavior.",
+      "generatedTaskPayload": {
+        "title": "Expose selected MCP mutation tools behind policy controls",
+        "type": "execution",
+        "priority": "P3",
+        "phase": "Later MCP mutation phase",
+        "phaseKey": "later",
+        "approach": "Add carefully selected mutation tools after shared runtime and audit controls are proven, disabled unless explicitly enabled.",
+        "technicalScope": [
+          "selected MCP mutation tools",
+          "policyApproval enforcement",
+          "audit parity",
+          "disabled-by-default configuration"
+        ],
+        "acceptanceCriteria": [
+          "Mutation tools remain disabled unless explicitly enabled.",
+          "Policy and audit behavior matches CLI expectations."
+        ],
+        "dependsOn": [
+          "P134-T008",
+          "P135-T004"
+        ],
+        "status": "proposed"
+      }
+    }
+  ],
+  "phaseRecommendations": [
+    {
+      "phaseKey": "134",
+      "label": "Phase 134",
+      "rationale": "Read-only MCP server, agent adoption, setup/status, and integration hardening.",
+      "isPrimary": true
+    },
+    {
+      "phaseKey": "135",
+      "label": "Phase 135",
+      "rationale": "Shared command runtime cleanup and adapter parity.",
+      "isPrimary": false
+    },
+    {
+      "phaseKey": "later",
+      "label": "Later MCP mutation phase",
+      "rationale": "Selected mutation tools should wait until shared runtime, audit, and policy controls are proven.",
+      "isPrimary": false
+    }
+  ],
+  "provenance": {
+    "createdAt": "2026-06-06T03:42:24.000Z",
+    "updatedAt": "2026-06-06T03:55:00.000Z",
+    "createdBy": "codex",
+    "source": "draft-plan-artifact",
+    "chatSessionRef": "local-session",
+    "previousPlanArtifacts": []
+  },
+  "version": 4
+}

@@ -1,7 +1,7 @@
 # Interview Sunset Plan
 
 **Artifact:** `INTERVIEW_SUNSET.md`  
-**Status:** Proposed implementation plan  
+**Status:** NOT YET IMPLEMENTED — `build-plan` and related files still exist in source  
 **Decision:** Hard-sunset the legacy `build-plan` planning interview path and make PlanArtifact v1 the only supported serious planning lifecycle.
 
 ## 1. Purpose

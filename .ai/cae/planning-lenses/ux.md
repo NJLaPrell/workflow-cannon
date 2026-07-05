@@ -9,7 +9,7 @@ Keep human workflow in the Dashboard aligned with kit contracts—no shadow UI s
 ## Agent checklist
 
 - `uiUxDirection.summary` describes panels and primary actions (review, accept, finalize).
-- `mockupRefs` point to repo paths (e.g. `PLANNER_UX.md`) — no binary embeds in plan JSON.
+- `mockupRefs` point to repo paths — no binary embeds in plan JSON.
 - Dashboard calls `wk run` only; `dashboard-summary.planArtifact` contract respected.
 - Accept/finalize use policy drawer pattern; disabled states when review blocked.
 - Accessibility: not color-only status; keyboard order documented.
@@ -22,4 +22,4 @@ Keep human workflow in the Dashboard aligned with kit contracts—no shadow UI s
 
 ## Reference
 
-- `PLANNER_UX.md` wireframes; **A-COMPAT** for dual surfaces.
+- Wireframe paths in `mockupRefs`; **A-COMPAT** for dual surfaces.

@@ -2321,5 +2321,21 @@
     "description": "Explain deterministic precedence between policy, canon, docs, and memory.",
     "defaultResponseTemplateId": "default",
     "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "model-selection",
+    "name": "recommend-model",
+    "file": "recommend-model.md",
+    "description": "Select cheapest adequate Cursor Task-tool model slug for a subagent dispatch based on scope signals (complexity, risk, ambiguity, subagentType).",
+    "policySensitivity": "non-sensitive",
+    "executionClass": "read_hot"
+  },
+  {
+    "moduleId": "model-selection",
+    "name": "list-model-selection-map",
+    "file": "list-model-selection-map.md",
+    "description": "List all models in the active model-selection map with tiers, cost bands, and defaults.",
+    "policySensitivity": "non-sensitive",
+    "executionClass": "read_hot"
   }
 ]
