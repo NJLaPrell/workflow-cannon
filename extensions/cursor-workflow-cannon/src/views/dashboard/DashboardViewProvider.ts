@@ -428,6 +428,9 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   /** Coalesces planning-tab upgrades from overview stub to queue projection. */
   private planningHydrationInFlight?: Promise<void>;
 
+  /** Coalesces first-load queue projection so Tasks + Planning hydrate from one read. */
+  private startupEagerHydrationInFlight?: Promise<void>;
+
   /** Sections hydrated via tab activation or eager first paint (T100398). */
   private hydratedDashboardSections = new Set<DashboardSectionId>();
 
@@ -583,8 +586,11 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
           reason: "drawer/coordinator mutation complete"
         });
         this.readPath?.resume();
-        if (dashboardSummaryNeedsQueueRollupHydration(this.lastDashboardSummaryData)) {
-          void this.ensureQueueRollupsHydrated(this.refreshController.currentGeneration());
+        if (
+          dashboardSummaryNeedsQueueRollupHydration(this.lastDashboardSummaryData) ||
+          dashboardSummaryNeedsPlanningHydration(this.lastDashboardSummaryData)
+        ) {
+          void this.ensureStartupEagerSectionsHydrated();
         }
       },
       log: (message) => {
@@ -989,8 +995,11 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       return;
     }
     if (this.activeDashboardTab === "overview" && this.hydratedDashboardSections.has("overview")) {
-      if (dashboardSummaryNeedsQueueRollupHydration(this.lastDashboardSummaryData)) {
-        await this.ensureQueueRollupsHydrated(updateSequence);
+      if (
+        dashboardSummaryNeedsQueueRollupHydration(this.lastDashboardSummaryData) ||
+        dashboardSummaryNeedsPlanningHydration(this.lastDashboardSummaryData)
+      ) {
+        await this.ensureStartupEagerSectionsHydrated();
         return;
       }
       await this.patchDashboardSectionsFromSummary(
@@ -1106,9 +1115,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         if (!this.dashboardRootHydrated) {
           await this.renderDashboardStartupDirect(webview);
         } else {
-          logWc("dashboard", "webview ready: triggering background queue hydration");
-          void this.ensureQueueRollupsHydrated(this.refreshController.currentGeneration());
-          void this.ensurePlanningSectionsHydrated(this.refreshController.currentGeneration());
+          logWc("dashboard", "webview ready: triggering background eager hydration");
+          void this.ensureStartupEagerSectionsHydrated();
         }
         return;
       }
@@ -1796,10 +1804,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       await webview.postMessage({ type: "wcReplaceRoot", html: rootInner });
       logWc("dashboard", "startup diagnostic direct render applied via wcReplaceRoot");
       this.markDashboardRootHydrated();
-      void this.ensureQueueRollupsHydrated(this.refreshController.currentGeneration());
-      logWc("dashboard", "startup queue rollup hydration scheduled");
-      void this.ensurePlanningSectionsHydrated(this.refreshController.currentGeneration());
-      logWc("dashboard", "startup planning hydration scheduled");
+      void this.ensureStartupEagerSectionsHydrated();
+      logWc("dashboard", "startup eager hydration scheduled");
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       logWc("dashboard", `startup diagnostic direct render failed: ${message}`);
@@ -1865,6 +1871,52 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       });
     }
     this.syncVisibleSectionsToPollers();
+  }
+
+  /**
+   * First load paints overview quickly, then upgrades Tasks + Planning from one queue projection.
+   * This avoids two concurrent `dashboard-summary {projection:"queue"}` reads and prevents the
+   * overview stubs (empty ideas/plans/queue) from getting stuck until manual refresh.
+   */
+  private async ensureStartupEagerSectionsHydrated(): Promise<void> {
+    if (this.startupEagerHydrationInFlight) {
+      logWc("dashboard", "startup eager hydration coalesced with in-flight dashboard-summary");
+      return this.startupEagerHydrationInFlight;
+    }
+    const run = this.ensureStartupEagerSectionsHydratedOnce().finally(() => {
+      if (this.startupEagerHydrationInFlight === run) {
+        this.startupEagerHydrationInFlight = undefined;
+      }
+    });
+    this.startupEagerHydrationInFlight = run;
+    return run;
+  }
+
+  private async ensureStartupEagerSectionsHydratedOnce(): Promise<void> {
+    if (!this.view || !this.dashboardRootHydrated) {
+      logWc("dashboard", "startup eager hydration deferred: root not hydrated");
+      return;
+    }
+    const needsQueue = dashboardSummaryNeedsQueueRollupHydration(this.lastDashboardSummaryData);
+    const needsPlanning = dashboardSummaryNeedsPlanningHydration(this.lastDashboardSummaryData);
+    if (!needsQueue && !needsPlanning) {
+      return;
+    }
+    if (this.shouldSkipDashboardKitRefresh()) {
+      logWc("dashboard", "startup eager hydration deferred: refresh paused or suppressed");
+      this.refreshController.markDeferredRefreshNeeded();
+      return;
+    }
+    logWc("dashboard", "startup eager hydration: upgrading task and planning sections to queue projection");
+    await this.patchDashboardSectionsFromSummary(
+      ["overview", "queue", "phase-roster", "ideas", "plan-artifact"],
+      undefined,
+      {
+        projection: "queue",
+        preserveOnSummaryFailure: true,
+        source: "startup eager hydration"
+      }
+    );
   }
 
   /** Upgrade queue (+ overview stat pills) from overview stub to queue rollups. */
@@ -6938,6 +6990,27 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       margin: 0;
     }
     .wc-plan-artifacts-section > p:first-child { margin: 0 0 10px 0; }
+    .wc-plan-state-bucket { margin: 10px 0 0 0; }
+    .wc-plan-state-bucket > summary {
+      cursor: pointer;
+      user-select: none;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .wc-plan-state-bucket-body {
+      margin: 8px 0 0 12px;
+      padding-left: 16px;
+      border-left: 1px solid var(--vscode-widget-border, rgba(127,127,127,.35));
+    }
+    .wc-plan-title-group { margin: 0 0 10px 0; }
+    .wc-plan-title-group > summary {
+      cursor: pointer;
+      user-select: none;
+      margin: 0 0 6px 0;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--vscode-descriptionForeground, var(--vscode-foreground));
+    }
     .wc-plan-card-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -7154,6 +7227,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       background: var(--vscode-editor-background);
     }
     .wc-brainstorming-idea-head { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: flex-start; justify-content: space-between; }
+    .wc-brainstorming-idea-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: flex-end; }
     .wc-brainstorming-idea-title { margin: 0; font-size: 12px; }
     .wc-brainstorming-idea-id { margin-left: 6px; font-size: 11px; }
     .wc-brainstorm-score-pills { display: flex; flex-wrap: wrap; gap: 6px; }

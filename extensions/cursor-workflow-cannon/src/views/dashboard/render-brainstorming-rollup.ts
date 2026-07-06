@@ -167,6 +167,8 @@ export function renderBrainstormingIdeasRollupSection(brainstormingIdeas: unknow
       return (
         '<article class="wc-brainstorming-idea-row" data-wc-idea-id="' +
         escapeHtmlAttr(ideaId) +
+        '" data-wc-idea-title="' +
+        escapeHtmlAttr(title) +
         '" data-plan-ref="' +
         escapeHtmlAttr(planRef) +
         '"><div class="wc-brainstorming-idea-head"><p class="wc-brainstorming-idea-title"><b>' +
@@ -174,8 +176,10 @@ export function renderBrainstormingIdeasRollupSection(brainstormingIdeas: unknow
         '</b><span class="muted wc-brainstorming-idea-id">' +
         escapeHtml(ideaId) +
         "</span></p>" +
+        '<div class="wc-brainstorming-idea-actions">' +
         renderBrainstormScorePills(synthesis) +
-        "</div>" +
+        '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="idea-plan" title="Start planning from this brainstorm">Start Planning</button>' +
+        "</div></div>" +
         historyHtml +
         "</article>"
       );

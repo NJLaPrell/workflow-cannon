@@ -6,7 +6,8 @@ import type {
 } from "../../../contracts/dashboard-summary-run.js";
 import { readLatestPlanArtifact, readPlanArtifactIndex } from "../../../core/planning/plan-artifact-storage.js";
 import { readActiveDraftPlanArtifact } from "../../ideas/idea-planning-metadata.js";
-import { readIdeaPlanArtifact } from "../../ideas/idea-plan-artifact-storage.js";
+import { listIdeaPlanArtifacts, readIdeaPlanArtifact } from "../../ideas/idea-plan-artifact-storage.js";
+import type { IdeaPlanDocument } from "../../ideas/idea-plan-types.js";
 import { listIdeas } from "../../ideas/idea-store.js";
 import { listPlanningChatSessions } from "../../ideas/planning-chat-session.js";
 import { parsePlanIdFromPlanArtifactRef } from "../plan-artifact-execute-policy.js";
@@ -64,6 +65,15 @@ function buildIdeaPlanArtifactSummary(
   );
   if (index && index.planRef === normalizedRef) {
     const latestArtifact = readLatestPlanArtifact(ctx.workspacePath, planId);
+    const ideaPlan = readIdeaPlanArtifact(ctx.workspacePath, normalizedRef);
+    const latestStatus =
+      latestArtifact && typeof latestArtifact === "object"
+        ? String((latestArtifact as Record<string, unknown>).status ?? "").trim()
+        : "";
+    const effectiveStatus =
+      ideaPlan?.status ?? (latestStatus.length > 0 ? latestStatus : index.status);
+    const brainstormSynthesis = mapBrainstormSynthesisForDashboard(ideaPlan?.brainstorm);
+    const brainstormSessions = mapBrainstormSessionsForDashboard(ideaPlan?.brainstorm?.sessions);
     const latestReview =
       index.latestReview &&
       index.latestReview.planRef === index.planRef &&
@@ -80,9 +90,11 @@ function buildIdeaPlanArtifactSummary(
     const summary: DashboardIdeaPlanArtifactSummary = {
       planId,
       planRef: index.planRef,
-      status: index.status,
-      version: index.currentVersion,
+      status: effectiveStatus,
+      version: typeof ideaPlan?.version === "number" ? ideaPlan.version : index.currentVersion,
       ...(latestReview ? { latestReview } : {}),
+      ...(brainstormSynthesis ? { brainstormSynthesis } : {}),
+      ...(brainstormSessions.length > 0 ? { brainstormSessions } : {}),
       ...(phaseKey ? { phaseKey } : {})
     };
     cache.set(normalizedRef, summary);
@@ -110,13 +122,17 @@ function buildIdeaPlanArtifactSummary(
 function buildDashboardIdeaRow(
   ctx: ModuleLifecycleContext,
   row: Record<string, unknown>,
-  cache: Map<string, DashboardIdeaPlanArtifactSummary | null>
+  cache: Map<string, DashboardIdeaPlanArtifactSummary | null>,
+  recoveredIdeaPlansByIdeaId: Map<string, IdeaPlanDocument>
 ): DashboardIdeaRow {
   const idea = row as DashboardIdeaRow;
   const planningChatSession =
     row.planningChatSession && typeof row.planningChatSession === "object"
       ? (row.planningChatSession as DashboardIdeaRow["planningChatSession"])
       : undefined;
+  const ideaId = typeof row.id === "string" ? row.id.trim() : "";
+  const fallbackIdeaPlan = ideaId.length > 0 ? recoveredIdeaPlansByIdeaId.get(ideaId) : undefined;
+  const fallbackIdeaPlanRef = fallbackIdeaPlan?.planRef;
   const activeDraftPlanRef =
     buildIdeaPlanArtifactSummary(
       ctx,
@@ -126,6 +142,11 @@ function buildDashboardIdeaRow(
     buildIdeaPlanArtifactSummary(
       ctx,
       planningChatSession && planningChatSession.status !== "completed" ? planningChatSession.currentPlanRef : undefined,
+      cache
+    ) ??
+    buildIdeaPlanArtifactSummary(
+      ctx,
+      fallbackIdeaPlan && fallbackIdeaPlan.status !== "idea" ? fallbackIdeaPlanRef : undefined,
       cache
     );
   const linkedPlanSummary =
@@ -137,6 +158,11 @@ function buildDashboardIdeaRow(
     buildIdeaPlanArtifactSummary(
       ctx,
       planningChatSession?.status === "completed" ? planningChatSession.currentPlanRef : undefined,
+      cache
+    ) ??
+    buildIdeaPlanArtifactSummary(
+      ctx,
+      fallbackIdeaPlan && fallbackIdeaPlan.status === "idea" ? fallbackIdeaPlanRef : undefined,
       cache
     );
   return {
@@ -159,6 +185,12 @@ export function buildDashboardIdeasSummary(
     const ideas = listIdeas(db);
     const sessions = new Map(listPlanningChatSessions(db).map((session) => [session.ideaId, session]));
     const planSummaryCache = new Map<string, DashboardIdeaPlanArtifactSummary | null>();
+    const recoveredIdeaPlansByIdeaId = new Map<string, IdeaPlanDocument>();
+    for (const document of listIdeaPlanArtifacts(ctx.workspacePath)) {
+      if (!recoveredIdeaPlansByIdeaId.has(document.ideaId)) {
+        recoveredIdeaPlansByIdeaId.set(document.ideaId, document);
+      }
+    }
     return {
       schemaVersion: 1,
       available: true,
@@ -188,7 +220,7 @@ export function buildDashboardIdeasSummary(
             ...(session.completedAt ? { completedAt: session.completedAt } : {})
           };
         }
-        return buildDashboardIdeaRow(ctx, base, planSummaryCache);
+        return buildDashboardIdeaRow(ctx, base, planSummaryCache, recoveredIdeaPlansByIdeaId);
       })
     };
   } catch {

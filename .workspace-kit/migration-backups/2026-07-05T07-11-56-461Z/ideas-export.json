@@ -1,0 +1,46 @@
+{
+  "exportedAt": "2026-07-05T07:11:56.461Z",
+  "ideas": [
+    {
+      "id": "I004",
+      "title": "Phase Work Tree",
+      "note": "Add a diagram to the Overview tab to display the current phase tasks as a diagram with links showing dependencies and blockers to other tasks. Use blue to denote tasks ready to work, Yellow for tasks that are blocked and not yet ready., Red for tasks that are blocked and will not be unblocked by completing other tasks.",
+      "status": "open",
+      "sortOrder": 3,
+      "linkedPlanArtifact": "plan-artifact:349c70f8-9a5b-4016-96b9-63b55209da27",
+      "previousPlanArtifacts": [],
+      "createdAt": "2026-06-30T16:04:40.162Z",
+      "updatedAt": "2026-07-03T08:40:39.265Z"
+    },
+    {
+      "id": "I005",
+      "title": "Brainstorm",
+      "note": "Idea -> Brainstorm -> Plan\nIdeas have a \"Brainstorm\" button instead of a plan button. Then we replace the \"New\" plan rollup with a \"Brainstorming\" rollup. Show only our brainstorming metrics (Risk/Value/etc)",
+      "status": "open",
+      "sortOrder": 4,
+      "linkedPlanArtifact": "plan-artifact:f7a3b891-c5d2-4e6f-9a08-1b2c3d4e5f60",
+      "previousPlanArtifacts": [],
+      "createdAt": "2026-07-01T07:19:05.620Z",
+      "updatedAt": "2026-07-03T08:40:51.384Z"
+    },
+    {
+      "id": "I006",
+      "title": "Merge Ideas and Planning modules",
+      "note": "Ideas and Planning modules have overlapping concerns now that the Planning module drives document status transitions (planning→reviewed→accepted) on the unified IdeaPlan document. A merged module would eliminate the cross-module import boundary and make the document lifecycle ownership fully explicit. The planning module also has generic commands (build-plan, execute-plan-artifact, list-planning-types) that are not idea-specific — those would need to stay separate or be reorganized. Scope and impact need evaluation before committing.",
+      "status": "open",
+      "sortOrder": 5,
+      "previousPlanArtifacts": [],
+      "createdAt": "2026-07-02T05:40:35.548Z",
+      "updatedAt": "2026-07-02T05:40:35.548Z"
+    },
+    {
+      "id": "I007",
+      "title": "Test Idea",
+      "status": "open",
+      "sortOrder": 6,
+      "previousPlanArtifacts": [],
+      "createdAt": "2026-07-04T01:12:40.568Z",
+      "updatedAt": "2026-07-04T01:12:40.568Z"
+    }
+  ]
+}

@@ -13,6 +13,7 @@ import { enforceIdeaPlanStatusTransition, IdeaPlanStatusTransitionError } from "
 import { loadIdeaPlanStateSchema } from "./idea-plan-state-schema-loader.js";
 import { guardIdeaPlanStateSchemaLoad } from "./idea-plan-state-schema-guard.js";
 import type { BrainstormSession, IdeaPlanDocument } from "./idea-plan-types.js";
+import { writeActiveDraftPlanArtifact } from "./idea-planning-metadata.js";
 
 const IDEMPOTENCY_MODULE_PREFIX = "ideas-start-brainstorm-session-idempotency:";
 
@@ -207,6 +208,7 @@ export async function runStartBrainstormSession(
   };
 
   const persisted = writeNextIdeaPlanArtifactVersion(workspacePath, updated, { sqliteDb: db });
+  writeActiveDraftPlanArtifact(db, persisted.ideaId, persisted.planRef, nowIso);
   const result: StartBrainstormSessionResultV1 = {
     responseSchemaVersion: 1,
     planRef: persisted.planRef,

@@ -3,7 +3,7 @@ import type {
   DashboardBrainstormingIdeasRollup,
   DashboardBrainstormingIdeaRow
 } from "../../../contracts/dashboard-summary-run.js";
-import { readIdeaPlanArtifact } from "../../ideas/idea-plan-artifact-storage.js";
+import { listIdeaPlanArtifacts, readIdeaPlanArtifact } from "../../ideas/idea-plan-artifact-storage.js";
 import { readActiveDraftPlanArtifact } from "../../ideas/idea-planning-metadata.js";
 import { listIdeas } from "../../ideas/idea-store.js";
 import { listPlanningChatSessions } from "../../ideas/planning-chat-session.js";
@@ -58,6 +58,12 @@ export function buildDashboardBrainstormingIdeasRollup(
     const db = sqliteDual.getDatabase();
     const ideas = listIdeas(db);
     const sessions = new Map(listPlanningChatSessions(db).map((session) => [session.ideaId, session]));
+    const recoveredIdeaPlansByIdeaId = new Map<string, string>();
+    for (const document of listIdeaPlanArtifacts(ctx.workspacePath)) {
+      if (!recoveredIdeaPlansByIdeaId.has(document.ideaId)) {
+        recoveredIdeaPlansByIdeaId.set(document.ideaId, document.planRef);
+      }
+    }
     const rows: DashboardBrainstormingIdeaRow[] = [];
 
     for (const idea of ideas) {
@@ -67,7 +73,7 @@ export function buildDashboardBrainstormingIdeasRollup(
         idea,
         session,
         readActiveDraftPlanArtifact(db, idea.id)
-      );
+      ) ?? recoveredIdeaPlansByIdeaId.get(idea.id);
       if (!planRef) {
         continue;
       }

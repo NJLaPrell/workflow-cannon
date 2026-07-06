@@ -2622,39 +2622,45 @@ function renderDashboardIdeasSectionInnerHtml(
   const ideas = rawIdeas && typeof rawIdeas === "object" ? (rawIdeas as Record<string, unknown>) : {};
   const available = ideas.available === true;
   const rawTop = Array.isArray(ideas.top) ? ideas.top : [];
-  const top = rawTop
-    .filter((item) => {
-      if (!item || typeof item !== "object") return true;
-      const row = item as Record<string, unknown>;
-      const status = String(row.status ?? "open").trim().toLowerCase();
-      if (status === "brainstorming") return false;
-      const linkedPlan =
-        row.linkedPlanArtifactSummary && typeof row.linkedPlanArtifactSummary === "object"
-          ? (row.linkedPlanArtifactSummary as Record<string, unknown>)
-          : null;
-      if (linkedPlan) {
-        const linkedStatus = String(linkedPlan.status ?? "").trim().toLowerCase();
-        if (linkedStatus.length > 0 && linkedStatus !== "brainstorming" && linkedStatus !== "idea") {
-          return false;
-        }
+  // Once an idea has a real plan lifecycle state, it graduates out of Ideas. Only bare ideas
+  // (and pre-plan IdeaPlan documents still marked "idea") remain here; brainstorming has its own
+  // dedicated rollup.
+  function ideaPassesFilter(item: unknown): boolean {
+    if (!item || typeof item !== "object") return true;
+    const row = item as Record<string, unknown>;
+    const status = String(row.status ?? "open").trim().toLowerCase();
+    if (status === "brainstorming") return false;
+    const linkedPlan =
+      row.linkedPlanArtifactSummary && typeof row.linkedPlanArtifactSummary === "object"
+        ? (row.linkedPlanArtifactSummary as Record<string, unknown>)
+        : null;
+    if (linkedPlan) {
+      const linkedStatus = String(linkedPlan.status ?? "").trim().toLowerCase();
+      if (linkedStatus.length > 0 && linkedStatus !== "idea") {
+        return false;
       }
-      const activeDraft =
-        row.activeDraftPlanArtifactSummary && typeof row.activeDraftPlanArtifactSummary === "object"
-          ? (row.activeDraftPlanArtifactSummary as Record<string, unknown>)
-          : null;
-      if (activeDraft) {
-        const draftStatus = String(activeDraft.status ?? "").trim().toLowerCase();
-        if (draftStatus.length > 0 && draftStatus !== "brainstorming" && draftStatus !== "idea") {
-          return false;
-        }
+    }
+    const activeDraft =
+      row.activeDraftPlanArtifactSummary && typeof row.activeDraftPlanArtifactSummary === "object"
+        ? (row.activeDraftPlanArtifactSummary as Record<string, unknown>)
+        : null;
+    if (activeDraft) {
+      const draftStatus = String(activeDraft.status ?? "").trim().toLowerCase();
+      if (draftStatus.length > 0 && draftStatus !== "idea") {
+        return false;
       }
-      return true;
-    })
-    .slice(0, 5);
-  const openCount = Number(ideas.openCount ?? 0);
+    }
+    return true;
+  }
+  const filteredTop = rawTop.filter(ideaPassesFilter);
+  const top = filteredTop.slice(0, 5);
+  // Derive openCount from filtered items so the badge matches what's actually visible.
+  const openCount = filteredTop.filter(
+    (item) => item && typeof item === "object" && String((item as Record<string, unknown>).status ?? "open").trim().toLowerCase() === "open"
+  ).length;
   const planningCount = Number(ideas.planningCount ?? 0);
   const plannedCount = Number(ideas.plannedCount ?? 0);
-  const totalCount = Number(ideas.totalCount ?? top.length);
+  const totalCount = Number(ideas.totalCount ?? filteredTop.length);
   const rows = top
     .map((item) => {
       if (!item || typeof item !== "object") {

@@ -1,8 +1,10 @@
 import fs from "node:fs";
+import path from "node:path";
 
 import type Database from "better-sqlite3";
 import {
   getPlanArtifactStoragePaths,
+  PLAN_ARTIFACT_ROOT_REL,
   resolveLatestPlanArtifactVersion
 } from "../../core/planning/plan-artifact-storage.js";
 import { parsePlanIdFromPlanArtifactRef } from "../task-engine/plan-artifact-execute-policy.js";
@@ -72,6 +74,54 @@ export function readIdeaPlanArtifact(workspacePath: string, planRef: string): Id
     return null;
   }
   return readIdeaPlanArtifactVersion(workspacePath, planId, version);
+}
+
+function ideaPlanRecoveryRank(status: IdeaPlanStatus): number {
+  switch (status) {
+    case "idea":
+      return 0;
+    case "brainstorming":
+      return 1;
+    case "planning":
+      return 2;
+    case "reviewed":
+      return 3;
+    case "accepted":
+      return 4;
+    case "delivered":
+      return 5;
+  }
+}
+
+export function listIdeaPlanArtifacts(workspacePath: string): IdeaPlanDocument[] {
+  const root = path.resolve(workspacePath, PLAN_ARTIFACT_ROOT_REL);
+  if (!fs.existsSync(root)) {
+    return [];
+  }
+  const documents: IdeaPlanDocument[] = [];
+  for (const planId of fs.readdirSync(root)) {
+    const version = resolveLatestPlanArtifactVersion(workspacePath, planId);
+    if (version === null) {
+      continue;
+    }
+    const document = readIdeaPlanArtifactVersion(workspacePath, planId, version);
+    if (document) {
+      documents.push(document);
+    }
+  }
+  documents.sort((a, b) => {
+    const rank = ideaPlanRecoveryRank(b.status) - ideaPlanRecoveryRank(a.status);
+    if (rank !== 0) {
+      return rank;
+    }
+    const updated = b.updatedAt.localeCompare(a.updatedAt);
+    return updated !== 0 ? updated : b.version - a.version;
+  });
+  return documents;
+}
+
+export function listIdeaPlanArtifactsForIdea(workspacePath: string, ideaId: string): IdeaPlanDocument[] {
+  return listIdeaPlanArtifacts(workspacePath).filter((document) => document.ideaId === ideaId);
 }
 
 export function writeIdeaPlanArtifactVersion(
