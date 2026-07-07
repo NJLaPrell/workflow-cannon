@@ -93,10 +93,10 @@ export const DASHBOARD_SERVICE_SLICE_DEFINITIONS: readonly DashboardServiceSlice
   {
     name: "planArtifact",
     pollGroup: "critical",
-    command: "dashboard-summary",
-    args: { projection: "status" },
-    source: "dashboard-summary:status",
-    extractPayload: (data) => pick(data, [...SHARED_META_KEYS, "planArtifact", "workspaceStatus"])
+    command: "dashboard-ops-slice",
+    args: {},
+    source: "dashboard-ops-slice",
+    extractPayload: (data) => pick(data, [...SHARED_META_KEYS, "planArtifact", "workspaceStatus", "brainstormingIdeas"])
   },
   {
     name: "agentActivity",
@@ -135,10 +135,10 @@ export const DASHBOARD_SERVICE_SLICE_DEFINITIONS: readonly DashboardServiceSlice
   {
     name: "ideas",
     pollGroup: "queue",
-    command: "dashboard-summary",
-    args: { projection: "queue" },
-    source: "dashboard-summary:queue",
-    extractPayload: (data) => pick(data, [...SHARED_META_KEYS, "ideas"])
+    command: "dashboard-queue-slice",
+    args: {},
+    source: "dashboard-queue-slice",
+    extractPayload: (data) => pick(data, [...SHARED_META_KEYS, "ideas", "brainstormingIdeas"])
   },
   {
     name: "team",

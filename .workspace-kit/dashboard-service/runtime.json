@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
-  "pid": 72271,
+  "pid": 64807,
   "host": "127.0.0.1",
-  "port": 58432,
-  "startedAt": "2026-07-07T16:58:38.823Z",
+  "port": 60350,
+  "startedAt": "2026-07-07T18:30:28.071Z",
   "serviceVersion": "1.0.3",
   "generation": 4,
-  "planningGeneration": 5728
+  "planningGeneration": 5731
 }

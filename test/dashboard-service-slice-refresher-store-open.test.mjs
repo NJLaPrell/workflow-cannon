@@ -34,7 +34,9 @@ async function seedEmptySqlite(workspace) {
 
 const SLICE_NATIVE_SLICES = [
   "overview",
+  "planArtifact",
   "queue",
+  "ideas",
   "status",
   "agentActivity",
   "agentTypes",
@@ -79,6 +81,30 @@ describe("dashboard slice refresher store reuse", () => {
     } finally {
       await refresher.stop();
       openSpy.mock.restore();
+    }
+  });
+
+  it("hydrates planArtifact and ideas from non-empty slice payloads", async () => {
+    const workspace = await tmpWorkspace();
+    await seedEmptySqlite(workspace);
+
+    const snapshotStore = new DashboardSnapshotStore("test");
+    const refresher = new DashboardSliceRefresher({ workspacePath: workspace, snapshotStore });
+    try {
+      await refresher.start();
+      await refresher.refreshSlice("planArtifact");
+      await refresher.refreshSlice("ideas");
+
+      const planArtifact = snapshotStore.getSlice("planArtifact");
+      const ideas = snapshotStore.getSlice("ideas");
+      assert.equal(planArtifact?.status, "fresh", `planArtifact not fresh: ${JSON.stringify(planArtifact)}`);
+      assert.equal(ideas?.status, "fresh", `ideas not fresh: ${JSON.stringify(ideas)}`);
+      assert.ok(planArtifact?.value && typeof planArtifact.value.planArtifact === "object");
+      assert.ok("brainstormingIdeas" in planArtifact.value);
+      assert.ok(ideas?.value && typeof ideas.value.ideas === "object");
+      assert.ok("brainstormingIdeas" in ideas.value);
+    } finally {
+      await refresher.stop();
     }
   });
 });

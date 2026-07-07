@@ -921,6 +921,7 @@ export async function buildDashboardOpsSlice(
   const workspaceStatus = readWorkspaceStatusSnapshotFromDual(dualForStatus);
   const tasks = store.getActiveTasks();
   const planArtifact = buildDashboardPlanArtifactSummary(ctx, tasks);
+  const brainstormingIdeas = buildDashboardBrainstormingIdeasRollup(ctx, sqliteDual, true);
 
   const teamExecution: DashboardTeamExecutionSummary = db
     ? (summarizeTeamAssignmentsForDashboard(db, (id) => store.getTask(id)?.title ?? null) as DashboardTeamExecutionSummary)
@@ -951,6 +952,7 @@ export async function buildDashboardOpsSlice(
     planningGeneration,
     workspaceStatus,
     planArtifact,
+    brainstormingIdeas,
     teamExecution,
     subagentRegistry,
     taskCheckpoints

@@ -173,14 +173,12 @@ export async function buildDashboardPlanArtifactSlice(
   commandArgs?: Record<string, unknown>,
   tracer?: DashboardSummaryTracer
 ) {
-  // Plan artifact is part of the overview projection
-  return originalBuildDashboardOverviewSlice(
+  // Plan artifact belongs to the lightweight ops slice; overview only carries an eager stub.
+  return originalBuildDashboardOpsSlice(
     ctx,
     store,
     planningGeneration,
-    sqliteDual,
-    commandArgs,
-    tracer
+    sqliteDual
   );
 }
 
@@ -192,8 +190,8 @@ export async function buildDashboardIdeasSlice(
   commandArgs?: Record<string, unknown>,
   tracer?: DashboardSummaryTracer
 ) {
-  // Ideas are included in the overview projection
-  return originalBuildDashboardOverviewSlice(
+  // Ideas and brainstorming rollups are populated by the queue projection.
+  return originalBuildDashboardQueueSlice(
     ctx,
     store,
     planningGeneration,
