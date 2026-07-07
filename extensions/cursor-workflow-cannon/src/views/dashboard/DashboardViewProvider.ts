@@ -7243,12 +7243,19 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     .wc-brainstorm-score-label { opacity: 0.85; }
     .wc-brainstorm-score-value { font-weight: 600; }
+    .wc-brainstorm-readiness-pill {
+      background: var(--vscode-inputValidation-warningBackground, rgba(255,196,0,.18));
+      color: var(--vscode-foreground);
+    }
+    .wc-brainstorm-readiness-pill.wc-brainstorm-readiness-ready {
+      background: var(--vscode-testing-iconPassed, #3fb950);
+      color: var(--vscode-editor-background, #fff);
+    }
     .wc-brainstorm-session-history { margin-top: 8px; font-size: 11px; }
     .wc-brainstorm-session-history-body { margin-top: 6px; overflow-x: auto; }
     .wc-brainstorm-session-table { width: 100%; border-collapse: collapse; font-size: 11px; }
     .wc-brainstorm-session-table th,
     .wc-brainstorm-session-table td { border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.35)); padding: 4px 6px; text-align: left; }
-    .wc-idea-brainstorm-detail-panel { margin: 6px 0 0 28px; }
     .wc-plan-value-rationale-text { margin: 6px 0 0 0; font-size: 11px; overflow-wrap: anywhere; }
     .wc-plan-architecture-overview-text { margin: 6px 0 0 0; font-size: 11px; overflow-wrap: anywhere; }
     .wc-plan-wbs-table-extended { display: block; overflow-x: auto; max-width: 100%; }

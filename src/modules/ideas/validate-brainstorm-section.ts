@@ -1,7 +1,7 @@
 import { BRAINSTORM_SCORING_SUB_INPUT_FIELDS, hasCompleteBrainstormScoringInputs } from "./brainstorm-scoring.js";
 import type { BrainstormSession, IdeaPlanBrainstormSection } from "./idea-plan-types.js";
 
-const REQUIRED_CONTEXT_FIELDS = ["contextProblem", "contextAudience"] as const;
+export const REQUIRED_CONTEXT_FIELDS = ["contextProblem", "contextAudience"] as const;
 
 export type BrainstormSectionValidationResult =
   | { ok: true }

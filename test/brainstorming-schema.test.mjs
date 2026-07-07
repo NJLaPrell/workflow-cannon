@@ -79,6 +79,16 @@ test("brainstorming state schema documents brainstorming to planning transitions
   assert.deepEqual(schema["x-validTransitions"], ["brainstorming", "planning"]);
 });
 
+test("brainstorming state schema distinguishes session completion from planning transition", () => {
+  assert.match(schema.description, /Session completion is not lifecycle completion/);
+  assert.match(schema["x-sessionMutability"].description, /Setting completedAt finishes the guided session only/);
+  const sessionNotes = schema.$defs.canonicalAgentDirective.questions.find(
+    (question) => question.fieldName === "sessionNotes"
+  );
+  assert.ok(sessionNotes, "sessionNotes directive question should exist");
+  assert.match(sessionNotes.guidance, /do not transition to planning unless the operator explicitly confirms/);
+});
+
 test("scoring formulas produce correct outputs for known inputs", () => {
   const inputs = {
     valueImpact: 8,

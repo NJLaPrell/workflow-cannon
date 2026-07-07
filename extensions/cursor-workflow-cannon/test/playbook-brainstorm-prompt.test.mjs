@@ -17,4 +17,8 @@ test("buildBrainstormSessionPrompt includes ideaId, sessionIndex, and schema loa
   assert.match(prompt, /agentDirective/);
   assert.match(prompt, /Operator idea/);
   assert.match(prompt, /Try unified brainstorm/);
+  assert.match(prompt, /update-brainstorm-session/);
+  assert.match(prompt, /completedAt/);
+  assert.match(prompt, /Stop after the session update/);
+  assert.doesNotMatch(prompt, /complete-brainstorm/);
 });

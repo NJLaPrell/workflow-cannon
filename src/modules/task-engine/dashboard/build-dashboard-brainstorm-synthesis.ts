@@ -1,4 +1,5 @@
 import type { DashboardBrainstormSynthesisSummary } from "../../../contracts/dashboard-summary-run.js";
+import { computeBrainstormReadiness } from "../../ideas/brainstorm-readiness.js";
 import type { IdeaPlanBrainstormSection } from "../../ideas/idea-plan-types.js";
 
 /** Map `brainstorm.synthesis` + session count into dashboard-summary score fields. */
@@ -13,12 +14,15 @@ export function mapBrainstormSynthesisForDashboard(
   if (!synthesis && sessionCount === 0) {
     return undefined;
   }
+  const readiness = computeBrainstormReadiness(brainstorm);
   return {
     ...(synthesis?.value !== undefined ? { valueScore: synthesis.value } : {}),
     ...(synthesis?.risk !== undefined ? { riskScore: synthesis.risk } : {}),
     ...(synthesis?.effort !== undefined ? { effortScore: synthesis.effort } : {}),
     ...(synthesis?.confidence !== undefined ? { confidenceScore: synthesis.confidence } : {}),
     ...(synthesis?.priority !== undefined ? { priorityScore: synthesis.priority } : {}),
-    sessionCount
+    sessionCount,
+    readinessPercent: readiness.completenessPercent,
+    readyForPlanning: readiness.readyForPlanning
   };
 }

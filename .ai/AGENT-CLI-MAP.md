@@ -77,8 +77,8 @@ Playbook: [`.ai/playbooks/task-to-phase-branch.md`](./playbooks/task-to-phase-br
 - `pnpm exec wk run delete-idea '{"ideaId":"I001","policyApproval":{"confirmed":true,"rationale":"remove stale idea"}}'`
 - `pnpm exec wk run reorder-ideas '{"ideaIds":["I002","I001"],"policyApproval":{"confirmed":true,"rationale":"reorder ideas by operator priority"}}'`
 - `pnpm exec wk run start-brainstorm-session '{"planRef":"plan-artifact:<planId>","policyApproval":{"confirmed":true,"rationale":"start brainstorm session"}}'`
-- `pnpm exec wk run update-brainstorm-session '{"planRef":"plan-artifact:<planId>","sessionIndex":0,"inputs":{"valueImpact":8},"policyApproval":{"confirmed":true,"rationale":"update brainstorm inputs"}}'`
-- `pnpm exec wk run complete-brainstorm '{"planRef":"plan-artifact:<planId>","policyApproval":{"confirmed":true,"rationale":"complete brainstorm and transition to planning"}}'`
+- `pnpm exec wk run update-brainstorm-session '{"planRef":"plan-artifact:<planId>","sessionIndex":0,"inputs":{"valueImpact":8},"policyApproval":{"confirmed":true,"rationale":"update brainstorm inputs"}}'` — use `completedAt` here to finish the guided session, then stop for operator direction.
+- `pnpm exec wk run complete-brainstorm '{"planRef":"plan-artifact:<planId>","operatorConfirmedBrainstormComplete":true,"policyApproval":{"confirmed":true,"rationale":"operator confirmed brainstorming is finished and planning should start"}}'` — only after the operator explicitly says brainstorming is finished.
 - `pnpm exec wk run check-delivery-status '{"planRef":"plan-artifact:<planId>","policyApproval":{"confirmed":true,"rationale":"check IdeaPlan delivery task completion"}}'`
 
 ## Contract: no hand-editing lifecycle in the task store

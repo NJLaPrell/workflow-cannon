@@ -78,6 +78,10 @@ export type DashboardBrainstormSynthesisSummary = {
   confidenceScore?: number;
   priorityScore?: number;
   sessionCount: number;
+  /** 0-100: share of the latest session's required inputs (context + scoring) that are filled in. */
+  readinessPercent: number;
+  /** True when the brainstorm section satisfies complete-brainstorm's transition-to-planning gate. */
+  readyForPlanning: boolean;
 };
 
 /** Per-session brainstorm scores for dashboard detail panels. */

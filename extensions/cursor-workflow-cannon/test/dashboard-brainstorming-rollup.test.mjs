@@ -63,6 +63,8 @@ test("renderBrainstormingIdeasRollupSection renders brainstorming-state ideas wi
   assert.match(html, /I005/);
   assert.match(html, /7\.6/);
   assert.match(html, /61/);
+  assert.match(html, /Continue Brainstorming/);
+  assert.match(html, /Operator action: finish brainstorming and start planning/);
   assert.equal((html.match(/wc-brainstorming-idea-row/g) ?? []).length, brainstormingIdeas.count);
 });
 
@@ -123,42 +125,4 @@ test("renderDashboardRootInnerHtml shows Brainstorming rollup instead of New pla
   assert.match(html, /wc-brainstorming-ideas-section/);
   assert.match(html, /Unified IdeaPlan document/);
   assert.doesNotMatch(html, /<summary>New \(/);
-});
-
-test("idea detail panel renders brainstorm session history from linkedPlanArtifactSummary", () => {
-  const html = renderDashboardRootInnerHtml({
-    ok: true,
-    data: {
-      stateSummary: {},
-      workspaceStatus: {},
-      brainstormingIdeas: { schemaVersion: 1, available: false, count: 0, top: [] },
-      ideas: {
-        available: true,
-        totalCount: 1,
-        openCount: 0,
-        planningCount: 0,
-        plannedCount: 0,
-        top: [
-          {
-            id: "I005",
-            title: "Unified IdeaPlan document",
-            note: "",
-            status: "planning",
-            linkedPlanArtifactSummary: {
-              planId: dashboardFixture.ideasTopPlanSummary.planId,
-              planRef: dashboardFixture.ideasTopPlanSummary.planRef,
-              status: "brainstorming",
-              version: 1,
-              brainstormSynthesis: dashboardFixture.ideasTopPlanSummary.brainstormSynthesis,
-              brainstormSessions: sampleSessions
-            }
-          }
-        ]
-      }
-    }
-  }, null, null, null, null, { ideasUnifiedModelEnabled: true });
-  assert.match(html, /wc-idea-brainstorm-detail-panel/);
-  assert.match(html, /Brainstorm session history/);
-  assert.match(html, /Session 1/);
-  assert.match(html, /Session 2/);
 });

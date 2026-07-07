@@ -7,6 +7,7 @@ Validate the brainstorm section and transition a unified IdeaPlan document from 
 ## Required args
 
 - `planRef` — `plan-artifact:<planId>` for the unified IdeaPlan document.
+- `operatorConfirmedBrainstormComplete` — must be `true` after the operator explicitly says brainstorming is finished and wants to start planning. Completing an individual session with `update-brainstorm-session.completedAt` is not enough.
 
 ## Optional args
 
@@ -20,6 +21,7 @@ Validate the brainstorm section and transition a unified IdeaPlan document from 
 
 Rejects the transition when:
 
+- `operatorConfirmedBrainstormComplete` is not `true`
 - document `status` is not `brainstorming`
 - `brainstorm.sessions` is empty
 - any session is missing required context fields (`contextProblem`, `contextAudience`) or scoring sub-inputs
@@ -32,7 +34,7 @@ On success, writes `brainstorm.synthesis` (60/40 recency when multiple scored se
 This command writes the IdeaPlan artifact file and is policy-sensitive. Pass JSON `policyApproval` in the command args. When `tasks.planningGenerationPolicy` is `require`, include `expectedPlanningGeneration` from a prior read.
 
 ```bash
-pnpm exec wk run complete-brainstorm '{"planRef":"plan-artifact:f7a3b891-c5d2-4e6f-9a08-1b2c3d4e5f60","expectedPlanningGeneration":31,"policyApproval":{"confirmed":true,"rationale":"complete brainstorm and enter planning"}}'
+pnpm exec wk run complete-brainstorm '{"planRef":"plan-artifact:f7a3b891-c5d2-4e6f-9a08-1b2c3d4e5f60","operatorConfirmedBrainstormComplete":true,"expectedPlanningGeneration":31,"policyApproval":{"confirmed":true,"rationale":"operator confirmed brainstorming is finished and planning should start"}}'
 ```
 
 Returns `data.status` `planning`, `data.brainstorm` (sessions + synthesis), and `data.plan` (initialized title/summary).

@@ -186,7 +186,8 @@ export function buildBrainstormSessionPrompt(input: BrainstormSessionPromptInput
     "",
     "Load **`schemas/ideas/states/brainstorming.schema.json`** and follow its **`agentDirective`** for scoring inputs, computed scores, and session completion.",
     "",
-    "Use **`update-brainstorm-session`** to fill session inputs progressively. When the session is complete, use **`complete-brainstorm`** to transition toward planning.",
+    "Use **`update-brainstorm-session`** to fill session inputs progressively, including `completedAt` when the session record is complete.",
+    "Stop after the session update: summarize the brainstorm scores and ask whether the operator wants another brainstorm session or wants to start planning. Do not transition the IdeaPlan lifecycle from this prompt.",
     "",
     "Use **`.ai/AGENT-CLI-MAP.md`** and **`.ai/POLICY-APPROVAL.md`** for gated `workspace-kit run` commands. Keep normal user-facing chat focused on brainstorm decisions, not raw CLI choreography."
   ].filter((line): line is string => line !== undefined);

@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://workflow-cannon.dev/schemas/ideas/states/brainstorming.schema.json",
   "title": "IdeaPlan brainstorming state",
-  "description": "Unified IdeaPlan document shape and agent contract when status is brainstorming. The brainstorm section is required; the plan section must be absent. Session records are mutable in place: start-brainstorm-session creates the slot; update-brainstorm-session fills inputs and scores progressively until completedAt is set.",
+  "description": "Unified IdeaPlan document shape and agent contract when status is brainstorming. The brainstorm section is required; the plan section must be absent. Session records are mutable in place: start-brainstorm-session creates the slot; update-brainstorm-session fills inputs and scores progressively until completedAt is set. Session completion is not lifecycle completion: agents stop after updating the session unless the operator explicitly says brainstorming is finished and asks to start planning.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -38,7 +38,7 @@
     "model": "mutable-in-place",
     "createCommand": "start-brainstorm-session",
     "updateCommand": "update-brainstorm-session",
-    "description": "start-brainstorm-session allocates a sessionId and timestamps; update-brainstorm-session progressively fills inputs, computes scores, and may set completedAt without replacing the session row."
+    "description": "start-brainstorm-session allocates a sessionId and timestamps; update-brainstorm-session progressively fills inputs, computes scores, and may set completedAt without replacing the session row. Setting completedAt finishes the guided session only; complete-brainstorm is reserved for explicit operator confirmation that brainstorming as a whole is finished."
   },
   "x-canonicalAgentDirective": { "$ref": "#/$defs/canonicalAgentDirective" },
   "$defs": {
@@ -356,7 +356,7 @@
           "fieldName": "sessionNotes",
           "prompt": "Add any session notes, assumptions, or follow-ups for the planning phase.",
           "type": "text",
-          "guidance": "Keep notes concise and actionable. Do not duplicate computed scores here."
+          "guidance": "Keep notes concise and actionable. Do not duplicate computed scores here. After setting completedAt with update-brainstorm-session, stop and summarize the session; do not transition to planning unless the operator explicitly confirms brainstorming is finished."
         }
       ],
       "computeSteps": [

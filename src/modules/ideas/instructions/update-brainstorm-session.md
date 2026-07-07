@@ -12,12 +12,14 @@ Merge partial fields into a brainstorm session at the given `sessionIndex`. Comp
 ## Optional args
 
 - `inputs` — partial session record (scoring sub-inputs, context text fields).
-- `completedAt` — ISO timestamp when the session is finished.
+- `completedAt` — ISO timestamp when this guided brainstorm session record is finished. This does **not** transition the IdeaPlan to planning.
 - `notes` — free-form session notes.
 - `ideaId` — when provided, must match the document `ideaId`.
 - `clientMutationId` — idempotency key.
 
 At least one of `inputs`, `completedAt`, or `notes` is required.
+
+After the agent fills inputs, computes scores, and sets `completedAt`, stop and summarize the session for the operator. Do not call `complete-brainstorm` unless the operator explicitly says brainstorming as a whole is finished and wants to start planning.
 
 ## Policy
 

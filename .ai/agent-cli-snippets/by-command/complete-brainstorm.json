@@ -11,8 +11,8 @@
   "sampleArgs": {},
   "examples": [
     {
-      "description": "Minimal argv example",
-      "argv": "workspace-kit run complete-brainstorm '{}'"
+      "description": "Operator-confirmed transition example",
+      "argv": "workspace-kit run complete-brainstorm '{\"planRef\":\"plan-artifact:<planId>\",\"operatorConfirmedBrainstormComplete\":true,\"policyApproval\":{\"confirmed\":true,\"rationale\":\"operator confirmed brainstorming is finished and planning should start\"}}'"
     }
   ],
   "instructionPath": "src/modules/ideas/instructions/complete-brainstorm.md",

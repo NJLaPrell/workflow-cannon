@@ -41,10 +41,7 @@ import {
 } from "./plan-artifact-display-state.js";
 import type { DashboardSectionId } from "./dashboard-section-registry.js";
 import { lookupDashboardSection } from "./dashboard-section-registry.js";
-import {
-  renderBrainstormingIdeasRollupSection,
-  renderIdeaPlanBrainstormDetailPanel
-} from "./render-brainstorming-rollup.js";
+import { renderBrainstormingIdeasRollupSection } from "./render-brainstorming-rollup.js";
 import { renderDashboardReadModeBadgeHtml, renderDashboardSectionPlaceholder } from "./render-dashboard-shell.js";
 import type { DashboardReadModeBadge } from "./dashboard-read-mode-badge.js";
 import type { McpHostStatus } from "../../mcp/mcp-status-types.js";
@@ -2714,11 +2711,6 @@ function renderDashboardIdeasSectionInnerHtml(
         activeDraftPlanArtifact: row.activeDraftPlanArtifact,
         ideasUnifiedModelEnabled
       });
-      const brainstormDetailPanel = ideasUnifiedModelEnabled
-        ? renderIdeaPlanBrainstormDetailPanel(
-            activeDraftPlanArtifactSummary ?? linkedPlanArtifactSummary
-          )
-        : "";
       return (
         '<div class="wc-ideas-row" draggable="true" data-wc-idea-id="' +
         idAttr +
@@ -2744,9 +2736,6 @@ function renderDashboardIdeasSectionInnerHtml(
         '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="idea-delete">Delete</button>' +
         "</span>" +
         "</div>" +
-        (brainstormDetailPanel
-          ? '<div class="wc-idea-brainstorm-detail-panel">' + brainstormDetailPanel + "</div>"
-          : "") +
         '<div class="wc-ideas-edit-form" data-wc-ideas-edit-form="1" hidden>' +
         '<input class="wc-input" data-wc-idea-edit-title="1" type="text" maxlength="180" value="' +
         titleAttr +

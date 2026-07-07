@@ -40,8 +40,8 @@ function cleanString(raw: unknown): string | undefined {
   return typeof raw === "string" && raw.trim() ? raw.trim() : undefined;
 }
 
-function completePayloadDigest(planRef: string): string {
-  return digestPayload({ planRef });
+function completePayloadDigest(input: { planRef: string; operatorConfirmedBrainstormComplete: true }): string {
+  return digestPayload(input);
 }
 
 function successResult(
@@ -70,6 +70,19 @@ export async function runCompleteBrainstorm(
       message: "complete-brainstorm requires planRef shaped like plan-artifact:<planId>"
     };
   }
+  if (args.operatorConfirmedBrainstormComplete !== true) {
+    return {
+      ok: false,
+      code: "brainstorm-completion-confirmation-required",
+      message:
+        "complete-brainstorm requires operatorConfirmedBrainstormComplete:true after the operator explicitly says brainstorming is finished.",
+      data: {
+        responseSchemaVersion: 1,
+        planRef,
+        requiredArg: "operatorConfirmedBrainstormComplete"
+      }
+    };
+  }
 
   let planning;
   try {
@@ -93,7 +106,7 @@ export async function runCompleteBrainstorm(
   }
 
   const clientMutationId = readIdempotencyValue(args);
-  const digest = completePayloadDigest(planRef);
+  const digest = completePayloadDigest({ planRef, operatorConfirmedBrainstormComplete: true });
   const db = planning.sqliteDual.getDatabase();
 
   if (clientMutationId) {

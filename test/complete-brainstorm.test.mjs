@@ -124,6 +124,7 @@ test("complete-brainstorm transitions brainstorming to planning when valid", asy
       name: "complete-brainstorm",
       args: {
         planRef: brainstormingFixture.planRef,
+        operatorConfirmedBrainstormComplete: true,
         expectedPlanningGeneration: generation,
         policyApproval: policyApproval()
       }
@@ -135,6 +136,38 @@ test("complete-brainstorm transitions brainstorming to planning when valid", asy
   assert.equal(out.data.status, "planning");
   assert.ok(out.data.brainstorm.synthesis);
   assert.equal(out.data.plan.title, "Unified doc idea");
+});
+
+test("complete-brainstorm requires explicit operator confirmation", async () => {
+  const { workspace } = await tmpWorkspace();
+  const created = await ideasModule.onCommand(
+    {
+      name: "create-idea",
+      args: {
+        title: "Unified doc idea",
+        linkedPlanArtifact: brainstormingFixture.planRef,
+        policyApproval: policyApproval()
+      }
+    },
+    ctx(workspace)
+  );
+  assert.equal(created.ok, true);
+  seedBrainstormingDocument(workspace, { ideaId: created.data.idea.id });
+
+  const generation = await planningGeneration(workspace);
+  const out = await ideasModule.onCommand(
+    {
+      name: "complete-brainstorm",
+      args: {
+        planRef: brainstormingFixture.planRef,
+        expectedPlanningGeneration: generation,
+        policyApproval: policyApproval()
+      }
+    },
+    ctx(workspace)
+  );
+  assert.equal(out.ok, false);
+  assert.equal(out.code, "brainstorm-completion-confirmation-required");
 });
 
 test("complete-brainstorm rejects empty brainstorm sessions", async () => {
@@ -149,6 +182,7 @@ test("complete-brainstorm rejects empty brainstorm sessions", async () => {
       name: "complete-brainstorm",
       args: {
         planRef: brainstormingFixture.planRef,
+        operatorConfirmedBrainstormComplete: true,
         expectedPlanningGeneration: generation,
         policyApproval: policyApproval()
       }

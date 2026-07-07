@@ -27,6 +27,8 @@ type BrainstormSessionRow = BrainstormScoreFields & {
 
 type BrainstormSynthesisRow = BrainstormScoreFields & {
   sessionCount?: number;
+  readinessPercent?: number;
+  readyForPlanning?: boolean;
 };
 
 function formatBrainstormScore(value: unknown): string {
@@ -36,7 +38,26 @@ function formatBrainstormScore(value: unknown): string {
   return Number.isInteger(value) ? String(value) : value.toFixed(1);
 }
 
-export function renderBrainstormScorePills(scores: BrainstormScoreFields | null | undefined): string {
+function renderBrainstormReadinessPill(row: BrainstormSynthesisRow): string {
+  if (typeof row.readinessPercent !== "number" || !Number.isFinite(row.readinessPercent)) {
+    return "";
+  }
+  const ready = row.readyForPlanning === true;
+  const cls = ready
+    ? "wc-brainstorm-score-pill wc-brainstorm-readiness-pill wc-brainstorm-readiness-ready"
+    : "wc-brainstorm-score-pill wc-brainstorm-readiness-pill";
+  const label = ready ? "Ready to plan" : row.readinessPercent + "% ready";
+  return (
+    '<span class="' +
+    cls +
+    '" title="Share of required brainstorm inputs (context + value/risk/effort/confidence) captured for the latest session">' +
+    '<span class="wc-brainstorm-score-label">Readiness</span><span class="wc-brainstorm-score-value">' +
+    escapeHtml(label) +
+    "</span></span>"
+  );
+}
+
+export function renderBrainstormScorePills(scores: BrainstormSynthesisRow | null | undefined): string {
   if (!scores || typeof scores !== "object") {
     return '<span class="muted">No scores yet</span>';
   }
@@ -49,6 +70,7 @@ export function renderBrainstormScorePills(scores: BrainstormScoreFields | null 
   ];
   return (
     '<span class="wc-brainstorm-score-pills">' +
+    renderBrainstormReadinessPill(scores) +
     items
       .map(
         ([label, value]) =>
@@ -157,6 +179,7 @@ export function renderBrainstormingIdeasRollupSection(brainstormingIdeas: unknow
       const synthesis =
         row.synthesis && typeof row.synthesis === "object" ? (row.synthesis as BrainstormSynthesisRow) : null;
       const sessions = row.sessions;
+      const sessionCount = Array.isArray(sessions) ? sessions.length : 0;
       const detailKey = "brainstorm-rollup-" + (ideaId.length > 0 ? ideaId : planRef || "row");
       const historyHtml = renderBrainstormSessionHistory({
         sessions,
@@ -164,6 +187,18 @@ export function renderBrainstormingIdeasRollupSection(brainstormingIdeas: unknow
         detailKey,
         openByDefault: false
       });
+      const brainstormBtnAttrs =
+        ' data-plan-ref="' + escapeHtmlAttr(planRef) + '" data-idea-id="' + escapeHtmlAttr(ideaId) + '"';
+      const brainstormBtnLabel = sessionCount === 0 ? "Start Brainstorming" : "Continue Brainstorming";
+      const brainstormBtnTitle =
+        sessionCount === 0
+          ? "Run the first brainstorm session for this idea"
+          : "Append a new brainstorm session to refine scores";
+      const readyForPlanning = synthesis?.readyForPlanning === true;
+      const planBtnLabel = readyForPlanning ? "Start Planning" : "Start Planning anyway";
+      const planBtnTitle = readyForPlanning
+        ? "Operator action: finish brainstorming and start planning"
+        : "Operator action: start planning even though brainstorming is not marked ready; plan sections may be based on incomplete scoring";
       return (
         '<article class="wc-brainstorming-idea-row" data-wc-idea-id="' +
         escapeHtmlAttr(ideaId) +
@@ -178,7 +213,18 @@ export function renderBrainstormingIdeasRollupSection(brainstormingIdeas: unknow
         "</span></p>" +
         '<div class="wc-brainstorming-idea-actions">' +
         renderBrainstormScorePills(synthesis) +
-        '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="idea-plan" title="Start planning from this brainstorm">Start Planning</button>' +
+        '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="plan-artifact-brainstorm"' +
+        brainstormBtnAttrs +
+        ' title="' +
+        escapeHtmlAttr(brainstormBtnTitle) +
+        '">' +
+        escapeHtml(brainstormBtnLabel) +
+        "</button>" +
+        '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="idea-plan" title="' +
+        escapeHtmlAttr(planBtnTitle) +
+        '">' +
+        escapeHtml(planBtnLabel) +
+        "</button>" +
         "</div></div>" +
         historyHtml +
         "</article>"
@@ -196,22 +242,4 @@ export function renderBrainstormingIdeasRollupSection(brainstormingIdeas: unknow
       : '<p class="muted">No ideas in brainstorming state.</p>') +
     "</section>"
   );
-}
-
-export function renderIdeaPlanBrainstormDetailPanel(summary: Record<string, unknown> | null | undefined): string {
-  if (!summary || typeof summary !== "object") {
-    return "";
-  }
-  const sessions = summary.brainstormSessions;
-  const synthesis = summary.brainstormSynthesis;
-  const planId = String(summary.planId ?? "").trim();
-  if ((!sessions || (Array.isArray(sessions) && sessions.length === 0)) && !synthesis) {
-    return "";
-  }
-  return renderBrainstormSessionHistory({
-    sessions,
-    synthesis,
-    detailKey: "idea-plan-brainstorm-" + (planId.length > 0 ? planId : "summary"),
-    openByDefault: false
-  });
 }
