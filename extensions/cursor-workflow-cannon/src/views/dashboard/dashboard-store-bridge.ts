@@ -562,14 +562,14 @@ export function wrapSectionHtmlWithFreshness(html: string, _slice: DashboardSlic
 export function sliceNamesForDashboardSummaryProjection(
   projection: "overview" | "queue" | "status" | "agentActivity"
 ): DashboardSliceName[] {
-  return DASHBOARD_SLICE_REGISTRY.filter((desc) => {
-    if (desc.command !== "dashboard-summary") {
-      return false;
-    }
-    const sliceProjection = desc.args.projection;
-    if (typeof sliceProjection !== "string") {
-      return projection === "overview";
-    }
-    return projection === "overview" || sliceProjection === projection;
-  }).map((desc) => desc.name);
+  switch (projection) {
+    case "overview":
+      return ["overview", "phase", "agent", "config"];
+    case "queue":
+      return ["overview", "phase", "queue", "ideas", "planArtifact", "phaseJournal"];
+    case "status":
+      return ["status", "team", "subagents", "checkpoints", "config"];
+    case "agentActivity":
+      return ["agentActivity"];
+  }
 }

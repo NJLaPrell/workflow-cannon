@@ -7,10 +7,8 @@ import {
   getPlanArtifactStoragePaths,
   readPlanArtifactIndex,
   readPlanArtifactVersion,
-  resolveLatestPlanArtifactVersion,
-  upsertPlanArtifactIndexOnDatabase
+  resolveLatestPlanArtifactVersion
 } from "../../core/planning/plan-artifact-storage.js";
-import type { PlanArtifactIndexStateV1 } from "../../core/planning/plan-artifact-storage.js";
 import type { PlanArtifactReviewRecordV1 } from "../../core/planning/plan-artifact-review-record.js";
 import { isPlanArtifactV1, type PlanArtifactV1 } from "../../core/planning/plan-artifact-v1.js";
 import { parsePlanIdFromPlanArtifactRef } from "../task-engine/plan-artifact-execute-policy.js";
@@ -27,6 +25,7 @@ import {
   mergePlanArtifactIntoIdeaPlanDocument,
   type IdeaPlanDocumentWithPlanningPayload
 } from "./idea-plan-planning-init.js";
+import { upsertIdeaPlanArtifactIndexFromDocument } from "./idea-plan-artifact-storage.js";
 import { loadIdeaPlanStateSchema } from "./idea-plan-state-schema-loader.js";
 import { requireIdeaPlanAgentDirective } from "./idea-plan-state-schema-guard.js";
 import type {
@@ -286,29 +285,7 @@ function upsertUnifiedPlanIndex(
   document: IdeaPlanDocumentWithPlanningPayload,
   planArtifact: PlanArtifactV1 | null
 ): void {
-  const paths = getPlanArtifactStoragePaths("", document.planId);
-  const mapStatus = (status: IdeaPlanStatus): PlanArtifactIndexStateV1["status"] => {
-    if (status === "reviewed") {
-      return "reviewed";
-    }
-    if (status === "accepted" || status === "delivered") {
-      return status === "delivered" ? "finalized" : "accepted";
-    }
-    return "draft";
-  };
-  const index: PlanArtifactIndexStateV1 = {
-    schemaVersion: 1,
-    planId: document.planId,
-    currentVersion: document.version,
-    planRef: document.planRef,
-    status: mapStatus(document.status),
-    title: document.plan?.title ?? planArtifact?.identity.title ?? "Idea plan",
-    planningType: document.plan?.planningType ?? planArtifact?.identity.planningType ?? "new-feature",
-    updatedAt: document.updatedAt,
-    wbsRowCount: document.wbs?.length ?? planArtifact?.wbs.length ?? 0,
-    openQuestionCount: document.openQuestions?.length ?? planArtifact?.openQuestions.length ?? 0
-  };
-  upsertPlanArtifactIndexOnDatabase(db, paths.moduleId, index);
+  upsertIdeaPlanArtifactIndexFromDocument(db, document, planArtifact);
 }
 
 function copyIfExists(source: string, target: string): boolean {

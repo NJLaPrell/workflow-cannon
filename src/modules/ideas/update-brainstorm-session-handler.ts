@@ -9,8 +9,14 @@ import {
   hasCompleteBrainstormScoringInputs,
   synthesizeBrainstormScores
 } from "./brainstorm-scoring.js";
+import { mergeBrainstormSessionIdeation, parseBrainstormSessionIdeationPatch } from "./brainstorm-ideation.js";
 import { readIdeaPlanArtifact, writeNextIdeaPlanArtifactVersion } from "./idea-plan-artifact-storage.js";
-import type { BrainstormSession, BrainstormSessionInputs, IdeaPlanDocument } from "./idea-plan-types.js";
+import type {
+  BrainstormSession,
+  BrainstormSessionIdeation,
+  BrainstormSessionInputs,
+  IdeaPlanDocument
+} from "./idea-plan-types.js";
 
 const IDEMPOTENCY_MODULE_PREFIX = "ideas-update-brainstorm-session-idempotency:";
 
@@ -122,6 +128,7 @@ function updatePayloadDigest(input: {
   planRef: string;
   sessionIndex: number;
   inputs?: Partial<BrainstormSessionInputs>;
+  ideation?: Partial<BrainstormSessionIdeation>;
   completedAt?: string;
   notes?: string;
 }): string {
@@ -132,6 +139,7 @@ function mergeSession(
   existing: BrainstormSession,
   patch: {
     inputs?: Partial<BrainstormSessionInputs>;
+    ideation?: Partial<BrainstormSessionIdeation>;
     completedAt?: string;
     notes?: string;
   },
@@ -149,6 +157,9 @@ function mergeSession(
   };
   if (patch.inputs) {
     session.inputs = mergedInputs;
+  }
+  if (patch.ideation) {
+    session.ideation = mergeBrainstormSessionIdeation(existing.ideation, patch.ideation);
   }
 
   let scoresComputed = false;
@@ -180,6 +191,7 @@ export async function runUpdateBrainstormSession(
   const planRef = cleanString(args.planRef);
   const sessionIndex = cleanSessionIndex(args.sessionIndex);
   const inputsPatch = parseSessionInputsPatch(args.inputs);
+  const ideationPatch = parseBrainstormSessionIdeationPatch(args.ideation);
   const completedAt = cleanString(args.completedAt);
   const notes = args.notes === undefined ? undefined : cleanString(args.notes);
 
@@ -192,11 +204,14 @@ export async function runUpdateBrainstormSession(
   if (args.inputs !== undefined && !inputsPatch) {
     return { ok: false, code: "invalid-args", message: "update-brainstorm-session inputs must be an object with recognized session fields" };
   }
-  if (!inputsPatch && completedAt === undefined && notes === undefined) {
+  if (args.ideation !== undefined && !ideationPatch) {
+    return { ok: false, code: "invalid-args", message: "update-brainstorm-session ideation must be an object with recognized ideation fields" };
+  }
+  if (!inputsPatch && !ideationPatch && completedAt === undefined && notes === undefined) {
     return {
       ok: false,
       code: "invalid-args",
-      message: "update-brainstorm-session requires at least one of inputs, completedAt, or notes"
+      message: "update-brainstorm-session requires at least one of inputs, ideation, completedAt, or notes"
     };
   }
 
@@ -226,6 +241,7 @@ export async function runUpdateBrainstormSession(
     planRef,
     sessionIndex,
     ...(inputsPatch ? { inputs: inputsPatch } : {}),
+    ...(ideationPatch ? { ideation: ideationPatch } : {}),
     ...(completedAt ? { completedAt } : {}),
     ...(notes !== undefined ? { notes } : {})
   });
@@ -297,6 +313,7 @@ export async function runUpdateBrainstormSession(
     currentSession,
     {
       ...(inputsPatch ? { inputs: inputsPatch } : {}),
+      ...(ideationPatch ? { ideation: ideationPatch } : {}),
       ...(completedAt ? { completedAt } : {}),
       ...(notes !== undefined ? { notes } : {})
     },

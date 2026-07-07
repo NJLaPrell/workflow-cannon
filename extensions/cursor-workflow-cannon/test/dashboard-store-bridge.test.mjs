@@ -75,6 +75,25 @@ test("agentActivity dashboard-summary projection maps to the agentActivity slice
   assert.deepEqual(sliceNamesForDashboardSummaryProjection("agentActivity"), ["agentActivity"]);
 });
 
+test("overview dashboard-summary projection does not map to queue or planning slices", () => {
+  const slices = sliceNamesForDashboardSummaryProjection("overview");
+  assert.deepEqual(slices, ["overview", "phase", "agent", "config"]);
+  assert.equal(slices.includes("queue"), false);
+  assert.equal(slices.includes("ideas"), false);
+  assert.equal(slices.includes("planArtifact"), false);
+});
+
+test("queue dashboard-summary projection hydrates queue and planning slices", () => {
+  assert.deepEqual(sliceNamesForDashboardSummaryProjection("queue"), [
+    "overview",
+    "phase",
+    "queue",
+    "ideas",
+    "planArtifact",
+    "phaseJournal"
+  ]);
+});
+
 test("mergeSlicePayloadIntoSummary preserves prior agentActivitySummary when new payload is empty", () => {
   const prior = {
     agentActivitySummary: {

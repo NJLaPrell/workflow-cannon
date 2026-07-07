@@ -1,4 +1,5 @@
 import { BRAINSTORM_SCORING_SUB_INPUT_FIELDS, hasCompleteBrainstormScoringInputs } from "./brainstorm-scoring.js";
+import { hasSubstantialBrainstormIdeation } from "./brainstorm-ideation.js";
 import type { BrainstormSession, IdeaPlanBrainstormSection } from "./idea-plan-types.js";
 
 export const REQUIRED_CONTEXT_FIELDS = ["contextProblem", "contextAudience"] as const;
@@ -8,6 +9,9 @@ export type BrainstormSectionValidationResult =
   | { ok: false; code: string; message: string; field?: string; sessionIndex?: number };
 
 function sessionHasRequiredInputs(session: BrainstormSession, sessionIndex: number): BrainstormSectionValidationResult {
+  if (hasSubstantialBrainstormIdeation(session.ideation)) {
+    return { ok: true };
+  }
   if (!session.inputs) {
     return {
       ok: false,

@@ -177,6 +177,31 @@ export type BrainstormSessionInputs = {
   sessionNotes?: string;
 };
 
+export type BrainstormIdeationTextItem = {
+  text: string;
+};
+
+export type BrainstormIdeationRationaleItem = {
+  text: string;
+  rationale?: string;
+};
+
+export type BrainstormIdeationTranscriptEntry = {
+  role: "agent" | "operator";
+  text: string;
+  at: string;
+};
+
+/** Qualitative ideation captured during a guided brainstorm session. */
+export type BrainstormSessionIdeation = {
+  featureIdeas?: BrainstormIdeationRationaleItem[];
+  perspectives?: BrainstormIdeationTextItem[];
+  expectations?: BrainstormIdeationTextItem[];
+  openThreads?: BrainstormIdeationTextItem[];
+  decisions?: BrainstormIdeationRationaleItem[];
+  transcript?: BrainstormIdeationTranscriptEntry[];
+};
+
 /**
  * Mutable brainstorm session record. Commands create the slot, then fill it progressively.
  */
@@ -186,6 +211,7 @@ export type BrainstormSession = {
   updatedAt: string;
   completedAt?: string;
   inputs?: Partial<BrainstormSessionInputs>;
+  ideation?: BrainstormSessionIdeation;
   scores?: BrainstormScoreInputs;
   synthesized?: BrainstormScoreInputs;
   notes?: string;

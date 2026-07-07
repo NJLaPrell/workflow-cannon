@@ -12,6 +12,7 @@
     "updatedAt": { "type": "string", "format": "date-time" },
     "completedAt": { "type": "string", "format": "date-time" },
     "inputs": { "$ref": "#/$defs/brainstormSessionInputs" },
+    "ideation": { "$ref": "#/$defs/brainstormSessionIdeation" },
     "scores": { "$ref": "#/$defs/brainstormScoreInputs" },
     "synthesized": { "$ref": "#/$defs/brainstormScoreInputs" },
     "notes": { "type": "string" }
@@ -66,6 +67,63 @@
         "unknownsNotes": { "type": "string" },
         "alternativesConsidered": { "type": "string" },
         "sessionNotes": { "type": "string" }
+      }
+    },
+    "brainstormIdeationTextItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["text"],
+      "properties": {
+        "text": { "type": "string", "minLength": 1 }
+      }
+    },
+    "brainstormIdeationRationaleItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["text"],
+      "properties": {
+        "text": { "type": "string", "minLength": 1 },
+        "rationale": { "type": "string" }
+      }
+    },
+    "brainstormIdeationTranscriptEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["role", "text", "at"],
+      "properties": {
+        "role": { "type": "string", "enum": ["agent", "operator"] },
+        "text": { "type": "string", "minLength": 1 },
+        "at": { "type": "string", "format": "date-time" }
+      }
+    },
+    "brainstormSessionIdeation": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "featureIdeas": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/brainstormIdeationRationaleItem" }
+        },
+        "perspectives": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/brainstormIdeationTextItem" }
+        },
+        "expectations": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/brainstormIdeationTextItem" }
+        },
+        "openThreads": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/brainstormIdeationTextItem" }
+        },
+        "decisions": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/brainstormIdeationRationaleItem" }
+        },
+        "transcript": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/brainstormIdeationTranscriptEntry" }
+        }
       }
     }
   }

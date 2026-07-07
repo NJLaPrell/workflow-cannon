@@ -37,6 +37,7 @@ import { buildDashboardDependencyOverview } from "./dashboard-dependency-overvie
 import { buildDashboardPhaseBucketsForTasks } from "./dashboard-phase-buckets.js";
 import { readBuildPlanSession, toDashboardPlanningSession } from "../../../core/planning/build-plan-session-file.js";
 import { listPlanArtifactSummaries, readLatestPlanArtifact } from "../../../core/planning/plan-artifact-storage.js";
+import { readIdeaPlanArtifact } from "../../ideas/idea-plan-artifact-storage.js";
 import { isCriticalOpenQuestion } from "../../../core/planning/review-plan-artifact.js";
 import { reviewPlanArtifact } from "../../../core/planning/review-plan-artifact.js";
 import {
@@ -812,13 +813,22 @@ export function buildDashboardPlanArtifactSummary(
   const planRefToTasks = buildPlanRefToTasksIndex(allTasks);
   const PLAN_ARTIFACT_SUMMARY_TEXT_MAX_LENGTH = 160;
   const rows = summaries.slice(0, 20).map((summary) => {
+    const ideaPlan = readIdeaPlanArtifact(ctx.workspacePath, summary.planRef);
     const latestArtifact = readLatestPlanArtifact(ctx.workspacePath, summary.planId);
+    const version = ideaPlan?.version ?? summary.currentVersion;
     const latestReview =
       summary.latestReview &&
       summary.latestReview.planRef === summary.planRef &&
-      summary.latestReview.reviewedVersion === summary.currentVersion
+      summary.latestReview.reviewedVersion === version
         ? summary.latestReview
         : undefined;
+    const title =
+      ideaPlan?.plan?.title?.trim() ||
+      latestArtifact?.identity.title?.trim() ||
+      summary.title;
+    const updatedAt = ideaPlan?.updatedAt ?? summary.updatedAt;
+    const indexStatus = summary.status;
+    const status = indexStatus;
     const phaseRecommendations = Array.isArray(latestArtifact?.phaseRecommendations)
       ? latestArtifact.phaseRecommendations
       : [];
@@ -828,9 +838,13 @@ export function buildDashboardPlanArtifactSummary(
       : "";
     const phaseKey = typeof primaryPhase?.phaseKey === "string" ? primaryPhase.phaseKey.trim() : "";
     const sourceIdeaId =
-      typeof latestArtifact?.provenance?.sourceIdeaId === "string" ? latestArtifact.provenance.sourceIdeaId.trim() : "";
+      ideaPlan?.ideaId ??
+      (typeof latestArtifact?.provenance?.sourceIdeaId === "string"
+        ? latestArtifact.provenance.sourceIdeaId.trim()
+        : "");
     const summaryTextRaw =
-      typeof latestArtifact?.identity?.summary === "string" ? latestArtifact.identity.summary.trim() : "";
+      ideaPlan?.plan?.summary?.trim() ||
+      (typeof latestArtifact?.identity?.summary === "string" ? latestArtifact.identity.summary.trim() : "");
     const summaryText =
       summaryTextRaw.length > PLAN_ARTIFACT_SUMMARY_TEXT_MAX_LENGTH
         ? summaryTextRaw.slice(0, PLAN_ARTIFACT_SUMMARY_TEXT_MAX_LENGTH - 3).trimEnd() + "..."
@@ -943,12 +957,12 @@ export function buildDashboardPlanArtifactSummary(
     return {
       planId: summary.planId,
       planRef: summary.planRef,
-      version: summary.currentVersion,
-      status: summary.status,
+      version,
+      status,
       lifecycleStatus,
-      title: summary.title,
-      planningType: summary.planningType,
-      updatedAt: summary.updatedAt,
+      title,
+      planningType: ideaPlan?.plan?.planningType ?? summary.planningType,
+      updatedAt,
       wbsRowCount: summary.wbsRowCount,
       openQuestionCount: summary.openQuestionCount,
       blockerCount,

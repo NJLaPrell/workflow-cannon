@@ -174,3 +174,37 @@ test("update-brainstorm-session computes all five scores when sub-inputs are com
     complexity: 9
   });
 });
+
+test("update-brainstorm-session persists structured ideation without dropping unknown fields", async () => {
+  const { workspace } = await tmpWorkspace();
+  await writeIdeaPlanFixture(workspace, "idea-state.fixture.json");
+  const started = await runStart(workspace, { planRef: PLAN_REF });
+  assert.equal(started.ok, true);
+
+  const update = await runUpdate(workspace, {
+    planRef: PLAN_REF,
+    sessionIndex: 0,
+    ideation: {
+      featureIdeas: [{ text: "Agent proposes feature A", rationale: "High operator value" }],
+      perspectives: [{ text: "Treat ideation and scoring as separate passes" }],
+      transcript: [{ role: "agent", text: "What if brainstorming seeded the plan?", at: "2026-07-07T21:00:00.000Z" }]
+    }
+  });
+  assert.equal(update.ok, true);
+  assert.equal(update.data.session.ideation?.featureIdeas?.[0]?.text, "Agent proposes feature A");
+  assert.equal(update.data.session.ideation?.perspectives?.[0]?.text, "Treat ideation and scoring as separate passes");
+  assert.equal(update.data.session.ideation?.transcript?.length, 1);
+
+  const followUp = await runUpdate(workspace, {
+    planRef: PLAN_REF,
+    sessionIndex: 0,
+    ideation: {
+      expectations: [{ text: "Operator can save partial ideation and return later" }],
+      transcript: [{ role: "operator", text: "Yes, do that.", at: "2026-07-07T21:01:00.000Z" }]
+    }
+  });
+  assert.equal(followUp.ok, true);
+  assert.equal(followUp.data.session.ideation?.featureIdeas?.[0]?.text, "Agent proposes feature A");
+  assert.equal(followUp.data.session.ideation?.expectations?.[0]?.text, "Operator can save partial ideation and return later");
+  assert.equal(followUp.data.session.ideation?.transcript?.length, 2);
+});
