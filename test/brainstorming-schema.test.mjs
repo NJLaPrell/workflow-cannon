@@ -57,6 +57,10 @@ test("canonical agentDirective includes all 13 scoring sub-input questions", () 
 
 test("canonical agentDirective question phases are ordered", () => {
   const expectedOrder = [
+    "ideation-feature",
+    "ideation-perspective",
+    "ideation-expectation",
+    "checkpoint",
     "context",
     "value-scoring",
     "risk-scoring",

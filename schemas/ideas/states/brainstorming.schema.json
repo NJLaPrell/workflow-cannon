@@ -147,6 +147,10 @@
         "phase": {
           "type": "string",
           "enum": [
+            "ideation-feature",
+            "ideation-perspective",
+            "ideation-expectation",
+            "checkpoint",
             "context",
             "value-scoring",
             "risk-scoring",
@@ -219,6 +223,34 @@
       "schemaVersion": 1,
       "state": "brainstorming",
       "questions": [
+        {
+          "phase": "ideation-feature",
+          "fieldName": "featureIdeas",
+          "prompt": "What feature ideas or solution directions should we capture for this idea?",
+          "type": "text",
+          "guidance": "Contribute proposals yourself; do not only ask the operator. Persist with update-brainstorm-session ideation.featureIdeas as {text,rationale?} items."
+        },
+        {
+          "phase": "ideation-perspective",
+          "fieldName": "perspectives",
+          "prompt": "What perspectives, constraints, or framing should shape this idea?",
+          "type": "text",
+          "guidance": "Offer at least one perspective the operator may not have stated. Persist with update-brainstorm-session ideation.perspectives."
+        },
+        {
+          "phase": "ideation-expectation",
+          "fieldName": "expectations",
+          "prompt": "What should success look like if this idea ships?",
+          "type": "text",
+          "guidance": "Capture operator-visible outcomes and expectations. Persist with update-brainstorm-session ideation.expectations."
+        },
+        {
+          "phase": "checkpoint",
+          "fieldName": "sessionCheckpoint",
+          "prompt": "Save brainstorm progress or finish and move toward planning?",
+          "type": "text",
+          "guidance": "After each ideation turn, offer save-and-return (update-brainstorm-session without completedAt) vs finish-session (set completedAt when the operator confirms). Run complete-brainstorm only when the operator explicitly says brainstorming is finished."
+        },
         {
           "phase": "context",
           "fieldName": "contextProblem",

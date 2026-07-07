@@ -86,6 +86,16 @@ test("buildIdeaPlanningPrompt with full lineage and active session summary", () 
   assert.match(prompt, /1 prior artifact: \*\*plan-artifact:old-plan\*\*/);
 });
 
+test("buildIdeaPlanningPrompt includes brainstorm digest when provided", () => {
+  const prompt = buildIdeaPlanningPrompt({
+    ideaId: "I009",
+    title: "Guided brainstorming",
+    brainstormDigest: "## Feature ideas\n- Seed plan from ideation"
+  });
+  assert.match(prompt, /Brainstorm digest:/);
+  assert.match(prompt, /Seed plan from ideation/);
+});
+
 test("formatPlanLineageSummary returns compact none-yet message", () => {
   assert.match(formatPlanLineageSummary({}), /none yet/);
 });

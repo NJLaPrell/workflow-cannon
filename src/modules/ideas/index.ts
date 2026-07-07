@@ -28,6 +28,7 @@ import {
 import { readActiveDraftPlanArtifact } from "./idea-planning-metadata.js";
 import { publishIdeasPlanningEvents } from "./ideas-planning-events-runtime.js";
 import { readIdeaPlanArtifact } from "./idea-plan-artifact-storage.js";
+import { createUnifiedIdeaPlanDocumentForIdea } from "./migrate-ideas-to-unified-document.js";
 import { persistPlanningChatSession } from "./planning-chat-session.js";
 import { runStartIdeaPlanning } from "./start-idea-planning-handler.js";
 import { runStartBrainstormSession } from "./start-brainstorm-session-handler.js";
@@ -207,11 +208,12 @@ export const ideasModule: WorkflowModule = {
       }
       const clientMutationId = readIdempotencyValue(args);
       const nowIso = new Date().toISOString();
+      const workspacePath = ctx.workspacePath ?? process.cwd();
 
       if (gitCanonical) {
         const id = allocateNextIdeaId(db);
         const sortOrder = nextIdeaSortOrder(db);
-        const ideaRecord = buildCreateIdeaRecord({
+        let ideaRecord = buildCreateIdeaRecord({
           title,
           note,
           status,
@@ -221,6 +223,9 @@ export const ideasModule: WorkflowModule = {
           sortOrder,
           nowIso
         });
+        if (!linkedPlanArtifact) {
+          ideaRecord = createUnifiedIdeaPlanDocumentForIdea(workspacePath, db, ideaRecord, nowIso).idea;
+        }
         const publishErr = await publishIdeasPlanningEvents({
           ctx,
           store,
@@ -245,11 +250,14 @@ export const ideasModule: WorkflowModule = {
         return { ok: true, code: "idea-created", message: `Idea ${idea.id} created`, data };
       }
 
-      const idea = createIdea(
+      let idea = createIdea(
         db,
         { title, note, status, linkedPlanArtifact, previousPlanArtifacts },
         nowIso
       );
+      if (!linkedPlanArtifact) {
+        idea = createUnifiedIdeaPlanDocumentForIdea(workspacePath, db, idea, nowIso).idea;
+      }
       const data: Record<string, unknown> = { responseSchemaVersion: 1, idea };
       attachPlanningMeta(data, ctx, planningGeneration);
       return { ok: true, code: "idea-created", message: `Idea ${idea.id} created`, data };

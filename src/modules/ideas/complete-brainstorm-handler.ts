@@ -5,6 +5,7 @@ import { planningGenPolicyGate } from "../task-engine/planning-generation-gate.j
 import { digestPayload, readIdempotencyValue } from "../task-engine/mutation-utils.js";
 import { TaskEngineError } from "../task-engine/transitions.js";
 import { applyBrainstormSectionSynthesis } from "./brainstorm-section-synthesis.js";
+import { buildPlanSeedFromBrainstorm } from "./brainstorm-plan-seed.js";
 import { enforceIdeaPlanStatusTransition, IdeaPlanStatusTransitionError } from "./idea-plan-status-machine.js";
 import {
   readIdeaPlanArtifact,
@@ -185,9 +186,25 @@ export async function runCompleteBrainstorm(
 
   const idea = getIdea(db, existing.ideaId);
   const planTitle = cleanString(args.planTitle) ?? idea?.title ?? "Idea plan";
-  const planSummary =
-    cleanString(args.planSummary) ?? "Author structured plan sections from brainstorm synthesis.";
+  const brainstorm = applyBrainstormSectionSynthesis(existing.brainstorm!);
+  const seed = buildPlanSeedFromBrainstorm({
+    title: planTitle,
+    brainstorm,
+    fallbackSummary: cleanString(args.planSummary)
+  });
+  const planSummary = cleanString(args.planSummary) ?? seed.planSummary;
   const planningType = cleanString(args.planningType);
+  const schemaLoad = loadIdeaPlanStateSchema("planning", workspacePath);
+  const schemaGuard = guardIdeaPlanStateSchemaLoad(schemaLoad);
+  if (!schemaGuard.ok) {
+    return {
+      ok: false,
+      code: schemaGuard.code,
+      message: schemaGuard.message,
+      data: { responseSchemaVersion: 1, planRef, ...schemaGuard.data }
+    };
+  }
+  const planningDirective = schemaGuard.agentDirective;
 
   const nowIso = new Date().toISOString();
   let nextStatus: IdeaPlanDocument["status"];
@@ -205,19 +222,6 @@ export async function runCompleteBrainstorm(
     throw err;
   }
 
-  const brainstorm = applyBrainstormSectionSynthesis(existing.brainstorm!);
-  const schemaLoad = loadIdeaPlanStateSchema("planning", workspacePath);
-  const schemaGuard = guardIdeaPlanStateSchemaLoad(schemaLoad);
-  if (!schemaGuard.ok) {
-    return {
-      ok: false,
-      code: schemaGuard.code,
-      message: schemaGuard.message,
-      data: { responseSchemaVersion: 1, planRef, ...schemaGuard.data }
-    };
-  }
-  const planningDirective = schemaGuard.agentDirective;
-
   const updated: IdeaPlanDocument = {
     ...existing,
     status: nextStatus,
@@ -229,7 +233,8 @@ export async function runCompleteBrainstorm(
       summary: planSummary,
       ...(planningType ? { planningType } : {}),
       wbsRowCount: 0
-    }
+    },
+    ...seed.planningPayload
   };
 
   const persisted = writeNextIdeaPlanArtifactVersion(workspacePath, updated, { sqliteDb: db });

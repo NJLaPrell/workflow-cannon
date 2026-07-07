@@ -221,3 +221,52 @@ test("get-idea returns unified ideaPlan with brainstorm synthesis", async () => 
   assert.ok(Array.isArray(out.data.ideaPlan.brainstorm.sessions));
   assert.ok(out.data.ideaPlan.brainstorm.synthesis);
 });
+
+test("complete-brainstorm seeds plan summary and goals from ideation when planSummary omitted", async () => {
+  const { workspace } = await tmpWorkspace();
+  const created = await ideasModule.onCommand(
+    {
+      name: "create-idea",
+      args: {
+        title: "Ideation seeded plan",
+        linkedPlanArtifact: brainstormingFixture.planRef,
+        policyApproval: policyApproval()
+      }
+    },
+    ctx(workspace)
+  );
+  assert.equal(created.ok, true);
+  const session = {
+    ...sessionFixture,
+    ideation: {
+      featureIdeas: [{ text: "Persist structured ideation", rationale: "Stop cramming into sessionNotes" }],
+      openThreads: [{ text: "Transcript retention policy" }]
+    }
+  };
+  seedBrainstormingDocument(workspace, {
+    ideaId: created.data.idea.id,
+    brainstorm: { sessions: [session], activeSessionId: session.sessionId }
+  });
+
+  const generation = await planningGeneration(workspace);
+  const out = await ideasModule.onCommand(
+    {
+      name: "complete-brainstorm",
+      args: {
+        planRef: brainstormingFixture.planRef,
+        operatorConfirmedBrainstormComplete: true,
+        expectedPlanningGeneration: generation,
+        policyApproval: policyApproval()
+      }
+    },
+    ctx(workspace)
+  );
+  assert.equal(out.ok, true, out.message);
+  assert.match(out.data.plan.summary, /Persist structured ideation/);
+  const persisted = await ideasModule.onCommand(
+    { name: "get-idea", args: { ideaId: created.data.idea.id } },
+    ctx(workspace)
+  );
+  assert.equal(persisted.data.ideaPlan.goals?.[0], "Persist structured ideation");
+  assert.equal(persisted.data.ideaPlan.openQuestions?.[0], "Transcript retention policy");
+});

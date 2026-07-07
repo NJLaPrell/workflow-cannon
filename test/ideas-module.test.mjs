@@ -36,6 +36,7 @@ test("ideasModule creates and retrieves an idea", async () => {
   assert.equal(created.data.idea.note, "Keep the spark.");
   assert.equal(created.data.idea.status, "open");
   assert.equal(created.data.idea.sortOrder, 0);
+  assert.match(created.data.idea.linkedPlanArtifact, /^plan-artifact:[0-9a-f-]{36}$/);
   assert.deepEqual(created.data.idea.previousPlanArtifacts, []);
   assert.equal(created.data.responseSchemaVersion, 1);
 

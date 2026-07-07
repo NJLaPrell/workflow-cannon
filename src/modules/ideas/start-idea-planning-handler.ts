@@ -7,6 +7,8 @@ import { planningGenPolicyGate } from "../task-engine/planning-generation-gate.j
 import { digestPayload, readIdempotencyValue } from "../task-engine/mutation-utils.js";
 import { TaskEngineError } from "../task-engine/transitions.js";
 import { buildIdeaPlanningPrompt } from "./build-idea-planning-prompt.js";
+import { buildBrainstormDigest } from "./brainstorm-plan-seed.js";
+import { readIdeaPlanArtifact } from "./idea-plan-artifact-storage.js";
 import { initializeIdeaPlanPlanningSectionForStart } from "./idea-plan-planning-init.js";
 import { getIdea, isIdeaId, updateIdea, type IdeaRecord } from "./idea-store.js";
 import { readActiveDraftPlanArtifact } from "./idea-planning-metadata.js";
@@ -98,6 +100,33 @@ function writeIdempotencyRecord(
   nowIso: string
 ): void {
   writeModuleStateJson(db, idempotencyModuleId(clientMutationId), 1, record as unknown as Record<string, unknown>, nowIso);
+}
+
+function brainstormDigestForPlanningStart(
+  workspacePath: string,
+  planRef: string | undefined,
+  ideaPlan: ReturnType<typeof initializeIdeaPlanPlanningSectionForStart>["ideaPlan"]
+): string | undefined {
+  const document = ideaPlan ?? (planRef ? readIdeaPlanArtifact(workspacePath, planRef) : null);
+  return buildBrainstormDigest(document?.brainstorm);
+}
+
+function buildPlanningPromptForIdea(input: {
+  workspacePath: string;
+  idea: IdeaRecord;
+  planningSessionId: string;
+  lineage: ReturnType<typeof collectPlanLineage>;
+  ideaPlan?: ReturnType<typeof initializeIdeaPlanPlanningSectionForStart>["ideaPlan"];
+  planRef?: string;
+}): string {
+  return buildIdeaPlanningPrompt({
+    ideaId: input.idea.id,
+    title: input.idea.title,
+    note: input.idea.note,
+    planningSessionId: input.planningSessionId,
+    brainstormDigest: brainstormDigestForPlanningStart(input.workspacePath, input.planRef, input.ideaPlan),
+    ...input.lineage
+  });
 }
 
 function startPayloadDigest(ideaId: string): string {
@@ -234,12 +263,13 @@ export async function runStartIdeaPlanning(
   if (existingSession) {
     const prompt =
       existingSession.resumePrompt ??
-      buildIdeaPlanningPrompt({
-        ideaId: workingIdea.id,
-        title: workingIdea.title,
-        note: workingIdea.note,
+      buildPlanningPromptForIdea({
+        workspacePath,
+        idea: workingIdea,
         planningSessionId: existingSession.sessionId,
-        ...lineage
+        lineage,
+        ideaPlan: initialized.ideaPlan,
+        planRef: initialized.planRef ?? workingIdea.linkedPlanArtifact
       });
     let updatedIdea = workingIdea;
     let session = existingSession;
@@ -282,12 +312,13 @@ export async function runStartIdeaPlanning(
   }
 
   const sessionId = `pcs-${crypto.randomUUID()}`;
-  const prompt = buildIdeaPlanningPrompt({
-    ideaId: workingIdea.id,
-    title: workingIdea.title,
-    note: workingIdea.note,
+  const prompt = buildPlanningPromptForIdea({
+    workspacePath,
+    idea: workingIdea,
     planningSessionId: sessionId,
-    ...lineage
+    lineage,
+    ideaPlan: initialized.ideaPlan,
+    planRef: initialized.planRef ?? workingIdea.linkedPlanArtifact
   });
 
   let updatedIdea = workingIdea;

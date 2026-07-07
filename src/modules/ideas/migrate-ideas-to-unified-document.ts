@@ -19,7 +19,8 @@ import { reviewPlanArtifact } from "../../core/planning/review-plan-artifact.js"
 import {
   isIdeaPlanDocument,
   readIdeaPlanArtifact,
-  writeIdeaPlanArtifactVersion
+  writeIdeaPlanArtifactVersion,
+  writeNextIdeaPlanArtifactVersion
 } from "./idea-plan-artifact-storage.js";
 import {
   mergePlanArtifactIntoIdeaPlanDocument,
@@ -201,6 +202,19 @@ export function buildIdeaOnlyUnifiedDocument(
     updatedAt: nowIso,
     agentDirective
   };
+}
+
+/** Create and link a unified IdeaPlan document when create-idea did not supply planRef. */
+export function createUnifiedIdeaPlanDocumentForIdea(
+  workspacePath: string,
+  db: Database.Database,
+  idea: IdeaRecord,
+  nowIso: string
+): { idea: IdeaRecord; document: IdeaPlanDocument } {
+  const document = buildIdeaOnlyUnifiedDocument(idea, workspacePath, nowIso);
+  const persisted = writeNextIdeaPlanArtifactVersion(workspacePath, document, { sqliteDb: db });
+  const updated = updateIdea(db, idea.id, { linkedPlanArtifact: persisted.planRef }, nowIso);
+  return { idea: updated ?? idea, document: persisted };
 }
 
 export function buildUnifiedDocumentFromLegacy(

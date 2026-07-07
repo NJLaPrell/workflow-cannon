@@ -6,6 +6,7 @@ export type IdeaPlanningPromptInput = {
   activeDraftPlanArtifact?: string;
   previousPlanArtifacts?: string[];
   planningSessionId?: string;
+  brainstormDigest?: string;
 };
 
 function trimmed(value: string | undefined): string | undefined {
@@ -67,6 +68,7 @@ export function buildIdeaPlanningPrompt(input: IdeaPlanningPromptInput): string 
     ideaId ? `Source idea id: **${ideaId}**` : undefined,
     title ? `Idea title: **${title}**` : undefined,
     note ? `Idea note: ${note}` : undefined,
+    input.brainstormDigest ? `Brainstorm digest:\n${input.brainstormDigest}` : undefined,
     planningSessionId ? `Planning session: **${planningSessionId}** (active).` : undefined,
     lineageSummary,
     "",
