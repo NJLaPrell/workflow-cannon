@@ -25,7 +25,8 @@ export const STATE_LIKE_MCP_TOOL_NAMES = [
   "workflow-cannon.planner-packet",
   "workflow-cannon.list-ideas",
   "workflow-cannon.get-plan-artifact",
-  "workflow-cannon.plan-review-packet"
+  "workflow-cannon.plan-review-packet",
+  "workflow-cannon.finalize-preview-packet"
 ] as const;
 
 export type StateLikeMcpToolName = (typeof STATE_LIKE_MCP_TOOL_NAMES)[number];
