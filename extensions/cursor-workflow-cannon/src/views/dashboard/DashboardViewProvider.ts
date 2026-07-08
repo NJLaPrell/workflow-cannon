@@ -4239,8 +4239,20 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
     const data = r.data && typeof r.data === "object" ? (r.data as Record<string, unknown>) : {};
     const passed = data.passed === true;
+    const blockers = Array.isArray(data.blockers) ? data.blockers.length : Number(data.blockerCount ?? 0);
+    const warnings = Array.isArray(data.warnings) ? data.warnings.length : Number(data.warningCount ?? 0);
+    const reviewSummary =
+      typeof data.reviewSummary === "string" && data.reviewSummary.trim()
+        ? data.reviewSummary.trim()
+        : undefined;
+    const detail =
+      passed && blockers === 0 && warnings === 0
+        ? "no blockers or warnings"
+        : `${blockers} blocker(s), ${warnings} warning(s)`;
     await vscode.window.showInformationMessage(
-      passed ? `Reviewed plan ${planId}.` : `Reviewed plan ${planId}; findings need attention.`
+      passed
+        ? `Reviewed plan ${planId}: passed (${detail})${reviewSummary ? ` — ${reviewSummary.slice(0, 120)}` : ""}`
+        : `Reviewed plan ${planId}: findings need attention (${detail})`
     );
     await this.applyDashboardMutationInvalidation("plan-artifact");
   }

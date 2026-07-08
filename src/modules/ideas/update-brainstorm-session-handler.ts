@@ -10,6 +10,7 @@ import {
   synthesizeBrainstormScores
 } from "./brainstorm-scoring.js";
 import { mergeBrainstormSessionIdeation, parseBrainstormSessionIdeationPatch } from "./brainstorm-ideation.js";
+import { applyBrainstormSectionSynthesis } from "./brainstorm-section-synthesis.js";
 import { readIdeaPlanArtifact, writeNextIdeaPlanArtifactVersion } from "./idea-plan-artifact-storage.js";
 import type {
   BrainstormSession,
@@ -330,11 +331,11 @@ export async function runUpdateBrainstormSession(
   const updated: IdeaPlanDocument = {
     ...existing,
     updatedAt: nowIso,
-    brainstorm: {
+    brainstorm: applyBrainstormSectionSynthesis({
       ...(existing.brainstorm ?? { sessions: [] }),
       sessions: nextSessions,
       activeSessionId: updatedSession.sessionId
-    }
+    })
   };
 
   const persisted = writeNextIdeaPlanArtifactVersion(workspacePath, updated, { sqliteDb: db });

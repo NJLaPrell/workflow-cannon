@@ -250,6 +250,36 @@ function buildMinimalCoverageMap(artifact: PlanArtifactV1): PlanArtifactCoverage
 }
 
 /**
+ * Execution-blueprint profile — accept structured plan without WBS rows (materialize at finalize).
+ */
+function reviewExecutionBlueprintBlockers(
+  artifact: PlanArtifactV1,
+  blockers: PlanArtifactReviewFinding[],
+  warnings: PlanArtifactReviewFinding[]
+): void {
+  if (!nonEmptyStringArray(artifact.goals)) {
+    blockers.push(blocker("RUBRIC-MIN-GOALS", "goals must be a non-empty array", { path: "goals" }));
+  }
+
+  if (!Array.isArray(artifact.openQuestions)) {
+    blockers.push(
+      blocker("RUBRIC-MIN-OQ-MISSING", "openQuestions field is required", { path: "openQuestions" })
+    );
+    return;
+  }
+
+  if (Array.isArray(artifact.wbs) && artifact.wbs.length > 0) {
+    warnings.push(
+      warning(
+        "RUBRIC-BLUEPRINT-WBS-PRESENT",
+        "execution-blueprint accept allows empty WBS; rows present will materialize at finalize",
+        { path: "wbs" }
+      )
+    );
+  }
+}
+
+/**
  * Minimal profile blockers — core completeness only.
  */
 function reviewMinimalBlockers(
@@ -802,6 +832,19 @@ export function reviewPlanArtifact(
   const profile = resolvePlanArtifactReviewProfile(artifact, options.profile);
   const blockers: PlanArtifactReviewFinding[] = [];
   const warnings: PlanArtifactReviewFinding[] = [];
+
+  if (profile === "execution-blueprint") {
+    reviewExecutionBlueprintBlockers(artifact, blockers, warnings);
+    return {
+      passed: blockers.length === 0,
+      profile,
+      blockers,
+      warnings,
+      coverageMap: buildMinimalCoverageMap(artifact),
+      sizingFindings: [],
+      openQuestionCount: Array.isArray(artifact.openQuestions) ? artifact.openQuestions.length : 0
+    };
+  }
 
   if (profile === "minimal") {
     reviewMinimalBlockers(artifact, blockers, warnings);

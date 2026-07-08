@@ -29,7 +29,12 @@ export type PlanArtifactPlanningType =
   | "change";
 
 /** Review rubric profile selection. */
-export type PlanArtifactReviewProfile = "minimal" | "refactor" | "full-feature" | "sprint-phase";
+export type PlanArtifactReviewProfile =
+  | "minimal"
+  | "refactor"
+  | "full-feature"
+  | "sprint-phase"
+  | "execution-blueprint";
 
 export type PlanArtifactConfidence = "high" | "medium" | "low";
 
@@ -186,6 +191,8 @@ export type PlanArtifactApprovalRecord = {
   reviewSummary?: string;
   /** Deferred open-question text or ids accepted at sign-off. */
   openQuestionsAccepted?: string[];
+  /** PQ-12-A: plan accepted as execution blueprint; WBS materializes at finalize/execute. */
+  executionBlueprint?: boolean;
 };
 
 export type PlanArtifactProvenance = {

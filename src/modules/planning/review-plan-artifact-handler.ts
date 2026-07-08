@@ -39,7 +39,8 @@ const REVIEW_PROFILES = new Set<PlanArtifactReviewProfile>([
   "minimal",
   "refactor",
   "full-feature",
-  "sprint-phase"
+  "sprint-phase",
+  "execution-blueprint"
 ]);
 
 function parseProfile(raw: unknown): PlanArtifactReviewProfile | undefined {
