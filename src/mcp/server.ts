@@ -680,6 +680,43 @@ const packetReadToolDefinitions: Omit<ReadOnlyMcpToolDefinition, "outputByteBudg
         ".ai/mcp-tool-version-policy.md"
       ]
     }
+  },
+  {
+    toolName: "workflow-cannon.plan-review-packet",
+    commandName: "review-plan-artifact",
+    description: "Read plan rubric review packet with blockers, warnings, and coverage preview.",
+    stateLike: true,
+    cliFallbackArgs: '{"planId":"<uuid>","profile":"minimal"}',
+    commonMistakes: [
+      "passing recordReview through MCP",
+      "omitting required planId",
+      "expecting MCP to persist reviewed status on the artifact"
+    ],
+    inputSchema: objectSchema(
+      {
+        planId: stringSchema("PlanArtifact id (UUID)."),
+        version: numberSchema("Optional 1-based version; defaults to latest."),
+        profile: enumSchema(
+          ["minimal", "refactor", "full-feature", "sprint-phase"],
+          "Optional rubric profile; defaults to minimal when omitted."
+        )
+      },
+      ["planId"]
+    ),
+    expansionArgs: (args) => ({
+      planId: args.planId,
+      ...(typeof args.version === "number" ? { version: args.version } : {}),
+      ...(typeof args.profile === "string" ? { profile: args.profile } : {})
+    }),
+    validateArgs: validatePlanReviewPacketArgs,
+    governance: {
+      bounded: true,
+      note: "Plan review packets are read-only through review-plan-artifact (Tier C, no recordReview); recording reviewed status and accept/finalize mutations use Tier B CLI with policyApproval when required.",
+      sourceRefs: [
+        "src/modules/planning/instructions/review-plan-artifact.md",
+        ".ai/mcp-tool-version-policy.md"
+      ]
+    }
   }
 ];
 
@@ -1699,6 +1736,29 @@ function validateGetPlanArtifactArgs(args: Record<string, unknown>): string | nu
   }
   if (args.includeArtifact !== undefined && typeof args.includeArtifact !== "boolean") {
     return "includeArtifact must be a boolean when provided";
+  }
+  return null;
+}
+
+const PLAN_REVIEW_PROFILES = new Set(["minimal", "refactor", "full-feature", "sprint-phase"]);
+
+function validatePlanReviewPacketArgs(args: Record<string, unknown>): string | null {
+  const missingPlanId = requireStringArgs("planId")(args);
+  if (missingPlanId) {
+    return missingPlanId;
+  }
+  if (args.version !== undefined) {
+    if (typeof args.version !== "number" || !Number.isInteger(args.version) || args.version < 1) {
+      return "version must be a positive integer when provided";
+    }
+  }
+  if (args.profile !== undefined) {
+    if (typeof args.profile !== "string" || !PLAN_REVIEW_PROFILES.has(args.profile)) {
+      return "profile must be one of minimal, refactor, full-feature, or sprint-phase when provided";
+    }
+  }
+  if (args.recordReview !== undefined) {
+    return "recordReview is not supported through MCP; use Tier B CLI review-plan-artifact with policyApproval";
   }
   return null;
 }
