@@ -117,6 +117,7 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
     "get-next-actions",
     "get-phase-context",
     "get-plan-artifact",
+    "get-planner-flow-status",
     "get-ready-queue",
     "get-recent-task-activity",
     "get-task",

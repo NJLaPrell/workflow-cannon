@@ -55,6 +55,7 @@ import {
   bestEffortGeneratePlanDocument
 } from "./best-effort-generate-plan-document.js";
 import { runGetPlanArtifact } from "./get-plan-artifact-handler.js";
+import { runGetPlanArtifactTemplate } from "./get-plan-artifact-template-handler.js";
 import { runExecutePlanArtifact } from "./execute-plan-artifact-handler.js";
 import { attachPolicyMeta } from "../task-engine/attach-planning-response-meta.js";
 import { planningGenPolicyGate } from "../task-engine/planning-generation-gate.js";
@@ -145,6 +146,10 @@ export const planningModule: WorkflowModule = {
 
     if (command.name === "get-plan-artifact") {
       return runGetPlanArtifact((command.args ?? {}) as Record<string, unknown>, ctx);
+    }
+
+    if (command.name === "get-plan-artifact-template") {
+      return runGetPlanArtifactTemplate((command.args ?? {}) as Record<string, unknown>, ctx);
     }
 
     if (command.name === "generate-plan-document") {
