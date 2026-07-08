@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-08T23:23:40.918Z",
+  "generatedAt": "2026-07-08T23:29:45.303Z",
   "packageVersion": "1.0.4",
-  "toolCount": 19,
+  "toolCount": 20,
   "tools": [
     {
       "name": "workflow-cannon.agent_start",
@@ -367,6 +367,50 @@
               "sprint-phase"
             ],
             "description": "Optional rubric profile; defaults to minimal when omitted."
+          }
+        },
+        "required": [
+          "planId"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "workflow-cannon.finalize-preview-packet",
+      "cliCommand": "finalize-plan-to-phase",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "planId": {
+            "type": "string",
+            "description": "PlanArtifact id (UUID)."
+          },
+          "version": {
+            "type": "number",
+            "description": "Optional 1-based version; defaults to latest."
+          },
+          "targetPhaseKey": {
+            "type": "string",
+            "description": "Optional phase key override for preview resolution."
+          },
+          "targetPhase": {
+            "type": "string",
+            "description": "Optional phase label override for preview resolution."
+          },
+          "desiredStatus": {
+            "type": "string",
+            "enum": [
+              "proposed",
+              "ready"
+            ],
+            "description": "Optional task status for preview drafts; defaults to ready when omitted."
+          },
+          "wbsFilter": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Optional WBS row ids to include in the preview subset."
           }
         },
         "required": [

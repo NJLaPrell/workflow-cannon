@@ -717,6 +717,54 @@ const packetReadToolDefinitions: Omit<ReadOnlyMcpToolDefinition, "outputByteBudg
         ".ai/mcp-tool-version-policy.md"
       ]
     }
+  },
+  {
+    toolName: "workflow-cannon.finalize-preview-packet",
+    commandName: "finalize-plan-to-phase",
+    description: "Read finalize dry-run task draft preview with batch review findings.",
+    stateLike: true,
+    cliFallbackArgs: '{"planId":"<uuid>","dryRun":true}',
+    commonMistakes: [
+      "passing dryRun:false or policyApproval through MCP",
+      "omitting required planId",
+      "expecting MCP to persist phase tasks to the task store"
+    ],
+    inputSchema: objectSchema(
+      {
+        planId: stringSchema("PlanArtifact id (UUID)."),
+        version: numberSchema("Optional 1-based version; defaults to latest."),
+        targetPhaseKey: stringSchema("Optional phase key override for preview resolution."),
+        targetPhase: stringSchema("Optional phase label override for preview resolution."),
+        desiredStatus: enumSchema(
+          ["proposed", "ready"],
+          "Optional task status for preview drafts; defaults to ready when omitted."
+        ),
+        wbsFilter: {
+          type: "array",
+          items: { type: "string" },
+          description: "Optional WBS row ids to include in the preview subset."
+        }
+      },
+      ["planId"]
+    ),
+    expansionArgs: (args) => ({
+      planId: args.planId,
+      dryRun: true,
+      ...(typeof args.version === "number" ? { version: args.version } : {}),
+      ...(typeof args.targetPhaseKey === "string" ? { targetPhaseKey: args.targetPhaseKey } : {}),
+      ...(typeof args.targetPhase === "string" ? { targetPhase: args.targetPhase } : {}),
+      ...(typeof args.desiredStatus === "string" ? { desiredStatus: args.desiredStatus } : {}),
+      ...(Array.isArray(args.wbsFilter) ? { wbsFilter: args.wbsFilter } : {})
+    }),
+    validateArgs: validateFinalizePreviewPacketArgs,
+    governance: {
+      bounded: true,
+      note: "Finalize previews are read-only through finalize-plan-to-phase with dryRun:true; persisting phase tasks uses Tier B CLI with policyApproval when required.",
+      sourceRefs: [
+        "src/modules/planning/instructions/finalize-plan-to-phase.md",
+        ".ai/mcp-tool-version-policy.md"
+      ]
+    }
   }
 ];
 
@@ -1759,6 +1807,60 @@ function validatePlanReviewPacketArgs(args: Record<string, unknown>): string | n
   }
   if (args.recordReview !== undefined) {
     return "recordReview is not supported through MCP; use Tier B CLI review-plan-artifact with policyApproval";
+  }
+  return null;
+}
+
+const FINALIZE_PREVIEW_DESIRED_STATUSES = new Set(["proposed", "ready"]);
+
+function validateFinalizePreviewPacketArgs(args: Record<string, unknown>): string | null {
+  const missingPlanId = requireStringArgs("planId")(args);
+  if (missingPlanId) {
+    return missingPlanId;
+  }
+  if (args.version !== undefined) {
+    if (typeof args.version !== "number" || !Number.isInteger(args.version) || args.version < 1) {
+      return "version must be a positive integer when provided";
+    }
+  }
+  if (args.targetPhaseKey !== undefined) {
+    if (typeof args.targetPhaseKey !== "string" || args.targetPhaseKey.trim().length === 0) {
+      return "targetPhaseKey must be a non-empty string when provided";
+    }
+  }
+  if (args.targetPhase !== undefined) {
+    if (typeof args.targetPhase !== "string" || args.targetPhase.trim().length === 0) {
+      return "targetPhase must be a non-empty string when provided";
+    }
+  }
+  if (args.desiredStatus !== undefined) {
+    if (
+      typeof args.desiredStatus !== "string" ||
+      !FINALIZE_PREVIEW_DESIRED_STATUSES.has(args.desiredStatus)
+    ) {
+      return "desiredStatus must be proposed or ready when provided";
+    }
+  }
+  if (args.wbsFilter !== undefined) {
+    if (
+      !Array.isArray(args.wbsFilter) ||
+      args.wbsFilter.length === 0 ||
+      args.wbsFilter.some((row) => typeof row !== "string" || row.trim().length === 0)
+    ) {
+      return "wbsFilter must be a non-empty array of WBS ids when provided";
+    }
+  }
+  if (args.dryRun !== undefined && args.dryRun !== true) {
+    return "dryRun:false is not supported through MCP; use Tier B CLI finalize-plan-to-phase with policyApproval";
+  }
+  if (args.policyApproval !== undefined) {
+    return "policyApproval is not supported through MCP; use Tier B CLI finalize-plan-to-phase with policyApproval";
+  }
+  if (args.expectedPlanningGeneration !== undefined) {
+    return "expectedPlanningGeneration is not supported through MCP finalize preview; use Tier B CLI finalize-plan-to-phase when persisting";
+  }
+  if (args.clientMutationId !== undefined) {
+    return "clientMutationId is not supported through MCP finalize preview; use Tier B CLI finalize-plan-to-phase when persisting";
   }
   return null;
 }
