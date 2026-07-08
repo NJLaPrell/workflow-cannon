@@ -68,6 +68,14 @@ export type RenderDashboardRootOptions = {
   ideasUnifiedModelEnabled?: boolean;
 };
 
+export type WeeklySparklineData = {
+  ready: number[];
+  proposed: number[];
+  blocked: number[];
+  done: number[];
+  human: number[];
+};
+
 export type RenderDashboardSectionOptions = {
   editorIntegration?: EditorIntegrationRenderState | null;
   phaseJournal?: DashboardPhaseJournalBundle | null;
@@ -75,6 +83,8 @@ export type RenderDashboardSectionOptions = {
   mcpStatus?: McpHostStatus | null;
   /** When true, render unified IdeaPlan Brainstorm UI and rollup (T100795). Default false. */
   ideasUnifiedModelEnabled?: boolean;
+  /** Weekly count histories for sparkline charts (7 weeks). If absent, falls back to decorative bars. */
+  weeklySparklines?: WeeklySparklineData | null;
 };
 
 export type WcDashboardStatusKind = "active" | "waiting" | "blocked" | "idle" | "done";
@@ -1174,13 +1184,28 @@ function renderContextHelpIcon(helpText: string, ariaLabel = "About this section
 }
 
 /** 5-pill stat row: Ready / Proposed / Blocked / Done / Human — single line on Overview. */
-function renderSparklineBars(n: number, pillCls: string): string {
+function renderSparklineBars(
+  pillCls: string,
+  weeklyData?: number[] | null
+): string {
   const bars = 7;
-  let h = n;
   const heights: number[] = [];
-  for (let i = 0; i < bars; i++) {
-    h = ((h * 9301 + 49297) % 233280) / 233280;
-    heights.push(Math.max(2, Math.round(h * 14)));
+  if (weeklyData && weeklyData.length > 0) {
+    // Real weekly data — normalize to max for height scaling
+    const max = Math.max(1, ...weeklyData);
+    const len = weeklyData.length;
+    for (let i = 0; i < bars; i++) {
+      const idx = Math.max(0, len - bars + i);
+      const val = weeklyData[idx] ?? 0;
+      heights.push(Math.max(2, Math.round((val / max) * 14)));
+    }
+  } else {
+    // Decorative fallback
+    let h = 1;
+    for (let i = 0; i < bars; i++) {
+      h = ((h * 9301 + 49297) % 233280) / 233280;
+      heights.push(Math.max(2, Math.round(h * 14)));
+    }
   }
   const colorCls =
     pillCls === "wc-pill-ready"
@@ -1217,14 +1242,21 @@ function renderStatPills(
   proposedTotal: number,
   blockedTotal: number,
   doneTotal: number,
-  humanTotal: number
+  humanTotal: number,
+  weekly?: WeeklySparklineData | null
 ): string {
-  const pills: Array<{ label: string; n: number; cls: string; numCls?: string }> = [
-    { label: "Ready", n: readyTotal, cls: "wc-pill-ready" },
-    { label: "Proposed", n: proposedTotal, cls: "wc-pill-proposed" },
-    { label: "Blocked", n: blockedTotal, cls: "wc-pill-blocked" },
-    { label: "Done", n: doneTotal, cls: "wc-pill-done" },
-    { label: "Human", n: humanTotal, cls: "wc-pill-human", numCls: "wc-stat-num-human" }
+  const pills: Array<{
+    label: string;
+    n: number;
+    cls: string;
+    numCls?: string;
+    weekKey?: keyof WeeklySparklineData;
+  }> = [
+    { label: "Ready", n: readyTotal, cls: "wc-pill-ready", weekKey: "ready" },
+    { label: "Proposed", n: proposedTotal, cls: "wc-pill-proposed", weekKey: "proposed" },
+    { label: "Blocked", n: blockedTotal, cls: "wc-pill-blocked", weekKey: "blocked" },
+    { label: "Done", n: doneTotal, cls: "wc-pill-done", weekKey: "done" },
+    { label: "Human", n: humanTotal, cls: "wc-pill-human", numCls: "wc-stat-num-human", weekKey: "human" }
   ];
   const filterMap: Record<string, string> = {
     "wc-pill-ready": "ready",
@@ -1238,6 +1270,7 @@ function renderStatPills(
     pills
       .map((p) => {
         const filter = filterMap[p.cls] ?? "all";
+        const weekData = p.weekKey && weekly ? weekly[p.weekKey] : null;
         return (
           '<button type="button" class="wc-stat-pill ' +
           p.cls +
@@ -1251,7 +1284,7 @@ function renderStatPills(
           '">' +
           escapeHtml(String(p.n)) +
           "</span>" +
-          renderSparklineBars(p.n, p.cls) +
+          renderSparklineBars(p.cls, weekData) +
           '<span class="wc-stat-lbl">' +
           escapeHtml(p.label) +
           "</span>" +
@@ -7595,7 +7628,8 @@ function renderOverviewSectionInnerHtml(
       queueCtx.totalProposedCount,
       queueCtx.totalBlockedCount,
       queueCtx.totalDoneCount,
-      queueCtx.humanGatesCount
+      queueCtx.humanGatesCount,
+      options?.weeklySparklines
     ) +
     renderAgentStatusBanner(d) +
     recNextCard +

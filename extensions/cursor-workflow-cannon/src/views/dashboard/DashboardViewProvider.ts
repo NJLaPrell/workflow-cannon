@@ -78,6 +78,10 @@ import {
   postQueueHumanGateResumePatch
 } from "./dashboard-human-gate-patch.js";
 import { DashboardDataStore } from "./dashboard-data-store.js";
+import {
+  getAllWeeklyCountHistories,
+  recordWeeklyTaskCounts
+} from "./dashboard-weekly-counts.js";
 import { DashboardLoadTrace, isDashboardLoadTraceEnabled } from "./dashboard-load-trace.js";
 import { DashboardPollerCoordinator } from "./dashboard-pollers.js";
 import { DashboardReadPathCoordinator } from "./dashboard-read-path-coordinator.js";
@@ -658,7 +662,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     return {
       ...extra,
       mcpStatus: extra?.mcpStatus ?? resolveMcpHostStatus(this.client.getWorkspaceRoot()),
-      ideasUnifiedModelEnabled: isIdeasUnifiedModelEnabledForDashboard()
+      ideasUnifiedModelEnabled: isIdeasUnifiedModelEnabledForDashboard(),
+      weeklySparklines: getAllWeeklyCountHistories(this.client.getWorkspaceRoot())
     };
   }
 
@@ -865,6 +870,30 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       sliceName,
       slice.value as Record<string, unknown>
     );
+    // Record weekly task counts whenever queue data arrives.
+    if (sliceName === "queue") {
+      const d = this.lastDashboardSummaryData;
+      const readyImp = (d?.readyImprovementsSummary as Record<string, unknown> | undefined)?.count ?? 0;
+      const readyExe = (d?.readyExecutionSummary as Record<string, unknown> | undefined)?.count ?? 0;
+      const ready =
+        typeof d?.readyQueueCount === "number"
+          ? d.readyQueueCount
+          : (typeof readyImp === "number" ? readyImp : 0) + (typeof readyExe === "number" ? readyExe : 0);
+      const proposedImp = (d?.proposedImprovementsSummary as Record<string, unknown> | undefined)?.count ?? 0;
+      const proposedExe = (d?.proposedExecutionSummary as Record<string, unknown> | undefined)?.count ?? 0;
+      const proposed =
+        (typeof proposedImp === "number" ? proposedImp : 0) + (typeof proposedExe === "number" ? proposedExe : 0);
+      const blocked = (d?.blockedSummary as Record<string, unknown> | undefined)?.count ?? 0;
+      const done = (d?.completedSummary as Record<string, unknown> | undefined)?.count ?? 0;
+      const human = (d?.humanGatesSummary as Record<string, unknown> | undefined)?.count ?? 0;
+      recordWeeklyTaskCounts(this.client.getWorkspaceRoot(), {
+        ready,
+        proposed,
+        blocked: typeof blocked === "number" ? blocked : 0,
+        done: typeof done === "number" ? done : 0,
+        human: typeof human === "number" ? human : 0
+      });
+    }
     await this.patchDashboardSectionFromStore(sectionId, slice);
     if (sliceName === "queue" && this.hydratedDashboardSections.has("overview")) {
       await this.patchDashboardSectionFromStore("overview");
