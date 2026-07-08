@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-08T23:13:53.255Z",
+  "generatedAt": "2026-07-08T23:19:04.497Z",
   "packageVersion": "1.0.4",
-  "toolCount": 17,
+  "toolCount": 18,
   "tools": [
     {
       "name": "workflow-cannon.agent_start",
@@ -316,6 +316,31 @@
           }
         },
         "required": [],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "workflow-cannon.get-plan-artifact",
+      "cliCommand": "get-plan-artifact",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "planId": {
+            "type": "string",
+            "description": "PlanArtifact id (UUID)."
+          },
+          "version": {
+            "type": "number",
+            "description": "Optional 1-based version; defaults to latest."
+          },
+          "includeArtifact": {
+            "type": "boolean",
+            "description": "When false, omit the full artifact body from the response."
+          }
+        },
+        "required": [
+          "planId"
+        ],
         "additionalProperties": false
       }
     }
