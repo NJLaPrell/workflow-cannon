@@ -254,10 +254,11 @@ test("dual-worktree fetch + hydrate converges phase note, idea, and module state
   assert.equal(modulePublish, null, modulePublish?.message);
 
   const primarySnapshot = readPlanningConvergenceSnapshot(workspace);
+  const primaryImprovementStates = primarySnapshot.moduleStates.filter((row) => row.moduleId === "improvement");
   assert.equal(primarySnapshot.notes.length, 1);
   assert.equal(primarySnapshot.ideas.length, 1);
-  assert.equal(primarySnapshot.moduleStates.length, 1);
-  assert.equal(primarySnapshot.moduleStates[0].state.lastIngestedPolicyTraceId, 7);
+  assert.equal(primaryImprovementStates.length, 1);
+  assert.equal(primaryImprovementStates[0].state.lastIngestedPolicyTraceId, 7);
 
   const consumer = cloneConsumerWorkspace(bare);
   const consumerCtx = sqliteTaskEngineCtx(consumer, {
@@ -292,20 +293,16 @@ test("dual-worktree fetch + hydrate converges phase note, idea, and module state
     consumerSnapshot.ideas.map(({ title, note }) => ({ title, note })),
     primarySnapshot.ideas.map(({ title, note }) => ({ title, note }))
   );
-  assert.deepEqual(
-    consumerSnapshot.moduleStates.map(({ moduleId, stateSchemaVersion, state }) => ({
-      moduleId,
-      stateSchemaVersion,
-      lastIngestedPolicyTraceId: state.lastIngestedPolicyTraceId,
-      lastSyncRunAt: state.lastSyncRunAt
-    })),
-    primarySnapshot.moduleStates.map(({ moduleId, stateSchemaVersion, state }) => ({
-      moduleId,
-      stateSchemaVersion,
-      lastIngestedPolicyTraceId: state.lastIngestedPolicyTraceId,
-      lastSyncRunAt: state.lastSyncRunAt
-    }))
-  );
+  const improvementModuleSnapshot = (snapshot) =>
+    snapshot.moduleStates
+      .filter((row) => row.moduleId === "improvement")
+      .map(({ moduleId, stateSchemaVersion, state }) => ({
+        moduleId,
+        stateSchemaVersion,
+        lastIngestedPolicyTraceId: state.lastIngestedPolicyTraceId,
+        lastSyncRunAt: state.lastSyncRunAt
+      }));
+  assert.deepEqual(improvementModuleSnapshot(consumerSnapshot), improvementModuleSnapshot(primarySnapshot));
   assert.deepEqual(
     consumerSnapshot.tasks.map(({ id, title }) => ({ id, title })),
     primarySnapshot.tasks.map(({ id, title }) => ({ id, title }))

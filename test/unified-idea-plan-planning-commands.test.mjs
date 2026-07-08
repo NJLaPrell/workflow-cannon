@@ -234,17 +234,9 @@ describe("unified IdeaPlan planning commands (T100785)", () => {
 
   it("standalone draft-plan-artifact still allocates a new planId when no unified link exists", async () => {
     const workspace = await tmpWorkspace();
-    const created = await ideasModule.onCommand(
-      {
-        name: "create-idea",
-        args: { title: "No unified link", policyApproval: policyApproval() }
-      },
-      ctx(workspace)
-    );
-    const idea = created.data.idea;
     const artifact = freshDraftArtifact(loadFixture("plan-artifact-minimal.valid.v1.json"));
     const requestedPlanId = artifact.planId;
-    artifact.provenance = { ...artifact.provenance, sourceIdeaId: idea.id, chatSessionRef: "pcs-standalone" };
+    // No sourceIdeaId — create-idea always provisions a unified IdeaPlan link today.
 
     const generation = await planningGeneration(workspace);
     const result = await planningModule.onCommand(
