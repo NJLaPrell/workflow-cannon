@@ -193,9 +193,10 @@ for (const parityCase of PARITY_CASES) {
   test(`MCP list-ideas matches CLI core result for ${parityCase.label}`, async () => {
     const workspacePath = await tmpWorkspace();
     await seedIdeas(workspacePath);
+    const runtime = await createSharedRuntime(workspacePath);
 
     const viaCli = await runCliAdapter(workspacePath, parityCase.args);
-    const envelope = await runMcpListIdeas(workspacePath, parityCase.args);
+    const envelope = await runMcpListIdeas(workspacePath, parityCase.args, runtime);
 
     assert.equal(envelope.tool, LIST_IDEAS_TOOL_NAME);
     assert.equal(envelope.command, COMMAND_NAME);
