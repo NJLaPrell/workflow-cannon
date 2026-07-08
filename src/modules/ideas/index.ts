@@ -36,6 +36,7 @@ import { runUpdateIdeaPlanningSession } from "./update-idea-planning-session-han
 import { runUpdateBrainstormSession } from "./update-brainstorm-session-handler.js";
 import { runCompleteBrainstorm } from "./complete-brainstorm-handler.js";
 import { runCheckDeliveryStatus } from "./check-delivery-status-handler.js";
+import { runGetPlannerFlowStatus } from "./get-planner-flow-status-handler.js";
 import { runMigrateIdeasToUnifiedDocument } from "./migrate-ideas-to-unified-document-handler.js";
 
 function attachPlanningMeta(
@@ -536,6 +537,14 @@ export const ideasModule: WorkflowModule = {
         args as Record<string, unknown>,
         ctx,
         "src/modules/ideas/instructions/check-delivery-status.md"
+      );
+    }
+
+    if (command.name === "get-planner-flow-status") {
+      return runGetPlannerFlowStatus(
+        args as Record<string, unknown>,
+        ctx,
+        "src/modules/ideas/instructions/get-planner-flow-status.md"
       );
     }
 

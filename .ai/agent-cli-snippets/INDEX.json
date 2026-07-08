@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-08T21:03:19.335Z",
+  "generatedAt": "2026-07-08T21:58:00.000Z",
   "commands": [
     {
       "name": "accept-improvement",
@@ -733,9 +733,15 @@
       "moduleId": "planning"
     },
     {
+    {
       "name": "get-plan-artifact-template",
       "path": ".ai/agent-cli-snippets/by-command/get-plan-artifact-template.json",
       "moduleId": "planning"
+    },
+    {
+      "name": "get-planner-flow-status",
+      "path": ".ai/agent-cli-snippets/by-command/get-planner-flow-status.json",
+      "moduleId": "ideas"
     },
     {
       "name": "get-ready-queue",
