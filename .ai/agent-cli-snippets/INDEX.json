@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-08T21:58:00.000Z",
+  "generatedAt": "2026-07-08T22:13:54.501Z",
   "commands": [
     {
       "name": "accept-improvement",
@@ -41,6 +41,11 @@
       "name": "agent-session-snapshot",
       "path": ".ai/agent-cli-snippets/by-command/agent-session-snapshot.json",
       "moduleId": "task-engine"
+    },
+    {
+      "name": "append-wbs-row",
+      "path": ".ai/agent-cli-snippets/by-command/append-wbs-row.json",
+      "moduleId": "planning"
     },
     {
       "name": "apply-isolated-proposal",

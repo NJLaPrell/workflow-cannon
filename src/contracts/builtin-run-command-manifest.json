@@ -1444,6 +1444,15 @@
   },
   {
     "moduleId": "planning",
+    "name": "append-wbs-row",
+    "file": "append-wbs-row.md",
+    "description": "Append one schema-valid WBS row to a unified IdeaPlan planning draft.",
+    "policyOperationId": "planning.append-wbs-row",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "planning",
     "name": "finalize-plan-to-phase",
     "file": "finalize-plan-to-phase.md",
     "description": "Preview or persist WBS task drafts from an accepted PlanArtifact v1 into a target phase.",
