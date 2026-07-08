@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-08T06:32:32.487Z",
+  "generatedAt": "2026-07-08T22:52:57.724Z",
   "packageVersion": "1.0.4",
-  "toolCount": 15,
+  "toolCount": 16,
   "tools": [
     {
       "name": "workflow-cannon.agent_start",
@@ -280,6 +280,21 @@
       "inputSchema": {
         "type": "object",
         "properties": {},
+        "required": [],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "workflow-cannon.planner-packet",
+      "cliCommand": "get-planner-flow-status",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "ideaId": {
+            "type": "string",
+            "description": "Optional idea id such as I001."
+          }
+        },
         "required": [],
         "additionalProperties": false
       }
