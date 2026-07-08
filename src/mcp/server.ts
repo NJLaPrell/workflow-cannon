@@ -1273,10 +1273,13 @@ async function handleToolCall(
 
   const commandArgs = definition.expansionArgs(args);
   const runtime = await resolveMcpRuntime(options);
-  const commandResult = await runtime.invoke({
-    name: definition.commandName,
-    args: commandArgs
-  });
+  const commandResult =
+    params.name === PLANNER_PACKET_TOOL_NAME
+      ? await invokePlannerPacket(runtime, commandArgs)
+      : await runtime.invoke({
+          name: definition.commandName,
+          args: commandArgs
+        });
   const toolResult = formatToolResult(definition, commandArgs, commandResult, options);
   recordAuditEvent(options, params.name, commandResult.ok ? "success" : "command_error", {
     command: params.name === PLANNER_PACKET_TOOL_NAME ? "planner-packet" : definition.commandName,
