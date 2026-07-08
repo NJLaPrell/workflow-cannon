@@ -614,6 +614,35 @@ const packetReadToolDefinitions: Omit<ReadOnlyMcpToolDefinition, "outputByteBudg
         ".ai/mcp-tool-version-policy.md"
       ]
     }
+  },
+  {
+    toolName: "workflow-cannon.list-ideas",
+    commandName: "list-ideas",
+    description: "Read lightweight Ideas inventory rows in sortOrder order.",
+    stateLike: true,
+    cliFallbackArgs: '{}',
+    commonMistakes: [
+      "treating ideas inventory as linked plan content",
+      "passing invalid status filter values",
+      "expecting MCP to mutate ideas without policyApproval"
+    ],
+    inputSchema: objectSchema(
+      {
+        status: enumSchema(["open", "planning", "planned"], "Optional idea status filter.")
+      },
+      []
+    ),
+    expansionArgs: (args) => ({
+      ...(typeof args.status === "string" ? { status: args.status } : {})
+    }),
+    governance: {
+      bounded: true,
+      note: "Ideas inventory is read-only through list-ideas; create, update, delete, and planner mutations use Tier B CLI with policyApproval when required.",
+      sourceRefs: [
+        "src/modules/ideas/instructions/list-ideas.md",
+        ".ai/mcp-tool-version-policy.md"
+      ]
+    }
   }
 ];
 
