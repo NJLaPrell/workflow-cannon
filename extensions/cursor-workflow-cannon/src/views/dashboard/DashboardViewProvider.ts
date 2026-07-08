@@ -5994,7 +5994,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     pre { white-space: pre-wrap; background: var(--vscode-textCodeBlock-background); padding: 8px; border-radius: 4px; }
     button { cursor: pointer; }
     .dash-row-list { display: flex; flex-direction: column; gap: 4px; margin: 6px 0 8px 0; }
-    .dash-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; padding: 4px 6px; border-radius: 4px; background: var(--vscode-textCodeBlock-background); }
+    .dash-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; padding: 4px 6px; border-radius: 6px; background: var(--vscode-textCodeBlock-background); }
     .dash-row-label { flex: 1; min-width: 0; white-space: pre-wrap; word-break: break-word; font-size: 12px; line-height: 1.35; }
     .dash-row-actions { display: flex; flex-wrap: wrap; gap: 4px; flex-shrink: 0; align-items: flex-start; }
     .dash-row-actions.wc-task-actions {
@@ -6065,7 +6065,6 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       font-family: var(--vscode-editor-font-family);
       font-size: 11px;
       line-height: 1.4;
-      opacity: 0.65;
       padding-top: 2px;
       cursor: grab;
     }
@@ -6166,14 +6165,13 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       border-color: color-mix(in srgb, var(--vscode-textLink-foreground, #4fc1ff) 45%, transparent);
     }
     .dash-task-chip-feature {
-      color: var(--vscode-foreground);
-      opacity: 0.88;
+      color: var(--vscode-descriptionForeground, var(--vscode-foreground));
     }
     .dash-task-row-summary {
       display: block;
       font-size: 11px;
       line-height: 1.3;
-      opacity: 0.82;
+      color: var(--vscode-descriptionForeground, var(--vscode-foreground));
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
@@ -6577,7 +6575,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     .dash-agent-status-banner p { margin: 0; line-height: 1.35; }
     .dash-agent-status-label { overflow-wrap: anywhere; }
     .dash-agent-row-list { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
-    .dash-agent-row { padding: 4px 5px; border-radius: 4px; background: var(--vscode-textCodeBlock-background); }
+    .dash-agent-row { padding: 4px 5px; border-radius: 6px; background: var(--vscode-textCodeBlock-background); }
     .dash-agent-row:not(details), .dash-agent-row-summary { display: grid; grid-template-columns: auto minmax(92px, 1.2fr) minmax(92px, 1fr) minmax(70px, auto); gap: 6px; align-items: center; }
     .dash-agent-row-summary { cursor: pointer; list-style: none; }
     .dash-agent-row-summary::-webkit-details-marker { display: none; }
@@ -6593,7 +6591,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     .dash-agent-row-main b, .dash-agent-row-detail { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .dash-agent-row-detail { min-width: 0; font-size: 11px; }
     .dash-agent-row-meta { display: inline-flex; align-items: center; justify-content: flex-end; gap: 4px; flex-wrap: wrap; min-width: 0; font-size: 10px; }
-    .dash-agent-row-chip { display: inline-flex; align-items: center; padding: 1px 5px; border-radius: 4px; border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.35)); background: var(--vscode-sideBar-background); font-size: 9.5px; line-height: 1.3; }
+    .dash-agent-row-chip { display: inline-flex; align-items: center; padding: 1px 5px; border-radius: 6px; border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.35)); background: var(--vscode-sideBar-background); font-size: 9.5px; line-height: 1.3; }
     .dash-agent-row-chip-sub { color: var(--vscode-textLink-foreground); }
     .wc-agent-section-label {
       font-size: 9.5px;
@@ -6873,7 +6871,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       margin-left: 8px;
       background: rgba(255,255,255,0.03);
       border: 1px solid var(--wc-border);
-      border-radius: 4px;
+      border-radius: 6px;
       padding: 4px 8px;
       min-width: 0;
       transition: border-color 0.3s;
@@ -6890,7 +6888,6 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       font-size: 10.5px;
       font-weight: 600;
       color: var(--wc-fg);
-      opacity: 0.85;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -6953,7 +6950,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     .wc-agent-empty-icon {
       font-size: 18px;
-      opacity: 0.25;
+      opacity: 0.40;
       margin-bottom: 6px;
       display: block;
     }
@@ -6961,7 +6958,6 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     .wc-agent-empty-sub {
       font-size: 10px;
       color: var(--wc-muted);
-      opacity: 0.65;
       margin-top: 2px;
     }
     .dash-planning-head {
@@ -7302,7 +7298,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       background: var(--vscode-badge-background, rgba(127,127,127,.2));
       color: var(--vscode-badge-foreground, inherit);
     }
-    .wc-brainstorm-score-label { opacity: 0.85; }
+    .wc-brainstorm-score-label { color: var(--vscode-descriptionForeground); }
     .wc-brainstorm-score-value { font-weight: 600; }
     .wc-brainstorm-readiness-pill {
       background: var(--vscode-inputValidation-warningBackground, rgba(255,196,0,.18));
@@ -7478,7 +7474,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     .wc-card-title-icon {
       font-size: 10px;
-      opacity: 0.65;
+      opacity: 0.55;
       flex-shrink: 0;
     }
     .wc-card-actions {
@@ -7489,7 +7485,6 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     .wc-card-body {
       font-size: 11.5px;
       color: var(--wc-fg);
-      opacity: 0.85;
       line-height: 1.5;
     }
     .wc-card-body p { margin: 0 0 6px; }
@@ -7571,7 +7566,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     .dash-card > details.status-section:last-child { margin-bottom: 0; }
     .dash-count-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px 14px; margin: 4px 0 10px 0; }
     .dash-count-cell { display: flex; flex-direction: row; align-items: baseline; justify-content: space-between; gap: 8px; min-width: 0; }
-    .dash-count-label { font-size: 11px; opacity: 0.85; line-height: 1.25; flex: 1; min-width: 0; }
+    .dash-count-label { font-size: 11px; line-height: 1.25; flex: 1; min-width: 0; }
     .dash-count-num { flex-shrink: 0; text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; font-size: 13px; line-height: 1.25; }
     pre.resume-cli { font-size: 11px; }
     /* ── Tab system (agent status banner lives in .wc-dashboard-tab-shell above this bar) ── */
@@ -7637,7 +7632,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     .wc-tab-btn.wc-tab-active {
       background: var(--wc-accent);
-      color: #ffffff;
+      color: var(--vscode-button-foreground, #ffffff);
       font-weight: 600;
     }
     .wc-tab-btn.wc-tab-active:hover {
@@ -7666,8 +7661,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       font-size: 11px;
     }
     .wc-status-kv:last-child { border-bottom: none; }
-    .wc-status-kv-label { color: var(--vscode-foreground); opacity: 0.65; flex-shrink: 0; }
-    .wc-status-kv-val { text-align: right; word-break: break-all; opacity: 0.9; }
+    .wc-status-kv-label { color: var(--vscode-descriptionForeground, var(--vscode-foreground)); flex-shrink: 0; }
+    .wc-status-kv-val { text-align: right; word-break: break-all; }
     .dash-footer {
       flex-shrink: 0;
       margin-top: 10px;
@@ -7722,7 +7717,6 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       text-transform: uppercase;
       letter-spacing: 0.07em;
       color: var(--vscode-button-background);
-      opacity: 0.9;
     }
     .wc-rec-title {
       font-size: 12px;
@@ -7839,19 +7833,19 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       border-color: var(--vscode-widget-border, #5a5a5a);
     }
     .wc-phase-tag-current {
-      background: #1b4d1f;
-      color: #c8f5c8;
-      border-color: #2e7d32;
+      background: color-mix(in srgb, var(--wc-green) 18%, var(--vscode-textCodeBlock-background));
+      color: var(--wc-green);
+      border-color: var(--wc-green-border);
     }
     .wc-phase-tag-next {
-      background: #5c4a12;
-      color: #fff3b0;
-      border-color: #9a7b1a;
+      background: color-mix(in srgb, var(--wc-amber) 18%, var(--vscode-textCodeBlock-background));
+      color: var(--wc-amber);
+      border-color: var(--wc-amber-border);
     }
     .wc-phase-tag-future {
-      background: #1a3358;
-      color: #b8d4ff;
-      border-color: #2a5490;
+      background: color-mix(in srgb, var(--wc-blue) 18%, var(--vscode-textCodeBlock-background));
+      color: var(--wc-blue);
+      border-color: var(--wc-blue-border);
     }
     .phase-bucket-summary {
       display: flex;
@@ -8045,11 +8039,10 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       cursor: pointer;
       border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.45));
       background: transparent;
-      color: var(--vscode-foreground);
-      opacity: 0.6;
-      transition: opacity 0.1s;
+      color: var(--vscode-descriptionForeground);
+      transition: color 0.1s;
     }
-    button.wc-filter-chip:hover { opacity: 0.85; }
+    button.wc-filter-chip:hover { color: var(--vscode-foreground); }
     button.wc-filter-chip.wc-filter-active {
       opacity: 1;
       background: var(--vscode-button-background);
@@ -8080,7 +8073,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       gap: 6px;
       margin-left: auto;
       font-size: 10.5px;
-      opacity: 0.85;
+      color: var(--vscode-descriptionForeground);
     }
     .wc-phase-filter-select {
       font-size: 11px;
@@ -8464,7 +8457,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       box-shadow: 0 6px 24px rgba(0,0,0,0.35);
     }
     .wc-drawer-title { margin: 0 0 6px 0; font-size: 14px; font-weight: 600; }
-    .wc-drawer-desc { margin: 0 0 10px 0; opacity: 0.9; line-height: 1.35; }
+    .wc-drawer-desc { margin: 0 0 10px 0; line-height: 1.35; }
     .wc-drawer-validation { margin: 0 0 8px 0; padding: 6px 8px; border-radius: 4px; background: var(--vscode-inputValidation-errorBackground); color: var(--vscode-inputValidation-errorForeground); }
     .wc-drawer-fields { display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
     .wc-drawer-field-label { display: block; font-size: 11px; font-weight: 600; margin-bottom: 4px; }
