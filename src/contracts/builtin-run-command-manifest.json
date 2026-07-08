@@ -1461,6 +1461,14 @@
   },
   {
     "moduleId": "planning",
+    "name": "get-plan-artifact-template",
+    "file": "get-plan-artifact-template.md",
+    "description": "Return minimal valid PlanArtifact v1 skeleton from kernel fixture.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "planning",
     "name": "generate-plan-document",
     "file": "generate-plan-document.md",
     "description": "Render unified IdeaPlan artifact to docs/maintainers/plans/<ideaId>-<slug>.md via plan-document view and template.",

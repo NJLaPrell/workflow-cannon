@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-08T21:07:37.691Z",
+  "generatedAt": "2026-07-08T21:58:00.000Z",
   "commands": [
     {
       "name": "accept-improvement",
@@ -730,6 +730,12 @@
     {
       "name": "get-plan-artifact",
       "path": ".ai/agent-cli-snippets/by-command/get-plan-artifact.json",
+      "moduleId": "planning"
+    },
+    {
+    {
+      "name": "get-plan-artifact-template",
+      "path": ".ai/agent-cli-snippets/by-command/get-plan-artifact-template.json",
       "moduleId": "planning"
     },
     {
