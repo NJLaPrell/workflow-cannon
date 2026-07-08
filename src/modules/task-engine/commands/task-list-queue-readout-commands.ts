@@ -384,6 +384,13 @@ export function resolveTaskListQueueReadoutCommands(
       scope: "tasks-only",
       queueNamespace: ns ?? null,
       maintainerDelivery,
+      canonicalPhase: {
+        schemaVersion: 1,
+        currentKitPhase: workspaceStatus?.currentKitPhase ?? null,
+        nextKitPhase: workspaceStatus?.nextKitPhase ?? null,
+        canonicalPhaseKey: phaseRes.canonicalPhaseKey,
+        source: phaseRes.source
+      },
       workspacePhaseScheduling: {
         schemaVersion: 1,
         workspaceKitPhaseKey: phaseRes.canonicalPhaseKey,

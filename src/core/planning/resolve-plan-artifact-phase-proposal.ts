@@ -45,6 +45,8 @@ export type ResolvePlanArtifactPhaseProposalInput = {
   occupiedPhaseKeys?: string[];
   /** Workspace kit `nextKitPhase` when set (roster operator intent). */
   workspaceNextPhaseKey?: string;
+  /** Workspace kit `currentKitPhase` when set (canonical current phase for planner defaults). */
+  workspaceCurrentPhaseKey?: string;
   /** When true, an explicit key may reuse an active phase bucket. */
   allowPhaseKeyCollision?: boolean;
   /** Long descriptions are blockers when true; warnings when false. */
@@ -55,7 +57,7 @@ export type ResolvePlanArtifactPhaseProposalSuccess = {
   ok: true;
   proposal: PlanArtifactPhaseProposal;
   findings: PlanArtifactPhaseProposalFinding[];
-  source: "explicit" | "workspace-next" | "auto-empty" | "recommendation" | "auto";
+  source: "explicit" | "workspace-next" | "workspace-current" | "auto-empty" | "recommendation" | "auto";
 };
 
 export type ResolvePlanArtifactPhaseProposalFailure = {
@@ -220,10 +222,23 @@ export function resolvePlanArtifactPhaseProposal(
     const match = input.phaseRecommendations.find((r) => r.phaseKey.trim() === explicitKey);
     labelFromRecommendation = match?.label.trim();
   } else {
+    const primaryRecommendation = input.phaseRecommendations.find(
+      (r) => r.phaseKey.trim().length > 0 && !isDeferredPlanPhaseRecommendationKey(r.phaseKey)
+    );
+    const workspaceCurrent = trimOptional(input.workspaceCurrentPhaseKey);
     const workspaceNext = trimOptional(input.workspaceNextPhaseKey);
     const occupiedKeys = (input.occupiedPhaseKeys ?? []).map((k) => k.trim()).filter((k) => k.length > 0);
 
-    if (workspaceNext) {
+    if (primaryRecommendation && PLAN_ARTIFACT_PHASE_KEY_RE.test(primaryRecommendation.phaseKey.trim())) {
+      phaseKey = primaryRecommendation.phaseKey.trim();
+      source = "recommendation";
+      labelFromRecommendation = primaryRecommendation.label.trim();
+    } else if (workspaceCurrent && PLAN_ARTIFACT_PHASE_KEY_RE.test(workspaceCurrent)) {
+      phaseKey = workspaceCurrent;
+      source = "workspace-current";
+      const match = input.phaseRecommendations.find((r) => r.phaseKey.trim() === workspaceCurrent);
+      labelFromRecommendation = match?.label.trim();
+    } else if (workspaceNext) {
       if (!PLAN_ARTIFACT_PHASE_KEY_RE.test(workspaceNext)) {
         const findings: PlanArtifactPhaseProposalFinding[] = [
           {
