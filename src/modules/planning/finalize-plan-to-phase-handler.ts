@@ -346,8 +346,6 @@ export async function runFinalizePlanToPhase(
   const workspaceStatus = readKitWorkspaceStatusRow(stores.sqliteDual.getDatabase());
   const workspaceNextPhaseKey =
     typeof workspaceStatus?.nextKitPhase === "string" ? workspaceStatus.nextKitPhase.trim() : "";
-  const workspaceCurrentPhaseKey =
-    typeof workspaceStatus?.currentKitPhase === "string" ? workspaceStatus.currentKitPhase.trim() : "";
 
   const phaseResolved = resolvePlanArtifactPhaseProposal({
     targetPhaseKey: typeof args.targetPhaseKey === "string" ? args.targetPhaseKey : undefined,
@@ -358,7 +356,6 @@ export async function runFinalizePlanToPhase(
     activePhaseKeys: collectActivePhaseKeys(allTasks),
     occupiedPhaseKeys: collectOccupiedPhaseKeys(allTasks),
     workspaceNextPhaseKey: workspaceNextPhaseKey.length > 0 ? workspaceNextPhaseKey : undefined,
-    workspaceCurrentPhaseKey: workspaceCurrentPhaseKey.length > 0 ? workspaceCurrentPhaseKey : undefined,
     allowPhaseKeyCollision: args.allowPhaseKeyCollision === true,
     strict: args.strict !== false
   });
