@@ -6573,7 +6573,6 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       text-transform: uppercase;
       color: var(--wc-muted);
       margin: 12px 0 6px;
-      opacity: 0.7;
     }
     .wc-agent-card {
       display: flex !important;
@@ -6784,7 +6783,6 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       font-size: 9.5px;
       color: var(--wc-muted);
       white-space: nowrap;
-      opacity: 0.7;
     }
     .wc-agent-card-sub-count {
       font-size: 9.5px;
@@ -6809,7 +6807,6 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       letter-spacing: 0.12em;
       text-transform: uppercase;
       color: var(--wc-muted);
-      opacity: 0.55;
       margin-bottom: 4px;
       padding-left: 8px;
     }
@@ -6891,7 +6888,6 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       font-size: 10px;
       color: var(--wc-muted);
       white-space: nowrap;
-      opacity: 0.7;
       flex-shrink: 0;
     }
     .wc-dot {
@@ -7557,6 +7553,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       overflow-x: auto;
       -ms-overflow-style: none;
       scrollbar-width: none;
+      user-select: none;
     }
     .wc-tab-bar::-webkit-scrollbar { display: none; }
     .wc-tab-btn {
@@ -7861,6 +7858,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.3));
       background: var(--vscode-textCodeBlock-background);
       color: var(--vscode-foreground);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.25);
     }
     .wc-stat-num {
       font-size: 15px;
@@ -7902,6 +7900,24 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     .wc-stat-num-human {
       color: var(--vscode-editorWarning-foreground, #cca700);
     }
+    .wc-stat-sparkline {
+      display: flex;
+      align-items: flex-end;
+      gap: 2px;
+      height: 16px;
+      margin: 1px 0;
+    }
+    .wc-stat-sparkline-bar {
+      display: block;
+      width: 3px;
+      border-radius: 1px;
+      flex-shrink: 0;
+    }
+    .wc-spark-ready   { background: var(--vscode-testing-iconPassed, #4ec9b0); }
+    .wc-spark-proposed { background: var(--vscode-textLink-foreground, #4fc1ff); }
+    .wc-spark-blocked  { background: var(--vscode-editorWarning-foreground, #cca700); }
+    .wc-spark-human    { background: var(--vscode-editorWarning-foreground, #cca700); }
+    .wc-spark-done     { background: var(--vscode-foreground); opacity: 0.45; }
     /* ── Contextual help (fixed popover outside #root — no blink on refresh) ── */
     .wc-context-help-popover {
       position: fixed;
