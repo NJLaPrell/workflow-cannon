@@ -1641,6 +1641,14 @@
   },
   {
     "moduleId": "ideas",
+    "name": "get-planner-flow-status",
+    "file": "get-planner-flow-status.md",
+    "description": "Read-only planner golden-path stage, blockers, mismatches, and recommendedNextCommand with readyRun argv.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "ideas",
     "name": "list-ideas",
     "file": "list-ideas.md",
     "description": "List lightweight operator ideas in sort order, optionally filtered by status.",
