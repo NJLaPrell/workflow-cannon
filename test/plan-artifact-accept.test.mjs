@@ -304,7 +304,10 @@ describe("accept-plan-artifact command (T100466)", () => {
         name: "accept-plan-artifact",
         args: {
           planId: draft.data.planId,
-          approvalRecord: approvalFor(artifact, review.data.version),
+          approvalRecord: approvalFor(
+            { ...artifact, planId: draft.data.planId, planRef: draft.data.planRef },
+            review.data.version
+          ),
           expectedPlanningGeneration: review.data.planningGeneration ?? 0,
           policyApproval: { confirmed: true, rationale: "accept lifecycle test plan" }
         }
