@@ -1,0 +1,277 @@
+{
+  "schemaVersion": 1,
+  "planId": "8c59a86c-8a99-41b3-a48e-e0506066914f",
+  "version": 8,
+  "planRef": "plan-artifact:8c59a86c-8a99-41b3-a48e-e0506066914f",
+  "status": "brainstorming",
+  "ideaId": "I007",
+  "createdAt": "2026-07-04T01:12:40.568Z",
+  "updatedAt": "2026-07-07T21:16:33.595Z",
+  "agentDirective": {
+    "schemaVersion": 1,
+    "state": "brainstorming",
+    "questions": [
+      {
+        "phase": "context",
+        "fieldName": "contextProblem",
+        "prompt": "In one or two sentences, what problem or opportunity does this idea address?",
+        "type": "text",
+        "guidance": "Restate the operator's idea in plain language before scoring. Capture the core pain or opportunity, not implementation details."
+      },
+      {
+        "phase": "context",
+        "fieldName": "contextAudience",
+        "prompt": "Who benefits first if this idea succeeds?",
+        "type": "text",
+        "guidance": "Name the primary user or operator persona. Secondary audiences can be noted in session notes later."
+      },
+      {
+        "phase": "value-scoring",
+        "fieldName": "valueImpact",
+        "prompt": "How strong is the expected impact if this idea succeeds (1=minimal, 10=transformative)?",
+        "type": "score-1-10",
+        "validRange": {
+          "min": 1,
+          "max": 10
+        },
+        "guidance": "Score the magnitude of outcome improvement, not confidence that it will happen."
+      },
+      {
+        "phase": "value-scoring",
+        "fieldName": "valueReach",
+        "prompt": "How many users, workflows, or systems would materially benefit (1=narrow, 10=broad)?",
+        "type": "score-1-10",
+        "validRange": {
+          "min": 1,
+          "max": 10
+        },
+        "guidance": "Count durable beneficiaries across the workspace, not one-off convenience."
+      },
+      {
+        "phase": "value-scoring",
+        "fieldName": "valueUrgency",
+        "prompt": "How time-sensitive is pursuing this idea now (1=can wait, 10=blocking now)?",
+        "type": "score-1-10",
+        "validRange": {
+          "min": 1,
+          "max": 10
+        },
+        "guidance": "Higher scores mean delay has clear cost or risk; lower scores mean the idea is valuable but not urgent."
+      },
+      {
+        "phase": "value-scoring",
+        "fieldName": "valueStrategicFit",
+        "prompt": "How well does this idea align with current roadmap and strategic goals (1=orthogonal, 10=core)?",
+        "type": "score-1-10",
+        "validRange": {
+          "min": 1,
+          "max": 10
+        },
+        "guidance": "Score alignment with active phase goals and maintainer priorities, not generic importance."
+      },
+      {
+        "phase": "risk-scoring",
+        "fieldName": "riskTechnical",
+        "prompt": "How high is the technical execution risk (1=well understood, 10=high unknowns)?",
+        "type": "score-1-10",
+        "validRange": {
+          "min": 1,
+          "max": 10
+        },
+        "guidance": "Consider architecture novelty, dependency risk, and verification difficulty."
+      },
+      {
+        "phase": "risk-scoring",
+        "fieldName": "riskOperational",
+        "prompt": "How high is the operational or rollout risk (1=low blast radius, 10=wide blast radius)?",
+        "type": "score-1-10",
+        "validRange": {
+          "min": 1,
+          "max": 10
+        },
+        "guidance": "Include support burden, migration pain, and failure impact on active workflows."
+      },
+      {
+        "phase": "risk-scoring",
+        "fieldName": "riskUnknowns",
+        "prompt": "How many unresolved unknowns remain (1=few, 10=many critical gaps)?",
+        "type": "score-1-10",
+        "validRange": {
+          "min": 1,
+          "max": 10
+        },
+        "guidance": "Score open questions that could invalidate the approach if left unanswered."
+      },
+      {
+        "phase": "risk-scoring",
+        "fieldName": "riskReversibility",
+        "prompt": "If this idea fails or must roll back, how hard is recovery (1=easy rollback, 10=hard to unwind)?",
+        "type": "score-1-10",
+        "validRange": {
+          "min": 1,
+          "max": 10
+        },
+        "guidance": "Higher scores mean partial delivery or bad assumptions would be costly to reverse."
+      },
+      {
+        "phase": "effort-scoring",
+        "fieldName": "tShirtSize",
+        "prompt": "What T-shirt size best fits the first shippable slice?",
+        "type": "enum",
+        "validValues": [
+          "XS",
+          "S",
+          "M",
+          "L",
+          "XL"
+        ],
+        "guidance": "Estimate relative delivery size for a focused implementation slice, not the entire multi-phase vision."
+      },
+      {
+        "phase": "effort-scoring",
+        "fieldName": "complexity",
+        "prompt": "How complex is the work independent of calendar time (1=straightforward, 10=deeply complex)?",
+        "type": "score-1-10",
+        "validRange": {
+          "min": 1,
+          "max": 10
+        },
+        "guidance": "T-shirt size and complexity are weighted independently in effortScore — a high-complexity M item intentionally scores higher than a low-complexity L item because complexity carries 60% of the effort blend."
+      },
+      {
+        "phase": "confidence-scoring",
+        "fieldName": "confidenceEvidence",
+        "prompt": "How strong is the supporting evidence (1=anecdotal, 10=strong proof)?",
+        "type": "score-1-10",
+        "validRange": {
+          "min": 1,
+          "max": 10
+        },
+        "guidance": "Include prior art, operator feedback, telemetry, or prior experiments."
+      },
+      {
+        "phase": "confidence-scoring",
+        "fieldName": "confidenceExpertise",
+        "prompt": "How available is the expertise needed to execute (1=scarce, 10=ready now)?",
+        "type": "score-1-10",
+        "validRange": {
+          "min": 1,
+          "max": 10
+        },
+        "guidance": "Consider team familiarity with affected modules and required review depth."
+      },
+      {
+        "phase": "confidence-scoring",
+        "fieldName": "confidenceClarity",
+        "prompt": "How clear is the problem and solution boundary (1=vague, 10=crisp)?",
+        "type": "score-1-10",
+        "validRange": {
+          "min": 1,
+          "max": 10
+        },
+        "guidance": "Higher clarity means acceptance criteria and scope boundaries are already obvious."
+      },
+      {
+        "phase": "unknowns",
+        "fieldName": "unknownsNotes",
+        "prompt": "List the top unknowns that could change the scores or scope.",
+        "type": "text",
+        "guidance": "Prefer concrete questions over generic risk statements. Unknowns here inform planning, not session scoring."
+      },
+      {
+        "phase": "alternatives",
+        "fieldName": "alternativesConsidered",
+        "prompt": "What alternatives did you consider and why is this approach preferred?",
+        "type": "text",
+        "guidance": "Capture at least one credible alternative, including doing nothing, and why it was deprioritized."
+      },
+      {
+        "phase": "session-notes",
+        "fieldName": "sessionNotes",
+        "prompt": "Add any session notes, assumptions, or follow-ups for the planning phase.",
+        "type": "text",
+        "guidance": "Keep notes concise and actionable. Do not duplicate computed scores here."
+      }
+    ],
+    "computeSteps": [
+      {
+        "id": "valueScore",
+        "formula": "valueScore = (valueImpact × 0.30) + (valueReach × 0.25) + (valueUrgency × 0.20) + (valueStrategicFit × 0.25)",
+        "description": "Weighted average of value sub-inputs."
+      },
+      {
+        "id": "riskScore",
+        "formula": "riskScore = (riskTechnical × 0.35) + (riskOperational × 0.25) + (riskUnknowns × 0.25) + (riskReversibility × 0.15)",
+        "description": "Weighted average of risk sub-inputs."
+      },
+      {
+        "id": "effortScore",
+        "formula": "effortScore = (tShirtSizeScore × 0.40) + (complexity × 0.60); tShirtSizeScore map: XS=2, S=4, M=6, L=8, XL=10",
+        "description": "Blend of T-shirt size and complexity. High-complexity M intentionally scores higher than low-complexity L."
+      },
+      {
+        "id": "confidenceScore",
+        "formula": "confidenceScore = (confidenceEvidence × 0.35) + (confidenceExpertise × 0.30) + (confidenceClarity × 0.35)",
+        "description": "Weighted average of confidence sub-inputs."
+      },
+      {
+        "id": "priorityScore",
+        "formula": "rawPriority = ((valueScore × 0.40) + (confidenceScore × 0.20) − (riskScore × 0.25) − (effortScore × 0.15)) × 10; priorityScore = Math.round(((rawPriority + 34) / 90) × 100)",
+        "description": "Priority blends upside and confidence minus risk and effort, scaled to 0–100 via rawPriority normalization."
+      }
+    ],
+    "synthesisStep": {
+      "formula": "if sessions.length===1 then synthesized=session.scores else for each score field synthesized[field]=latest[field]×0.60+mean(prior[field])×0.40",
+      "description": "N=1 edge case: when sessions.length===1, synthesized=session scores; else synthesized=latest×0.60+mean(prior)×0.40."
+    }
+  },
+  "brainstorm": {
+    "sessions": [
+      {
+        "sessionId": "bsess-8b93e2f7-072e-4ad3-8cab-4598a1d91275",
+        "startedAt": "2026-07-05T07:11:57.611Z",
+        "updatedAt": "2026-07-07T21:16:33.595Z",
+        "inputs": {
+          "contextProblem": "The available idea record is a placeholder/test idea without a clear problem statement. The only concrete opportunity visible from the current record is validating that the Ideas to Brainstorm session workflow can persist a completed scoring pass.",
+          "contextAudience": "Workflow Cannon maintainers/operators validating the Ideas brainstorming workflow.",
+          "valueImpact": 2,
+          "valueReach": 2,
+          "valueUrgency": 2,
+          "valueStrategicFit": 3,
+          "riskTechnical": 3,
+          "riskOperational": 2,
+          "riskUnknowns": 8,
+          "riskReversibility": 2,
+          "tShirtSize": "XS",
+          "complexity": 2,
+          "confidenceEvidence": 2,
+          "confidenceExpertise": 7,
+          "confidenceClarity": 1,
+          "unknownsNotes": "The idea title appears to be test text, and there is no note describing the desired outcome. Key unknowns: what real problem should I007 solve, whether this artifact should still be live after migration, and whether the missing linkedPlanArtifact on I007 is expected.",
+          "alternativesConsidered": "Do nothing until the operator replaces the placeholder idea with a real problem statement; preferred only if this is purely test data. Start planning immediately was rejected because the problem boundary is not clear.",
+          "sessionNotes": "Agent-led brainstorm completed from sparse local evidence. Scores are intentionally conservative; planning should first clarify whether I007 is real work or a workflow persistence test."
+        },
+        "scores": {
+          "value": 2.25,
+          "risk": 3.85,
+          "effort": 2,
+          "confidence": 3.15,
+          "priority": 41,
+          "tShirtSize": "XS",
+          "complexity": 2
+        },
+        "completedAt": "2026-07-07T21:16:32.619Z",
+        "synthesized": {
+          "value": 2.25,
+          "risk": 3.85,
+          "effort": 2,
+          "confidence": 3.15,
+          "priority": 41,
+          "tShirtSize": "XS",
+          "complexity": 2
+        }
+      }
+    ],
+    "activeSessionId": "bsess-8b93e2f7-072e-4ad3-8cab-4598a1d91275"
+  }
+}

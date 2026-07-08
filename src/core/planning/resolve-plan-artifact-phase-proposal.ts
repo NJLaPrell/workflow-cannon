@@ -5,6 +5,18 @@ export const PLAN_ARTIFACT_PHASE_KEY_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
 
 export const PLAN_ARTIFACT_PHASE_DESCRIPTION_MAX_WORDS = 5;
 
+/** Placeholder plan phase keys — not real roster targets; finalize resolves a numeric phase at materialization. */
+export const DEFERRED_PLAN_PHASE_RECOMMENDATION_KEYS = new Set([
+  "planner-resolved",
+  "deferred",
+  "at-finalize",
+  "auto"
+]);
+
+export function isDeferredPlanPhaseRecommendationKey(phaseKey: string): boolean {
+  return DEFERRED_PLAN_PHASE_RECOMMENDATION_KEYS.has(phaseKey.trim().toLowerCase());
+}
+
 export type PlanArtifactPhaseProposal = {
   phaseKey: string;
   label: string;
@@ -161,9 +173,13 @@ export function resolvePlanArtifactPhaseProposal(
   const strict = input.strict !== false;
   const activeKeys = (input.activePhaseKeys ?? []).map((k) => k.trim()).filter((k) => k.length > 0);
   const activeSet = new Set(activeKeys);
-  const recommendationKeys = input.phaseRecommendations.map((r) => r.phaseKey.trim()).filter((k) => k.length > 0);
+  const recommendationKeys = input.phaseRecommendations
+    .map((r) => r.phaseKey.trim())
+    .filter((k) => k.length > 0 && !isDeferredPlanPhaseRecommendationKey(k));
 
-  const explicitKey = trimOptional(input.targetPhaseKey) ?? trimOptional(input.preferredPhaseKey);
+  const explicitKeyRaw = trimOptional(input.targetPhaseKey) ?? trimOptional(input.preferredPhaseKey);
+  const explicitKey =
+    explicitKeyRaw && !isDeferredPlanPhaseRecommendationKey(explicitKeyRaw) ? explicitKeyRaw : undefined;
   const explicitLabel = trimOptional(input.targetPhase);
   const description = trimOptional(input.phaseShortDescription);
 

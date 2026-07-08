@@ -4247,15 +4247,12 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
 
   private async onFinalizePlanArtifact(planId: string, version: number): Promise<void> {
     await this.ingestPlanningGenFromDashboard();
-    const targetPhaseKey = this.inferPhaseKeyForKitPhaseNoteFromDashboard();
-    const phaseArgs = targetPhaseKey
-      ? { targetPhaseKey, targetPhase: `Phase ${targetPhaseKey}` }
-      : {};
+    // Phase rosters are resolved at finalize time (auto-empty / workspace nextKitPhase).
+    // Do not pin to the workspace *current* phase — that collides with active queue work.
     const commonArgs = {
       planId,
       version,
-      desiredStatus: "ready",
-      ...phaseArgs
+      desiredStatus: "ready"
     };
     const preview = await this.runMutationWithGenerationRetry("finalize-plan-to-phase", {
       ...commonArgs,

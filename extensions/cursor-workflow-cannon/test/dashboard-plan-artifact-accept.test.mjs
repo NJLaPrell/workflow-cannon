@@ -90,5 +90,7 @@ test("PlanArtifact finalize previews then persists and opens the phase queue", (
     providerSrc.indexOf("private async onViewPlanArtifact")
   );
   assert.match(hostBlock, /applyDashboardMutationInvalidation\("plan-artifact"\)/);
+  assert.doesNotMatch(hostBlock, /inferPhaseKeyForKitPhaseNoteFromDashboard/);
+  assert.doesNotMatch(hostBlock, /targetPhaseKey/);
   assert.match(providerSrc, /wcOpenQueueForPhase/);
 });

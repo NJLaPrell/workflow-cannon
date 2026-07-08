@@ -1,0 +1,100 @@
+{
+  "schemaVersion": 1,
+  "planId": "a6334fe7-bb18-43cb-9d38-78af3ed25025",
+  "version": 7,
+  "planRef": "plan-artifact:a6334fe7-bb18-43cb-9d38-78af3ed25025",
+  "status": "planning",
+  "ideaId": "I008",
+  "createdAt": "2026-07-05T07:25:21.916Z",
+  "updatedAt": "2026-07-05T07:29:39.937Z",
+  "agentDirective": {
+    "schemaVersion": 1,
+    "state": "planning",
+    "questions": [
+      {
+        "phase": "context",
+        "fieldName": "planTitle",
+        "prompt": "What title should the structured plan use?",
+        "type": "text",
+        "guidance": "Initialize the plan section title before invoking planner-chat."
+      },
+      {
+        "phase": "context",
+        "fieldName": "planSummary",
+        "prompt": "Summarize the plan scope that planner-chat should expand into WBS rows.",
+        "type": "text",
+        "guidance": "Ground the summary in synthesized brainstorm scores; do not re-run brainstorming scoring here."
+      },
+      {
+        "phase": "session-notes",
+        "fieldName": "plannerChatInvocation",
+        "prompt": "Invoke planner-chat to author structured plan sections and WBS from the brainstorm synthesis.",
+        "type": "text",
+        "guidance": "Follow the planner-chat playbook after plan.title and plan.summary are set. Transition to reviewed when rubric review is recorded."
+      }
+    ]
+  },
+  "brainstorm": {
+    "sessions": [
+      {
+        "sessionId": "bsess-43492739-22a4-434e-addd-b006dbb585c5",
+        "startedAt": "2026-07-05T07:28:41.357Z",
+        "updatedAt": "2026-07-05T07:29:34.655Z",
+        "inputs": {
+          "contextProblem": "Validate the Ideas brainstorm workflow with a second test row—session scoring, synthesis, and transition to planning should work end-to-end.",
+          "contextAudience": "Workflow Cannon maintainers and agents exercising the ideas module brainstorm flow.",
+          "valueImpact": 3,
+          "valueReach": 2,
+          "valueUrgency": 2,
+          "valueStrategicFit": 5,
+          "riskTechnical": 2,
+          "riskOperational": 1,
+          "riskUnknowns": 4,
+          "riskReversibility": 1,
+          "tShirtSize": "XS",
+          "complexity": 2,
+          "confidenceEvidence": 4,
+          "confidenceExpertise": 8,
+          "confidenceClarity": 3,
+          "unknownsNotes": "Whether this row is purely a fixture or will accumulate real scope; what the operator meant by the placeholder note 'Details.'",
+          "alternativesConsidered": "Do nothing (leave idea open without brainstorm)—deprioritized because the goal is to exercise brainstorm→planning. Manual dashboard scoring—deprioritized because agent-led session is the target flow.",
+          "sessionNotes": "Smoke-test brainstorm for I008. Revisit scores if operator replaces placeholder note with real requirements."
+        },
+        "scores": {
+          "value": 3.05,
+          "risk": 2.1,
+          "effort": 2,
+          "confidence": 4.85,
+          "priority": 53,
+          "tShirtSize": "XS",
+          "complexity": 2
+        },
+        "completedAt": "2026-07-05T07:29:33.000Z",
+        "synthesized": {
+          "value": 3.05,
+          "risk": 2.1,
+          "effort": 2,
+          "confidence": 4.85,
+          "priority": 53,
+          "tShirtSize": "XS",
+          "complexity": 2
+        }
+      }
+    ],
+    "activeSessionId": "bsess-43492739-22a4-434e-addd-b006dbb585c5",
+    "synthesis": {
+      "value": 3.05,
+      "risk": 2.1,
+      "effort": 2,
+      "confidence": 4.85,
+      "priority": 53,
+      "tShirtSize": "XS",
+      "complexity": 2
+    }
+  },
+  "plan": {
+    "title": "Test Idea 2",
+    "summary": "Author structured plan sections from brainstorm synthesis.",
+    "wbsRowCount": 0
+  }
+}

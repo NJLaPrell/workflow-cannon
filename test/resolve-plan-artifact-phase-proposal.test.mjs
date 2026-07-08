@@ -135,4 +135,22 @@ describe("resolvePlanArtifactPhaseProposal (T100469)", () => {
     assert.equal(countDescriptionWords("  one   two  "), 2);
     assert.equal(countDescriptionWords("alpha beta gamma delta epsilon"), PLAN_ARTIFACT_PHASE_DESCRIPTION_MAX_WORDS);
   });
+
+  it("ignores deferred placeholder recommendation keys and explicit overrides", () => {
+    const deferred = resolvePlanArtifactPhaseProposal({
+      targetPhaseKey: "planner-resolved",
+      phaseRecommendations: [
+        {
+          phaseKey: "planner-resolved",
+          label: "Resolved at finalize",
+          rationale: "Deferred assignment",
+          isPrimary: true
+        }
+      ],
+      occupiedPhaseKeys: ["140", "141"]
+    });
+    assert.equal(deferred.ok, true);
+    assert.equal(deferred.source, "auto-empty");
+    assert.equal(deferred.proposal.phaseKey, "142");
+  });
 });

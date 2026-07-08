@@ -59,6 +59,7 @@ import type {
   PlanArtifactV1,
   PlanArtifactWbsItem
 } from "../../../core/planning/plan-artifact-v1.js";
+import { isDeferredPlanPhaseRecommendationKey } from "../../../core/planning/resolve-plan-artifact-phase-proposal.js";
 import { dashboardOnboardingTemperamentLabel } from "../../agent-behavior/onboarding-temperament-label.js";
 import { loadBehaviorWorkspaceState } from "../../agent-behavior/persistence.js";
 import { BehaviorProfileStore } from "../../agent-behavior/store.js";
@@ -836,7 +837,9 @@ export function buildDashboardPlanArtifactSummary(
     const phaseRecommendation = primaryPhase
       ? [primaryPhase.label?.trim(), primaryPhase.phaseKey?.trim()].filter((value) => !!value).join(" · ")
       : "";
-    const phaseKey = typeof primaryPhase?.phaseKey === "string" ? primaryPhase.phaseKey.trim() : "";
+    const phaseKeyRaw = typeof primaryPhase?.phaseKey === "string" ? primaryPhase.phaseKey.trim() : "";
+    const phaseKey =
+      phaseKeyRaw.length > 0 && !isDeferredPlanPhaseRecommendationKey(phaseKeyRaw) ? phaseKeyRaw : "";
     const sourceIdeaId =
       ideaPlan?.ideaId ??
       (typeof latestArtifact?.provenance?.sourceIdeaId === "string"
