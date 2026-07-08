@@ -996,6 +996,87 @@ test("renderDashboardRootInnerHtml groups plans by lifecycle state and title", (
   assert.match(html, /wc-plan-status-pill wc-plan-status-done">Delivered/);
 });
 
+test("renderDashboardRootInnerHtml hides stale drafts when idea has advanced plan state", () => {
+  const html = renderDashboardRootInnerHtml({
+    ok: true,
+    data: {
+      workspaceStatus: { activeFocus: "Planning" },
+      stateSummary: { proposed: 0, ready: 0, in_progress: 0, completed: 0, total: 0 },
+      planningSession: null,
+      planArtifact: {
+        count: 2,
+        current: {
+          planId: "plan-accepted",
+          sourceIdeaId: "I011",
+          title: "Agent Planning Tools",
+          status: "accepted",
+          tasksGenerated: true,
+          executed: false,
+          updatedAt: "2026-07-08T17:00:00.000Z"
+        },
+        recent: [
+          {
+            planId: "plan-draft",
+            sourceIdeaId: "I011",
+            title: "Agent Planning Tools",
+            status: "draft",
+            updatedAt: "2026-07-08T15:00:00.000Z"
+          }
+        ]
+      },
+      readyExecutionSummary: { count: 0, top: [] },
+      readyImprovementsSummary: { count: 0, top: [] },
+      proposedExecutionSummary: { count: 0, top: [] },
+      proposedImprovementsSummary: { count: 0, top: [] },
+      transcriptChurnResearchSummary: { count: 0, top: [] },
+      wishlistSummary: { count: 0, top: [] }
+    }
+  });
+
+  assert.match(html, /data-wc-ui-state-key="plan-state-scheduled"/);
+  assert.doesNotMatch(html, /data-wc-plan-card-id="plan-draft"/);
+  assert.doesNotMatch(html, /data-wc-ui-state-key="plan-state-new"/);
+});
+
+test("renderDashboardRootInnerHtml keeps only newest draft per idea in Draft rollup", () => {
+  const html = renderDashboardRootInnerHtml({
+    ok: true,
+    data: {
+      workspaceStatus: { activeFocus: "Planning" },
+      stateSummary: { proposed: 0, ready: 0, in_progress: 0, completed: 0, total: 0 },
+      planningSession: null,
+      planArtifact: {
+        count: 2,
+        current: {
+          planId: "draft-new",
+          sourceIdeaId: "I006",
+          title: "Idea plan",
+          status: "draft",
+          updatedAt: "2026-07-08T15:55:19.690Z"
+        },
+        recent: [
+          {
+            planId: "draft-old",
+            sourceIdeaId: "I006",
+            title: "Idea plan",
+            status: "draft",
+            updatedAt: "2026-07-04T01:09:30.667Z"
+          }
+        ]
+      },
+      readyExecutionSummary: { count: 0, top: [] },
+      readyImprovementsSummary: { count: 0, top: [] },
+      proposedExecutionSummary: { count: 0, top: [] },
+      proposedImprovementsSummary: { count: 0, top: [] },
+      transcriptChurnResearchSummary: { count: 0, top: [] },
+      wishlistSummary: { count: 0, top: [] }
+    }
+  });
+
+  assert.match(html, /data-wc-plan-card-id="draft-new"/);
+  assert.doesNotMatch(html, /data-wc-plan-card-id="draft-old"/);
+});
+
 test("renderDashboardRootInnerHtml renders phase roster deliverables inline edit affordances", () => {
   const html = renderDashboardRootInnerHtml({
     ok: true,

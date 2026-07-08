@@ -1,0 +1,1148 @@
+{
+  "schemaVersion": 1,
+  "planId": "f7a3b891-c5d2-4e6f-9a08-1b2c3d4e5f60",
+  "planRef": "plan-artifact:f7a3b891-c5d2-4e6f-9a08-1b2c3d4e5f60",
+  "status": "accepted",
+  "identity": {
+    "title": "Unified Idea → Brainstorm → Plan Document with Agent-Directive State Schemas",
+    "planningType": "new-feature",
+    "summary": "Merge the separate Idea row and PlanArtifact JSON into a single progressive document that advances through idea → brainstorming → planning → reviewed → accepted → delivered. Each state has a machine-readable schema with an agentDirective section that prescribes agent behavior for that state. The brainstorming state schema directs the full agent-led session: question sequence, scoring formulas, synthesis update. Introduces a Brainstorm dashboard button and Brainstorming rollup. WBS decomposed into 14 single-session tasks.",
+    "tags": [
+      "ideas",
+      "planner",
+      "brainstorm",
+      "dashboard",
+      "unified-model",
+      "scoring",
+      "agent-directive-schema"
+    ]
+  },
+  "goals": [
+    "A single document traces an idea from inception through brainstorming, planning, review, acceptance, and delivery — no separate entities to keep in sync",
+    "The document status advances through six states: idea → brainstorming → planning → reviewed → accepted → delivered",
+    "Each state has a machine-readable schema file with an agentDirective section that prescribes required agent behavior for that state — agents read the state schema and follow it, not playbook prose",
+    "The brainstorming state schema agentDirective defines the full agent-led session: ordered question phases, scoring sub-inputs, formula application steps, and synthesis update — agents must not invent a different flow",
+    "Agent-led brainstorming sessions are stored as an ordered array on the document and can be triggered at any document status",
+    "Each brainstorming session computes valueScore, riskScore, effortScore, confidenceScore, and priorityScore using the canonical formulas defined in the schema",
+    "The dashboard surfaces a Brainstorm button and a Brainstorming rollup showing synthesized scores (Value, Risk, Effort, Confidence, Priority) for ideas in brainstorming state",
+    "Planning schema sections (WBS, goals, non-goals) are added to the same document when the operator advances to planning",
+    "Task refs and delivery refs attach to the unified document as work progresses to delivered; a check-delivery-status command transitions accepted→delivered when all delivery task refs report complete"
+  ],
+  "nonGoals": [
+    "Maintaining a legacy two-artifact model (separate Idea SQLite row and PlanArtifact JSON) for any ideas after migration",
+    "Automated pipeline migration of existing ideas and plan artifacts — a lightweight manual agent task handles the low-volume cutover",
+    "Changing finalize-plan-to-phase task-creation logic as part of this tranche",
+    "Making agent directive weights runtime-configurable in v1 — weights are fixed in the schema; future iteration adds workspace-level overrides",
+    "Merging the Ideas module and Planning module into a single module (tracked as a separate improvement idea)",
+    "Automatic delivered-status detection via task-engine event hooks in v1 — check-delivery-status is an explicit operator/agent command"
+  ],
+  "userStories": [
+    {
+      "id": "US-1",
+      "asA": "maintainer",
+      "iWant": "to click Brainstorm on an idea card",
+      "soThat": "an agent reads the brainstorming state schema and conducts the prescribed session without me having to guide the process",
+      "priority": "must"
+    },
+    {
+      "id": "US-2",
+      "asA": "maintainer",
+      "iWant": "to trigger a new brainstorming session on a document already in planning or later states",
+      "soThat": "I can revisit assumptions and update synthesized scores without rolling back the document status",
+      "priority": "must"
+    },
+    {
+      "id": "US-3",
+      "asA": "maintainer",
+      "iWant": "to see a Brainstorming rollup with Value, Risk, Effort, Confidence, and Priority scores",
+      "soThat": "I can compare and prioritize all ideas currently in brainstorming state",
+      "priority": "must"
+    },
+    {
+      "id": "US-4",
+      "asA": "maintainer",
+      "iWant": "my brainstorm sessions, plan WBS, task refs, and delivery refs to live on the same document",
+      "soThat": "I never need to cross-reference a separate idea row and plan artifact file",
+      "priority": "must"
+    },
+    {
+      "id": "US-5",
+      "asA": "agent",
+      "iWant": "to load the state schema for the current document state",
+      "soThat": "I know exactly what to do next — which fields to populate, what questions to ask, what transitions are valid — without guessing",
+      "priority": "must"
+    },
+    {
+      "id": "US-6",
+      "asA": "maintainer",
+      "iWant": "existing ideas migrated to the unified format",
+      "soThat": "there is no legacy split-model debt after the cutover",
+      "priority": "should"
+    }
+  ],
+  "valueAssessment": {
+    "impact": "Eliminates split-model complexity; adds agent-directive schemas that make agent behavior deterministic and repeatable; structured scoring gives a defensible prioritization basis before committing to planning",
+    "confidence": "medium",
+    "rationale": "Schema design and scoring model are well-understood; integration risk exists at the planning module boundary and in correctly authoring directive schemas that cover all agent edge cases"
+  },
+  "riskAssessment": [
+    {
+      "id": "R1",
+      "description": "Hard cutover leaves existing ideas and plan artifacts inaccessible until migration task runs",
+      "severity": "medium",
+      "mitigation": "Migration task runs dry-run first; existing volume is low and manageable by a single agent session"
+    },
+    {
+      "id": "R2",
+      "description": "Six-state status machine with per-state required sections and agentDirective is more complex than the previous two-state idea model",
+      "severity": "medium",
+      "mitigation": "Per-state schema files make each state contract explicit and machine-checkable; agents load the schema rather than inferring behavior"
+    },
+    {
+      "id": "R3",
+      "description": "Planning module commands are coupled to the two-artifact model and require non-trivial updates",
+      "severity": "medium",
+      "mitigation": "WBS-3A through WBS-3C adapt commands incrementally; external argv shapes are preserved"
+    },
+    {
+      "id": "R4",
+      "description": "Incomplete or ambiguous agentDirective in the brainstorming schema could cause agents to skip questions or compute scores incorrectly",
+      "severity": "medium",
+      "mitigation": "WBS-1B acceptance criteria require the directive to be walkthrough-tested with a real agent session before sign-off"
+    },
+    {
+      "id": "R5",
+      "description": "Scoring formula weights may need calibration after real-world use",
+      "severity": "low",
+      "mitigation": "Weights annotated in schema metadata; future iteration adds workspace-level overrides without changing v1 defaults"
+    }
+  ],
+  "technicalImpact": {
+    "systemsTouched": [
+      "schemas/ideas/states/ (six per-state schema files with agentDirective sections)",
+      "schemas/ideas/ (unified IdeaPlan envelope schema, brainstorm-session record schema)",
+      "src/modules/ideas/ (six-state machine, commands, scoring engine, state-schema loader)",
+      "src/modules/planning/ (draft-plan-artifact, review-plan-artifact, accept-plan-artifact, finalize-plan-to-phase)",
+      "extensions/cursor-workflow-cannon (dashboard rollup, button labels, idea detail panel, scoring display)",
+      ".ai/playbooks/brainstorm-session.md (new), .ai/playbooks/planner-chat.md (updated)",
+      "src/modules/ideas/instructions/start-idea-planning.md"
+    ],
+    "compatibilityNotes": "Hard cutover — all existing I### rows and plan artifact JSON files must be migrated before the new dashboard code deploys.",
+    "migrationImpact": "Existing I### rows promoted to unified document format with correct state mapping; associated plan artifact JSON merged into corresponding unified documents. No legacy two-model path maintained after migration."
+  },
+  "architecture": {
+    "overview": "The unified IdeaPlan document is a single progressive artifact with six status states: idea → brainstorming → planning → reviewed → accepted → delivered. Each state has a dedicated machine-readable schema file under schemas/ideas/states/ that defines (a) required/optional fields at that state, (b) valid transitions, and (c) an agentDirective section prescribing agent behavior. The brainstorming state schema agentDirective is the authoritative contract for the agent-led session. Agents load the state schema and follow the directive; they do not improvise. The brainstorm section stores an ordered sessions[] array appendable at any document state; sessions are mutable in-place via update-brainstorm-session. The plan section is added at planning state. The Ideas module owns the document lifecycle. The Planning module enriches the plan section and drives plan-phase status transitions (planning→reviewed→accepted) via cross-module updateIdea calls. Brainstorming is optional — idea→planning is a valid direct transition.",
+    "decisions": [
+      {
+        "id": "D1",
+        "decision": "Hard cutover — no legacy two-model path after migration",
+        "rationale": "Operator decision; low existing data volume makes this safe and removes long-term maintenance burden"
+      },
+      {
+        "id": "D2",
+        "decision": "Six-state status machine: idea → brainstorming → planning → reviewed → accepted → delivered",
+        "rationale": "Reviewed and Accepted are first-class document statuses; Delivered replaces finalized; each state maps to a schema file"
+      },
+      {
+        "id": "D3",
+        "decision": "Per-state machine-readable schema files with agentDirective sections — agents must load and follow the state schema; it is authoritative over playbook prose",
+        "rationale": "Eliminates agent improvisation and ensures reproducible, comparable sessions across runs"
+      },
+      {
+        "id": "D4",
+        "decision": "Brainstorming sessions are an array on the document — start-brainstorm-session appends a session at any document state",
+        "rationale": "Allows assumptions to be revisited without rolling back status; only first call from idea state transitions to brainstorming"
+      },
+      {
+        "id": "D5",
+        "decision": "Scoring formulas fixed defaults in v1 with weights annotated in the brainstorming state schema for future override support",
+        "rationale": "Consistent comparable scores for rollup ranking; weights stored in schema for discoverability"
+      },
+      {
+        "id": "D6",
+        "decision": "Storage model (JSON blob on SQLite row vs linked artifact file) resolved in WBS-1A",
+        "rationale": "Both options viable; WBS-1A evaluates based on query and update access patterns"
+      },
+      {
+        "id": "D7",
+        "decision": "Ideas module owns the document lifecycle; Planning module enriches the plan section only",
+        "rationale": "Preserves clear module ownership and prevents circular dependency"
+      },
+      {
+        "id": "D8",
+        "decision": "Button-to-agent invocation uses the existing prefillCursorChat + buildXxxPrompt pattern: start-brainstorm-session transitions the document and appends a session slot, then the dashboard calls prefillCursorChat({ newChat: true }) with buildBrainstormSessionPrompt — identical to how start-idea-planning + planner-chat-prompt works today",
+        "rationale": "Reuses a proven, already-shipped mechanism; no new IPC or invocation channel required"
+      },
+      {
+        "id": "D9",
+        "decision": "IdeaStatus expanded from three values (open/planning/planned) to nine; old values remain valid SQLite strings during migration mapping open→idea and planned→accepted; 'planning' is valid in both old and new models with no migration needed",
+        "rationale": "Backward-compatible enum expansion avoids breaking existing callers; WBS-6 migration cleans up old values from the database"
+      },
+      {
+        "id": "D10",
+        "decision": "PlanningChatSession records (pcs-*) survive unchanged; they track the agent chat session lifecycle for the planning phase (active/draft_ready/approval_ready/completed); the unified document status is source of truth for document state; PlanningChatSession is orchestration metadata only",
+        "rationale": "Separate concerns: document state vs. agent session orchestration; no value in merging or eliminating an already-working mechanism"
+      },
+      {
+        "id": "D11",
+        "decision": "Brainstorming is optional; idea→planning is a valid direct transition; the dashboard shows a Brainstorm button (→brainstorming) and a Plan button (→planning bypass) on idea-state cards; start-idea-planning accepts documents in idea or brainstorming state",
+        "rationale": "Operators should not be forced through a full brainstorming session for simple or time-sensitive ideas; optionality also preserves existing workflow patterns"
+      },
+      {
+        "id": "D12",
+        "decision": "priorityScore is normalized to 0–100 via: rawPriority = ((valueScore×0.40)+(confidenceScore×0.20)−(riskScore×0.25)−(effortScore×0.15))×10; priorityScore = Math.round(((rawPriority+34)/90)×100); raw range is −34 to +56 given 1–10 inputs; normalization maps 0→0, midpoint→50, max→100",
+        "rationale": "Raw formula can produce negative values; normalized scale is intuitive for display and sorting; mid-inputs produce exactly 50 which is a useful sanity check"
+      },
+      {
+        "id": "D13",
+        "decision": "Delivered status is triggered by an explicit check-delivery-status command that queries task engine for refs in delivery.taskRefs[]; when all tasks are completed or cancelled (minimum one completed), the command transitions accepted→delivered; automatic hooks are not implemented in v1",
+        "rationale": "Automatic hooks require coupling the task engine back to the ideas module; explicit command is simpler, auditable, and correct for v1; auto-detection can be added in v2 as a reconciliation daemon"
+      },
+      {
+        "id": "D14",
+        "decision": "Brainstorm session records are mutable in place — start-brainstorm-session appends a slot with sessionIndex and startedAt, update-brainstorm-session writes sub-inputs and computed scores to that slot; there is no session-level status field; sessions contain whatever the agent has written",
+        "rationale": "Eliminates the atomic-session requirement that would cause data loss if the agent chat is interrupted; progressive writes are more resilient and simpler to implement"
+      },
+      {
+        "id": "D15",
+        "decision": "Score display uses normalized 0–100 values with color-coded progress bars; Value, Confidence, and Priority use green-high/red-low semantics; Risk and Effort use green-low/red-high semantics; color bands: 0–33 red, 34–66 amber, 67–100 green; Brainstorming rollup sorted by priorityScore descending",
+        "rationale": "Color semantics must match the meaning of each score (high risk is bad, high value is good); rollup ordering by priority gives the operator an immediate ranking without manual sorting"
+      }
+    ]
+  },
+  "uiUxDirection": {
+    "hasUiChanges": true,
+    "summary": "Replace the Plan button on idea-state cards with two buttons: 'Brainstorm' (→ start-brainstorm-session then prefillCursorChat with buildBrainstormSessionPrompt) and 'Plan' (→ start-idea-planning direct bypass, then prefillCursorChat with buildPlannerChatPrompt). Add a secondary Brainstorm button on idea detail panels for documents in any post-brainstorming state to append a new session without changing document status. Add a Brainstorming rollup (replacing the New plan rollup) showing synthesized Value, Risk, Effort, Confidence, and Priority scores as color-coded progress bars (Value/Confidence/Priority: green-high/red-low; Risk/Effort: green-low/red-high; bands: 0–33 red, 34–66 amber, 67–100 green) for ideas in brainstorming state, sorted by priorityScore descending. Idea detail panel shows brainstorm session history with per-session and synthesized scores. Dashboard shows a 'Check delivery' button for accepted-state ideas."
+  },
+  "testingStrategy": {
+    "layers": [
+      "unit",
+      "integration",
+      "extension"
+    ],
+    "criticalPaths": [
+      "Each per-state schema validates a fixture document at that state and rejects documents missing required fields",
+      "Brainstorming state schema agentDirective walkthrough covers all 13 scoring sub-inputs and produces correct computed scores",
+      "Scoring engine produces correct outputs for all five score types given known inputs and reads weights from schema not hardcoded values",
+      "Session synthesis applies 60/40 recency weighting correctly across multiple sessions",
+      "Brainstorm button transitions idea→brainstorming; secondary brainstorm appends session without status change",
+      "Full planning lifecycle (draft→review→accept→finalize) advances document status correctly at each gate",
+      "Brainstorming rollup displays correct synthesized scores from dashboard-summary projection"
+    ],
+    "outOfScopeTesting": [
+      "E2E browser automation for the dashboard in v1 tranche"
+    ]
+  },
+  "implementationGuidance": [
+    "Deliver WBS-1A first — all other items depend on the agreed TypeScript types and storage model decision",
+    "WBS-1B (brainstorming agentDirective) and WBS-1C (other 5 state schemas) can run in parallel after WBS-1A",
+    "Canonical scoring formulas (v1): valueScore=(strategicAlignment×0.35)+(customerImpact×0.40)+(businessValue×0.25); riskScore=(technicalRisk×0.40)+(businessRisk×0.35)+(dependencyRisk×0.25); effortScore=(effortTshirt×0.45)+(technicalComplexity×0.30)+(scopeBreadth×0.15)+(unknownDensity×0.10) where S=2,M=4,L=7,XL=10; confidenceScore=(problemClarity+solutionClarity+feasibilityConfidence)/3; rawPriority=((valueScore×0.40)+(confidenceScore×0.20)−(riskScore×0.25)−(effortScore×0.15))×10; priorityScore=Math.round(((rawPriority+34)/90)×100) [range: 0–100]. Note: effortScore blends T-shirt size with complexity sub-inputs intentionally — a high-complexity M item will score higher than a low-complexity L item; this is by design and should be surfaced in agentDirective guidance.",
+    "Session synthesis formula: if sessions.length===1, synthesized scores equal the single session scores (no recency weighting); if sessions.length>=2, synthesizedScore=latestSession×0.60+mean(priorSessions)×0.40 per score type; embed verbatim (including N=1 edge case) in brainstorming state schema",
+    "State-schema loader must be a reusable utility — given a document status, returns the schema file path and parsed directive",
+    "Button-to-agent invocation (Brainstorm button): (1) dashboard calls command client to run start-brainstorm-session for the idea; (2) reads brainstormChatPrompt from response data; (3) calls prefillCursorChat({ newChat: true }) with the returned prompt — identical pattern to the existing Plan button and start-idea-planning. Add buildBrainstormSessionPrompt() to playbook-chat-prompts.ts: include ideaId, title, note, sessionIndex, and instruction to load schemas/ideas/states/brainstorming.schema.json and follow the agentDirective.",
+    "Score color semantics for UI: Value, Confidence, Priority — green when high (good); Risk, Effort — green when low (good); bands: 0–33=red, 34–66=amber, 67–100=green. Store as named constants in extensions/cursor-workflow-cannon/src/views/shared/ so rollup and detail panel renderers import from a single source. Rollup sorted by priorityScore descending."
+  ],
+  "whatNotToDo": [
+    "Do not let agents invent question sequences or scoring logic — they must read and follow the brainstorming state schema agentDirective",
+    "Do not flatten brainstorm session records or plan sections into individual SQLite columns — use JSON blobs",
+    "Do not allow the Planning module to own the document lifecycle or create top-level documents",
+    "Do not deploy the Brainstorm button (WBS-4B) before the backend brainstorming status and session commands are live (WBS-2A, WBS-2B)",
+    "Do not skip the recency-weighting step in synthesis — a flat average obscures recent reevaluation",
+    "Do not run migration without a dry-run step even though volume is low"
+  ],
+  "assumptions": [
+    "The agentDirective format in state schema files is JSON-serializable and loadable by the state-schema loader utility without additional tooling",
+    "All scoring sub-inputs are captured as 1–10 integer or decimal values; the schema agentDirective specifies the prompt and valid range for each",
+    "effortTshirt maps cleanly to numeric anchor values (S=2, M=4, L=7, XL=10) for formula consistency",
+    "The existing planning command surface can be adapted to write to the unified document plan section without a complete rewrite",
+    "Existing ideas and plan artifacts are low-volume enough for a manual agent migration task with a dry-run step",
+    "WBS-1A resolves the storage model decision before WBS-1B, WBS-1C, and WBS-1D begin"
+  ],
+  "openQuestions": [
+    "OQ-1: Should the unified document be stored as a JSON blob on the SQLite ideas row, or as a linked artifact file following the existing plan-artifact file pattern? (Resolved in WBS-1A)"
+  ],
+  "wbs": [
+    {
+      "wbsId": "WBS-1A",
+      "path": "1.1",
+      "title": "Storage model decision and six-state machine TypeScript types",
+      "goalMapping": [
+        "A single document traces an idea from inception through brainstorming, planning, review, acceptance, and delivery — no separate entities to keep in sync",
+        "The document status advances through six states: idea → brainstorming → planning → reviewed → accepted → delivered",
+        "Each state has a machine-readable schema file with an agentDirective section that prescribes required agent behavior for that state — agents read the state schema and follow it, not playbook prose",
+        "US-5"
+      ],
+      "suggestedTaskTitle": "Storage model decision and six-state machine TypeScript types for unified IdeaPlan",
+      "approach": "Evaluate and document the storage model (JSON blob column on the SQLite ideas row vs linked artifact file per existing plan-artifact pattern). Author TypeScript enum and type definitions for the six-state machine (IdeaPlanStatus, IdeaPlanDocument envelope, AgentDirective shape, BrainstormSession record shape). No schema files yet — types only. Record the storage model decision in an ADR.",
+      "technicalScope": [
+        "src/modules/ideas/ (TypeScript types: IdeaPlanStatus enum, IdeaPlanDocument envelope type, AgentDirective type, BrainstormSession type)",
+        "ADR or inline decision record for storage model choice"
+      ],
+      "acceptanceCriteria": [
+        "IdeaPlanStatus enum defines all six states with valid transition table",
+        "IdeaPlanDocument TypeScript type compiles with all progressive sections typed as optional beyond the envelope",
+        "AgentDirective and BrainstormSession types compile clean",
+        "Storage model decision is documented in an ADR with rationale"
+      ],
+      "testingVerification": [
+        "TypeScript compiler passes with zero errors on all new type definitions",
+        "Unit test: IdeaPlanStatus transition table rejects invalid state transitions"
+      ],
+      "dependsOn": [],
+      "recommendedPhase": "140",
+      "recommendedOrder": 1,
+      "sizingConfidence": "high",
+      "riskNotes": "Storage model decision (D6) is the only uncertainty; make the call early and document it",
+      "doneMeans": "TypeScript types for the unified document and six-state machine are committed and compile clean; storage model is decided and documented",
+      "generatedTaskPayload": {
+        "title": "Storage model decision and six-state machine TypeScript types for unified IdeaPlan",
+        "approach": "Evaluate storage model (JSON blob vs linked artifact file), document in ADR. Author TypeScript enum and types for six-state machine, IdeaPlanDocument envelope, AgentDirective, and BrainstormSession.",
+        "technicalScope": [
+          "src/modules/ideas/ (TypeScript types)",
+          "ADR for storage model decision"
+        ],
+        "acceptanceCriteria": [
+          "IdeaPlanStatus enum with valid transition table",
+          "IdeaPlanDocument, AgentDirective, BrainstormSession types compile clean",
+          "Storage model documented in ADR"
+        ],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-1B",
+      "path": "1.2",
+      "title": "Author brainstorming state schema with full agentDirective and walkthrough test",
+      "goalMapping": [
+        "A single document traces an idea from inception through brainstorming, planning, review, acceptance, and delivery — no separate entities to keep in sync",
+        "Each state has a machine-readable schema file with an agentDirective section that prescribes required agent behavior for that state — agents read the state schema and follow it, not playbook prose",
+        "The brainstorming state schema agentDirective defines the full agent-led session: ordered question phases, scoring sub-inputs, formula application steps, and synthesis update — agents must not invent a different flow",
+        "Each brainstorming session computes valueScore, riskScore, effortScore, confidenceScore, and priorityScore using the canonical formulas defined in the schema",
+        "US-5"
+      ],
+      "suggestedTaskTitle": "Author schemas/ideas/states/brainstorming.schema.json with full agentDirective",
+      "approach": "Author schemas/ideas/states/brainstorming.schema.json. Required/optional fields section: define brainstorm section as required, plan section as absent. Valid transitions: brainstorming→planning. agentDirective section: define ordered question phases (context, value-scoring, risk-scoring, effort-scoring, confidence-scoring, unknowns, alternatives, session-notes), each question with fieldName, prompt, type (score-1-10/text/enum), validRange, and guidance. Note in effort-scoring guidance that T-shirt size and complexity sub-inputs are weighted independently — a high-complexity M item intentionally scores higher than a low-complexity L. Include compute step listing all five score formulas verbatim with weights. Include synthesis-update step with explicit N=1 edge case: if sessions.length===1, synthesized=session scores; else synthesized=latest×0.60+mean(prior)×0.40. Note that session records are mutable in place — start-brainstorm-session creates the slot, update-brainstorm-session fills it progressively. Walkthrough-test the directive with a real agent session: agent must complete all phases and produce correct computed scores from the schema alone.",
+      "technicalScope": [
+        "schemas/ideas/states/brainstorming.schema.json (new)",
+        "fixtures/ideas/brainstorming-session.fixture.json (one brainstorm session record for validation)"
+      ],
+      "acceptanceCriteria": [
+        "brainstorming.schema.json exists with required/optional fields, valid transitions, and complete agentDirective section",
+        "agentDirective covers all 13 scoring sub-inputs across ordered phases with prompt, type, validRange, and guidance for each",
+        "All five scoring formulas and synthesis formula (including N=1 edge case) are embedded verbatim with weights in the agentDirective compute step",
+        "effortScore guidance explicitly notes that T-shirt size and complexity sub-inputs blend intentionally",
+        "Session mutability model documented in schema: slot created by start-brainstorm-session, filled progressively by update-brainstorm-session",
+        "A brainstorming session fixture validates against the session record schema",
+        "Walkthrough test passed: agent read the directive cold and produced a complete, correctly scored session record"
+      ],
+      "testingVerification": [
+        "Unit test: brainstorming session fixture validates against brainstorm-session schema",
+        "Unit test: scoring formulas in directive produce correct outputs for a set of known input values",
+        "Unit test: N=1 synthesis returns session scores directly; N=2 applies 60/40 weighting",
+        "Integration walkthrough: agent completes full session from directive alone without supplementary guidance"
+      ],
+      "dependsOn": [
+        "WBS-1A"
+      ],
+      "recommendedPhase": "140",
+      "recommendedOrder": 2,
+      "sizingConfidence": "medium",
+      "riskNotes": "The agentDirective authoring is the most creative and error-prone step in the schema tranche — budget time for the walkthrough test AC; this is the critical path item",
+      "doneMeans": "brainstorming.schema.json committed with complete agentDirective; session fixture validates; walkthrough test passed",
+      "generatedTaskPayload": {
+        "title": "Author schemas/ideas/states/brainstorming.schema.json with full agentDirective",
+        "approach": "Author brainstorming state schema with required/optional fields, valid transitions, and complete agentDirective covering all 13 scoring sub-inputs, five score formulas verbatim, and synthesis formula. Produce session fixture. Walkthrough-test directive with a real agent.",
+        "technicalScope": [
+          "schemas/ideas/states/brainstorming.schema.json",
+          "fixtures/ideas/brainstorming-session.fixture.json"
+        ],
+        "acceptanceCriteria": [
+          "agentDirective covers all 13 sub-inputs with prompts, ranges, and guidance",
+          "All five score formulas and synthesis formula embedded verbatim",
+          "Walkthrough test: agent completed full session from directive alone"
+        ],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-1C",
+      "path": "1.3",
+      "title": "Author the five remaining state schemas (idea, planning, reviewed, accepted, delivered)",
+      "goalMapping": [
+        "A single document traces an idea from inception through brainstorming, planning, review, acceptance, and delivery — no separate entities to keep in sync",
+        "The document status advances through six states: idea → brainstorming → planning → reviewed → accepted → delivered",
+        "Each state has a machine-readable schema file with an agentDirective section that prescribes required agent behavior for that state — agents read the state schema and follow it, not playbook prose",
+        "US-5"
+      ],
+      "suggestedTaskTitle": "Author five state schemas: idea, planning, reviewed, accepted, delivered",
+      "approach": "Author schemas/ideas/states/idea.schema.json, planning.schema.json, reviewed.schema.json, accepted.schema.json, and delivered.schema.json. Each file defines: (a) required/optional fields at that state, (b) valid transitions, (c) an agentDirective section appropriate for that state (idea: no active agent session; planning: direct agent to initialize plan section and invoke planner-chat; reviewed: direct agent to present review results; accepted: direct agent to confirm acceptance record; delivered: direct agent to attach delivery refs). Follow the pattern established in WBS-1B.",
+      "technicalScope": [
+        "schemas/ideas/states/idea.schema.json (new)",
+        "schemas/ideas/states/planning.schema.json (new)",
+        "schemas/ideas/states/reviewed.schema.json (new)",
+        "schemas/ideas/states/accepted.schema.json (new)",
+        "schemas/ideas/states/delivered.schema.json (new)"
+      ],
+      "acceptanceCriteria": [
+        "All five schema files exist under schemas/ideas/states/ with required/optional fields and valid transitions defined",
+        "Each schema has an agentDirective section appropriate for its state",
+        "Transitions chain correctly: idea→brainstorming, brainstorming→planning, planning→reviewed, reviewed→accepted, accepted→delivered",
+        "No state schema references brainstorming-specific scoring formulas (those live only in brainstorming.schema.json)"
+      ],
+      "testingVerification": [
+        "Unit test: each state schema file parses as valid JSON",
+        "Unit test: transition table for all six states forms a valid DAG with no cycles"
+      ],
+      "dependsOn": [
+        "WBS-1A",
+        "WBS-1B"
+      ],
+      "recommendedPhase": "140",
+      "recommendedOrder": 3,
+      "sizingConfidence": "high",
+      "riskNotes": "Straightforward once the brainstorming schema pattern (WBS-1B) is established; primarily repetitive authoring",
+      "doneMeans": "Five state schema files committed, each with required fields, transitions, and agentDirective; transition table forms a valid DAG",
+      "generatedTaskPayload": {
+        "title": "Author five state schemas: idea, planning, reviewed, accepted, delivered",
+        "approach": "Author schemas/ideas/states/ files for idea, planning, reviewed, accepted, and delivered states. Each defines required/optional fields, valid transitions, and an agentDirective appropriate for that state.",
+        "technicalScope": [
+          "schemas/ideas/states/ (five new schema files)"
+        ],
+        "acceptanceCriteria": [
+          "Five schema files with required fields, transitions, and agentDirective sections",
+          "Transitions chain correctly across all six states",
+          "Transition table forms a valid DAG"
+        ],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-1D",
+      "path": "1.4",
+      "title": "Unified IdeaPlan envelope schema, brainstorm-session record schema, and four validation fixtures",
+      "goalMapping": [
+        "A single document traces an idea from inception through brainstorming, planning, review, acceptance, and delivery — no separate entities to keep in sync",
+        "Each state has a machine-readable schema file with an agentDirective section that prescribes required agent behavior for that state — agents read the state schema and follow it, not playbook prose",
+        "The brainstorming state schema agentDirective defines the full agent-led session: ordered question phases, scoring sub-inputs, formula application steps, and synthesis update — agents must not invent a different flow",
+        "Each brainstorming session computes valueScore, riskScore, effortScore, confidenceScore, and priorityScore using the canonical formulas defined in the schema",
+        "US-5"
+      ],
+      "suggestedTaskTitle": "Unified IdeaPlan envelope schema, brainstorm-session schema, and four progressive fixtures",
+      "approach": "Author schemas/ideas/unified-idea-plan.schema.json (envelope: id, title, status enum, timestamps, optional brainstorm section reference, optional plan section reference, optional delivery section). Author schemas/ideas/brainstorm-session.schema.json (session record: sessionId, conductedAt, agentSessionRef, all 13 sub-input fields, computed score fields, sessionNotes). Produce four progressive validation fixtures: (1) idea-only, (2) idea+brainstorm-1session, (3) idea+brainstorm-2sessions+plan-section, (4) idea+all-sections. All fixtures must pass schema validation.",
+      "technicalScope": [
+        "schemas/ideas/unified-idea-plan.schema.json (new)",
+        "schemas/ideas/brainstorm-session.schema.json (new)",
+        "fixtures/ideas/fixture-1-idea-only.json",
+        "fixtures/ideas/fixture-2-idea-brainstorm-1session.json",
+        "fixtures/ideas/fixture-3-idea-brainstorm-2sessions-plan.json",
+        "fixtures/ideas/fixture-4-idea-all-sections.json"
+      ],
+      "acceptanceCriteria": [
+        "unified-idea-plan.schema.json validates the envelope with status constrained to the six-state enum",
+        "brainstorm-session.schema.json validates a session record including all 13 sub-input fields and five computed score fields",
+        "All four progressive fixtures pass schema validation without errors",
+        "Each fixture contains only the sections appropriate for its state (no future sections leaking into earlier fixtures)"
+      ],
+      "testingVerification": [
+        "Unit test: all four fixtures pass unified-idea-plan schema validation",
+        "Unit test: fixtures 2, 3, 4 pass brainstorm-session schema validation for their session records",
+        "Unit test: fixture-1 fails validation if a brainstorm section is injected (schema correctly rejects it at idea state)"
+      ],
+      "dependsOn": [
+        "WBS-1A",
+        "WBS-1B",
+        "WBS-1C"
+      ],
+      "recommendedPhase": "140",
+      "recommendedOrder": 4,
+      "sizingConfidence": "high",
+      "riskNotes": "Mechanical once the per-state schemas are established; risk is fixtures being inconsistent with the per-state schemas",
+      "doneMeans": "Both schema files committed; four progressive fixtures pass schema validation; fixture isolation verified",
+      "generatedTaskPayload": {
+        "title": "Unified IdeaPlan envelope schema, brainstorm-session schema, and four progressive fixtures",
+        "approach": "Author unified-idea-plan.schema.json and brainstorm-session.schema.json. Produce four progressive validation fixtures. All fixtures pass schema validation.",
+        "technicalScope": [
+          "schemas/ideas/unified-idea-plan.schema.json",
+          "schemas/ideas/brainstorm-session.schema.json",
+          "fixtures/ideas/ (four progressive fixtures)"
+        ],
+        "acceptanceCriteria": [
+          "Both schema files validate their respective shapes",
+          "All four fixtures pass validation",
+          "Fixtures contain only sections appropriate for their state"
+        ],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-2A",
+      "path": "2.1",
+      "title": "Ideas module: six-state machine implementation and state-schema loader utility",
+      "goalMapping": [
+        "A single document traces an idea from inception through brainstorming, planning, review, acceptance, and delivery — no separate entities to keep in sync",
+        "The document status advances through six states: idea → brainstorming → planning → reviewed → accepted → delivered",
+        "Each state has a machine-readable schema file with an agentDirective section that prescribes required agent behavior for that state — agents read the state schema and follow it, not playbook prose",
+        "US-5"
+      ],
+      "suggestedTaskTitle": "Ideas module: six-state machine and state-schema loader utility",
+      "approach": "Implement the six-state status machine in the Ideas module SQLite layer. Expand the IdeaStatus TypeScript type to IdeaPlanStatus including all nine valid values (six new states plus three legacy aliases: open→idea, planning unchanged, planned→accepted). Enforce valid transitions per the transition table from WBS-1A; additionally allow idea→planning as a valid direct transition (skip brainstorming). Build the state-schema loader utility: given a document status string, returns the path to the correct state schema file and the parsed agentDirective object. Update the SQLite schema if the storage model decision requires new columns. No new commands in this task — state machine and loader only.",
+      "technicalScope": [
+        "src/modules/ideas/ (six-state machine enforcement, state-schema loader utility)",
+        "SQLite migration if storage model requires new column"
+      ],
+      "acceptanceCriteria": [
+        "IdeaPlanStatus type includes all six new states plus three legacy aliases; parseIdeaStatus accepts all nine values",
+        "Six-state machine implemented; all valid transitions succeed including idea→planning direct bypass; invalid transitions rejected with clear error message",
+        "State-schema loader returns the correct schema file path and a parsed agentDirective for each of the six statuses",
+        "State-schema loader is importable as a standalone utility by other modules"
+      ],
+      "testingVerification": [
+        "Unit tests: all six valid status transitions succeed; idea→planning direct bypass succeeds; at least three invalid transitions are rejected with appropriate errors",
+        "Unit test: state-schema loader returns correct schema path and parseable agentDirective for each of the six statuses",
+        "Unit test: parseIdeaStatus accepts all nine values (six new + three legacy aliases)"
+      ],
+      "dependsOn": [
+        "WBS-1A",
+        "WBS-1B",
+        "WBS-1C",
+        "WBS-1D"
+      ],
+      "recommendedPhase": "140",
+      "recommendedOrder": 5,
+      "sizingConfidence": "high",
+      "riskNotes": "SQLite migration should be minimal and reversible; if storage model uses a new JSON column, keep the migration single-purpose",
+      "doneMeans": "Six-state machine enforces transitions in SQLite layer; state-schema loader utility committed and unit tested",
+      "generatedTaskPayload": {
+        "title": "Ideas module: six-state machine and state-schema loader utility",
+        "approach": "Implement six-state machine enforcement and state-schema loader utility (given a status, returns schema path and parsed agentDirective). SQLite migration if needed. No new commands.",
+        "technicalScope": [
+          "src/modules/ideas/ (state machine, state-schema loader)",
+          "SQLite migration if needed"
+        ],
+        "acceptanceCriteria": [
+          "Six-state machine enforces valid transitions",
+          "State-schema loader returns correct schema and agentDirective for each status",
+          "Loader importable as standalone utility"
+        ],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-2B",
+      "path": "2.2",
+      "title": "Ideas module: start-brainstorm-session, update-brainstorm-session commands and scoring engine",
+      "goalMapping": [
+        "Agent-led brainstorming sessions are stored as an ordered array on the document and can be triggered at any document status",
+        "Each brainstorming session computes valueScore, riskScore, effortScore, confidenceScore, and priorityScore using the canonical formulas defined in the schema",
+        "The brainstorming state schema agentDirective defines the full agent-led session: ordered question phases, scoring sub-inputs, formula application steps, and synthesis update — agents must not invent a different flow",
+        "US-1",
+        "US-2",
+        "US-5"
+      ],
+      "suggestedTaskTitle": "Ideas module: start-brainstorm-session, update-brainstorm-session commands and scoring engine",
+      "approach": "Implement start-brainstorm-session command: when the document is in idea state, transition to brainstorming and append a session slot with { sessionIndex, startedAt }; when the document is in any other state, append a new session slot without changing status. Implement update-brainstorm-session command: given a sessionIndex and a partial session record, merges supplied fields into the session record at that index — allows the agent to write sub-inputs and computed scores incrementally during the session. Implement the scoring engine: reads formula weights from the brainstorming state schema via the state-schema loader, computes valueScore, riskScore, effortScore, confidenceScore, and priorityScore (including normalization: rawPriority=((v×0.40)+(c×0.20)−(r×0.25)−(e×0.15))×10; priorityScore=Math.round(((rawPriority+34)/90)×100)) from session sub-inputs. Add instruction .md files for both commands.",
+      "technicalScope": [
+        "src/modules/ideas/ (start-brainstorm-session command handler, update-brainstorm-session command handler, scoring engine)",
+        "src/modules/ideas/instructions/start-brainstorm-session.md (new)",
+        "src/modules/ideas/instructions/update-brainstorm-session.md (new)"
+      ],
+      "acceptanceCriteria": [
+        "start-brainstorm-session transitions idea→brainstorming and appends first session slot { sessionIndex: 0, startedAt }",
+        "start-brainstorm-session on any non-idea state appends a new session slot without changing status",
+        "update-brainstorm-session merges supplied fields into the session record at the specified sessionIndex without replacing other fields or other sessions",
+        "Scoring engine reads formula weights from the brainstorming state schema (not hardcoded constants)",
+        "Scoring engine computes all five scores correctly including priorityScore normalization to 0–100",
+        "Session record is updated with all 13 sub-input fields and five computed score fields via update-brainstorm-session calls"
+      ],
+      "testingVerification": [
+        "Unit test: start-brainstorm-session on idea-state document transitions to brainstorming and appends session slot",
+        "Unit test: start-brainstorm-session on planning-state document appends session slot without status change",
+        "Unit test: update-brainstorm-session merges fields into correct session index without affecting other sessions",
+        "Unit test: scoring engine produces correct valueScore, riskScore, effortScore, confidenceScore, priorityScore (0–100) for known inputs",
+        "Unit test: scoring engine reads weights from schema file — verify by mutating a weight in schema and confirming output changes",
+        "Unit test: priorityScore normalization produces 0 at minimum inputs, 100 at maximum inputs, 50 at midpoint inputs"
+      ],
+      "dependsOn": [
+        "WBS-2A"
+      ],
+      "recommendedPhase": "140",
+      "recommendedOrder": 6,
+      "sizingConfidence": "medium",
+      "riskNotes": "Scoring engine correctness is the critical path; the weight-sourcing test is essential to preserve the schema-as-source-of-truth contract",
+      "doneMeans": "start-brainstorm-session command and scoring engine implemented; all five scores computed correctly from schema weights; instruction .md committed",
+      "generatedTaskPayload": {
+        "title": "Ideas module: start-brainstorm-session, update-brainstorm-session commands and scoring engine",
+        "approach": "Implement start-brainstorm-session (transitions idea→brainstorming on first call, appends session slot on subsequent calls). Implement update-brainstorm-session (merges partial fields into session at given index). Implement scoring engine reading weights from brainstorming state schema including priorityScore normalization to 0–100.",
+        "technicalScope": [
+          "src/modules/ideas/ (command handlers, scoring engine)",
+          "src/modules/ideas/instructions/start-brainstorm-session.md",
+          "src/modules/ideas/instructions/update-brainstorm-session.md"
+        ],
+        "acceptanceCriteria": [
+          "start-brainstorm-session transitions or appends correctly per current state",
+          "update-brainstorm-session merges partial fields at correct session index",
+          "Scoring engine reads weights from schema; priorityScore normalized 0–100",
+          "All five scores computed correctly for known inputs"
+        ],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-2C",
+      "path": "2.3",
+      "title": "Ideas module: complete-brainstorm command, session synthesis, and get-idea update",
+      "goalMapping": [
+        "A single document traces an idea from inception through brainstorming, planning, review, acceptance, and delivery — no separate entities to keep in sync",
+        "The document status advances through six states: idea → brainstorming → planning → reviewed → accepted → delivered",
+        "Agent-led brainstorming sessions are stored as an ordered array on the document and can be triggered at any document status",
+        "Each brainstorming session computes valueScore, riskScore, effortScore, confidenceScore, and priorityScore using the canonical formulas defined in the schema",
+        "US-1",
+        "US-2"
+      ],
+      "suggestedTaskTitle": "Ideas module: complete-brainstorm command, session synthesis, and get-idea update",
+      "approach": "Implement complete-brainstorm command: validates the brainstorm section (at least one session, all required fields present) and transitions document status from brainstorming to planning. Implement session synthesis: computes synthesized scores (latestSession×0.60 + mean(priorSessions)×0.40 per score type) and writes the synthesis object to brainstorm.synthesis. Synthesis is recomputed each time a new session is appended. Update get-idea to return the unified document including all sections present for the current state (brainstorm section with sessions and synthesis when in brainstorming or later states). Add instruction .md for complete-brainstorm.",
+      "technicalScope": [
+        "src/modules/ideas/ (complete-brainstorm command handler, synthesis computation)",
+        "src/modules/ideas/instructions/complete-brainstorm.md (new)",
+        "src/modules/ideas/ (get-idea update to return unified document structure)"
+      ],
+      "acceptanceCriteria": [
+        "complete-brainstorm validates brainstorm section and transitions brainstorming→planning",
+        "complete-brainstorm rejects transition if brainstorm section has zero sessions or missing required fields",
+        "Session synthesis handles N=1 correctly: synthesized scores equal the single session scores with no recency weighting",
+        "Session synthesis for N>=2 computes correctly: latestSession×0.60+mean(priorSessions)×0.40 per score type",
+        "Synthesis is recomputed and written to brainstorm.synthesis each time a new session slot is appended via start-brainstorm-session",
+        "get-idea returns unified document including brainstorm.sessions and brainstorm.synthesis when present"
+      ],
+      "testingVerification": [
+        "Unit test: complete-brainstorm transitions brainstorming→planning when brainstorm section is valid",
+        "Unit test: complete-brainstorm rejects transition when sessions array is empty",
+        "Unit test: N=1 synthesis returns session scores directly without recency weighting",
+        "Unit test: N=2 synthesis produces expected synthesized scores with 60/40 weighting",
+        "Integration test: get-idea on a brainstorming-state document returns sessions array and synthesis object"
+      ],
+      "dependsOn": [
+        "WBS-2B"
+      ],
+      "recommendedPhase": "140",
+      "recommendedOrder": 7,
+      "sizingConfidence": "medium",
+      "riskNotes": "Synthesis correctness for edge cases (single session, many sessions) needs explicit test coverage",
+      "doneMeans": "complete-brainstorm command implemented and tested; synthesis computation correct for single and multi-session cases; get-idea returns unified document structure",
+      "generatedTaskPayload": {
+        "title": "Ideas module: complete-brainstorm command, session synthesis, and get-idea update",
+        "approach": "Implement complete-brainstorm (validates brainstorm section, transitions brainstorming→planning). Implement synthesis computation (60/40 recency weighting per score type, recomputed on each new session). Update get-idea to return unified document.",
+        "technicalScope": [
+          "src/modules/ideas/ (complete-brainstorm handler, synthesis, get-idea update)",
+          "src/modules/ideas/instructions/complete-brainstorm.md"
+        ],
+        "acceptanceCriteria": [
+          "complete-brainstorm validates and transitions correctly",
+          "Synthesis computes 60/40 recency weighting correctly",
+          "get-idea returns unified document with brainstorm sections"
+        ],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-2D",
+      "path": "2.4",
+      "title": "Ideas module: check-delivery-status command and delivered transition",
+      "goalMapping": [
+        "Task refs and delivery refs attach to the unified document as work progresses to delivered; a check-delivery-status command transitions accepted→delivered when all delivery task refs report complete",
+        "A single document traces an idea from inception through brainstorming, planning, review, acceptance, and delivery — no separate entities to keep in sync",
+        "US-4"
+      ],
+      "suggestedTaskTitle": "Ideas module: check-delivery-status command and accepted→delivered transition",
+      "approach": "Implement check-delivery-status command: reads delivery.taskRefs[] from a unified document in accepted state, queries the task engine for the status of each task ref, transitions the document accepted→delivered if all tasks are completed or cancelled (minimum one completed task required). Returns a delivery status summary (total tasks, completed count, pending count, cancelled count) without transitioning when tasks are still in progress. Rejects if document is not in accepted state. Add a 'Check delivery' button to the dashboard for accepted-state ideas that calls this command and refreshes the idea card. Add instruction .md file.",
+      "technicalScope": [
+        "src/modules/ideas/ (check-delivery-status command handler)",
+        "src/modules/ideas/instructions/check-delivery-status.md (new)",
+        "extensions/cursor-workflow-cannon (dashboard: Check delivery button for accepted-state ideas)"
+      ],
+      "acceptanceCriteria": [
+        "check-delivery-status on an accepted-state document with all task refs completed or cancelled (min one completed) transitions status to delivered",
+        "check-delivery-status returns delivery status summary (total/completed/pending/cancelled counts) without transitioning when tasks are still in progress",
+        "check-delivery-status rejects if document status is not accepted",
+        "Dashboard shows a 'Check delivery' button for accepted-state ideas; clicking it runs check-delivery-status and refreshes the idea card"
+      ],
+      "testingVerification": [
+        "Unit test: check-delivery-status transitions accepted→delivered when all task refs are completed or cancelled with minimum one completed",
+        "Unit test: check-delivery-status returns status summary without transitioning when one or more tasks are still in progress",
+        "Unit test: check-delivery-status rejects with clear error when document is not in accepted state",
+        "Extension unit test: Check delivery button renders on accepted-state idea cards and invokes check-delivery-status"
+      ],
+      "dependsOn": [
+        "WBS-3C"
+      ],
+      "recommendedPhase": "140",
+      "recommendedOrder": 8,
+      "sizingConfidence": "high",
+      "riskNotes": "Task engine query must be accessible from ideas module; use existing task-engine read commands (get-task / list-tasks) to avoid tight coupling; do not embed task-engine internals in ideas module",
+      "doneMeans": "check-delivery-status command implemented; accepted→delivered transition working; dashboard Check delivery button renders and functions for accepted ideas",
+      "generatedTaskPayload": {
+        "title": "Ideas module: check-delivery-status command and accepted→delivered transition",
+        "approach": "Implement check-delivery-status (queries task refs, transitions accepted→delivered on completion, returns status summary otherwise). Add Check delivery button to dashboard for accepted ideas.",
+        "technicalScope": [
+          "src/modules/ideas/ (check-delivery-status handler)",
+          "src/modules/ideas/instructions/check-delivery-status.md",
+          "extensions/cursor-workflow-cannon (Check delivery button)"
+        ],
+        "acceptanceCriteria": [
+          "Transitions accepted→delivered when all task refs complete",
+          "Returns status summary without transitioning when tasks in progress",
+          "Rejects if not in accepted state",
+          "Dashboard Check delivery button renders and functions"
+        ],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-3A",
+      "path": "3.1",
+      "title": "Planning module: adapt draft-plan-artifact and start-idea-planning to unified document",
+      "goalMapping": [
+        "A single document traces an idea from inception through brainstorming, planning, review, acceptance, and delivery — no separate entities to keep in sync",
+        "Planning schema sections (WBS, goals, non-goals) are added to the same document when the operator advances to planning",
+        "US-4"
+      ],
+      "suggestedTaskTitle": "Planning module: adapt draft-plan-artifact and start-idea-planning to unified document",
+      "approach": "Update start-idea-planning to initialize the plan section on the unified document (instead of creating a new standalone PlanArtifact file). Update draft-plan-artifact to write the plan section to the unified document identified by idea id (instead of creating a separate artifact file under .workspace-kit/planning/plan-artifacts/). Preserve external argv shapes for both commands. Update command instruction .md files accordingly.",
+      "technicalScope": [
+        "src/modules/planning/ (draft-plan-artifact command handler)",
+        "src/modules/ideas/instructions/start-idea-planning.md (updated)",
+        "src/modules/planning/instructions/draft-plan-artifact.md (updated)"
+      ],
+      "acceptanceCriteria": [
+        "start-idea-planning initializes the plan section on the unified document; no new standalone artifact file created",
+        "draft-plan-artifact writes the plan section to the unified document; no file created under .workspace-kit/planning/plan-artifacts/",
+        "External argv shapes for both commands remain backward-compatible",
+        "start-idea-planning.md instruction file updated to reflect unified document model"
+      ],
+      "testingVerification": [
+        "Unit test: draft-plan-artifact writes plan section to unified document, not to a separate artifact file",
+        "Unit test: start-idea-planning initializes plan section on unified document for a planning-state document",
+        "Regression test: existing argv shapes for both commands still accepted"
+      ],
+      "dependsOn": [
+        "WBS-2A"
+      ],
+      "recommendedPhase": "140",
+      "recommendedOrder": 9,
+      "sizingConfidence": "medium",
+      "riskNotes": "Preserving backward-compatible argv shapes is essential; test regression explicitly",
+      "doneMeans": "draft-plan-artifact and start-idea-planning write to the unified document plan section; no separate artifact files created; instruction files updated",
+      "generatedTaskPayload": {
+        "title": "Planning module: adapt draft-plan-artifact and start-idea-planning to unified document",
+        "approach": "Update start-idea-planning to initialize plan section on unified document. Update draft-plan-artifact to write plan section to unified document. Preserve argv shapes. Update instruction .md files.",
+        "technicalScope": [
+          "src/modules/planning/ (draft-plan-artifact handler)",
+          "src/modules/ideas/instructions/start-idea-planning.md",
+          "src/modules/planning/instructions/draft-plan-artifact.md"
+        ],
+        "acceptanceCriteria": [
+          "Both commands write to unified document plan section, not separate files",
+          "Backward-compatible argv shapes preserved",
+          "Instruction files updated"
+        ],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-3B",
+      "path": "3.2",
+      "title": "Planning module: adapt review-plan-artifact and accept-plan-artifact to unified document statuses",
+      "goalMapping": [
+        "A single document traces an idea from inception through brainstorming, planning, review, acceptance, and delivery — no separate entities to keep in sync",
+        "The document status advances through six states: idea → brainstorming → planning → reviewed → accepted → delivered",
+        "Planning schema sections (WBS, goals, non-goals) are added to the same document when the operator advances to planning",
+        "US-4"
+      ],
+      "suggestedTaskTitle": "Planning module: adapt review-plan-artifact and accept-plan-artifact to unified document",
+      "approach": "Update review-plan-artifact to read from the unified document plan section and transition document status from planning to reviewed. Update accept-plan-artifact to read from the unified document plan section and transition document status from reviewed to accepted. Both commands operate on the unified document identified by idea id. Preserve external argv shapes. Update review-plan-artifact rubric so goal-coverage and story-coverage checks reference the unified document's top-level goals and userStories arrays (not a standalone PlanArtifact envelope). Update command instruction .md files.",
+      "technicalScope": [
+        "src/modules/planning/ (review-plan-artifact command handler including rubric updates, accept-plan-artifact command handler)",
+        "src/modules/planning/instructions/review-plan-artifact.md (updated)",
+        "src/modules/planning/instructions/accept-plan-artifact.md (updated)"
+      ],
+      "acceptanceCriteria": [
+        "review-plan-artifact reads plan section from unified document and transitions status planning→reviewed",
+        "accept-plan-artifact reads plan section from unified document and transitions status reviewed→accepted",
+        "Both commands reject if the document is not in the correct predecessor state",
+        "review-plan-artifact rubric goal-coverage and story-coverage checks reference the unified document's goals and userStories arrays",
+        "External argv shapes for both commands remain backward-compatible"
+      ],
+      "testingVerification": [
+        "Unit test: review-plan-artifact transitions planning→reviewed on unified document",
+        "Unit test: accept-plan-artifact transitions reviewed→accepted on unified document",
+        "Unit test: review-plan-artifact rejects if document status is not planning",
+        "Unit test: rubric correctly identifies missing goal coverage from the unified document goals array",
+        "Regression test: existing argv shapes still accepted"
+      ],
+      "dependsOn": [
+        "WBS-3A"
+      ],
+      "recommendedPhase": "140",
+      "recommendedOrder": 10,
+      "sizingConfidence": "medium",
+      "riskNotes": "State transition guards are critical; test rejection cases explicitly",
+      "doneMeans": "review and accept commands operate on unified document; status transitions planning→reviewed→accepted enforced; instruction files updated",
+      "generatedTaskPayload": {
+        "title": "Planning module: adapt review-plan-artifact and accept-plan-artifact to unified document",
+        "approach": "Update review-plan-artifact (transitions planning→reviewed) and accept-plan-artifact (transitions reviewed→accepted) to operate on unified document plan section. Preserve argv shapes. Update instruction files.",
+        "technicalScope": [
+          "src/modules/planning/ (review and accept command handlers)",
+          "src/modules/planning/instructions/ (updated instruction files)"
+        ],
+        "acceptanceCriteria": [
+          "review transitions planning→reviewed on unified document",
+          "accept transitions reviewed→accepted on unified document",
+          "Both reject incorrect predecessor states",
+          "Backward-compatible argv shapes"
+        ],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-3C",
+      "path": "3.3",
+      "title": "Planning module: adapt finalize-plan-to-phase to attach task refs and transition to delivered",
+      "goalMapping": [
+        "A single document traces an idea from inception through brainstorming, planning, review, acceptance, and delivery — no separate entities to keep in sync",
+        "The document status advances through six states: idea → brainstorming → planning → reviewed → accepted → delivered",
+        "Task refs and delivery refs attach to the unified document as work progresses to delivered",
+        "US-4"
+      ],
+      "suggestedTaskTitle": "Planning module: adapt finalize-plan-to-phase to attach task refs and transition to delivered",
+      "approach": "Update finalize-plan-to-phase to write task refs and delivery refs to the unified document delivery section (instead of writing to a separate plan artifact file). After all generated tasks close, transition document status from accepted to delivered. Preserve external argv shapes. Update command instruction .md file.",
+      "technicalScope": [
+        "src/modules/planning/ (finalize-plan-to-phase command handler)",
+        "src/modules/planning/instructions/finalize-plan-to-phase.md (updated)"
+      ],
+      "acceptanceCriteria": [
+        "finalize-plan-to-phase writes task refs to the unified document delivery section, not to a separate file",
+        "Document status transitions accepted→delivered when all generated tasks close",
+        "finalize-plan-to-phase rejects if document status is not accepted",
+        "External argv shape for finalize-plan-to-phase remains backward-compatible"
+      ],
+      "testingVerification": [
+        "Unit test: finalize-plan-to-phase writes task refs to unified document delivery section",
+        "Unit test: status transitions accepted→delivered when task closure condition is met",
+        "Unit test: finalize-plan-to-phase rejects if document not in accepted state",
+        "Regression test: existing argv shape still accepted"
+      ],
+      "dependsOn": [
+        "WBS-3B"
+      ],
+      "recommendedPhase": "140",
+      "recommendedOrder": 11,
+      "sizingConfidence": "medium",
+      "riskNotes": "Task closure detection logic (when to trigger delivered transition) needs a clear definition in the implementation",
+      "doneMeans": "finalize-plan-to-phase writes to unified document delivery section; delivered transition works; instruction file updated",
+      "generatedTaskPayload": {
+        "title": "Planning module: adapt finalize-plan-to-phase to attach task refs and transition to delivered",
+        "approach": "Update finalize-plan-to-phase to write task refs to unified document delivery section. Transition accepted→delivered when all tasks close. Preserve argv shape.",
+        "technicalScope": [
+          "src/modules/planning/ (finalize-plan-to-phase handler)",
+          "src/modules/planning/instructions/finalize-plan-to-phase.md"
+        ],
+        "acceptanceCriteria": [
+          "Task refs written to unified document delivery section",
+          "Status transitions accepted→delivered on task closure",
+          "Rejects if not in accepted state",
+          "Backward-compatible argv shape"
+        ],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-4A",
+      "path": "4.1",
+      "title": "Extend dashboard-summary projection to expose brainstorm.synthesis fields",
+      "goalMapping": [
+        "A single document traces an idea from inception through brainstorming, planning, review, acceptance, and delivery — no separate entities to keep in sync",
+        "The dashboard surfaces a Brainstorm button and a Brainstorming rollup showing synthesized scores (Value, Risk, Effort, Confidence, Priority) for ideas in brainstorming state",
+        "US-3"
+      ],
+      "suggestedTaskTitle": "Extend dashboard-summary projection to expose brainstorm.synthesis fields",
+      "approach": "Extend the dashboard-summary command projection to include brainstorm.synthesis fields (valueScore, riskScore, effortScore, confidenceScore, priorityScore, sessionCount) for ideas in brainstorming state. Add a brainstormingIdeas rollup section to the dashboard-summary output that aggregates ideas in brainstorming state with their synthesis scores. This is a backend-only change — no webview changes in this task.",
+      "technicalScope": [
+        "src/modules/ideas/ (dashboard-summary projection update)",
+        "fixtures/ideas/ (update dashboard-summary fixture to include brainstorming rollup)"
+      ],
+      "acceptanceCriteria": [
+        "dashboard-summary output includes brainstorm.synthesis fields for ideas in brainstorming state",
+        "dashboard-summary output includes a brainstormingIdeas rollup section with all brainstorming-state ideas and their synthesis scores",
+        "dashboard-summary fixture updated to include the new brainstorming rollup section",
+        "No webview changes in this task"
+      ],
+      "testingVerification": [
+        "Unit test: dashboard-summary projection includes brainstorm.synthesis fields for a brainstorming-state idea fixture",
+        "Unit test: brainstormingIdeas rollup section aggregates all brainstorming-state ideas correctly"
+      ],
+      "dependsOn": [
+        "WBS-2C"
+      ],
+      "recommendedPhase": "140",
+      "recommendedOrder": 12,
+      "sizingConfidence": "high",
+      "riskNotes": "Backend only; keep it focused on projection changes; do not touch webview in this task",
+      "doneMeans": "dashboard-summary projection exposes brainstorm.synthesis fields and brainstormingIdeas rollup; fixture updated; no webview changes",
+      "generatedTaskPayload": {
+        "title": "Extend dashboard-summary projection to expose brainstorm.synthesis fields",
+        "approach": "Extend dashboard-summary projection to include brainstorm.synthesis fields and brainstormingIdeas rollup for ideas in brainstorming state. Update fixture. Backend only.",
+        "technicalScope": [
+          "src/modules/ideas/ (dashboard-summary projection)",
+          "fixtures/ideas/ (dashboard-summary fixture)"
+        ],
+        "acceptanceCriteria": [
+          "brainstorm.synthesis fields in dashboard-summary for brainstorming-state ideas",
+          "brainstormingIdeas rollup section in dashboard-summary output",
+          "Fixture updated"
+        ],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-4B",
+      "path": "4.2",
+      "title": "Dashboard: Brainstorm button on idea cards and secondary brainstorm button on detail panels",
+      "goalMapping": [
+        "Agent-led brainstorming sessions are stored as an ordered array on the document and can be triggered at any document status",
+        "The dashboard surfaces a Brainstorm button and a Brainstorming rollup showing synthesized scores (Value, Risk, Effort, Confidence, Priority) for ideas in brainstorming state",
+        "US-1",
+        "US-2"
+      ],
+      "suggestedTaskTitle": "Dashboard: Brainstorm button on idea cards and secondary brainstorm button on detail panels",
+      "approach": "Replace the Plan button on idea-state cards with two buttons: 'Brainstorm' and 'Plan'. Brainstorm button flow: (1) dashboard calls command client to run start-brainstorm-session; (2) reads brainstormChatPrompt from response; (3) calls prefillCursorChat({ newChat: true }) with the prompt — identical to existing Plan button pattern. Plan button flow (skip brainstorming): (1) calls start-idea-planning; (2) reads planningChatPrompt; (3) calls prefillCursorChat({ newChat: true }). Add buildBrainstormSessionPrompt() to extensions/cursor-workflow-cannon/src/playbook-chat-prompts.ts: includes ideaId, title, note, sessionIndex from the command response, and instructs agent to load schemas/ideas/states/brainstorming.schema.json and follow the agentDirective. Add a secondary Brainstorm button on idea detail panels for documents in any post-brainstorming state (appends session without status change).",
+      "technicalScope": [
+        "extensions/cursor-workflow-cannon (idea card render: replace Plan button with Brainstorm + Plan buttons)",
+        "extensions/cursor-workflow-cannon (idea detail panel: add secondary Brainstorm button for post-brainstorming states)",
+        "extensions/cursor-workflow-cannon/src/playbook-chat-prompts.ts (add buildBrainstormSessionPrompt)"
+      ],
+      "acceptanceCriteria": [
+        "Idea cards display Brainstorm and Plan buttons in place of the single Plan button for idea-state documents",
+        "Brainstorm button calls start-brainstorm-session, reads brainstormChatPrompt from response, calls prefillCursorChat({ newChat: true })",
+        "Plan button calls start-idea-planning (skipping brainstorming), reads planningChatPrompt from response, calls prefillCursorChat({ newChat: true })",
+        "buildBrainstormSessionPrompt includes ideaId, title, note, sessionIndex, and instruction to load brainstorming state schema agentDirective",
+        "Idea detail panels for documents in planning, reviewed, accepted, or delivered state show a secondary Brainstorm button",
+        "Clicking the secondary Brainstorm button invokes start-brainstorm-session and appends a new session slot without changing document status"
+      ],
+      "testingVerification": [
+        "Extension unit test: Brainstorm and Plan buttons render on idea-state cards",
+        "Extension unit test: secondary Brainstorm button renders on detail panels for post-brainstorming states",
+        "Unit test: buildBrainstormSessionPrompt includes ideaId, sessionIndex, and schema load instruction",
+        "Integration test: Brainstorm button click invokes start-brainstorm-session then prefillCursorChat with brainstormChatPrompt",
+        "Integration test: Plan button click invokes start-idea-planning then prefillCursorChat with planningChatPrompt"
+      ],
+      "dependsOn": [
+        "WBS-4A"
+      ],
+      "recommendedPhase": "140",
+      "recommendedOrder": 13,
+      "sizingConfidence": "medium",
+      "riskNotes": "Ensure the secondary brainstorm button is gated correctly by document state to avoid showing it on idea-state documents",
+      "doneMeans": "Brainstorm button on idea cards and secondary button on detail panels working; extension tests pass",
+      "generatedTaskPayload": {
+        "title": "Dashboard: Brainstorm and Plan buttons on idea cards with buildBrainstormSessionPrompt",
+        "approach": "Replace Plan button with Brainstorm + Plan buttons on idea cards. Add buildBrainstormSessionPrompt to playbook-chat-prompts.ts. Brainstorm button: start-brainstorm-session → prefillCursorChat. Plan button: start-idea-planning → prefillCursorChat (skip brainstorm). Add secondary Brainstorm on detail panels.",
+        "technicalScope": [
+          "extensions/cursor-workflow-cannon (idea card, detail panel)",
+          "extensions/cursor-workflow-cannon/src/playbook-chat-prompts.ts"
+        ],
+        "acceptanceCriteria": [
+          "Brainstorm and Plan buttons on idea-state cards",
+          "buildBrainstormSessionPrompt includes ideaId, sessionIndex, schema load instruction",
+          "Button-to-agent invocation via prefillCursorChat",
+          "Secondary Brainstorm on detail panels for post-brainstorming states"
+        ],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-4C",
+      "path": "4.3",
+      "title": "Dashboard: Brainstorming rollup with scoring display and idea detail panel session history",
+      "goalMapping": [
+        "A single document traces an idea from inception through brainstorming, planning, review, acceptance, and delivery — no separate entities to keep in sync",
+        "The dashboard surfaces a Brainstorm button and a Brainstorming rollup showing synthesized scores (Value, Risk, Effort, Confidence, Priority) for ideas in brainstorming state",
+        "US-3"
+      ],
+      "suggestedTaskTitle": "Dashboard: Brainstorming rollup with scoring display and session history in detail panel",
+      "approach": "Add a Brainstorming rollup to the dashboard (replacing the New plan rollup) that reads from the brainstormingIdeas rollup section of the dashboard-summary projection. Display Value, Risk, Effort, Confidence, and Priority scores per idea in the rollup. Update the idea detail panel to show brainstorm session history (per-session scores and synthesized scores) for ideas with at least one session.",
+      "technicalScope": [
+        "extensions/cursor-workflow-cannon (dashboard webview: add Brainstorming rollup, replace New plan rollup)",
+        "extensions/cursor-workflow-cannon (idea detail panel: add brainstorm session history display)"
+      ],
+      "acceptanceCriteria": [
+        "Brainstorming rollup appears on the dashboard in place of the New plan rollup",
+        "Rollup displays all ideas in brainstorming state with Value, Risk, Effort, Confidence, and Priority scores from brainstorm.synthesis",
+        "Idea detail panel shows brainstorm session history with per-session scores when sessions are present",
+        "Idea detail panel shows synthesized scores (brainstorm.synthesis) when multiple sessions are present"
+      ],
+      "testingVerification": [
+        "Extension unit test: Brainstorming rollup renders with correct scores from dashboard-summary projection fixture",
+        "Extension unit test: rollup shows all brainstorming-state ideas from the projection",
+        "Extension unit test: detail panel session history renders per-session and synthesized scores"
+      ],
+      "dependsOn": [
+        "WBS-4A",
+        "WBS-4B"
+      ],
+      "recommendedPhase": "140",
+      "recommendedOrder": 14,
+      "sizingConfidence": "medium",
+      "riskNotes": "Source data from dashboard-summary projection fixture (WBS-4A) before writing rollup render code",
+      "doneMeans": "Brainstorming rollup live on dashboard with all five scores; detail panel shows session history; extension tests pass",
+      "generatedTaskPayload": {
+        "title": "Dashboard: Brainstorming rollup with scoring display and session history in detail panel",
+        "approach": "Add Brainstorming rollup (replacing New plan rollup) reading from brainstormingIdeas projection section. Display five scores. Update detail panel to show session history.",
+        "technicalScope": [
+          "extensions/cursor-workflow-cannon (dashboard webview rollup, detail panel)"
+        ],
+        "acceptanceCriteria": [
+          "Brainstorming rollup displays all five synthesized scores for brainstorming-state ideas",
+          "New plan rollup replaced",
+          "Detail panel shows per-session and synthesized scores"
+        ],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-5",
+      "path": "5",
+      "title": "Human-companion playbooks and updated instruction files for unified document model",
+      "goalMapping": [
+        "A single document traces an idea from inception through brainstorming, planning, review, acceptance, and delivery — no separate entities to keep in sync",
+        "Each state has a machine-readable schema file with an agentDirective section that prescribes required agent behavior for that state — agents read the state schema and follow it, not playbook prose",
+        "The brainstorming state schema agentDirective defines the full agent-led session: ordered question phases, scoring sub-inputs, formula application steps, and synthesis update — agents must not invent a different flow",
+        "US-4"
+      ],
+      "suggestedTaskTitle": "Author brainstorm-session companion playbook and update planner-chat and instruction files",
+      "approach": "Author brainstorm-session.md as a human-readable companion to the brainstorming state schema agentDirective — tone guidance, how to handle operator confusion, how to summarize scores after computation, effortScore sub-input relationship guidance. The schema is machine-authoritative; the playbook adds human context only and must not redefine question sequences or formulas. Update planner-chat.md for the unified document model. Update start-idea-planning.md, update-idea-planning-session.md, and PLANNER_SCHEMA.md to remove stale separate artifact references and point to per-state schema files. Document score color semantics (Value/Confidence/Priority: green-high/red-low; Risk/Effort: green-low/red-high; bands: 0–33 red, 34–66 amber, 67–100 green) and rollup sort order (priorityScore descending) as named constants in extensions/cursor-workflow-cannon/src/views/shared/ for use by WBS-4C.",
+      "technicalScope": [
+        ".ai/playbooks/brainstorm-session.md (new — human companion)",
+        ".ai/playbooks/planner-chat.md (updated for unified model)",
+        "src/modules/ideas/instructions/start-idea-planning.md",
+        "src/modules/ideas/instructions/update-idea-planning-session.md",
+        "PLANNER_SCHEMA.md (plan section reference update, pointer to per-state schema files)",
+        "extensions/cursor-workflow-cannon/src/views/shared/ (score color semantics and rollup sort constants)"
+      ],
+      "acceptanceCriteria": [
+        "brainstorm-session.md companion playbook exists with tone guidance and explicitly states the schema agentDirective is machine-authoritative",
+        "Playbook does not redefine question sequences or formulas — those live only in the schema",
+        "planner-chat.md references unified document model and per-state schema files",
+        "No instruction file references a standalone plan artifact file path",
+        "Score color semantics (per-score-type direction + color bands) defined as named constants importable by dashboard render code",
+        "Rollup sort order (priorityScore descending) documented in the constants file"
+      ],
+      "testingVerification": [
+        "Manual review: brainstorm-session.md does not duplicate or contradict the schema agentDirective",
+        "Manual review: no stale references to separate plan artifact files in any instruction file",
+        "Code review: score color semantic constants exist and are correctly typed for import by WBS-4C renderers"
+      ],
+      "dependsOn": [
+        "WBS-1B",
+        "WBS-3C"
+      ],
+      "recommendedPhase": "140",
+      "recommendedOrder": 15,
+      "sizingConfidence": "high",
+      "riskNotes": "Risk is the companion playbook accidentally becoming the authoritative source — it must defer to the schema explicitly",
+      "doneMeans": "brainstorm-session.md companion authored; all instruction files reference unified model; no stale artifact references remain",
+      "generatedTaskPayload": {
+        "title": "Author brainstorm-session companion playbook and update planner-chat and instruction files",
+        "approach": "Author brainstorm-session.md (schema is authoritative; playbook is human companion). Update planner-chat.md, start-idea-planning.md, update-idea-planning-session.md, and PLANNER_SCHEMA.md for unified model.",
+        "technicalScope": [
+          ".ai/playbooks/brainstorm-session.md (new)",
+          ".ai/playbooks/planner-chat.md",
+          "src/modules/ideas/instructions/",
+          "PLANNER_SCHEMA.md"
+        ],
+        "acceptanceCriteria": [
+          "Companion playbook defers to schema agentDirective as authoritative",
+          "planner-chat.md references unified model",
+          "No stale separate artifact references"
+        ],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-6",
+      "path": "6",
+      "title": "Migrate existing Ideas and PlanArtifacts to unified document format",
+      "goalMapping": [
+        "A single document traces an idea from inception through brainstorming, planning, review, acceptance, and delivery — no separate entities to keep in sync",
+        "US-6"
+      ],
+      "suggestedTaskTitle": "Agent migration: promote existing Ideas and PlanArtifacts to unified document format",
+      "approach": "Manual agent task. Read each existing I### row from SQLite. For rows with a linked plan artifact, read the plan artifact JSON and merge into the unified document plan section with status mapped correctly. For rows without a linked plan artifact, promote to unified document format with status idea. Run dry-run first. Commit only after dry-run validates clean.",
+      "technicalScope": [
+        ".workspace-kit/ (SQLite ideas table — read existing I### rows)",
+        ".workspace-kit/planning/plan-artifacts/ (read existing plan artifact JSON files)",
+        "SQLite ideas table (write unified documents or promote existing rows)"
+      ],
+      "acceptanceCriteria": [
+        "All existing I### rows are in unified document format with correct status mapping after migration",
+        "Existing plan artifact JSON files merged into corresponding unified documents",
+        "Dry-run verified clean before commit — no data loss reported",
+        "Post-migration: get-idea returns schema-valid unified documents for all existing ideas"
+      ],
+      "testingVerification": [
+        "Dry-run reports all ideas and migration outcomes before any writes",
+        "Post-migration: get-idea on 3–5 existing ideas returns schema-valid unified documents per the per-state schema for their current status"
+      ],
+      "dependsOn": [
+        "WBS-1D",
+        "WBS-2C"
+      ],
+      "recommendedPhase": "140",
+      "recommendedOrder": 16,
+      "sizingConfidence": "high",
+      "riskNotes": "Low volume makes this safe; dry-run is the key safety gate; schedule before dashboard deploy",
+      "doneMeans": "All existing ideas and plan artifacts in unified document format; post-migration validation passes; no legacy split-model data remains",
+      "generatedTaskPayload": {
+        "title": "Agent migration: promote existing Ideas and PlanArtifacts to unified document format",
+        "approach": "Manual agent task. Read I### rows and plan artifact files. Merge into unified format with correct status mapping. Dry-run first, then commit.",
+        "technicalScope": [
+          ".workspace-kit/ (SQLite ideas table, plan artifact files)"
+        ],
+        "acceptanceCriteria": [
+          "All I### rows in unified document format with correct status post-migration",
+          "Dry-run verified clean before commit",
+          "get-idea returns schema-valid unified documents for all existing ideas"
+        ],
+        "status": "proposed"
+      }
+    }
+  ],
+  "phaseRecommendations": [
+    {
+      "phaseKey": "140",
+      "label": "Phase 140",
+      "rationale": "Current canonical phase; unified document model with agent-directive schemas is a foundational change that should land in the active sprint",
+      "isPrimary": true
+    }
+  ],
+  "provenance": {
+    "createdAt": "2026-07-02T04:33:00.000Z",
+    "updatedAt": "2026-07-02T05:40:20.078Z",
+    "createdBy": "agent",
+    "source": "draft-plan-artifact",
+    "chatSessionRef": "pcs-5380b41e-6607-4c17-9867-ebf091e766e6",
+    "sourceIdeaId": "I005"
+  },
+  "approvalRecord": {
+    "schemaVersion": 1,
+    "confirmed": true,
+    "approvedVersion": 8,
+    "approvedAt": "2026-07-02T05:55:00.000Z",
+    "approvedBy": "operator",
+    "planRef": "plan-artifact:f7a3b891-c5d2-4e6f-9a08-1b2c3d4e5f60",
+    "reviewSummary": "0 blockers, 7 warnings — all non-blocking; OQ-1 deferred to WBS-1A",
+    "openQuestionsAccepted": [
+      "OQ-1: Should the unified document be stored as a JSON blob on the SQLite ideas row, or as a linked artifact file following the existing plan-artifact file pattern? (Resolved in WBS-1A)"
+    ]
+  },
+  "version": 9
+}

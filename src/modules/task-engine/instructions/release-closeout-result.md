@@ -47,6 +47,10 @@ You may also pass a prior `release-evidence-manifest` `data.manifest` payload as
   - `phase-release-state`
   - `prepare-release-artifacts`
   - `release-closeout-result`
+- `refs.postCloseoutCommands[]` — final agent mutations after publish (playbook **§6b**):
+  - `phase-status`
+  - `update-workspace-status` with `currentKitPhase: null`
+  - `phase-status` (verify no active phase)
 - `refs.concreteRefs[]` — evidence refs for completed task count, features, and follow-up count
 
 ## Structured failures

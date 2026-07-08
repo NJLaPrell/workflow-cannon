@@ -281,6 +281,17 @@ export function buildReleaseCloseoutResult(args: {
     commandRef("prepare-release-artifacts", releaseVersion ? { version: releaseVersion } : undefined),
     commandRef("release-closeout-result", releaseVersion && phaseKey ? { phaseKey, releaseVersion } : undefined)
   ];
+  const postCloseoutCommands = [
+    commandRef("phase-status"),
+    {
+      command: "update-workspace-status",
+      commandLine:
+        "pnpm exec wk run update-workspace-status " +
+        `'{"expectedWorkspaceRevision":<rev>,"currentKitPhase":null,"activeFocus":"Phase ${phaseKey ?? "<N>"} complete — no active workspace phase","blockers":[],"pendingDecisions":[],"nextAgentActions":["Pick the next phase from the Phase Roster when you are ready to deliver."],"command":"phase-closeout-complete"}'`,
+      instructionPath: "src/modules/task-engine/instructions/update-workspace-status.md"
+    },
+    commandRef("phase-status")
+  ];
 
   return {
     ok: true,
@@ -316,6 +327,7 @@ export function buildReleaseCloseoutResult(args: {
       },
       refs: {
         commandSequence: sequence,
+        postCloseoutCommands,
         concreteRefs: [
           {
             field: "completedExecutionTaskCount",

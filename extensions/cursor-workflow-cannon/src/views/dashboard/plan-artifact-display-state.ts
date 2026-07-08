@@ -160,3 +160,68 @@ export function bucketPlanRowsByDisplayState(
   }
   return buckets;
 }
+
+const PLAN_DISPLAY_STATE_PRIORITY: Readonly<Record<PlanArtifactDisplayState, number>> = {
+  superseded: 0,
+  new: 1,
+  needs_revision: 2,
+  reviewed: 3,
+  accepted: 4,
+  finalized: 5,
+  scheduled: 6,
+  delivered: 7
+};
+
+/** Stable rollup identity: one idea may accumulate multiple plan artifact ids over time. */
+export function planArtifactRollupGroupKey(row: Record<string, unknown>): string {
+  const sourceIdeaId = String(row.sourceIdeaId ?? "").trim();
+  if (sourceIdeaId.length > 0) {
+    return `idea:${sourceIdeaId}`;
+  }
+  const planId = String(row.planId ?? "").trim();
+  if (planId.length > 0) {
+    return `plan:${planId}`;
+  }
+  return `title:${planArtifactTitleKey(row)}`;
+}
+
+function comparePlanRowsByUpdatedAtDesc(
+  a: Record<string, unknown>,
+  b: Record<string, unknown>
+): number {
+  return String(b.updatedAt ?? "").localeCompare(String(a.updatedAt ?? ""));
+}
+
+/**
+ * Collapse plan rows for dashboard rollups:
+ * - one visible row per idea/plan identity at its highest lifecycle state
+ * - draft bucket keeps only the newest draft when the plan has not advanced
+ */
+export function filterPlanArtifactRowsForRollup(
+  rows: readonly Record<string, unknown>[]
+): Record<string, unknown>[] {
+  const groups = new Map<string, Array<{ row: Record<string, unknown>; state: PlanArtifactDisplayState }>>();
+  for (const row of rows) {
+    const key = planArtifactRollupGroupKey(row);
+    const state = derivePlanArtifactDisplayState(row);
+    const list = groups.get(key) ?? [];
+    list.push({ row, state });
+    groups.set(key, list);
+  }
+
+  const kept: Record<string, unknown>[] = [];
+  for (const entries of groups.values()) {
+    const nonSuperseded = entries.filter((entry) => entry.state !== "superseded");
+    const pool = nonSuperseded.length > 0 ? nonSuperseded : entries;
+    const maxPriority = Math.max(...pool.map((entry) => PLAN_DISPLAY_STATE_PRIORITY[entry.state]));
+    const canonicalState = pool.find((entry) => PLAN_DISPLAY_STATE_PRIORITY[entry.state] === maxPriority)!.state;
+    const candidates = pool.filter((entry) => entry.state === canonicalState);
+    candidates.sort((a, b) => comparePlanRowsByUpdatedAtDesc(a.row, b.row));
+    if (candidates.length > 0) {
+      kept.push(candidates[0]!.row);
+    }
+  }
+
+  kept.sort((a, b) => planArtifactTitleLabel(a).localeCompare(planArtifactTitleLabel(b)));
+  return kept;
+}

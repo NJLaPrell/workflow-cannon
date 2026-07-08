@@ -71,6 +71,10 @@
     {
       "description": "Minimal argv example",
       "argv": "workspace-kit run update-workspace-status '{\"expectedWorkspaceRevision\":0}'"
+    },
+    {
+      "description": "Unset workspace current phase after phase publish (playbook §6b)",
+      "argv": "workspace-kit run update-workspace-status '{\"expectedWorkspaceRevision\":1,\"currentKitPhase\":null,\"activeFocus\":\"Phase 72 complete — no active workspace phase\",\"blockers\":[],\"pendingDecisions\":[],\"nextAgentActions\":[\"Pick the next phase from the Phase Roster when you are ready to deliver.\"],\"command\":\"phase-closeout-complete\"}'"
     }
   ],
   "instructionPath": "src/modules/task-engine/instructions/update-workspace-status.md",

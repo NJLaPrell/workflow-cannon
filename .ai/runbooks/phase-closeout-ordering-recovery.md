@@ -15,11 +15,11 @@
 3. **Create** `release/phase-<N>` from **`origin/main`** if missing (policy approval for protected-branch push when required).
 4. **Ship** closeout PR **`release/phase-<N>` → `main`** (version bump + changelog).
 5. **Publish** per `.ai/RELEASING.md` (operator chat confirm before `pnpm run publish:npm`).
-6. **Unset workspace phase** (preferred after out-of-order closeout):
+6. **Unset workspace phase** (same as playbook **§6b** — not recovery-only):
 
    ```bash
    pnpm exec wk run get-workspace-status '{}'
-   pnpm exec wk run update-workspace-status '{"expectedWorkspaceRevision":<rev>,"currentKitPhase":null,"nextKitPhase":null,"activeFocus":"Phase <N> complete — no active workspace phase","blockers":[],"pendingDecisions":[],"nextAgentActions":["Pick the next phase from the Phase Roster when you are ready to deliver."],"policyApproval":{"confirmed":true,"rationale":"unset workspace phase after catch-up closeout"}}'
+   pnpm exec wk run update-workspace-status '{"expectedWorkspaceRevision":<rev>,"currentKitPhase":null,"nextKitPhase":null,"activeFocus":"Phase <N> complete — no active workspace phase","blockers":[],"pendingDecisions":[],"nextAgentActions":["Pick the next phase from the Phase Roster when you are ready to deliver."],"command":"phase-closeout-complete"}'
    ```
 
 7. **Bump** `kit.phaseDelivery.legacyDeliveredMaxOrdinal` to **N** in `.workspace-kit/config.json` so the roster marks phases **≤ N** delivered while workspace phase stays unset.

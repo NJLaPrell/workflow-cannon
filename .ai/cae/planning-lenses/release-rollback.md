@@ -13,6 +13,7 @@ Ensure plans target the correct phase integration branch and operators know roll
 - Generated tasks land as `ready` or `proposed` consistently with argv.
 - Rollback story: cancel tasks via task-engine; do not delete artifact versions silently.
 - Closeout gates (`phase-closeout-readiness`) acknowledged if tasks still `ready` in phase.
+- After publish: unset workspace phase with **`update-workspace-status`** / **`currentKitPhase: null`** (playbook **§6b**); do not leave agents in the shipped phase.
 
 ## Prompts
 

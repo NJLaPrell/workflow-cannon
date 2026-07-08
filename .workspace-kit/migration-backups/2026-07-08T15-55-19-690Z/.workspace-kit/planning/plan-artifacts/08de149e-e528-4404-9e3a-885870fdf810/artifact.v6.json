@@ -1,0 +1,101 @@
+{
+  "schemaVersion": 1,
+  "planId": "08de149e-e528-4404-9e3a-885870fdf810",
+  "version": 6,
+  "planRef": "plan-artifact:08de149e-e528-4404-9e3a-885870fdf810",
+  "status": "planning",
+  "ideaId": "I009",
+  "createdAt": "2026-07-07T21:27:12.540Z",
+  "updatedAt": "2026-07-07T21:48:03.711Z",
+  "agentDirective": {
+    "schemaVersion": 1,
+    "state": "planning",
+    "questions": [
+      {
+        "phase": "context",
+        "fieldName": "planTitle",
+        "prompt": "What title should the structured plan use?",
+        "type": "text",
+        "guidance": "Initialize the plan section title before invoking planner-chat."
+      },
+      {
+        "phase": "context",
+        "fieldName": "planSummary",
+        "prompt": "Summarize the plan scope that planner-chat should expand into WBS rows.",
+        "type": "text",
+        "guidance": "Ground the summary in synthesized brainstorm scores; do not re-run brainstorming scoring here."
+      },
+      {
+        "phase": "session-notes",
+        "fieldName": "plannerChatInvocation",
+        "prompt": "Invoke planner-chat to author structured plan sections and WBS from the brainstorm synthesis.",
+        "type": "text",
+        "guidance": "Follow the planner-chat playbook after plan.title and plan.summary are set. Transition to reviewed when rubric review is recorded."
+      }
+    ]
+  },
+  "brainstorm": {
+    "sessions": [
+      {
+        "sessionId": "bsess-a1dc20dc-0567-4af8-b4e3-8f0dbf40d3e3",
+        "startedAt": "2026-07-07T21:28:58.669Z",
+        "updatedAt": "2026-07-07T21:48:03.711Z",
+        "inputs": {
+          "valueImpact": 8,
+          "valueReach": 7,
+          "valueUrgency": 6,
+          "valueStrategicFit": 9,
+          "riskTechnical": 4,
+          "riskOperational": 3,
+          "riskUnknowns": 5,
+          "riskReversibility": 3,
+          "tShirtSize": "M",
+          "complexity": 6,
+          "confidenceEvidence": 8,
+          "confidenceExpertise": 8,
+          "confidenceClarity": 7,
+          "contextProblem": "Ideas brainstorming is a hollow scoring survey: no guided ideation chat, no structured storage for agent-generated ideas/perspectives, and no mechanical seeding of plan drafts from brainstorm output.",
+          "contextAudience": "Workflow Cannon operators capturing ideas and maintainers delivering Ideas→Plan improvements.",
+          "unknownsNotes": "Ideation field shapes; transcript vs curated-only; qualitative synthesis across sessions; scoring optional ordering; dashboard rollup for qualitative content (see I005).",
+          "alternativesConsidered": "Rejected: survey-only, sessionNotes blob, transcript-only, external brainstorm store. Preferred: additive ideation object + directive reframe + seed map + per-idea doc init on create-idea.",
+          "sessionNotes": "## Status\nManual capture after dogfood brainstorm. Session completed without further guided chat rounds — operator directed manual enrichment of idea/plan record.\n\n## Current behavior (broken)\n- agentDirective.questions[] is a 18-field scoring/elicitation form (score-1-10, text, enum only).\n- brainstormSessionInputs is additionalProperties:false: 13 scores + contextProblem, contextAudience, unknownsNotes, alternativesConsidered, sessionNotes.\n- update-brainstorm-session-handler SESSION_INPUT_FIELDS allowlist drops unknown keys.\n- complete-brainstorm seeds plan.title from idea title and plan.summary from hardcoded placeholder unless planSummary passed manually.\n- buildIdeaPlanningPrompt ignores brainstorm content entirely.\n- applyBrainstormSectionSynthesis / synthesizeBrainstormScores only blend numeric scores across sessions.\n\n## Target UX\n- Natural chat: agent proposes feature ideas, perspectives, expectations, risks, alternatives — not only asks operator to score.\n- Each turn ends with operator choice: save session & return later (partial update-brainstorm-session) OR finish brainstorming & start planning (complete-brainstorm).\n- Qualitative outputs persist in structured session fields, not a sessionNotes blob.\n- On promotion, brainstorm content mechanically stubs plan.summary, goals, openQuestions, assumptions, and warms planner-chat prompt.\n\n## Proposed schema additions (ideation object on session)\nideation: {\n  featureIdeas: [{ text, rationale? }],\n  perspectives: [{ text }],\n  expectations: [{ text }],\n  openThreads: [{ text }],\n  decisions: [{ text, rationale? }],\n  transcript?: [{ role: \"agent\"|\"operator\", text, at }]\n}\nKeep existing scoring inputs separate. Both may be partial; ideation-rich completion should not require all 13 scores.\n\n## Proposed agentDirective reframe\n- Phases: context → ideation (agent contributes + elicits) → scoring (optional convergent) → checkpoint → session-notes.\n- Add question types: agent-proposal, agent-perspective (not only score-1-10|text|enum).\n- Add explicit checkpoint phase with save-vs-finish guidance.\n\n## Plan seed map (complete-brainstorm / planning init)\n- featureIdeas → goals[] + userStories[]\n- openThreads → openQuestions[]\n- perspectives + expectations → assumptions[] + valueAssessment narrative\n- synthesized scores → valueAssessment metrics (existing)\n- ideation digest → plan.summary + buildIdeaPlanningPrompt opening context\n\n## Additional pipeline fixes discovered in dogfood\n- create-idea should call buildIdeaOnlyUnifiedDocument and link planRef immediately.\n- migrate-ideas-to-unified-document should not be the only path for new ideas.\n- Align migrate dry-run policy tier docs with runtime (or exempt dry-run from policy gate).\n- Related idea I005 tracks brainstorming dashboard rollup UX.\n\n## Alternatives rejected\n- Do nothing / keep survey-only brainstorm.\n- sessionNotes-only blob storage (current workaround; not machine-seedable).\n- Full transcript only without curated ideation fields.\n- Separate brainstorm store outside unified IdeaPlan document.\n\n## Open questions\n- Field shape: plain string[] vs {text,rationale}[] for featureIdeas.\n- Transcript capture: full vs curated-only.\n- Qualitative multi-session synthesis: concatenate + agent summarize for v1?\n- Should scoring move to post-ideation optional step in directive ordering?\n\n## Acceptance criteria (for implementation task)\n1. Structured ideation fields persist through update-brainstorm-session.\n2. Agent directive supports ideation + checkpoint turns.\n3. complete-brainstorm seeds plan sections from ideation + scores.\n4. buildIdeaPlanningPrompt includes brainstorm digest.\n5. create-idea auto-creates unified document.\n6. Existing brainstorm sessions still validate.\n\n## Dashboard projection (added)\n\n## Dashboard projection (dogfood finding)\nUnified IdeaPlan writes did not update the plan-artifact SQLite index, so dashboard Plans showed stale \"Idea plan\" titles and empty summaries even when plan.title/plan.summary were correct on disk.\n\nFix (in progress on branch):\n- upsertIdeaPlanArtifactIndexFromDocument on every writeIdeaPlanArtifactVersion when sqliteDb is provided\n- buildDashboardPlanArtifactSummary reads plan.title, plan.summary, version, updatedAt from unified IdeaPlan documents\n- reconcileIdeaPlanArtifactIndexes(workspacePath, db) backfills stale index rows for existing workspaces\n\nAcceptance: after any IdeaPlan mutation, dashboard-summary shows the current plan title/summary without manual reconcile."
+        },
+        "scores": {
+          "value": 7.6,
+          "risk": 3.85,
+          "effort": 6,
+          "confidence": 7.65,
+          "priority": 68,
+          "tShirtSize": "M",
+          "complexity": 6
+        },
+        "completedAt": "2026-07-07T21:36:36.969Z",
+        "synthesized": {
+          "value": 7.6,
+          "risk": 3.85,
+          "effort": 6,
+          "confidence": 7.65,
+          "priority": 68,
+          "tShirtSize": "M",
+          "complexity": 6
+        }
+      }
+    ],
+    "activeSessionId": "bsess-a1dc20dc-0567-4af8-b4e3-8f0dbf40d3e3",
+    "synthesis": {
+      "value": 7.6,
+      "risk": 3.85,
+      "effort": 6,
+      "confidence": 7.65,
+      "priority": 68,
+      "tShirtSize": "M",
+      "complexity": 6
+    }
+  },
+  "plan": {
+    "title": "Make brainstorming a real guided ideation session that seeds the plan",
+    "summary": "Transform Ideas brainstorming from a scoring survey into guided ideation that seeds the plan draft.\n\n## Problem\nCurrent flow: agentDirective is 18 elicitation/scoring questions; session storage accepts only scores + 5 text fields; handler drops unknown keys; plan promotion uses hardcoded summary; planner-chat starts cold.\n\n## Solution (v1 scope)\n1. Schema: add session.ideation { featureIdeas[], perspectives[], expectations[], openThreads[], decisions[], transcript? } alongside existing scoring inputs.\n2. Handler: extend SESSION_INPUT_FIELDS + types; allow partial ideation updates; keep backward compat.\n3. Directive: reframe brainstorming.schema.json agentDirective for ideation turns + per-turn save/finish checkpoint; agent contributes proposals not only questions.\n4. Seed: complete-brainstorm + idea-plan-planning-init map ideation → plan.summary/goals/openQuestions/assumptions; buildIdeaPlanningPrompt includes brainstorm digest.\n5. Pipeline: create-idea auto-creates unified IdeaPlan document (buildIdeaOnlyUnifiedDocument) and links planRef.\n6. Policy: ideation-rich session may complete without all 13 scores (relax validateBrainstormSectionForPlanning when ideation present).\n\n## Files\nschemas/ideas/brainstorm-session.schema.json, schemas/ideas/states/brainstorming.schema.json, idea-plan-types.ts, update-brainstorm-session-handler.ts, complete-brainstorm-handler.ts, idea-plan-planning-init.ts, build-idea-planning-prompt.ts, create-idea handler, validate-brainstorm-section.ts, tests.\n\n## Dogfood reference\nI009 session bsess-a1dc20dc-0567-4af8-b4e3-8f0dbf40d3e3 documents the failure mode (ideation crammed into sessionNotes). Scores: value 7.6, risk 3.85, effort 6, confidence 7.3, priority 67.\n\n## Out of scope (v1)\nDashboard brainstorming rollup UI (track separately; relates to I005). Full qualitative multi-session synthesis beyond concatenate+summarize.\n## Dashboard projection (dogfood finding)\nUnified IdeaPlan writes did not update the plan-artifact SQLite index, so dashboard Plans showed stale \"Idea plan\" titles and empty summaries even when plan.title/plan.summary were correct on disk.\n\nFix (in progress on branch):\n- upsertIdeaPlanArtifactIndexFromDocument on every writeIdeaPlanArtifactVersion when sqliteDb is provided\n- buildDashboardPlanArtifactSummary reads plan.title, plan.summary, version, updatedAt from unified IdeaPlan documents\n- reconcileIdeaPlanArtifactIndexes(workspacePath, db) backfills stale index rows for existing workspaces\n\nAcceptance: after any IdeaPlan mutation, dashboard-summary shows the current plan title/summary without manual reconcile.",
+    "planningType": "new-feature",
+    "wbsRowCount": 0
+  }
+}

@@ -26,7 +26,9 @@ No required args. The command reads phase/task state from the configured task st
 - `blocked` — one or more phase tasks are blocked
 - `closeout-pending` — tasks are drained but closeout/evidence preflight still has findings
 - `release-running` — closeout is clean but execution has moved off the phase branch (release in flight)
-- `post-release` — workspace already rolled past the phase
+- `post-release` — workspace already rolled past the phase, or closeout is complete and the workspace should be cleared (playbook **§6b**)
+
+When publish is complete but **`workspace.currentKitPhase`** still matches the shipped phase, the final agent step is **`update-workspace-status`** with **`currentKitPhase: null`** — not another **`set-current-phase`** rollover.
 
 ## Response highlights (`data`)
 

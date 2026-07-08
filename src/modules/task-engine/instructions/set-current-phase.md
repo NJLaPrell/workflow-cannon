@@ -59,3 +59,10 @@ Apply:
 workspace-kit run get-workspace-status '{}'
 workspace-kit run set-current-phase '{"currentKitPhase":"72","nextKitPhase":"73","activeFocus":"Phase 72 delivery","pendingDecisions":[],"nextAgentActions":["Start Phase 72 delivery"],"blockers":[],"expectedWorkspaceRevision":1,"clientMutationId":"phase-72-rollover"}'
 ```
+
+Clear after phase publish/closeout (use **`update-workspace-status`**, not this command):
+
+```bash
+workspace-kit run phase-status '{}'
+workspace-kit run update-workspace-status '{"expectedWorkspaceRevision":1,"currentKitPhase":null,"activeFocus":"Phase 72 complete — no active workspace phase","blockers":[],"pendingDecisions":[],"nextAgentActions":["Pick the next phase from the Phase Roster when you are ready to deliver."],"command":"phase-closeout-complete"}'
+```

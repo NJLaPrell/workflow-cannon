@@ -6,6 +6,8 @@ agentCapsule|v=1|command=update-workspace-status|module=task-engine|schema_only=
 
 Patch **`kit_workspace_status`** with optimistic concurrency on **`workspaceRevision`**. This is the low-level workspace-status patch command; prefer **`set-current-phase`** for phase rollover and **`phase-status`** for read-only phase discovery.
 
+**Phase closeout:** after publish and evidence, **unset** the active workspace phase with **`currentKitPhase: null`** (success code **`workspace-phase-cleared`**). This clears the config phase hint and DB export. See **`.ai/playbooks/phase-closeout-and-release.md`** § **6b**. Do **not** use **`set-current-phase`** to clear — it requires a non-empty phase string.
+
 ## Usage
 
 ```

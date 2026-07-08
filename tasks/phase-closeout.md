@@ -35,9 +35,13 @@ workspace-kit run run-transition '{"taskId":"T###","action":"complete","policyAp
 
 Replace `T###` and rationale strings per task. Do **not** hand-edit `.workspace-kit/tasks/state.json` for routine lifecycle moves.
 
-## 4) Phase delivery summary
+## 4) Unset workspace current phase
 
-After publish and evidence steps (**playbook §6**), emit the **Phase delivery summary** using **§7** in **`.ai/playbooks/phase-closeout-and-release.md`**, filled only from **CLI / task-store / maintainer-doc evidence** (not memory). Expand **`{phaseNumber}`**, **`{featureMarkdownBullets}`**, **`{optionalNotesBlockOrEmpty}`**, and the count tokens fully — do not paste unfilled template slots. Keep the block compact; methodology stays in the playbook **§7 evidence rules**.
+After publish and evidence (**playbook §6**), run **§6b** in **`.ai/playbooks/phase-closeout-and-release.md`**: **`phase-status`** → **`update-workspace-status`** with **`currentKitPhase: null`** → **`phase-status`** again. This is the final agent mutation before the session summary.
+
+## 5) Phase delivery summary
+
+After **§4**, emit the **Phase delivery summary** using **§7** in **`.ai/playbooks/phase-closeout-and-release.md`**, filled only from **CLI / task-store / maintainer-doc evidence** (not memory). Expand **`{phaseNumber}`**, **`{featureMarkdownBullets}`**, **`{optionalNotesBlockOrEmpty}`**, and the count tokens fully — do not paste unfilled template slots. Keep the block compact; methodology stays in the playbook **§7 evidence rules**.
 
 ---
 **Use:** Open or @-attach `tasks/phase-closeout.md` with your phase/release context (e.g. `Phase 25 → v0.26.0`).

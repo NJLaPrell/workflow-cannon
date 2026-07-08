@@ -72,6 +72,10 @@ test("buildReleaseCloseoutResult emits placeholder-free final report and concret
       "release-closeout-result"
     ]
   );
+  assert.deepEqual(
+    result.packet.refs.postCloseoutCommands.map((ref) => ref.command),
+    ["phase-status", "update-workspace-status", "phase-status"]
+  );
   assert.deepEqual(result.packet.releaseEvidence.missingFinalEvidence, []);
   assert.equal(result.packet.releaseEvidence.postReleaseEvidence.tag, "v0.99.27");
   assert.ok(

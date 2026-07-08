@@ -4,6 +4,7 @@ import {
   PLAN_STATE_BUCKETS,
   bucketPlanRowsByDisplayState,
   derivePlanArtifactDisplayState,
+  filterPlanArtifactRowsForRollup,
   groupPlanRowsByTitle,
   planArtifactDisplayStateMeta,
   planArtifactEffectiveStatus,
@@ -94,4 +95,68 @@ test("PLAN_STATE_BUCKETS default open states match spec", () => {
 test("planTitleSlug produces stable ascii keys", () => {
   assert.equal(planTitleSlug("Phase Work Tree Diagram"), "phase-work-tree-diagram");
   assert.equal(planTitleSlug("   "), "untitled");
+});
+
+test("filterPlanArtifactRowsForRollup keeps only canonical lifecycle row per idea", () => {
+  const filtered = filterPlanArtifactRowsForRollup([
+    {
+      planId: "accepted-plan",
+      sourceIdeaId: "I011",
+      title: "Agent Planning Tools",
+      status: "accepted",
+      tasksGenerated: true,
+      executed: false,
+      updatedAt: "2026-07-08T17:00:00.000Z"
+    },
+    {
+      planId: "older-draft",
+      sourceIdeaId: "I011",
+      title: "Agent Planning Tools",
+      status: "draft",
+      updatedAt: "2026-07-08T15:00:00.000Z"
+    }
+  ]);
+  assert.equal(filtered.length, 1);
+  assert.equal(filtered[0].planId, "accepted-plan");
+  assert.equal(derivePlanArtifactDisplayState(filtered[0]), "scheduled");
+});
+
+test("filterPlanArtifactRowsForRollup keeps only newest draft when plan has not advanced", () => {
+  const filtered = filterPlanArtifactRowsForRollup([
+    {
+      planId: "draft-new",
+      sourceIdeaId: "I006",
+      title: "Idea plan",
+      status: "draft",
+      updatedAt: "2026-07-08T15:55:19.690Z"
+    },
+    {
+      planId: "draft-old",
+      sourceIdeaId: "I006",
+      title: "Idea plan",
+      status: "draft",
+      updatedAt: "2026-07-04T01:09:30.667Z"
+    }
+  ]);
+  assert.equal(filtered.length, 1);
+  assert.equal(filtered[0].planId, "draft-new");
+});
+
+test("filterPlanArtifactRowsForRollup drops accepted rows superseded by delivered state", () => {
+  const filtered = filterPlanArtifactRowsForRollup([
+    {
+      planId: "brainstorm-plan",
+      sourceIdeaId: "I009",
+      title: "Make brainstorming a real guided ideation session that seeds the plan",
+      status: "accepted",
+      tasksGenerated: true,
+      executed: true,
+      updatedAt: "2026-07-08T00:24:09.000Z"
+    }
+  ]);
+  assert.equal(filtered.length, 1);
+  assert.equal(derivePlanArtifactDisplayState(filtered[0]), "delivered");
+  const buckets = bucketPlanRowsByDisplayState(filtered);
+  assert.equal(buckets.get("accepted")?.length ?? 0, 0);
+  assert.equal(buckets.get("delivered")?.length, 1);
 });

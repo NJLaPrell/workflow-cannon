@@ -90,6 +90,8 @@ export function buildPhaseCompleteReleaseChatPrompt(
     "",
     "## Final response",
     "",
+    "After publish and evidence, **unset the workspace current phase** (playbook §6b): `phase-status` → `update-workspace-status` with `currentKitPhase: null` → `phase-status` to verify no active phase. Then paste the playbook §7 Phase delivery summary.",
+    "",
     "```text",
     "Phase:",
     "Verdict:",

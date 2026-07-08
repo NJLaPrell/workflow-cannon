@@ -174,6 +174,43 @@ function buildPlanRefToTasksIndex(allTasks: readonly TaskEntity[]): Map<string, 
   return index;
 }
 
+function buildTaskByIdIndex(allTasks: readonly TaskEntity[]): Map<string, TaskEntity> {
+  const index = new Map<string, TaskEntity>();
+  for (const task of allTasks) {
+    index.set(task.id, task);
+  }
+  return index;
+}
+
+/** Merge planRef-linked tasks with unified IdeaPlan `delivery.taskRefs` when finalize omitted metadata.planRef. */
+function resolvePlanArtifactLinkedTasks(
+  planRefLinkedTasks: readonly TaskEntity[],
+  deliveryTaskRefs: readonly string[] | undefined,
+  taskById: ReadonlyMap<string, TaskEntity>
+): TaskEntity[] {
+  const merged = new Map<string, TaskEntity>();
+  for (const task of planRefLinkedTasks) {
+    merged.set(task.id, task);
+  }
+  if (!Array.isArray(deliveryTaskRefs)) {
+    return [...merged.values()];
+  }
+  for (const raw of deliveryTaskRefs) {
+    if (typeof raw !== "string") {
+      continue;
+    }
+    const taskId = raw.trim();
+    if (!/^T[0-9]+$/.test(taskId)) {
+      continue;
+    }
+    const task = taskById.get(taskId);
+    if (task) {
+      merged.set(taskId, task);
+    }
+  }
+  return [...merged.values()];
+}
+
 const PLAN_ARTIFACT_WBS_DESCRIPTION_MAX_LENGTH = 140;
 const PLAN_ARTIFACT_RISK_DESCRIPTION_MAX_LENGTH = 200;
 const PLAN_ARTIFACT_RISK_MITIGATION_MAX_LENGTH = 160;
@@ -812,6 +849,7 @@ export function buildDashboardPlanArtifactSummary(
     return null;
   }
   const planRefToTasks = buildPlanRefToTasksIndex(allTasks);
+  const allTasksById = buildTaskByIdIndex(allTasks);
   const PLAN_ARTIFACT_SUMMARY_TEXT_MAX_LENGTH = 160;
   const rows = summaries.slice(0, 20).map((summary) => {
     const ideaPlan = readIdeaPlanArtifact(ctx.workspacePath, summary.planRef);
@@ -838,8 +876,12 @@ export function buildDashboardPlanArtifactSummary(
       ? [primaryPhase.label?.trim(), primaryPhase.phaseKey?.trim()].filter((value) => !!value).join(" · ")
       : "";
     const phaseKeyRaw = typeof primaryPhase?.phaseKey === "string" ? primaryPhase.phaseKey.trim() : "";
+    const deliveryPhaseKeyRaw =
+      typeof ideaPlan?.delivery?.phaseKey === "string" ? ideaPlan.delivery.phaseKey.trim() : "";
     const phaseKey =
-      phaseKeyRaw.length > 0 && !isDeferredPlanPhaseRecommendationKey(phaseKeyRaw) ? phaseKeyRaw : "";
+      phaseKeyRaw.length > 0 && !isDeferredPlanPhaseRecommendationKey(phaseKeyRaw)
+        ? phaseKeyRaw
+        : deliveryPhaseKeyRaw;
     const sourceIdeaId =
       ideaPlan?.ideaId ??
       (typeof latestArtifact?.provenance?.sourceIdeaId === "string"
@@ -913,7 +955,11 @@ export function buildDashboardPlanArtifactSummary(
     const wbsPreviewRows = Array.isArray(latestArtifact?.wbs)
       ? buildDashboardPlanArtifactWbsRows(latestArtifact.wbs)
       : [];
-    const linkedTasks = planRefToTasks.get(summary.planRef) ?? [];
+    const linkedTasks = resolvePlanArtifactLinkedTasks(
+      planRefToTasks.get(summary.planRef) ?? [],
+      ideaPlan?.delivery?.taskRefs,
+      allTasksById
+    );
     const wbsIdToTask = buildWbsIdToLinkedTaskIndex(linkedTasks);
     const taskById = new Map(linkedTasks.map((task) => [task.id, task]));
     const executionLinkages = Array.isArray(latestArtifact?.executionLinkages)
@@ -940,15 +986,19 @@ export function buildDashboardPlanArtifactSummary(
       wbsIdToTask
     );
     const approvalSummary = buildDashboardPlanArtifactApprovalSummary(latestArtifact?.approvalRecord);
-    const tasksGenerated = linkedTasks.length > 0;
+    let tasksGenerated = linkedTasks.length > 0;
     // Cancelled tasks don't block "executed"; only count them if that's all there is (avoids reporting
     // "executed" for a plan whose entire WBS was cancelled rather than delivered).
     const nonCancelledTasks = linkedTasks.filter((task) => task.status !== "cancelled");
     const deliveryConsideredTasks = nonCancelledTasks.length > 0 ? nonCancelledTasks : linkedTasks;
-    const executed =
+    let executed =
       tasksGenerated &&
       deliveryConsideredTasks.length > 0 &&
       deliveryConsideredTasks.every((task) => task.status === "completed");
+    if (ideaPlan?.status === "delivered") {
+      tasksGenerated = true;
+      executed = true;
+    }
     const blockerCount = latestReview?.blockerCount ?? 0;
     const warningCount = latestReview?.warningCount ?? 0;
     const lifecycleStatus =

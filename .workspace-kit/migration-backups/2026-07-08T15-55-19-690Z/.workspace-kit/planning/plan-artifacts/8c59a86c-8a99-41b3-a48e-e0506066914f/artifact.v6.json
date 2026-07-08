@@ -1,0 +1,100 @@
+{
+  "schemaVersion": 1,
+  "planId": "8c59a86c-8a99-41b3-a48e-e0506066914f",
+  "version": 6,
+  "planRef": "plan-artifact:8c59a86c-8a99-41b3-a48e-e0506066914f",
+  "status": "planning",
+  "ideaId": "I007",
+  "createdAt": "2026-07-04T01:12:40.568Z",
+  "updatedAt": "2026-07-07T17:01:10.394Z",
+  "agentDirective": {
+    "schemaVersion": 1,
+    "state": "planning",
+    "questions": [
+      {
+        "phase": "context",
+        "fieldName": "planTitle",
+        "prompt": "What title should the structured plan use?",
+        "type": "text",
+        "guidance": "Initialize the plan section title before invoking planner-chat."
+      },
+      {
+        "phase": "context",
+        "fieldName": "planSummary",
+        "prompt": "Summarize the plan scope that planner-chat should expand into WBS rows.",
+        "type": "text",
+        "guidance": "Ground the summary in synthesized brainstorm scores; do not re-run brainstorming scoring here."
+      },
+      {
+        "phase": "session-notes",
+        "fieldName": "plannerChatInvocation",
+        "prompt": "Invoke planner-chat to author structured plan sections and WBS from the brainstorm synthesis.",
+        "type": "text",
+        "guidance": "Follow the planner-chat playbook after plan.title and plan.summary are set. Transition to reviewed when rubric review is recorded."
+      }
+    ]
+  },
+  "brainstorm": {
+    "sessions": [
+      {
+        "sessionId": "bsess-8b93e2f7-072e-4ad3-8cab-4598a1d91275",
+        "startedAt": "2026-07-05T07:11:57.611Z",
+        "updatedAt": "2026-07-07T17:01:03.902Z",
+        "inputs": {
+          "contextProblem": "This appears to be a placeholder or test idea rather than a fully formed product opportunity. The immediate opportunity is to decide whether it should become a real planning item or be treated as planning-system test data.",
+          "contextAudience": "Workflow Cannon maintainers and operators managing the Ideas backlog.",
+          "valueImpact": 2,
+          "valueReach": 2,
+          "valueUrgency": 1,
+          "valueStrategicFit": 2,
+          "riskTechnical": 2,
+          "riskOperational": 1,
+          "riskUnknowns": 9,
+          "riskReversibility": 1,
+          "tShirtSize": "XS",
+          "complexity": 2,
+          "confidenceEvidence": 2,
+          "confidenceExpertise": 8,
+          "confidenceClarity": 2,
+          "unknownsNotes": "The main unknown is whether this row represents a real operator need or test data. The current title is not enough to infer desired behavior, success criteria, or roadmap fit. Planning should first clarify intent before creating any execution tasks.",
+          "alternativesConsidered": "Alternative 1: do nothing and leave the idea open; this keeps noise in the backlog. Alternative 2: delete or close it as test data; that may be right after maintainer confirmation. Preferred next step: transition to planning with a low-priority cleanup/clarification plan so the row can be resolved deliberately.",
+          "sessionNotes": "Agent-led brainstorm completed from available evidence only. Treat this as a low-priority clarification item unless the operator supplies a real problem statement."
+        },
+        "scores": {
+          "value": 1.8,
+          "risk": 3.35,
+          "effort": 2,
+          "confidence": 3.8,
+          "priority": 42,
+          "tShirtSize": "XS",
+          "complexity": 2
+        },
+        "completedAt": "2026-07-07T17:01:02Z",
+        "synthesized": {
+          "value": 1.8,
+          "risk": 3.35,
+          "effort": 2,
+          "confidence": 3.8,
+          "priority": 42,
+          "tShirtSize": "XS",
+          "complexity": 2
+        }
+      }
+    ],
+    "activeSessionId": "bsess-8b93e2f7-072e-4ad3-8cab-4598a1d91275",
+    "synthesis": {
+      "value": 1.8,
+      "risk": 3.35,
+      "effort": 2,
+      "confidence": 3.8,
+      "priority": 42,
+      "tShirtSize": "XS",
+      "complexity": 2
+    }
+  },
+  "plan": {
+    "title": "Clarify or retire placeholder idea I007",
+    "summary": "I007 appears to be placeholder or test data rather than a fully formed operator idea. Planning should first clarify whether there is a real problem statement; if not, resolve the row as backlog cleanup instead of creating execution work.",
+    "wbsRowCount": 0
+  }
+}

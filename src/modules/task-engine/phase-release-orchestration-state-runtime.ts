@@ -428,7 +428,7 @@ function nextActionForVerdict(verdict: PhaseReleasePathVerdict): string {
     case "release-running":
       return "Continue release execution on main/release automation and monitor checks.";
     case "post-release":
-      return "Phase already rolled out; use release status/history commands for follow-up only.";
+      return "Phase shipped; capture follow-up evidence and clear workspace current phase if still set (playbook §6b).";
     default:
       return "Proceed with phase closeout and release sequence.";
   }
@@ -557,9 +557,20 @@ function summarizeMissingArtifacts(
   }));
 }
 
+function buildUnsetWorkspacePhaseRef(phaseKey: string | null): PhaseReleaseCommandRef {
+  return {
+    command: "update-workspace-status",
+    commandLine:
+      "pnpm exec wk run phase-status '{}' && pnpm exec wk run update-workspace-status " +
+      `'{"expectedWorkspaceRevision":<rev>,"currentKitPhase":null,"activeFocus":"Phase ${phaseKey ?? "<N>"} complete — no active workspace phase","blockers":[],"pendingDecisions":[],"nextAgentActions":["Pick the next phase from the Phase Roster when you are ready to deliver."],"command":"phase-closeout-complete"}'`,
+    instructionPath: "src/modules/task-engine/instructions/update-workspace-status.md"
+  };
+}
+
 function buildNextActionRef(
   verdict: PhaseReleasePathVerdict,
-  phaseKey: string | null
+  phaseKey: string | null,
+  options?: { closeoutReady?: boolean; workspaceStillOnPhase?: boolean }
 ): { summary: string; ref: PhaseReleaseCommandRef } {
   switch (verdict) {
     case "blocked":
@@ -578,11 +589,24 @@ function buildNextActionRef(
         ref: buildCommandRef("phase-delivery-preflight", phaseKey)
       };
     case "release-running":
+      if (options?.closeoutReady && options?.workspaceStillOnPhase) {
+        return {
+          summary:
+            "Release is in flight or on main; after publish and evidence, unset workspace current phase (playbook §6b).",
+          ref: buildUnsetWorkspacePhaseRef(phaseKey)
+        };
+      }
       return {
         summary: "Monitor the in-flight release path and branch state.",
         ref: buildCommandRef("release-status", phaseKey)
       };
     case "post-release":
+      if (options?.workspaceStillOnPhase) {
+        return {
+          summary: "Unset workspace current phase so the workspace is not still in the shipped phase.",
+          ref: buildUnsetWorkspacePhaseRef(phaseKey)
+        };
+      }
       return {
         summary: "Use release status/history commands for post-release follow-up.",
         ref: buildCommandRef("release-status", phaseKey)
@@ -733,7 +757,15 @@ export function buildPhaseReleaseOrchestrationState(args: {
     preflightViolationCount: preflight.violationCount,
     rolledOut: args.rolledOut
   });
-  const nextActionRef = buildNextActionRef(verdict, args.phaseKey);
+  const workspaceStillOnPhase =
+    args.phaseKey !== null &&
+    args.currentKitPhase !== null &&
+    parseLeadingPhaseOrdinal(args.currentKitPhase) === parseLeadingPhaseOrdinal(args.phaseKey);
+  const closeoutReady = readiness.passed && preflight.violationCount === 0;
+  const nextActionRef = buildNextActionRef(verdict, args.phaseKey, {
+    closeoutReady,
+    workspaceStillOnPhase
+  });
   const readinessRemainingTop = flattenRemainingTop(readiness.remainingByStatus);
   const missingArtifactsTop = summarizeMissingArtifacts(preflight.violations);
   const publishSafety = buildPublishSafety({

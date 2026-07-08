@@ -5,7 +5,7 @@
 
 This file is an **ordered checklist**. Canonical prose lives in the linked docs — do not treat this as a fork of [`RELEASING.md`](../RELEASING.md).
 
-**Agent sessions:** Attach this playbook (`@` the path) when closing a phase so steps stay in context. After publish and evidence (**§6**), end with **§7** using the copy-paste template — placeholders only; do not paste long governance asides into the template body.
+**Agent sessions:** Attach this playbook (`@` the path) when closing a phase so steps stay in context. After publish and evidence (**§6**), **unset the workspace current phase** (**§6b**), then end with **§7** using the copy-paste template — placeholders only; do not paste long governance asides into the template body.
 
 ## 0) Attach context
 
@@ -139,7 +139,38 @@ Tier **B** `workspace-kit run` commands (non-transition) also require JSON `poli
 
 - Capture and cite `workspace-kit run release-evidence-manifest` output per [`RELEASING.md`](../RELEASING.md) → **Required release evidence**.
 - Update maintainer snapshots (for example [`docs/maintainers/ROADMAP.md`](../ROADMAP.md), [`docs/maintainers/data/workspace-kit-status.yaml`](../data/workspace-kit-status.yaml)) when the phase closeout task requires it.
-- Bump **`current_kit_phase`** / **`next_kit_phase`** via **`workspace-kit run set-current-phase`** so SQLite stays canonical while config hints and the non-authoritative export stay aligned; use **`phase-status`** to verify drift before and after — see [`WORKSPACE-KIT-SESSION.md`](../WORKSPACE-KIT-SESSION.md) → **Workspace phase snapshot**.
+
+## 6b) Unset workspace current phase (final agent mutation)
+
+After publish and evidence are recorded, **clear the active workspace phase** so operators and agents are not still “in” the shipped phase. Use **`update-workspace-status`** with **`currentKitPhase: null`** — **not** **`set-current-phase`** (that command sets a non-empty phase only). This matches dashboard **Mark Phase Complete** and clears the config phase hint plus the non-authoritative DB export.
+
+1. Read revision:
+
+```bash
+pnpm exec wk run phase-status '{}'
+```
+
+2. Unset **`current_kit_phase`** (replace **`<rev>`** and **`<N>`**; preserve **`next_kit_phase`** when the roster already queues the next phase — omit **`nextKitPhase`** unless you intentionally clear it):
+
+```bash
+pnpm exec wk run update-workspace-status '{"expectedWorkspaceRevision":<rev>,"currentKitPhase":null,"activeFocus":"Phase <N> complete — no active workspace phase","blockers":[],"pendingDecisions":[],"nextAgentActions":["Pick the next phase from the Phase Roster when you are ready to deliver."],"command":"phase-closeout-complete"}'
+```
+
+When **`next_kit_phase`** is set and should stay queued, use dashboard-aligned copy instead:
+
+```bash
+pnpm exec wk run update-workspace-status '{"expectedWorkspaceRevision":<rev>,"currentKitPhase":null,"activeFocus":"Phase <N> complete — use roster Start when ready for Phase <N+1>","blockers":[],"pendingDecisions":[],"nextAgentActions":["Start Phase <N+1> from the Phase Roster when you are ready to deliver"],"command":"phase-closeout-complete"}'
+```
+
+3. Verify **`canonicalPhase.canonicalPhaseKey`** is **`null`**:
+
+```bash
+pnpm exec wk run phase-status '{}'
+```
+
+Success code: **`workspace-phase-cleared`**. See [`WORKSPACE-KIT-SESSION.md`](../WORKSPACE-KIT-SESSION.md) → **Workspace phase snapshot** and [`.ai/runbooks/workspace-status-sqlite.md`](../runbooks/workspace-status-sqlite.md).
+
+**Do not** advance **`current_kit_phase`** to the next phase here — starting the next phase belongs on the Phase Roster (**`set-current-phase`**) when delivery intentionally resumes.
 
 ## 7) Phase delivery summary (agent wrap-up)
 

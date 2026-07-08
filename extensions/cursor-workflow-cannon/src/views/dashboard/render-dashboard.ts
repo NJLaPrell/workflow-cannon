@@ -33,6 +33,7 @@ import {
   PLAN_STATE_BUCKETS,
   bucketPlanRowsByDisplayState,
   derivePlanArtifactDisplayState,
+  filterPlanArtifactRowsForRollup,
   groupPlanRowsByTitle,
   planArtifactDisplayStateMeta,
   planArtifactEffectiveStatus,
@@ -4704,6 +4705,19 @@ function renderPlanArtifactExecutionLinkagesTable(
 }
 
 /** Reuses the same PlanArtifact lifecycle actions as the Ideas rows, keyed off the plan's own status (not an idea's). */
+function renderPlanArtifactViewTasksButton(row: Record<string, unknown>): string {
+  const phaseKey = String(row.phaseKey ?? "").trim();
+  const tasksGenerated = row.tasksGenerated === true;
+  return phaseKey.length > 0 && tasksGenerated
+    ? ideaPlanButton("View tasks", "open-queue-for-phase", ` data-wc-phase-key="${escapeHtmlAttr(phaseKey)}"`)
+    : ideaPlanButton("View tasks", "open-queue-for-phase", "", {
+        disabled: true,
+        title: tasksGenerated
+          ? "Phase key unavailable for this finalized plan."
+          : "No tasks found for this plan yet."
+      });
+}
+
 function renderPlanArtifactCardActions(
   row: Record<string, unknown>,
   effectiveStatusRaw: string,
@@ -4765,7 +4779,10 @@ function renderPlanArtifactCardActions(
         secondaryBrainstorm
       );
     }
-    case "accepted":
+    case "accepted": {
+      if (row.tasksGenerated === true) {
+        return renderPlanArtifactViewTasksButton(row) + viewPlanButton + secondaryBrainstorm;
+      }
       return (
         ideaPlanButton(
           "Finalize",
@@ -4776,17 +4793,9 @@ function renderPlanArtifactCardActions(
         viewPlanButton +
         secondaryBrainstorm
       );
+    }
     case "finalized": {
-      const phaseKey = String(row.phaseKey ?? "").trim();
-      const tasksGenerated = row.tasksGenerated === true;
-      const viewTasksButton =
-        phaseKey.length > 0 && tasksGenerated
-          ? ideaPlanButton("View tasks", "open-queue-for-phase", ` data-wc-phase-key="${escapeHtmlAttr(phaseKey)}"`)
-          : ideaPlanButton("View tasks", "open-queue-for-phase", "", {
-              disabled: true,
-              title: tasksGenerated ? "Phase key unavailable for this finalized plan." : "No tasks found for this plan yet."
-            });
-      return viewTasksButton + viewPlanButton + secondaryBrainstorm;
+      return renderPlanArtifactViewTasksButton(row) + viewPlanButton + secondaryBrainstorm;
     }
     case "superseded":
       return viewPlanButton;
@@ -5075,7 +5084,8 @@ function renderPlanArtifactsSectionInnerHtml(
     return '<section class="dash-card wc-plan-artifacts-section" aria-label="Plans"><p><b>Plans</b></p><p class="muted">No plans yet.</p></section>';
   }
 
-  const rowsByState = bucketPlanRowsByDisplayState(allRows);
+  const rollupRows = filterPlanArtifactRowsForRollup(allRows);
+  const rowsByState = bucketPlanRowsByDisplayState(rollupRows);
   const stateBucketsHtml = PLAN_STATE_BUCKETS.map((bucket) => {
     const rows = rowsByState.get(bucket.key) ?? [];
     if (rows.length === 0) {

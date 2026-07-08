@@ -357,6 +357,14 @@ pnpm exec wk run set-current-phase '{"currentKitPhase":"72","nextKitPhase":"73",
 pnpm exec wk run set-current-phase '{"currentKitPhase":"72","nextKitPhase":"73","dryRun":true}'
 ```
 
+**Copy-paste — unset workspace current phase after phase publish (playbook §6b; not `set-current-phase`):**
+
+```bash
+pnpm exec wk run phase-status '{}'
+pnpm exec wk run update-workspace-status '{"expectedWorkspaceRevision":1,"currentKitPhase":null,"activeFocus":"Phase 72 complete — no active workspace phase","blockers":[],"pendingDecisions":[],"nextAgentActions":["Pick the next phase from the Phase Roster when you are ready to deliver."],"command":"phase-closeout-complete"}'
+pnpm exec wk run phase-status '{}'
+```
+
 ## Phase kickoff readiness (Tier C)
 
 Read-only aggregate audit **before** phase rollover or delivery start. Composes planning staleness, git integration branch, task scope paths, validation recommendations, and doctor contract slices. **`passed`** is `false` only when a finding has **`severity: "block"`** (for example missing integration branch when `mode` is **`enforce`**). No `policyApproval`; no task-store or workspace-status mutations.

@@ -76,6 +76,20 @@ test("PlanArtifact dashboard happy path stays UI-driven without raw CLI prompts"
   assert.match(acceptedHtml, /data-wc-action="plan-artifact-finalize"/);
   assert.match(acceptedHtml, />Finalize<\/button>/);
   assert.doesNotMatch(acceptedHtml, RAW_CLI_INVOCATION);
+
+  const acceptedWithTasksHtml = renderDashboardRootInnerHtml(
+    summaryWithPlan("accepted", {
+      current: {
+        tasksGenerated: true,
+        executed: false,
+        phaseKey: "143"
+      }
+    })
+  );
+  assert.doesNotMatch(acceptedWithTasksHtml, /data-wc-action="plan-artifact-finalize"/);
+  assert.doesNotMatch(acceptedWithTasksHtml, />Finalize<\/button>/);
+  assert.match(acceptedWithTasksHtml, /data-wc-action="open-queue-for-phase"/);
+  assert.match(acceptedWithTasksHtml, /data-wc-phase-key="143"/);
 });
 
 test("planner-chat prefill prompt avoids copy-paste wk run invocations", () => {
