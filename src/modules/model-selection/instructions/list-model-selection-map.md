@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=list-model-selection-map|module=model-selection|schema_only=pnpm exec wk run list-model-selection-map --schema-only '{}'
+-->
+
 # list-model-selection-map
 
 Read and summarize the active model-selection map without running a selection query. Useful for agents that need to understand which models are available and their tiers before making dispatch decisions.

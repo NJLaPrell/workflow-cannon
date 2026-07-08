@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-02T10:43:47.468Z",
+  "generatedAt": "2026-07-08T06:30:15.293Z",
   "commands": [
     {
       "name": "accept-improvement",
@@ -868,6 +868,11 @@
       "moduleId": "project-memory"
     },
     {
+      "name": "list-model-selection-map",
+      "path": ".ai/agent-cli-snippets/by-command/list-model-selection-map.json",
+      "moduleId": "model-selection"
+    },
+    {
       "name": "list-module-states",
       "path": ".ai/agent-cli-snippets/by-command/list-module-states.json",
       "moduleId": "task-engine"
@@ -1041,6 +1046,11 @@
       "name": "rebuild-task-state-cache",
       "path": ".ai/agent-cli-snippets/by-command/rebuild-task-state-cache.json",
       "moduleId": "task-engine"
+    },
+    {
+      "name": "recommend-model",
+      "path": ".ai/agent-cli-snippets/by-command/recommend-model.json",
+      "moduleId": "model-selection"
     },
     {
       "name": "recommend-skills",

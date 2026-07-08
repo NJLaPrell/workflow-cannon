@@ -1,23 +1,23 @@
 {
   "ok": true,
   "code": "run-args-schema",
-  "command": "list-memory",
+  "command": "list-model-selection-map",
   "schema": {
     "type": "object",
     "additionalProperties": true,
-    "description": "Permissive fallback args schema for 'list-memory'. Use instructionPath for command-specific field guidance until a stricter schema is added."
+    "description": "Permissive fallback args schema for 'list-model-selection-map'. Use instructionPath for command-specific field guidance until a stricter schema is added."
   },
   "schemaSource": "manifest-permissive-fallback",
   "sampleArgs": {},
   "examples": [
     {
       "description": "Minimal argv example",
-      "argv": "workspace-kit run list-memory '{}'"
+      "argv": "workspace-kit run list-model-selection-map '{}'"
     }
   ],
-  "instructionPath": "src/modules/project-memory/instructions/list-memory.md",
-  "moduleId": "project-memory",
-  "description": "List governed project-memory records (draft, approved, pruned).",
+  "instructionPath": "src/modules/model-selection/instructions/list-model-selection-map.md",
+  "moduleId": "model-selection",
+  "description": "List all models in the active model-selection map with tiers, cost bands, and defaults.",
   "policy": {
     "sensitivity": "non-sensitive",
     "operationId": null,
@@ -31,12 +31,12 @@
     "clientMutationId": false
   },
   "responseTemplate": {
-    "defaultResponseTemplateId": "default"
+    "defaultResponseTemplateId": null
   },
   "remediationContract": ".ai/runbooks/agent-task-engine-ergonomics.md",
   "discovery": {
     "listCommands": "pnpm exec wk run --list-commands",
     "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
   },
-  "invocationId": "d1ec9920-da8b-48a4-bcbf-12b985b33134"
+  "invocationId": "6a51a347-4768-492a-bf9b-44c133fcd276"
 }
