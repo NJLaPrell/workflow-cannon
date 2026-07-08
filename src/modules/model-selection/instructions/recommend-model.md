@@ -1,3 +1,7 @@
+<!--
+agentCapsule|v=1|command=recommend-model|module=model-selection|schema_only=pnpm exec wk run recommend-model --schema-only '{}'
+-->
+
 # recommend-model
 
 Select the cheapest adequate model slug for a Cursor Task-tool subagent dispatch based on task scope signals.

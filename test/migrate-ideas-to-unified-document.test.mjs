@@ -13,6 +13,7 @@ import { describe, it } from "node:test";
 import { ideasModule, planningModule } from "../dist/index.js";
 import { getPlanArtifactStoragePaths, writePlanArtifactVersion } from "../dist/core/planning/plan-artifact-storage.js";
 import { isIdeaPlanDocument, readIdeaPlanArtifact } from "../dist/modules/ideas/idea-plan-artifact-storage.js";
+import { createIdea } from "../dist/modules/ideas/idea-store.js";
 import {
   buildIdeaOnlyUnifiedDocument,
   mapLifecycleToUnifiedStatus,
@@ -77,23 +78,39 @@ describe("migrate-ideas-to-unified-document", () => {
 
   it("dry-run previews idea-only promotion without writes", async () => {
     const workspace = await tmpWorkspace();
-    const created = await ideasModule.onCommand(
-      {
-        name: "create-idea",
-        args: { title: "Migrate me", policyApproval: policyApproval() }
-      },
-      ctx(workspace)
-    );
-    assert.equal(created.ok, true);
-    const ideaId = created.data.idea.id;
     const db = await openDb(workspace);
+    // Simulate a legacy idea row persisted before create-idea auto-linked a unified
+    // document (bypasses the ideasModule command, which now auto-creates one).
+    const idea = createIdea(db, { title: "Migrate me" }, new Date().toISOString());
 
     const preview = migrateIdeasToUnifiedDocument({ workspacePath: workspace, db, dryRun: true });
     assert.equal(preview.dataLossReported, false);
     assert.equal(preview.outcomes.length, 1);
     assert.equal(preview.outcomes[0].action, "created");
-    assert.equal(preview.outcomes[0].ideaId, ideaId);
+    assert.equal(preview.outcomes[0].ideaId, idea.id);
     assert.equal(readIdeaPlanArtifact(workspace, preview.outcomes[0].planRef), null);
+  });
+
+  it("create-idea already links a unified document, so migration reports already-unified", async () => {
+    const workspace = await tmpWorkspace();
+    const created = await ideasModule.onCommand(
+      {
+        name: "create-idea",
+        args: { title: "Fresh idea", policyApproval: policyApproval() }
+      },
+      ctx(workspace)
+    );
+    assert.equal(created.ok, true);
+    const ideaId = created.data.idea.id;
+    assert.ok(created.data.idea.linkedPlanArtifact);
+    const db = await openDb(workspace);
+
+    const preview = migrateIdeasToUnifiedDocument({ workspacePath: workspace, db, dryRun: true });
+    assert.equal(preview.dataLossReported, false);
+    assert.equal(preview.outcomes.length, 1);
+    assert.equal(preview.outcomes[0].action, "already-unified");
+    assert.equal(preview.outcomes[0].ideaId, ideaId);
+    assert.equal(preview.outcomes[0].planRef, created.data.idea.linkedPlanArtifact);
   });
 
   it("applies migration for idea-only rows and links linkedPlanArtifact", async () => {

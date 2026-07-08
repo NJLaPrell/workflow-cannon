@@ -12,6 +12,7 @@ import { requireIdeaPlanAgentDirective } from "./idea-plan-state-schema-guard.js
 import type { IdeaPlanDocument, IdeaPlanPlanSection } from "./idea-plan-types.js";
 import { getIdea, isIdeaId, updateIdea, type IdeaRecord } from "./idea-store.js";
 import { readActiveDraftPlanArtifact } from "./idea-planning-metadata.js";
+import { buildPlanSeedFromBrainstorm } from "./brainstorm-plan-seed.js";
 
 export type IdeaPlanPlanningPayload = Pick<
   PlanArtifactV1,
@@ -249,7 +250,26 @@ export function initializeIdeaPlanPlanningSectionForStart(
 
   let updatedIdea = idea;
   try {
-    const nextDocument = ensureIdeaPlanPlanningSection(existing, idea, workspacePath, nowIso);
+    let nextDocument = ensureIdeaPlanPlanningSection(existing, idea, workspacePath, nowIso);
+    if (existing.brainstorm?.sessions?.length) {
+      const seed = buildPlanSeedFromBrainstorm({
+        title: idea.title,
+        brainstorm: existing.brainstorm,
+        fallbackSummary: nextDocument.plan?.summary
+      });
+      const seededPayload = seed.planningPayload;
+      nextDocument = {
+        ...nextDocument,
+        plan: {
+          ...nextDocument.plan!,
+          summary: seed.planSummary
+        },
+        ...(seededPayload.goals ? { goals: seededPayload.goals } : {}),
+        ...(seededPayload.userStories ? { userStories: seededPayload.userStories } : {}),
+        ...(seededPayload.openQuestions ? { openQuestions: seededPayload.openQuestions } : {}),
+        ...(seededPayload.assumptions ? { assumptions: seededPayload.assumptions } : {})
+      } as IdeaPlanDocument;
+    }
     const unchanged =
       nextDocument.status === existing.status &&
       nextDocument.plan?.title === existing.plan?.title &&

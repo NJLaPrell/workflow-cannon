@@ -85,8 +85,9 @@ Example summary shape:
 ## 6) Complete And Hand Off
 
 1. When all required questions are answered and scores are computed, set `completedAt` on the session via **`update-brainstorm-session`** if the operator is done with this round.
-2. Run **`complete-brainstorm`** to validate the brainstorm section and transition **`brainstorming` → `planning`**, initializing the `plan` section. Command contract: [`complete-brainstorm.md`](../../src/modules/ideas/instructions/complete-brainstorm.md).
-3. Summarize what was captured and offer **`planner-chat`** for structured WBS authoring — attach [`.ai/playbooks/planner-chat.md`](./planner-chat.md) and follow the planning state schema [`schemas/ideas/states/planning.schema.json`](../../schemas/ideas/states/planning.schema.json).
+2. Stop after the session update, summarize what was captured, and ask whether the operator wants another brainstorm session or wants to start planning.
+3. Run **`complete-brainstorm`** only after the operator explicitly confirms brainstorming is finished; pass `operatorConfirmedBrainstormComplete:true` to validate the brainstorm section and transition **`brainstorming` → `planning`**. Command contract: [`complete-brainstorm.md`](../../src/modules/ideas/instructions/complete-brainstorm.md).
+4. After the transition, offer **`planner-chat`** for structured WBS authoring — attach [`.ai/playbooks/planner-chat.md`](./planner-chat.md) and follow the planning state schema [`schemas/ideas/states/planning.schema.json`](../../schemas/ideas/states/planning.schema.json).
 
 ## 7) Error Recovery
 

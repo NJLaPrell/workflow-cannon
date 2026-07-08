@@ -7,6 +7,8 @@ export type IdeaPlanningPromptInput = {
   previousPlanArtifacts?: string[];
   planningSessionId?: string;
   brainstormDigest?: string;
+  canonicalPhaseKey?: string;
+  currentKitPhase?: string | null;
 };
 
 function trimmed(value: string | undefined): string | undefined {
@@ -67,6 +69,9 @@ export function buildIdeaPlanningPrompt(input: IdeaPlanningPromptInput): string 
     "",
     ideaId ? `Source idea id: **${ideaId}**` : undefined,
     title ? `Idea title: **${title}**` : undefined,
+    input.canonicalPhaseKey
+      ? `Canonical workspace phase: **${input.canonicalPhaseKey}**${input.currentKitPhase ? ` (workspace status: ${input.currentKitPhase})` : ""}`
+      : undefined,
     note ? `Idea note: ${note}` : undefined,
     input.brainstormDigest ? `Brainstorm digest:\n${input.brainstormDigest}` : undefined,
     planningSessionId ? `Planning session: **${planningSessionId}** (active).` : undefined,

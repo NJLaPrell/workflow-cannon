@@ -5,6 +5,8 @@ import { openPlanningStores } from "../../core/planning/index.js";
 import { attachPolicyMeta } from "../task-engine/attach-planning-response-meta.js";
 import { planningGenPolicyGate } from "../task-engine/planning-generation-gate.js";
 import { digestPayload, readIdempotencyValue } from "../task-engine/mutation-utils.js";
+import { resolveCanonicalPhase } from "../task-engine/phase-resolution.js";
+import { readWorkspaceStatusSnapshotFromDual } from "../task-engine/persistence/workspace-status-store.js";
 import { TaskEngineError } from "../task-engine/transitions.js";
 import { buildIdeaPlanningPrompt } from "./build-idea-planning-prompt.js";
 import { buildBrainstormDigest } from "./brainstorm-plan-seed.js";
@@ -32,6 +34,12 @@ export type StartIdeaPlanningResultV1 = {
   activeDraftPlanArtifact?: string;
   previousPlanArtifacts: string[];
   replayed?: boolean;
+  planningPhaseContext?: {
+    schemaVersion: 1;
+    canonicalPhaseKey: string | null;
+    currentKitPhase: string | null;
+    source: string;
+  };
 };
 
 type StartIdeaPlanningIdempotencyStateV1 = {
@@ -118,6 +126,8 @@ function buildPlanningPromptForIdea(input: {
   lineage: ReturnType<typeof collectPlanLineage>;
   ideaPlan?: ReturnType<typeof initializeIdeaPlanPlanningSectionForStart>["ideaPlan"];
   planRef?: string;
+  canonicalPhaseKey?: string | null;
+  currentKitPhase?: string | null;
 }): string {
   return buildIdeaPlanningPrompt({
     ideaId: input.idea.id,
@@ -125,6 +135,8 @@ function buildPlanningPromptForIdea(input: {
     note: input.idea.note,
     planningSessionId: input.planningSessionId,
     brainstormDigest: brainstormDigestForPlanningStart(input.workspacePath, input.planRef, input.ideaPlan),
+    canonicalPhaseKey: input.canonicalPhaseKey ?? undefined,
+    currentKitPhase: input.currentKitPhase ?? null,
     ...input.lineage
   });
 }
@@ -155,6 +167,7 @@ function buildResult(args: {
   prompt: string;
   session: PlanningChatSessionRecord;
   lineage: ReturnType<typeof collectPlanLineage>;
+  planningPhaseContext?: StartIdeaPlanningResultV1["planningPhaseContext"];
   replayed?: boolean;
 }): StartIdeaPlanningResultV1 {
   return {
@@ -167,6 +180,7 @@ function buildResult(args: {
     ...(args.lineage.linkedPlanArtifact ? { linkedPlanArtifact: args.lineage.linkedPlanArtifact } : {}),
     ...(args.lineage.activeDraftPlanArtifact ? { activeDraftPlanArtifact: args.lineage.activeDraftPlanArtifact } : {}),
     previousPlanArtifacts: args.lineage.previousPlanArtifacts,
+    ...(args.planningPhaseContext ? { planningPhaseContext: args.planningPhaseContext } : {}),
     ...(args.replayed ? { replayed: true } : {})
   };
 }
@@ -255,6 +269,17 @@ export async function runStartIdeaPlanning(
 
   const workspacePath = ctx.workspacePath ?? process.cwd();
   const nowIso = new Date().toISOString();
+  const workspaceStatus = readWorkspaceStatusSnapshotFromDual(planning.sqliteDual);
+  const phaseRes = resolveCanonicalPhase({
+    effectiveConfig: ctx.effectiveConfig as Record<string, unknown> | undefined,
+    workspaceStatus
+  });
+  const planningPhaseContext: StartIdeaPlanningResultV1["planningPhaseContext"] = {
+    schemaVersion: 1,
+    canonicalPhaseKey: phaseRes.canonicalPhaseKey,
+    currentKitPhase: workspaceStatus?.currentKitPhase ?? null,
+    source: phaseRes.source
+  };
   const initialized = initializeIdeaPlanPlanningSectionForStart(workspacePath, db, idea, nowIso);
   const workingIdea = initialized.idea;
   const lineage = collectPlanLineage(db, workingIdea);
@@ -269,7 +294,9 @@ export async function runStartIdeaPlanning(
         planningSessionId: existingSession.sessionId,
         lineage,
         ideaPlan: initialized.ideaPlan,
-        planRef: initialized.planRef ?? workingIdea.linkedPlanArtifact
+        planRef: initialized.planRef ?? workingIdea.linkedPlanArtifact,
+        canonicalPhaseKey: phaseRes.canonicalPhaseKey,
+        currentKitPhase: workspaceStatus?.currentKitPhase ?? null
       });
     let updatedIdea = workingIdea;
     let session = existingSession;
@@ -291,7 +318,8 @@ export async function runStartIdeaPlanning(
       mode: "resumed",
       prompt,
       session,
-      lineage
+      lineage,
+      planningPhaseContext
     });
     if (clientMutationId) {
       writeIdempotencyRecord(
@@ -318,7 +346,9 @@ export async function runStartIdeaPlanning(
     planningSessionId: sessionId,
     lineage,
     ideaPlan: initialized.ideaPlan,
-    planRef: initialized.planRef ?? workingIdea.linkedPlanArtifact
+    planRef: initialized.planRef ?? workingIdea.linkedPlanArtifact,
+    canonicalPhaseKey: phaseRes.canonicalPhaseKey,
+    currentKitPhase: workspaceStatus?.currentKitPhase ?? null
   });
 
   let updatedIdea = workingIdea;
@@ -354,7 +384,8 @@ export async function runStartIdeaPlanning(
     mode: "started",
     prompt,
     session,
-    lineage
+    lineage,
+    planningPhaseContext
   });
 
   if (clientMutationId) {

@@ -8,6 +8,10 @@ This root file is intentionally pointer-only to avoid split release history.
 
 - See `docs/maintainers/CHANGELOG.md` for all release notes, migration notes, and historical entries.
 
+## [1.0.4] - 2026-07-08
+
+- See `docs/maintainers/CHANGELOG.md` for release notes, migration notes, and historical entries.
+
 ## [1.0.3] - 2026-07-02
 
 - **Phase 140 — Unified IdeaPlan:** One document carries an idea from first brainstorm through planning, review, acceptance, and delivery. Dashboard Brainstorm/Plan actions, scored brainstorming rollups, plan document generation, safe migration, and feature-flag rollout. [Release notes](https://github.com/NJLaPrell/workflow-cannon/releases/tag/v1.0.3) · See `docs/maintainers/CHANGELOG.md` for technical detail.

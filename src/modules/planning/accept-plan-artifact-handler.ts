@@ -585,7 +585,10 @@ export async function runAcceptPlanArtifact(
     approvedBy: approvalRecord.approvedBy,
     planRef: approvalRecord.planRef,
     reviewSummary,
-    ...(approvalRecord.openQuestionsAccepted ? { openQuestionsAccepted: approvalRecord.openQuestionsAccepted } : {})
+    ...(approvalRecord.openQuestionsAccepted ? { openQuestionsAccepted: approvalRecord.openQuestionsAccepted } : {}),
+    ...(reviewedVersionGate.reviewRecord.profile === "execution-blueprint"
+      ? { executionBlueprint: true }
+      : {})
   };
 
   let written;
