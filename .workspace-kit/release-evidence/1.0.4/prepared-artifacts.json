@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 1,
+  "fragmentKind": "preparedArtifacts",
+  "releaseVersion": "1.0.4",
+  "date": "2026-07-08",
+  "createdAt": "2026-07-08T06:20:44.566Z",
+  "changedArtifacts": [
+    {
+      "path": "package.json",
+      "refs": [
+        {
+          "kind": "artifact",
+          "value": "package.json"
+        },
+        {
+          "kind": "command",
+          "value": "pnpm exec wk run prepare-release-artifacts '{\"version\":\"1.0.4\",\"date\":\"2026-07-08\"}'",
+          "instructionPath": "src/modules/task-engine/instructions/prepare-release-artifacts.md"
+        }
+      ],
+      "replacements": [
+        {
+          "description": "package version field",
+          "oldText": "\"version\": \"1.0.3\"",
+          "newText": "\"version\": \"1.0.4\""
+        }
+      ]
+    },
+    {
+      "path": "CHANGELOG.md",
+      "refs": [
+        {
+          "kind": "artifact",
+          "value": "CHANGELOG.md"
+        },
+        {
+          "kind": "command",
+          "value": "pnpm exec wk run prepare-release-artifacts '{\"version\":\"1.0.4\",\"date\":\"2026-07-08\"}'",
+          "instructionPath": "src/modules/task-engine/instructions/prepare-release-artifacts.md"
+        }
+      ],
+      "replacements": [
+        {
+          "description": "insert root changelog release pointer",
+          "oldText": "",
+          "newText": "## [1.0.4] - 2026-07-08\n\n- See `docs/maintainers/CHANGELOG.md` for release notes, migration notes, and historical entries.\n\n"
+        }
+      ]
+    },
+    {
+      "path": "docs/maintainers/CHANGELOG.md",
+      "refs": [
+        {
+          "kind": "artifact",
+          "value": "docs/maintainers/CHANGELOG.md"
+        },
+        {
+          "kind": "command",
+          "value": "pnpm exec wk run prepare-release-artifacts '{\"version\":\"1.0.4\",\"date\":\"2026-07-08\"}'",
+          "instructionPath": "src/modules/task-engine/instructions/prepare-release-artifacts.md"
+        }
+      ],
+      "replacements": [
+        {
+          "description": "roll maintainer changelog unreleased notes into a release section",
+          "oldText": "\n\n",
+          "newText": "\n\n## [1.0.4] - 2026-07-08\n\n"
+        }
+      ]
+    },
+    {
+      "path": "schemas/task-engine-run-contracts.schema.json",
+      "refs": [
+        {
+          "kind": "artifact",
+          "value": "schemas/task-engine-run-contracts.schema.json"
+        },
+        {
+          "kind": "command",
+          "value": "pnpm exec wk run prepare-release-artifacts '{\"version\":\"1.0.4\",\"date\":\"2026-07-08\"}'",
+          "instructionPath": "src/modules/task-engine/instructions/prepare-release-artifacts.md"
+        }
+      ],
+      "replacements": [
+        {
+          "description": "schema packageVersion const",
+          "oldText": "\"packageVersion\": {\n      \"const\": \"1.0.3\"",
+          "newText": "\"packageVersion\": {\n      \"const\": \"1.0.4\""
+        }
+      ]
+    },
+    {
+      "path": "schemas/pilot-run-args.snapshot.json",
+      "refs": [
+        {
+          "kind": "artifact",
+          "value": "schemas/pilot-run-args.snapshot.json"
+        },
+        {
+          "kind": "command",
+          "value": "pnpm exec wk run prepare-release-artifacts '{\"version\":\"1.0.4\",\"date\":\"2026-07-08\"}'",
+          "instructionPath": "src/modules/task-engine/instructions/prepare-release-artifacts.md"
+        }
+      ],
+      "replacements": [
+        {
+          "description": "pilot snapshot sourceSchemaPackageVersion",
+          "oldText": "\"sourceSchemaPackageVersion\": \"1.0.3\"",
+          "newText": "\"sourceSchemaPackageVersion\": \"1.0.4\""
+        }
+      ]
+    }
+  ]
+}
