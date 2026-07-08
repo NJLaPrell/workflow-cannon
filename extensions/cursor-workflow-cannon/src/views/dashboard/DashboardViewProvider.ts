@@ -6418,6 +6418,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       padding: 6px 12px;
       border-top: 2px solid var(--wc-accent);
       border-bottom: 1px solid var(--wc-border);
+      border-radius: 0 0 6px 6px;
       background: var(--wc-surface);
       transition: background 0.5s ease;
     }
@@ -8300,11 +8301,13 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       transition: border-color 0.1s, background 0.1s;
       width: 100%;
     }
+    button.wc-stat-pill { cursor: pointer; }
     button.wc-stat-pill:hover { background: var(--vscode-toolbar-hoverBackground, rgba(127,127,127,.1)); }
     button.wc-pill-ready:hover { border-color: var(--vscode-testing-iconPassed, #4ec9b0); }
     button.wc-pill-proposed:hover { border-color: var(--vscode-textLink-foreground, #4fc1ff); }
     button.wc-pill-blocked:hover { border-color: var(--vscode-editorWarning-foreground, #cca700); }
     button.wc-pill-done:hover { border-color: var(--vscode-foreground); }
+    button.wc-pill-human:hover { border-color: var(--vscode-editorWarning-foreground, #cca700); }
     /* ── Empty section muting ── */
     details.status-section.wc-section-empty {
       opacity: 0.32;

@@ -556,7 +556,7 @@ export function renderDashboardTabBarHtml(args?: {
   const tabs: Array<{ id: DashboardTabId; icon: string; label: string; badge?: string }> = [
     { id: "overview", icon: "◎", label: "Overview" },
     { id: "planning", icon: "⬡", label: "Planning" },
-    { id: "task-engine", icon: "▤", label: "Queue", badge: queueBadge },
+    { id: "task-engine", icon: "▤", label: "Task Engine", badge: queueBadge },
     { id: "status", icon: "◈", label: "Status" },
     { id: "config", icon: "⚙", label: "Config" },
     { id: "cae", icon: "⚑", label: "CAE" }
