@@ -136,6 +136,17 @@ describe("resolvePlanArtifactPhaseProposal (T100469)", () => {
     assert.equal(countDescriptionWords("alpha beta gamma delta epsilon"), PLAN_ARTIFACT_PHASE_DESCRIPTION_MAX_WORDS);
   });
 
+  it("prefers workspace currentKitPhase when next is omitted", () => {
+    const result = resolvePlanArtifactPhaseProposal({
+      phaseRecommendations: RECOMMENDATIONS,
+      workspaceCurrentPhaseKey: "142",
+      occupiedPhaseKeys: ["109", "110"]
+    });
+    assert.equal(result.ok, true);
+    assert.equal(result.source, "workspace-current");
+    assert.equal(result.proposal.phaseKey, "142");
+  });
+
   it("ignores deferred placeholder recommendation keys and explicit overrides", () => {
     const deferred = resolvePlanArtifactPhaseProposal({
       targetPhaseKey: "planner-resolved",

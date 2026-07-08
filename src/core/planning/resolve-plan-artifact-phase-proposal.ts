@@ -222,23 +222,11 @@ export function resolvePlanArtifactPhaseProposal(
     const match = input.phaseRecommendations.find((r) => r.phaseKey.trim() === explicitKey);
     labelFromRecommendation = match?.label.trim();
   } else {
-    const primaryRecommendation = input.phaseRecommendations.find(
-      (r) => r.phaseKey.trim().length > 0 && !isDeferredPlanPhaseRecommendationKey(r.phaseKey)
-    );
-    const workspaceCurrent = trimOptional(input.workspaceCurrentPhaseKey);
     const workspaceNext = trimOptional(input.workspaceNextPhaseKey);
+    const workspaceCurrent = trimOptional(input.workspaceCurrentPhaseKey);
     const occupiedKeys = (input.occupiedPhaseKeys ?? []).map((k) => k.trim()).filter((k) => k.length > 0);
 
-    if (primaryRecommendation && PLAN_ARTIFACT_PHASE_KEY_RE.test(primaryRecommendation.phaseKey.trim())) {
-      phaseKey = primaryRecommendation.phaseKey.trim();
-      source = "recommendation";
-      labelFromRecommendation = primaryRecommendation.label.trim();
-    } else if (workspaceCurrent && PLAN_ARTIFACT_PHASE_KEY_RE.test(workspaceCurrent)) {
-      phaseKey = workspaceCurrent;
-      source = "workspace-current";
-      const match = input.phaseRecommendations.find((r) => r.phaseKey.trim() === workspaceCurrent);
-      labelFromRecommendation = match?.label.trim();
-    } else if (workspaceNext) {
+    if (workspaceNext) {
       if (!PLAN_ARTIFACT_PHASE_KEY_RE.test(workspaceNext)) {
         const findings: PlanArtifactPhaseProposalFinding[] = [
           {
@@ -254,6 +242,23 @@ export function resolvePlanArtifactPhaseProposal(
       phaseKey = workspaceNext;
       source = "workspace-next";
       const match = input.phaseRecommendations.find((r) => r.phaseKey.trim() === workspaceNext);
+      labelFromRecommendation = match?.label.trim();
+    } else if (workspaceCurrent) {
+      if (!PLAN_ARTIFACT_PHASE_KEY_RE.test(workspaceCurrent)) {
+        const findings: PlanArtifactPhaseProposalFinding[] = [
+          {
+            code: "PLAN-PHASE-KEY-INVALID",
+            message: `workspace currentKitPhase '${workspaceCurrent}' is not a valid phase key`,
+            severity: "blocker",
+            field: "workspaceCurrentPhaseKey"
+          },
+          ...descriptionFindings
+        ];
+        return { ok: false, code: "plan-artifact-phase-proposal-blocked", findings };
+      }
+      phaseKey = workspaceCurrent;
+      source = "workspace-current";
+      const match = input.phaseRecommendations.find((r) => r.phaseKey.trim() === workspaceCurrent);
       labelFromRecommendation = match?.label.trim();
     } else {
       phaseKey = resolveNextEmptyNumericPhaseKey(occupiedKeys, [...activeKeys, ...recommendationKeys]);

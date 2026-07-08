@@ -4635,6 +4635,37 @@ test("taskEngineModule onCommand get-next-actions works on populated store", asy
   assert.match(result.message, /T002/);
 });
 
+test("taskEngineModule get-next-actions exposes canonicalPhase distinct from lagging ready-queue phaseKey tags", async () => {
+  const workspace = await tmpDir();
+  await seedSqliteStore(workspace, (store) => {
+    store.addTask(makeTask({ id: "T109", status: "ready", priority: "P1", phaseKey: "109", phase: "Phase 109" }));
+  });
+  const ctx = sqliteTaskEngineCtx(workspace, {
+    tasks: { phaseKickoff: { enforcementMode: "off", checkScopePaths: false } }
+  });
+
+  const phaseSet = await taskEngineModule.onCommand(
+    {
+      name: "set-current-phase",
+      args: {
+        currentKitPhase: "142",
+        nextKitPhase: "143",
+        expectedWorkspaceRevision: 0,
+        clientMutationId: "t100776-get-next-actions-phase"
+      }
+    },
+    ctx
+  );
+  assert.equal(phaseSet.ok, true);
+
+  const result = await taskEngineModule.onCommand({ name: "get-next-actions", args: {} }, ctx);
+  assert.equal(result.ok, true);
+  assert.equal(result.data.canonicalPhase?.canonicalPhaseKey, "142");
+  assert.equal(result.data.canonicalPhase?.currentKitPhase, "142");
+  assert.equal(result.data.readyQueue[0]?.phaseKey, "109");
+  assert.notEqual(result.data.canonicalPhase?.canonicalPhaseKey, result.data.readyQueue[0]?.phaseKey);
+});
+
 test("taskEngineModule onCommand queue-health detects unmet deps on ready tasks", async () => {
   const workspace = await tmpDir();
   const now = new Date().toISOString();

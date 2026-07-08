@@ -194,3 +194,40 @@ test("start-idea-planning works with ideaId only", async () => {
   assert.equal(out.data.ideaId, idea.id);
   assert.equal(typeof out.data.planningChatPrompt, "string");
 });
+
+test("start-idea-planning returns planningPhaseContext with canonical phase", async () => {
+  const { workspace } = await tmpWorkspace();
+  const { taskEngineModule } = await import("../dist/index.js");
+
+  const phaseSet = await taskEngineModule.onCommand(
+    {
+      name: "set-current-phase",
+      args: {
+        currentKitPhase: "142",
+        nextKitPhase: "143",
+        expectedWorkspaceRevision: 0,
+        clientMutationId: "t100776-start-planning-phase"
+      }
+    },
+    {
+      runtimeVersion: "0.1",
+      workspacePath: workspace,
+      effectiveConfig: {
+        tasks: {
+          persistenceBackend: "sqlite",
+          sqliteDatabaseRelativePath: ".workspace-kit/tasks/workspace-kit.db",
+          phaseKickoff: { enforcementMode: "off", checkScopePaths: false }
+        }
+      }
+    }
+  );
+  assert.equal(phaseSet.ok, true);
+
+  const idea = await createOpenIdea(workspace, "Phase context");
+  const out = await runStart(workspace, { ideaId: idea.id });
+  assert.equal(out.ok, true);
+  assert.equal(out.data.planningPhaseContext?.schemaVersion, 1);
+  assert.equal(out.data.planningPhaseContext?.canonicalPhaseKey, "142");
+  assert.equal(out.data.planningPhaseContext?.currentKitPhase, "142");
+  assert.match(out.data.planningChatPrompt, /Canonical workspace phase: \*\*142\*\*/);
+});
