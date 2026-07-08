@@ -69,6 +69,13 @@ export {
   type AuditRedactionSummary
 } from "./audit-redaction.js";
 export {
+  PLANNER_PACKET_TOOL_NAME,
+  applyPlannerPacketTruncationLadder,
+  buildPlannerPacketFromReads,
+  invokePlannerPacket,
+  validatePlannerPacketArgs
+} from "./planner-packet.js";
+export {
   MCP_DEBUG_ENV_VAR,
   MCP_DEBUG_MAX_LINE_LENGTH,
   MCP_DEBUG_MAX_LINES_PER_SESSION,

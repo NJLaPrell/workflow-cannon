@@ -34,6 +34,12 @@ import {
   resolveMcpMutationEnabled,
   type MutationMcpToolDefinition
 } from "./mutation-tools.js";
+import {
+  expansionArgsForPlannerPacket,
+  invokePlannerPacket,
+  PLANNER_PACKET_TOOL_NAME,
+  validatePlannerPacketArgs
+} from "./planner-packet.js";
 
 const JSON_RPC_VERSION = "2.0";
 const MCP_PROTOCOL_VERSION = "2024-11-05";
@@ -576,6 +582,36 @@ const packetReadToolDefinitions: Omit<ReadOnlyMcpToolDefinition, "outputByteBudg
       sourceRefs: [
         "src/modules/project-memory/instructions/explain-memory-precedence.md",
         "src/modules/project-memory/index.ts"
+      ]
+    }
+  },
+  {
+    toolName: PLANNER_PACKET_TOOL_NAME,
+    commandName: "get-planner-flow-status",
+    description:
+      "Read planner bootstrap packet: idea, session, agentDirective, truncated wbsPreview, and recommendedNextCommand.",
+    stateLike: true,
+    cliFallbackArgs: '{"ideaId":"<idea>"}',
+    commonMistakes: [
+      "skipping recommendedNextCommand.readyRun for Tier B follow-on",
+      "treating session/document mismatches as non-blocking",
+      "expecting MCP to run planner mutations without policyApproval"
+    ],
+    inputSchema: objectSchema(
+      {
+        ideaId: stringSchema("Optional idea id such as I001.")
+      },
+      []
+    ),
+    expansionArgs: expansionArgsForPlannerPacket,
+    validateArgs: validatePlannerPacketArgs,
+    governance: {
+      bounded: true,
+      note: "Planner bootstrap read orchestrates get-planner-flow-status and get-idea; Tier B mutations use recommendedNextCommand.readyRun with policyApproval when required.",
+      sourceRefs: [
+        "src/modules/ideas/instructions/get-planner-flow-status.md",
+        "src/modules/ideas/instructions/get-idea.md",
+        ".ai/mcp-tool-version-policy.md"
       ]
     }
   }
@@ -1237,13 +1273,16 @@ async function handleToolCall(
 
   const commandArgs = definition.expansionArgs(args);
   const runtime = await resolveMcpRuntime(options);
-  const commandResult = await runtime.invoke({
-    name: definition.commandName,
-    args: commandArgs
-  });
+  const commandResult =
+    params.name === PLANNER_PACKET_TOOL_NAME
+      ? await invokePlannerPacket(runtime, commandArgs)
+      : await runtime.invoke({
+          name: definition.commandName,
+          args: commandArgs
+        });
   const toolResult = formatToolResult(definition, commandArgs, commandResult, options);
   recordAuditEvent(options, params.name, commandResult.ok ? "success" : "command_error", {
-    command: definition.commandName,
+    command: params.name === PLANNER_PACKET_TOOL_NAME ? "planner-packet" : definition.commandName,
     args: commandArgs,
     resultCode: commandResult.code,
     oversized: isOversizedToolResult(toolResult),
