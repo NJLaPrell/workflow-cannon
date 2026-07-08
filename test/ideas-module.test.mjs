@@ -6,6 +6,7 @@ import test from "node:test";
 
 import { ideasModule } from "../dist/index.js";
 import { SqliteDualPlanningStore } from "../dist/modules/task-engine/persistence/sqlite-dual-planning.js";
+import { readIdeaPlanArtifact } from "../dist/modules/ideas/idea-plan-artifact-storage.js";
 
 const SQLITE_CFG = { tasks: { persistenceBackend: "sqlite" } };
 
@@ -48,6 +49,27 @@ test("ideasModule creates and retrieves an idea", async () => {
   assert.equal(retrieved.ok, true);
   assert.equal(retrieved.code, "idea-retrieved");
   assert.deepEqual(retrieved.data.idea, created.data.idea);
+});
+
+test("ideasModule auto-links a unified IdeaPlan document on first-run create-idea (no migration needed)", async () => {
+  // Fresh workspace, no migrate-ideas-to-unified-document call anywhere in this test.
+  const workspace = await tmpWorkspace();
+
+  const created = await ideasModule.onCommand(
+    { name: "create-idea", args: { title: "Ship the idea-plan auto-init" } },
+    ctx(workspace)
+  );
+
+  assert.equal(created.ok, true);
+  const planRef = created.data.idea.linkedPlanArtifact;
+  assert.match(planRef, /^plan-artifact:[0-9a-f-]{36}$/);
+
+  const document = readIdeaPlanArtifact(workspace, planRef);
+  assert.notEqual(document, null, "unified IdeaPlan document should exist on disk at the returned planRef");
+  assert.equal(document.planRef, planRef);
+  assert.equal(document.ideaId, created.data.idea.id);
+  assert.equal(document.status, "idea");
+  assert.equal(document.version, 1);
 });
 
 test("ideasModule increments id and sort order", async () => {
