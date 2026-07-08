@@ -564,6 +564,10 @@ export type DashboardPlanArtifactRow = {
   /** Raw recommended phaseKey (e.g. "140"), separate from the formatted `phaseRecommendation` label. */
   phaseKey?: string;
   sourceIdeaId?: string;
+  /** Ideas-store title for `sourceIdeaId` (when plan title is generic). */
+  sourceIdeaTitle?: string;
+  /** Truncated Ideas-store note for `sourceIdeaId`. */
+  sourceIdeaNote?: string;
   /** Whether WBS tasks were persisted (`metadata.planRef` linkage). */
   tasksGenerated?: boolean;
   /** Whether all generated tasks reached `completed`. */

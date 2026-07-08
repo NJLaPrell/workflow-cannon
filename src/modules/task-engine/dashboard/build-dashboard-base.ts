@@ -38,6 +38,7 @@ import { buildDashboardPhaseBucketsForTasks } from "./dashboard-phase-buckets.js
 import { readBuildPlanSession, toDashboardPlanningSession } from "../../../core/planning/build-plan-session-file.js";
 import { listPlanArtifactSummaries, readLatestPlanArtifact } from "../../../core/planning/plan-artifact-storage.js";
 import { readIdeaPlanArtifact } from "../../ideas/idea-plan-artifact-storage.js";
+import { listIdeas } from "../../ideas/idea-store.js";
 import { isCriticalOpenQuestion } from "../../../core/planning/review-plan-artifact.js";
 import { reviewPlanArtifact } from "../../../core/planning/review-plan-artifact.js";
 import {
@@ -839,7 +840,8 @@ function buildDashboardPlanArtifactWbsRows(wbs: readonly PlanArtifactWbsItem[]):
 
 export function buildDashboardPlanArtifactSummary(
   ctx: ModuleLifecycleContext,
-  allTasks: readonly TaskEntity[]
+  allTasks: readonly TaskEntity[],
+  sqliteDual?: SqliteDualPlanningStore
 ): DashboardSummaryData["planArtifact"] {
   const summaries = listPlanArtifactSummaries(
     ctx.workspacePath,
@@ -850,7 +852,27 @@ export function buildDashboardPlanArtifactSummary(
   }
   const planRefToTasks = buildPlanRefToTasksIndex(allTasks);
   const allTasksById = buildTaskByIdIndex(allTasks);
+  const sourceIdeaById = new Map<string, { title: string; note?: string }>();
+  const ideasDb = sqliteDual?.getDatabase();
+  if (ideasDb) {
+    try {
+      for (const idea of listIdeas(ideasDb)) {
+        const ideaTitle = idea.title.trim();
+        if (ideaTitle.length === 0) {
+          continue;
+        }
+        const ideaNote = typeof idea.note === "string" ? idea.note.trim() : "";
+        sourceIdeaById.set(idea.id, {
+          title: ideaTitle,
+          ...(ideaNote.length > 0 ? { note: ideaNote } : {})
+        });
+      }
+    } catch {
+      // Ideas store unavailable — plan cards fall back to plan title only.
+    }
+  }
   const PLAN_ARTIFACT_SUMMARY_TEXT_MAX_LENGTH = 160;
+  const SOURCE_IDEA_NOTE_MAX_LENGTH = 140;
   const rows = summaries.slice(0, 20).map((summary) => {
     const ideaPlan = readIdeaPlanArtifact(ctx.workspacePath, summary.planRef);
     const latestArtifact = readLatestPlanArtifact(ctx.workspacePath, summary.planId);
@@ -887,6 +909,12 @@ export function buildDashboardPlanArtifactSummary(
       (typeof latestArtifact?.provenance?.sourceIdeaId === "string"
         ? latestArtifact.provenance.sourceIdeaId.trim()
         : "");
+    const sourceIdeaContext = sourceIdeaId.length > 0 ? sourceIdeaById.get(sourceIdeaId) : undefined;
+    const sourceIdeaNoteRaw = sourceIdeaContext?.note ?? "";
+    const sourceIdeaNote =
+      sourceIdeaNoteRaw.length > SOURCE_IDEA_NOTE_MAX_LENGTH
+        ? sourceIdeaNoteRaw.slice(0, SOURCE_IDEA_NOTE_MAX_LENGTH - 3).trimEnd() + "..."
+        : sourceIdeaNoteRaw;
     const summaryTextRaw =
       ideaPlan?.plan?.summary?.trim() ||
       (typeof latestArtifact?.identity?.summary === "string" ? latestArtifact.identity.summary.trim() : "");
@@ -1027,6 +1055,8 @@ export function buildDashboardPlanArtifactSummary(
       ...(phaseRecommendation.length > 0 ? { phaseRecommendation } : {}),
       ...(phaseKey.length > 0 ? { phaseKey } : {}),
       ...(sourceIdeaId.length > 0 ? { sourceIdeaId } : {}),
+      ...(sourceIdeaContext?.title ? { sourceIdeaTitle: sourceIdeaContext.title } : {}),
+      ...(sourceIdeaNote.length > 0 ? { sourceIdeaNote } : {}),
       tasksGenerated,
       executed,
       ...(wbsPreviewRows.length > 0 ? { wbsRows: wbsRowsWithLinkedTasks } : {}),
@@ -1260,8 +1290,9 @@ export async function buildDashboardBase(
         ctx.effectiveConfig as Record<string, unknown> | undefined
       ).then(toDashboardPlanningSession)));
   const planArtifact =
-    tracer?.span("planArtifact", () => buildDashboardPlanArtifactSummary(ctx, allTasks)) ??
-    buildDashboardPlanArtifactSummary(ctx, allTasks);
+    tracer?.span("planArtifact", () =>
+      buildDashboardPlanArtifactSummary(ctx, allTasks, sqliteDual ?? dualForStatus)
+    ) ?? buildDashboardPlanArtifactSummary(ctx, allTasks, sqliteDual ?? dualForStatus);
 
   const dashboardPhaseTop = 15;
   const toProposedRow = (t: (typeof tasks)[0]) => projectDashboardTaskRow(t, enrich, { includePriority: false });

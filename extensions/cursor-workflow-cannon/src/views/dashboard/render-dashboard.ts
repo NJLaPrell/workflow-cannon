@@ -34,7 +34,9 @@ import {
   bucketPlanRowsByDisplayState,
   derivePlanArtifactDisplayState,
   filterPlanArtifactRowsForRollup,
-  groupPlanRowsByTitle,
+  groupPlanRowsForStateBucket,
+  planArtifactRollupDisplayLabel,
+  planArtifactRollupSubtitle,
   planArtifactDisplayStateMeta,
   planArtifactEffectiveStatus,
   planTitleSlug,
@@ -4811,10 +4813,12 @@ function renderPlanArtifactCardActions(
 
 /** Condensed, progressively-disclosed card for one PlanArtifact. Reused for both current and recent/finalized plans. */
 function renderPlanArtifactCard(row: Record<string, unknown>, ideasUnifiedModelEnabled: boolean): string {
-  const title = String(row.title ?? "").trim() || "Untitled Plan";
+  const title = planArtifactRollupDisplayLabel(row);
+  const subtitleText = planArtifactRollupSubtitle(row);
+  const sourceIdeaId = String(row.sourceIdeaId ?? "").trim();
   const planId = String(row.planId ?? "").trim();
   const planRef = String(row.planRef ?? "").trim();
-  const summaryText = String(row.summary ?? "").trim();
+  const summaryText = subtitleText;
   const wbsRowCount = numberOrZero(row.wbsRowCount);
   const openQuestions = numberOrZero(row.openQuestionCount);
   const blockerCount = numberOrZero(row.blockerCount);
@@ -4825,7 +4829,6 @@ function renderPlanArtifactCard(row: Record<string, unknown>, ideasUnifiedModelE
   const statusMeta = planArtifactDisplayStateMeta(displayState);
   const profileRaw = String(row.profile ?? "").trim();
   const profileText = profileRaw.length > 0 ? humanizePlanningToken(profileRaw) : "—";
-  const sourceIdeaId = String(row.sourceIdeaId ?? "").trim();
   const reviewSummaryText = String(row.reviewSummary ?? "").trim();
   const refLabel = planRef.length > 0 ? planRef : planId;
   const phaseKey = String(row.phaseKey ?? "").trim();
@@ -4919,6 +4922,15 @@ function renderPlanArtifactCard(row: Record<string, unknown>, ideasUnifiedModelE
     phaseKey
   );
 
+  const ideaIdChipHtml =
+    sourceIdeaId.length > 0
+      ? '<span class="wc-plan-card-rollup-idea-id muted">' + escapeHtml(sourceIdeaId) + "</span>"
+      : "";
+  const rollupSubtitleHtml =
+    summaryText.length > 0
+      ? '<span class="wc-plan-card-rollup-subtitle muted">' + escapeHtml(summaryText) + "</span>"
+      : "";
+
   return (
     '<details class="wc-plan-card-rollup ' +
     statusMeta.className +
@@ -4930,9 +4942,13 @@ function renderPlanArtifactCard(row: Record<string, unknown>, ideasUnifiedModelE
     planCardUiStateAttr(planId, "rollup") +
     ">" +
     '<summary class="wc-plan-card-rollup-summary">' +
+    '<span class="wc-plan-card-rollup-title-wrap">' +
     '<span class="wc-plan-card-rollup-title"><b>' +
     escapeHtml(title) +
     "</b></span>" +
+    ideaIdChipHtml +
+    rollupSubtitleHtml +
+    "</span>" +
     '<span class="wc-plan-status-pill ' +
     statusMeta.className +
     '">' +
@@ -4995,7 +5011,13 @@ function renderPlanTitleGroupsInStateBucket(
   rows: Record<string, unknown>[],
   ideasUnifiedModelEnabled: boolean
 ): string {
-  const groups = groupPlanRowsByTitle(rows);
+  if (stateKey === "new") {
+    const cardsHtml = rows
+      .map((row) => renderPlanArtifactCard(row, ideasUnifiedModelEnabled))
+      .join("");
+    return '<div class="wc-plan-card-grid">' + cardsHtml + "</div>";
+  }
+  const groups = groupPlanRowsForStateBucket(stateKey, rows);
   return groups
     .map((group) => {
       const cardsHtml = group.rows.map((row) => renderPlanArtifactCard(row, ideasUnifiedModelEnabled)).join("");

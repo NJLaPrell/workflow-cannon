@@ -1077,6 +1077,52 @@ test("renderDashboardRootInnerHtml keeps only newest draft per idea in Draft rol
   assert.doesNotMatch(html, /data-wc-plan-card-id="draft-old"/);
 });
 
+test("renderDashboardRootInnerHtml disambiguates generic Idea plan drafts in Draft rollup", () => {
+  const html = renderDashboardRootInnerHtml({
+    ok: true,
+    data: {
+      workspaceStatus: { activeFocus: "Planning" },
+      stateSummary: { proposed: 0, ready: 0, in_progress: 0, completed: 0, total: 0 },
+      planningSession: null,
+      planArtifact: {
+        count: 2,
+        current: {
+          planId: "draft-i006",
+          sourceIdeaId: "I006",
+          sourceIdeaTitle: "Merge Ideas and Planning modules",
+          sourceIdeaNote: "Ideas and Planning modules have overlapping concerns.",
+          title: "Idea plan",
+          status: "draft",
+          updatedAt: "2026-07-08T15:55:19.690Z"
+        },
+        recent: [
+          {
+            planId: "draft-i007",
+            sourceIdeaId: "I007",
+            sourceIdeaTitle: "Test Ideaasdfasdfas",
+            title: "Idea plan",
+            status: "draft",
+            updatedAt: "2026-07-07T21:17:23.828Z"
+          }
+        ]
+      },
+      readyExecutionSummary: { count: 0, top: [] },
+      readyImprovementsSummary: { count: 0, top: [] },
+      proposedExecutionSummary: { count: 0, top: [] },
+      proposedImprovementsSummary: { count: 0, top: [] },
+      transcriptChurnResearchSummary: { count: 0, top: [] },
+      wishlistSummary: { count: 0, top: [] }
+    }
+  });
+
+  assert.match(html, /Merge Ideas and Planning modules/);
+  assert.match(html, /Ideas and Planning modules have overlapping concerns\./);
+  assert.match(html, /Test Ideaasdfasdfas/);
+  assert.match(html, /wc-plan-card-rollup-idea-id/);
+  assert.doesNotMatch(html, />Idea plan \(2\)</);
+  assert.doesNotMatch(html, /wc-plan-title-group/);
+});
+
 test("renderDashboardRootInnerHtml renders phase roster deliverables inline edit affordances", () => {
   const html = renderDashboardRootInnerHtml({
     ok: true,

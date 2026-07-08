@@ -6,8 +6,11 @@ import {
   derivePlanArtifactDisplayState,
   filterPlanArtifactRowsForRollup,
   groupPlanRowsByTitle,
+  groupPlanRowsForStateBucket,
   planArtifactDisplayStateMeta,
   planArtifactEffectiveStatus,
+  planArtifactRollupDisplayLabel,
+  planArtifactRollupSubtitle,
   planTitleSlug
 } from "../dist/views/dashboard/plan-artifact-display-state.js";
 
@@ -159,4 +162,44 @@ test("filterPlanArtifactRowsForRollup drops accepted rows superseded by delivere
   const buckets = bucketPlanRowsByDisplayState(filtered);
   assert.equal(buckets.get("accepted")?.length ?? 0, 0);
   assert.equal(buckets.get("delivered")?.length, 1);
+});
+
+test("planArtifactRollupDisplayLabel disambiguates generic Idea plan titles", () => {
+  assert.equal(
+    planArtifactRollupDisplayLabel({ title: "Idea plan", sourceIdeaId: "I006" }),
+    "Idea plan · I006"
+  );
+  assert.equal(
+    planArtifactRollupDisplayLabel({
+      title: "Idea plan",
+      sourceIdeaId: "I006",
+      sourceIdeaTitle: "Merge Ideas and Planning modules"
+    }),
+    "Merge Ideas and Planning modules"
+  );
+  assert.equal(
+    planArtifactRollupDisplayLabel({ title: "Agent Planning Tools v1", sourceIdeaId: "I011" }),
+    "Agent Planning Tools v1"
+  );
+});
+
+test("planArtifactRollupSubtitle prefers idea note over plan summary", () => {
+  assert.equal(
+    planArtifactRollupSubtitle({
+      sourceIdeaNote: "Use CAE to cause the agent to file bug report tasks.",
+      summary: "Idea plan"
+    }),
+    "Use CAE to cause the agent to file bug report tasks."
+  );
+});
+
+test("groupPlanRowsForStateBucket keeps draft rows flat with idea labels", () => {
+  const groups = groupPlanRowsForStateBucket("new", [
+    { planId: "a", title: "Idea plan", sourceIdeaId: "I006", updatedAt: "2026-07-08T00:00:00.000Z" },
+    { planId: "b", title: "Idea plan", sourceIdeaId: "I007", updatedAt: "2026-07-07T00:00:00.000Z" }
+  ]);
+  assert.equal(groups.length, 2);
+  assert.equal(groups[0].titleLabel, "Idea plan · I006");
+  assert.equal(groups[1].titleLabel, "Idea plan · I007");
+  assert.equal(groups[0].rows.length, 1);
 });

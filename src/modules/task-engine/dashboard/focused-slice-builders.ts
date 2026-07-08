@@ -310,7 +310,7 @@ export async function buildDashboardQueueSlice(
       ctx.effectiveConfig as Record<string, unknown> | undefined
     )
   );
-  const planArtifact = buildDashboardPlanArtifactSummary(ctx, allTasks);
+  const planArtifact = buildDashboardPlanArtifactSummary(ctx, allTasks, sqliteDual ?? dualForStatus);
 
   // Use fast/overview helpers as required: "Queue slice does not call full system status/task-state projection"
   const systemStatus = await buildDashboardSystemStatusOverview(ctx, store, dualForStatus);
@@ -534,7 +534,7 @@ export async function buildDashboardStatusSlice(
     )
   );
   const tasks = store.getActiveTasks();
-  const planArtifact = buildDashboardPlanArtifactSummary(ctx, tasks);
+  const planArtifact = buildDashboardPlanArtifactSummary(ctx, tasks, sqliteDual);
 
   const effCfg =
     ctx.effectiveConfig && typeof ctx.effectiveConfig === "object" && !Array.isArray(ctx.effectiveConfig)
@@ -920,7 +920,7 @@ export async function buildDashboardOpsSlice(
   const db = dualForStatus.getDatabase();
   const workspaceStatus = readWorkspaceStatusSnapshotFromDual(dualForStatus);
   const tasks = store.getActiveTasks();
-  const planArtifact = buildDashboardPlanArtifactSummary(ctx, tasks);
+  const planArtifact = buildDashboardPlanArtifactSummary(ctx, tasks, sqliteDual);
   const brainstormingIdeas = buildDashboardBrainstormingIdeasRollup(ctx, sqliteDual, true);
 
   const teamExecution: DashboardTeamExecutionSummary = db

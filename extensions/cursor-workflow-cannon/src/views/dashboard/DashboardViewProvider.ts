@@ -7026,6 +7026,32 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       gap: 12px;
       margin-top: 4px;
     }
+    .wc-plan-card-rollup-summary {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 8px;
+      list-style: none;
+    }
+    .wc-plan-card-rollup-title-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+      flex: 1;
+    }
+    .wc-plan-card-rollup-title { overflow-wrap: anywhere; }
+    .wc-plan-card-rollup-idea-id {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+    .wc-plan-card-rollup-subtitle {
+      display: block;
+      font-size: 11px;
+      line-height: 1.35;
+      overflow-wrap: anywhere;
+    }
     .wc-plan-card {
       display: flex;
       flex-direction: column;

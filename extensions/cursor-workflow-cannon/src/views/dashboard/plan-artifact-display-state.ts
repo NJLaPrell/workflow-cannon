@@ -108,6 +108,31 @@ export function planArtifactTitleLabel(row: Record<string, unknown>): string {
   return title.length > 0 ? title : "Untitled Plan";
 }
 
+const GENERIC_PLAN_ROLLUP_TITLES = new Set(["idea plan", "untitled plan"]);
+
+/** User-facing label for plan rollups/cards; disambiguates generic migration titles. */
+export function planArtifactRollupDisplayLabel(row: Record<string, unknown>): string {
+  const sourceIdeaTitle = String(row.sourceIdeaTitle ?? "").trim();
+  const title = planArtifactTitleLabel(row);
+  if (sourceIdeaTitle.length > 0) {
+    return sourceIdeaTitle;
+  }
+  const sourceIdeaId = String(row.sourceIdeaId ?? "").trim();
+  if (sourceIdeaId.length > 0 && GENERIC_PLAN_ROLLUP_TITLES.has(title.toLowerCase())) {
+    return `${title} · ${sourceIdeaId}`;
+  }
+  return title;
+}
+
+/** Secondary line for collapsed plan cards (idea note or plan summary). */
+export function planArtifactRollupSubtitle(row: Record<string, unknown>): string {
+  const sourceIdeaNote = String(row.sourceIdeaNote ?? "").trim();
+  if (sourceIdeaNote.length > 0) {
+    return sourceIdeaNote;
+  }
+  return String(row.summary ?? "").trim();
+}
+
 /** Stable ASCII slug for UI state keys (`plan-title-{state}-{slug}`). */
 export function planTitleSlug(title: string): string {
   const slug = title
@@ -222,6 +247,23 @@ export function filterPlanArtifactRowsForRollup(
     }
   }
 
-  kept.sort((a, b) => planArtifactTitleLabel(a).localeCompare(planArtifactTitleLabel(b)));
+  kept.sort((a, b) => planArtifactRollupDisplayLabel(a).localeCompare(planArtifactRollupDisplayLabel(b)));
   return kept;
+}
+
+/** Draft bucket: never nest unrelated ideas under one generic title group. */
+export function groupPlanRowsForStateBucket(
+  stateKey: PlanArtifactDisplayState,
+  rows: readonly Record<string, unknown>[]
+): PlanTitleGroup[] {
+  if (stateKey === "new") {
+    const groups = rows.map((row) => ({
+      titleKey: planArtifactRollupGroupKey(row),
+      titleLabel: planArtifactRollupDisplayLabel(row),
+      rows: [row]
+    }));
+    groups.sort((a, b) => a.titleLabel.localeCompare(b.titleLabel));
+    return groups;
+  }
+  return groupPlanRowsByTitle(rows);
 }
