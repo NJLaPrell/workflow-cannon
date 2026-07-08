@@ -6559,7 +6559,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     .dash-agent-row-expanded dt { color: var(--vscode-descriptionForeground); font-size: 10px; line-height: 1.25; }
     .dash-agent-row-expanded dd { margin: 0; overflow-wrap: anywhere; line-height: 1.25; }
     .dash-agent-row--subagent { margin-left: 14px; border-left: 2px solid var(--vscode-textLink-foreground); }
-    .dash-agent-row-icon { font-size: 10px; opacity: 0.75; }
+    .dash-agent-row-icon { font-size: 10px; }
     .dash-agent-row-main { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
     .dash-agent-row-main b, .dash-agent-row-detail { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .dash-agent-row-detail { min-width: 0; font-size: 11px; }
@@ -6715,7 +6715,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     .wc-agent-card--expanded .wc-agent-card-chevron { transform: rotate(90deg); }
     .wc-agent-card:not(.wc-agent-card--expanded) .wc-agent-tree { display: none; }
     .wc-agent-card-now {
-      background: rgba(0,0,0,0.3);
+      background: var(--vscode-textCodeBlock-background, rgba(0,0,0,0.15));
       border-radius: 4px;
       padding: 5px 8px;
       border-left: 2px solid var(--wc-now-color, var(--wc-muted));
@@ -7399,6 +7399,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       border-radius: 6px;
       padding: 10px 12px;
       margin: 0 0 10px 0;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.20);
     }
     .wc-card > * { margin-top: 0; }
     .wc-card > *:last-child,
@@ -7890,7 +7891,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     .wc-pill-done {
       border-color: var(--vscode-widget-border, rgba(127,127,127,.45));
     }
-    .wc-pill-done .wc-stat-num { color: var(--vscode-foreground); opacity: 0.7; }
+    .wc-pill-done .wc-stat-num { color: var(--vscode-foreground); opacity: 0.55; }
     .wc-pill-human {
       border-color: color-mix(in srgb, var(--vscode-editorWarning-foreground, #cca700) 55%, transparent);
       background: color-mix(in srgb, var(--vscode-editorWarning-foreground, #cca700) 12%, var(--vscode-textCodeBlock-background));
