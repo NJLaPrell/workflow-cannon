@@ -733,7 +733,6 @@
       "moduleId": "planning"
     },
     {
-    {
       "name": "get-plan-artifact-template",
       "path": ".ai/agent-cli-snippets/by-command/get-plan-artifact-template.json",
       "moduleId": "planning"
