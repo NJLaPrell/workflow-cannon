@@ -7589,10 +7589,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     .wc-tab-icon {
       font-size: 10px;
-      opacity: 0.7;
       flex-shrink: 0;
     }
-    .wc-tab-btn.wc-tab-active .wc-tab-icon { opacity: 0.9; }
     .wc-tab-panel {
       display: block;
       flex: 1;
@@ -8150,8 +8148,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     .wc-phase-progress-track {
       display: flex;
       width: 100%;
-      height: 12px;
-      border-radius: 6px;
+      height: 5px;
+      border-radius: 3px;
       overflow: hidden;
       background: var(--vscode-editor-inactiveSelectionBackground, rgba(127,127,127,.2));
       margin-bottom: 8px;
@@ -8205,7 +8203,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       line-height: 1;
       flex-shrink: 0;
     }
-    .wc-cae-score-badge span { font-size: 11px; font-weight: 500; opacity: 0.7; margin-left: 1px; }
+    .wc-cae-score-badge span { font-size: 11px; font-weight: 500; margin-left: 1px; }
     .wc-cae-score-ok { color: var(--vscode-testing-iconPassed, #4ec9b0); }
     .wc-cae-score-warn { color: var(--vscode-editorWarning-foreground, #cca700); }
     .wc-cae-score-bad { color: var(--vscode-errorForeground, #f44747); }
@@ -8366,13 +8364,11 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       border-left: 3px solid var(--vscode-foreground);
       padding-left: 6px;
       margin-left: -2px;
-      opacity: 0.55;
     }
     details.status-section[data-wc-filter="terminal"] > summary {
       border-left: 3px solid var(--vscode-foreground);
       padding-left: 6px;
       margin-left: -2px;
-      opacity: 0.4;
     }
     /* ── Tab badge ── */
     .wc-tab-badge {

@@ -2090,7 +2090,7 @@ function renderPhaseReadinessCard(
   const pendingBlock =
     pending.length > 0
       ? '<div class="wc-cae-decisions">' +
-        '<p><b>Pending Decisions</b></p>' +
+        '<p><span style="color:var(--vscode-editorWarning-foreground,#cca700);">&#9888;</span> <b>Pending Decisions</b></p>' +
         pending
           .slice(0, 3)
           .map(
