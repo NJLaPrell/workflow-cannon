@@ -4,6 +4,7 @@
   "commands": [
     "accept-plan-artifact",
     "append-wbs-row",
+    "patch-plan-artifact",
     "apply-skill",
     "approve-memory",
     "block-assignment",

@@ -968,6 +968,11 @@
       "moduleId": "task-engine"
     },
     {
+      "name": "patch-plan-artifact",
+      "path": ".ai/agent-cli-snippets/by-command/patch-plan-artifact.json",
+      "moduleId": "planning"
+    },
+    {
       "name": "pause-task",
       "path": ".ai/agent-cli-snippets/by-command/pause-task.json",
       "moduleId": "task-engine"
