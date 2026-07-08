@@ -147,6 +147,7 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
     "migrate-ideas-to-unified-document",
     "migrate-task-persistence",
     "open-isolated-proposal-pr",
+    "patch-plan-artifact",
     "pause-task",
     "persist-planning-execution-drafts",
     "phase-closeout-readiness",
