@@ -42,6 +42,7 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
     "agent-bootstrap",
     "agent-mutation-plan",
     "agent-session-snapshot",
+    "append-wbs-row",
     "apply-isolated-proposal",
     "apply-task-batch",
     "apply-task-mutation-intent",

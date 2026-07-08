@@ -66,6 +66,7 @@ export type PolicyOperationId =
   | "planning.draft-plan-artifact"
   | "planning.review-plan-artifact"
   | "planning.accept-plan-artifact"
+  | "planning.append-wbs-row"
   | "planning.finalize-plan-to-phase"
   | "planning.execute-plan-artifact"
   | "planning.generate-plan-document";
