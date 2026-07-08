@@ -643,6 +643,43 @@ const packetReadToolDefinitions: Omit<ReadOnlyMcpToolDefinition, "outputByteBudg
         ".ai/mcp-tool-version-policy.md"
       ]
     }
+  },
+  {
+    toolName: "workflow-cannon.get-plan-artifact",
+    commandName: "get-plan-artifact",
+    description: "Read PlanArtifact version history, lineage metadata, and bounded artifact payload.",
+    stateLike: true,
+    cliFallbackArgs: '{"planId":"<uuid>"}',
+    commonMistakes: [
+      "omitting required planId",
+      "treating MCP as a plan mutation path",
+      "expecting unbounded artifact bodies within MCP budget"
+    ],
+    inputSchema: objectSchema(
+      {
+        planId: stringSchema("PlanArtifact id (UUID)."),
+        version: numberSchema("Optional 1-based version; defaults to latest."),
+        includeArtifact: {
+          type: "boolean",
+          description: "When false, omit the full artifact body from the response."
+        }
+      },
+      ["planId"]
+    ),
+    expansionArgs: (args) => ({
+      planId: args.planId,
+      ...(typeof args.version === "number" ? { version: args.version } : {}),
+      ...(typeof args.includeArtifact === "boolean" ? { includeArtifact: args.includeArtifact } : {})
+    }),
+    validateArgs: validateGetPlanArtifactArgs,
+    governance: {
+      bounded: true,
+      note: "Plan artifact reads are read-only through get-plan-artifact; draft, patch, accept, and finalize mutations use Tier B CLI with policyApproval when required.",
+      sourceRefs: [
+        "src/modules/planning/instructions/get-plan-artifact.md",
+        ".ai/mcp-tool-version-policy.md"
+      ]
+    }
   }
 ];
 
@@ -1648,6 +1685,22 @@ function requireStringArgs(...names: string[]): (args: Record<string, unknown>) 
     }
     return null;
   };
+}
+
+function validateGetPlanArtifactArgs(args: Record<string, unknown>): string | null {
+  const missingPlanId = requireStringArgs("planId")(args);
+  if (missingPlanId) {
+    return missingPlanId;
+  }
+  if (args.version !== undefined) {
+    if (typeof args.version !== "number" || !Number.isInteger(args.version) || args.version < 1) {
+      return "version must be a positive integer when provided";
+    }
+  }
+  if (args.includeArtifact !== undefined && typeof args.includeArtifact !== "boolean") {
+    return "includeArtifact must be a boolean when provided";
+  }
+  return null;
 }
 
 function objectSchema(
