@@ -43,3 +43,4 @@ This checklist is the operational companion to [phase-closeout-and-release.md](.
 - [ ] Phase closeout evidence is complete.
 - [ ] Publish was explicitly approved.
 - [ ] Post-publish verification has been recorded.
+- [ ] Workspace current phase cleared via **`update-workspace-status`** with **`currentKitPhase: null`** (playbook **§6b**); **`phase-status`** shows no active phase.
