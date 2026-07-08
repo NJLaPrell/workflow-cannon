@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-08T23:19:04.497Z",
+  "generatedAt": "2026-07-08T23:23:40.918Z",
   "packageVersion": "1.0.4",
-  "toolCount": 18,
+  "toolCount": 19,
   "tools": [
     {
       "name": "workflow-cannon.agent_start",
@@ -336,6 +336,37 @@
           "includeArtifact": {
             "type": "boolean",
             "description": "When false, omit the full artifact body from the response."
+          }
+        },
+        "required": [
+          "planId"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "workflow-cannon.plan-review-packet",
+      "cliCommand": "review-plan-artifact",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "planId": {
+            "type": "string",
+            "description": "PlanArtifact id (UUID)."
+          },
+          "version": {
+            "type": "number",
+            "description": "Optional 1-based version; defaults to latest."
+          },
+          "profile": {
+            "type": "string",
+            "enum": [
+              "minimal",
+              "refactor",
+              "full-feature",
+              "sprint-phase"
+            ],
+            "description": "Optional rubric profile; defaults to minimal when omitted."
           }
         },
         "required": [
