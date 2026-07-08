@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "planId": "00000000-0000-4000-8000-000000000001",
+  "version": 1,
+  "planRef": "plan-artifact:00000000-0000-4000-8000-000000000001",
+  "status": "draft",
+  "identity": {
+    "title": "Plan title",
+    "planningType": "new-feature",
+    "summary": "One-line plan scope summary"
+  },
+  "goals": ["Primary outcome for this plan"],
+  "nonGoals": [],
+  "valueAssessment": { "impact": "Describe expected value", "confidence": "medium" },
+  "riskAssessment": [],
+  "technicalImpact": { "systemsTouched": ["src/modules/planning"] },
+  "testingStrategy": {
+    "layers": ["unit"],
+    "criticalPaths": ["Template validates against plan-artifact.v1 schema"]
+  },
+  "implementationGuidance": [],
+  "whatNotToDo": [],
+  "assumptions": [],
+  "openQuestions": [],
+  "wbs": [
+    {
+      "wbsId": "WBS-1",
+      "title": "First work breakdown row",
+      "goalMapping": ["Primary outcome for this plan"],
+      "suggestedTaskTitle": "First deliverable task",
+      "approach": "Describe how to implement this row",
+      "technicalScope": ["src/modules/planning"],
+      "acceptanceCriteria": ["Row acceptance criteria"],
+      "testingVerification": ["test/get-plan-artifact-template.test.mjs"],
+      "dependsOn": [],
+      "sizingConfidence": "medium",
+      "doneMeans": "Row is complete when acceptance criteria pass",
+      "generatedTaskPayload": {
+        "title": "First deliverable task",
+        "approach": "Describe how to implement this row",
+        "technicalScope": ["src/modules/planning"],
+        "acceptanceCriteria": ["Row acceptance criteria"]
+      }
+    }
+  ],
+  "phaseRecommendations": [
+    { "phaseKey": "1", "label": "Phase 1", "rationale": "Target phase for this plan", "isPrimary": true }
+  ],
+  "provenance": {
+    "createdAt": "2026-01-01T00:00:00.000Z",
+    "updatedAt": "2026-01-01T00:00:00.000Z",
+    "createdBy": "agent",
+    "source": "draft-plan-artifact"
+  }
+}
