@@ -733,6 +733,11 @@
       "moduleId": "planning"
     },
     {
+      "name": "get-planner-flow-status",
+      "path": ".ai/agent-cli-snippets/by-command/get-planner-flow-status.json",
+      "moduleId": "ideas"
+    },
+    {
       "name": "get-ready-queue",
       "path": ".ai/agent-cli-snippets/by-command/get-ready-queue.json",
       "moduleId": "task-engine"
