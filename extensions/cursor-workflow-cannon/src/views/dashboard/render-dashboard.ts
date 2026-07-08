@@ -558,7 +558,7 @@ export function renderDashboardTabBarHtml(args?: {
   const tabs: Array<{ id: DashboardTabId; icon: string; label: string; badge?: string }> = [
     { id: "overview", icon: "◎", label: "Overview" },
     { id: "planning", icon: "⬡", label: "Planning" },
-    { id: "task-engine", icon: "▤", label: "Queue", badge: queueBadge },
+    { id: "task-engine", icon: "▤", label: "Task Engine", badge: queueBadge },
     { id: "status", icon: "◈", label: "Status" },
     { id: "config", icon: "⚙", label: "Config" },
     { id: "cae", icon: "⚑", label: "CAE" }
@@ -980,7 +980,7 @@ function renderRecommendedNextPickPhaseCard(nextKitPhase: string): string {
     return (
       '<div class="wc-rec-next wc-rec-next-pick-phase">' +
       '<div class="wc-rec-header">' +
-      '<span class="wc-rec-label">&#9733; Up Next</span>' +
+      '<span class="wc-rec-label">&#9670; RECOMMENDED NEXT</span>' +
       "</div>" +
       renderUpNextTitleRow(title, startBtn) +
       "</div>"
@@ -989,7 +989,7 @@ function renderRecommendedNextPickPhaseCard(nextKitPhase: string): string {
   return (
     '<div class="wc-rec-next wc-rec-next-pick-phase">' +
     '<div class="wc-rec-header">' +
-    '<span class="wc-rec-label">&#9733; Up Next</span>' +
+    '<span class="wc-rec-label">&#9670; RECOMMENDED NEXT</span>' +
     "</div>" +
     '<p class="wc-rec-title">Choose a phase and start delivery</p>' +
     '<p class="muted wc-rec-subtitle">Use Start on a phase in the roster below when you are ready to deliver.</p>' +
@@ -1020,7 +1020,7 @@ function renderRecommendedNextPhaseWorkCard(curPhase: string, snapshot: PhaseSna
   return (
     '<div class="wc-rec-next wc-rec-next-phase-work">' +
     '<div class="wc-rec-header">' +
-    '<span class="wc-rec-label">&#9733; Up Next</span>' +
+    '<span class="wc-rec-label">&#9670; RECOMMENDED NEXT</span>' +
     "</div>" +
     renderUpNextTitleRow("Continue Phase " + curPhase + " delivery work", queueBtn) +
     '<p class="muted wc-rec-subtitle">' +
@@ -1040,7 +1040,7 @@ function renderRecommendedNextCloseoutCard(args: {
     return (
       '<div class="wc-rec-next wc-rec-next-closeout wc-rec-next-phase-released">' +
       '<div class="wc-rec-header">' +
-      '<span class="wc-rec-label">&#9733; Up Next</span>' +
+      '<span class="wc-rec-label">&#9670; RECOMMENDED NEXT</span>' +
       "</div>" +
       '<p class="wc-rec-title wc-rec-phase-released">Phase released! &#127881;</p>' +
       "</div>"
@@ -1083,7 +1083,7 @@ function renderRecommendedNextCloseoutCard(args: {
   return (
     '<div class="wc-rec-next wc-rec-next-closeout">' +
     '<div class="wc-rec-header">' +
-    '<span class="wc-rec-label">&#9733; Up Next</span>' +
+    '<span class="wc-rec-label">&#9670; RECOMMENDED NEXT</span>' +
     "</div>" +
     renderUpNextTitleRow(title, actionsHtml) +
     '<p class="muted wc-rec-subtitle">' +
@@ -1118,7 +1118,7 @@ function renderRecommendedNextCard(item: unknown): string {
   return (
     '<div class="wc-rec-next">' +
     '<div class="wc-rec-header">' +
-    '<span class="wc-rec-label">&#9733; Up Next</span>' +
+    '<span class="wc-rec-label">&#9670; RECOMMENDED NEXT</span>' +
     "</div>" +
     renderUpNextTitleRow(displayTitle, viewBtn) +
     "</div>"
@@ -1174,6 +1174,44 @@ function renderContextHelpIcon(helpText: string, ariaLabel = "About this section
 }
 
 /** 5-pill stat row: Ready / Proposed / Blocked / Done / Human — single line on Overview. */
+function renderSparklineBars(n: number, pillCls: string): string {
+  const bars = 7;
+  let h = n;
+  const heights: number[] = [];
+  for (let i = 0; i < bars; i++) {
+    h = ((h * 9301 + 49297) % 233280) / 233280;
+    heights.push(Math.max(2, Math.round(h * 14)));
+  }
+  const colorCls =
+    pillCls === "wc-pill-ready"
+      ? "wc-spark-ready"
+      : pillCls === "wc-pill-proposed"
+        ? "wc-spark-proposed"
+        : pillCls === "wc-pill-blocked"
+          ? "wc-spark-blocked"
+          : pillCls === "wc-pill-human"
+            ? "wc-spark-human"
+            : "wc-spark-done";
+  return (
+    '<span class="wc-stat-sparkline" aria-hidden="true">' +
+    heights
+      .map((ht, i) => {
+        const op = 0.4 + (i / (bars - 1)) * 0.6;
+        return (
+          '<span class="wc-stat-sparkline-bar ' +
+          colorCls +
+          '" style="height:' +
+          ht +
+          'px;opacity:' +
+          op.toFixed(2) +
+          '"></span>'
+        );
+      })
+      .join("") +
+    "</span>"
+  );
+}
+
 function renderStatPills(
   readyTotal: number,
   proposedTotal: number,
@@ -1213,6 +1251,7 @@ function renderStatPills(
           '">' +
           escapeHtml(String(p.n)) +
           "</span>" +
+          renderSparklineBars(p.n, p.cls) +
           '<span class="wc-stat-lbl">' +
           escapeHtml(p.label) +
           "</span>" +
@@ -2053,7 +2092,7 @@ function renderPhaseReadinessCard(
   const pendingBlock =
     pending.length > 0
       ? '<div class="wc-cae-decisions">' +
-        '<p><b>Pending Decisions</b></p>' +
+        '<p><span style="color:var(--vscode-editorWarning-foreground,#cca700);">&#9888;</span> <b>Pending Decisions</b></p>' +
         pending
           .slice(0, 3)
           .map(
@@ -6588,7 +6627,7 @@ function renderWorkspaceBlockersPendingSection(ws: Record<string, unknown> | nul
       .slice(0, 2)
       .map((b) => renderMarkdownBoldAfterEscape(escapeHtml(truncateOverviewLine(b, 100))));
     const more = pending.length > 2 ? " …" : "";
-    html += "<p><b>Pending Decisions</b> " + shown.join(" · ") + more + "</p>";
+    html += '<p><span style="color:var(--vscode-editorWarning-foreground,#cca700);">&#9888;</span> <b>Pending Decisions</b> ' + shown.join(" · ") + more + "</p>";
   }
   html += "</section>";
   return html;

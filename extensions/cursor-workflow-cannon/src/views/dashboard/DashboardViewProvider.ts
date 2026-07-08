@@ -6418,6 +6418,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       padding: 6px 12px;
       border-top: 2px solid var(--wc-accent);
       border-bottom: 1px solid var(--wc-border);
+      border-radius: 0 0 6px 6px;
       background: var(--wc-surface);
       transition: background 0.5s ease;
     }
@@ -6558,7 +6559,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     .dash-agent-row-expanded dt { color: var(--vscode-descriptionForeground); font-size: 10px; line-height: 1.25; }
     .dash-agent-row-expanded dd { margin: 0; overflow-wrap: anywhere; line-height: 1.25; }
     .dash-agent-row--subagent { margin-left: 14px; border-left: 2px solid var(--vscode-textLink-foreground); }
-    .dash-agent-row-icon { font-size: 10px; opacity: 0.75; }
+    .dash-agent-row-icon { font-size: 10px; }
     .dash-agent-row-main { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
     .dash-agent-row-main b, .dash-agent-row-detail { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .dash-agent-row-detail { min-width: 0; font-size: 11px; }
@@ -6572,7 +6573,6 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       text-transform: uppercase;
       color: var(--wc-muted);
       margin: 12px 0 6px;
-      opacity: 0.7;
     }
     .wc-agent-card {
       display: flex !important;
@@ -6715,7 +6715,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     .wc-agent-card--expanded .wc-agent-card-chevron { transform: rotate(90deg); }
     .wc-agent-card:not(.wc-agent-card--expanded) .wc-agent-tree { display: none; }
     .wc-agent-card-now {
-      background: rgba(0,0,0,0.3);
+      background: var(--vscode-textCodeBlock-background, rgba(0,0,0,0.15));
       border-radius: 4px;
       padding: 5px 8px;
       border-left: 2px solid var(--wc-now-color, var(--wc-muted));
@@ -6783,7 +6783,6 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       font-size: 9.5px;
       color: var(--wc-muted);
       white-space: nowrap;
-      opacity: 0.7;
     }
     .wc-agent-card-sub-count {
       font-size: 9.5px;
@@ -6808,7 +6807,6 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       letter-spacing: 0.12em;
       text-transform: uppercase;
       color: var(--wc-muted);
-      opacity: 0.55;
       margin-bottom: 4px;
       padding-left: 8px;
     }
@@ -6890,7 +6888,6 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       font-size: 10px;
       color: var(--wc-muted);
       white-space: nowrap;
-      opacity: 0.7;
       flex-shrink: 0;
     }
     .wc-dot {
@@ -7428,6 +7425,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       border-radius: 6px;
       padding: 10px 12px;
       margin: 0 0 10px 0;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.20);
     }
     .wc-card > * { margin-top: 0; }
     .wc-card > *:last-child,
@@ -7582,6 +7580,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       overflow-x: auto;
       -ms-overflow-style: none;
       scrollbar-width: none;
+      user-select: none;
     }
     .wc-tab-bar::-webkit-scrollbar { display: none; }
     .wc-tab-btn {
@@ -7617,10 +7616,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     .wc-tab-icon {
       font-size: 10px;
-      opacity: 0.7;
       flex-shrink: 0;
     }
-    .wc-tab-btn.wc-tab-active .wc-tab-icon { opacity: 0.9; }
     .wc-tab-panel {
       display: block;
       flex: 1;
@@ -7886,6 +7883,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.3));
       background: var(--vscode-textCodeBlock-background);
       color: var(--vscode-foreground);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.25);
     }
     .wc-stat-num {
       font-size: 15px;
@@ -7919,7 +7917,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     .wc-pill-done {
       border-color: var(--vscode-widget-border, rgba(127,127,127,.45));
     }
-    .wc-pill-done .wc-stat-num { color: var(--vscode-foreground); opacity: 0.7; }
+    .wc-pill-done .wc-stat-num { color: var(--vscode-foreground); opacity: 0.55; }
     .wc-pill-human {
       border-color: color-mix(in srgb, var(--vscode-editorWarning-foreground, #cca700) 55%, transparent);
       background: color-mix(in srgb, var(--vscode-editorWarning-foreground, #cca700) 12%, var(--vscode-textCodeBlock-background));
@@ -7927,6 +7925,24 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     .wc-stat-num-human {
       color: var(--vscode-editorWarning-foreground, #cca700);
     }
+    .wc-stat-sparkline {
+      display: flex;
+      align-items: flex-end;
+      gap: 2px;
+      height: 16px;
+      margin: 1px 0;
+    }
+    .wc-stat-sparkline-bar {
+      display: block;
+      width: 3px;
+      border-radius: 1px;
+      flex-shrink: 0;
+    }
+    .wc-spark-ready   { background: var(--vscode-testing-iconPassed, #4ec9b0); }
+    .wc-spark-proposed { background: var(--vscode-textLink-foreground, #4fc1ff); }
+    .wc-spark-blocked  { background: var(--vscode-editorWarning-foreground, #cca700); }
+    .wc-spark-human    { background: var(--vscode-editorWarning-foreground, #cca700); }
+    .wc-spark-done     { background: var(--vscode-foreground); opacity: 0.45; }
     /* ── Contextual help (fixed popover outside #root — no blink on refresh) ── */
     .wc-context-help-popover {
       position: fixed;
@@ -8159,8 +8175,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     .wc-phase-progress-track {
       display: flex;
       width: 100%;
-      height: 12px;
-      border-radius: 6px;
+      height: 5px;
+      border-radius: 3px;
       overflow: hidden;
       background: var(--vscode-editor-inactiveSelectionBackground, rgba(127,127,127,.2));
       margin-bottom: 8px;
@@ -8214,7 +8230,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       line-height: 1;
       flex-shrink: 0;
     }
-    .wc-cae-score-badge span { font-size: 11px; font-weight: 500; opacity: 0.7; margin-left: 1px; }
+    .wc-cae-score-badge span { font-size: 11px; font-weight: 500; margin-left: 1px; }
     .wc-cae-score-ok { color: var(--vscode-testing-iconPassed, #4ec9b0); }
     .wc-cae-score-warn { color: var(--vscode-editorWarning-foreground, #cca700); }
     .wc-cae-score-bad { color: var(--vscode-errorForeground, #f44747); }
@@ -8326,11 +8342,13 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       transition: border-color 0.1s, background 0.1s;
       width: 100%;
     }
+    button.wc-stat-pill { cursor: pointer; }
     button.wc-stat-pill:hover { background: var(--vscode-toolbar-hoverBackground, rgba(127,127,127,.1)); }
     button.wc-pill-ready:hover { border-color: var(--vscode-testing-iconPassed, #4ec9b0); }
     button.wc-pill-proposed:hover { border-color: var(--vscode-textLink-foreground, #4fc1ff); }
     button.wc-pill-blocked:hover { border-color: var(--vscode-editorWarning-foreground, #cca700); }
     button.wc-pill-done:hover { border-color: var(--vscode-foreground); }
+    button.wc-pill-human:hover { border-color: var(--vscode-editorWarning-foreground, #cca700); }
     /* ── Empty section muting ── */
     details.status-section.wc-section-empty {
       opacity: 0.32;
@@ -8373,13 +8391,11 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       border-left: 3px solid var(--vscode-foreground);
       padding-left: 6px;
       margin-left: -2px;
-      opacity: 0.55;
     }
     details.status-section[data-wc-filter="terminal"] > summary {
       border-left: 3px solid var(--vscode-foreground);
       padding-left: 6px;
       margin-left: -2px;
-      opacity: 0.4;
     }
     /* ── Tab badge ── */
     .wc-tab-badge {
