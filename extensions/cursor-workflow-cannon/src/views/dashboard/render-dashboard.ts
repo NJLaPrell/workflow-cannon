@@ -66,6 +66,8 @@ export type RenderDashboardRootOptions = {
   mcpStatus?: McpHostStatus | null;
   /** When true, render unified IdeaPlan Brainstorm UI and rollup (T100795). Default false. */
   ideasUnifiedModelEnabled?: boolean;
+  /** Weekly count histories for sparkline charts (7 weeks). If absent, falls back to decorative bars. */
+  weeklySparklines?: WeeklySparklineData | null;
 };
 
 export type WeeklySparklineData = {
@@ -7595,7 +7597,8 @@ function renderOverviewSectionInnerHtml(
   d: Record<string, unknown>,
   ws: Record<string, unknown> | null,
   phaseCtx: DashboardPhaseRenderContext,
-  queueCtx: DashboardQueueRenderContext
+  queueCtx: DashboardQueueRenderContext,
+  options?: Pick<RenderDashboardSectionOptions, "weeklySparklines">
 ): string {
   const firstWishlistOpen =
     ((d.wishlist as Record<string, unknown> | undefined)?.enabled === true &&
@@ -7704,7 +7707,7 @@ export function renderDashboardRootInnerHtml(
 
   const overviewWrapped = wrapDashboardSection(
     "overview",
-    renderOverviewSectionInnerHtml(d, ws, phaseCtx, queueCtx),
+    renderOverviewSectionInnerHtml(d, ws, phaseCtx, queueCtx, options),
     deferred.has("overview")
   );
   const phaseRosterWrapped = wrapDashboardSection(
@@ -7795,7 +7798,7 @@ export function renderDashboardSectionInnerHtml(
     case "overview": {
       const phaseCtx = createDashboardPhaseRenderContext(d, ws);
       const queueCtx = createDashboardQueueRenderContext(d, ws, phaseCtx);
-      return renderOverviewSectionInnerHtml(d, ws, phaseCtx, queueCtx);
+      return renderOverviewSectionInnerHtml(d, ws, phaseCtx, queueCtx, options);
     }
     case "phase-roster": {
       const phaseCtx = createDashboardPhaseRenderContext(d, ws);
