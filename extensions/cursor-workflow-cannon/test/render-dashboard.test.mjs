@@ -2840,7 +2840,7 @@ test("renderDashboardRootInnerHtml renders segmented tabs with icons and Queue b
   const tabBar = html.slice(html.indexOf('class="wc-tab-bar"'), html.indexOf('class="wc-tab-panel"'));
   assert.match(tabBar, /<button[^>]+wc-tab-active[^>]+data-wc-tab="overview"[\s\S]*<span class="wc-tab-icon">[\s\S]*Overview/);
   assert.match(tabBar, /data-wc-tab="planning"[\s\S]*<span class="wc-tab-icon">[\s\S]*Planning/);
-  assert.match(tabBar, /data-wc-tab="task-engine"[\s\S]*<span class="wc-tab-icon">[\s\S]*Queue[\s\S]*wc-tab-badge wc-tab-badge-ready[\s\S]*>2<\/span>/);
+  assert.match(tabBar, /data-wc-tab="task-engine"[\s\S]*<span class="wc-tab-icon">[\s\S]*Task Engine[\s\S]*wc-tab-badge wc-tab-badge-ready[\s\S]*>2<\/span>/);
   assert.doesNotMatch(tabBar, /wc-tab-badge-blocked[\s\S]*>3<\/span>/);
   assert.match(tabBar, /data-wc-tab="status"[\s\S]*<span class="wc-tab-icon">[\s\S]*Status/);
   assert.match(tabBar, /data-wc-tab="config"[\s\S]*<span class="wc-tab-icon">[\s\S]*Config/);
@@ -3361,44 +3361,31 @@ test("renderDashboardRootInnerHtml ready phase buckets include Complete & Releas
   assert.match(html, /phase-bucket-summary/);
 });
 
-test("renderPlanningInterviewWizardPanel picker wires start control and planning type select", () => {
-  const html = renderPlanningInterviewWizardPanel({ kind: "picker" });
-  assert.match(html, /id="wc-planning-type"/);
-  assert.match(html, /Planning Type/);
-  assert.match(html, /Legacy preview\./);
-  assert.match(html, /Plan this/);
-  assert.match(html, /dash-planning-wizard-picker-row/);
-  assert.match(html, /data-wc-action="planning-wizard-start"/);
-  assert.match(html, /value="change"/);
-  assert.match(html, /Legacy planning interview/);
-  assert.doesNotMatch(html, /Answers run through/);
-});
-
-test("renderPlanningInterviewWizardPanel question mode escapes prompt and includes submit/cancel", () => {
-  const html = renderPlanningInterviewWizardPanel({
-    kind: "question",
-    planningType: "change",
-    questionId: "changeGoal",
-    prompt: 'What <change>?',
-    examples: ['A & B'],
-    whyItMatters: "Trust",
-    progressHint: "1 answered"
-  });
-  assert.match(html, /data-wc-action="planning-wizard-submit"/);
-  assert.match(html, /data-wc-action="planning-wizard-cancel"/);
-  assert.match(html, /&lt;change&gt;/);
-  assert.match(html, /A &amp; B/);
-});
-
-test("renderPlanningInterviewWizardPanel success shows response-only persistence hint", () => {
-  const html = renderPlanningInterviewWizardPanel({
-    kind: "success",
-    planningType: "change",
-    code: "planning-response-ready",
-    message: "All set."
-  });
-  assert.match(html, /Your answers were saved\. No task was created\./);
-  assert.match(html, /data-wc-action="planning-wizard-dismiss"/);
+test("renderPlanningInterviewWizardPanel shows removal notice for all panel kinds", () => {
+  for (const panel of [
+    { kind: "picker" },
+    {
+      kind: "question",
+      planningType: "change",
+      questionId: "changeGoal",
+      prompt: "What?",
+      examples: [],
+      whyItMatters: "",
+      progressHint: "1 answered"
+    },
+    {
+      kind: "success",
+      planningType: "change",
+      code: "planning-response-ready",
+      message: "All set."
+    }
+  ]) {
+    const html = renderPlanningInterviewWizardPanel(panel);
+    assert.match(html, /Removed\./);
+    assert.match(html, /build-plan/);
+    assert.match(html, /Plan this/);
+    assert.doesNotMatch(html, /planning-wizard-start/);
+  }
 });
 
 
