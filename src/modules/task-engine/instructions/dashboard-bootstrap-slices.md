@@ -4,4 +4,17 @@ agentCapsule|v=1|command=dashboard-bootstrap-slices|module=task-engine|schema_on
 
 # Dashboard Bootstrap Slices
 
-Placeholder instruction file for the `dashboard-bootstrap-slices` command. This command provides cheap dashboard slices when the dashboard service is unavailable.
+Cheap multi-slice CLI read for cold dashboard paint when the warm service is unavailable.
+
+## Default slices
+
+When `slices` is omitted, defaults to `["overview", "queue"]`:
+
+- `overview` — phase/status shell fields for first paint
+- `queue` — rollup **counts** for overview pills (Ideas/detail hydrate later)
+
+Optional slice names: `status`, `agentActivity`, `agentTypes`.
+
+## Extension paint lane
+
+The Cursor extension treats this command as a refresh/paint-lane read (`KIT_REFRESH_RUN_COMMANDS`) so cold bootstrap is not blocked behind mutation-lane task-state sync.

@@ -8,6 +8,19 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [1.0.8] - 2026-07-09
+
+Patch — **Phase 146 Dashboard Loading & Sync (first paint)** (single startup owner, CLI-primary cold bootstrap, quiet service promote, SLA/empty/fallback coverage).
+
+### Added
+
+- **DashboardStartupController** — single owner for cold-start shell paint, bootstrap, and webview boot/ready/timeout/refresh with one in-flight promise (T100843).
+- **CLI-primary cold bootstrap** — `BootstrapSnapshotAdapter` hydrates overview from session cache / store / `dashboard-bootstrap-slices` without waiting on dashboard-service health (T100844).
+- **Quiet post-paint service promote** — promote to healthy service after first paint via section patches only; never restart startup or wipe a usable overview (T100845).
+- **Cold-path first-paint SLA tests** — deterministic stubbed tests prove usable overview within 3s when the service is cold (T100846).
+- **Empty / first-run cold-path coverage** — zero-count and fresh-workspace overview paints without a stuck loading shell (T100847).
+- **Promote fallback and disable toggle** — failed promote keeps CLI overview; `dashboard.postPaintPromote: false` disables quiet promote without forcing `cli-polling` (T100848).
+
 ## [1.0.7] - 2026-07-09
 
 Patch — **Phase 132 User Simulation Harness** (deterministic Complete & Release scenarios with persona evaluators).

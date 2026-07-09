@@ -28,18 +28,25 @@ test("initial overview hydration skips secondary kit commands (T100400 regressio
   assert.doesNotMatch(skipBlock, /cae-authoring-summary/);
 });
 
-test("initial webview resolve paints via startup direct render (overview)", () => {
+test("initial webview resolve paints via startup controller (overview)", () => {
   const providerSrc = fs.readFileSync(providerPath, "utf8");
   const resolveBlock = providerSrc.slice(providerSrc.indexOf("resolveWebviewView("));
-  assert.match(resolveBlock, /renderDashboardStartupDirect\(webview\)/);
-  assert.match(resolveBlock, /runDashboardSummary/);
+  assert.match(resolveBlock, /requestDashboardStartup\("resolve-webview"\)/);
+  assert.match(resolveBlock, /startupController\.markShellPainted\(\)/);
+  assert.match(providerSrc, /executeDashboardStartupBootstrap/);
+  assert.match(providerSrc, /resolveBootstrapSnapshot/);
+  assert.match(providerSrc, /applyBootstrapSnapshot/);
   const startupBlock = providerSrc.slice(
-    providerSrc.indexOf("private async renderDashboardStartupDirectOnce"),
+    providerSrc.indexOf("private async executeDashboardStartupBootstrap"),
     providerSrc.indexOf("private async postSectionPatch")
   );
+  assert.match(startupBlock, /dashboard-bootstrap-slices/);
   assert.match(startupBlock, /projection:\s*"overview"/);
   assert.match(startupBlock, /"startup overview"/);
   assert.doesNotMatch(startupBlock, /projection:\s*"full"/);
+  assert.doesNotMatch(startupBlock, /readPath\.start/);
+  assert.doesNotMatch(startupBlock, /restartDashboardService/);
+  assert.doesNotMatch(startupBlock, /probeDashboardServiceHealth/);
 });
 
 test("dashboard webview ready handshake retries initial hydration", () => {
@@ -49,39 +56,39 @@ test("dashboard webview ready handshake retries initial hydration", () => {
   assert.match(providerSrc, /dashboardWebviewBoot/);
   assert.match(providerSrc, /dashboardStartupTimeout/);
   assert.match(providerSrc, /dashboardStartupRefresh/);
-  assert.match(providerSrc, /renderDashboardStartupDirect/);
+  assert.match(providerSrc, /requestDashboardStartup/);
   assert.match(providerSrc, /dashboardStartupError/);
   assert.match(providerSrc, /data-wc-startup-refresh/);
   assert.match(providerSrc, /data-wc-startup-status/);
   assert.match(providerSrc, /msg\?\.type === "dashboardWebviewReady"/);
-  assert.match(providerSrc, /renderDashboardStartupDirect/);
+  assert.match(providerSrc, /requestDashboardStartup\("webview-ready"\)/);
 });
 
-test("boot ready and timeout startup triggers coalesce through the startup single-flight", () => {
+test("boot ready and timeout startup triggers coalesce through the startup controller", () => {
   const providerSrc = fs.readFileSync(providerPath, "utf8");
-  const directBlock = providerSrc.slice(
-    providerSrc.indexOf("private async renderDashboardStartupDirect"),
-    providerSrc.indexOf("private async renderDashboardStartupDirectOnce")
-  );
-  assert.match(directBlock, /dashboardStartupSingleFlight\.run/);
-  assert.match(directBlock, /startup render coalesced with in-flight dashboard-summary/);
+  assert.match(providerSrc, /new DashboardStartupController/);
+  assert.match(providerSrc, /isBootstrapInFlight\(\)/);
+  assert.doesNotMatch(providerSrc, /DashboardStartupSingleFlight/);
+  assert.doesNotMatch(providerSrc, /renderDashboardStartupDirect/);
 
   const messageBlock = providerSrc.slice(
     providerSrc.indexOf("webview.onDidReceiveMessage"),
     providerSrc.indexOf("webviewView.onDidChangeVisibility")
   );
-  assert.match(messageBlock, /dashboardWebviewBoot[\s\S]*renderDashboardStartupDirect\(webview\)/);
-  assert.match(messageBlock, /dashboardStartupTimeout[\s\S]*renderDashboardStartupDirect\(webview\)/);
-  assert.match(messageBlock, /dashboardWebviewReady[\s\S]*renderDashboardStartupDirect\(webview\)/);
+  assert.match(messageBlock, /dashboardWebviewBoot[\s\S]*requestDashboardStartup\("webview-boot"\)/);
+  assert.match(messageBlock, /dashboardStartupTimeout[\s\S]*requestDashboardStartup\("startup-timeout"\)/);
+  assert.match(messageBlock, /dashboardWebviewReady[\s\S]*requestDashboardStartup\("webview-ready"\)/);
+  assert.match(messageBlock, /dashboardStartupRefresh[\s\S]*requestDashboardStartup\("startup-refresh"\)/);
 });
 
 test("first dashboard data render patches the painted shell root", () => {
   const providerSrc = fs.readFileSync(providerPath, "utf8");
   assert.match(providerSrc, /dashboardRootHydrated = false/);
   const startupBlock = providerSrc.slice(
-    providerSrc.indexOf("private async renderDashboardStartupDirectOnce"),
+    providerSrc.indexOf("private async executeDashboardStartupBootstrap"),
     providerSrc.indexOf("private async postSectionPatch")
   );
+  assert.match(startupBlock, /applyBootstrapSnapshot/);
   assert.match(startupBlock, /postMessage\(\{ type: "wcReplaceRoot", html: rootInner \}\)/);
   assert.doesNotMatch(startupBlock, /webview\.html = this\.buildHtml\(webview, rootInner\)/);
   const refreshBlock = providerSrc.slice(
@@ -94,8 +101,8 @@ test("first dashboard data render patches the painted shell root", () => {
 test("startup timeout and refresh failures preserve actionable recovery without blanking a good dashboard", () => {
   const providerSrc = fs.readFileSync(providerPath, "utf8");
   const startupBlock = providerSrc.slice(
-    providerSrc.indexOf("if (raw.ok !== true && raw.code === \"extension-cli-timeout\")"),
-    providerSrc.indexOf("if (raw.ok === true && raw.data")
+    providerSrc.indexOf("private async executeDashboardStartupBootstrap"),
+    providerSrc.indexOf("private async applyBootstrapSnapshot")
   );
   assert.match(startupBlock, /Dashboard overview timed out before JSON was returned/);
   assert.match(startupBlock, /pnpm exec wk run dashboard-summary/);
@@ -225,4 +232,30 @@ test("dashboard timeout remediation is command specific", () => {
 test("stale section state is wired in webview and provider", () => {
   assert.match(readSrc("dashboard-webview-client.ts"), /wc-dash-section--stale/);
   assert.match(fs.readFileSync(providerPath, "utf8"), /markDashboardSectionStale/);
+});
+
+test("T100845: paint-safe read path + quiet promote after ready (no startup restart)", () => {
+  const providerSrc = fs.readFileSync(providerPath, "utf8");
+  const coordinatorSrc = readSrc("dashboard-read-path-coordinator.ts");
+  const startupSrc = readSrc("dashboard-startup-controller.ts");
+
+  assert.match(providerSrc, /readPath\.startForPaint\(\)/);
+  assert.match(providerSrc, /onReady:[\s\S]*promoteToService\(\)/);
+  assert.doesNotMatch(providerSrc, /void this\.readPath\.start\(\)/);
+
+  assert.match(coordinatorSrc, /async startForPaint\(\)/);
+  assert.match(coordinatorSrc, /async promoteToService\(\)/);
+  assert.match(coordinatorSrc, /swapToServicePathQuietly/);
+  assert.match(coordinatorSrc, /restoreSliceIfRegressed/);
+
+  const paintBlock = coordinatorSrc.slice(
+    coordinatorSrc.indexOf("private async activateReadPathForPaint"),
+    coordinatorSrc.indexOf("private async runPromoteToService")
+  );
+  assert.doesNotMatch(paintBlock, /dashboard-service-start/);
+
+  // Promote lives on the read-path coordinator — not inside the startup controller.
+  assert.doesNotMatch(startupSrc, /promoteToService/);
+  assert.doesNotMatch(startupSrc, /startForPaint/);
+  assert.doesNotMatch(startupSrc, /dashboard-service-start/);
 });

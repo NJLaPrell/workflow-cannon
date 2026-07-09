@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "fragmentKind": "validations",
+  "phaseKey": "146",
+  "validations": [
+    {
+      "command": "pnpm run build",
+      "conclusion": "success",
+      "source": "closeout-canonical"
+    },
+    {
+      "command": "pnpm run check",
+      "conclusion": "success",
+      "source": "closeout-canonical"
+    },
+    {
+      "command": "node scripts/check-release-metadata.mjs",
+      "conclusion": "success",
+      "source": "closeout-canonical"
+    },
+    {
+      "command": "pnpm exec wk run phase-closeout-readiness",
+      "conclusion": "success",
+      "source": "closeout-canonical"
+    },
+    {
+      "command": "pnpm exec wk run phase-delivery-preflight",
+      "conclusion": "success",
+      "source": "closeout-canonical"
+    },
+    {
+      "command": "phase task PRs #764-#769 CI",
+      "conclusion": "success",
+      "source": "closeout-canonical"
+    }
+  ],
+  "source": "closeout-canonical",
+  "notes": "Full pnpm test hung locally under concurrent load; full suite deferred to phase→main PR CI."
+}

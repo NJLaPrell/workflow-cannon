@@ -1,0 +1,160 @@
+{
+  "schemaVersion": 1,
+  "fragmentKind": "publishArtifacts",
+  "version": "1.0.8",
+  "packageName": "@workflow-cannon/workspace-kit",
+  "publishArtifacts": [
+    {
+      "kind": "git-tag",
+      "ref": "v1.0.8",
+      "version": "1.0.8",
+      "present": false,
+      "commit": null
+    },
+    {
+      "kind": "npm",
+      "package": "@workflow-cannon/workspace-kit",
+      "version": "1.0.7",
+      "distTag": "latest",
+      "state": "different-version-published"
+    }
+  ],
+  "readinessChecks": [
+    {
+      "code": "release-version-present",
+      "state": "pass",
+      "blocking": false,
+      "summary": "package.json release version 1.0.8 is a valid semver tag candidate.",
+      "refs": [
+        {
+          "kind": "artifact",
+          "value": "package.json"
+        },
+        {
+          "kind": "command",
+          "value": "pnpm exec wk run propose-release-version '{}'",
+          "instructionPath": "src/modules/task-engine/instructions/propose-release-version.md"
+        }
+      ]
+    },
+    {
+      "code": "root-changelog-entry-present",
+      "state": "pass",
+      "blocking": false,
+      "summary": "CHANGELOG.md includes a 1.0.8 heading.",
+      "refs": [
+        {
+          "kind": "artifact",
+          "value": "CHANGELOG.md"
+        },
+        {
+          "kind": "command",
+          "value": "node scripts/check-release-diff-shape.mjs"
+        }
+      ]
+    },
+    {
+      "code": "maintainer-changelog-entry-present",
+      "state": "pass",
+      "blocking": false,
+      "summary": "docs/maintainers/CHANGELOG.md includes a 1.0.8 heading.",
+      "refs": [
+        {
+          "kind": "artifact",
+          "value": "docs/maintainers/CHANGELOG.md"
+        },
+        {
+          "kind": "command",
+          "value": "node scripts/check-release-diff-shape.mjs"
+        }
+      ]
+    },
+    {
+      "code": "task-engine-run-contracts-schema-aligned",
+      "state": "pass",
+      "blocking": false,
+      "summary": "schemas/task-engine-run-contracts.schema.json mirrors package version 1.0.8.",
+      "refs": [
+        {
+          "kind": "artifact",
+          "value": "schemas/task-engine-run-contracts.schema.json"
+        },
+        {
+          "kind": "command",
+          "value": "node scripts/check-task-engine-run-contracts.mjs"
+        }
+      ]
+    },
+    {
+      "code": "pilot-run-args-snapshot-aligned",
+      "state": "pass",
+      "blocking": false,
+      "summary": "schemas/pilot-run-args.snapshot.json mirrors package version 1.0.8.",
+      "refs": [
+        {
+          "kind": "artifact",
+          "value": "schemas/pilot-run-args.snapshot.json"
+        },
+        {
+          "kind": "command",
+          "value": "node scripts/check-pilot-run-args-snapshot.mjs"
+        },
+        {
+          "kind": "command",
+          "value": "node scripts/refresh-pilot-run-args-snapshot.mjs"
+        }
+      ]
+    },
+    {
+      "code": "git-tag-not-published",
+      "state": "info",
+      "blocking": false,
+      "summary": "Git tag v1.0.8 is not present yet.",
+      "refs": [
+        {
+          "kind": "artifact",
+          "value": "refs/tags/v1.0.8"
+        },
+        {
+          "kind": "command",
+          "value": "git tag -l 'v1.0.8'"
+        }
+      ]
+    },
+    {
+      "code": "github-release-not-published",
+      "state": "warn",
+      "blocking": false,
+      "summary": "GitHub release for v1.0.8 is not published or gh could not read it.",
+      "refs": [
+        {
+          "kind": "artifact",
+          "value": "refs/tags/v1.0.8"
+        },
+        {
+          "kind": "command",
+          "value": "gh release view v1.0.8 --json url,tagName,publishedAt"
+        }
+      ]
+    },
+    {
+      "code": "npm-version-not-published",
+      "state": "info",
+      "blocking": false,
+      "summary": "@workflow-cannon/workspace-kit@1.0.8 is not the published latest version (current 1.0.7).",
+      "refs": [
+        {
+          "kind": "artifact",
+          "value": "@workflow-cannon/workspace-kit@1.0.8"
+        },
+        {
+          "kind": "command",
+          "value": "npm view @workflow-cannon/workspace-kit version --json --tag=latest"
+        }
+      ]
+    }
+  ],
+  "degraded": [
+    "GitHub release not found for v1.0.8 (gh auth or unpublished)"
+  ]
+}
