@@ -1123,6 +1123,135 @@ test("renderDashboardRootInnerHtml disambiguates generic Idea plan drafts in Dra
   assert.doesNotMatch(html, /wc-plan-title-group/);
 });
 
+test("renderDashboardRootInnerHtml keeps idea-state unified plans in Ideas rollup only", () => {
+  const html = renderDashboardRootInnerHtml(
+    {
+      ok: true,
+      data: {
+        workspaceStatus: { activeFocus: "Planning" },
+        stateSummary: { proposed: 0, ready: 0, in_progress: 0, completed: 0, total: 0 },
+        ideas: {
+          available: true,
+          totalCount: 1,
+          openCount: 1,
+          planningCount: 0,
+          plannedCount: 0,
+          top: [
+            {
+              id: "I012",
+              title: "Improve Dashboard Loading & Sync",
+              note: "Loading report",
+              status: "open",
+              linkedPlanArtifactSummary: {
+                planId: "idea-plan-1",
+                planRef: "plan-artifact:idea-plan-1",
+                status: "idea",
+                version: 1
+              }
+            }
+          ]
+        },
+        planArtifact: {
+          count: 1,
+          current: {
+            planId: "idea-plan-1",
+            sourceIdeaId: "I012",
+            sourceIdeaTitle: "Improve Dashboard Loading & Sync",
+            title: "Idea plan",
+            status: "idea",
+            lifecycleStatus: "idea",
+            updatedAt: "2026-07-09T16:09:22.955Z"
+          },
+          recent: []
+        },
+        brainstormingIdeas: { available: true, count: 0, top: [] },
+        readyExecutionSummary: { count: 0, top: [] },
+        readyImprovementsSummary: { count: 0, top: [] },
+        proposedExecutionSummary: { count: 0, top: [] },
+        proposedImprovementsSummary: { count: 0, top: [] },
+        transcriptChurnResearchSummary: { count: 0, top: [] },
+        wishlistSummary: { count: 0, top: [] }
+      }
+    },
+    null,
+    null,
+    null,
+    null,
+    { ideasUnifiedModelEnabled: true }
+  );
+
+  assert.match(html, /wc-ideas-section[\s\S]*Improve Dashboard Loading &amp; Sync/);
+  assert.match(html, /data-wc-action="idea-brainstorm"/);
+  assert.doesNotMatch(html, /data-wc-ui-state-key="plan-state-new"/);
+  assert.doesNotMatch(html, /data-wc-plan-card-id="idea-plan-1"/);
+});
+
+test("renderDashboardRootInnerHtml hides planned or linked ideas even without plan summary", () => {
+  const html = renderDashboardRootInnerHtml(
+    {
+      ok: true,
+      data: {
+        workspaceStatus: { activeFocus: "Planning" },
+        stateSummary: { proposed: 0, ready: 0, in_progress: 0, completed: 0, total: 0 },
+        ideas: {
+          available: true,
+          totalCount: 2,
+          openCount: 0,
+          planningCount: 1,
+          plannedCount: 1,
+          top: [
+            {
+              id: "I009",
+              title: "Make brainstorming a real guided ideation session that seeds the plan",
+              status: "planned",
+              linkedPlanArtifact: "plan-artifact:08de149e-e528-4404-9e3a-885870fdf810"
+            },
+            {
+              id: "I004",
+              title: "Phase Work Tree Diagram",
+              status: "planning",
+              linkedPlanArtifact: "plan-artifact:349c70f8-9a5b-4016-96b9-63b55209da27"
+            }
+          ]
+        },
+        planArtifact: {
+          count: 1,
+          current: {
+            planId: "08de149e-e528-4404-9e3a-885870fdf810",
+            sourceIdeaId: "I009",
+            title: "Make brainstorming a real guided ideation session that seeds the plan",
+            status: "delivered",
+            lifecycleStatus: "delivered",
+            tasksGenerated: true,
+            executed: true,
+            updatedAt: "2026-07-09T18:00:00.000Z"
+          },
+          recent: []
+        },
+        brainstormingIdeas: { available: true, count: 0, top: [] },
+        readyExecutionSummary: { count: 0, top: [] },
+        readyImprovementsSummary: { count: 0, top: [] },
+        proposedExecutionSummary: { count: 0, top: [] },
+        proposedImprovementsSummary: { count: 0, top: [] },
+        transcriptChurnResearchSummary: { count: 0, top: [] },
+        wishlistSummary: { count: 0, top: [] }
+      }
+    },
+    null,
+    null,
+    null,
+    null,
+    { ideasUnifiedModelEnabled: true }
+  );
+
+  const ideasSection = html.match(/<section class="dash-card wc-ideas-section"[\s\S]*?<\/section>/)?.[0] ?? "";
+  assert.match(ideasSection, /No ideas yet/);
+  assert.doesNotMatch(ideasSection, /Make brainstorming a real guided ideation session/);
+  assert.doesNotMatch(ideasSection, /Phase Work Tree Diagram/);
+  assert.match(html, /data-wc-ui-state-key="plan-state-delivered"/);
+  assert.match(html, /data-wc-plan-card-id="08de149e-e528-4404-9e3a-885870fdf810"/);
+});
+
 test("renderDashboardRootInnerHtml renders phase roster deliverables inline edit affordances", () => {
   const html = renderDashboardRootInnerHtml({
     ok: true,

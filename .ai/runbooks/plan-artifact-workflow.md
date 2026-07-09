@@ -133,3 +133,4 @@ Use `wk run <cmd> --schema-only '{}'` for full arg/response schema.
 - Hand-edit plan JSON under `.workspace-kit/planning/plan-artifacts/` for routine workflow (use commands).
 - Treat CAE shadow output as review blockers — use **`review-plan-artifact`** findings.
 - Create execution tasks without **`finalize-plan-to-phase`** + **`persist-planning-execution-drafts`** provenance.
+- Run **`git stash -a`** / **`git clean -fdx`** (or otherwise wipe gitignored `.workspace-kit/planning/`) to clear a dirty tree — PlanArtifacts are local-only; see **`.cursor/rules/workspace-kit-gitignored-data-hygiene.mdc`**.

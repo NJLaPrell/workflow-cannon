@@ -170,9 +170,6 @@ function deriveFromIdea(idea: IdeaLifecycleIdeaLike): IdeaPlanningLifecycleState
   if (!idea || typeof idea !== "object") {
     return "open";
   }
-  if (trimmed(idea.linkedPlanArtifact).length > 0) {
-    return "accepted";
-  }
   const status = normalizedStatus(idea.status);
   if (status === "planning") {
     return "planning";
@@ -203,10 +200,14 @@ export function deriveIdeaPlanningLifecycleState(
   }
 
   if (linkedPlan.status === "idea" || linkedPlan.status === "brainstorming") {
-    return linkedPlan.status === "brainstorming" ? "open" : "open";
+    return "open";
   }
 
-  if (linkedPlan.status === "accepted" || linkedPlan.planRef.length > 0) {
+  if (linkedPlan.status === "planning") {
+    return "planning";
+  }
+
+  if (linkedPlan.status === "accepted") {
     return "accepted";
   }
 
@@ -226,6 +227,10 @@ export function deriveIdeaPlanningLifecycleState(
 
   if (activeDraft.status === "idea" || activeDraft.status === "brainstorming") {
     return "open";
+  }
+
+  if (activeDraft.status === "planning") {
+    return "planning";
   }
 
   if (activeDraft.present) {

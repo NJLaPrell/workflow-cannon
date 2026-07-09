@@ -838,6 +838,29 @@ function buildDashboardPlanArtifactWbsRows(wbs: readonly PlanArtifactWbsItem[]):
   });
 }
 
+function resolveDashboardPlanArtifactRowStatus(
+  ideaPlan: ReturnType<typeof readIdeaPlanArtifact>,
+  indexStatus: string
+): string {
+  const unified = ideaPlan?.status?.trim().toLowerCase();
+  if (
+    unified === "idea" ||
+    unified === "brainstorming" ||
+    unified === "planning" ||
+    unified === "reviewed" ||
+    unified === "accepted" ||
+    unified === "delivered"
+  ) {
+    return unified;
+  }
+  return indexStatus;
+}
+
+function shouldExposePlanArtifactInDashboardRollup(resolvedStatus: string): boolean {
+  const status = resolvedStatus.trim().toLowerCase();
+  return status !== "idea" && status !== "brainstorming";
+}
+
 export function buildDashboardPlanArtifactSummary(
   ctx: ModuleLifecycleContext,
   allTasks: readonly TaskEntity[],
@@ -889,7 +912,7 @@ export function buildDashboardPlanArtifactSummary(
       summary.title;
     const updatedAt = ideaPlan?.updatedAt ?? summary.updatedAt;
     const indexStatus = summary.status;
-    const status = indexStatus;
+    const status = resolveDashboardPlanArtifactRowStatus(ideaPlan, indexStatus);
     const phaseRecommendations = Array.isArray(latestArtifact?.phaseRecommendations)
       ? latestArtifact.phaseRecommendations
       : [];
@@ -1030,11 +1053,11 @@ export function buildDashboardPlanArtifactSummary(
     const blockerCount = latestReview?.blockerCount ?? 0;
     const warningCount = latestReview?.warningCount ?? 0;
     const lifecycleStatus =
-      summary.status === "reviewed"
+      status === "reviewed"
         ? blockerCount > 0 || latestReview?.passed === false
           ? "needs_revision"
           : "approval_ready"
-        : summary.status;
+        : status;
     return {
       planId: summary.planId,
       planRef: summary.planRef,
@@ -1092,11 +1115,17 @@ export function buildDashboardPlanArtifactSummary(
       ...(linkedTaskCount > 0 ? { linkedTaskCount } : {})
     };
   });
+  const visibleRows = rows.filter((row) =>
+    shouldExposePlanArtifactInDashboardRollup(String(row.lifecycleStatus ?? row.status ?? ""))
+  );
+  if (visibleRows.length === 0) {
+    return null;
+  }
   return {
     schemaVersion: 1,
-    count: summaries.length,
-    current: rows[0]!,
-    recent: rows
+    count: visibleRows.length,
+    current: visibleRows[0]!,
+    recent: visibleRows
   };
 }
 

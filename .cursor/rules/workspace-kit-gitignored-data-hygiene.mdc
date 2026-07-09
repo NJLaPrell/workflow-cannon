@@ -1,0 +1,32 @@
+---
+description: Never stash/clean gitignored .workspace-kit data (plans, tasks DB, etc.)
+alwaysApply: true
+---
+
+# Gitignored workspace-kit data hygiene
+
+`.workspace-kit/planning/` (PlanArtifact JSON), task DB projections, policy/approvals, and other kit paths are **gitignored local workspace data**. They are **not** recoverable from git history.
+
+## Forbidden (unless the operator explicitly approves and names the risk)
+
+- `git stash -a` / `git stash --all` / `git stash push -a`
+- `git clean -fdx` / `git clean -ffdx` / any clean that includes **ignored** files (`-x`)
+- `rm -rf .workspace-kit/planning` (or wiping `plan-artifacts/`) to “reset” the tree
+
+These remove plan artifacts from the working tree. Stashes are easy to abandon; ignored files never come back via `git checkout`.
+
+## Allowed tree hygiene
+
+- `git stash` / `git stash -u` **without** `-a`, ideally path-scoped: `git stash push -u -m "…" -- <paths>`
+- `git clean -fd` **without** `-x` (untracked only; skips ignored kit data)
+- Path-scoped clean of known junk: `git clean -fd -- path/to/untracked`
+
+## If you already ran a forbidden command
+
+1. Stop. Do **not** `stash drop` / `stash clear`.
+2. Check `git stash list` for entries that may hold `.workspace-kit/planning/`.
+3. Restore from stash and/or `.workspace-kit/migration-backups/`, then reindex plan artifacts — do not recreate plans from memory.
+
+## Why this exists
+
+Phase-143 orchestration used `git stash -a` (“orch-cleanup”) and vacuumed live PlanArtifacts into a stash. The dashboard then looked empty until restore from migration backup.
