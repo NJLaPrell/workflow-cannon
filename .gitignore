@@ -11,6 +11,10 @@ artifacts/
 !tasks/cae/artifacts/**
 # Machine-local runtime stamp (regenerate: pnpm exec wk init)
 .workspace-kit/runtime.json
+# Dashboard read-service local process stamp (pid/port/log) — not shared across machines
+.workspace-kit/dashboard-service/runtime.json
+.workspace-kit/dashboard-service/service.pid
+.workspace-kit/dashboard-service/service.log
 # Task store: canonical history on branch workflow-cannon/task-state (git-event-log); local projection only
 # Do not commit repo-root task-state/ (branch layout materialization or bootstrap scratch — use the git branch)
 /task-state/
@@ -27,6 +31,8 @@ artifacts/
 .workspace-kit/approvals/
 .workspace-kit/planning/
 .workspace-kit/backups/
+# Extension-local dashboard caches (e.g. weekly sparkline counts)
+.workflow-cannon/
 agent-transcripts/
 # Extension VSIX builds (publish via vsce / attach to release locally)
 extensions/cursor-workflow-cannon/*.vsix
