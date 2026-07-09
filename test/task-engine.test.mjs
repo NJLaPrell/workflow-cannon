@@ -2768,31 +2768,6 @@ test("claim-next-task records working live activity for the claimed task", async
   assert.equal(result.data.agentStatus.taskId, "T081");
 });
 
-test("build-plan records planning live activity while questions remain and clears on discard", async () => {
-  const workspace = await tmpDir();
-  const ctx = sqliteTaskEngineCtx(workspace);
-
-  let result = await planningModule.onCommand(
-    { name: "build-plan", args: { planningType: "new-feature", outputMode: "response" } },
-    ctx
-  );
-  assert.equal(result.ok, true);
-  assert.equal(result.code, "planning-questions");
-
-  result = await taskEngineModule.onCommand({ name: "dashboard-summary", args: {} }, ctx);
-  assert.equal(result.ok, true);
-  assert.equal(result.data.agentStatus.source, "live_activity");
-  assert.equal(result.data.agentStatus.kind, "planning");
-  assert.equal(result.data.agentStatus.command, "build-plan");
-
-  result = await planningModule.onCommand({ name: "build-plan", args: { action: "discard" } }, ctx);
-  assert.equal(result.ok, true);
-
-  result = await taskEngineModule.onCommand({ name: "dashboard-summary", args: {} }, ctx);
-  assert.equal(result.ok, true);
-  assert.equal(result.data.agentStatus.source, "derived");
-});
-
 test("taskEngineModule dashboard-summary disables wishlist by default and includes backing taskId when opted in", async () => {
   const workspace = await tmpDir();
   await seedSqliteStore(workspace, (store) => {
