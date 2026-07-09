@@ -1,31 +1,18 @@
 import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const HARNESS_ROOT = path.resolve(__dirname, "..");
+import { assertValidPersona } from "./validate-schema.mjs";
+import { HARNESS_ROOT, harnessPath } from "./harness-paths.mjs";
 
 function readJson(relativePath) {
-  const absolute = path.join(HARNESS_ROOT, relativePath);
-  return JSON.parse(readFileSync(absolute, "utf8"));
-}
-
-function assertPersonaShape(persona, sourceLabel) {
-  const required = ["id", "title", "goals", "behaviorProfile", "successCriteria"];
-  for (const key of required) {
-    if (persona[key] === undefined || persona[key] === null) {
-      throw new Error(`${sourceLabel}: missing required persona field '${key}'`);
-    }
-  }
-  if (!Array.isArray(persona.goals) || persona.goals.length === 0) {
-    throw new Error(`${sourceLabel}: persona.goals must be a non-empty array`);
-  }
-  return persona;
+  return JSON.parse(readFileSync(harnessPath(relativePath), "utf8"));
 }
 
 export function loadPersona(personaId) {
   const persona = readJson(path.join("personas", `${personaId}.json`));
-  return assertPersonaShape(persona, `persona:${personaId}`);
+  if (persona.id !== personaId) {
+    throw new Error(`persona:${personaId}: file id '${persona.id}' does not match filename`);
+  }
+  return assertValidPersona(persona, `persona:${personaId}`);
 }
 
 export function listPersonaIds() {
