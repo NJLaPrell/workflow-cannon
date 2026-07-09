@@ -1,6 +1,7 @@
 /** Kit `run` commands treated as dashboard refresh reads (may pause during drawer mutations). */
 export const KIT_REFRESH_RUN_COMMANDS = new Set([
   "dashboard-summary",
+  "dashboard-bootstrap-slices",
   "list-phase-notes",
   "get-phase-context",
   "cae-authoring-summary"
@@ -56,6 +57,12 @@ export function kitRefreshCoalesceKey(
   if (commandName === "dashboard-summary") {
     const projection = typeof args?.projection === "string" ? args.projection.trim() : "full";
     return `dashboard-summary:${projection}`;
+  }
+  if (commandName === "dashboard-bootstrap-slices") {
+    const slices = Array.isArray(args?.slices)
+      ? [...args.slices].map(String).sort().join(",")
+      : "default";
+    return `dashboard-bootstrap-slices:${slices}`;
   }
   return commandName;
 }

@@ -7,9 +7,11 @@ import {
   buildDashboardQueueSlice,
   buildDashboardStatusSlice,
   buildDashboardAgentActivitySlice,
-  buildDashboardAgentTypesSlice,
-  buildDashboardOverviewSlice as buildOverview,
+  buildDashboardAgentTypesSlice
 } from "../dashboard/slice-builders.js";
+
+/** Cold-path default: overview + queue counts (Ideas/detail hydrate later). */
+export const DASHBOARD_BOOTSTRAP_DEFAULT_SLICES = ["overview", "queue"] as const;
 
 /**
  * CLI fallback command that returns a set of cheap dashboard slices in a single request.
@@ -22,32 +24,63 @@ export async function dashboardBootstrapSlices(
   sqliteDual: SqliteDualPlanningStore | undefined,
   commandArgs: { slices?: string[] } | undefined
 ): Promise<ModuleCommandResult> {
-  const requested = commandArgs?.slices ?? ["overview", "agentTypes", "agentActivity"];
+  const requested = commandArgs?.slices ?? [...DASHBOARD_BOOTSTRAP_DEFAULT_SLICES];
   const result: Record<string, unknown> = {};
   for (const slice of requested) {
     switch (slice) {
       case "overview": {
-        result.overview = await buildDashboardOverviewSlice(ctx, store, planningGeneration, sqliteDual, undefined, undefined);
+        result.overview = await buildDashboardOverviewSlice(
+          ctx,
+          store,
+          planningGeneration,
+          sqliteDual,
+          undefined,
+          undefined
+        );
         break;
       }
       case "queue": {
-        result.queue = await buildDashboardQueueSlice(ctx, store, planningGeneration, sqliteDual, undefined, undefined);
+        result.queue = await buildDashboardQueueSlice(
+          ctx,
+          store,
+          planningGeneration,
+          sqliteDual,
+          undefined,
+          undefined
+        );
         break;
       }
       case "status": {
-        result.status = await buildDashboardStatusSlice(ctx, store, planningGeneration, sqliteDual, undefined, undefined);
+        result.status = await buildDashboardStatusSlice(
+          ctx,
+          store,
+          planningGeneration,
+          sqliteDual,
+          undefined,
+          undefined
+        );
         break;
       }
       case "agentActivity": {
-        result.agentActivity = await buildDashboardAgentActivitySlice(ctx, store, planningGeneration, sqliteDual, undefined, undefined);
+        result.agentActivity = await buildDashboardAgentActivitySlice(
+          ctx,
+          store,
+          planningGeneration,
+          sqliteDual,
+          undefined,
+          undefined
+        );
         break;
       }
       case "agentTypes": {
-        result.agentTypes = await buildDashboardAgentTypesSlice(ctx, store, planningGeneration, sqliteDual, undefined, undefined);
-        break;
-      }
-      case "overview": {
-        // already handled above
+        result.agentTypes = await buildDashboardAgentTypesSlice(
+          ctx,
+          store,
+          planningGeneration,
+          sqliteDual,
+          undefined,
+          undefined
+        );
         break;
       }
       default: {

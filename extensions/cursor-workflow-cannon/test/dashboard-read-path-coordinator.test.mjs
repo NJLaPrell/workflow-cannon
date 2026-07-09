@@ -426,3 +426,82 @@ test("T100601: coordinator source-checks document error-vs-success forwarding", 
   // Must pass isSuccess to pollers (call may span multiple lines, use dotAll).
   assert.match(coordSrc, /recordPushSliceUpdate[\s\S]{0,120}isSuccess/);
 });
+
+test("T100844: auto cold path does not await service restart before CLI bootstrap", async () => {
+  const store = new DashboardDataStore();
+  const runCalls = [];
+  let releaseRestart;
+  const restartGate = new Promise((resolve) => {
+    releaseRestart = resolve;
+  });
+  let pollersStarted = 0;
+  const pollers = {
+    start: () => {
+      pollersStarted += 1;
+    },
+    stop: () => {},
+    pause: () => {},
+    resume: () => {},
+    useFullCadence: () => {},
+    usePushSafetyNetCadence: () => {},
+    recordPushSliceUpdate: () => {},
+    refreshCriticalNow: async () => {},
+    refreshSlicesNow: async () => {},
+    setVisibleSections: () => {}
+  };
+  const coordinator = new DashboardReadPathCoordinator({
+    workspacePath: "/tmp/no-service-t100844",
+    client: {
+      run: async (command, args) => {
+        runCalls.push({ command, args });
+        if (command === "dashboard-service-start") {
+          await restartGate;
+          return { ok: false, message: "still cold" };
+        }
+        if (command === "dashboard-bootstrap-slices") {
+          return {
+            ok: true,
+            data: {
+              overview: { workspaceStatus: { phaseKey: "146" }, dashboardProjection: "overview" },
+              queue: { readyQueueCount: 3, readyImprovementsSummary: { count: 3, top: [], phaseBuckets: [] } }
+            }
+          };
+        }
+        return { ok: false };
+      }
+    },
+    store,
+    pollers,
+    log: () => {}
+  });
+
+  const startPromise = coordinator.start();
+  await waitFor(() => pollersStarted >= 1);
+  assert.equal(coordinator.getModeBadge().active, "cli-polling");
+  assert.ok(
+    runCalls.some((c) => c.command === "dashboard-bootstrap-slices"),
+    "cold path should call dashboard-bootstrap-slices without waiting on service start"
+  );
+  const bootstrapCall = runCalls.find((c) => c.command === "dashboard-bootstrap-slices");
+  assert.deepEqual(bootstrapCall.args?.slices, ["overview", "queue"]);
+  assert.equal(store.getSlice("overview").status, "fresh");
+  assert.equal(store.getSlice("queue").status, "fresh");
+  releaseRestart();
+  await startPromise;
+  await coordinator.stop();
+});
+
+test("T100844: coordinator source keeps service restart off cold critical path", () => {
+  const coordSrc = readFileSync(
+    path.join(__dirname, "../src/views/dashboard/dashboard-read-path-coordinator.ts"),
+    "utf8"
+  );
+  assert.match(coordSrc, /void this\.attemptBackgroundServiceStart\(\)/);
+  assert.match(coordSrc, /slices:\s*\["overview",\s*"queue"\]/);
+  const activateBlock = coordSrc.slice(
+    coordSrc.indexOf("private async activateReadPath"),
+    coordSrc.indexOf("private async emitServiceHealthDiagnostics")
+  );
+  assert.doesNotMatch(activateBlock, /await this\.restartDashboardService\(\)/);
+  assert.doesNotMatch(activateBlock, /void this\.restartDashboardService\(\)/);
+});
