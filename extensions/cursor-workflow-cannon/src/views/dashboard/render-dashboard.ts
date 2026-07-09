@@ -7606,7 +7606,7 @@ function renderOverviewSectionInnerHtml(
   ws: Record<string, unknown> | null,
   phaseCtx: DashboardPhaseRenderContext,
   queueCtx: DashboardQueueRenderContext,
-  options?: RenderDashboardRootOptions
+  options?: Pick<RenderDashboardSectionOptions, "weeklySparklines">
 ): string {
   const firstWishlistOpen =
     ((d.wishlist as Record<string, unknown> | undefined)?.enabled === true &&
