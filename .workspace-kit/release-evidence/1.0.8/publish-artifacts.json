@@ -8,15 +8,21 @@
       "kind": "git-tag",
       "ref": "v1.0.8",
       "version": "1.0.8",
-      "present": false,
-      "commit": null
+      "present": true,
+      "commit": "06c957e587f51dd53cb9bd686840d24e4cfb5d71"
+    },
+    {
+      "kind": "github-release",
+      "url": "https://github.com/NJLaPrell/workflow-cannon/releases/tag/v1.0.8",
+      "tagName": "v1.0.8",
+      "publishedAt": "2026-07-09T22:15:46Z"
     },
     {
       "kind": "npm",
       "package": "@workflow-cannon/workspace-kit",
-      "version": "1.0.7",
+      "version": "1.0.8",
       "distTag": "latest",
-      "state": "different-version-published"
+      "state": "already-published"
     }
   ],
   "readinessChecks": [
@@ -106,10 +112,10 @@
       ]
     },
     {
-      "code": "git-tag-not-published",
+      "code": "git-tag-already-present",
       "state": "info",
       "blocking": false,
-      "summary": "Git tag v1.0.8 is not present yet.",
+      "summary": "Git tag v1.0.8 already exists at 06c957e587f51dd53cb9bd686840d24e4cfb5d71.",
       "refs": [
         {
           "kind": "artifact",
@@ -118,18 +124,23 @@
         {
           "kind": "command",
           "value": "git tag -l 'v1.0.8'"
+        },
+        {
+          "kind": "command",
+          "value": "pnpm exec wk run propose-release-version '{}'",
+          "instructionPath": "src/modules/task-engine/instructions/propose-release-version.md"
         }
       ]
     },
     {
-      "code": "github-release-not-published",
-      "state": "warn",
+      "code": "github-release-already-published",
+      "state": "info",
       "blocking": false,
-      "summary": "GitHub release for v1.0.8 is not published or gh could not read it.",
+      "summary": "GitHub release for v1.0.8 already exists.",
       "refs": [
         {
           "kind": "artifact",
-          "value": "refs/tags/v1.0.8"
+          "value": "https://github.com/NJLaPrell/workflow-cannon/releases/tag/v1.0.8"
         },
         {
           "kind": "command",
@@ -138,10 +149,10 @@
       ]
     },
     {
-      "code": "npm-version-not-published",
+      "code": "npm-version-already-published",
       "state": "info",
       "blocking": false,
-      "summary": "@workflow-cannon/workspace-kit@1.0.8 is not the published latest version (current 1.0.7).",
+      "summary": "@workflow-cannon/workspace-kit@1.0.8 is already published on dist-tag latest.",
       "refs": [
         {
           "kind": "artifact",
@@ -150,11 +161,14 @@
         {
           "kind": "command",
           "value": "npm view @workflow-cannon/workspace-kit version --json --tag=latest"
+        },
+        {
+          "kind": "command",
+          "value": "pnpm exec wk run propose-release-version '{}'",
+          "instructionPath": "src/modules/task-engine/instructions/propose-release-version.md"
         }
       ]
     }
   ],
-  "degraded": [
-    "GitHub release not found for v1.0.8 (gh auth or unpublished)"
-  ]
+  "degraded": []
 }

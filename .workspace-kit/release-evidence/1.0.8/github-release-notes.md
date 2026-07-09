@@ -1,15 +1,19 @@
 ## What's New in 1.0.8
 
-This release focuses on **General**.
+Phase 146 — **Dashboard Loading & Sync (first paint)**.
 
-### ✨ Highlights
+### Highlights
 
-- Dashboard cold start now has a single DashboardStartupController owner: shell paint, bootstrap, and webview boot/ready/timeout/refresh coalesce behind one in fl
-- Dashboard cold start paints a usable overview from CLI or session cache without waiting on the dashboard service.
-- Dashboard quietly promotes to the warm service after first paint without flashing or clearing the usable overview.
-- Deterministic cold path tests prove the dashboard overview becomes usable within 3 seconds when the service is cold or unavailable.
-- Fresh and empty workspaces now paint a usable dashboard overview with zero queue counts instead of a stuck loading shell.
+- Single `DashboardStartupController` owns cold-start shell paint, bootstrap, and webview boot/ready/timeout/refresh behind one in-flight promise.
+- CLI-primary cold bootstrap paints a usable overview from session cache / store / `dashboard-bootstrap-slices` without waiting on dashboard-service health.
+- Quiet post-paint promote to a healthy service via section patches only — never restarts startup or wipes a usable overview.
+- Deterministic cold-path tests prove usable overview within 3s when the service is cold; empty/first-run workspaces no longer stick on a loading shell.
+- Promote fallback keeps the CLI overview on failure; `dashboard.postPaintPromote: false` disables quiet promote without forcing `cli-polling`.
+
+### Tasks
+
+T100843–T100848 (PRs #764–#769). Phase closeout: #770.
 
 ---
 
-_Technical changelog: [`docs/maintainers/CHANGELOG.md`](docs/maintainers/CHANGELOG.md)_
+Technical changelog: [`docs/maintainers/CHANGELOG.md`](https://github.com/NJLaPrell/workflow-cannon/blob/main/docs/maintainers/CHANGELOG.md)

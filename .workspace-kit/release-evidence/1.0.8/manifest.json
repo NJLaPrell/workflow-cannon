@@ -1,15 +1,15 @@
 {
   "schemaVersion": 1,
-  "createdAt": "2026-07-09T22:08:02.373Z",
+  "createdAt": "2026-07-09T22:20:48.453Z",
   "releaseVersion": "1.0.8",
   "packageName": "@workflow-cannon/workspace-kit",
   "phaseKey": "146",
   "git": {},
   "approval": {
     "actor": "operator via chat closeout",
-    "timestamp": "2026-07-09T22:08:01.000Z",
-    "rationale": "Phase 146 all tasks complete (T100843-T100848); merge release/phase-146 to main for @workflow-cannon/workspace-kit@1.0.8. Publish/tag still requires separate explicit approval.",
-    "scope": "phase-146 merge-to-main prepare @workflow-cannon/workspace-kit@1.0.8 (publish gated)"
+    "timestamp": "2026-07-09T22:20:47.000Z",
+    "rationale": "Phase 146 merged via PR #770; CI green; explicit publish approval for @workflow-cannon/workspace-kit@1.0.8 latest.",
+    "scope": "phase-146 publish @workflow-cannon/workspace-kit@1.0.8 dist-tag latest"
   },
   "releaseNotes": {
     "source": "docs/maintainers/CHANGELOG.md",
@@ -59,6 +59,10 @@
     {
       "kind": "validation",
       "summary": "Local full pnpm test hung under concurrent load; phase→main PR CI is the remaining full-suite gate before merge."
+    },
+    {
+      "kind": "ops",
+      "summary": "Duplicate publish-npm run from release.published event may fail after tag-push already published (same pattern as 1.0.7); tag-push run is authoritative."
     }
   ],
   "publishArtifacts": [
@@ -75,6 +79,46 @@
       "version": "1.0.7",
       "distTag": "latest",
       "state": "different-version-published"
+    },
+    {
+      "kind": "git-tag",
+      "ref": "v1.0.8",
+      "version": "1.0.8",
+      "present": true,
+      "commit": "06c957e587f51dd53cb9bd686840d24e4cfb5d71"
+    },
+    {
+      "kind": "github-release",
+      "url": "https://github.com/NJLaPrell/workflow-cannon/releases/tag/v1.0.8",
+      "tagName": "v1.0.8",
+      "publishedAt": "2026-07-09T22:15:46Z"
+    },
+    {
+      "kind": "npm",
+      "package": "@workflow-cannon/workspace-kit",
+      "version": "1.0.8",
+      "distTag": "latest",
+      "state": "already-published"
+    },
+    {
+      "kind": "git-tag",
+      "ref": "v1.0.8",
+      "url": "https://github.com/NJLaPrell/workflow-cannon/releases/tag/v1.0.8"
+    },
+    {
+      "kind": "github-release",
+      "ref": "v1.0.8",
+      "url": "https://github.com/NJLaPrell/workflow-cannon/releases/tag/v1.0.8"
+    },
+    {
+      "kind": "npm-package",
+      "ref": "@workflow-cannon/workspace-kit@1.0.8",
+      "url": "https://www.npmjs.com/package/@workflow-cannon/workspace-kit/v/1.0.8"
+    },
+    {
+      "kind": "ci-publish-run",
+      "ref": "29054003010",
+      "url": "https://github.com/NJLaPrell/workflow-cannon/actions/runs/29054003010"
     }
   ],
   "readinessChecks": [
@@ -208,6 +252,64 @@
         {
           "kind": "command",
           "value": "npm view @workflow-cannon/workspace-kit version --json --tag=latest"
+        }
+      ]
+    },
+    {
+      "code": "git-tag-already-present",
+      "state": "info",
+      "blocking": false,
+      "summary": "Git tag v1.0.8 already exists at 06c957e587f51dd53cb9bd686840d24e4cfb5d71.",
+      "refs": [
+        {
+          "kind": "artifact",
+          "value": "refs/tags/v1.0.8"
+        },
+        {
+          "kind": "command",
+          "value": "git tag -l 'v1.0.8'"
+        },
+        {
+          "kind": "command",
+          "value": "pnpm exec wk run propose-release-version '{}'",
+          "instructionPath": "src/modules/task-engine/instructions/propose-release-version.md"
+        }
+      ]
+    },
+    {
+      "code": "github-release-already-published",
+      "state": "info",
+      "blocking": false,
+      "summary": "GitHub release for v1.0.8 already exists.",
+      "refs": [
+        {
+          "kind": "artifact",
+          "value": "https://github.com/NJLaPrell/workflow-cannon/releases/tag/v1.0.8"
+        },
+        {
+          "kind": "command",
+          "value": "gh release view v1.0.8 --json url,tagName,publishedAt"
+        }
+      ]
+    },
+    {
+      "code": "npm-version-already-published",
+      "state": "info",
+      "blocking": false,
+      "summary": "@workflow-cannon/workspace-kit@1.0.8 is already published on dist-tag latest.",
+      "refs": [
+        {
+          "kind": "artifact",
+          "value": "@workflow-cannon/workspace-kit@1.0.8"
+        },
+        {
+          "kind": "command",
+          "value": "npm view @workflow-cannon/workspace-kit version --json --tag=latest"
+        },
+        {
+          "kind": "command",
+          "value": "pnpm exec wk run propose-release-version '{}'",
+          "instructionPath": "src/modules/task-engine/instructions/propose-release-version.md"
         }
       ]
     }
@@ -431,13 +533,13 @@
     }
   ],
   "followUpScan": {
-    "scannedAt": "2026-07-09T22:08:01.000Z",
-    "rationale": "Phase 146 bucket drained (6/6 completed). No follow-up execution tasks created during closeout scan."
+    "scannedAt": "2026-07-09T22:20:47.000Z",
+    "rationale": "Phase 146 published; no follow-up execution tasks from closeout scan."
   },
   "followUpTasks": [],
   "followUpSummary": {
     "count": 0,
-    "scannedAt": "2026-07-09T22:08:01.000Z",
-    "rationale": "Phase 146 bucket drained (6/6 completed). No follow-up execution tasks created during closeout scan."
+    "scannedAt": "2026-07-09T22:20:47.000Z",
+    "rationale": "Phase 146 published; no follow-up execution tasks from closeout scan."
   }
 }

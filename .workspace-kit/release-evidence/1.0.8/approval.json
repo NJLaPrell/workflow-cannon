@@ -3,8 +3,8 @@
   "fragmentKind": "approval",
   "approval": {
     "actor": "operator via chat closeout",
-    "timestamp": "2026-07-09T21:55:00.000Z",
-    "rationale": "Phase 146 all tasks complete (T100843-T100848), closeout readiness and delivery preflight passed, merge release/phase-146 to main for @workflow-cannon/workspace-kit@1.0.8.",
+    "timestamp": "2026-07-09T22:15:45.000Z",
+    "rationale": "Phase 146 merged to main via PR #770; CI test/parity/release-readiness green. Explicit operator approval to publish @workflow-cannon/workspace-kit@1.0.8 dist-tag latest.",
     "scope": "phase-146 publish @workflow-cannon/workspace-kit@1.0.8 dist-tag latest"
   }
 }
