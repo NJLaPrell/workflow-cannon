@@ -11,6 +11,6 @@ test("DashboardViewProvider overview hydration skips heavy kit fetches (T100396)
   const src = fs.readFileSync(providerPath, "utf8");
   assert.match(src, /skipHeavyFetches/);
   assert.match(src, /projection:\s*"overview"/);
-  assert.match(src, /renderDashboardStartupDirect/);
+  assert.match(src, /requestDashboardStartup|executeDashboardStartupBootstrap/);
   assert.match(src, /runDashboardSummary/);
 });

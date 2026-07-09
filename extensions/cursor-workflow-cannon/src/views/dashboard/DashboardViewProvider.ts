@@ -85,7 +85,11 @@ import {
 import { DashboardLoadTrace, isDashboardLoadTraceEnabled } from "./dashboard-load-trace.js";
 import { DashboardPollerCoordinator } from "./dashboard-pollers.js";
 import { DashboardReadPathCoordinator } from "./dashboard-read-path-coordinator.js";
-import { DashboardStartupSingleFlight } from "./dashboard-startup-single-flight.js";
+import {
+  DashboardStartupAbortedError,
+  DashboardStartupController,
+  type DashboardStartupTrigger
+} from "./dashboard-startup-controller.js";
 import {
   formatDashboardReadModeBadgeDetail,
   formatDashboardReadModeBadgeLabel
@@ -423,8 +427,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   /** First successful data render replaces the full document once; later refreshes patch `#root`. */
   private dashboardRootHydrated = false;
 
-  /** Coalesces parallel boot/ready/timeout startup renders. */
-  private readonly dashboardStartupSingleFlight = new DashboardStartupSingleFlight();
+  /** Sole owner of cold-start state machine + single-flight bootstrap (T100843). */
+  private readonly startupController: DashboardStartupController;
 
   /** Coalesces queue rollup upgrades so heavier queue projections stay single-flight. */
   private queueRollupHydrationInFlight?: Promise<void>;
@@ -603,13 +607,26 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         }
       }
     });
+    this.startupController = new DashboardStartupController({
+      executeBootstrap: () => this.executeDashboardStartupBootstrap(),
+      executeBackgroundHydration: () => this.ensureStartupEagerSectionsHydrated(),
+      onHydrated: () => {
+        this.markDashboardRootHydrated();
+      },
+      onReady: () => {
+        if (this.dashboardRootHydrated) {
+          this.syncVisibleSectionsToPollers();
+        }
+      },
+      log: (message) => logWc("dashboard", message)
+    });
     this.dashboardPollers = new DashboardPollerCoordinator({
       client: this.client,
       store: this.dashboardStore,
       refreshController: this.refreshController,
       isDeferred: () =>
         !this.dashboardRootHydrated ||
-        this.dashboardStartupSingleFlight.isInFlight() ||
+        this.startupController.isBootstrapInFlight() ||
         this.isDashboardRefreshDeferred(),
       isSliceVisible: (name) => this.isDashboardSliceVisible(name),
       isRefreshPaused: () => this.client.isRefreshPaused(),
@@ -1120,34 +1137,25 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       }
       if (msg?.type === "dashboardWebviewBoot") {
         logWc("dashboard", "webview boot");
-        if (!this.dashboardRootHydrated) {
-          await this.renderDashboardStartupDirect(webview);
-        }
+        await this.requestDashboardStartup("webview-boot");
         return;
       }
       if (msg?.type === "dashboardStartupTimeout") {
         const rootClass = typeof msg.rootClass === "string" ? msg.rootClass : "";
         logWc("dashboard", `startup timeout rootClass=${rootClass}`);
-        if (!this.dashboardRootHydrated) {
-          await this.renderDashboardStartupDirect(webview);
-        }
+        await this.requestDashboardStartup("startup-timeout");
         return;
       }
       if (msg?.type === "dashboardStartupRefresh") {
         logWc("dashboard", "startup diagnostic refresh");
         this.dashboardInteractionLocks.clear();
         this.dashboardRefreshAfterInteraction = false;
-        await this.renderDashboardStartupDirect(webview);
+        await this.requestDashboardStartup("startup-refresh");
         return;
       }
       if (msg?.type === "dashboardWebviewReady") {
         logWc("dashboard", "webview ready");
-        if (!this.dashboardRootHydrated) {
-          await this.renderDashboardStartupDirect(webview);
-        } else {
-          logWc("dashboard", "webview ready: triggering background eager hydration");
-          void this.ensureStartupEagerSectionsHydrated();
-        }
+        await this.requestDashboardStartup("webview-ready");
         return;
       }
       if (msg?.type === "dashboardTabActivated") {
@@ -1711,7 +1719,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         !webviewView.visible ||
         this.refreshController.isSuppressed() ||
         !this.dashboardRootHydrated ||
-        this.dashboardStartupSingleFlight.isInFlight()
+        this.startupController.isBootstrapInFlight()
       ) {
         return;
       }
@@ -1724,7 +1732,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     webviewView.onDidDispose(() => {
       this.dashboardRootShellReady = false;
       this.dashboardRootHydrated = false;
-      this.dashboardStartupSingleFlight.clear();
+      this.startupController.reset();
       this.queueRollupHydrationInFlight = undefined;
       this.kitStateRefreshInFlight = undefined;
       this.kitStateRefreshQueued = false;
@@ -1750,44 +1758,50 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     });
     // Shell-first paint (T100395): document before any dashboard-summary await.
     this.dashboardRootHydrated = false;
+    this.startupController.reset();
     webview.html = this.buildHtml(webview, renderDashboardShellInnerHtml());
     this.dashboardRootShellReady = true;
+    this.startupController.markShellPainted();
     logWc("dashboard", "resolveWebviewView: shell painted synchronously");
-    void this.renderDashboardStartupDirect(webview).then(() => {
-      if (this.dashboardRootHydrated) {
-        this.syncVisibleSectionsToPollers();
-      }
-    });
+    // Service start stays off the critical path; bootstrap is owned by the startup controller.
+    void this.requestDashboardStartup("resolve-webview");
   }
 
-  /** Section-level DOM patch (T100395); full wcReplaceRoot remains the compatibility fallback. */
-  private async renderDashboardStartupDirect(webview: vscode.Webview): Promise<void> {
-    return this.dashboardStartupSingleFlight.run(
-      () => this.renderDashboardStartupDirectOnce(webview),
-      () => logWc("dashboard", "startup render coalesced with in-flight dashboard-summary")
-    );
+  /** Route inventoried startup triggers through {@link DashboardStartupController} only. */
+  private requestDashboardStartup(trigger: DashboardStartupTrigger): Promise<void> {
+    return this.startupController.request(trigger);
   }
 
-  private async renderDashboardStartupDirectOnce(webview: vscode.Webview): Promise<void> {
+  /**
+   * Overview bootstrap paint executed exclusively by the startup controller (T100843).
+   * Throws on hard failure so the controller can enter `error`; soft kit-abort posts an
+   * error message and throws so we do not falsely mark hydrated.
+   */
+  private async executeDashboardStartupBootstrap(): Promise<void> {
     const activeView = this.view;
-    if (!activeView || activeView.webview !== webview) {
+    const webview = activeView?.webview;
+    if (!activeView || !webview) {
       logWc("dashboard", "startup render skipped (stale webview before summary)");
-      return;
+      throw new DashboardStartupAbortedError("startup render skipped (stale webview before summary)");
     }
+    let postedStartupError = false;
     try {
       const raw = (await this.runDashboardSummary({
         projection: "overview"
       }, "startup overview")) as DashboardSummaryCommandSuccess | Record<string, unknown>;
       if (isKitRefreshRunAborted(raw as Record<string, unknown>)) {
+        const message =
+          "Dashboard refresh was paused by another Workflow Cannon operation. Try again in a moment.";
         await webview.postMessage({
           type: "dashboardStartupError",
-          message: "Dashboard refresh was paused by another Workflow Cannon operation. Try again in a moment."
+          message
         });
-        return;
+        postedStartupError = true;
+        throw new Error(message);
       }
       if (!this.view || this.view !== activeView || activeView.webview !== webview) {
         logWc("dashboard", "startup render result ignored (stale webview)");
-        return;
+        throw new DashboardStartupAbortedError("startup render result ignored (stale webview)");
       }
       if (raw.ok !== true && raw.code === "extension-cli-timeout") {
         raw.message =
@@ -1833,13 +1847,22 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       }
       await webview.postMessage({ type: "wcReplaceRoot", html: rootInner });
       logWc("dashboard", "startup diagnostic direct render applied via wcReplaceRoot");
-      this.markDashboardRootHydrated();
-      void this.ensureStartupEagerSectionsHydrated();
+      // Hydrated + eager hydration are owned by DashboardStartupController callbacks.
       logWc("dashboard", "startup eager hydration scheduled");
     } catch (error) {
+      if (error instanceof DashboardStartupAbortedError) {
+        throw error;
+      }
       const message = error instanceof Error ? error.message : String(error);
       logWc("dashboard", `startup diagnostic direct render failed: ${message}`);
-      await webview.postMessage({ type: "dashboardStartupError", message });
+      if (!postedStartupError) {
+        try {
+          await webview.postMessage({ type: "dashboardStartupError", message });
+        } catch {
+          // best-effort error surface
+        }
+      }
+      throw error instanceof Error ? error : new Error(message);
     }
   }
 
@@ -5485,6 +5508,11 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       this.refreshController.markDeferredRefreshNeeded();
       return;
     }
+    // Pre-hydrate refreshes must not run a parallel full paint — sole owner is startup controller.
+    if (!this.dashboardRootHydrated) {
+      await this.requestDashboardStartup("push-update-fallback");
+      return;
+    }
     const { webview } = activeView;
     const lightRefresh = mode === "light";
     const refreshOptions = this.pendingPushUpdateOptions;
@@ -5492,15 +5520,12 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     const summaryProjection = refreshOptions?.projection ?? "overview";
     const summarySource =
       refreshOptions?.source ??
-      (lightRefresh ? "kit-state refresh" : this.dashboardRootHydrated ? "overview refresh" : "startup overview");
-    const skipHeavyFetches = refreshOptions?.skipHeavyFetches === true || (!this.dashboardRootHydrated && summaryProjection === "overview");
+      (lightRefresh ? "kit-state refresh" : "overview refresh");
+    const skipHeavyFetches = refreshOptions?.skipHeavyFetches === true;
     if (this.isDashboardRefreshDeferred()) {
       this.refreshController.markDeferredRefreshNeeded();
       this.dashboardCoordinator?.emitSnapshot();
       logWc("dashboard", "pushUpdate deferred (UI interaction lock active)");
-      if (!this.dashboardRootHydrated) {
-        await this.renderDashboardStartupDirect(webview);
-      }
       return;
     }
     if (lightRefresh) {
@@ -5522,9 +5547,6 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       }, summarySource)) as DashboardSummaryCommandSuccess | Record<string, unknown>;
       if (isKitRefreshRunAborted(raw as Record<string, unknown>)) {
         logWc("dashboard", "pushUpdate aborted (refresh paused or preempted)");
-        if (!this.dashboardRootHydrated) {
-          await this.renderDashboardStartupDirect(webview);
-        }
         return;
       }
       if (isWishlistPagingArgRejection(raw as Record<string, unknown>)) {
@@ -5536,9 +5558,6 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         )) as DashboardSummaryCommandSuccess | Record<string, unknown>;
         if (isKitRefreshRunAborted(raw as Record<string, unknown>)) {
           logWc("dashboard", "pushUpdate aborted (refresh paused or preempted)");
-          if (!this.dashboardRootHydrated) {
-            await this.renderDashboardStartupDirect(webview);
-          }
           return;
         }
       }

@@ -28,13 +28,14 @@ test("initial overview hydration skips secondary kit commands (T100400 regressio
   assert.doesNotMatch(skipBlock, /cae-authoring-summary/);
 });
 
-test("initial webview resolve paints via startup direct render (overview)", () => {
+test("initial webview resolve paints via startup controller (overview)", () => {
   const providerSrc = fs.readFileSync(providerPath, "utf8");
   const resolveBlock = providerSrc.slice(providerSrc.indexOf("resolveWebviewView("));
-  assert.match(resolveBlock, /renderDashboardStartupDirect\(webview\)/);
-  assert.match(resolveBlock, /runDashboardSummary/);
+  assert.match(resolveBlock, /requestDashboardStartup\("resolve-webview"\)/);
+  assert.match(resolveBlock, /startupController\.markShellPainted\(\)/);
+  assert.match(providerSrc, /executeDashboardStartupBootstrap/);
   const startupBlock = providerSrc.slice(
-    providerSrc.indexOf("private async renderDashboardStartupDirectOnce"),
+    providerSrc.indexOf("private async executeDashboardStartupBootstrap"),
     providerSrc.indexOf("private async postSectionPatch")
   );
   assert.match(startupBlock, /projection:\s*"overview"/);
@@ -49,37 +50,36 @@ test("dashboard webview ready handshake retries initial hydration", () => {
   assert.match(providerSrc, /dashboardWebviewBoot/);
   assert.match(providerSrc, /dashboardStartupTimeout/);
   assert.match(providerSrc, /dashboardStartupRefresh/);
-  assert.match(providerSrc, /renderDashboardStartupDirect/);
+  assert.match(providerSrc, /requestDashboardStartup/);
   assert.match(providerSrc, /dashboardStartupError/);
   assert.match(providerSrc, /data-wc-startup-refresh/);
   assert.match(providerSrc, /data-wc-startup-status/);
   assert.match(providerSrc, /msg\?\.type === "dashboardWebviewReady"/);
-  assert.match(providerSrc, /renderDashboardStartupDirect/);
+  assert.match(providerSrc, /requestDashboardStartup\("webview-ready"\)/);
 });
 
-test("boot ready and timeout startup triggers coalesce through the startup single-flight", () => {
+test("boot ready and timeout startup triggers coalesce through the startup controller", () => {
   const providerSrc = fs.readFileSync(providerPath, "utf8");
-  const directBlock = providerSrc.slice(
-    providerSrc.indexOf("private async renderDashboardStartupDirect"),
-    providerSrc.indexOf("private async renderDashboardStartupDirectOnce")
-  );
-  assert.match(directBlock, /dashboardStartupSingleFlight\.run/);
-  assert.match(directBlock, /startup render coalesced with in-flight dashboard-summary/);
+  assert.match(providerSrc, /new DashboardStartupController/);
+  assert.match(providerSrc, /isBootstrapInFlight\(\)/);
+  assert.doesNotMatch(providerSrc, /DashboardStartupSingleFlight/);
+  assert.doesNotMatch(providerSrc, /renderDashboardStartupDirect/);
 
   const messageBlock = providerSrc.slice(
     providerSrc.indexOf("webview.onDidReceiveMessage"),
     providerSrc.indexOf("webviewView.onDidChangeVisibility")
   );
-  assert.match(messageBlock, /dashboardWebviewBoot[\s\S]*renderDashboardStartupDirect\(webview\)/);
-  assert.match(messageBlock, /dashboardStartupTimeout[\s\S]*renderDashboardStartupDirect\(webview\)/);
-  assert.match(messageBlock, /dashboardWebviewReady[\s\S]*renderDashboardStartupDirect\(webview\)/);
+  assert.match(messageBlock, /dashboardWebviewBoot[\s\S]*requestDashboardStartup\("webview-boot"\)/);
+  assert.match(messageBlock, /dashboardStartupTimeout[\s\S]*requestDashboardStartup\("startup-timeout"\)/);
+  assert.match(messageBlock, /dashboardWebviewReady[\s\S]*requestDashboardStartup\("webview-ready"\)/);
+  assert.match(messageBlock, /dashboardStartupRefresh[\s\S]*requestDashboardStartup\("startup-refresh"\)/);
 });
 
 test("first dashboard data render patches the painted shell root", () => {
   const providerSrc = fs.readFileSync(providerPath, "utf8");
   assert.match(providerSrc, /dashboardRootHydrated = false/);
   const startupBlock = providerSrc.slice(
-    providerSrc.indexOf("private async renderDashboardStartupDirectOnce"),
+    providerSrc.indexOf("private async executeDashboardStartupBootstrap"),
     providerSrc.indexOf("private async postSectionPatch")
   );
   assert.match(startupBlock, /postMessage\(\{ type: "wcReplaceRoot", html: rootInner \}\)/);
