@@ -96,6 +96,17 @@ function workspaceStatusEventsReadable(db: SqliteDb): boolean {
   }
 }
 
+function collectDistinctTaskPhaseKeys(tasks: TaskEntity[]): string[] {
+  const keys = new Set<string>();
+  for (const task of tasks) {
+    const key = inferTaskPhaseKey(task);
+    if (key && key.length > 0) {
+      keys.add(key);
+    }
+  }
+  return [...keys];
+}
+
 /** Phase keys with closeout-passed delivery evidence among workspace rollover candidates. */
 export function collectDeliveredPhaseKeys(
   db: SqliteDb,
@@ -103,14 +114,17 @@ export function collectDeliveredPhaseKeys(
   limit = 300
 ): string[] {
   const historyDelivered = readDeliveredPhaseKeysFromHistory(db, limit);
-  const candidates = collectRolledOutPhaseKeys(db, limit);
+  const candidates = new Set(collectRolledOutPhaseKeys(db, limit));
+  for (const phaseKey of collectDistinctTaskPhaseKeys(tasks)) {
+    candidates.add(phaseKey);
+  }
   const delivered = new Set(historyDelivered);
   for (const phaseKey of candidates) {
     if (delivered.has(phaseKey)) {
       continue;
     }
     const closeout = buildPhaseCloseoutReadiness({ tasks, phaseKey });
-    if (closeout.passed) {
+    if (closeout.passed && closeout.checkedTaskCount > 0) {
       delivered.add(phaseKey);
     }
   }

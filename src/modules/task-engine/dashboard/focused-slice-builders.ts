@@ -345,7 +345,7 @@ export async function buildDashboardQueueSlice(
 
   const phaseDeliveryFields = collectPhaseDeliveryDashboardFields(
     dualForStatus?.getDatabase() ?? null,
-    tasks,
+    allTasks,
     ctx.effectiveConfig as Record<string, unknown> | undefined
   );
 

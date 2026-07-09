@@ -1648,7 +1648,7 @@ export async function buildDashboardBase(
     tracer?.span("phaseDeliveryHistory", () => ({
       deliveredPhaseKeys:
         dualForStatus != null
-          ? collectDeliveredPhaseKeys(dualForStatus.getDatabase(), tasks)
+          ? collectDeliveredPhaseKeys(dualForStatus.getDatabase(), allTasks)
           : [],
       rolledOutPhaseKeys:
         dualForStatus != null ? collectRolledOutPhaseKeys(dualForStatus.getDatabase()) : [],
@@ -1659,7 +1659,7 @@ export async function buildDashboardBase(
     })) ?? {
       deliveredPhaseKeys:
         dualForStatus != null
-          ? collectDeliveredPhaseKeys(dualForStatus.getDatabase(), tasks)
+          ? collectDeliveredPhaseKeys(dualForStatus.getDatabase(), allTasks)
           : [],
       rolledOutPhaseKeys:
         dualForStatus != null ? collectRolledOutPhaseKeys(dualForStatus.getDatabase()) : [],

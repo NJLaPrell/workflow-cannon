@@ -297,6 +297,19 @@ function readPhaseReleaseDates(data: Record<string, unknown>): Record<string, st
   return out;
 }
 
+function readLastDeliveredPhaseKey(data: Record<string, unknown>): string | null {
+  const row = data.lastDeliveredPhase;
+  if (!row || typeof row !== "object") {
+    return null;
+  }
+  const phaseKey = (row as Record<string, unknown>).phaseKey;
+  if (typeof phaseKey !== "string") {
+    return null;
+  }
+  const trimmed = phaseKey.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
 function parsePhaseCatalogRows(phaseSlice: Record<string, unknown> | undefined): PhaseCatalogListRow[] {
   const cat = phaseSlice?.phaseCatalog as { phases?: unknown } | undefined;
   const phasesRaw = Array.isArray(cat?.phases) ? (cat!.phases as unknown[]) : [];
@@ -6405,7 +6418,8 @@ export function renderPhaseCatalogOverviewSection(
   releasedPhaseKeys?: readonly string[],
   legacyDeliveredMaxOrdinal?: number | null,
   activeQueuePhaseKeys?: readonly string[],
-  phaseReleaseDates?: Readonly<Record<string, string>>
+  phaseReleaseDates?: Readonly<Record<string, string>>,
+  lastDeliveredPhaseKey?: string | null
 ): string {
   if (!phaseSlice || typeof phaseSlice !== "object") {
     return "";
@@ -6443,7 +6457,8 @@ export function renderPhaseCatalogOverviewSection(
       rosterContext,
       releasedPhaseKeys,
       legacyDeliveredMaxOrdinal,
-      activeQueuePhaseKeys
+      activeQueuePhaseKeys,
+      lastDeliveredPhaseKey
     );
     const rosterRows = narrow.ok
       ? narrow.rows
@@ -6453,7 +6468,8 @@ export function renderPhaseCatalogOverviewSection(
             rosterContext,
             releasedPhaseKeys,
             legacyDeliveredMaxOrdinal,
-            activeQueuePhaseKeys
+            activeQueuePhaseKeys,
+            lastDeliveredPhaseKey
           )
         : [];
     if (rosterRows.length === 0) {
@@ -7167,6 +7183,7 @@ type DashboardPhaseRenderContext = {
   legacyDeliveredMaxOrdinal: number | null;
   activeQueuePhaseKeys: string[];
   phaseReleaseDates: Readonly<Record<string, string>>;
+  lastDeliveredPhaseKey: string | null;
   phaseFocus: PhaseScheduleFocus;
   phaseSystemSlice: Record<string, unknown> | undefined;
   phaseCatalogLookup: Map<string, PhaseCatalogListRow>;
@@ -7218,6 +7235,7 @@ function createDashboardPhaseRenderContext(
   const legacyDeliveredMaxOrdinal = readLegacyDeliveredMaxOrdinal(d);
   const activeQueuePhaseKeys = readPhaseKeysWithActiveQueueWork(d);
   const phaseReleaseDates = readPhaseReleaseDates(d);
+  const lastDeliveredPhaseKey = readLastDeliveredPhaseKey(d);
   const phaseFocus = phaseScheduleFocusFromWorkspace(
     ws,
     deliveredPhaseKeys,
@@ -7243,6 +7261,7 @@ function createDashboardPhaseRenderContext(
     legacyDeliveredMaxOrdinal,
     activeQueuePhaseKeys,
     phaseReleaseDates,
+    lastDeliveredPhaseKey,
     phaseFocus,
     phaseSystemSlice,
     phaseCatalogLookup,
@@ -7583,7 +7602,8 @@ function renderPhaseRosterSectionInnerHtml(
     phaseCtx.rosterDeliveredPhaseKeys,
     phaseCtx.legacyDeliveredMaxOrdinal,
     phaseCtx.activeQueuePhaseKeys,
-    phaseCtx.phaseReleaseDates
+    phaseCtx.phaseReleaseDates,
+    phaseCtx.lastDeliveredPhaseKey
   );
 }
 
