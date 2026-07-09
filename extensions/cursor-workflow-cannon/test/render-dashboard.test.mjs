@@ -4083,3 +4083,54 @@ test("renderDashboardQueueTaskRowsHtml renders queue rows for host lazy terminal
   assert.match(html, /T900/);
   assert.equal(lazyTerminalBucketListLimit(), 50);
 });
+
+test("T100847: cold-bootstrap empty first-run payload paints readable overview with deferredSections", () => {
+  const html = renderDashboardRootInnerHtml(
+    {
+      ok: true,
+      code: "bootstrap-cli-bootstrap",
+      data: {
+        workspaceStatus: {
+          phaseKey: "146",
+          label: "Phase 146",
+          currentKitPhase: "146",
+          status: "active"
+        },
+        systemStatus: { phase: "146", status: "ok" },
+        stateSummary: { ready: 0, blocked: 0, inProgress: 0, proposed: 0, completed: 0 },
+        dashboardProjection: "overview",
+        readyQueueCount: 0,
+        readyImprovementsSummary: { schemaVersion: 1, count: 0, top: [], phaseBuckets: [] },
+        readyExecutionSummary: { schemaVersion: 1, count: 0, top: [], phaseBuckets: [] },
+        blockedSummary: { schemaVersion: 1, count: 0, top: [], phaseBuckets: [] },
+        proposedImprovementsSummary: { schemaVersion: 1, count: 0, top: [], phaseBuckets: [] },
+        proposedExecutionSummary: { schemaVersion: 1, count: 0, top: [], phaseBuckets: [] },
+        completedSummary: { schemaVersion: 1, count: 0, top: [], phaseBuckets: [] },
+        cancelledSummary: { schemaVersion: 1, count: 0, top: [], phaseBuckets: [] },
+        wishlist: { schemaVersion: 1, openCount: 0, totalCount: 0, openTop: [] }
+      }
+    },
+    null,
+    null,
+    undefined,
+    null,
+    {
+      deferredSections: new Set(["status", "config", "cae", "phase-journal"]),
+      readModeBadge: { active: "cli-polling", detail: "service unavailable (forced)" }
+    }
+  );
+
+  assert.doesNotMatch(html, /wc-dashboard-shell-initial/);
+  assert.match(
+    html,
+    /data-wc-section="overview"[^>]*class="[^"]*wc-dash-section--ready[^"]*"/
+  );
+  assert.doesNotMatch(html, /data-wc-section="overview"[^>]*wc-dash-section--loading/);
+  assert.match(html, /wc-stat-pills/);
+  assert.match(html, /wc-stat-num">0</);
+  assert.match(html, /No ready tasks\./);
+  assert.match(html, /data-wc-section="status"[\s\S]*?wc-dash-section--loading/);
+  assert.match(html, /data-wc-section="config"[\s\S]*?wc-dash-section--loading/);
+  assert.match(html, /data-wc-section="cae"[\s\S]*?wc-dash-section--loading/);
+  assert.match(html, /data-wc-section="phase-journal"[\s\S]*?wc-dash-section--loading/);
+});

@@ -206,3 +206,90 @@ test("resolveBootstrapSnapshot never requires service health and fails closed wh
   assert.equal(result.ok, false);
   assert.match(result.message, /exhausted/i);
 });
+
+/** Fresh workspace / first-run: all queue + state counts are zero, but phase identity is present. */
+const FIRST_RUN_EMPTY_OVERVIEW = {
+  workspaceStatus: {
+    phaseKey: "146",
+    label: "Phase 146",
+    currentKitPhase: "146",
+    status: "active"
+  },
+  systemStatus: { phase: "146", status: "ok" },
+  stateSummary: { ready: 0, blocked: 0, inProgress: 0, proposed: 0, completed: 0 },
+  dashboardProjection: "overview",
+  readyQueueCount: 0,
+  readyImprovementsSummary: { schemaVersion: 1, count: 0, top: [], phaseBuckets: [] },
+  readyExecutionSummary: { schemaVersion: 1, count: 0, top: [], phaseBuckets: [] },
+  blockedSummary: { schemaVersion: 1, count: 0, top: [], phaseBuckets: [] },
+  proposedImprovementsSummary: { schemaVersion: 1, count: 0, top: [], phaseBuckets: [] },
+  proposedExecutionSummary: { schemaVersion: 1, count: 0, top: [], phaseBuckets: [] },
+  completedSummary: { schemaVersion: 1, count: 0, top: [], phaseBuckets: [] },
+  cancelledSummary: { schemaVersion: 1, count: 0, top: [], phaseBuckets: [] }
+};
+
+const FIRST_RUN_EMPTY_QUEUE = {
+  readyQueueCount: 0,
+  readyImprovementsSummary: { schemaVersion: 1, count: 0, top: [], phaseBuckets: [] },
+  readyExecutionSummary: { schemaVersion: 1, count: 0, top: [], phaseBuckets: [] },
+  blockedSummary: { schemaVersion: 1, count: 0, top: [], phaseBuckets: [] }
+};
+
+test("T100847: isUsableColdBootstrapCache accepts all-zero first-run bag", () => {
+  assert.equal(isUsableColdBootstrapCache(FIRST_RUN_EMPTY_OVERVIEW), true);
+  assert.equal(isUsableColdBootstrapCache({ stateSummary: { ready: 0, blocked: 0 } }), true);
+  assert.equal(isUsableColdBootstrapCache({ systemStatus: { phase: "146" } }), true);
+  // Zeros alone without phase/status/stateSummary still fail closed.
+  assert.equal(isUsableColdBootstrapCache({ readyQueueCount: 0 }), false);
+});
+
+test("T100847: summaryFromBootstrapSlices keeps all-zero first-run usable and overview-stamped", () => {
+  const summary = summaryFromBootstrapSlices({
+    overview: FIRST_RUN_EMPTY_OVERVIEW,
+    queue: FIRST_RUN_EMPTY_QUEUE
+  });
+  assert.equal(isUsableColdBootstrapCache(summary), true);
+  assert.equal(summary.dashboardProjection, "overview");
+  assert.equal(summary.readyQueueCount, 0);
+  assert.equal((summary.readyImprovementsSummary).count, 0);
+  assert.equal((summary.readyExecutionSummary).count, 0);
+  assert.equal((summary.blockedSummary).count, 0);
+  assert.deepEqual((summary.stateSummary).ready, 0);
+  // Empty tops still need background rollup hydration — must not block first paint.
+  assert.equal(dashboardSummaryNeedsQueueRollupHydration(summary), true);
+});
+
+test("T100847: resolveBootstrapSnapshot accepts cli-bootstrap all-zero first-run bag", async () => {
+  const result = await resolveBootstrapSnapshot({
+    cache: null,
+    store: new DashboardDataStore(),
+    fetchCliBootstrap: async () => ({
+      ok: true,
+      data: {
+        overview: FIRST_RUN_EMPTY_OVERVIEW,
+        queue: FIRST_RUN_EMPTY_QUEUE
+      }
+    }),
+    fetchCliSummaryOverview: async () => ({ ok: false })
+  });
+  assert.equal(result.ok, true);
+  assert.equal(result.provenance, "cli-bootstrap");
+  assert.equal(isUsableColdBootstrapCache(result.data), true);
+  assert.equal(result.data.readyQueueCount, 0);
+  assert.equal(result.dashboardProjection, "overview");
+  assert.equal(dashboardSummaryNeedsQueueRollupHydration(result.data), true);
+});
+
+test("T100847: resolveBootstrapSnapshot accepts session-cache all-zero first-run bag", async () => {
+  const result = await resolveBootstrapSnapshot({
+    cache: { ...FIRST_RUN_EMPTY_OVERVIEW },
+    store: new DashboardDataStore(),
+    fetchCliBootstrap: async () => {
+      throw new Error("CLI must not run when session-cache is usable");
+    }
+  });
+  assert.equal(result.ok, true);
+  assert.equal(result.provenance, "session-cache");
+  assert.equal(result.data.readyQueueCount, 0);
+  assert.equal(isUsableColdBootstrapCache(result.data), true);
+});
