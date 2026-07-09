@@ -38,5 +38,5 @@
     "listCommands": "pnpm exec wk run --list-commands",
     "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
   },
-  "invocationId": "a36a799c-dc5a-459e-8f03-0a489b39d208"
+  "invocationId": "07d7468a-8a3f-47cb-8ea4-d53ed98b9c68"
 }
