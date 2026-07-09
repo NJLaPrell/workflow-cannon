@@ -24,7 +24,7 @@ import {
   probeDashboardServiceHealth,
   ServiceDashboardDataSource
 } from "./service-dashboard-data-source.js";
-import type { DashboardSliceName } from "./dashboard-snapshot-types.js";
+import type { DashboardSlice, DashboardSliceName } from "./dashboard-snapshot-types.js";
 import type { DashboardSectionId } from "./dashboard-section-registry.js";
 import { DASHBOARD_SLICE_REGISTRY } from "./dashboard-slice-registry.js";
 
@@ -40,8 +40,12 @@ export type DashboardReadPathCoordinatorDeps = {
 };
 
 /**
- * Selects Option 1 CLI pollers vs Option 2 warm service (T100599).
- * Service mode is push-driven; CLI pollers stay alive only as a stale safety net.
+ * Selects Option 1 CLI pollers vs Option 2 warm service (T100599 / T100845).
+ *
+ * Paint path ({@link startForPaint}): fast health probe only — never awaits
+ * `dashboard-service-start`. Healthy → service immediately; cold → CLI bootstrap.
+ * Post-paint ({@link promoteToService}): background service start + quiet path swap
+ * that preserves the store and never restarts the startup pipeline.
  */
 export class DashboardReadPathCoordinator {
   private configuredMode: DashboardDataSourceMode = "auto";
@@ -54,8 +58,8 @@ export class DashboardReadPathCoordinator {
   private serviceHealthCheckInFlight = false;
   private serviceHealthMonitorGeneration = 0;
   private pollersPaused = false;
-  private serviceStartAttempted = false;
   private running = false;
+  private promoteInFlight: Promise<void> | undefined;
 
   constructor(private readonly deps: DashboardReadPathCoordinatorDeps) {}
 
@@ -85,19 +89,55 @@ export class DashboardReadPathCoordinator {
     return this.activePath === "service";
   }
 
-  async start(): Promise<void> {
+  /**
+   * Paint-safe start (T100845): probe only — no `dashboard-service-start` on the
+   * critical path. Prefer service when already healthy; otherwise CLI bootstrap.
+   */
+  async startForPaint(): Promise<void> {
     if (this.running) {
       return;
     }
     this.running = true;
     this.configuredMode = await readConfiguredDashboardDataSourceMode(this.deps.workspacePath);
-    await this.activateReadPath();
+    await this.activateReadPathForPaint();
+  }
+
+  /** @deprecated Prefer {@link startForPaint}; kept as alias for callers/tests. */
+  async start(): Promise<void> {
+    return this.startForPaint();
+  }
+
+  /**
+   * After overview is hydrated/ready: background-start service (if needed) and
+   * quietly swap to the service path without clearing the store or restarting startup.
+   */
+  async promoteToService(): Promise<void> {
+    if (!this.running) {
+      return;
+    }
+    if (this.activePath === "service") {
+      return;
+    }
+    if (this.sessionOverride === "cli-polling" || this.configuredMode === "cli-polling") {
+      return;
+    }
+    if (this.promoteInFlight) {
+      return this.promoteInFlight;
+    }
+    const run = this.runPromoteToService().finally(() => {
+      if (this.promoteInFlight === run) {
+        this.promoteInFlight = undefined;
+      }
+    });
+    this.promoteInFlight = run;
+    return run;
   }
 
   async stop(): Promise<void> {
     await this.stopActivePath();
     this.running = false;
     this.activePath = null;
+    this.promoteInFlight = undefined;
   }
 
   /** Re-read config and swap read paths when `dashboard.dataSource` changes. */
@@ -108,7 +148,7 @@ export class DashboardReadPathCoordinator {
     }
     this.configuredMode = next;
     if (this.running) {
-      await this.activateReadPath();
+      await this.activateReadPathForPaint();
     }
   }
 
@@ -116,7 +156,9 @@ export class DashboardReadPathCoordinator {
     this.sessionOverride = "cli-polling";
     this.serviceFailDetail = undefined;
     if (this.running) {
-      await this.activateReadPath();
+      await this.stopActivePath();
+      await this.startCliPollingPath();
+      this.emitModeChanged();
     } else {
       this.emitModeChanged();
     }
@@ -135,12 +177,27 @@ export class DashboardReadPathCoordinator {
             : "dashboard-service-start failed";
       this.serviceFailDetail = message;
       if (this.running) {
-        await this.activateReadPath();
+        await this.startCliBootstrapPath();
+        this.emitModeChanged();
       }
       return { ok: false, message };
     }
     if (this.running) {
-      await this.activateReadPath();
+      const healthy = await probeDashboardServiceHealth(this.deps.workspacePath);
+      if (healthy) {
+        try {
+          await this.startServicePath();
+          this.serviceFailDetail = undefined;
+          this.emitModeChanged();
+          return { ok: true, message: typeof result.message === "string" ? result.message : undefined };
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          this.serviceFailDetail = "Dashboard service start failed — using CLI polling";
+          this.deps.log?.(`dashboard service start failed after restart: ${message}`);
+        }
+      }
+      await this.startCliBootstrapPath();
+      this.emitModeChanged();
     }
     return { ok: true, message: typeof result.message === "string" ? result.message : undefined };
   }
@@ -181,7 +238,11 @@ export class DashboardReadPathCoordinator {
     }
   }
 
-  private async activateReadPath(): Promise<void> {
+  /**
+   * Paint-time path selection: never awaits `dashboard-service-start`.
+   * Healthy probe → service immediately (skip CLI detour). Cold → CLI bootstrap.
+   */
+  private async activateReadPathForPaint(): Promise<void> {
     await this.stopActivePath();
     const effectiveMode = this.sessionOverride ?? this.configuredMode;
     this.serviceFailDetail = undefined;
@@ -201,39 +262,54 @@ export class DashboardReadPathCoordinator {
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         this.deps.log?.(`dashboard service start failed: ${message}`);
-        // Fall back to CLI polling after log.
         this.serviceFailDetail = "Dashboard service start failed — using CLI polling";
       }
     } else if (effectiveMode === "service") {
       this.serviceFailDetail =
         "Dashboard service is not running or failed health check — using CLI polling";
-    } else if (!this.serviceStartAttempted) {
-      // Auto mode: kick service start off the critical path (T100844 / T100845 promote).
-      // Cold paint uses BootstrapSnapshotAdapter CLI path; do not await restart here.
-      this.serviceStartAttempted = true;
-      this.serviceFailDetail = "Dashboard service unavailable — using CLI polling";
-      void this.attemptBackgroundServiceStart();
     } else {
+      // Auto cold: CLI bootstrap only. Service start waits for promoteToService (T100845).
       this.serviceFailDetail = "Dashboard service unavailable — using CLI polling";
     }
 
-    // Fallback: use CLI bootstrap command to fetch multiple cheap slices in one request.
     await this.startCliBootstrapPath();
     this.emitModeChanged();
   }
 
+  private async runPromoteToService(): Promise<void> {
+    if (!this.running || this.activePath === "service") {
+      return;
+    }
+    if (this.sessionOverride === "cli-polling" || this.configuredMode === "cli-polling") {
+      return;
+    }
+
+    let healthy = await probeDashboardServiceHealth(this.deps.workspacePath);
+    if (!healthy) {
+      const started = await this.attemptBackgroundServiceStart();
+      if (!started) {
+        this.deps.log?.("dashboard promote: service start failed — keeping CLI path");
+        return;
+      }
+      healthy = await probeDashboardServiceHealth(this.deps.workspacePath);
+      if (!healthy) {
+        this.deps.log?.("dashboard promote: service still unhealthy after start — keeping CLI path");
+        return;
+      }
+    }
+
+    await this.swapToServicePathQuietly();
+  }
+
   /**
-   * Best-effort service start after cold CLI path is already active.
-   * Must not stop pollers or clear CLI fail detail while overview bootstrap is racing.
+   * Best-effort service start for post-paint promote. Does not touch the active
+   * CLI path or store. Returns true when `dashboard-service-start` reports ok.
    */
-  private async attemptBackgroundServiceStart(): Promise<void> {
+  private async attemptBackgroundServiceStart(): Promise<boolean> {
     const result = await this.deps.client.run("dashboard-service-start", {});
     if (result.ok === true) {
-      this.deps.log?.("dashboard service start completed in background after cold CLI path");
-      if (this.running) {
-        await this.activateReadPath();
-      }
-      return;
+      this.deps.log?.("dashboard service start completed for post-paint promote");
+      return true;
     }
     this.deps.log?.(
       `dashboard service background start failed: ${
@@ -244,6 +320,63 @@ export class DashboardReadPathCoordinator {
             : "unknown"
       }`
     );
+    return false;
+  }
+
+  /**
+   * Quiet path swap: preserve store, attach service sync, restore overview/queue
+   * if service ingest regresses usable CLI data. Never clears the store.
+   */
+  private async swapToServicePathQuietly(): Promise<void> {
+    if (!this.running || this.activePath === "service") {
+      return;
+    }
+
+    const priorOverview = cloneSlice(this.deps.store.getSlice("overview"));
+    const priorQueue = cloneSlice(this.deps.store.getSlice("queue"));
+
+    // Detach CLI pollers / prior path without wiping store contents.
+    await this.stopActivePath();
+
+    try {
+      await this.startServicePath();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.deps.log?.(`dashboard promote: service path attach failed — restoring CLI: ${message}`);
+      this.serviceFailDetail = "Dashboard service promote failed — using CLI polling";
+      await this.startCliPollingPath();
+      this.restoreSliceIfRegressed("overview", priorOverview);
+      this.restoreSliceIfRegressed("queue", priorQueue);
+      this.emitModeChanged();
+      return;
+    }
+
+    this.restoreSliceIfRegressed("overview", priorOverview);
+    this.restoreSliceIfRegressed("queue", priorQueue);
+    this.serviceFailDetail = undefined;
+    this.deps.log?.("dashboard promote: quietly swapped to service path (store preserved)");
+    this.emitModeChanged();
+  }
+
+  /**
+   * If service ingest left overview/queue empty or missing critical fields that
+   * the prior CLI path had, put the prior fresh value back.
+   */
+  private restoreSliceIfRegressed(name: DashboardSliceName, prior: DashboardSlice): void {
+    if (prior.status !== "fresh" || !prior.value || typeof prior.value !== "object") {
+      return;
+    }
+    const current = this.deps.store.getSlice(name);
+    if (sliceRegressed(name, prior, current)) {
+      this.deps.log?.(
+        `dashboard promote: restoring prior ${name} slice after service regress`
+      );
+      this.deps.store.updateSlice(name, prior.value, {
+        source: prior.source,
+        sourceArgs: prior.sourceArgs,
+        planningGeneration: prior.planningGeneration
+      });
+    }
   }
 
   private async emitServiceHealthDiagnostics(): Promise<void> {
@@ -491,4 +624,48 @@ export class DashboardReadPathCoordinator {
   private emitModeChanged(): void {
     this.deps.onModeChanged?.(this.getModeBadge());
   }
+}
+
+function cloneSlice(slice: DashboardSlice): DashboardSlice {
+  return {
+    ...slice,
+    value: slice.value,
+    sourceArgs: slice.sourceArgs ? { ...slice.sourceArgs } : slice.sourceArgs
+  };
+}
+
+function sliceRegressed(
+  name: DashboardSliceName,
+  prior: DashboardSlice,
+  current: DashboardSlice
+): boolean {
+  if (!prior.value || typeof prior.value !== "object") {
+    return false;
+  }
+  if (!current.value || typeof current.value !== "object") {
+    return true;
+  }
+  if (current.status === "empty" || current.status === "error") {
+    return true;
+  }
+  if (name === "overview") {
+    const priorWs = (prior.value as Record<string, unknown>).workspaceStatus;
+    const nextWs = (current.value as Record<string, unknown>).workspaceStatus;
+    if (priorWs && !nextWs) {
+      return true;
+    }
+    const priorProj = (prior.value as Record<string, unknown>).dashboardProjection;
+    const nextProj = (current.value as Record<string, unknown>).dashboardProjection;
+    if (priorProj && !nextProj) {
+      return true;
+    }
+  }
+  if (name === "queue") {
+    const priorReady = (prior.value as Record<string, unknown>).readyQueueCount;
+    const nextReady = (current.value as Record<string, unknown>).readyQueueCount;
+    if (typeof priorReady === "number" && typeof nextReady !== "number") {
+      return true;
+    }
+  }
+  return false;
 }

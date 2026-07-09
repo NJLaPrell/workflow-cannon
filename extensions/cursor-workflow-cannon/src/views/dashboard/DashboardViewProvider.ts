@@ -621,6 +621,10 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         if (this.dashboardRootHydrated) {
           this.syncVisibleSectionsToPollers();
         }
+        // T100845: quiet post-paint promote — store patches only; never restart startup.
+        void this.readPath.promoteToService().then(() => {
+          this.postDashboardReadModeBadge();
+        });
       },
       log: (message) => logWc("dashboard", message)
     });
@@ -1730,7 +1734,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       this.syncVisibleSectionsToPollers();
     });
     this.dashboardStore.start();
-    void this.readPath.start().then(() => {
+    // T100845: paint-safe probe only — no dashboard-service-start on critical path.
+    void this.readPath.startForPaint().then(() => {
       this.postDashboardReadModeBadge();
     });
     webviewView.onDidDispose(() => {
