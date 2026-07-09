@@ -635,7 +635,7 @@ test("T100845: promoteToService starts service after cold paint and swaps quietl
   await new Promise((resolve) => server.close(resolve));
 });
 
-test("T100845: promote failure keeps CLI path and usable overview", async () => {
+test("T100845/T100848: promote failure keeps CLI path and usable overview", async () => {
   const store = new DashboardDataStore();
   const pollers = {
     start: () => {},
@@ -683,6 +683,66 @@ test("T100845: promote failure keeps CLI path and usable overview", async () => 
   assert.equal(store.getSlice("overview").status, "fresh");
   assert.equal(store.getSlice("overview").value?.workspaceStatus?.phaseKey, "146");
   assert.equal(store.getSlice("queue").value?.readyQueueCount, 7);
+  assert.match(
+    coordinator.getModeBadge().detail ?? "",
+    /promote failed|using CLI polling/i
+  );
+
+  await coordinator.stop();
+});
+
+test("T100848: postPaintPromote false is a no-op promote without forcing cli-polling mode", async () => {
+  const workspace = await fsMkdtemp();
+  await mkdir(path.join(workspace, ".workspace-kit"), { recursive: true });
+  await writeFile(
+    path.join(workspace, ".workspace-kit", "config.json"),
+    JSON.stringify({ dashboard: { dataSource: "auto", postPaintPromote: false } })
+  );
+
+  const runCalls = [];
+  const store = new DashboardDataStore();
+  const pollers = {
+    start: () => {},
+    stop: () => {},
+    pause: () => {},
+    resume: () => {},
+    useFullCadence: () => {},
+    usePushSafetyNetCadence: () => {},
+    recordPushSliceUpdate: () => {},
+    refreshCriticalNow: async () => {},
+    refreshSlicesNow: async () => {},
+    setVisibleSections: () => {}
+  };
+  const coordinator = new DashboardReadPathCoordinator({
+    workspacePath: workspace,
+    client: {
+      run: async (command) => {
+        runCalls.push(command);
+        if (command === "dashboard-bootstrap-slices") {
+          return {
+            ok: true,
+            data: {
+              overview: { workspaceStatus: { phaseKey: "146" }, dashboardProjection: "overview" },
+              queue: { readyQueueCount: 1 }
+            }
+          };
+        }
+        return { ok: false };
+      }
+    },
+    store,
+    pollers,
+    log: () => {}
+  });
+
+  await coordinator.startForPaint();
+  assert.equal(coordinator.getModeBadge().configured, "auto");
+  assert.equal(coordinator.getModeBadge().active, "cli-polling");
+
+  await coordinator.promoteToService();
+  assert.equal(coordinator.isServicePathActive(), false);
+  assert.equal(runCalls.includes("dashboard-service-start"), false);
+  assert.equal(store.getSlice("overview").value?.workspaceStatus?.phaseKey, "146");
 
   await coordinator.stop();
 });

@@ -19,7 +19,10 @@ import {
   DASHBOARD_SERVICE_RUNTIME_REL,
   parseDashboardServiceRuntime
 } from "./dashboard-service-mapper.js";
-import { readConfiguredDashboardDataSourceMode } from "./resolve-dashboard-read-config.js";
+import {
+  readConfiguredDashboardDataSourceMode,
+  readConfiguredDashboardPostPaintPromote
+} from "./resolve-dashboard-read-config.js";
 import {
   probeDashboardServiceHealth,
   ServiceDashboardDataSource
@@ -40,15 +43,19 @@ export type DashboardReadPathCoordinatorDeps = {
 };
 
 /**
- * Selects Option 1 CLI pollers vs Option 2 warm service (T100599 / T100845).
+ * Selects Option 1 CLI pollers vs Option 2 warm service (T100599 / T100845 / T100848).
  *
  * Paint path ({@link startForPaint}): fast health probe only — never awaits
  * `dashboard-service-start`. Healthy → service immediately; cold → CLI bootstrap.
  * Post-paint ({@link promoteToService}): background service start + quiet path swap
  * that preserves the store and never restarts the startup pipeline.
+ * Operators can set `dashboard.postPaintPromote: false` to keep cold-path CLI
+ * without forcing `dashboard.dataSource: cli-polling`.
  */
 export class DashboardReadPathCoordinator {
   private configuredMode: DashboardDataSourceMode = "auto";
+  /** When false, {@link promoteToService} is a no-op (T100848 rollback toggle). */
+  private postPaintPromoteEnabled = true;
   private sessionOverride: "cli-polling" | null = null;
   private activePath: DashboardActiveReadPath | null = null;
   private serviceFailDetail: string | undefined;
@@ -99,6 +106,9 @@ export class DashboardReadPathCoordinator {
     }
     this.running = true;
     this.configuredMode = await readConfiguredDashboardDataSourceMode(this.deps.workspacePath);
+    this.postPaintPromoteEnabled = await readConfiguredDashboardPostPaintPromote(
+      this.deps.workspacePath
+    );
     await this.activateReadPathForPaint();
   }
 
@@ -110,6 +120,7 @@ export class DashboardReadPathCoordinator {
   /**
    * After overview is hydrated/ready: background-start service (if needed) and
    * quietly swap to the service path without clearing the store or restarting startup.
+   * No-op when `dashboard.postPaintPromote` is false (operator rollback).
    */
   async promoteToService(): Promise<void> {
     if (!this.running) {
@@ -119,6 +130,12 @@ export class DashboardReadPathCoordinator {
       return;
     }
     if (this.sessionOverride === "cli-polling" || this.configuredMode === "cli-polling") {
+      return;
+    }
+    if (!this.postPaintPromoteEnabled) {
+      this.deps.log?.(
+        "dashboard promote: skipped — dashboard.postPaintPromote is false (keeping CLI path)"
+      );
       return;
     }
     if (this.promoteInFlight) {
@@ -143,6 +160,13 @@ export class DashboardReadPathCoordinator {
   /** Re-read config and swap read paths when `dashboard.dataSource` changes. */
   async reloadFromConfig(): Promise<void> {
     const next = await readConfiguredDashboardDataSourceMode(this.deps.workspacePath);
+    const nextPromote = await readConfiguredDashboardPostPaintPromote(this.deps.workspacePath);
+    const promoteChanged = nextPromote !== this.postPaintPromoteEnabled;
+    this.postPaintPromoteEnabled = nextPromote;
+    if (next === this.configuredMode && !this.sessionOverride && !promoteChanged) {
+      return;
+    }
+    // Promote-flag-only changes do not restart the paint path; they only gate promoteToService.
     if (next === this.configuredMode && !this.sessionOverride) {
       return;
     }
@@ -283,17 +307,24 @@ export class DashboardReadPathCoordinator {
     if (this.sessionOverride === "cli-polling" || this.configuredMode === "cli-polling") {
       return;
     }
+    if (!this.postPaintPromoteEnabled) {
+      return;
+    }
 
     let healthy = await probeDashboardServiceHealth(this.deps.workspacePath);
     if (!healthy) {
       const started = await this.attemptBackgroundServiceStart();
       if (!started) {
         this.deps.log?.("dashboard promote: service start failed — keeping CLI path");
+        this.serviceFailDetail = "Dashboard service promote failed — using CLI polling";
+        this.emitModeChanged();
         return;
       }
       healthy = await probeDashboardServiceHealth(this.deps.workspacePath);
       if (!healthy) {
         this.deps.log?.("dashboard promote: service still unhealthy after start — keeping CLI path");
+        this.serviceFailDetail = "Dashboard service promote failed — using CLI polling";
+        this.emitModeChanged();
         return;
       }
     }
@@ -344,6 +375,8 @@ export class DashboardReadPathCoordinator {
       const message = error instanceof Error ? error.message : String(error);
       this.deps.log?.(`dashboard promote: service path attach failed — restoring CLI: ${message}`);
       this.serviceFailDetail = "Dashboard service promote failed — using CLI polling";
+      // Tear down any partial service attach before restoring CLI pollers.
+      await this.stopActivePath();
       await this.startCliPollingPath();
       this.restoreSliceIfRegressed("overview", priorOverview);
       this.restoreSliceIfRegressed("queue", priorQueue);
