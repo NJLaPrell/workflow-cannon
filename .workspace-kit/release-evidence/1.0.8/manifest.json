@@ -1,0 +1,443 @@
+{
+  "schemaVersion": 1,
+  "createdAt": "2026-07-09T22:08:02.373Z",
+  "releaseVersion": "1.0.8",
+  "packageName": "@workflow-cannon/workspace-kit",
+  "phaseKey": "146",
+  "git": {},
+  "approval": {
+    "actor": "operator via chat closeout",
+    "timestamp": "2026-07-09T22:08:01.000Z",
+    "rationale": "Phase 146 all tasks complete (T100843-T100848); merge release/phase-146 to main for @workflow-cannon/workspace-kit@1.0.8. Publish/tag still requires separate explicit approval.",
+    "scope": "phase-146 merge-to-main prepare @workflow-cannon/workspace-kit@1.0.8 (publish gated)"
+  },
+  "releaseNotes": {
+    "source": "docs/maintainers/CHANGELOG.md",
+    "entries": [
+      "1.0.8 — Phase 146 Dashboard Loading & Sync (first paint)",
+      "DashboardStartupController single cold-start owner (T100843)",
+      "CLI-primary cold bootstrap via BootstrapSnapshotAdapter (T100844)",
+      "Quiet post-paint service promote (T100845)",
+      "Cold-path first-paint SLA tests ≤3s (T100846)",
+      "Empty/first-run cold-path coverage (T100847)",
+      "Promote fallback + dashboard.postPaintPromote (T100848)"
+    ]
+  },
+  "validations": [
+    {
+      "command": "pnpm run build",
+      "conclusion": "success",
+      "source": "closeout-canonical"
+    },
+    {
+      "command": "pnpm run check",
+      "conclusion": "success",
+      "source": "closeout-canonical"
+    },
+    {
+      "command": "node scripts/check-release-metadata.mjs",
+      "conclusion": "success",
+      "source": "closeout-canonical"
+    },
+    {
+      "command": "pnpm exec wk run phase-closeout-readiness",
+      "conclusion": "success",
+      "source": "closeout-canonical"
+    },
+    {
+      "command": "pnpm exec wk run phase-delivery-preflight",
+      "conclusion": "success",
+      "source": "closeout-canonical"
+    },
+    {
+      "command": "phase task PRs #764-#769 CI",
+      "conclusion": "success",
+      "source": "closeout-canonical"
+    }
+  ],
+  "risks": [
+    {
+      "kind": "validation",
+      "summary": "Local full pnpm test hung under concurrent load; phase→main PR CI is the remaining full-suite gate before merge."
+    }
+  ],
+  "publishArtifacts": [
+    {
+      "kind": "git-tag",
+      "ref": "v1.0.8",
+      "version": "1.0.8",
+      "present": false,
+      "commit": null
+    },
+    {
+      "kind": "npm",
+      "package": "@workflow-cannon/workspace-kit",
+      "version": "1.0.7",
+      "distTag": "latest",
+      "state": "different-version-published"
+    }
+  ],
+  "readinessChecks": [
+    {
+      "code": "release-version-present",
+      "state": "pass",
+      "blocking": false,
+      "summary": "package.json release version 1.0.8 is a valid semver tag candidate.",
+      "refs": [
+        {
+          "kind": "artifact",
+          "value": "package.json"
+        },
+        {
+          "kind": "command",
+          "value": "pnpm exec wk run propose-release-version '{}'",
+          "instructionPath": "src/modules/task-engine/instructions/propose-release-version.md"
+        }
+      ]
+    },
+    {
+      "code": "root-changelog-entry-present",
+      "state": "pass",
+      "blocking": false,
+      "summary": "CHANGELOG.md includes a 1.0.8 heading.",
+      "refs": [
+        {
+          "kind": "artifact",
+          "value": "CHANGELOG.md"
+        },
+        {
+          "kind": "command",
+          "value": "node scripts/check-release-diff-shape.mjs"
+        }
+      ]
+    },
+    {
+      "code": "maintainer-changelog-entry-present",
+      "state": "pass",
+      "blocking": false,
+      "summary": "docs/maintainers/CHANGELOG.md includes a 1.0.8 heading.",
+      "refs": [
+        {
+          "kind": "artifact",
+          "value": "docs/maintainers/CHANGELOG.md"
+        },
+        {
+          "kind": "command",
+          "value": "node scripts/check-release-diff-shape.mjs"
+        }
+      ]
+    },
+    {
+      "code": "task-engine-run-contracts-schema-aligned",
+      "state": "pass",
+      "blocking": false,
+      "summary": "schemas/task-engine-run-contracts.schema.json mirrors package version 1.0.8.",
+      "refs": [
+        {
+          "kind": "artifact",
+          "value": "schemas/task-engine-run-contracts.schema.json"
+        },
+        {
+          "kind": "command",
+          "value": "node scripts/check-task-engine-run-contracts.mjs"
+        }
+      ]
+    },
+    {
+      "code": "pilot-run-args-snapshot-aligned",
+      "state": "pass",
+      "blocking": false,
+      "summary": "schemas/pilot-run-args.snapshot.json mirrors package version 1.0.8.",
+      "refs": [
+        {
+          "kind": "artifact",
+          "value": "schemas/pilot-run-args.snapshot.json"
+        },
+        {
+          "kind": "command",
+          "value": "node scripts/check-pilot-run-args-snapshot.mjs"
+        },
+        {
+          "kind": "command",
+          "value": "node scripts/refresh-pilot-run-args-snapshot.mjs"
+        }
+      ]
+    },
+    {
+      "code": "git-tag-not-published",
+      "state": "info",
+      "blocking": false,
+      "summary": "Git tag v1.0.8 is not present yet.",
+      "refs": [
+        {
+          "kind": "artifact",
+          "value": "refs/tags/v1.0.8"
+        },
+        {
+          "kind": "command",
+          "value": "git tag -l 'v1.0.8'"
+        }
+      ]
+    },
+    {
+      "code": "github-release-not-published",
+      "state": "warn",
+      "blocking": false,
+      "summary": "GitHub release for v1.0.8 is not published or gh could not read it.",
+      "refs": [
+        {
+          "kind": "artifact",
+          "value": "refs/tags/v1.0.8"
+        },
+        {
+          "kind": "command",
+          "value": "gh release view v1.0.8 --json url,tagName,publishedAt"
+        }
+      ]
+    },
+    {
+      "code": "npm-version-not-published",
+      "state": "info",
+      "blocking": false,
+      "summary": "@workflow-cannon/workspace-kit@1.0.8 is not the published latest version (current 1.0.7).",
+      "refs": [
+        {
+          "kind": "artifact",
+          "value": "@workflow-cannon/workspace-kit@1.0.8"
+        },
+        {
+          "kind": "command",
+          "value": "npm view @workflow-cannon/workspace-kit version --json --tag=latest"
+        }
+      ]
+    }
+  ],
+  "taskDeliveryEvidence": [
+    {
+      "taskId": "T100843",
+      "title": "Add DashboardStartupController as sole startup owner",
+      "phaseKey": "146",
+      "deliveryEvidence": {
+        "schemaVersion": 1,
+        "branchName": "feature/T100843-dashboard-startup-controller",
+        "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/764",
+        "prNumber": 764,
+        "baseBranch": "release/phase-146",
+        "mergeSha": "12dc9f908f470217a482c21d25ccb034d381b32a",
+        "checks": [
+          {
+            "name": "test",
+            "conclusion": "success"
+          }
+        ],
+        "validationCommands": [
+          {
+            "command": "pnpm run ext:compile",
+            "exitCode": 0
+          },
+          {
+            "command": "node --test extensions/cursor-workflow-cannon/test/dashboard-startup*.test.mjs extensions/cursor-workflow-cannon/test/dashboard-lazy*.test.mjs",
+            "exitCode": 0
+          },
+          {
+            "command": "pnpm run check",
+            "exitCode": 0
+          }
+        ]
+      },
+      "deliveryEvidenceSummary": {
+        "schemaVersion": 1,
+        "mode": null
+      },
+      "deliveryWaiver": null
+    },
+    {
+      "taskId": "T100844",
+      "title": "Wire CLI-primary cold bootstrap and BootstrapSnapshotAdapter",
+      "phaseKey": "146",
+      "deliveryEvidence": {
+        "schemaVersion": 1,
+        "branchName": "feature/T100844-cli-primary-cold-bootstrap",
+        "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/765",
+        "prNumber": 765,
+        "baseBranch": "release/phase-146",
+        "mergeSha": "ceda56454c122bc695cf5a3d45a7df0e88796197",
+        "checks": [
+          {
+            "name": "test",
+            "conclusion": "success"
+          }
+        ],
+        "validationCommands": [
+          {
+            "command": "pnpm run ext:compile",
+            "exitCode": 0
+          },
+          {
+            "command": "node --test extensions/cursor-workflow-cannon/test/bootstrap-snapshot-adapter.test.mjs extensions/cursor-workflow-cannon/test/dashboard-startup-controller.test.mjs extensions/cursor-workflow-cannon/test/dashboard-startup-single-flight.test.mjs extensions/cursor-workflow-cannon/test/dashboard-lazy-regression-gates.test.mjs extensions/cursor-workflow-cannon/test/dashboard-read-path-coordinator.test.mjs extensions/cursor-workflow-cannon/test/command-client.test.mjs extensions/cursor-workflow-cannon/test/dashboard-store-bridge.test.mjs",
+            "exitCode": 0
+          }
+        ]
+      },
+      "deliveryEvidenceSummary": {
+        "schemaVersion": 1,
+        "mode": null
+      },
+      "deliveryWaiver": null
+    },
+    {
+      "taskId": "T100845",
+      "title": "Promote to service after first paint without regressing overview",
+      "phaseKey": "146",
+      "deliveryEvidence": {
+        "schemaVersion": 1,
+        "branchName": "feature/T100845-quiet-service-promote",
+        "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/766",
+        "prNumber": 766,
+        "baseBranch": "release/phase-146",
+        "mergeSha": "e4d856f08408cd8a243546e23976ade9ef7d4415",
+        "checks": [
+          {
+            "name": "test",
+            "conclusion": "success"
+          }
+        ],
+        "validationCommands": [
+          {
+            "command": "pnpm run ext:compile",
+            "exitCode": 0
+          },
+          {
+            "command": "node --test extensions/cursor-workflow-cannon/test/dashboard-read-path-coordinator.test.mjs extensions/cursor-workflow-cannon/test/dashboard-promote-after-paint.test.mjs extensions/cursor-workflow-cannon/test/dashboard-lazy-regression-gates.test.mjs extensions/cursor-workflow-cannon/test/dashboard-option2-acceptance.test.mjs extensions/cursor-workflow-cannon/test/dashboard-t100612-acceptance.test.mjs",
+            "exitCode": 0
+          }
+        ]
+      },
+      "deliveryEvidenceSummary": {
+        "schemaVersion": 1,
+        "mode": null
+      },
+      "deliveryWaiver": null
+    },
+    {
+      "taskId": "T100846",
+      "title": "Add deterministic cold-path first-paint SLA tests",
+      "phaseKey": "146",
+      "deliveryEvidence": {
+        "schemaVersion": 1,
+        "branchName": "feature/T100846-cold-path-first-paint-sla",
+        "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/767",
+        "prNumber": 767,
+        "baseBranch": "release/phase-146",
+        "mergeSha": "852158b3dfee2957cd29eb363ea9bd4f912c4ff9",
+        "checks": [
+          {
+            "name": "test",
+            "conclusion": "success"
+          }
+        ],
+        "validationCommands": [
+          {
+            "command": "pnpm run ext:compile",
+            "exitCode": 0
+          },
+          {
+            "command": "node --test extensions/cursor-workflow-cannon/test/dashboard-cold-path-first-paint-sla.test.mjs",
+            "exitCode": 0
+          },
+          {
+            "command": "node --test extensions/cursor-workflow-cannon/test/bootstrap-snapshot-adapter.test.mjs extensions/cursor-workflow-cannon/test/dashboard-startup-single-flight.test.mjs extensions/cursor-workflow-cannon/test/dashboard-promote-after-paint.test.mjs extensions/cursor-workflow-cannon/test/dashboard-cold-path-first-paint-sla.test.mjs",
+            "exitCode": 0
+          }
+        ]
+      },
+      "deliveryEvidenceSummary": {
+        "schemaVersion": 1,
+        "mode": null
+      },
+      "deliveryWaiver": null
+    },
+    {
+      "taskId": "T100847",
+      "title": "Cover empty and first-run overview cold-path behavior",
+      "phaseKey": "146",
+      "deliveryEvidence": {
+        "schemaVersion": 1,
+        "branchName": "feature/T100847-empty-first-run-cold-path",
+        "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/768",
+        "prNumber": 768,
+        "baseBranch": "release/phase-146",
+        "mergeSha": "f7c69172e0a6b2e150ce6252969ab8f09d02d31c",
+        "checks": [
+          {
+            "name": "test",
+            "conclusion": "success"
+          }
+        ],
+        "validationCommands": [
+          {
+            "command": "node --test test/bootstrap-snapshot-adapter.test.mjs test/dashboard-startup-cold-path-empty.test.mjs",
+            "exitCode": 0
+          },
+          {
+            "command": "pnpm run ext:compile",
+            "exitCode": 0
+          },
+          {
+            "command": "CI test (PR #768)",
+            "exitCode": 0
+          }
+        ]
+      },
+      "deliveryEvidenceSummary": {
+        "schemaVersion": 1,
+        "mode": null
+      },
+      "deliveryWaiver": null
+    },
+    {
+      "taskId": "T100848",
+      "title": "Add fallback and rollback for post-paint service promote",
+      "phaseKey": "146",
+      "deliveryEvidence": {
+        "schemaVersion": 1,
+        "branchName": "feature/T100848-promote-fallback-rollback",
+        "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/769",
+        "prNumber": 769,
+        "baseBranch": "release/phase-146",
+        "mergeSha": "3356d6ff76265d473d9fddb92675222216947223",
+        "checks": [
+          {
+            "name": "test",
+            "conclusion": "success"
+          }
+        ],
+        "validationCommands": [
+          {
+            "command": "pnpm run build && pnpm run ext:compile",
+            "exitCode": 0
+          },
+          {
+            "command": "node --test extensions/cursor-workflow-cannon/test/dashboard-promote-after-paint.test.mjs extensions/cursor-workflow-cannon/test/dashboard-read-path-coordinator.test.mjs test/dashboard-data-source-config.test.mjs",
+            "exitCode": 0
+          }
+        ]
+      },
+      "deliveryEvidenceSummary": {
+        "schemaVersion": 1,
+        "mode": null
+      },
+      "deliveryWaiver": null
+    }
+  ],
+  "followUpScan": {
+    "scannedAt": "2026-07-09T22:08:01.000Z",
+    "rationale": "Phase 146 bucket drained (6/6 completed). No follow-up execution tasks created during closeout scan."
+  },
+  "followUpTasks": [],
+  "followUpSummary": {
+    "count": 0,
+    "scannedAt": "2026-07-09T22:08:01.000Z",
+    "rationale": "Phase 146 bucket drained (6/6 completed). No follow-up execution tasks created during closeout scan."
+  }
+}
