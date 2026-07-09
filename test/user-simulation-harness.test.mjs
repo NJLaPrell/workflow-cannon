@@ -24,6 +24,8 @@ test("user simulation personas load and validate", () => {
 test("user simulation scenarios load and include MCP context modes", () => {
   const ids = listScenarioIds();
   assert.ok(ids.includes("complete-release-completed-only"));
+  assert.ok(ids.includes("complete-release-empty-phase"));
+  assert.ok(ids.includes("complete-release-active-work"));
   const scenario = loadScenario("complete-release-completed-only");
   assert.equal(scenario.entryPoint, "dashboard-complete-and-release");
   assert.equal(scenario.phaseKey, "134");
@@ -74,6 +76,21 @@ test("MCP fallback records explicit fallback before CLI orchestration", async ()
   assert.ok(trace.fallbackEvents.some((event) => event.code === "CLI_FALLBACK"));
   assert.deepEqual(trace.commandsRun, ["phase-release-orchestration-state"]);
   assert.equal(trace.verdict, "ready-to-ship");
+});
+
+test("empty and active-work scenarios assert expected orchestration verdicts", async () => {
+  for (const [scenarioId, expectedVerdict] of [
+    ["complete-release-empty-phase", "ready-to-ship"],
+    ["complete-release-active-work", "tasks-remaining"]
+  ]) {
+    const report = await runUserSimulationScenario({
+      scenarioId,
+      contextModes: ["cli"]
+    });
+    assert.equal(report.ok, true, `${scenarioId}: ${JSON.stringify(report.summary)}`);
+    assert.equal(report.tracesByMode.cli.verdict, expectedVerdict, scenarioId);
+    assert.equal(report.tracesByMode.cli.verdict, loadScenario(scenarioId).fixture.expectedVerdict);
+  }
 });
 
 test("PM and expert persona UX evaluators pass for MCP mode", async () => {

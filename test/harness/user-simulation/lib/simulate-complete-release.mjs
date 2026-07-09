@@ -24,7 +24,7 @@ function taskRow(fixtureTask, phaseKey) {
 
 function buildCliOrchestrationPacket(scenario) {
   const phaseKey = scenario.phaseKey;
-  const tasks = scenario.fixture.tasks.map((row) => taskRow(row, phaseKey));
+  const tasks = (scenario.fixture.tasks ?? []).map((row) => taskRow(row, phaseKey));
   const nonTerminalCount = tasks.filter((t) => !["completed", "cancelled"].includes(t.status)).length;
   const blockedCount = tasks.filter((t) => t.status === "blocked").length;
   const packet = buildPhaseReleaseOrchestrationState({
@@ -78,6 +78,38 @@ function createMcpRuntime(scenario) {
   };
 }
 
+function finalizeTrace(trace, scenario, packet) {
+  const scenarioJson = JSON.stringify(scenario);
+  const stepsJson = JSON.stringify(trace.steps);
+  trace.metrics = {
+    contextBytes: Buffer.byteLength(scenarioJson, "utf8"),
+    packetBytes: Buffer.byteLength(stepsJson, "utf8"),
+    transportEventBytes: Buffer.byteLength(
+      JSON.stringify({
+        commandsRun: trace.commandsRun,
+        mcpToolsCalled: trace.mcpToolsCalled,
+        fallbackEvents: trace.fallbackEvents
+      }),
+      "utf8"
+    )
+  };
+  trace.assignmentPacketDigest =
+    scenario.fixture?.stateExpectations?.assignmentPacketDigest ??
+    trace.comparableFields?.assignmentPacketDigest ??
+    null;
+  trace.releaseEvidencePresent = scenario.fixture?.stateExpectations?.releaseEvidencePresent === true;
+  trace.usedBroadDiscoveryFallback = (trace.commandsRun ?? []).some((cmd) =>
+    (scenario.efficiency?.avoidBroadCommands ?? []).includes(cmd)
+  );
+  if (packet?.refs?.commands?.length) {
+    trace.comparableFields = {
+      ...trace.comparableFields,
+      assignmentPacketDigest: trace.assignmentPacketDigest
+    };
+  }
+  return trace;
+}
+
 async function callMcpTool(toolName, args, runtime, auditLog) {
   const response = await handleMcpRequest(
     {
@@ -128,7 +160,7 @@ export async function simulateCompleteReleaseFlow({ scenario, contextMode }) {
       phaseKey: scenario.phaseKey,
       hasCommandRefs: trace.steps.at(0).hasRefs
     };
-    return trace;
+    return finalizeTrace(trace, scenario, packet);
   }
 
   if (contextMode === "mcp-fallback") {
@@ -164,7 +196,7 @@ export async function simulateCompleteReleaseFlow({ scenario, contextMode }) {
       hasCommandRefs: trace.steps.at(-1).hasRefs,
       explicitFallback: trace.fallbackEvents.length >= 2
     };
-    return trace;
+    return finalizeTrace(trace, scenario, packet);
   }
 
   if (contextMode === "mcp") {
@@ -203,7 +235,9 @@ export async function simulateCompleteReleaseFlow({ scenario, contextMode }) {
       recommendedMcpTool: completeRelease?.recommendedMcpTool,
       hasFreshness: Boolean(trace.steps.at(-1).freshness)
     };
-    return trace;
+    return finalizeTrace(trace, scenario, {
+      refs: orchestration.content?.result?.data?.refs ?? orchestration.content?.data?.refs
+    });
   }
 
   throw new Error(`Unsupported contextMode: ${contextMode}`);

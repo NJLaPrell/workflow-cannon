@@ -12,6 +12,7 @@ import { listScenarioIds } from "../test/harness/user-simulation/lib/load-scenar
 function parseArgs(argv) {
   const options = {
     dryRun: false,
+    includeReport: false,
     scenarioId: "complete-release-completed-only",
     personaIds: null,
     contextModes: null
@@ -20,6 +21,8 @@ function parseArgs(argv) {
     const arg = argv[i];
     if (arg === "--dry-run") {
       options.dryRun = true;
+    } else if (arg === "--report") {
+      options.includeReport = true;
     } else if (arg === "--list-scenarios") {
       options.listScenarios = true;
     } else if (arg === "--scenario" && argv[i + 1]) {
@@ -45,6 +48,7 @@ Options:
   --persona <id>      Persona id (repeatable; default: scenario personaIds)
   --mode <mode>       cli | mcp | mcp-fallback (repeatable; default: scenario contextModes)
   --dry-run           Validate fixtures without invoking MCP/CLI simulation
+  --report            Include simulationReport with dry-run improvement payloads
   --list-scenarios    Print available scenario ids
   -h, --help          Show this help
 `);
@@ -65,10 +69,12 @@ async function main() {
     scenarioId: options.scenarioId,
     personaIds: options.personaIds,
     contextModes: options.contextModes,
-    dryRun: options.dryRun
+    dryRun: options.dryRun,
+    includeReport: options.includeReport
   });
 
-  console.log(JSON.stringify(report, null, 2));
+  const output = options.includeReport ? report : report;
+  console.log(JSON.stringify(output, null, 2));
   process.exit(report.ok ? 0 : 1);
 }
 

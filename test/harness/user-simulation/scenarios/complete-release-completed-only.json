@@ -16,14 +16,24 @@
     "tasks": [
       { "id": "T100700", "status": "completed", "title": "Prior phase task" },
       { "id": "T100701", "status": "completed", "title": "Another completed task" }
-    ]
+    ],
+    "stateExpectations": {
+      "completedTaskCount": 2,
+      "nonTerminalTaskCount": 0,
+      "requireOrchestrationRefs": true,
+      "releaseEvidencePresent": true
+    }
   },
   "efficiency": {
     "avoidBroadCommands": ["list-tasks", "phase-status", "dashboard-summary", "get-next-actions"],
     "avoidRunbookResourceUris": [
       "workflow-cannon://resources/runbooks/phase-closeout-ordering-recovery"
     ],
-    "mcpModeMaxBroadCommands": 0
+    "mcpModeMaxBroadCommands": 0,
+    "expectedCommands": {
+      "cli": ["phase-release-orchestration-state"],
+      "mcp-fallback": ["phase-release-orchestration-state"]
+    }
   },
   "mcpFallback": {
     "trigger": "mcp-unavailable",

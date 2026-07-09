@@ -1,0 +1,30 @@
+{
+  "id": "complete-release-empty-phase",
+  "title": "Complete & Release — empty phase (ready-to-ship)",
+  "entryPoint": "dashboard-complete-and-release",
+  "phaseKey": "134",
+  "personaIds": ["pm-nontechnical", "expert-engineer"],
+  "contextModes": ["cli", "mcp"],
+  "cliArgs": {
+    "scope": "current",
+    "integrationBranch": "release/phase-134",
+    "dashboardAuthorization": "complete-and-release"
+  },
+  "fixture": {
+    "expectedVerdict": "ready-to-ship",
+    "currentKitPhase": "134",
+    "tasks": [],
+    "stateExpectations": {
+      "nonTerminalTaskCount": 0,
+      "completedTaskCount": 0,
+      "requireOrchestrationRefs": true
+    }
+  },
+  "efficiency": {
+    "avoidBroadCommands": ["list-tasks", "get-next-actions"],
+    "mcpModeMaxBroadCommands": 0,
+    "expectedCommands": {
+      "cli": ["phase-release-orchestration-state"]
+    }
+  }
+}
