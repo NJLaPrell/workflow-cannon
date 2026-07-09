@@ -34,13 +34,19 @@ test("initial webview resolve paints via startup controller (overview)", () => {
   assert.match(resolveBlock, /requestDashboardStartup\("resolve-webview"\)/);
   assert.match(resolveBlock, /startupController\.markShellPainted\(\)/);
   assert.match(providerSrc, /executeDashboardStartupBootstrap/);
+  assert.match(providerSrc, /resolveBootstrapSnapshot/);
+  assert.match(providerSrc, /applyBootstrapSnapshot/);
   const startupBlock = providerSrc.slice(
     providerSrc.indexOf("private async executeDashboardStartupBootstrap"),
     providerSrc.indexOf("private async postSectionPatch")
   );
+  assert.match(startupBlock, /dashboard-bootstrap-slices/);
   assert.match(startupBlock, /projection:\s*"overview"/);
   assert.match(startupBlock, /"startup overview"/);
   assert.doesNotMatch(startupBlock, /projection:\s*"full"/);
+  assert.doesNotMatch(startupBlock, /readPath\.start/);
+  assert.doesNotMatch(startupBlock, /restartDashboardService/);
+  assert.doesNotMatch(startupBlock, /probeDashboardServiceHealth/);
 });
 
 test("dashboard webview ready handshake retries initial hydration", () => {
@@ -82,6 +88,7 @@ test("first dashboard data render patches the painted shell root", () => {
     providerSrc.indexOf("private async executeDashboardStartupBootstrap"),
     providerSrc.indexOf("private async postSectionPatch")
   );
+  assert.match(startupBlock, /applyBootstrapSnapshot/);
   assert.match(startupBlock, /postMessage\(\{ type: "wcReplaceRoot", html: rootInner \}\)/);
   assert.doesNotMatch(startupBlock, /webview\.html = this\.buildHtml\(webview, rootInner\)/);
   const refreshBlock = providerSrc.slice(
@@ -94,8 +101,8 @@ test("first dashboard data render patches the painted shell root", () => {
 test("startup timeout and refresh failures preserve actionable recovery without blanking a good dashboard", () => {
   const providerSrc = fs.readFileSync(providerPath, "utf8");
   const startupBlock = providerSrc.slice(
-    providerSrc.indexOf("if (raw.ok !== true && raw.code === \"extension-cli-timeout\")"),
-    providerSrc.indexOf("if (raw.ok === true && raw.data")
+    providerSrc.indexOf("private async executeDashboardStartupBootstrap"),
+    providerSrc.indexOf("private async applyBootstrapSnapshot")
   );
   assert.match(startupBlock, /Dashboard overview timed out before JSON was returned/);
   assert.match(startupBlock, /pnpm exec wk run dashboard-summary/);

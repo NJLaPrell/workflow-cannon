@@ -418,10 +418,21 @@ test("CommandClient.run passes command context to timeout remediation", async ()
 });
 
 test("kitRunTimeoutMsForCommand gives mutations more time than refresh reads", async () => {
-  const { kitRunTimeoutMsForCommand, KIT_MUTATION_RUN_TIMEOUT_MS, KIT_REFRESH_RUN_TIMEOUT_MS } =
-    await import("../dist/runtime/kit-refresh-run-commands.js");
+  const {
+    kitRunTimeoutMsForCommand,
+    KIT_MUTATION_RUN_TIMEOUT_MS,
+    KIT_REFRESH_RUN_TIMEOUT_MS,
+    isKitRefreshRunCommand,
+    kitRefreshCoalesceKey
+  } = await import("../dist/runtime/kit-refresh-run-commands.js");
   assert.equal(kitRunTimeoutMsForCommand("create-idea"), KIT_MUTATION_RUN_TIMEOUT_MS);
   assert.equal(kitRunTimeoutMsForCommand("dashboard-summary"), KIT_REFRESH_RUN_TIMEOUT_MS);
+  assert.equal(isKitRefreshRunCommand("dashboard-bootstrap-slices"), true);
+  assert.equal(kitRunTimeoutMsForCommand("dashboard-bootstrap-slices"), KIT_REFRESH_RUN_TIMEOUT_MS);
+  assert.equal(
+    kitRefreshCoalesceKey("dashboard-bootstrap-slices", { slices: ["queue", "overview"] }),
+    "dashboard-bootstrap-slices:overview,queue"
+  );
   assert.ok(KIT_MUTATION_RUN_TIMEOUT_MS > KIT_REFRESH_RUN_TIMEOUT_MS);
 });
 

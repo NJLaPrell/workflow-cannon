@@ -204,27 +204,46 @@ export class DashboardReadPathCoordinator {
         // Fall back to CLI polling after log.
         this.serviceFailDetail = "Dashboard service start failed — using CLI polling";
       }
+    } else if (effectiveMode === "service") {
+      this.serviceFailDetail =
+        "Dashboard service is not running or failed health check — using CLI polling";
+    } else if (!this.serviceStartAttempted) {
+      // Auto mode: kick service start off the critical path (T100844 / T100845 promote).
+      // Cold paint uses BootstrapSnapshotAdapter CLI path; do not await restart here.
+      this.serviceStartAttempted = true;
+      this.serviceFailDetail = "Dashboard service unavailable — using CLI polling";
+      void this.attemptBackgroundServiceStart();
     } else {
-      // Service not healthy.
-      if (effectiveMode === "service") {
-        this.serviceFailDetail = "Dashboard service is not running or failed health check — using CLI polling";
-        await this.startCliBootstrapPath();
-        this.emitModeChanged();
-        return;
-      }
-      // Auto mode: attempt to start service once per session.
-      if (!this.serviceStartAttempted) {
-        this.serviceStartAttempted = true;
-        await this.restartDashboardService();
-        return;
-      } else {
-        this.serviceFailDetail = "Dashboard service unavailable — using CLI polling";
-      }
+      this.serviceFailDetail = "Dashboard service unavailable — using CLI polling";
     }
 
     // Fallback: use CLI bootstrap command to fetch multiple cheap slices in one request.
     await this.startCliBootstrapPath();
     this.emitModeChanged();
+  }
+
+  /**
+   * Best-effort service start after cold CLI path is already active.
+   * Must not stop pollers or clear CLI fail detail while overview bootstrap is racing.
+   */
+  private async attemptBackgroundServiceStart(): Promise<void> {
+    const result = await this.deps.client.run("dashboard-service-start", {});
+    if (result.ok === true) {
+      this.deps.log?.("dashboard service start completed in background after cold CLI path");
+      if (this.running) {
+        await this.activateReadPath();
+      }
+      return;
+    }
+    this.deps.log?.(
+      `dashboard service background start failed: ${
+        typeof result.message === "string"
+          ? result.message
+          : typeof result.code === "string"
+            ? result.code
+            : "unknown"
+      }`
+    );
   }
 
   private async emitServiceHealthDiagnostics(): Promise<void> {
@@ -286,8 +305,10 @@ export class DashboardReadPathCoordinator {
   }
 
   private async startCliBootstrapPath(): Promise<void> {
-    // Use the new command to fetch a batch of slices.
-    const result = await this.deps.client.run("dashboard-bootstrap-slices", {});
+    // Align with BootstrapSnapshotAdapter cold path: overview + queue counts.
+    const result = await this.deps.client.run("dashboard-bootstrap-slices", {
+      slices: ["overview", "queue"]
+    });
     if (result.ok !== true || !result.data || typeof result.data !== "object") {
       this.deps.log?.(`dashboard-bootstrap-slices failed: ${result.message ?? result.code ?? "unknown"}`);
       // Fallback to regular CLI polling as a safety net.

@@ -86,6 +86,10 @@ import { DashboardLoadTrace, isDashboardLoadTraceEnabled } from "./dashboard-loa
 import { DashboardPollerCoordinator } from "./dashboard-pollers.js";
 import { DashboardReadPathCoordinator } from "./dashboard-read-path-coordinator.js";
 import {
+  type BootstrapSnapshot,
+  resolveBootstrapSnapshot
+} from "./bootstrap-snapshot-adapter.js";
+import {
   DashboardStartupAbortedError,
   DashboardStartupController,
   type DashboardStartupTrigger
@@ -1773,7 +1777,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   }
 
   /**
-   * Overview bootstrap paint executed exclusively by the startup controller (T100843).
+   * Overview bootstrap paint executed exclusively by the startup controller (T100843/T100844).
+   * CLI-primary cold path via {@link resolveBootstrapSnapshot} — never waits on service health.
    * Throws on hard failure so the controller can enter `error`; soft kit-abort posts an
    * error message and throws so we do not falsely mark hydrated.
    */
@@ -1786,12 +1791,41 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     let postedStartupError = false;
     try {
-      const raw = (await this.runDashboardSummary({
-        projection: "overview"
-      }, "startup overview")) as DashboardSummaryCommandSuccess | Record<string, unknown>;
-      if (isKitRefreshRunAborted(raw as Record<string, unknown>)) {
-        const message =
-          "Dashboard refresh was paused by another Workflow Cannon operation. Try again in a moment.";
+      const snapshot = await resolveBootstrapSnapshot({
+        cache: this.lastDashboardSummaryData,
+        store: this.dashboardStore,
+        fetchCliBootstrap: () =>
+          this.client.runForDashboardPaint(
+            "dashboard-bootstrap-slices",
+            { slices: ["overview", "queue"] },
+            { bootstrap: true }
+          ),
+        fetchCliSummaryOverview: () =>
+          this.runDashboardSummary({ projection: "overview" }, "startup overview") as Promise<
+            DashboardSummaryCommandSuccess | Record<string, unknown>
+          >,
+        log: (message) => logWc("dashboard", message)
+      });
+      if (!this.view || this.view !== activeView || activeView.webview !== webview) {
+        logWc("dashboard", "startup render result ignored (stale webview)");
+        throw new DashboardStartupAbortedError("startup render result ignored (stale webview)");
+      }
+      if (!snapshot.ok) {
+        let message = snapshot.message;
+        if (snapshot.code === "extension-cli-timeout" || /timed out/i.test(message)) {
+          message =
+            "Dashboard overview timed out before JSON was returned. From a terminal, run: pnpm exec wk run dashboard-summary '{\"projection\":\"overview\"}'";
+        }
+        if (isKitRefreshRunAborted(snapshot)) {
+          message =
+            "Dashboard refresh was paused by another Workflow Cannon operation. Try again in a moment.";
+          await webview.postMessage({
+            type: "dashboardStartupError",
+            message
+          });
+          postedStartupError = true;
+          throw new Error(message);
+        }
         await webview.postMessage({
           type: "dashboardStartupError",
           message
@@ -1799,54 +1833,11 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         postedStartupError = true;
         throw new Error(message);
       }
-      if (!this.view || this.view !== activeView || activeView.webview !== webview) {
-        logWc("dashboard", "startup render result ignored (stale webview)");
-        throw new DashboardStartupAbortedError("startup render result ignored (stale webview)");
-      }
-      if (raw.ok !== true && raw.code === "extension-cli-timeout") {
-        raw.message =
-          "Dashboard overview timed out before JSON was returned. From a terminal, run: pnpm exec wk run dashboard-summary '{\"projection\":\"overview\"}'";
-      }
-      if (raw.ok === true && raw.data && typeof raw.data === "object") {
-        const prior = this.lastDashboardSummaryData ?? {};
-        this.lastDashboardSummaryData = mergeDashboardProjectionIntoSummary(
-          prior,
-          "overview",
-          raw.data as Record<string, unknown>
-        );
-        this.lastQueueContentFingerprint = computeQueueContentFingerprint(this.lastDashboardSummaryData);
-        ingestPlanningMetaFromData(raw.data as Record<string, unknown>);
-        this.ingestDashboardSummaryIntoStore(raw.data as Record<string, unknown>, "overview");
-      }
-      const editorIntegration = await resolveEditorIntegrationState();
-      const rootInner = renderDashboardRootInnerHtml(
-        this.dashboardRenderPayload(raw),
-        raw.ok === true ? this.planningWizardPanel() : null,
-        editorIntegration,
-        undefined,
-        null,
-        {
-          deferredSections: new Set<DashboardSectionId>([
-            "status",
-            "config",
-            "cae",
-            "phase-journal"
-          ]),
-          readModeBadge: this.readPath.getModeBadge()
-        }
+      await this.applyBootstrapSnapshot(webview, snapshot);
+      logWc(
+        "dashboard",
+        `startup diagnostic direct render applied via wcReplaceRoot provenance=${snapshot.provenance}`
       );
-      this.hydratedDashboardSections.clear();
-      this.hydratedDashboardSections.add("overview");
-      for (const section of DASHBOARD_SECTION_REGISTRY) {
-        if (section.tabId === "planning" && section.refreshPolicy === "eager") {
-          this.hydratedDashboardSections.add(section.id);
-        }
-      }
-      for (const sectionId of ["queue", "status", "config", "cae", "phase-journal"] as const) {
-        this.staleDashboardSections.add(sectionId);
-      }
-      await webview.postMessage({ type: "wcReplaceRoot", html: rootInner });
-      logWc("dashboard", "startup diagnostic direct render applied via wcReplaceRoot");
       // Hydrated + eager hydration are owned by DashboardStartupController callbacks.
       logWc("dashboard", "startup eager hydration scheduled");
     } catch (error) {
@@ -1864,6 +1855,80 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       }
       throw error instanceof Error ? error : new Error(message);
     }
+  }
+
+  /**
+   * Apply a resolved cold-bootstrap snapshot into session cache + store, then paint root.
+   * Overview-minimal: Ideas/detail stay deferred for background hydration.
+   */
+  private async applyBootstrapSnapshot(
+    webview: vscode.Webview,
+    snapshot: Extract<BootstrapSnapshot, { ok: true }>
+  ): Promise<void> {
+    const prior = this.lastDashboardSummaryData ?? {};
+    this.lastDashboardSummaryData = {
+      ...prior,
+      ...snapshot.data,
+      dashboardProjection: "overview"
+    };
+    this.lastQueueContentFingerprint = computeQueueContentFingerprint(this.lastDashboardSummaryData);
+    ingestPlanningMetaFromData(snapshot.data);
+    this.ingestDashboardSummaryIntoStore(snapshot.data, "overview");
+    // Opportunistic queue count fields from cold bootstrap — do not mark queue hydrated.
+    if (
+      typeof snapshot.data.readyQueueCount === "number" ||
+      snapshot.data.readyImprovementsSummary ||
+      snapshot.data.readyExecutionSummary
+    ) {
+      const queueDesc = DASHBOARD_SLICE_REGISTRY.find((entry) => entry.name === "queue");
+      if (queueDesc) {
+        this.dashboardStore.updateSlice(
+          "queue",
+          queueDesc.extractPayload(snapshot.data),
+          {
+            source: "cold-bootstrap-counts",
+            sourceArgs: {},
+            planningGeneration:
+              typeof snapshot.data.planningGeneration === "number"
+                ? snapshot.data.planningGeneration
+                : null
+          }
+        );
+      }
+    }
+    const raw: Record<string, unknown> = {
+      ok: true,
+      code: `bootstrap-${snapshot.provenance}`,
+      data: this.lastDashboardSummaryData
+    };
+    const editorIntegration = await resolveEditorIntegrationState();
+    const rootInner = renderDashboardRootInnerHtml(
+      this.dashboardRenderPayload(raw),
+      this.planningWizardPanel(),
+      editorIntegration,
+      undefined,
+      null,
+      {
+        deferredSections: new Set<DashboardSectionId>([
+          "status",
+          "config",
+          "cae",
+          "phase-journal"
+        ]),
+        readModeBadge: this.readPath.getModeBadge()
+      }
+    );
+    this.hydratedDashboardSections.clear();
+    this.hydratedDashboardSections.add("overview");
+    for (const section of DASHBOARD_SECTION_REGISTRY) {
+      if (section.tabId === "planning" && section.refreshPolicy === "eager") {
+        this.hydratedDashboardSections.add(section.id);
+      }
+    }
+    for (const sectionId of ["queue", "status", "config", "cae", "phase-journal"] as const) {
+      this.staleDashboardSections.add(sectionId);
+    }
+    await webview.postMessage({ type: "wcReplaceRoot", html: rootInner });
   }
 
   private async postSectionPatch(
