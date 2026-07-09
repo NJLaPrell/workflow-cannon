@@ -53,7 +53,7 @@ test("T100845: provider promote after ready never uses wcReplaceRoot", () => {
   assert.doesNotMatch(onReadyBlock, /pushUpdate\(/);
 });
 
-test("T100845: promote after ready keeps CLI overview when service start fails", async () => {
+test("T100845/T100848: promote after ready keeps CLI overview when service start fails", async () => {
   const store = new DashboardDataStore();
   const coordinator = new DashboardReadPathCoordinator({
     workspacePath: "/tmp/promote-fail-steady",
@@ -92,6 +92,162 @@ test("T100845: promote after ready keeps CLI overview when service start fails",
   assert.equal(coordinator.isServicePathActive(), false);
   assert.deepEqual(store.getSlice("overview").value, overviewBefore);
   assert.equal(store.getSlice("queue").value?.readyQueueCount, 4);
+  assert.match(
+    coordinator.getModeBadge().detail ?? "",
+    /promote failed|using CLI polling/i
+  );
+
+  await coordinator.stop();
+});
+
+test("T100848: promote attach failure restores CLI and preserves overview", async () => {
+  let serviceHealthy = false;
+  const server = http.createServer((req, res) => {
+    const url = req.url ?? "";
+    if (url === "/health") {
+      res.writeHead(serviceHealthy ? 200 : 503, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ ok: serviceHealthy }));
+      return;
+    }
+    if (url === "/dashboard/snapshot") {
+      // Attach path: health ok but snapshot ingest throws → serviceSync.start fails.
+      res.writeHead(500, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ ok: false, message: "snapshot borked" }));
+      return;
+    }
+    if (url.startsWith("/dashboard/events")) {
+      res.writeHead(200, { "Content-Type": "text/event-stream" });
+      res.end("");
+      return;
+    }
+    res.writeHead(404);
+    res.end("");
+  });
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const port = server.address().port;
+  const workspace = await fsMkdtemp();
+  const runtimeDir = path.join(workspace, ".workspace-kit", "dashboard-service");
+  await mkdir(runtimeDir, { recursive: true });
+  await writeFile(
+    path.join(runtimeDir, "runtime.json"),
+    JSON.stringify({
+      schemaVersion: 1,
+      pid: 1,
+      host: "127.0.0.1",
+      port,
+      startedAt: "2026-05-30T03:00:00.000Z",
+      serviceVersion: "0.99.21",
+      generation: 1,
+      planningGeneration: 42
+    })
+  );
+
+  const store = new DashboardDataStore();
+  const coordinator = new DashboardReadPathCoordinator({
+    workspacePath: workspace,
+    client: {
+      run: async (command) => {
+        if (command === "dashboard-bootstrap-slices") {
+          return {
+            ok: true,
+            data: {
+              overview: {
+                workspaceStatus: { phaseKey: "146", label: "keep after attach fail" },
+                dashboardProjection: "overview"
+              },
+              queue: { readyQueueCount: 11 }
+            }
+          };
+        }
+        if (command === "dashboard-service-start") {
+          serviceHealthy = true;
+          return { ok: true };
+        }
+        return { ok: false };
+      }
+    },
+    store,
+    pollers: stubPollers(),
+    log: () => {}
+  });
+
+  await coordinator.startForPaint();
+  assert.equal(coordinator.getModeBadge().active, "cli-polling");
+  const overviewBefore = store.getSlice("overview").value;
+
+  await coordinator.promoteToService();
+
+  assert.equal(coordinator.isServicePathActive(), false);
+  assert.equal(coordinator.getModeBadge().active, "cli-polling");
+  assert.deepEqual(store.getSlice("overview").value, overviewBefore);
+  assert.equal(store.getSlice("queue").value?.readyQueueCount, 11);
+  assert.match(
+    coordinator.getModeBadge().detail ?? "",
+    /promote failed|using CLI polling/i
+  );
+
+  await coordinator.stop();
+  await new Promise((resolve) => server.close(resolve));
+});
+
+test("T100848: dashboard.postPaintPromote false skips promote and keeps CLI overview", async () => {
+  const workspace = await fsMkdtemp();
+  await mkdir(path.join(workspace, ".workspace-kit"), { recursive: true });
+  await writeFile(
+    path.join(workspace, ".workspace-kit", "config.json"),
+    JSON.stringify({
+      dashboard: {
+        dataSource: "auto",
+        postPaintPromote: false
+      }
+    })
+  );
+
+  const runCalls = [];
+  const store = new DashboardDataStore();
+  const coordinator = new DashboardReadPathCoordinator({
+    workspacePath: workspace,
+    client: {
+      run: async (command) => {
+        runCalls.push(command);
+        if (command === "dashboard-bootstrap-slices") {
+          return {
+            ok: true,
+            data: {
+              overview: {
+                workspaceStatus: { phaseKey: "146", label: "cold path stays" },
+                dashboardProjection: "overview"
+              },
+              queue: { readyQueueCount: 2 }
+            }
+          };
+        }
+        if (command === "dashboard-service-start") {
+          return { ok: true };
+        }
+        return { ok: false };
+      }
+    },
+    store,
+    pollers: stubPollers(),
+    log: () => {}
+  });
+
+  await coordinator.startForPaint();
+  assert.equal(coordinator.getModeBadge().active, "cli-polling");
+  assert.equal(coordinator.getModeBadge().configured, "auto");
+  const overviewBefore = store.getSlice("overview").value;
+
+  await coordinator.promoteToService();
+
+  assert.equal(coordinator.isServicePathActive(), false);
+  assert.equal(coordinator.getModeBadge().active, "cli-polling");
+  assert.deepEqual(store.getSlice("overview").value, overviewBefore);
+  assert.equal(
+    runCalls.includes("dashboard-service-start"),
+    false,
+    "disabled promote must not start the service"
+  );
 
   await coordinator.stop();
 });

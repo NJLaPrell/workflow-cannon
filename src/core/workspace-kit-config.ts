@@ -130,7 +130,9 @@ export const KIT_CONFIG_DEFAULTS: Record<string, unknown> = {
   },
   /** Dashboard extension read path (Option 2); see `dashboard.dataSource` registry key. */
   dashboard: {
-    dataSource: "auto"
+    dataSource: "auto",
+    /** When false, skip post-paint service promote (T100848); cold CLI overview stays primary. */
+    postPaintPromote: true
   },
   maintainerDelivery: {
     defaultProfile: "github-pr",

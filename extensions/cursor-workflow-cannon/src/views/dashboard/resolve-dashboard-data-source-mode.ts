@@ -15,6 +15,9 @@ export const DASHBOARD_DATA_SOURCE_MODES: readonly DashboardDataSourceMode[] = [
 
 export const DASHBOARD_DATA_SOURCE_CONFIG_KEY = "dashboard.dataSource";
 
+/** When false, post-paint promote stays on CLI/cache overview (T100848). Default true. */
+export const DASHBOARD_POST_PAINT_PROMOTE_CONFIG_KEY = "dashboard.postPaintPromote";
+
 function getAtPath(root: Record<string, unknown>, dotted: string): unknown {
   const parts = dotted.split(".").filter(Boolean);
   let cur: unknown = root;
@@ -48,4 +51,18 @@ export function resolveDashboardDataSource(
     );
   }
   return raw;
+}
+
+/**
+ * Resolve `dashboard.postPaintPromote` from merged workspace config.
+ * Missing/invalid → `true` (promote enabled). Explicit `false` disables promote only.
+ */
+export function resolveDashboardPostPaintPromote(
+  effectiveConfig: Record<string, unknown> | undefined
+): boolean {
+  const raw = getAtPath(effectiveConfig ?? {}, DASHBOARD_POST_PAINT_PROMOTE_CONFIG_KEY);
+  if (raw === undefined || raw === null) {
+    return true;
+  }
+  return raw !== false;
 }

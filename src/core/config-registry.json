@@ -1561,5 +1561,21 @@
       "project",
       "user"
     ]
+  },
+  "dashboard.postPaintPromote": {
+    "key": "dashboard.postPaintPromote",
+    "type": "boolean",
+    "description": "When true (default), the Cursor dashboard may background-start and quietly promote to the warm service path after first paint. Set false to keep the cold-path CLI/cache overview and skip post-paint promote without forcing dashboard.dataSource to cli-polling.",
+    "default": true,
+    "domainScope": "project",
+    "owningModule": "task-engine",
+    "sensitive": false,
+    "requiresRestart": false,
+    "requiresApproval": false,
+    "exposure": "public",
+    "writableLayers": [
+      "project",
+      "user"
+    ]
   }
 }
