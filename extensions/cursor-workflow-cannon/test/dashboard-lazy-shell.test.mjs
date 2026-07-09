@@ -39,7 +39,7 @@ test("renderDashboardShellInnerHtml includes branded idle banner and segmented t
   assert.match(html, /wc-dash-section-skeleton/);
   assert.match(html, /data-wc-tab="overview"[\s\S]*<span class="wc-tab-icon">[\s\S]*Overview/);
   assert.match(html, /data-wc-tab="planning"[\s\S]*<span class="wc-tab-icon">[\s\S]*Planning/);
-  assert.match(html, /data-wc-tab="task-engine"[\s\S]*<span class="wc-tab-icon">[\s\S]*Queue/);
+  assert.match(html, /data-wc-tab="task-engine"[\s\S]*<span class="wc-tab-icon">[\s\S]*Task Engine/);
   assert.match(html, /data-wc-tab="status"[\s\S]*<span class="wc-tab-icon">[\s\S]*Status/);
   assert.match(html, /data-wc-tab="config"[\s\S]*<span class="wc-tab-icon">[\s\S]*Config/);
   assert.match(html, /data-wc-tab="cae"[\s\S]*<span class="wc-tab-icon">[\s\S]*CAE/);
@@ -83,30 +83,30 @@ test("dashboard section registry lists overview, planning, queue, phase journal,
   assert.equal(phaseRoster?.tabId, "planning");
 });
 
-test("DashboardViewProvider paints shell before pushUpdate (T100395)", () => {
+test("DashboardViewProvider paints shell before startup controller bootstrap (T100395)", () => {
   const providerPath = path.join(srcDir, "DashboardViewProvider.ts");
   const src = fs.readFileSync(providerPath, "utf8");
   assert.match(src, /renderDashboardShellInnerHtml\(\)/);
   assert.match(src, /shell painted synchronously/);
   const resolveBlock = src.slice(src.indexOf("resolveWebviewView("));
   const shellIdx = resolveBlock.indexOf("renderDashboardShellInnerHtml()");
-  const paintIdx = resolveBlock.indexOf("void this.renderDashboardStartupDirect(webview)");
-  assert.ok(shellIdx >= 0 && paintIdx >= 0 && shellIdx < paintIdx, "shell must render before startup direct paint");
+  const paintIdx = resolveBlock.indexOf('requestDashboardStartup("resolve-webview")');
+  assert.ok(shellIdx >= 0 && paintIdx >= 0 && shellIdx < paintIdx, "shell must render before startup controller bootstrap");
 });
 
 test("DashboardViewProvider startup first paint uses overview then schedules queue rollup hydration", () => {
   const providerPath = path.join(srcDir, "DashboardViewProvider.ts");
   const src = fs.readFileSync(providerPath, "utf8");
   const startupBlock = src.slice(
-    src.indexOf("private async renderDashboardStartupDirectOnce"),
+    src.indexOf("private async executeDashboardStartupBootstrap"),
     src.indexOf("private async postSectionPatch")
   );
   assert.match(startupBlock, /projection:\s*"overview"/);
   assert.doesNotMatch(startupBlock, /projection:\s*"full"/);
   assert.match(startupBlock, /postMessage\(\{ type: "wcReplaceRoot", html: rootInner \}\)/);
   assert.doesNotMatch(startupBlock, /webview\.html = this\.buildHtml\(webview, rootInner\)/);
-  assert.match(startupBlock, /ensureQueueRollupsHydrated\(/);
-  assert.match(startupBlock, /startup queue rollup hydration scheduled/);
+  assert.match(src, /executeBackgroundHydration:\s*\(\)\s*=>\s*this\.ensureStartupEagerSectionsHydrated\(\)/);
+  assert.match(startupBlock, /startup eager hydration scheduled/);
   assert.doesNotMatch(startupBlock, /ensureStatusHydrated\(/);
 });
 
