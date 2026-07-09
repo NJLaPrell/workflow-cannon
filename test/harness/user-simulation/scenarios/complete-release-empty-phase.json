@@ -13,10 +13,18 @@
   "fixture": {
     "expectedVerdict": "ready-to-ship",
     "currentKitPhase": "134",
-    "tasks": []
+    "tasks": [],
+    "stateExpectations": {
+      "nonTerminalTaskCount": 0,
+      "completedTaskCount": 0,
+      "requireOrchestrationRefs": true
+    }
   },
   "efficiency": {
     "avoidBroadCommands": ["list-tasks", "get-next-actions"],
-    "mcpModeMaxBroadCommands": 0
+    "mcpModeMaxBroadCommands": 0,
+    "expectedCommands": {
+      "cli": ["phase-release-orchestration-state"]
+    }
   }
 }
