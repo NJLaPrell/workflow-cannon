@@ -2722,7 +2722,12 @@ function renderDashboardIdeasSectionInnerHtml(
     if (!item || typeof item !== "object") return true;
     const row = item as Record<string, unknown>;
     const status = String(row.status ?? "open").trim().toLowerCase();
-    if (status === "brainstorming") return false;
+    if (status === "brainstorming" || status === "planned") return false;
+    // Linked plan ref alone means the idea left the bare-Ideas lane, even if the artifact
+    // summary failed to load (missing/corrupt on-disk plan).
+    const linkedPlanRef =
+      typeof row.linkedPlanArtifact === "string" ? row.linkedPlanArtifact.trim() : "";
+    if (linkedPlanRef.length > 0) return false;
     const linkedPlan =
       row.linkedPlanArtifactSummary && typeof row.linkedPlanArtifactSummary === "object"
         ? (row.linkedPlanArtifactSummary as Record<string, unknown>)

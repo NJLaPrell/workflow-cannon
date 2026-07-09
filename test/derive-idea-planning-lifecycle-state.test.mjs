@@ -170,3 +170,27 @@ test("deriveIdeaPlanningLifecycleState treats empty refs and missing signals as 
     "open"
   );
 });
+
+test("deriveIdeaPlanningLifecycleState keeps unified idea shells open before planning starts", () => {
+  assert.equal(
+    deriveIdeaPlanningLifecycleState({
+      idea: baseIdea({ linkedPlanArtifact: "plan-artifact:shell-1" }),
+      linkedPlanArtifact: { planRef: "plan-artifact:shell-1", status: "idea" }
+    }),
+    "open"
+  );
+  assert.equal(
+    deriveIdeaPlanningLifecycleState({
+      idea: baseIdea({ linkedPlanArtifact: "plan-artifact:shell-2" }),
+      linkedPlanArtifact: { planRef: "plan-artifact:shell-2", status: "brainstorming" }
+    }),
+    "open"
+  );
+  assert.equal(
+    deriveIdeaPlanningLifecycleState({
+      idea: baseIdea({ linkedPlanArtifact: "plan-artifact:planning-1" }),
+      linkedPlanArtifact: { planRef: "plan-artifact:planning-1", status: "planning" }
+    }),
+    "planning"
+  );
+});

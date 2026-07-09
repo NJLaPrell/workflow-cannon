@@ -45,6 +45,7 @@ rule|id=A029|level=must|scope=agent|directive=when_triaging_improvement_backlog_
 rule|id=A023|level=must|scope=agent|directive=before_mutating_kit_owned_state_run_matching_workspace_kit_command|risk=high|approval=none|override=stop|status=active|refs=.ai/machine-cli-policy.md|why=rationale_for_A023
 rule|id=A024|level=must_not|scope=agent|directive=rely_on_chat_only_approval_for_policy_gated_workspace_kit_run|risk=critical|approval=none|override=stop|status=active|refs=.ai/machine-cli-policy.md|why=rationale_for_A024
 rule|id=A025|level=must_not|scope=agent|directive=hand_edit_task_engine_state_json_for_routine_lifecycle_transitions|risk=high|approval=none|override=stop|status=active|refs=.ai/machine-cli-policy.md,.workspace-kit/tasks/workspace-kit.db,.workspace-kit/tasks/state.json|why=rationale_for_A025
+rule|id=A030|level=must_not|scope=agent|directive=use_git_stash_all_or_git_clean_with_ignored_or_rm_workspace_kit_planning_to_clear_dirty_tree|risk=critical|approval=required|override=stop|status=active|refs=.cursor/rules/workspace-kit-gitignored-data-hygiene.mdc,.ai/runbooks/plan-artifact-workflow.md,.workspace-kit/planning/|why=plan_artifacts_and_other_gitignored_kit_data_are_not_in_git_history
 
 rule|id=A026|level=should|scope=agent|directive=optional_resolve_behavior_profile_for_advisory_collaboration_style_subordinate_to_principles_and_policy|risk=low|approval=none|override=auto|status=active|refs=.ai/machine-cli-policy.md,src/modules/agent-behavior/README.md|why=rationale_for_A026
 
