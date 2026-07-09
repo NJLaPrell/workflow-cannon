@@ -992,7 +992,7 @@ function renderRecommendedNextPickPhaseCard(nextKitPhase: string): string {
     return (
       '<div class="wc-rec-next wc-rec-next-pick-phase">' +
       '<div class="wc-rec-header">' +
-      '<span class="wc-rec-label">&#9670; RECOMMENDED NEXT</span>' +
+      '<span class="wc-rec-label">&#9733; Recommended Next</span>' +
       "</div>" +
       renderUpNextTitleRow(title, startBtn) +
       "</div>"
@@ -1001,7 +1001,7 @@ function renderRecommendedNextPickPhaseCard(nextKitPhase: string): string {
   return (
     '<div class="wc-rec-next wc-rec-next-pick-phase">' +
     '<div class="wc-rec-header">' +
-    '<span class="wc-rec-label">&#9670; RECOMMENDED NEXT</span>' +
+    '<span class="wc-rec-label">&#9733; Recommended Next</span>' +
     "</div>" +
     '<p class="wc-rec-title">Choose a phase and start delivery</p>' +
     '<p class="muted wc-rec-subtitle">Use Start on a phase in the roster below when you are ready to deliver.</p>' +
@@ -1032,7 +1032,7 @@ function renderRecommendedNextPhaseWorkCard(curPhase: string, snapshot: PhaseSna
   return (
     '<div class="wc-rec-next wc-rec-next-phase-work">' +
     '<div class="wc-rec-header">' +
-    '<span class="wc-rec-label">&#9670; RECOMMENDED NEXT</span>' +
+    '<span class="wc-rec-label">&#9733; Recommended Next</span>' +
     "</div>" +
     renderUpNextTitleRow("Continue Phase " + curPhase + " delivery work", queueBtn) +
     '<p class="muted wc-rec-subtitle">' +
@@ -1052,7 +1052,7 @@ function renderRecommendedNextCloseoutCard(args: {
     return (
       '<div class="wc-rec-next wc-rec-next-closeout wc-rec-next-phase-released">' +
       '<div class="wc-rec-header">' +
-      '<span class="wc-rec-label">&#9670; RECOMMENDED NEXT</span>' +
+      '<span class="wc-rec-label">&#9733; Recommended Next</span>' +
       "</div>" +
       '<p class="wc-rec-title wc-rec-phase-released">Phase released! &#127881;</p>' +
       "</div>"
@@ -1095,7 +1095,7 @@ function renderRecommendedNextCloseoutCard(args: {
   return (
     '<div class="wc-rec-next wc-rec-next-closeout">' +
     '<div class="wc-rec-header">' +
-    '<span class="wc-rec-label">&#9670; RECOMMENDED NEXT</span>' +
+    '<span class="wc-rec-label">&#9733; Recommended Next</span>' +
     "</div>" +
     renderUpNextTitleRow(title, actionsHtml) +
     '<p class="muted wc-rec-subtitle">' +
@@ -2433,8 +2433,10 @@ function renderWishlistOpenList(items: unknown): string {
         const taskIdAttr = escapeHtml(taskId);
         return (
           '<div class="dash-row" role="listitem">' +
-          '<span class="dash-row-label">- ' +
-          label +
+          '<span class="dash-row-label">' +
+          '<span class="dash-task-row-id">' + escapeHtml(id) + '</span>' +
+          (id ? " " : "") +
+          '<span class="dash-task-row-summary">' + title + "</span>" +
           "</span>" +
           '<span class="dash-row-actions">' +
           '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="wishlist-view" data-wishlist-id="' +
@@ -2946,12 +2948,13 @@ function renderTranscriptChurnResearchRow(row: { id?: unknown; title?: unknown; 
   const id = String(row?.id ?? "").trim();
   const title = escapeHtml(String(row?.title ?? ""));
   const ph = row?.phase != null && String(row.phase).length > 0 ? " · " + escapeHtml(String(row.phase)) : "";
-  const label = "- " + escapeHtml(id) + (id ? " " : "") + title + ph;
   const idAttr = escapeHtml(id);
   return (
     '<div class="dash-row" role="listitem">' +
     '<span class="dash-row-label">' +
-    label +
+    '<span class="dash-task-row-id">' + escapeHtml(id) + '</span>' +
+    (id ? " " : "") +
+    '<span class="dash-task-row-summary">' + title + ph + "</span>" +
     "</span>" +
     '<span class="dash-row-actions">' +
     '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="task-detail" data-task-id="' +
@@ -3033,7 +3036,7 @@ function renderBlockedList(items: unknown): string {
         const row = x as { taskId?: unknown; blockedBy?: unknown };
         const tid = String(row?.taskId ?? "").trim();
         const deps = Array.isArray(row?.blockedBy) ? (row.blockedBy as string[]).join(", ") : "";
-        const label = "- " + escapeHtml(tid) + " blocked by " + escapeHtml(deps);
+        const label = '<span class="dash-task-row-id">' + escapeHtml(tid) + '</span> blocked by <span class="dash-task-row-summary">' + escapeHtml(deps) + "</span>";
         const idAttr = escapeHtml(tid);
         return (
           '<div class="dash-row" role="listitem">' +
@@ -6393,7 +6396,10 @@ function renderDashboardAgentActivityBoard(summary: DashboardAgentActivitySummar
   if (!summary || typeof summary !== "object") {
     return (
       '<section class="wc-agent-board dash-agent-status-banner dash-agent-activity-board" aria-label="Agent Activity">' +
-      '<p><b>Agent Activity</b> <span class="dash-agent-status-label">Unknown</span></p>' +
+      '<div class="wc-agent-board-header">' +
+      '<span class="wc-agent-board-title"><b>Agent Activity</b></span>' +
+      '<span class="wc-agent-board-meta">Unknown</span>' +
+      "</div>" +
       '<p class="muted">No agent activity summary is available.</p>' +
       "</section>"
     );
@@ -6418,12 +6424,10 @@ function renderDashboardAgentActivityBoard(summary: DashboardAgentActivitySummar
     '" data-agent-activity-state="' +
     escapeHtmlAttr(boardState) +
     '">' +
-    '<p><b>Agent Activity</b> <span class="dash-agent-status-label">' +
-    escapeHtml(headerFreshness ? `${headerSource} · ${headerFreshness}` : headerSource) +
-    "</span></p>" +
-    '<p class="muted">Source: ' +
-    escapeHtml(sourceLabel) +
-    "</p>" +
+    '<div class="wc-agent-board-header">' +
+    '<span class="wc-agent-board-title"><b>Agent Activity</b></span>' +
+    '<span class="wc-agent-board-meta">' + escapeHtml(headerFreshness ? `${headerSource} \u00b7 ${headerFreshness}` : headerSource) + '</span>' +
+    "</div>" +
     '<div class="dash-agent-activity-section dash-agent-activity-section--main" aria-label="Main Agent">' +
     '<p class="wc-agent-section-label"><b>Main Agent</b></p>' +
     mainRowHtml +

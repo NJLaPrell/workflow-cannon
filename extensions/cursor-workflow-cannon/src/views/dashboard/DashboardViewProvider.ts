@@ -5947,18 +5947,18 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       --wc-border: var(--vscode-widget-border, rgba(127,127,127,.35));
       --wc-surface: var(--vscode-editor-background, #1A1A1A);
       --wc-bg: var(--vscode-sideBar-background, #0F0F0F);
-      --wc-green: #22C55E;
-      --wc-amber: #F59E0B;
-      --wc-red: #EF4444;
-      --wc-blue: #3B82F6;
-      --wc-green-tint: rgba(34,197,94,0.07);
-      --wc-amber-tint: rgba(245,158,11,0.07);
-      --wc-red-tint: rgba(239,68,68,0.07);
-      --wc-blue-tint: rgba(59,130,246,0.07);
-      --wc-green-border: rgba(34,197,94,0.20);
-      --wc-amber-border: rgba(245,158,11,0.20);
-      --wc-red-border: rgba(239,68,68,0.20);
-      --wc-blue-border: rgba(59,130,246,0.20);
+      --wc-green: var(--vscode-testing-iconPassed, #4ec9b0);
+      --wc-amber: var(--vscode-editorWarning-foreground, #cca700);
+      --wc-red: var(--vscode-charts-red, #f44336);
+      --wc-blue: var(--vscode-textLink-foreground, #4fc1ff);
+      --wc-green-tint: color-mix(in srgb, var(--wc-green) 7%, transparent);
+      --wc-amber-tint: color-mix(in srgb, var(--wc-amber) 7%, transparent);
+      --wc-red-tint: color-mix(in srgb, var(--wc-red) 7%, transparent);
+      --wc-blue-tint: color-mix(in srgb, var(--wc-blue) 7%, transparent);
+      --wc-green-border: color-mix(in srgb, var(--wc-green) 20%, transparent);
+      --wc-amber-border: color-mix(in srgb, var(--wc-amber) 20%, transparent);
+      --wc-red-border: color-mix(in srgb, var(--wc-red) 20%, transparent);
+      --wc-blue-border: color-mix(in srgb, var(--wc-blue) 20%, transparent);
     }
     @keyframes wc-pulse {
       0%, 100% { opacity: 1; }
@@ -5994,16 +5994,20 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     pre { white-space: pre-wrap; background: var(--vscode-textCodeBlock-background); padding: 8px; border-radius: 4px; }
     button { cursor: pointer; }
     .dash-row-list { display: flex; flex-direction: column; gap: 3px; margin: 6px 0 8px 0; }
-    .dash-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; padding: 5px 8px; border-radius: 6px; background: var(--vscode-textCodeBlock-background); position: relative; }
+    .dash-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; padding: 5px 8px; border-radius: 6px; background: var(--vscode-textCodeBlock-background); position: relative; transition: background 0.12s; }
+    .dash-row:hover { background: var(--vscode-list-hoverBackground, var(--vscode-textCodeBlock-background)); }
     /* Colored left status bars per section context */
     .status-section[data-wc-filter="ready"] .dash-row { border-left: 3px solid var(--vscode-testing-iconPassed, #4ec9b0); padding-left: 9px; }
     .status-section[data-wc-filter="proposed"] .dash-row { border-left: 3px solid var(--vscode-textLink-foreground, #4fc1ff); padding-left: 9px; }
     .status-section[data-wc-filter="blocked"] .dash-row { border-left: 3px solid var(--vscode-editorWarning-foreground, #cca700); padding-left: 9px; }
     .status-section[data-wc-filter="human-gates"] .dash-row { border-left: 3px solid var(--vscode-charts-red, #f44336); padding-left: 9px; }
-    .status-section[data-wc-filter="terminal"] .dash-row { border-left: 3px solid var(--vscode-foreground); opacity: 0.55; padding-left: 9px; }
+    .status-section[data-wc-filter="terminal"] .dash-row { border-left: 3px solid var(--vscode-foreground); padding-left: 9px; }
+    .status-section[data-wc-filter="terminal"] .dash-row .dash-row-label { opacity: 0.55; }
     .status-section[data-wc-filter="research"] .dash-row { border-left: 3px solid var(--vscode-charts-purple, #b388ff); padding-left: 9px; }
     .dash-row-label { flex: 1; min-width: 0; white-space: pre-wrap; word-break: break-word; font-size: 12px; line-height: 1.35; }
-    .dash-row-actions { display: flex; flex-wrap: wrap; gap: 4px; flex-shrink: 0; align-items: flex-start; }
+    .dash-row-actions { display: flex; flex-wrap: wrap; gap: 4px; flex-shrink: 0; align-items: flex-start; transition: opacity 0.15s; }
+    .dash-row .dash-row-actions { opacity: 0; }
+    .dash-row:hover .dash-row-actions { opacity: 1; }
     .dash-row-actions.wc-task-actions {
       --wc-task-action-btn-w: 104px;
       display: grid;
@@ -6175,7 +6179,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       color: var(--vscode-descriptionForeground, var(--vscode-foreground));
     }
     .dash-task-row-summary {
-      display: block;
+      display: inline;
       font-size: 11px;
       line-height: 1.3;
       color: var(--vscode-descriptionForeground, var(--vscode-foreground));
@@ -6525,14 +6529,14 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     .wc-status-dot--active,
     .wc-status-dot--running {
-      background: var(--wc-green);
-      box-shadow: 0 0 5px var(--wc-green);
+      background: var(--vscode-testing-iconPassed, #4ec9b0);
+      box-shadow: 0 0 5px var(--vscode-testing-iconPassed, #4ec9b0);
       animation: wc-pulse 1.6s ease-in-out infinite;
     }
-    .wc-status-dot--waiting { background: var(--wc-amber); box-shadow: 0 0 5px var(--wc-amber); }
-    .wc-status-dot--blocked { background: var(--wc-red); box-shadow: 0 0 5px var(--wc-red); }
-    .wc-status-dot--idle { background: var(--wc-muted); }
-    .wc-status-dot--done { background: var(--wc-blue); }
+    .wc-status-dot--waiting { background: var(--vscode-editorWarning-foreground, #cca700); box-shadow: 0 0 5px var(--vscode-editorWarning-foreground, #cca700); }
+    .wc-status-dot--blocked { background: var(--vscode-charts-red, #f44336); box-shadow: 0 0 5px var(--vscode-charts-red, #f44336); }
+    .wc-status-dot--idle { background: var(--vscode-descriptionForeground); }
+    .wc-status-dot--done { background: var(--vscode-textLink-foreground, #4fc1ff); }
     .wc-banner-status-label {
       font-size: 11px;
       font-weight: 600;
@@ -6581,8 +6585,12 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     .dash-agent-status-banner p { margin: 0; line-height: 1.35; }
     .dash-agent-status-label { overflow-wrap: anywhere; }
+    .wc-agent-board-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+    .wc-agent-board-title { font-size: 11px; }
+    .wc-agent-board-meta { font-size: 9.5px; color: var(--vscode-descriptionForeground); margin-left: auto; }
     .dash-agent-row-list { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
-    .dash-agent-row { padding: 4px 5px; border-radius: 6px; background: var(--vscode-textCodeBlock-background); }
+    .dash-agent-row { padding: 4px 5px; border-radius: 6px; background: var(--vscode-textCodeBlock-background); transition: background 0.12s; }
+    .dash-agent-row:hover { background: var(--vscode-list-hoverBackground, var(--vscode-textCodeBlock-background)); }
     .dash-agent-row:not(details), .dash-agent-row-summary { display: grid; grid-template-columns: auto minmax(92px, 1.2fr) minmax(92px, 1fr) minmax(70px, auto); gap: 6px; align-items: center; }
     .dash-agent-row-summary { cursor: pointer; list-style: none; }
     .dash-agent-row-summary::-webkit-details-marker { display: none; }
@@ -6611,6 +6619,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       align-items: center;
       gap: 6px;
     }
+    .wc-agent-section-label span { margin-left: auto; font-size: 9.5px; color: var(--vscode-descriptionForeground); }
     .wc-agent-card {
       display: flex !important;
       flex-direction: column !important;
@@ -6632,8 +6641,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       box-sizing: border-box !important;
       gap: 6px;
       padding: 6px 8px !important;
-      background: rgba(0,0,0,0.15);
-      border: 1px solid rgba(255,255,255,0.03);
+      background: var(--vscode-textCodeBlock-background, rgba(0,0,0,0.15));
+      border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.2));
       border-radius: 4px;
       margin-top: 4px;
     }
@@ -6713,16 +6722,16 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     .wc-agent-card[data-status="active"] .wc-agent-card-status-chip,
     .wc-agent-card[data-status="running"] .wc-agent-card-status-chip,
-    .wc-agent-card[data-status="in_progress"] .wc-agent-card-status-chip { background: rgba(34,197,94,0.12); color: var(--wc-green); }
+    .wc-agent-card[data-status="in_progress"] .wc-agent-card-status-chip { background: var(--wc-green-tint); color: var(--wc-green); }
     .wc-agent-card[data-status="waiting"] .wc-agent-card-status-chip,
     .wc-agent-card[data-status="awaiting_input"] .wc-agent-card-status-chip,
-    .wc-agent-card[data-status="in_review"] .wc-agent-card-status-chip { background: rgba(245,158,11,0.12); color: var(--wc-amber); }
+    .wc-agent-card[data-status="in_review"] .wc-agent-card-status-chip { background: var(--wc-amber-tint); color: var(--wc-amber); }
     .wc-agent-card[data-status="blocked"] .wc-agent-card-status-chip,
-    .wc-agent-card[data-status="error"] .wc-agent-card-status-chip { background: rgba(239,68,68,0.12); color: var(--wc-red); }
+    .wc-agent-card[data-status="error"] .wc-agent-card-status-chip { background: var(--wc-red-tint); color: var(--wc-red); }
     .wc-agent-card[data-status="done"] .wc-agent-card-status-chip,
     .wc-agent-card[data-status="complete"] .wc-agent-card-status-chip,
-    .wc-agent-card[data-status="released"] .wc-agent-card-status-chip { background: rgba(59,130,246,0.12); color: var(--wc-blue); }
-    .wc-agent-card[data-status="idle"] .wc-agent-card-status-chip { background: rgba(255,255,255,0.07); color: var(--wc-muted); }
+    .wc-agent-card[data-status="released"] .wc-agent-card-status-chip { background: var(--wc-blue-tint); color: var(--wc-blue); }
+    .wc-agent-card[data-status="idle"] .wc-agent-card-status-chip { background: var(--vscode-textCodeBlock-background); color: var(--vscode-descriptionForeground); }
     .wc-agent-card-role {
       font-size: 8.5px;
       font-weight: 500;
@@ -6801,7 +6810,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       font-size: 10px;
       font-weight: 600;
       color: var(--wc-accent);
-      background: rgba(255,95,31,0.10);
+      background: color-mix(in srgb, var(--wc-accent) 10%, transparent);
       padding: 1px 6px;
       border-radius: 3px;
       font-family: var(--vscode-editor-font-family, 'Consolas', monospace);
@@ -6824,7 +6833,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     .wc-agent-card-sub-count {
       font-size: 9.5px;
       color: var(--wc-muted);
-      background: rgba(255,255,255,0.05);
+      background: var(--vscode-textCodeBlock-background);
       padding: 1px 5px;
       border-radius: 999px;
       border: 1px solid var(--wc-border);
@@ -6832,7 +6841,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       flex-shrink: 0;
     }
     .wc-agent-tree {
-      border-top: 1px solid rgba(255,255,255,0.05);
+      border-top: 1px solid var(--vscode-widget-border, rgba(127,127,127,.25));
       padding: 4px 10px 8px 16px;
       width: 100% !important;
       box-sizing: border-box !important;
@@ -6879,7 +6888,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       align-items: center;
       gap: 6px;
       margin-left: 8px;
-      background: rgba(255,255,255,0.03);
+      background: var(--vscode-textCodeBlock-background);
       border: 1px solid var(--wc-border);
       border-radius: 6px;
       padding: 4px 8px;
@@ -6913,13 +6922,13 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     .wc-agent-sub-chip[data-status="active"],
     .wc-agent-sub-chip[data-status="running"],
-    .wc-agent-sub-chip[data-status="in_progress"] { background: rgba(34,197,94,0.12); color: var(--wc-green); }
+    .wc-agent-sub-chip[data-status="in_progress"] { background: var(--wc-green-tint); color: var(--wc-green); }
     .wc-agent-sub-chip[data-status="waiting"],
     .wc-agent-sub-chip[data-status="awaiting_input"],
-    .wc-agent-sub-chip[data-status="in_review"] { background: rgba(245,158,11,0.12); color: var(--wc-amber); }
+    .wc-agent-sub-chip[data-status="in_review"] { background: var(--wc-amber-tint); color: var(--wc-amber); }
     .wc-agent-sub-chip[data-status="blocked"],
-    .wc-agent-sub-chip[data-status="error"] { background: rgba(239,68,68,0.12); color: var(--wc-red); }
-    .wc-agent-sub-chip[data-status="idle"] { background: rgba(255,255,255,0.07); color: var(--wc-muted); }
+    .wc-agent-sub-chip[data-status="error"] { background: var(--wc-red-tint); color: var(--wc-red); }
+    .wc-agent-sub-chip[data-status="idle"] { background: var(--vscode-textCodeBlock-background); color: var(--vscode-descriptionForeground); }
     .wc-agent-sub-meta {
       font-size: 10px;
       color: var(--wc-muted);
@@ -7455,12 +7464,12 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     .wc-card,
     .dash-card {
-      background: var(--wc-surface);
-      border: 1px solid var(--wc-border);
-      border-radius: 6px;
+      background: var(--vscode-textCodeBlock-background);
+      border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.35));
+      border-radius: 8px;
       padding: 10px 12px;
       margin: 0 0 10px 0;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.20);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
     }
     .wc-card > * { margin-top: 0; }
     .wc-card > *:last-child,
@@ -7514,7 +7523,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     .wc-card-accent {
       border-left: 3px solid var(--wc-accent);
-      background: linear-gradient(135deg, rgba(255,95,31,0.06) 0%, var(--wc-surface) 60%);
+      background: linear-gradient(135deg, color-mix(in srgb, var(--wc-accent) 6%, transparent) 0%, var(--wc-surface) 60%);
     }
     .wc-card details { margin: 0; }
     .wc-card-summary {
@@ -7545,12 +7554,12 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       white-space: nowrap;
       flex-shrink: 0;
     }
-    .wc-chip-ready { background: rgba(34,197,94,0.12); color: var(--wc-green); }
-    .wc-chip-blocked { background: rgba(239,68,68,0.12); color: var(--wc-red); }
-    .wc-chip-waiting { background: rgba(245,158,11,0.12); color: var(--wc-amber); }
-    .wc-chip-active { background: rgba(255,95,31,0.12); color: var(--wc-accent); }
+    .wc-chip-ready { background: var(--wc-green-tint); color: var(--wc-green); }
+    .wc-chip-blocked { background: var(--wc-red-tint); color: var(--wc-red); }
+    .wc-chip-waiting { background: var(--wc-amber-tint); color: var(--wc-amber); }
+    .wc-chip-active { background: color-mix(in srgb, var(--wc-accent) 12%, transparent); color: var(--wc-accent); }
     .wc-chip-default {
-      background: rgba(255,255,255,0.07);
+      background: var(--vscode-textCodeBlock-background);
       color: var(--wc-muted);
       border: 1px solid var(--wc-border);
     }
@@ -7587,7 +7596,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.3));
       border-radius: 999px; padding: 1px 7px; line-height: 1;
     }
-    details.status-section > .status-section-body { padding-left: 2px; }
+    details.status-section > .status-section-body { padding-left: 0; }
     .dash-card > details.status-section:last-child { margin-bottom: 0; }
     .dash-count-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px 14px; margin: 4px 0 10px 0; }
     .dash-count-cell { display: flex; flex-direction: row; align-items: baseline; justify-content: space-between; gap: 8px; min-width: 0; }
@@ -7653,7 +7662,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     .wc-tab-btn:hover {
       color: var(--wc-fg);
-      background: rgba(255,255,255,0.04);
+      background: var(--vscode-textCodeBlock-background);
     }
     .wc-tab-btn.wc-tab-active {
       background: var(--wc-accent);
@@ -7997,10 +8006,17 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       border-radius: 1px;
       flex-shrink: 0;
     }
+    .wc-stat-sparkline-bar {
+      opacity: 0.45;
+      transition: opacity 0.2s;
+    }
+    .wc-stat-sparkline-bar:last-child {
+      opacity: 1;
+    }
     .wc-spark-ready   { background: var(--vscode-testing-iconPassed, #4ec9b0); }
     .wc-spark-proposed { background: var(--vscode-textLink-foreground, #4fc1ff); }
     .wc-spark-blocked  { background: var(--vscode-editorWarning-foreground, #cca700); }
-    .wc-spark-human    { background: var(--vscode-editorWarning-foreground, #cca700); }
+    .wc-spark-human    { background: var(--vscode-charts-red, #f44336); }
     .wc-spark-done     { background: var(--vscode-foreground); opacity: 0.45; }
     /* ── Contextual help (fixed popover outside #root — no blink on refresh) ── */
     .wc-context-help-popover {
@@ -8078,7 +8094,11 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       color: var(--vscode-descriptionForeground);
       transition: color 0.1s;
     }
-    button.wc-filter-chip:hover { color: var(--vscode-foreground); }
+    button.wc-filter-chip:hover { color: var(--vscode-foreground); border-color: var(--vscode-foreground); }
+    button.wc-filter-chip-ready { color: var(--vscode-testing-iconPassed, #4ec9b0); border-color: var(--vscode-testing-iconPassed, #4ec9b0); }
+    button.wc-filter-chip-proposed { color: var(--vscode-textLink-foreground, #4fc1ff); border-color: var(--vscode-textLink-foreground, #4fc1ff); }
+    button.wc-filter-chip-blocked { color: var(--vscode-editorWarning-foreground, #cca700); border-color: var(--vscode-editorWarning-foreground, #cca700); }
+    button.wc-filter-chip-human-gates { color: var(--vscode-charts-red, #f44336); border-color: var(--vscode-charts-red, #f44336); }
     button.wc-filter-chip.wc-filter-active {
       opacity: 1;
       background: var(--vscode-button-background);
@@ -8254,9 +8274,9 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     .wc-phase-seg-completed { background: var(--vscode-testing-iconPassed, #4ec9b0); }
     .wc-phase-seg-cancelled { background: var(--vscode-descriptionForeground, #888); }
     .wc-phase-seg-in-progress { background: var(--vscode-progressBar-background, #0e639c); }
-    .wc-phase-seg-ready { background: var(--vscode-editorWarning-foreground, #cca700); }
-    .wc-phase-seg-proposed { background: var(--vscode-badge-background, #4d4d4d); }
-    .wc-phase-seg-blocked { background: var(--vscode-errorForeground, #f44747); }
+    .wc-phase-seg-ready { background: var(--vscode-testing-iconPassed, #4ec9b0); }
+    .wc-phase-seg-proposed { background: var(--vscode-textLink-foreground, #4fc1ff); }
+    .wc-phase-seg-blocked { background: var(--vscode-editorWarning-foreground, #cca700); }
     .wc-phase-seg-research { background: var(--vscode-charts-purple, #8b5cf6); }
     .wc-phase-progress-legend {
       display: flex;
@@ -8404,13 +8424,22 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     button.wc-stat-pill:hover { background: var(--vscode-toolbar-hoverBackground, rgba(127,127,127,.1)); }
     button.wc-pill-ready:hover { border-color: var(--vscode-testing-iconPassed, #4ec9b0); }
     button.wc-pill-proposed:hover { border-color: var(--vscode-textLink-foreground, #4fc1ff); }
-    button.wc-pill-blocked:hover { border-color: var(--vscode-editorWarning-foreground, #cca700); }
+    button.wc-pill-blocked:hover { border-color: var(--vscode-errorForeground, #f44747); }
     button.wc-pill-done:hover { border-color: var(--vscode-foreground); }
     button.wc-pill-human:hover { border-color: var(--vscode-editorWarning-foreground, #cca700); }
     /* ── Empty section muting ── */
     details.status-section.wc-section-empty {
-      opacity: 0.32;
-      pointer-events: none;
+      opacity: 1;
+    }
+    details.status-section.wc-section-empty > summary { opacity: 0.6; }
+    details.status-section.wc-section-empty > .status-section-body { display: none; }
+    details.status-section.wc-section-empty > summary::after {
+      content: "0"; font-size: 10px; font-weight: 600;
+      color: var(--vscode-descriptionForeground);
+      background: var(--vscode-textCodeBlock-background);
+      border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.3));
+      border-radius: 999px; padding: 1px 7px; margin-left: auto;
+      line-height: 1;
     }
     /* ── Blocker card urgency ── */
     .dash-card.wc-blocker-card {
@@ -8446,7 +8475,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     .wc-filter-chip-human-gates.wc-filter-active { outline: 1px solid var(--vscode-inputValidation-warningBorder, #cca700); }
     details.status-section[data-wc-filter="research"] > summary {
-      border-left: 3px solid var(--vscode-foreground);
+      border-left: 3px solid var(--vscode-charts-purple, #b388ff);
       padding-left: 6px;
       margin-left: -2px;
     }
@@ -8470,11 +8499,11 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       flex-shrink: 0;
     }
     .wc-tab-badge-ready {
-      background: rgba(34,197,94,0.20);
+      background: var(--wc-green-border);
       color: var(--wc-green);
     }
     .wc-tab-badge-blocked {
-      background: rgba(239,68,68,0.20);
+      background: var(--wc-red-border);
       color: var(--wc-red);
     }
     .wc-drawer-host { position: fixed; inset: 0; z-index: 20000; pointer-events: none; }

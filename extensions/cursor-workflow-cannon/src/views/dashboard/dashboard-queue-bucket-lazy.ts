@@ -115,11 +115,10 @@ function renderProposedImprovementRows(tasks: unknown[]): string {
           '<div class="dash-row" role="listitem"' +
           (id.length > 0 ? ' data-wc-queue-task-id="' + idAttr + '"' : '') +
           ">" +
-          '<span class="dash-row-label">- ' +
-          escapeHtml(id) +
+          '<span class="dash-row-label">' +
+          '<span class="dash-task-row-id">' + escapeHtml(id) + '</span>' +
           (id ? " " : "") +
-          title +
-          ph +
+          '<span class="dash-task-row-summary">' + title + ph + "</span>" +
           "</span>" +
           '<span class="dash-row-actions wc-task-actions dash-row-actions-grid">' +
           '<button type="button" class="wc-btn wc-btn-sm wc-btn-success" data-wc-action="proposed-imp-accept" data-task-id="' +
@@ -197,10 +196,10 @@ function renderTranscriptChurnRows(tasks: unknown[]): string {
           '<div class="dash-row" role="listitem"' +
           (id.length > 0 ? ' data-wc-queue-task-id="' + idAttr + '"' : '') +
           ">" +
-          '<span class="dash-row-label">- ' +
-          idAttr +
+          '<span class="dash-row-label">' +
+          '<span class="dash-task-row-id">' + idAttr + '</span>' +
           (id ? " " : "") +
-          title +
+          '<span class="dash-task-row-summary">' + title + "</span>" +
           "</span>" +
           '<span class="dash-row-actions">' +
           '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="task-detail" data-task-id="' +
@@ -233,10 +232,10 @@ function renderBlockedTaskRows(tasks: unknown[]): string {
           '<div class="dash-row" role="listitem"' +
           (id.length > 0 ? ' data-wc-queue-task-id="' + idAttr + '"' : '') +
           ">" +
-          '<span class="dash-row-label">- ' +
-          idAttr +
+          '<span class="dash-row-label">' +
+          '<span class="dash-task-row-id">' + idAttr + '</span>' +
           (id ? " " : "") +
-          title +
+          '<span class="dash-task-row-summary">' + title + "</span>" +
           "</span>" +
           '<span class="dash-row-actions wc-task-actions dash-row-actions-grid">' +
           '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="task-detail" data-task-id="' +
