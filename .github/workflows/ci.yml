@@ -2,6 +2,8 @@
 #
 # Fast tier (required on pull_request):
 #   - Job `test` — build, check, unit tests, plugin fixture smoke, Cursor extension check.
+#   - Planner MCP parity (`test/mcp-planner-parity.test.mjs` via `pnpm test:run`) is required
+#     before tagging MCP planner read tools — blocks adapter envelope drift (WBS-30 / T100832).
 #
 # Full tier (required on push to `main` or `release/*` only — includes parity):
 #   - Job `release-readiness` — release metadata, pack dry-run, maintainer-gates.

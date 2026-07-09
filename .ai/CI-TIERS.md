@@ -10,6 +10,8 @@ Required check for PRs to `main` and `release/*`:
 | --- | --- |
 | **`test`** | `pnpm run build`, `pnpm check`, `pnpm run test:run`, plugin fixture smoke, Cursor extension check |
 
+`pnpm test:run` includes **`test/mcp-planner-parity.test.mjs`** (WBS-30): the aggregate gate for all five v1 planner MCP read tools. Run **`pnpm run test:planner-mcp-parity`** for the focused suite; **`pre-merge-gates`** invokes it explicitly. This gate must pass before tagging MCP planner read tool releases.
+
 Does **not** run: `parity`, `pack:dry-run`, `maintainer-gates`, release metadata check.
 
 ## Full tier (`push` to `main` or `release/*`)
