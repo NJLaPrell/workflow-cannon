@@ -51,6 +51,21 @@
               "dependsOn": { "type": "array", "items": { "type": "string" } }
             }
           }
+        },
+        "stateExpectations": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "nonTerminalTaskCount": { "type": "integer", "minimum": 0 },
+            "completedTaskCount": { "type": "integer", "minimum": 0 },
+            "requireOrchestrationRefs": { "type": "boolean" },
+            "requireAssignmentPacketDigest": { "type": "boolean" },
+            "assignmentPacketDigest": { "type": "string" },
+            "requireReleaseEvidenceWhenReady": { "type": "boolean" },
+            "releaseEvidencePresent": { "type": "boolean" },
+            "enforceKitPhaseAlignment": { "type": "boolean" },
+            "currentKitPhaseMustMatch": { "type": "boolean" }
+          }
         }
       }
     },
@@ -60,7 +75,14 @@
       "properties": {
         "avoidBroadCommands": { "type": "array", "items": { "type": "string" } },
         "avoidRunbookResourceUris": { "type": "array", "items": { "type": "string" } },
-        "mcpModeMaxBroadCommands": { "type": "integer", "minimum": 0 }
+        "mcpModeMaxBroadCommands": { "type": "integer", "minimum": 0 },
+        "expectedCommands": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        }
       }
     },
     "mcpFallback": {

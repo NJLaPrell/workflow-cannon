@@ -17,11 +17,20 @@
       { "id": "T100699", "status": "in_progress", "title": "Persona schema" },
       { "id": "T100700", "status": "ready", "title": "Scenario schema" },
       { "id": "T100701", "status": "completed", "title": "Prior completed task" }
-    ]
+    ],
+    "stateExpectations": {
+      "nonTerminalTaskCount": 2,
+      "completedTaskCount": 1,
+      "requireOrchestrationRefs": true
+    }
   },
   "efficiency": {
     "avoidBroadCommands": ["list-tasks", "phase-status", "dashboard-summary"],
-    "mcpModeMaxBroadCommands": 0
+    "mcpModeMaxBroadCommands": 0,
+    "expectedCommands": {
+      "cli": ["phase-release-orchestration-state"],
+      "mcp-fallback": ["phase-release-orchestration-state"]
+    }
   },
   "mcpFallback": {
     "trigger": "mcp-unavailable",
