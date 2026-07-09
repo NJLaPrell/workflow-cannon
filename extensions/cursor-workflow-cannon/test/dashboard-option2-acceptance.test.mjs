@@ -39,7 +39,8 @@ test("Option 2: /health exposes per-slice observability (T100600)", () => {
 });
 
 test("Option 2: provider uses readPath not raw poller lifecycle", () => {
-  assert.match(providerSrc, /readPath\.start\(\)/);
+  assert.match(providerSrc, /readPath\.startForPaint\(\)/);
+  assert.match(providerSrc, /readPath\.promoteToService\(\)/);
   assert.match(providerSrc, /readPath\.stop\(\)/);
   assert.match(providerSrc, /readPath\.pause\(\)/);
   assert.doesNotMatch(providerSrc, /this\.dashboardPollers\.start\(\)/);

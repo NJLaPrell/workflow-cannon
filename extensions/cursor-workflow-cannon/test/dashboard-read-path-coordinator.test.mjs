@@ -288,7 +288,8 @@ test("T100599: provider wires DashboardReadPathCoordinator", () => {
     "utf8"
   );
   assert.match(providerSrc, /DashboardReadPathCoordinator/);
-  assert.match(providerSrc, /readPath\.start\(\)/);
+  assert.match(providerSrc, /readPath\.startForPaint\(\)/);
+  assert.match(providerSrc, /readPath\.promoteToService\(\)/);
   assert.match(providerSrc, /wcDashboardReadMode/);
 });
 
@@ -427,13 +428,9 @@ test("T100601: coordinator source-checks document error-vs-success forwarding", 
   assert.match(coordSrc, /recordPushSliceUpdate[\s\S]{0,120}isSuccess/);
 });
 
-test("T100844: auto cold path does not await service restart before CLI bootstrap", async () => {
+test("T100844/T100845: auto cold path does not call service start before CLI bootstrap", async () => {
   const store = new DashboardDataStore();
   const runCalls = [];
-  let releaseRestart;
-  const restartGate = new Promise((resolve) => {
-    releaseRestart = resolve;
-  });
   let pollersStarted = 0;
   const pollers = {
     start: () => {
@@ -455,8 +452,7 @@ test("T100844: auto cold path does not await service restart before CLI bootstra
       run: async (command, args) => {
         runCalls.push({ command, args });
         if (command === "dashboard-service-start") {
-          await restartGate;
-          return { ok: false, message: "still cold" };
+          return { ok: false, message: "should not be called during startForPaint" };
         }
         if (command === "dashboard-bootstrap-slices") {
           return {
@@ -475,33 +471,218 @@ test("T100844: auto cold path does not await service restart before CLI bootstra
     log: () => {}
   });
 
-  const startPromise = coordinator.start();
-  await waitFor(() => pollersStarted >= 1);
+  await coordinator.startForPaint();
+  assert.equal(pollersStarted >= 1, true);
   assert.equal(coordinator.getModeBadge().active, "cli-polling");
   assert.ok(
     runCalls.some((c) => c.command === "dashboard-bootstrap-slices"),
     "cold path should call dashboard-bootstrap-slices without waiting on service start"
   );
+  assert.equal(
+    runCalls.some((c) => c.command === "dashboard-service-start"),
+    false,
+    "startForPaint must not call dashboard-service-start"
+  );
   const bootstrapCall = runCalls.find((c) => c.command === "dashboard-bootstrap-slices");
   assert.deepEqual(bootstrapCall.args?.slices, ["overview", "queue"]);
   assert.equal(store.getSlice("overview").status, "fresh");
   assert.equal(store.getSlice("queue").status, "fresh");
-  releaseRestart();
-  await startPromise;
   await coordinator.stop();
 });
 
-test("T100844: coordinator source keeps service restart off cold critical path", () => {
+test("T100844/T100845: coordinator source keeps service restart off cold critical path", () => {
   const coordSrc = readFileSync(
     path.join(__dirname, "../src/views/dashboard/dashboard-read-path-coordinator.ts"),
     "utf8"
   );
-  assert.match(coordSrc, /void this\.attemptBackgroundServiceStart\(\)/);
+  assert.match(coordSrc, /async startForPaint\(\)/);
+  assert.match(coordSrc, /async promoteToService\(\)/);
   assert.match(coordSrc, /slices:\s*\["overview",\s*"queue"\]/);
-  const activateBlock = coordSrc.slice(
-    coordSrc.indexOf("private async activateReadPath"),
-    coordSrc.indexOf("private async emitServiceHealthDiagnostics")
+  const paintBlock = coordSrc.slice(
+    coordSrc.indexOf("private async activateReadPathForPaint"),
+    coordSrc.indexOf("private async runPromoteToService")
   );
-  assert.doesNotMatch(activateBlock, /await this\.restartDashboardService\(\)/);
-  assert.doesNotMatch(activateBlock, /void this\.restartDashboardService\(\)/);
+  assert.doesNotMatch(paintBlock, /dashboard-service-start/);
+  assert.doesNotMatch(paintBlock, /await this\.restartDashboardService\(\)/);
+  assert.doesNotMatch(paintBlock, /attemptBackgroundServiceStart/);
+});
+
+test("T100845: promoteToService starts service after cold paint and swaps quietly", async () => {
+  const store = new DashboardDataStore();
+  const runCalls = [];
+  let serviceHealthy = false;
+  const server = http.createServer((req, res) => {
+    const url = req.url ?? "";
+    if (url === "/health") {
+      res.writeHead(serviceHealthy ? 200 : 503, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ ok: serviceHealthy }));
+      return;
+    }
+    if (url === "/dashboard/snapshot") {
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(
+        JSON.stringify({
+          schemaVersion: 1,
+          serviceVersion: "0.99.21",
+          generatedAt: "2026-05-30T03:00:00.000Z",
+          generation: 2,
+          planningGeneration: 42,
+          slices: {
+            overview: {
+              name: "overview",
+              status: "fresh",
+              value: {
+                workspaceStatus: { phaseKey: "146" },
+                dashboardProjection: "overview"
+              },
+              source: "service",
+              planningGeneration: 42
+            },
+            queue: {
+              name: "queue",
+              status: "fresh",
+              value: { readyQueueCount: 3 },
+              source: "service",
+              planningGeneration: 42
+            }
+          }
+        })
+      );
+      return;
+    }
+    if (url.startsWith("/dashboard/events")) {
+      res.writeHead(200, { "Content-Type": "text/event-stream" });
+      res.end("");
+      return;
+    }
+    res.writeHead(404);
+    res.end("");
+  });
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const port = server.address().port;
+  const workspace = await fsMkdtemp();
+  const runtimeDir = path.join(workspace, ".workspace-kit", "dashboard-service");
+  await mkdir(runtimeDir, { recursive: true });
+  await writeFile(
+    path.join(runtimeDir, "runtime.json"),
+    JSON.stringify({
+      schemaVersion: 1,
+      pid: 1,
+      host: "127.0.0.1",
+      port,
+      startedAt: "2026-05-30T03:00:00.000Z",
+      serviceVersion: "0.99.21",
+      generation: 1,
+      planningGeneration: 42
+    })
+  );
+
+  const pollers = {
+    start: () => {},
+    stop: () => {},
+    pause: () => {},
+    resume: () => {},
+    useFullCadence: () => {},
+    usePushSafetyNetCadence: () => {},
+    recordPushSliceUpdate: () => {},
+    setRequestServiceRefresh: () => {},
+    refreshCriticalNow: async () => {},
+    refreshSlicesNow: async () => {},
+    setVisibleSections: () => {}
+  };
+  const coordinator = new DashboardReadPathCoordinator({
+    workspacePath: workspace,
+    client: {
+      run: async (command, args) => {
+        runCalls.push({ command, args });
+        if (command === "dashboard-service-start") {
+          serviceHealthy = true;
+          return { ok: true };
+        }
+        if (command === "dashboard-bootstrap-slices") {
+          return {
+            ok: true,
+            data: {
+              overview: { workspaceStatus: { phaseKey: "146" }, dashboardProjection: "overview" },
+              queue: { readyQueueCount: 3 }
+            }
+          };
+        }
+        return { ok: false };
+      }
+    },
+    store,
+    pollers,
+    log: () => {}
+  });
+
+  await coordinator.startForPaint();
+  assert.equal(coordinator.getModeBadge().active, "cli-polling");
+  assert.equal(
+    runCalls.some((c) => c.command === "dashboard-service-start"),
+    false
+  );
+  assert.equal(store.getSlice("overview").status, "fresh");
+
+  await coordinator.promoteToService();
+  assert.equal(coordinator.isServicePathActive(), true);
+  assert.equal(coordinator.getModeBadge().active, "service");
+  assert.ok(runCalls.some((c) => c.command === "dashboard-service-start"));
+  assert.equal(store.getSlice("overview").status, "fresh");
+  assert.ok(store.getSlice("overview").value?.workspaceStatus);
+
+  await coordinator.stop();
+  await new Promise((resolve) => server.close(resolve));
+});
+
+test("T100845: promote failure keeps CLI path and usable overview", async () => {
+  const store = new DashboardDataStore();
+  const pollers = {
+    start: () => {},
+    stop: () => {},
+    pause: () => {},
+    resume: () => {},
+    useFullCadence: () => {},
+    usePushSafetyNetCadence: () => {},
+    recordPushSliceUpdate: () => {},
+    refreshCriticalNow: async () => {},
+    refreshSlicesNow: async () => {},
+    setVisibleSections: () => {}
+  };
+  const coordinator = new DashboardReadPathCoordinator({
+    workspacePath: "/tmp/no-service-promote-fail",
+    client: {
+      run: async (command) => {
+        if (command === "dashboard-service-start") {
+          return { ok: false, message: "boom" };
+        }
+        if (command === "dashboard-bootstrap-slices") {
+          return {
+            ok: true,
+            data: {
+              overview: { workspaceStatus: { phaseKey: "146" }, dashboardProjection: "overview" },
+              queue: { readyQueueCount: 7 }
+            }
+          };
+        }
+        return { ok: false };
+      }
+    },
+    store,
+    pollers,
+    log: () => {}
+  });
+
+  await coordinator.startForPaint();
+  assert.equal(coordinator.getModeBadge().active, "cli-polling");
+  assert.equal(store.getSlice("overview").value?.workspaceStatus?.phaseKey, "146");
+
+  await coordinator.promoteToService();
+  assert.equal(coordinator.getModeBadge().active, "cli-polling");
+  assert.equal(coordinator.isServicePathActive(), false);
+  assert.equal(store.getSlice("overview").status, "fresh");
+  assert.equal(store.getSlice("overview").value?.workspaceStatus?.phaseKey, "146");
+  assert.equal(store.getSlice("queue").value?.readyQueueCount, 7);
+
+  await coordinator.stop();
 });

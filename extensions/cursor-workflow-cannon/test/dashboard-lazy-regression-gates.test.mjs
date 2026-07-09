@@ -233,3 +233,29 @@ test("stale section state is wired in webview and provider", () => {
   assert.match(readSrc("dashboard-webview-client.ts"), /wc-dash-section--stale/);
   assert.match(fs.readFileSync(providerPath, "utf8"), /markDashboardSectionStale/);
 });
+
+test("T100845: paint-safe read path + quiet promote after ready (no startup restart)", () => {
+  const providerSrc = fs.readFileSync(providerPath, "utf8");
+  const coordinatorSrc = readSrc("dashboard-read-path-coordinator.ts");
+  const startupSrc = readSrc("dashboard-startup-controller.ts");
+
+  assert.match(providerSrc, /readPath\.startForPaint\(\)/);
+  assert.match(providerSrc, /onReady:[\s\S]*promoteToService\(\)/);
+  assert.doesNotMatch(providerSrc, /void this\.readPath\.start\(\)/);
+
+  assert.match(coordinatorSrc, /async startForPaint\(\)/);
+  assert.match(coordinatorSrc, /async promoteToService\(\)/);
+  assert.match(coordinatorSrc, /swapToServicePathQuietly/);
+  assert.match(coordinatorSrc, /restoreSliceIfRegressed/);
+
+  const paintBlock = coordinatorSrc.slice(
+    coordinatorSrc.indexOf("private async activateReadPathForPaint"),
+    coordinatorSrc.indexOf("private async runPromoteToService")
+  );
+  assert.doesNotMatch(paintBlock, /dashboard-service-start/);
+
+  // Promote lives on the read-path coordinator — not inside the startup controller.
+  assert.doesNotMatch(startupSrc, /promoteToService/);
+  assert.doesNotMatch(startupSrc, /startForPaint/);
+  assert.doesNotMatch(startupSrc, /dashboard-service-start/);
+});
