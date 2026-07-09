@@ -16,6 +16,7 @@ import {
   listToolOutputByteBudgets,
   MCP_RESOURCE_OUTPUT_BYTE_BUDGETS,
   MCP_TOOL_OUTPUT_BYTE_BUDGETS,
+  PLANNER_MCP_READ_TOOL_NAMES,
   resolveResourceOutputByteBudget,
   resolveToolOutputByteBudget,
   summarizeOversizedText
@@ -34,6 +35,12 @@ import {
   resolveMcpMutationEnabled,
   type MutationMcpToolDefinition
 } from "./mutation-tools.js";
+import {
+  expansionArgsForPlannerPacket,
+  invokePlannerPacket,
+  PLANNER_PACKET_TOOL_NAME,
+  validatePlannerPacketArgs
+} from "./planner-packet.js";
 
 const JSON_RPC_VERSION = "2.0";
 const MCP_PROTOCOL_VERSION = "2024-11-05";
@@ -199,6 +206,9 @@ const AGENT_START_TOOL_NAME = "workflow-cannon.agent_start";
 const CAPABILITIES_TOOL_NAME = "workflow-cannon.capabilities";
 const PHASE_RELEASE_ORCHESTRATION_TOOL_NAME = "workflow-cannon.phase-release-orchestration-state";
 const CAPABILITIES_CLI_FALLBACK = "pnpm exec wk -- list-commands";
+const IDEAS_MODULE_ID = "ideas";
+const PLANNER_CLI_FALLBACK_POINTER =
+  "pnpm exec wk run get-planner-flow-status '{\"ideaId\":\"<idea>\"}'";
 
 /**
  * Freshness policy injected into every tool result envelope. Authority is
@@ -578,6 +588,187 @@ const packetReadToolDefinitions: Omit<ReadOnlyMcpToolDefinition, "outputByteBudg
         "src/modules/project-memory/index.ts"
       ]
     }
+  },
+  {
+    toolName: PLANNER_PACKET_TOOL_NAME,
+    commandName: "get-planner-flow-status",
+    description:
+      "Read planner bootstrap packet: idea, session, agentDirective, truncated wbsPreview, and recommendedNextCommand.",
+    stateLike: true,
+    cliFallbackArgs: '{"ideaId":"<idea>"}',
+    commonMistakes: [
+      "skipping recommendedNextCommand.readyRun for Tier B follow-on",
+      "treating session/document mismatches as non-blocking",
+      "expecting MCP to run planner mutations without policyApproval"
+    ],
+    inputSchema: objectSchema(
+      {
+        ideaId: stringSchema("Optional idea id such as I001.")
+      },
+      []
+    ),
+    expansionArgs: expansionArgsForPlannerPacket,
+    validateArgs: validatePlannerPacketArgs,
+    governance: {
+      bounded: true,
+      note: "Planner bootstrap read orchestrates get-planner-flow-status and get-idea; Tier B mutations use recommendedNextCommand.readyRun with policyApproval when required.",
+      sourceRefs: [
+        "src/modules/ideas/instructions/get-planner-flow-status.md",
+        "src/modules/ideas/instructions/get-idea.md",
+        ".ai/mcp-tool-version-policy.md"
+      ]
+    }
+  },
+  {
+    toolName: "workflow-cannon.list-ideas",
+    commandName: "list-ideas",
+    description: "Read lightweight Ideas inventory rows in sortOrder order.",
+    stateLike: true,
+    cliFallbackArgs: '{}',
+    commonMistakes: [
+      "treating ideas inventory as linked plan content",
+      "passing invalid status filter values",
+      "expecting MCP to mutate ideas without policyApproval"
+    ],
+    inputSchema: objectSchema(
+      {
+        status: enumSchema(["open", "planning", "planned"], "Optional idea status filter.")
+      },
+      []
+    ),
+    expansionArgs: (args) => ({
+      ...(typeof args.status === "string" ? { status: args.status } : {})
+    }),
+    governance: {
+      bounded: true,
+      note: "Ideas inventory is read-only through list-ideas; create, update, delete, and planner mutations use Tier B CLI with policyApproval when required.",
+      sourceRefs: [
+        "src/modules/ideas/instructions/list-ideas.md",
+        ".ai/mcp-tool-version-policy.md"
+      ]
+    }
+  },
+  {
+    toolName: "workflow-cannon.get-plan-artifact",
+    commandName: "get-plan-artifact",
+    description: "Read PlanArtifact version history, lineage metadata, and bounded artifact payload.",
+    stateLike: true,
+    cliFallbackArgs: '{"planId":"<uuid>"}',
+    commonMistakes: [
+      "omitting required planId",
+      "treating MCP as a plan mutation path",
+      "expecting unbounded artifact bodies within MCP budget"
+    ],
+    inputSchema: objectSchema(
+      {
+        planId: stringSchema("PlanArtifact id (UUID)."),
+        version: numberSchema("Optional 1-based version; defaults to latest."),
+        includeArtifact: {
+          type: "boolean",
+          description: "When false, omit the full artifact body from the response."
+        }
+      },
+      ["planId"]
+    ),
+    expansionArgs: (args) => ({
+      planId: args.planId,
+      ...(typeof args.version === "number" ? { version: args.version } : {}),
+      ...(typeof args.includeArtifact === "boolean" ? { includeArtifact: args.includeArtifact } : {})
+    }),
+    validateArgs: validateGetPlanArtifactArgs,
+    governance: {
+      bounded: true,
+      note: "Plan artifact reads are read-only through get-plan-artifact; draft, patch, accept, and finalize mutations use Tier B CLI with policyApproval when required.",
+      sourceRefs: [
+        "src/modules/planning/instructions/get-plan-artifact.md",
+        ".ai/mcp-tool-version-policy.md"
+      ]
+    }
+  },
+  {
+    toolName: "workflow-cannon.plan-review-packet",
+    commandName: "review-plan-artifact",
+    description: "Read plan rubric review packet with blockers, warnings, and coverage preview.",
+    stateLike: true,
+    cliFallbackArgs: '{"planId":"<uuid>","profile":"minimal"}',
+    commonMistakes: [
+      "passing recordReview through MCP",
+      "omitting required planId",
+      "expecting MCP to persist reviewed status on the artifact"
+    ],
+    inputSchema: objectSchema(
+      {
+        planId: stringSchema("PlanArtifact id (UUID)."),
+        version: numberSchema("Optional 1-based version; defaults to latest."),
+        profile: enumSchema(
+          ["minimal", "refactor", "full-feature", "sprint-phase"],
+          "Optional rubric profile; defaults to minimal when omitted."
+        )
+      },
+      ["planId"]
+    ),
+    expansionArgs: (args) => ({
+      planId: args.planId,
+      ...(typeof args.version === "number" ? { version: args.version } : {}),
+      ...(typeof args.profile === "string" ? { profile: args.profile } : {})
+    }),
+    validateArgs: validatePlanReviewPacketArgs,
+    governance: {
+      bounded: true,
+      note: "Plan review packets are read-only through review-plan-artifact (Tier C, no recordReview); recording reviewed status and accept/finalize mutations use Tier B CLI with policyApproval when required.",
+      sourceRefs: [
+        "src/modules/planning/instructions/review-plan-artifact.md",
+        ".ai/mcp-tool-version-policy.md"
+      ]
+    }
+  },
+  {
+    toolName: "workflow-cannon.finalize-preview-packet",
+    commandName: "finalize-plan-to-phase",
+    description: "Read finalize dry-run task draft preview with batch review findings.",
+    stateLike: true,
+    cliFallbackArgs: '{"planId":"<uuid>","dryRun":true}',
+    commonMistakes: [
+      "passing dryRun:false or policyApproval through MCP",
+      "omitting required planId",
+      "expecting MCP to persist phase tasks to the task store"
+    ],
+    inputSchema: objectSchema(
+      {
+        planId: stringSchema("PlanArtifact id (UUID)."),
+        version: numberSchema("Optional 1-based version; defaults to latest."),
+        targetPhaseKey: stringSchema("Optional phase key override for preview resolution."),
+        targetPhase: stringSchema("Optional phase label override for preview resolution."),
+        desiredStatus: enumSchema(
+          ["proposed", "ready"],
+          "Optional task status for preview drafts; defaults to ready when omitted."
+        ),
+        wbsFilter: {
+          type: "array",
+          items: { type: "string" },
+          description: "Optional WBS row ids to include in the preview subset."
+        }
+      },
+      ["planId"]
+    ),
+    expansionArgs: (args) => ({
+      planId: args.planId,
+      dryRun: true,
+      ...(typeof args.version === "number" ? { version: args.version } : {}),
+      ...(typeof args.targetPhaseKey === "string" ? { targetPhaseKey: args.targetPhaseKey } : {}),
+      ...(typeof args.targetPhase === "string" ? { targetPhase: args.targetPhase } : {}),
+      ...(typeof args.desiredStatus === "string" ? { desiredStatus: args.desiredStatus } : {}),
+      ...(Array.isArray(args.wbsFilter) ? { wbsFilter: args.wbsFilter } : {})
+    }),
+    validateArgs: validateFinalizePreviewPacketArgs,
+    governance: {
+      bounded: true,
+      note: "Finalize previews are read-only through finalize-plan-to-phase with dryRun:true; persisting phase tasks uses Tier B CLI with policyApproval when required.",
+      sourceRefs: [
+        "src/modules/planning/instructions/finalize-plan-to-phase.md",
+        ".ai/mcp-tool-version-policy.md"
+      ]
+    }
   }
 ];
 
@@ -819,7 +1010,14 @@ async function handleAgentStartToolCall(id: JsonRpcId, options: McpServerOptions
     sessionSummary = undefined;
   }
 
-  const payload = buildAgentStartPayload(workspaceBinding, sessionSummary, options, mutationEnabled);
+  const ideasModuleEnabled = await resolveIdeasModuleEnabled(options);
+  const payload = buildAgentStartPayload(
+    workspaceBinding,
+    sessionSummary,
+    options,
+    mutationEnabled,
+    ideasModuleEnabled
+  );
   const text = JSON.stringify(payload, null, 2);
   const byteBudget = resolveToolOutputByteBudget(AGENT_START_TOOL_NAME, options);
   const oversized = Buffer.byteLength(text, "utf8") > byteBudget;
@@ -1069,11 +1267,40 @@ function handleResourceRead(
   });
 }
 
+async function resolveIdeasModuleEnabled(options: McpServerOptions): Promise<boolean> {
+  const workspaceBinding = resolveMcpWorkspaceBinding(options);
+  const { registry } = await resolveRegistryAndConfig(
+    workspaceBinding.workspaceRoot,
+    defaultRegistryModules,
+    {}
+  );
+  return registry.isModuleEnabled(IDEAS_MODULE_ID);
+}
+
+function buildPlannerWorkflowRouting(ideasModuleEnabled: boolean): Record<string, unknown> {
+  if (!ideasModuleEnabled) {
+    return {
+      enabled: false,
+      whenToUse: "Ideas module is disabled in this workspace; planner routing is unavailable.",
+      cliFallbackPointer: "pnpm exec wk doctor"
+    };
+  }
+  return {
+    enabled: true,
+    whenToUse:
+      "Cold start or resume Idea→Plan→Tasks workflows. v1 MCP planner tools are read-only; call nextTool for bootstrap context, not agent_start. Tier B planner mutations use CLI with policyApproval (P3 planner-mutations MCP profile deferred).",
+    nextTool: PLANNER_PACKET_TOOL_NAME,
+    cliFallbackPointer: PLANNER_CLI_FALLBACK_POINTER,
+    mcpToolNames: [...PLANNER_MCP_READ_TOOL_NAMES]
+  };
+}
+
 function buildAgentStartPayload(
   workspaceBinding: McpWorkspaceBinding,
   sessionSummary?: Record<string, unknown>,
   options: McpServerOptions = {},
-  mutationEnabled = false
+  mutationEnabled = false,
+  ideasModuleEnabled = true
 ): Record<string, unknown> {
   const tools = listAllMcpTools(options).map((tool) => tool.name);
   return {
@@ -1085,6 +1312,9 @@ function buildAgentStartPayload(
     readOnlyToolsOnly: !mutationEnabled,
     toolsAvailable: tools,
     recommendedNextTool: CAPABILITIES_TOOL_NAME,
+    workflows: {
+      planner: buildPlannerWorkflowRouting(ideasModuleEnabled)
+    },
     workflowRecommendations: [
       {
         workflowId: "complete-and-release",
@@ -1237,13 +1467,16 @@ async function handleToolCall(
 
   const commandArgs = definition.expansionArgs(args);
   const runtime = await resolveMcpRuntime(options);
-  const commandResult = await runtime.invoke({
-    name: definition.commandName,
-    args: commandArgs
-  });
+  const commandResult =
+    params.name === PLANNER_PACKET_TOOL_NAME
+      ? await invokePlannerPacket(runtime, commandArgs)
+      : await runtime.invoke({
+          name: definition.commandName,
+          args: commandArgs
+        });
   const toolResult = formatToolResult(definition, commandArgs, commandResult, options);
   recordAuditEvent(options, params.name, commandResult.ok ? "success" : "command_error", {
-    command: definition.commandName,
+    command: params.name === PLANNER_PACKET_TOOL_NAME ? "planner-packet" : definition.commandName,
     args: commandArgs,
     resultCode: commandResult.code,
     oversized: isOversizedToolResult(toolResult),
@@ -1580,6 +1813,99 @@ function requireStringArgs(...names: string[]): (args: Record<string, unknown>) 
     }
     return null;
   };
+}
+
+function validateGetPlanArtifactArgs(args: Record<string, unknown>): string | null {
+  const missingPlanId = requireStringArgs("planId")(args);
+  if (missingPlanId) {
+    return missingPlanId;
+  }
+  if (args.version !== undefined) {
+    if (typeof args.version !== "number" || !Number.isInteger(args.version) || args.version < 1) {
+      return "version must be a positive integer when provided";
+    }
+  }
+  if (args.includeArtifact !== undefined && typeof args.includeArtifact !== "boolean") {
+    return "includeArtifact must be a boolean when provided";
+  }
+  return null;
+}
+
+const PLAN_REVIEW_PROFILES = new Set(["minimal", "refactor", "full-feature", "sprint-phase"]);
+
+function validatePlanReviewPacketArgs(args: Record<string, unknown>): string | null {
+  const missingPlanId = requireStringArgs("planId")(args);
+  if (missingPlanId) {
+    return missingPlanId;
+  }
+  if (args.version !== undefined) {
+    if (typeof args.version !== "number" || !Number.isInteger(args.version) || args.version < 1) {
+      return "version must be a positive integer when provided";
+    }
+  }
+  if (args.profile !== undefined) {
+    if (typeof args.profile !== "string" || !PLAN_REVIEW_PROFILES.has(args.profile)) {
+      return "profile must be one of minimal, refactor, full-feature, or sprint-phase when provided";
+    }
+  }
+  if (args.recordReview !== undefined) {
+    return "recordReview is not supported through MCP; use Tier B CLI review-plan-artifact with policyApproval";
+  }
+  return null;
+}
+
+const FINALIZE_PREVIEW_DESIRED_STATUSES = new Set(["proposed", "ready"]);
+
+function validateFinalizePreviewPacketArgs(args: Record<string, unknown>): string | null {
+  const missingPlanId = requireStringArgs("planId")(args);
+  if (missingPlanId) {
+    return missingPlanId;
+  }
+  if (args.version !== undefined) {
+    if (typeof args.version !== "number" || !Number.isInteger(args.version) || args.version < 1) {
+      return "version must be a positive integer when provided";
+    }
+  }
+  if (args.targetPhaseKey !== undefined) {
+    if (typeof args.targetPhaseKey !== "string" || args.targetPhaseKey.trim().length === 0) {
+      return "targetPhaseKey must be a non-empty string when provided";
+    }
+  }
+  if (args.targetPhase !== undefined) {
+    if (typeof args.targetPhase !== "string" || args.targetPhase.trim().length === 0) {
+      return "targetPhase must be a non-empty string when provided";
+    }
+  }
+  if (args.desiredStatus !== undefined) {
+    if (
+      typeof args.desiredStatus !== "string" ||
+      !FINALIZE_PREVIEW_DESIRED_STATUSES.has(args.desiredStatus)
+    ) {
+      return "desiredStatus must be proposed or ready when provided";
+    }
+  }
+  if (args.wbsFilter !== undefined) {
+    if (
+      !Array.isArray(args.wbsFilter) ||
+      args.wbsFilter.length === 0 ||
+      args.wbsFilter.some((row) => typeof row !== "string" || row.trim().length === 0)
+    ) {
+      return "wbsFilter must be a non-empty array of WBS ids when provided";
+    }
+  }
+  if (args.dryRun !== undefined && args.dryRun !== true) {
+    return "dryRun:false is not supported through MCP; use Tier B CLI finalize-plan-to-phase with policyApproval";
+  }
+  if (args.policyApproval !== undefined) {
+    return "policyApproval is not supported through MCP; use Tier B CLI finalize-plan-to-phase with policyApproval";
+  }
+  if (args.expectedPlanningGeneration !== undefined) {
+    return "expectedPlanningGeneration is not supported through MCP finalize preview; use Tier B CLI finalize-plan-to-phase when persisting";
+  }
+  if (args.clientMutationId !== undefined) {
+    return "clientMutationId is not supported through MCP finalize preview; use Tier B CLI finalize-plan-to-phase when persisting";
+  }
+  return null;
 }
 
 function objectSchema(

@@ -3,6 +3,8 @@
   "description": "Policy-sensitive `workspace-kit run` commands whose args are not (yet) covered by task-engine-run-contracts / pilot-run-args.snapshot.json. Each must stay documented; shrink this list by adding schemas + snapshot entries.",
   "commands": [
     "accept-plan-artifact",
+    "append-wbs-row",
+    "patch-plan-artifact",
     "apply-skill",
     "approve-memory",
     "block-assignment",

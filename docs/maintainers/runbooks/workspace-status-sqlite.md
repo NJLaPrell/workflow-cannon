@@ -38,8 +38,8 @@ DDL and **`user_version`** steps live in **`src/core/state/kit-sqlite/planning-s
 
 - **`get-workspace-status`** — read singleton row + **`kitSqliteUserVersion`**.
 - **`phase-status`** — focused read-only phase answer: canonical current/next phase, config hint drift, export freshness, and optional task counts.
-- **`set-current-phase`** — SQLite-first happy-path phase rollover: patches **`kit_workspace_status`**, aligns config hints, and writes the non-authoritative DB export.
-- **`update-workspace-status`** — patch with **`expectedWorkspaceRevision`** (optimistic concurrency).
+- **`set-current-phase`** — SQLite-first happy-path phase **start/rollover**: patches **`kit_workspace_status`**, aligns config hints, and writes the non-authoritative DB export.
+- **`update-workspace-status`** — patch with **`expectedWorkspaceRevision`** (optimistic concurrency). Use **`currentKitPhase: null`** after phase publish/closeout to **unset** the active workspace phase (clears config hint and export; code **`workspace-phase-cleared`**). See **`.ai/playbooks/phase-closeout-and-release.md`** § **6b**.
 - **`export-workspace-status`** — write **`docs/maintainers/data/workspace-kit-status.db-export.yaml`** (non-authoritative); use **`dryRun`** to preview **`yamlBody`**.
 - **`workspace-status-history`** — list **`kit_workspace_status_events`** (optional **`limit`**).
 

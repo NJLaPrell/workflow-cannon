@@ -55,6 +55,9 @@ import {
   bestEffortGeneratePlanDocument
 } from "./best-effort-generate-plan-document.js";
 import { runGetPlanArtifact } from "./get-plan-artifact-handler.js";
+import { runGetPlanArtifactTemplate } from "./get-plan-artifact-template-handler.js";
+import { APPEND_WBS_ROW_INSTRUCTION, runAppendWbsRow } from "./append-wbs-row-handler.js";
+import { PATCH_PLAN_ARTIFACT_INSTRUCTION, runPatchPlanArtifact } from "./patch-plan-artifact-handler.js";
 import { runExecutePlanArtifact } from "./execute-plan-artifact-handler.js";
 import { attachPolicyMeta } from "../task-engine/attach-planning-response-meta.js";
 import { planningGenPolicyGate } from "../task-engine/planning-generation-gate.js";
@@ -145,6 +148,22 @@ export const planningModule: WorkflowModule = {
 
     if (command.name === "get-plan-artifact") {
       return runGetPlanArtifact((command.args ?? {}) as Record<string, unknown>, ctx);
+    }
+
+    if (command.name === "get-plan-artifact-template") {
+      return runGetPlanArtifactTemplate((command.args ?? {}) as Record<string, unknown>, ctx);
+    }
+
+    if (command.name === "append-wbs-row") {
+      return runAppendWbsRow((command.args ?? {}) as Record<string, unknown>, ctx, APPEND_WBS_ROW_INSTRUCTION);
+    }
+
+    if (command.name === "patch-plan-artifact") {
+      return runPatchPlanArtifact(
+        (command.args ?? {}) as Record<string, unknown>,
+        ctx,
+        PATCH_PLAN_ARTIFACT_INSTRUCTION
+      );
     }
 
     if (command.name === "generate-plan-document") {

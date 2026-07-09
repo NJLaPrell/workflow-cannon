@@ -1444,6 +1444,24 @@
   },
   {
     "moduleId": "planning",
+    "name": "append-wbs-row",
+    "file": "append-wbs-row.md",
+    "description": "Append one schema-valid WBS row to a unified IdeaPlan planning draft.",
+    "policyOperationId": "planning.append-wbs-row",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "planning",
+    "name": "patch-plan-artifact",
+    "file": "patch-plan-artifact.md",
+    "description": "Apply a section-scoped partial patch to a unified IdeaPlan planning draft.",
+    "policyOperationId": "planning.patch-plan-artifact",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "planning",
     "name": "finalize-plan-to-phase",
     "file": "finalize-plan-to-phase.md",
     "description": "Preview or persist WBS task drafts from an accepted PlanArtifact v1 into a target phase.",
@@ -1456,6 +1474,14 @@
     "name": "get-plan-artifact",
     "file": "get-plan-artifact.md",
     "description": "Read PlanArtifact version history and lineage.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "planning",
+    "name": "get-plan-artifact-template",
+    "file": "get-plan-artifact-template.md",
+    "description": "Return minimal valid PlanArtifact v1 skeleton from kernel fixture.",
     "defaultResponseTemplateId": "default",
     "policySensitivity": "non-sensitive"
   },
@@ -1636,6 +1662,14 @@
     "name": "get-idea",
     "file": "get-idea.md",
     "description": "Read one lightweight operator idea by I### id.",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive"
+  },
+  {
+    "moduleId": "ideas",
+    "name": "get-planner-flow-status",
+    "file": "get-planner-flow-status.md",
+    "description": "Read-only planner golden-path stage, blockers, mismatches, and recommendedNextCommand with readyRun argv.",
     "defaultResponseTemplateId": "default",
     "policySensitivity": "non-sensitive"
   },

@@ -8,6 +8,26 @@ export const MCP_MIN_OUTPUT_BYTE_BUDGET = 1_000;
 /** Fallback when a tool name is missing from the explicit budget map (should not happen). */
 export const MCP_DEFAULT_OUTPUT_BYTE_BUDGET = 24_000;
 
+/** Primary planner bootstrap read tool budget (architecture D3). */
+export const MCP_PLANNER_PACKET_OUTPUT_BYTE_BUDGET = 20 * 1024;
+
+/** Satellite planner read tool budget (architecture D3). */
+export const MCP_PLANNER_SATELLITE_OUTPUT_BYTE_BUDGET = 16 * 1024;
+
+/**
+ * v1 planner MCP read tools registered before tool handlers ship (WBS-6+).
+ * Budget map must include every name before server registration merges.
+ */
+export const PLANNER_MCP_READ_TOOL_NAMES = [
+  "workflow-cannon.planner-packet",
+  "workflow-cannon.list-ideas",
+  "workflow-cannon.get-plan-artifact",
+  "workflow-cannon.plan-review-packet",
+  "workflow-cannon.finalize-preview-packet"
+] as const;
+
+export type PlannerMcpReadToolName = (typeof PLANNER_MCP_READ_TOOL_NAMES)[number];
+
 export interface McpExpansionRef {
   kind: "cli" | "workspace-file";
   command?: string;
@@ -33,6 +53,12 @@ export const MCP_TOOL_OUTPUT_BYTE_BUDGETS: Readonly<Record<string, number>> = {
   "workflow-cannon.cae-recent-traces": 8 * 1024,
   "workflow-cannon.memory-list": 8 * 1024,
   "workflow-cannon.memory-precedence": 8 * 1024,
+  // Planner read tools (v1 — handlers register in WBS-6+; budgets per architecture D3)
+  "workflow-cannon.planner-packet": MCP_PLANNER_PACKET_OUTPUT_BYTE_BUDGET,
+  "workflow-cannon.list-ideas": MCP_PLANNER_SATELLITE_OUTPUT_BYTE_BUDGET,
+  "workflow-cannon.get-plan-artifact": MCP_PLANNER_SATELLITE_OUTPUT_BYTE_BUDGET,
+  "workflow-cannon.plan-review-packet": MCP_PLANNER_SATELLITE_OUTPUT_BYTE_BUDGET,
+  "workflow-cannon.finalize-preview-packet": MCP_PLANNER_SATELLITE_OUTPUT_BYTE_BUDGET,
   // Mutation tools (opt-in via WORKFLOW_CANNON_MCP_MUTATION_TOOLS=1)
   "workflow-cannon.run-transition": 12 * 1024,
   "workflow-cannon.write-memory": 8 * 1024
