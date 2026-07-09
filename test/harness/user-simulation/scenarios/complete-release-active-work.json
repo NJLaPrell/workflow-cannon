@@ -1,0 +1,30 @@
+{
+  "id": "complete-release-active-work",
+  "title": "Complete & Release — active work remains (tasks-remaining)",
+  "entryPoint": "dashboard-complete-and-release",
+  "phaseKey": "132",
+  "personaIds": ["pm-nontechnical", "expert-engineer"],
+  "contextModes": ["cli", "mcp", "mcp-fallback"],
+  "cliArgs": {
+    "scope": "current",
+    "integrationBranch": "release/phase-132",
+    "dashboardAuthorization": "complete-and-release"
+  },
+  "fixture": {
+    "expectedVerdict": "tasks-remaining",
+    "currentKitPhase": "132",
+    "tasks": [
+      { "id": "T100699", "status": "in_progress", "title": "Persona schema" },
+      { "id": "T100700", "status": "ready", "title": "Scenario schema" },
+      { "id": "T100701", "status": "completed", "title": "Prior completed task" }
+    ]
+  },
+  "efficiency": {
+    "avoidBroadCommands": ["list-tasks", "phase-status", "dashboard-summary"],
+    "mcpModeMaxBroadCommands": 0
+  },
+  "mcpFallback": {
+    "trigger": "mcp-unavailable",
+    "expectExplicitFallback": true
+  }
+}
