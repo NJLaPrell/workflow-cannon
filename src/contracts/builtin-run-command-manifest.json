@@ -1409,14 +1409,6 @@
   },
   {
     "moduleId": "planning",
-    "name": "build-plan",
-    "file": "build-plan.md",
-    "description": "Generate a dependency-aware execution plan.",
-    "defaultResponseTemplateId": "default",
-    "policySensitivity": "non-sensitive"
-  },
-  {
-    "moduleId": "planning",
     "name": "draft-plan-artifact",
     "file": "draft-plan-artifact.md",
     "description": "Validate and optionally persist a PlanArtifact v1 draft.",
