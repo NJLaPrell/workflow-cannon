@@ -1,0 +1,950 @@
+{
+  "schemaVersion": 1,
+  "planId": "c3d4e5f6-a7b8-4901-c234-567890abcdef",
+  "version": 1,
+  "planRef": "plan-artifact:c3d4e5f6-a7b8-4901-c234-567890abcdef",
+  "status": "draft",
+  "identity": {
+    "title": "MCP planner truncation stress plan artifact",
+    "planningType": "new-feature",
+    "summary": "WBS-16 stress fixture with twenty-four WBS rows for planner-packet truncation ladder CI evidence"
+  },
+  "goals": [
+    "Prove D3 truncation ladder under MCP planner-packet stress"
+  ],
+  "nonGoals": [
+    "Dashboard UI"
+  ],
+  "valueAssessment": {
+    "impact": "Test coverage",
+    "confidence": "high"
+  },
+  "riskAssessment": [],
+  "technicalImpact": {
+    "systemsTouched": [
+      "src/mcp/planner-packet.ts",
+      "fixtures/planning"
+    ]
+  },
+  "testingStrategy": {
+    "layers": [
+      "unit",
+      "integration"
+    ],
+    "criticalPaths": [
+      "mcp-planner-truncation-stress.test.mjs"
+    ]
+  },
+  "implementationGuidance": [
+    "Pair with brainstorm stress payload in truncation stress test"
+  ],
+  "whatNotToDo": [
+    "Do not treat as production plan"
+  ],
+  "assumptions": [
+    "Brainstorm ideation overflow is composed in test/mcp-planner-truncation-stress.test.mjs"
+  ],
+  "openQuestions": [],
+  "wbs": [
+    {
+      "wbsId": "WBS-1",
+      "title": "Stress row 1: oversized planner workload slice for truncation ladder verification",
+      "goalMapping": [
+        "Prove D3 truncation ladder under MCP planner-packet stress"
+      ],
+      "suggestedTaskTitle": "Stress task 1",
+      "approach": "Pack acceptance criteria and scope bullets to inflate IdeaPlan payload without changing handler contracts.",
+      "technicalScope": [
+        "src/mcp/planner-packet.ts",
+        "fixtures/planning/",
+        "test/mcp-planner-truncation-stress.test.mjs"
+      ],
+      "acceptanceCriteria": [
+        "Fixture row survives import",
+        "Truncation ladder order is deterministic",
+        "recommendedNextCommand is never dropped"
+      ],
+      "testingVerification": [
+        "test/mcp-planner-truncation-stress.test.mjs"
+      ],
+      "dependsOn": [],
+      "sizingConfidence": "high",
+      "doneMeans": "Stress WBS row for WBS-16 truncation evidence",
+      "generatedTaskPayload": {
+        "title": "Stress task 1",
+        "approach": "Pack acceptance criteria and scope bullets to inflate IdeaPlan payload without changing handler contracts.",
+        "technicalScope": [
+          "test/mcp-planner-truncation-stress.test.mjs"
+        ],
+        "acceptanceCriteria": [
+          "Truncation ladder proven under load"
+        ]
+      }
+    },
+    {
+      "wbsId": "WBS-2",
+      "title": "Stress row 2: oversized planner workload slice for truncation ladder verification",
+      "goalMapping": [
+        "Prove D3 truncation ladder under MCP planner-packet stress"
+      ],
+      "suggestedTaskTitle": "Stress task 2",
+      "approach": "Pack acceptance criteria and scope bullets to inflate IdeaPlan payload without changing handler contracts.",
+      "technicalScope": [
+        "src/mcp/planner-packet.ts",
+        "fixtures/planning/",
+        "test/mcp-planner-truncation-stress.test.mjs"
+      ],
+      "acceptanceCriteria": [
+        "Fixture row survives import",
+        "Truncation ladder order is deterministic",
+        "recommendedNextCommand is never dropped"
+      ],
+      "testingVerification": [
+        "test/mcp-planner-truncation-stress.test.mjs"
+      ],
+      "dependsOn": [
+        "WBS-1"
+      ],
+      "sizingConfidence": "medium",
+      "doneMeans": "Stress WBS row for WBS-16 truncation evidence",
+      "generatedTaskPayload": {
+        "title": "Stress task 2",
+        "approach": "Pack acceptance criteria and scope bullets to inflate IdeaPlan payload without changing handler contracts.",
+        "technicalScope": [
+          "test/mcp-planner-truncation-stress.test.mjs"
+        ],
+        "acceptanceCriteria": [
+          "Truncation ladder proven under load"
+        ]
+      }
+    },
+    {
+      "wbsId": "WBS-3",
+      "title": "Stress row 3: oversized planner workload slice for truncation ladder verification",
+      "goalMapping": [
+        "Prove D3 truncation ladder under MCP planner-packet stress"
+      ],
+      "suggestedTaskTitle": "Stress task 3",
+      "approach": "Pack acceptance criteria and scope bullets to inflate IdeaPlan payload without changing handler contracts.",
+      "technicalScope": [
+        "src/mcp/planner-packet.ts",
+        "fixtures/planning/",
+        "test/mcp-planner-truncation-stress.test.mjs"
+      ],
+      "acceptanceCriteria": [
+        "Fixture row survives import",
+        "Truncation ladder order is deterministic",
+        "recommendedNextCommand is never dropped"
+      ],
+      "testingVerification": [
+        "test/mcp-planner-truncation-stress.test.mjs"
+      ],
+      "dependsOn": [
+        "WBS-2"
+      ],
+      "sizingConfidence": "low",
+      "doneMeans": "Stress WBS row for WBS-16 truncation evidence",
+      "generatedTaskPayload": {
+        "title": "Stress task 3",
+        "approach": "Pack acceptance criteria and scope bullets to inflate IdeaPlan payload without changing handler contracts.",
+        "technicalScope": [
+          "test/mcp-planner-truncation-stress.test.mjs"
+        ],
+        "acceptanceCriteria": [
+          "Truncation ladder proven under load"
+        ]
+      }
+    },
+    {
+      "wbsId": "WBS-4",
+      "title": "Stress row 4: oversized planner workload slice for truncation ladder verification",
+      "goalMapping": [
+        "Prove D3 truncation ladder under MCP planner-packet stress"
+      ],
+      "suggestedTaskTitle": "Stress task 4",
+      "approach": "Pack acceptance criteria and scope bullets to inflate IdeaPlan payload without changing handler contracts.",
+      "technicalScope": [
+        "src/mcp/planner-packet.ts",
+        "fixtures/planning/",
+        "test/mcp-planner-truncation-stress.test.mjs"
+      ],
+      "acceptanceCriteria": [
+        "Fixture row survives import",
+        "Truncation ladder order is deterministic",
+        "recommendedNextCommand is never dropped"
+      ],
+      "testingVerification": [
+        "test/mcp-planner-truncation-stress.test.mjs"
+      ],
+      "dependsOn": [
+        "WBS-3"
+      ],
+      "sizingConfidence": "high",
+      "doneMeans": "Stress WBS row for WBS-16 truncation evidence",
+      "generatedTaskPayload": {
+        "title": "Stress task 4",
+        "approach": "Pack acceptance criteria and scope bullets to inflate IdeaPlan payload without changing handler contracts.",
+        "technicalScope": [
+          "test/mcp-planner-truncation-stress.test.mjs"
+        ],
+        "acceptanceCriteria": [
+          "Truncation ladder proven under load"
+        ]
+      }
+    },
+    {
+      "wbsId": "WBS-5",
+      "title": "Stress row 5: oversized planner workload slice for truncation ladder verification",
+      "goalMapping": [
+        "Prove D3 truncation ladder under MCP planner-packet stress"
+      ],
+      "suggestedTaskTitle": "Stress task 5",
+      "approach": "Pack acceptance criteria and scope bullets to inflate IdeaPlan payload without changing handler contracts.",
+      "technicalScope": [
+        "src/mcp/planner-packet.ts",
+        "fixtures/planning/",
+        "test/mcp-planner-truncation-stress.test.mjs"
+      ],
+      "acceptanceCriteria": [
+        "Fixture row survives import",
+        "Truncation ladder order is deterministic",
+        "recommendedNextCommand is never dropped"
+      ],
+      "testingVerification": [
+        "test/mcp-planner-truncation-stress.test.mjs"
+      ],
+      "dependsOn": [
+        "WBS-4"
+      ],
+      "sizingConfidence": "medium",
+      "doneMeans": "Stress WBS row for WBS-16 truncation evidence",
+      "generatedTaskPayload": {
+        "title": "Stress task 5",
+        "approach": "Pack acceptance criteria and scope bullets to inflate IdeaPlan payload without changing handler contracts.",
+        "technicalScope": [
+          "test/mcp-planner-truncation-stress.test.mjs"
+        ],
+        "acceptanceCriteria": [
+          "Truncation ladder proven under load"
+        ]
+      }
+    },
+    {
+      "wbsId": "WBS-6",
+      "title": "Stress row 6: oversized planner workload slice for truncation ladder verification",
+      "goalMapping": [
+        "Prove D3 truncation ladder under MCP planner-packet stress"
+      ],
+      "suggestedTaskTitle": "Stress task 6",
+      "approach": "Pack acceptance criteria and scope bullets to inflate IdeaPlan payload without changing handler contracts.",
+      "technicalScope": [
+        "src/mcp/planner-packet.ts",
+        "fixtures/planning/",
+        "test/mcp-planner-truncation-stress.test.mjs"
+      ],
+      "acceptanceCriteria": [
+        "Fixture row survives import",
+        "Truncation ladder order is deterministic",
+        "recommendedNextCommand is never dropped"
+      ],
+      "testingVerification": [
+        "test/mcp-planner-truncation-stress.test.mjs"
+      ],
+      "dependsOn": [
+        "WBS-5"
+      ],
+      "sizingConfidence": "low",
+      "doneMeans": "Stress WBS row for WBS-16 truncation evidence",
+      "generatedTaskPayload": {
+        "title": "Stress task 6",
+        "approach": "Pack acceptance criteria and scope bullets to inflate IdeaPlan payload without changing handler contracts.",
+        "technicalScope": [
+          "test/mcp-planner-truncation-stress.test.mjs"
+        ],
+        "acceptanceCriteria": [
+          "Truncation ladder proven under load"
+        ]
+      }
+    },
+    {
+      "wbsId": "WBS-7",
+      "title": "Stress row 7: oversized planner workload slice for truncation ladder verification",
+      "goalMapping": [
+        "Prove D3 truncation ladder under MCP planner-packet stress"
+      ],
+      "suggestedTaskTitle": "Stress task 7",
+      "approach": "Pack acceptance criteria and scope bullets to inflate IdeaPlan payload without changing handler contracts.",
+      "technicalScope": [
+        "src/mcp/planner-packet.ts",
+        "fixtures/planning/",
+        "test/mcp-planner-truncation-stress.test.mjs"
+      ],
+      "acceptanceCriteria": [
+        "Fixture row survives import",
+        "Truncation ladder order is deterministic",
+        "recommendedNextCommand is never dropped"
+      ],
+      "testingVerification": [
+        "test/mcp-planner-truncation-stress.test.mjs"
+      ],
+      "dependsOn": [
+        "WBS-6"
+      ],
+      "sizingConfidence": "high",
+      "doneMeans": "Stress WBS row for WBS-16 truncation evidence",
+      "generatedTaskPayload": {
+        "title": "Stress task 7",
+        "approach": "Pack acceptance criteria and scope bullets to inflate IdeaPlan payload without changing handler contracts.",
+        "technicalScope": [
+          "test/mcp-planner-truncation-stress.test.mjs"
+        ],
+        "acceptanceCriteria": [
+          "Truncation ladder proven under load"
+        ]
+      }
+    },
+    {
+      "wbsId": "WBS-8",
+      "title": "Stress row 8: oversized planner workload slice for truncation ladder verification",
+      "goalMapping": [
+        "Prove D3 truncation ladder under MCP planner-packet stress"
+      ],
+      "suggestedTaskTitle": "Stress task 8",
+      "approach": "Pack acceptance criteria and scope bullets to inflate IdeaPlan payload without changing handler contracts.",
+      "technicalScope": [
+        "src/mcp/planner-packet.ts",
+        "fixtures/planning/",
+        "test/mcp-planner-truncation-stress.test.mjs"
+      ],
+      "acceptanceCriteria": [
+        "Fixture row survives import",
+        "Truncation ladder order is deterministic",
+        "recommendedNextCommand is never dropped"
+      ],
+      "testingVerification": [
+        "test/mcp-planner-truncation-stress.test.mjs"
+      ],
+      "dependsOn": [
+        "WBS-7"
+      ],
+      "sizingConfidence": "medium",
+      "doneMeans": "Stress WBS row for WBS-16 truncation evidence",
+      "generatedTaskPayload": {
+        "title": "Stress task 8",
+        "approach": "Pack acceptance criteria and scope bullets to inflate IdeaPlan payload without changing handler contracts.",
+        "technicalScope": [
+          "test/mcp-planner-truncation-stress.test.mjs"
+        ],
+        "acceptanceCriteria": [
+          "Truncation ladder proven under load"
+        ]
+      }
+    },
+    {
+      "wbsId": "WBS-9",
+      "title": "Stress row 9: oversized planner workload slice for truncation ladder verification",
+      "goalMapping": [
+        "Prove D3 truncation ladder under MCP planner-packet stress"
+      ],
+      "suggestedTaskTitle": "Stress task 9",
+      "approach": "Pack acceptance criteria and scope bullets to inflate IdeaPlan payload without changing handler contracts.",
+      "technicalScope": [
+        "src/mcp/planner-packet.ts",
+        "fixtures/planning/",
+        "test/mcp-planner-truncation-stress.test.mjs"
+      ],
+      "acceptanceCriteria": [
+        "Fixture row survives import",
+        "Truncation ladder order is deterministic",
+        "recommendedNextCommand is never dropped"
+      ],
+      "testingVerification": [
+        "test/mcp-planner-truncation-stress.test.mjs"
+      ],
+      "dependsOn": [
+        "WBS-8"
+      ],
+      "sizingConfidence": "low",
+      "doneMeans": "Stress WBS row for WBS-16 truncation evidence",
+      "generatedTaskPayload": {
+        "title": "Stress task 9",
+        "approach": "Pack acceptance criteria and scope bullets to inflate IdeaPlan payload without changing handler contracts.",
+        "technicalScope": [
+          "test/mcp-planner-truncation-stress.test.mjs"
+        ],
+        "acceptanceCriteria": [
+          "Truncation ladder proven under load"
+        ]
+      }
+    },
+    {
+      "wbsId": "WBS-10",
+      "title": "Stress row 10: oversized planner workload slice for truncation ladder verification",
+      "goalMapping": [
+        "Prove D3 truncation ladder under MCP planner-packet stress"
+      ],
+      "suggestedTaskTitle": "Stress task 10",
+      "approach": "Pack acceptance criteria and scope bullets to inflate IdeaPlan payload without changing handler contracts.",
+      "technicalScope": [
+        "src/mcp/planner-packet.ts",
+        "fixtures/planning/",
+        "test/mcp-planner-truncation-stress.test.mjs"
+      ],
+      "acceptanceCriteria": [
+        "Fixture row survives import",
+        "Truncation ladder order is deterministic",
+        "recommendedNextCommand is never dropped"
+      ],
+      "testingVerification": [
+        "test/mcp-planner-truncation-stress.test.mjs"
+      ],
+      "dependsOn": [
+        "WBS-9"
+      ],
+      "sizingConfidence": "high",
+      "doneMeans": "Stress WBS row for WBS-16 truncation evidence",
+      "generatedTaskPayload": {
+        "title": "Stress task 10",
+        "approach": "Pack acceptance criteria and scope bullets to inflate IdeaPlan payload without changing handler contracts.",
+        "technicalScope": [
+          "test/mcp-planner-truncation-stress.test.mjs"
+        ],
+        "acceptanceCriteria": [
+          "Truncation ladder proven under load"
+        ]
+      }
+    },
+    {
+      "wbsId": "WBS-11",
+      "title": "Stress row 11: oversized planner workload slice for truncation ladder verification",
+      "goalMapping": [
+        "Prove D3 truncation ladder under MCP planner-packet stress"
+      ],
+      "suggestedTaskTitle": "Stress task 11",
+      "approach": "Pack acceptance criteria and scope bullets to inflate IdeaPlan payload without changing handler contracts.",
+      "technicalScope": [
+        "src/mcp/planner-packet.ts",
+        "fixtures/planning/",
+        "test/mcp-planner-truncation-stress.test.mjs"
+      ],
+      "acceptanceCriteria": [
+        "Fixture row survives import",
+        "Truncation ladder order is deterministic",
+        "recommendedNextCommand is never dropped"
+      ],
+      "testingVerification": [
+        "test/mcp-planner-truncation-stress.test.mjs"
+      ],
+      "dependsOn": [
+        "WBS-10"
+      ],
+      "sizingConfidence": "medium",
+      "doneMeans": "Stress WBS row for WBS-16 truncation evidence",
+      "generatedTaskPayload": {
+        "title": "Stress task 11",
+        "approach": "Pack acceptance criteria and scope bullets to inflate IdeaPlan payload without changing handler contracts.",
+        "technicalScope": [
+          "test/mcp-planner-truncation-stress.test.mjs"
+        ],
+        "acceptanceCriteria": [
+          "Truncation ladder proven under load"
+        ]
+      }
+    },
+    {
+      "wbsId": "WBS-12",
+      "title": "Stress row 12: oversized planner workload slice for truncation ladder verification",
+      "goalMapping": [
+        "Prove D3 truncation ladder under MCP planner-packet stress"
+      ],
+      "suggestedTaskTitle": "Stress task 12",
+      "approach": "Pack acceptance criteria and scope bullets to inflate IdeaPlan payload without changing handler contracts.",
+      "technicalScope": [
+        "src/mcp/planner-packet.ts",
+        "fixtures/planning/",
+        "test/mcp-planner-truncation-stress.test.mjs"
+      ],
+      "acceptanceCriteria": [
+        "Fixture row survives import",
+        "Truncation ladder order is deterministic",
+        "recommendedNextCommand is never dropped"
+      ],
+      "testingVerification": [
+        "test/mcp-planner-truncation-stress.test.mjs"
+      ],
+      "dependsOn": [
+        "WBS-11"
+      ],
+      "sizingConfidence": "low",
+      "doneMeans": "Stress WBS row for WBS-16 truncation evidence",
+      "generatedTaskPayload": {
+        "title": "Stress task 12",
+        "approach": "Pack acceptance criteria and scope bullets to inflate IdeaPlan payload without changing handler contracts.",
+        "technicalScope": [
+          "test/mcp-planner-truncation-stress.test.mjs"
+        ],
+        "acceptanceCriteria": [
+          "Truncation ladder proven under load"
+        ]
+      }
+    },
+    {
+      "wbsId": "WBS-13",
+      "title": "Stress row 13: oversized planner workload slice for truncation ladder verification",
+      "goalMapping": [
+        "Prove D3 truncation ladder under MCP planner-packet stress"
+      ],
+      "suggestedTaskTitle": "Stress task 13",
+      "approach": "Pack acceptance criteria and scope bullets to inflate IdeaPlan payload without changing handler contracts.",
+      "technicalScope": [
+        "src/mcp/planner-packet.ts",
+        "fixtures/planning/",
+        "test/mcp-planner-truncation-stress.test.mjs"
+      ],
+      "acceptanceCriteria": [
+        "Fixture row survives import",
+        "Truncation ladder order is deterministic",
+        "recommendedNextCommand is never dropped"
+      ],
+      "testingVerification": [
+        "test/mcp-planner-truncation-stress.test.mjs"
+      ],
+      "dependsOn": [
+        "WBS-12"
+      ],
+      "sizingConfidence": "high",
+      "doneMeans": "Stress WBS row for WBS-16 truncation evidence",
+      "generatedTaskPayload": {
+        "title": "Stress task 13",
+        "approach": "Pack acceptance criteria and scope bullets to inflate IdeaPlan payload without changing handler contracts.",
+        "technicalScope": [
+          "test/mcp-planner-truncation-stress.test.mjs"
+        ],
+        "acceptanceCriteria": [
+          "Truncation ladder proven under load"
+        ]
+      }
+    },
+    {
+      "wbsId": "WBS-14",
+      "title": "Stress row 14: oversized planner workload slice for truncation ladder verification",
+      "goalMapping": [
+        "Prove D3 truncation ladder under MCP planner-packet stress"
+      ],
+      "suggestedTaskTitle": "Stress task 14",
+      "approach": "Pack acceptance criteria and scope bullets to inflate IdeaPlan payload without changing handler contracts.",
+      "technicalScope": [
+        "src/mcp/planner-packet.ts",
+        "fixtures/planning/",
+        "test/mcp-planner-truncation-stress.test.mjs"
+      ],
+      "acceptanceCriteria": [
+        "Fixture row survives import",
+        "Truncation ladder order is deterministic",
+        "recommendedNextCommand is never dropped"
+      ],
+      "testingVerification": [
+        "test/mcp-planner-truncation-stress.test.mjs"
+      ],
+      "dependsOn": [
+        "WBS-13"
+      ],
+      "sizingConfidence": "medium",
+      "doneMeans": "Stress WBS row for WBS-16 truncation evidence",
+      "generatedTaskPayload": {
+        "title": "Stress task 14",
+        "approach": "Pack acceptance criteria and scope bullets to inflate IdeaPlan payload without changing handler contracts.",
+        "technicalScope": [
+          "test/mcp-planner-truncation-stress.test.mjs"
+        ],
+        "acceptanceCriteria": [
+          "Truncation ladder proven under load"
+        ]
+      }
+    },
+    {
+      "wbsId": "WBS-15",
+      "title": "Stress row 15: oversized planner workload slice for truncation ladder verification",
+      "goalMapping": [
+        "Prove D3 truncation ladder under MCP planner-packet stress"
+      ],
+      "suggestedTaskTitle": "Stress task 15",
+      "approach": "Pack acceptance criteria and scope bullets to inflate IdeaPlan payload without changing handler contracts.",
+      "technicalScope": [
+        "src/mcp/planner-packet.ts",
+        "fixtures/planning/",
+        "test/mcp-planner-truncation-stress.test.mjs"
+      ],
+      "acceptanceCriteria": [
+        "Fixture row survives import",
+        "Truncation ladder order is deterministic",
+        "recommendedNextCommand is never dropped"
+      ],
+      "testingVerification": [
+        "test/mcp-planner-truncation-stress.test.mjs"
+      ],
+      "dependsOn": [
+        "WBS-14"
+      ],
+      "sizingConfidence": "low",
+      "doneMeans": "Stress WBS row for WBS-16 truncation evidence",
+      "generatedTaskPayload": {
+        "title": "Stress task 15",
+        "approach": "Pack acceptance criteria and scope bullets to inflate IdeaPlan payload without changing handler contracts.",
+        "technicalScope": [
+          "test/mcp-planner-truncation-stress.test.mjs"
+        ],
+        "acceptanceCriteria": [
+          "Truncation ladder proven under load"
+        ]
+      }
+    },
+    {
+      "wbsId": "WBS-16",
+      "title": "Stress row 16: oversized planner workload slice for truncation ladder verification",
+      "goalMapping": [
+        "Prove D3 truncation ladder under MCP planner-packet stress"
+      ],
+      "suggestedTaskTitle": "Stress task 16",
+      "approach": "Pack acceptance criteria and scope bullets to inflate IdeaPlan payload without changing handler contracts.",
+      "technicalScope": [
+        "src/mcp/planner-packet.ts",
+        "fixtures/planning/",
+        "test/mcp-planner-truncation-stress.test.mjs"
+      ],
+      "acceptanceCriteria": [
+        "Fixture row survives import",
+        "Truncation ladder order is deterministic",
+        "recommendedNextCommand is never dropped"
+      ],
+      "testingVerification": [
+        "test/mcp-planner-truncation-stress.test.mjs"
+      ],
+      "dependsOn": [
+        "WBS-15"
+      ],
+      "sizingConfidence": "high",
+      "doneMeans": "Stress WBS row for WBS-16 truncation evidence",
+      "generatedTaskPayload": {
+        "title": "Stress task 16",
+        "approach": "Pack acceptance criteria and scope bullets to inflate IdeaPlan payload without changing handler contracts.",
+        "technicalScope": [
+          "test/mcp-planner-truncation-stress.test.mjs"
+        ],
+        "acceptanceCriteria": [
+          "Truncation ladder proven under load"
+        ]
+      }
+    },
+    {
+      "wbsId": "WBS-17",
+      "title": "Stress row 17: oversized planner workload slice for truncation ladder verification",
+      "goalMapping": [
+        "Prove D3 truncation ladder under MCP planner-packet stress"
+      ],
+      "suggestedTaskTitle": "Stress task 17",
+      "approach": "Pack acceptance criteria and scope bullets to inflate IdeaPlan payload without changing handler contracts.",
+      "technicalScope": [
+        "src/mcp/planner-packet.ts",
+        "fixtures/planning/",
+        "test/mcp-planner-truncation-stress.test.mjs"
+      ],
+      "acceptanceCriteria": [
+        "Fixture row survives import",
+        "Truncation ladder order is deterministic",
+        "recommendedNextCommand is never dropped"
+      ],
+      "testingVerification": [
+        "test/mcp-planner-truncation-stress.test.mjs"
+      ],
+      "dependsOn": [
+        "WBS-16"
+      ],
+      "sizingConfidence": "medium",
+      "doneMeans": "Stress WBS row for WBS-16 truncation evidence",
+      "generatedTaskPayload": {
+        "title": "Stress task 17",
+        "approach": "Pack acceptance criteria and scope bullets to inflate IdeaPlan payload without changing handler contracts.",
+        "technicalScope": [
+          "test/mcp-planner-truncation-stress.test.mjs"
+        ],
+        "acceptanceCriteria": [
+          "Truncation ladder proven under load"
+        ]
+      }
+    },
+    {
+      "wbsId": "WBS-18",
+      "title": "Stress row 18: oversized planner workload slice for truncation ladder verification",
+      "goalMapping": [
+        "Prove D3 truncation ladder under MCP planner-packet stress"
+      ],
+      "suggestedTaskTitle": "Stress task 18",
+      "approach": "Pack acceptance criteria and scope bullets to inflate IdeaPlan payload without changing handler contracts.",
+      "technicalScope": [
+        "src/mcp/planner-packet.ts",
+        "fixtures/planning/",
+        "test/mcp-planner-truncation-stress.test.mjs"
+      ],
+      "acceptanceCriteria": [
+        "Fixture row survives import",
+        "Truncation ladder order is deterministic",
+        "recommendedNextCommand is never dropped"
+      ],
+      "testingVerification": [
+        "test/mcp-planner-truncation-stress.test.mjs"
+      ],
+      "dependsOn": [
+        "WBS-17"
+      ],
+      "sizingConfidence": "low",
+      "doneMeans": "Stress WBS row for WBS-16 truncation evidence",
+      "generatedTaskPayload": {
+        "title": "Stress task 18",
+        "approach": "Pack acceptance criteria and scope bullets to inflate IdeaPlan payload without changing handler contracts.",
+        "technicalScope": [
+          "test/mcp-planner-truncation-stress.test.mjs"
+        ],
+        "acceptanceCriteria": [
+          "Truncation ladder proven under load"
+        ]
+      }
+    },
+    {
+      "wbsId": "WBS-19",
+      "title": "Stress row 19: oversized planner workload slice for truncation ladder verification",
+      "goalMapping": [
+        "Prove D3 truncation ladder under MCP planner-packet stress"
+      ],
+      "suggestedTaskTitle": "Stress task 19",
+      "approach": "Pack acceptance criteria and scope bullets to inflate IdeaPlan payload without changing handler contracts.",
+      "technicalScope": [
+        "src/mcp/planner-packet.ts",
+        "fixtures/planning/",
+        "test/mcp-planner-truncation-stress.test.mjs"
+      ],
+      "acceptanceCriteria": [
+        "Fixture row survives import",
+        "Truncation ladder order is deterministic",
+        "recommendedNextCommand is never dropped"
+      ],
+      "testingVerification": [
+        "test/mcp-planner-truncation-stress.test.mjs"
+      ],
+      "dependsOn": [
+        "WBS-18"
+      ],
+      "sizingConfidence": "high",
+      "doneMeans": "Stress WBS row for WBS-16 truncation evidence",
+      "generatedTaskPayload": {
+        "title": "Stress task 19",
+        "approach": "Pack acceptance criteria and scope bullets to inflate IdeaPlan payload without changing handler contracts.",
+        "technicalScope": [
+          "test/mcp-planner-truncation-stress.test.mjs"
+        ],
+        "acceptanceCriteria": [
+          "Truncation ladder proven under load"
+        ]
+      }
+    },
+    {
+      "wbsId": "WBS-20",
+      "title": "Stress row 20: oversized planner workload slice for truncation ladder verification",
+      "goalMapping": [
+        "Prove D3 truncation ladder under MCP planner-packet stress"
+      ],
+      "suggestedTaskTitle": "Stress task 20",
+      "approach": "Pack acceptance criteria and scope bullets to inflate IdeaPlan payload without changing handler contracts.",
+      "technicalScope": [
+        "src/mcp/planner-packet.ts",
+        "fixtures/planning/",
+        "test/mcp-planner-truncation-stress.test.mjs"
+      ],
+      "acceptanceCriteria": [
+        "Fixture row survives import",
+        "Truncation ladder order is deterministic",
+        "recommendedNextCommand is never dropped"
+      ],
+      "testingVerification": [
+        "test/mcp-planner-truncation-stress.test.mjs"
+      ],
+      "dependsOn": [
+        "WBS-19"
+      ],
+      "sizingConfidence": "medium",
+      "doneMeans": "Stress WBS row for WBS-16 truncation evidence",
+      "generatedTaskPayload": {
+        "title": "Stress task 20",
+        "approach": "Pack acceptance criteria and scope bullets to inflate IdeaPlan payload without changing handler contracts.",
+        "technicalScope": [
+          "test/mcp-planner-truncation-stress.test.mjs"
+        ],
+        "acceptanceCriteria": [
+          "Truncation ladder proven under load"
+        ]
+      }
+    },
+    {
+      "wbsId": "WBS-21",
+      "title": "Stress row 21: oversized planner workload slice for truncation ladder verification",
+      "goalMapping": [
+        "Prove D3 truncation ladder under MCP planner-packet stress"
+      ],
+      "suggestedTaskTitle": "Stress task 21",
+      "approach": "Pack acceptance criteria and scope bullets to inflate IdeaPlan payload without changing handler contracts.",
+      "technicalScope": [
+        "src/mcp/planner-packet.ts",
+        "fixtures/planning/",
+        "test/mcp-planner-truncation-stress.test.mjs"
+      ],
+      "acceptanceCriteria": [
+        "Fixture row survives import",
+        "Truncation ladder order is deterministic",
+        "recommendedNextCommand is never dropped"
+      ],
+      "testingVerification": [
+        "test/mcp-planner-truncation-stress.test.mjs"
+      ],
+      "dependsOn": [
+        "WBS-20"
+      ],
+      "sizingConfidence": "low",
+      "doneMeans": "Stress WBS row for WBS-16 truncation evidence",
+      "generatedTaskPayload": {
+        "title": "Stress task 21",
+        "approach": "Pack acceptance criteria and scope bullets to inflate IdeaPlan payload without changing handler contracts.",
+        "technicalScope": [
+          "test/mcp-planner-truncation-stress.test.mjs"
+        ],
+        "acceptanceCriteria": [
+          "Truncation ladder proven under load"
+        ]
+      }
+    },
+    {
+      "wbsId": "WBS-22",
+      "title": "Stress row 22: oversized planner workload slice for truncation ladder verification",
+      "goalMapping": [
+        "Prove D3 truncation ladder under MCP planner-packet stress"
+      ],
+      "suggestedTaskTitle": "Stress task 22",
+      "approach": "Pack acceptance criteria and scope bullets to inflate IdeaPlan payload without changing handler contracts.",
+      "technicalScope": [
+        "src/mcp/planner-packet.ts",
+        "fixtures/planning/",
+        "test/mcp-planner-truncation-stress.test.mjs"
+      ],
+      "acceptanceCriteria": [
+        "Fixture row survives import",
+        "Truncation ladder order is deterministic",
+        "recommendedNextCommand is never dropped"
+      ],
+      "testingVerification": [
+        "test/mcp-planner-truncation-stress.test.mjs"
+      ],
+      "dependsOn": [
+        "WBS-21"
+      ],
+      "sizingConfidence": "high",
+      "doneMeans": "Stress WBS row for WBS-16 truncation evidence",
+      "generatedTaskPayload": {
+        "title": "Stress task 22",
+        "approach": "Pack acceptance criteria and scope bullets to inflate IdeaPlan payload without changing handler contracts.",
+        "technicalScope": [
+          "test/mcp-planner-truncation-stress.test.mjs"
+        ],
+        "acceptanceCriteria": [
+          "Truncation ladder proven under load"
+        ]
+      }
+    },
+    {
+      "wbsId": "WBS-23",
+      "title": "Stress row 23: oversized planner workload slice for truncation ladder verification",
+      "goalMapping": [
+        "Prove D3 truncation ladder under MCP planner-packet stress"
+      ],
+      "suggestedTaskTitle": "Stress task 23",
+      "approach": "Pack acceptance criteria and scope bullets to inflate IdeaPlan payload without changing handler contracts.",
+      "technicalScope": [
+        "src/mcp/planner-packet.ts",
+        "fixtures/planning/",
+        "test/mcp-planner-truncation-stress.test.mjs"
+      ],
+      "acceptanceCriteria": [
+        "Fixture row survives import",
+        "Truncation ladder order is deterministic",
+        "recommendedNextCommand is never dropped"
+      ],
+      "testingVerification": [
+        "test/mcp-planner-truncation-stress.test.mjs"
+      ],
+      "dependsOn": [
+        "WBS-22"
+      ],
+      "sizingConfidence": "medium",
+      "doneMeans": "Stress WBS row for WBS-16 truncation evidence",
+      "generatedTaskPayload": {
+        "title": "Stress task 23",
+        "approach": "Pack acceptance criteria and scope bullets to inflate IdeaPlan payload without changing handler contracts.",
+        "technicalScope": [
+          "test/mcp-planner-truncation-stress.test.mjs"
+        ],
+        "acceptanceCriteria": [
+          "Truncation ladder proven under load"
+        ]
+      }
+    },
+    {
+      "wbsId": "WBS-24",
+      "title": "Stress row 24: oversized planner workload slice for truncation ladder verification",
+      "goalMapping": [
+        "Prove D3 truncation ladder under MCP planner-packet stress"
+      ],
+      "suggestedTaskTitle": "Stress task 24",
+      "approach": "Pack acceptance criteria and scope bullets to inflate IdeaPlan payload without changing handler contracts.",
+      "technicalScope": [
+        "src/mcp/planner-packet.ts",
+        "fixtures/planning/",
+        "test/mcp-planner-truncation-stress.test.mjs"
+      ],
+      "acceptanceCriteria": [
+        "Fixture row survives import",
+        "Truncation ladder order is deterministic",
+        "recommendedNextCommand is never dropped"
+      ],
+      "testingVerification": [
+        "test/mcp-planner-truncation-stress.test.mjs"
+      ],
+      "dependsOn": [
+        "WBS-23"
+      ],
+      "sizingConfidence": "low",
+      "doneMeans": "Stress WBS row for WBS-16 truncation evidence",
+      "generatedTaskPayload": {
+        "title": "Stress task 24",
+        "approach": "Pack acceptance criteria and scope bullets to inflate IdeaPlan payload without changing handler contracts.",
+        "technicalScope": [
+          "test/mcp-planner-truncation-stress.test.mjs"
+        ],
+        "acceptanceCriteria": [
+          "Truncation ladder proven under load"
+        ]
+      }
+    }
+  ],
+  "phaseRecommendations": [
+    {
+      "phaseKey": "143",
+      "label": "Phase 143",
+      "rationale": "Planner MCP tranche",
+      "isPrimary": true
+    }
+  ],
+  "provenance": {
+    "createdAt": "2026-07-09T00:00:00.000Z",
+    "updatedAt": "2026-07-09T00:00:00.000Z",
+    "createdBy": "fixture",
+    "source": "draft-plan-artifact"
+  }
+}
