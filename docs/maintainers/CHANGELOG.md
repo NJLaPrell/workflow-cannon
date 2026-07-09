@@ -8,6 +8,8 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [1.0.5] - 2026-07-09
+
 ## [1.0.4] - 2026-07-08
 
 ## [1.0.3] - 2026-07-02
