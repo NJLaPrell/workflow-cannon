@@ -66,6 +66,8 @@ export type RenderDashboardRootOptions = {
   mcpStatus?: McpHostStatus | null;
   /** When true, render unified IdeaPlan Brainstorm UI and rollup (T100795). Default false. */
   ideasUnifiedModelEnabled?: boolean;
+  /** Weekly count histories for sparkline charts (7 weeks). If absent, falls back to decorative bars. */
+  weeklySparklines?: WeeklySparklineData | null;
 };
 
 export type WeeklySparklineData = {
@@ -1128,9 +1130,10 @@ function renderRecommendedNextCard(item: unknown): string {
   return (
     '<div class="wc-rec-next">' +
     '<div class="wc-rec-header">' +
-    '<span class="wc-rec-label">&#9670; RECOMMENDED NEXT</span>' +
+    '<span class="wc-rec-label">&#9733; Recommended next</span>' +
     "</div>" +
-    renderUpNextTitleRow(displayTitle, viewBtn) +
+    '<p class="wc-rec-title">' + escapeHtml(displayTitle) + "</p>" +
+    (viewBtn ? '<div class="wc-rec-actions">' + viewBtn + "</div>" : "") +
     "</div>"
   );
 }
@@ -1194,10 +1197,13 @@ function renderSparklineBars(
     // Real weekly data — normalize to max for height scaling
     const max = Math.max(1, ...weeklyData);
     const len = weeklyData.length;
+    // Build exactly 7 bars: left-pad with zeros if <7 weeks of history.
+    const padded = Array.from({ length: bars }, (_, i) => {
+      const idx = len - bars + i; // index into weeklyData
+      return idx >= 0 ? weeklyData[idx] : 0;
+    });
     for (let i = 0; i < bars; i++) {
-      const idx = Math.max(0, len - bars + i);
-      const val = weeklyData[idx] ?? 0;
-      heights.push(Math.max(2, Math.round((val / max) * 14)));
+      heights.push(Math.max(2, Math.round((padded[i] / max) * 14)));
     }
   } else {
     // Decorative fallback
@@ -6686,7 +6692,7 @@ function renderStatusRollup(
     filterAttr +
     (openByDefault ? " open" : "") +
     ">" +
-    "<summary>" +
+    '<summary><span class="wc-section-chevron" aria-hidden="true">&#9654;</span>' +
     summaryInnerHtml +
     "</summary>" +
     '<div class="status-section-body">' +
@@ -7402,7 +7408,7 @@ function createDashboardQueueRenderContext(
     const inner =
       renderStatusRollup(
         "status-term-comp",
-        "<b>Completed</b> (" + String(compCount) + ")",
+        '<b>Completed</b> <span class="wc-section-count">' + String(compCount) + '</span>',
         renderTerminalTaskPhaseBuckets(
           cs?.phaseBuckets,
           compTop,
@@ -7419,7 +7425,7 @@ function createDashboardQueueRenderContext(
       ) +
       renderStatusRollup(
         "status-term-can",
-        "<b>Cancelled</b> (" + String(cancCount) + ")",
+        '<b>Cancelled</b> <span class="wc-section-count">' + String(cancCount) + '</span>',
         renderTerminalTaskPhaseBuckets(
           ks?.phaseBuckets,
           cancTop,
@@ -7465,7 +7471,7 @@ function createDashboardQueueRenderContext(
     renderFilterChipBar(queuePhaseFilterOptions, humanGatesCount) +
     renderStatusRollup(
       "status-ready",
-      "<b>Ready</b> (" + String(readyCount) + ")",
+      '<b>Ready</b> <span class="wc-section-count">' + String(readyCount) + '</span>',
       renderReadyPhaseBuckets(
         readyPhaseBuckets,
         readyTop,
@@ -7481,7 +7487,7 @@ function createDashboardQueueRenderContext(
     ) +
     renderStatusRollup(
       "status-prop-imp",
-      "<b>Proposed · Improvements</b> (" + String(piCount) + ")",
+      "<b>Proposed · Improvements</b> <span class=\"wc-section-count\">" + String(piCount) + "</span>",
       renderProposedPhaseBuckets(
         pis.phaseBuckets,
         piCount,
@@ -7496,7 +7502,7 @@ function createDashboardQueueRenderContext(
     ) +
     renderStatusRollup(
       "status-prop-exe",
-      "<b>Proposed · Execution</b> (" + String(peCount) + ")",
+      "<b>Proposed · Execution</b> <span class=\"wc-section-count\">" + String(peCount) + "</span>",
       renderProposedExecutionPhaseBuckets(
         pes.phaseBuckets,
         peCount,
@@ -7511,7 +7517,7 @@ function createDashboardQueueRenderContext(
     ) +
     renderStatusRollup(
       "status-tc-research",
-      "<b>Research · Transcript churn</b> (" + String(tcrCount) + ")",
+      "<b>Research · Transcript churn</b> <span class=\"wc-section-count\">" + String(tcrCount) + "</span>",
       renderTranscriptChurnResearchPhaseBuckets(
         tcrs.phaseBuckets,
         tcrCount,
@@ -7526,7 +7532,7 @@ function createDashboardQueueRenderContext(
     ) +
     renderStatusRollup(
       "status-blocked",
-      "<b>Blocked</b> (" + String(Number(blockedSummary.count ?? 0)) + ")",
+      "<b>Blocked</b> <span class=\"wc-section-count\">" + String(Number(blockedSummary.count ?? 0)) + "</span>",
       renderBlockedPhaseBuckets(
         blockedSummary.phaseBuckets,
         blockedTop,
@@ -7541,7 +7547,7 @@ function createDashboardQueueRenderContext(
     ) +
     renderStatusRollup(
       "status-human-gates",
-      "<b>Human Review</b> (" + String(humanGatesCount) + ")",
+      "<b>Human Review</b> <span class=\"wc-section-count\">" + String(humanGatesCount) + "</span>",
       renderHumanGatesList(humanGatesCount, humanGatesTop),
       humanGatesCount === 0,
       humanGatesCount > 0,
@@ -7555,7 +7561,7 @@ function createDashboardQueueRenderContext(
       '<details class="status-section"' +
       wcTrackAttr("wishlist") +
       ">" +
-      "<summary><b>Wishlist</b> · Open " +
+      '<summary><span class="wc-section-chevron" aria-hidden="true">&#9654;</span><b>Wishlist</b> \u00b7 Open ' +
       String(wishOpen) +
       " / Total " +
       String(wishTotal) +
@@ -7595,7 +7601,8 @@ function renderOverviewSectionInnerHtml(
   d: Record<string, unknown>,
   ws: Record<string, unknown> | null,
   phaseCtx: DashboardPhaseRenderContext,
-  queueCtx: DashboardQueueRenderContext
+  queueCtx: DashboardQueueRenderContext,
+  options?: RenderDashboardRootOptions
 ): string {
   const firstWishlistOpen =
     ((d.wishlist as Record<string, unknown> | undefined)?.enabled === true &&
@@ -7704,7 +7711,7 @@ export function renderDashboardRootInnerHtml(
 
   const overviewWrapped = wrapDashboardSection(
     "overview",
-    renderOverviewSectionInnerHtml(d, ws, phaseCtx, queueCtx),
+    renderOverviewSectionInnerHtml(d, ws, phaseCtx, queueCtx, options),
     deferred.has("overview")
   );
   const phaseRosterWrapped = wrapDashboardSection(

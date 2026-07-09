@@ -5993,8 +5993,15 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     .focus-md b { font-weight: 600; }
     pre { white-space: pre-wrap; background: var(--vscode-textCodeBlock-background); padding: 8px; border-radius: 4px; }
     button { cursor: pointer; }
-    .dash-row-list { display: flex; flex-direction: column; gap: 4px; margin: 6px 0 8px 0; }
-    .dash-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; padding: 4px 6px; border-radius: 6px; background: var(--vscode-textCodeBlock-background); }
+    .dash-row-list { display: flex; flex-direction: column; gap: 3px; margin: 6px 0 8px 0; }
+    .dash-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; padding: 5px 8px; border-radius: 6px; background: var(--vscode-textCodeBlock-background); position: relative; }
+    /* Colored left status bars per section context */
+    .status-section[data-wc-filter="ready"] .dash-row { border-left: 3px solid var(--vscode-testing-iconPassed, #4ec9b0); padding-left: 9px; }
+    .status-section[data-wc-filter="proposed"] .dash-row { border-left: 3px solid var(--vscode-textLink-foreground, #4fc1ff); padding-left: 9px; }
+    .status-section[data-wc-filter="blocked"] .dash-row { border-left: 3px solid var(--vscode-editorWarning-foreground, #cca700); padding-left: 9px; }
+    .status-section[data-wc-filter="human-gates"] .dash-row { border-left: 3px solid var(--vscode-charts-red, #f44336); padding-left: 9px; }
+    .status-section[data-wc-filter="terminal"] .dash-row { border-left: 3px solid var(--vscode-foreground); opacity: 0.55; padding-left: 9px; }
+    .status-section[data-wc-filter="research"] .dash-row { border-left: 3px solid var(--vscode-charts-purple, #b388ff); padding-left: 9px; }
     .dash-row-label { flex: 1; min-width: 0; white-space: pre-wrap; word-break: break-word; font-size: 12px; line-height: 1.35; }
     .dash-row-actions { display: flex; flex-wrap: wrap; gap: 4px; flex-shrink: 0; align-items: flex-start; }
     .dash-row-actions.wc-task-actions {
@@ -6566,11 +6573,11 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     .dash-agent-status-banner {
       border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.35));
-      border-left: 3px solid var(--vscode-charts-blue, var(--vscode-button-background));
-      border-radius: 6px;
-      padding: 7px 8px;
+      border-radius: 8px;
+      padding: 10px 10px 8px;
       margin: 0 0 10px 0;
-      background: var(--vscode-sideBar-background);
+      background: var(--vscode-textCodeBlock-background);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.25);
     }
     .dash-agent-status-banner p { margin: 0; line-height: 1.35; }
     .dash-agent-status-label { overflow-wrap: anywhere; }
@@ -6596,10 +6603,13 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     .wc-agent-section-label {
       font-size: 9.5px;
       font-weight: 700;
-      letter-spacing: 0.12em;
+      letter-spacing: 0.08em;
       text-transform: uppercase;
-      color: var(--wc-muted);
-      margin: 12px 0 6px;
+      color: var(--vscode-descriptionForeground);
+      margin: 8px 0 5px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
     }
     .wc-agent-card {
       display: flex !important;
@@ -7561,7 +7571,22 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     .wc-dash-cae-host.wc-dashboard-embedded-guidance .gp-head,
     .wc-dash-cae-host.wc-dashboard-embedded-guidance .gp-band { flex-wrap: wrap; }
     details.status-section { margin-bottom: 8px; }
-    details.status-section > summary { cursor: pointer; user-select: none; font-weight: 600; }
+    details.status-section > summary {
+      cursor: pointer; user-select: none; font-weight: 600;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .wc-section-chevron {
+      font-size: 9px; color: var(--vscode-descriptionForeground);
+      transition: transform 0.2s; flex-shrink: 0; display: inline-block;
+    }
+    details[open] > summary .wc-section-chevron { transform: rotate(90deg); }
+    .wc-section-count {
+      margin-left: auto; font-size: 10px; font-weight: 600;
+      color: var(--vscode-descriptionForeground);
+      background: var(--vscode-textCodeBlock-background);
+      border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.3));
+      border-radius: 999px; padding: 1px 7px; line-height: 1;
+    }
     details.status-section > .status-section-body { padding-left: 2px; }
     .dash-card > details.status-section:last-child { margin-bottom: 0; }
     .dash-count-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px 14px; margin: 4px 0 10px 0; }
@@ -7699,11 +7724,19 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     /* ── Recommended Next card ── */
     .wc-rec-next {
       border: 1px solid var(--vscode-button-background);
-      border-radius: 7px;
-      padding: 9px 10px 8px;
+      border-radius: 8px;
+      padding: 10px 10px 9px;
       margin: 4px 0 10px 0;
       background: var(--vscode-editor-background);
       position: relative;
+      overflow: hidden;
+    }
+    .wc-rec-next::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--vscode-button-background) 0%, transparent 100%);
     }
     .wc-rec-header {
       display: flex;
@@ -7745,6 +7778,12 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       align-items: center;
       gap: 4px;
       margin-left: auto;
+    }
+    .wc-rec-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 6px;
     }
     .wc-rec-subtitle {
       font-size: 11px;
@@ -7887,26 +7926,23 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     /* ── Stat pills ── */
     .wc-stat-pills {
-      display: flex;
-      flex-wrap: nowrap;
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
       gap: 6px;
       margin: 0 0 10px 0;
-    }
-    .wc-stat-pills .wc-stat-pill {
-      flex: 1 1 0;
-      min-width: 0;
     }
     .wc-stat-pill {
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 2px;
-      padding: 6px 4px 5px;
-      border-radius: 7px;
+      gap: 3px;
+      padding: 8px 4px 6px;
+      border-radius: 8px;
       border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.3));
       background: var(--vscode-textCodeBlock-background);
       color: var(--vscode-foreground);
       box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+      min-width: 0;
     }
     .wc-stat-num {
       font-size: 15px;
