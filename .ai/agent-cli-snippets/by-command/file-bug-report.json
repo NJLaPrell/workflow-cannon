@@ -1,0 +1,42 @@
+{
+  "ok": true,
+  "code": "run-args-schema",
+  "command": "file-bug-report",
+  "schema": {
+    "type": "object",
+    "additionalProperties": true,
+    "description": "Permissive fallback args schema for 'file-bug-report'. Use instructionPath for command-specific field guidance until a stricter schema is added."
+  },
+  "schemaSource": "manifest-permissive-fallback",
+  "sampleArgs": {},
+  "examples": [
+    {
+      "description": "Minimal argv example",
+      "argv": "workspace-kit run file-bug-report '{}'"
+    }
+  ],
+  "instructionPath": "src/modules/agent-bug-reporting/instructions/file-bug-report.md",
+  "moduleId": "agent-bug-reporting",
+  "description": "Tier C: create a proposed improvement with rich evidence (proposed-only; auto-fills planning generation under require).",
+  "policy": {
+    "sensitivity": "non-sensitive",
+    "operationId": null,
+    "jsonApprovalRequired": false
+  },
+  "planningGeneration": {
+    "cliPrelude": false,
+    "expectedPlanningGeneration": "not required by CLI prelude"
+  },
+  "idempotency": {
+    "clientMutationId": false
+  },
+  "responseTemplate": {
+    "defaultResponseTemplateId": "default"
+  },
+  "remediationContract": ".ai/runbooks/agent-task-engine-ergonomics.md",
+  "discovery": {
+    "listCommands": "pnpm exec wk run --list-commands",
+    "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
+  },
+  "invocationId": "820a0ffe-dc05-450b-b391-3ab1918049d2"
+}

@@ -1,6 +1,6 @@
 # agent-bug-reporting module configuration
 
-Scaffold module for agent-driven bug reporting (platform-agnostic reporter child → evidence-backed proposed improvement tasks).
+Module for agent-driven bug reporting (platform-agnostic reporter child → evidence-backed proposed improvement tasks).
 
 ## Dependencies
 
@@ -9,10 +9,8 @@ Scaffold module for agent-driven bug reporting (platform-agnostic reporter child
 
 ## Commands
 
-No shipped manifest commands yet. Follow-on task **T100856** owns `file-bug-report`.
-
-Until then, registration exposes a non-manifest overview instruction (`agent-bug-reporting-overview`) so the module appears in `list-commands` when enabled.
+- **`file-bug-report`** (Tier C / non-sensitive) — creates `type=improvement` `status=proposed` only; auto-fills `expectedPlanningGeneration` under policy `require`; supports `evidenceKey` / `clientMutationId` dedupe.
 
 ## Boundaries
 
-Follow module-build **R100–R102**: no direct imports from sibling modules; use core/contracts and declared peers only.
+Follow module-build **R100–R102**: prefer core/contracts; create path reuses task-engine mutation helpers declared via `dependsOn` (same as improvement/ideas).

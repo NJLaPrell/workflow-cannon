@@ -4,15 +4,16 @@ agentCapsule|v=1|command=agent-bug-reporting-overview|module=agent-bug-reporting
 
 # agent-bug-reporting-overview
 
-Placeholder instruction for the **agent-bug-reporting** WorkflowModule scaffold (Phase 148 / T100855).
+Overview for the **agent-bug-reporting** WorkflowModule (Phase 148 / I010).
 
-This entry is intentionally **not** in `builtin-run-command-manifest.json` yet (no shipped `workspace-kit run` command).
-It exists so the module has a valid instructions catalog while registration lands.
+## Shipped command
 
-The first shipped command, `file-bug-report`, is owned by **T100856** and will add:
+Use **`file-bug-report`** to create a proposed improvement with rich evidence:
 
-- a row in `src/contracts/builtin-run-command-manifest.json`
-- a matching instruction under this directory
-- an `onCommand` handler in `src/modules/agent-bug-reporting/index.ts`
+```
+pnpm exec wk run file-bug-report '{"title":"…","symptom":"…","evidenceKey":"…"}'
+```
 
-Until then, treat this overview as documentation-only; do not expect a runnable handler.
+See `src/modules/agent-bug-reporting/instructions/file-bug-report.md`.
+
+This overview entry is documentation-only (not in the builtin run-command manifest).

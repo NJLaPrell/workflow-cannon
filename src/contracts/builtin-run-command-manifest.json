@@ -123,6 +123,15 @@
     "policySensitivity": "non-sensitive"
   },
   {
+    "moduleId": "agent-bug-reporting",
+    "name": "file-bug-report",
+    "file": "file-bug-report.md",
+    "description": "Tier C: create a proposed improvement with rich evidence (proposed-only; auto-fills planning generation under require).",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "non-sensitive",
+    "executionClass": "mutation"
+  },
+  {
     "moduleId": "task-engine",
     "name": "run-transition",
     "file": "run-transition.md",
