@@ -8,6 +8,39 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [1.0.7] - 2026-07-09
+
+Patch — **Phase 132 User Simulation Harness** (deterministic Complete & Release scenarios with persona evaluators).
+
+### Added
+
+- **User simulation harness** — `scripts/agent-flow-harness.mjs` runs CLI, MCP, and MCP-fallback scenarios without real AI calls.
+- **Persona and scenario libraries** — JSON Schema validation, PM + expert personas, empty/completed/active-work scenarios.
+- **Evaluators** — state, UX, response, and efficiency evaluators with byte metrics and command-sequence checks.
+- **Simulation reports** — dry-run improvement/defect payloads traceable to scenario, persona, and step.
+- **Orchestration profiles** — `AGENT_ORCHESTRATION_PROFILES.md` and `AGENT_ORCHESTRATION_CONTRACTS.md` (Director / Scout roles).
+
+## [1.0.6] - 2026-07-09
+
+Patch — **Phase 144 planner-chat adoption and build-plan sunset** (remove legacy planning interview; ship planner MCP skill pack and golden-path coverage).
+
+### Added
+
+- **wc-planner-chat skill pack** — documents five v1 planner MCP read tools with CLI fallbacks (`.cursor/skills/` and `.claude/skills/`).
+- **Planner golden-path integration test** — `get-planner-flow-status` → draft → review → accept → finalize dryRun contract coverage.
+- **build-plan consumer inventory** — maintainer runbook auditing all in-repo `build-plan` consumers before removal.
+
+### Changed
+
+- **Dashboard planning wizard** — static removal notice; **Plan this** / planner-chat is the supported path.
+- **I011 dogfood** — planner tools exercised against the I011 IdeaPlan artifact lifecycle.
+
+### Removed
+
+- **`build-plan` CLI command** — legacy planning interview handler, instruction stub, and manifest registration removed after deprecation shim window.
+
+## [1.0.5] - 2026-07-09
+
 ## [1.0.4] - 2026-07-08
 
 ## [1.0.3] - 2026-07-02

@@ -297,6 +297,19 @@ function readPhaseReleaseDates(data: Record<string, unknown>): Record<string, st
   return out;
 }
 
+function readLastDeliveredPhaseKey(data: Record<string, unknown>): string | null {
+  const row = data.lastDeliveredPhase;
+  if (!row || typeof row !== "object") {
+    return null;
+  }
+  const phaseKey = (row as Record<string, unknown>).phaseKey;
+  if (typeof phaseKey !== "string") {
+    return null;
+  }
+  const trimmed = phaseKey.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
 function parsePhaseCatalogRows(phaseSlice: Record<string, unknown> | undefined): PhaseCatalogListRow[] {
   const cat = phaseSlice?.phaseCatalog as { phases?: unknown } | undefined;
   const phasesRaw = Array.isArray(cat?.phases) ? (cat!.phases as unknown[]) : [];
@@ -3857,93 +3870,11 @@ export type PlanningInterviewWizardPanel =
   | { kind: "success"; planningType: string; code: string; message: string }
   | { kind: "error"; message: string };
 
-export function renderPlanningInterviewWizardPanel(panel: PlanningInterviewWizardPanel): string {
-  const planningTypes: readonly [string, string][] = [
-    ["change", "Change / Refactor"],
-    ["new-feature", "New Feature"],
-    ["task-breakdown", "Task Breakdown"],
-    ["sprint-phase", "Sprint / Phase"],
-    ["task-ordering", "Task Ordering"]
-  ];
-  if (panel.kind === "picker") {
-    const opts = planningTypes
-      .map(
-        ([v, label]) =>
-          '<option value="' + escapeHtmlAttr(v) + '">' + escapeHtml(label) + "</option>"
-      )
-      .join("");
-    return (
-      '<div class="dash-planning-wizard" aria-label="Legacy planning interview">' +
-      '<p class="muted"><b>Legacy preview.</b> Use <b>Plan this</b> from Ideas for the primary PlanArtifact flow.</p>' +
-      '<div class="dash-planning-wizard-picker-row">' +
-      '<label class="dash-planning-wizard-label dash-planning-wizard-label-inline" for="wc-planning-type">Planning Type</label>' +
-      '<select id="wc-planning-type" class="dash-planning-wizard-select">' +
-      opts +
-      "</select>" +
-      '<button type="button" class="wc-btn wc-btn-md wc-btn-primary" data-wc-action="planning-wizard-start">Start interview</button>' +
-      "</div>" +
-      "</div>"
-    );
-  }
-  if (panel.kind === "question") {
-    const ex =
-      panel.examples.length > 0
-        ? "<p><b>Examples:</b> " + escapeHtml(panel.examples.join(" · ")) + "</p>"
-        : "";
-    return (
-      '<div class="dash-planning-wizard" aria-label="Legacy planning question">' +
-      "<p><b>Legacy interview</b> · " +
-      escapeHtml(panel.planningType) +
-      " · " +
-      escapeHtml(panel.progressHint) +
-      "</p>" +
-      "<p>" +
-      escapeHtml(panel.prompt) +
-      "</p>" +
-      ex +
-      (panel.whyItMatters.trim().length > 0
-        ? '<p class="muted"><b>Why it matters:</b> ' + escapeHtml(panel.whyItMatters) + "</p>"
-        : "") +
-      '<label class="dash-planning-wizard-label" for="wc-planning-answer">Your answer</label>' +
-      '<textarea id="wc-planning-answer" class="dash-planning-wizard-textarea" rows="5" spellcheck="true"></textarea>' +
-      '<p class="dash-planning-wizard-actions">' +
-      '<button type="button" class="wc-btn wc-btn-md wc-btn-primary" data-wc-action="planning-wizard-submit">Submit answer</button> ' +
-      '<button type="button" class="wc-btn wc-btn-md wc-btn-secondary" data-wc-action="planning-wizard-cancel">Cancel</button>' +
-      "</p>" +
-      "</div>"
-    );
-  }
-  if (panel.kind === "success") {
-    const persistenceHint =
-      panel.code === "planning-response-ready"
-        ? '<p class="muted">Your answers were saved. No task was created.</p>'
-        : panel.code === "planning-wishlist-ready"
-          ? '<p class="muted">Your answers were saved. Finish the wishlist flow when you are ready.</p>'
-          : panel.code === "planning-artifact-created"
-            ? '<p class="muted">Wishlist item created. Refresh the dashboard to see it.</p>'
-            : "";
-    return (
-      '<div class="dash-planning-wizard ok" aria-label="Legacy planning interview complete">' +
-      "<p><b>Legacy interview complete</b> · " +
-      escapeHtml(panel.planningType) +
-      " · <code>" +
-      escapeHtml(panel.code) +
-      "</code></p>" +
-      "<p>" +
-      escapeHtml(panel.message) +
-      "</p>" +
-      persistenceHint +
-      '<button type="button" class="wc-btn wc-btn-md wc-btn-primary" data-wc-action="planning-wizard-dismiss">Done</button>' +
-      "</div>"
-    );
-  }
+export function renderPlanningInterviewWizardPanel(_panel: PlanningInterviewWizardPanel): string {
+  void _panel;
   return (
-    '<div class="dash-planning-wizard bad" aria-label="Legacy planning interview error">' +
-    "<p><b>Legacy interview error</b></p>" +
-    "<p>" +
-    escapeHtml(panel.message) +
-    "</p>" +
-    '<button type="button" class="wc-btn wc-btn-md wc-btn-primary" data-wc-action="planning-wizard-cancel">Reset</button>' +
+    '<div class="dash-planning-wizard dash-planning-wizard-deprecated" aria-label="Removed legacy planning interview">' +
+    '<p class="dash-planning-wizard-deprecation"><b>Removed.</b> The <code>build-plan</code> interview was sunset in phase 144. Use <b>Plan this</b> on an Ideas row for planner-chat and PlanArtifact. Inventory: <code>.ai/runbooks/build-plan-consumer-inventory.md</code></p>' +
     "</div>"
   );
 }
@@ -6495,7 +6426,8 @@ export function renderPhaseCatalogOverviewSection(
   releasedPhaseKeys?: readonly string[],
   legacyDeliveredMaxOrdinal?: number | null,
   activeQueuePhaseKeys?: readonly string[],
-  phaseReleaseDates?: Readonly<Record<string, string>>
+  phaseReleaseDates?: Readonly<Record<string, string>>,
+  lastDeliveredPhaseKey?: string | null
 ): string {
   if (!phaseSlice || typeof phaseSlice !== "object") {
     return "";
@@ -6533,7 +6465,8 @@ export function renderPhaseCatalogOverviewSection(
       rosterContext,
       releasedPhaseKeys,
       legacyDeliveredMaxOrdinal,
-      activeQueuePhaseKeys
+      activeQueuePhaseKeys,
+      lastDeliveredPhaseKey
     );
     const rosterRows = narrow.ok
       ? narrow.rows
@@ -6543,7 +6476,8 @@ export function renderPhaseCatalogOverviewSection(
             rosterContext,
             releasedPhaseKeys,
             legacyDeliveredMaxOrdinal,
-            activeQueuePhaseKeys
+            activeQueuePhaseKeys,
+            lastDeliveredPhaseKey
           )
         : [];
     if (rosterRows.length === 0) {
@@ -7257,6 +7191,7 @@ type DashboardPhaseRenderContext = {
   legacyDeliveredMaxOrdinal: number | null;
   activeQueuePhaseKeys: string[];
   phaseReleaseDates: Readonly<Record<string, string>>;
+  lastDeliveredPhaseKey: string | null;
   phaseFocus: PhaseScheduleFocus;
   phaseSystemSlice: Record<string, unknown> | undefined;
   phaseCatalogLookup: Map<string, PhaseCatalogListRow>;
@@ -7308,6 +7243,7 @@ function createDashboardPhaseRenderContext(
   const legacyDeliveredMaxOrdinal = readLegacyDeliveredMaxOrdinal(d);
   const activeQueuePhaseKeys = readPhaseKeysWithActiveQueueWork(d);
   const phaseReleaseDates = readPhaseReleaseDates(d);
+  const lastDeliveredPhaseKey = readLastDeliveredPhaseKey(d);
   const phaseFocus = phaseScheduleFocusFromWorkspace(
     ws,
     deliveredPhaseKeys,
@@ -7333,6 +7269,7 @@ function createDashboardPhaseRenderContext(
     legacyDeliveredMaxOrdinal,
     activeQueuePhaseKeys,
     phaseReleaseDates,
+    lastDeliveredPhaseKey,
     phaseFocus,
     phaseSystemSlice,
     phaseCatalogLookup,
@@ -7673,7 +7610,8 @@ function renderPhaseRosterSectionInnerHtml(
     phaseCtx.rosterDeliveredPhaseKeys,
     phaseCtx.legacyDeliveredMaxOrdinal,
     phaseCtx.activeQueuePhaseKeys,
-    phaseCtx.phaseReleaseDates
+    phaseCtx.phaseReleaseDates,
+    phaseCtx.lastDeliveredPhaseKey
   );
 }
 
@@ -7806,7 +7744,7 @@ export function renderDashboardSectionInnerHtml(
     case "overview": {
       const phaseCtx = createDashboardPhaseRenderContext(d, ws);
       const queueCtx = createDashboardQueueRenderContext(d, ws, phaseCtx);
-      return renderOverviewSectionInnerHtml(d, ws, phaseCtx, queueCtx);
+      return renderOverviewSectionInnerHtml(d, ws, phaseCtx, queueCtx, options);
     }
     case "phase-roster": {
       const phaseCtx = createDashboardPhaseRenderContext(d, ws);

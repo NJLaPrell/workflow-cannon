@@ -547,6 +547,7 @@ workspace-kit run persist-planning-execution-drafts '{"targetPhaseKey":"73","tar
 # PlanArtifact lifecycle (runbook .ai/runbooks/plan-artifact-workflow.md; use --schema-only for arg shapes):
 workspace-kit run draft-plan-artifact '{"persist":false,"artifact":{...}}'
 workspace-kit run draft-plan-artifact '{"persist":true,"artifact":{...},"expectedPlanningGeneration":<n>,"policyApproval":{"confirmed":true,"rationale":"persist plan draft"}}'
+workspace-kit run append-wbs-row '{"planRef":"plan-artifact:<uuid>","wbsRow":{...},"expectedPlanningGeneration":<n>,"policyApproval":{"confirmed":true,"rationale":"append WBS row from planner-chat"}}'
 workspace-kit run review-plan-artifact '{"planId":"<uuid>","profile":"full-feature"}'
 workspace-kit run accept-plan-artifact '{"planId":"<uuid>","approvalRecord":{"schemaVersion":1,"confirmed":true,"approvedVersion":1,"approvedAt":"2026-05-27T00:00:00.000Z","approvedBy":"operator@example.com","planRef":"plan-artifact:<uuid>"},"expectedPlanningGeneration":<n>,"policyApproval":{"confirmed":true,"rationale":"operator accepted plan"}}'
 # Tier C preview: validates accepted plan, phase proposal, WBS normalization, and task-batch review without writes.

@@ -1,0 +1,42 @@
+{
+  "ok": true,
+  "code": "run-args-schema",
+  "command": "get-plan-artifact-template",
+  "schema": {
+    "type": "object",
+    "additionalProperties": true,
+    "description": "Permissive fallback args schema for 'get-plan-artifact-template'. Use instructionPath for command-specific field guidance until a stricter schema is added."
+  },
+  "schemaSource": "manifest-permissive-fallback",
+  "sampleArgs": {},
+  "examples": [
+    {
+      "description": "Minimal argv example",
+      "argv": "workspace-kit run get-plan-artifact-template '{}'"
+    }
+  ],
+  "instructionPath": "src/modules/planning/instructions/get-plan-artifact-template.md",
+  "moduleId": "planning",
+  "description": "Return minimal valid PlanArtifact v1 skeleton from kernel fixture.",
+  "policy": {
+    "sensitivity": "non-sensitive",
+    "operationId": null,
+    "jsonApprovalRequired": false
+  },
+  "planningGeneration": {
+    "cliPrelude": false,
+    "expectedPlanningGeneration": "not required by CLI prelude"
+  },
+  "idempotency": {
+    "clientMutationId": false
+  },
+  "responseTemplate": {
+    "defaultResponseTemplateId": "default"
+  },
+  "remediationContract": ".ai/runbooks/agent-task-engine-ergonomics.md",
+  "discovery": {
+    "listCommands": "pnpm exec wk run --list-commands",
+    "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
+  },
+  "invocationId": "a6829528-87b3-4ff6-8d42-1d3875a567d6"
+}

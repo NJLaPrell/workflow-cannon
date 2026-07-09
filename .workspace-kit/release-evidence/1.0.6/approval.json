@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "fragmentKind": "approval",
+  "approval": {
+    "actor": "operator via dashboard complete-and-release",
+    "timestamp": "2026-07-09T08:05:00.000Z",
+    "rationale": "Phase 144 closeout approved after all tasks completed, PR #758 merged, CI green, and local pre-merge-gates passed.",
+    "scope": "phase-144 publish @workflow-cannon/workspace-kit@1.0.6 dist-tag latest"
+  }
+}

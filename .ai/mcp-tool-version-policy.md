@@ -64,6 +64,31 @@ assert.equal(envelope.toolVersion, MCP_DEFAULT_TOOL_SCHEMA_VERSION);
 
 This ensures that a version bump in the source fails tests immediately, prompting the developer to update consumers intentionally.
 
+## Planner MCP output budgets (architecture D3)
+
+Planner read tools register in `MCP_TOOL_OUTPUT_BYTE_BUDGETS` (`src/mcp/output-budgets.ts`) **before** handlers ship in `src/mcp/server.ts`. Tool names are listed in `PLANNER_MCP_READ_TOOL_NAMES`.
+
+| Tool | Byte budget | Role |
+|---|---|---|
+| `workflow-cannon.planner-packet` | 20 KiB (`MCP_PLANNER_PACKET_OUTPUT_BYTE_BUDGET`) | Primary bootstrap packet (idea + session + directive + recommended next command) |
+| `workflow-cannon.list-ideas` | 16 KiB (`MCP_PLANNER_SATELLITE_OUTPUT_BYTE_BUDGET`) | Ideas inventory read |
+| `workflow-cannon.get-plan-artifact` | 16 KiB | Bounded plan artifact read |
+| `workflow-cannon.plan-review-packet` | 16 KiB | Review rubric preview (read-only) |
+| `workflow-cannon.finalize-preview-packet` | 16 KiB | Finalize dry-run task draft preview |
+
+Satellite budgets align with phase/release packet tools (16 KiB). `planner-packet` aligns with `workflow-cannon.agent-execution-packet` (20 KiB).
+
+### Truncation ladder (overflow handling)
+
+When a planner MCP response would exceed its registered byte budget, implementations apply this **deterministic field-drop order** (first applicable step wins; repeat until within budget or only protected fields remain):
+
+1. **Drop ideation transcript** — remove long brainstorm ideation notes / transcript bodies from the packet.
+2. **Reduce WBS preview** — shrink `wbsPreview` from max 5 rows to max 3 rows (retain `wbsId`, `title`, `dependsOn`, `sizingConfidence` on surviving rows).
+3. **Drop brainstorm synthesis scores** — remove synthesized score blocks while keeping structural flow metadata.
+4. **Never drop `recommendedNextCommand`** — orchestration argv and `readyRun` guidance must survive truncation.
+
+Overflow envelopes must set `oversized: true` and include `expansionRefs` pointing at the equivalent CLI command so agents can expand out-of-band. Stress fixtures and CI overflow gates (WBS-16) prove the ladder before production registration.
+
 ## Changelog
 
 | Date | Constant | Old | New | Reason |

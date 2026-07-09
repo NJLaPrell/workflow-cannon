@@ -652,7 +652,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       ...extra,
       readModeBadge: this.readPath.getModeBadge(),
       mcpStatus: resolveMcpHostStatus(this.client.getWorkspaceRoot()),
-      ideasUnifiedModelEnabled: isIdeasUnifiedModelEnabledForDashboard()
+      ideasUnifiedModelEnabled: isIdeasUnifiedModelEnabledForDashboard(),
+      weeklySparklines: getAllWeeklyCountHistories(this.client.getWorkspaceRoot())
     };
   }
 

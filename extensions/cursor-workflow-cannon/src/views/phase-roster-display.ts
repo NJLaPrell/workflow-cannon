@@ -144,19 +144,45 @@ function pickMostRecentDeliveredRow(
   phases: ReadonlyArray<PhaseCatalogListRow>,
   deliveredSet: Set<string>,
   legacyDeliveredMaxOrdinal?: number | null,
-  activeQueuePhaseKeys?: ReadonlySet<string>
+  activeQueuePhaseKeys?: ReadonlySet<string>,
+  lastDeliveredPhaseKey?: string | null
 ): PhaseCatalogListRow | null {
+  const catalogByKey = new Map(phases.map((p) => [p.phaseKey.trim(), p]));
+  const preferredKey =
+    typeof lastDeliveredPhaseKey === "string" ? lastDeliveredPhaseKey.trim() : "";
+  if (
+    preferredKey.length > 0 &&
+    phaseIsDelivered(preferredKey, deliveredSet, legacyDeliveredMaxOrdinal, activeQueuePhaseKeys)
+  ) {
+    return (
+      catalogByKey.get(preferredKey) ??
+      ({
+        phaseKey: preferredKey,
+        shortDescription: null,
+        inCatalog: false
+      } satisfies PhaseCatalogListRow)
+    );
+  }
+  const keysToCheck = new Set<string>(deliveredSet);
+  for (const p of phases) {
+    keysToCheck.add(p.phaseKey.trim());
+  }
   let delivered: PhaseCatalogListRow | null = null;
   let bestDeliveredOrd = -Infinity;
-  for (const p of phases) {
-    const pk = p.phaseKey.trim();
+  for (const pk of keysToCheck) {
     if (!phaseIsDelivered(pk, deliveredSet, legacyDeliveredMaxOrdinal, activeQueuePhaseKeys)) {
       continue;
     }
     const o = parseLeadingPhaseOrdinalFromKey(pk);
     if (o !== null && o > bestDeliveredOrd) {
       bestDeliveredOrd = o;
-      delivered = p;
+      delivered =
+        catalogByKey.get(pk) ??
+        ({
+          phaseKey: pk,
+          shortDescription: null,
+          inCatalog: false
+        } satisfies PhaseCatalogListRow);
     }
   }
   return delivered;
@@ -172,6 +198,66 @@ function rosterFutureStatus(
   return nextKitTrim.length > 0 && pk === nextKitTrim ? "next" : "future";
 }
 
+function resolveMaxDeliveredOrdinal(
+  phases: ReadonlyArray<PhaseCatalogListRow>,
+  deliveredSet: Set<string>,
+  legacyDeliveredMaxOrdinal?: number | null,
+  activeQueuePhaseKeys?: ReadonlySet<string>
+): number | null {
+  let best: number | null =
+    typeof legacyDeliveredMaxOrdinal === "number" && Number.isFinite(legacyDeliveredMaxOrdinal)
+      ? legacyDeliveredMaxOrdinal
+      : null;
+  const consider = (phaseKey: string) => {
+    const pk = phaseKey.trim();
+    if (!phaseIsDelivered(pk, deliveredSet, legacyDeliveredMaxOrdinal, activeQueuePhaseKeys)) {
+      return;
+    }
+    const ord = parseLeadingPhaseOrdinalFromKey(pk);
+    if (ord !== null && (best === null || ord > best)) {
+      best = ord;
+    }
+  };
+  for (const p of phases) {
+    consider(p.phaseKey);
+  }
+  for (const pk of deliveredSet) {
+    consider(pk);
+  }
+  return best;
+}
+
+/** When workspace has no current phase, hide stale catalog gaps below the latest delivered build. */
+function shouldShowUndeliveredPhaseOnIdleRoster(
+  phaseKey: string,
+  phaseSlice: Record<string, unknown>,
+  deliveredSet: Set<string>,
+  legacyDeliveredMaxOrdinal: number | null | undefined,
+  activeQueuePhaseKeys: ReadonlySet<string> | undefined,
+  maxDeliveredOrdinal: number | null
+): boolean {
+  const pk = phaseKey.trim();
+  if (phaseIsDelivered(pk, deliveredSet, legacyDeliveredMaxOrdinal, activeQueuePhaseKeys)) {
+    return false;
+  }
+  if (phaseHasActiveQueueWork(pk, activeQueuePhaseKeys)) {
+    return true;
+  }
+  const nextKitTrim =
+    typeof phaseSlice.nextKitPhase === "string" ? phaseSlice.nextKitPhase.trim() : "";
+  if (nextKitTrim.length > 0 && pk === nextKitTrim) {
+    return true;
+  }
+  const ord = parseLeadingPhaseOrdinalFromKey(pk);
+  if (ord === null) {
+    return false;
+  }
+  if (maxDeliveredOrdinal !== null && ord <= maxDeliveredOrdinal) {
+    return false;
+  }
+  return true;
+}
+
 export type PhaseRosterNarrowResult =
   | { ok: true; rows: PhaseRosterDisplayRow[] }
   | { ok: false; reason: "no-workspace-ordinal" };
@@ -185,7 +271,8 @@ export function buildNarrowPhaseRosterRows(
   phaseSlice: Record<string, unknown>,
   deliveredPhaseKeys?: ReadonlySet<string> | readonly string[],
   legacyDeliveredMaxOrdinal?: number | null,
-  activeQueuePhaseKeys?: ReadonlySet<string> | readonly string[]
+  activeQueuePhaseKeys?: ReadonlySet<string> | readonly string[],
+  lastDeliveredPhaseKey?: string | null
 ): PhaseRosterNarrowResult {
   const wOrd = resolveWorkspacePhaseOrdinal(phaseSlice);
   if (wOrd === null) {
@@ -198,7 +285,8 @@ export function buildNarrowPhaseRosterRows(
     phases,
     deliveredSet,
     legacyDeliveredMaxOrdinal,
-    activeSet
+    activeSet,
+    lastDeliveredPhaseKey
   );
   const { currentRow, currentDisplayKey } = resolveCurrentPhaseRow(phases, phaseSlice, wOrd);
   const currentKey = (currentRow?.phaseKey ?? currentDisplayKey).trim();
@@ -243,28 +331,24 @@ export function buildPhaseRosterRowsWhenNoCurrent(
   phaseSlice: Record<string, unknown>,
   deliveredPhaseKeys?: ReadonlySet<string> | readonly string[],
   legacyDeliveredMaxOrdinal?: number | null,
-  activeQueuePhaseKeys?: ReadonlySet<string> | readonly string[]
+  activeQueuePhaseKeys?: ReadonlySet<string> | readonly string[],
+  lastDeliveredPhaseKey?: string | null
 ): PhaseRosterDisplayRow[] {
   const deliveredSet = deliveredPhaseKeySet(deliveredPhaseKeys);
   const activeSet = activeQueuePhaseKeySet(activeQueuePhaseKeys);
-  const deliveredRow = pickMostRecentDeliveredRow(
+  const maxDeliveredOrdinal = resolveMaxDeliveredOrdinal(
     phases,
     deliveredSet,
     legacyDeliveredMaxOrdinal,
     activeSet
   );
-  const nextOrd = parseLeadingDigitsOrdinal(phaseSlice.nextKitPhase);
-  if (nextOrd === null) {
-    return phases
-      .filter((p) => {
-        const pk = p.phaseKey.trim();
-        return (
-          parseLeadingPhaseOrdinalFromKey(pk) !== null &&
-          !phaseIsDelivered(pk, deliveredSet, legacyDeliveredMaxOrdinal, activeSet)
-        );
-      })
-      .map((p) => ({ ...p, status: "future" as const }));
-  }
+  const deliveredRow = pickMostRecentDeliveredRow(
+    phases,
+    deliveredSet,
+    legacyDeliveredMaxOrdinal,
+    activeSet,
+    lastDeliveredPhaseKey
+  );
 
   const rows: PhaseRosterDisplayRow[] = [];
   if (deliveredRow) {
@@ -272,7 +356,16 @@ export function buildPhaseRosterRowsWhenNoCurrent(
   }
   for (const p of phases) {
     const pk = p.phaseKey.trim();
-    if (phaseIsDelivered(pk, deliveredSet, legacyDeliveredMaxOrdinal, activeSet)) {
+    if (
+      !shouldShowUndeliveredPhaseOnIdleRoster(
+        pk,
+        phaseSlice,
+        deliveredSet,
+        legacyDeliveredMaxOrdinal,
+        activeSet,
+        maxDeliveredOrdinal
+      )
+    ) {
       continue;
     }
     const o = parseLeadingPhaseOrdinalFromKey(pk);

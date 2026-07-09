@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-07-08T06:32:32.487Z",
-  "packageVersion": "1.0.4",
-  "toolCount": 15,
+  "generatedAt": "2026-07-09T13:48:40.909Z",
+  "packageVersion": "1.0.7",
+  "toolCount": 20,
   "tools": [
     {
       "name": "workflow-cannon.agent_start",
@@ -281,6 +281,141 @@
         "type": "object",
         "properties": {},
         "required": [],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "workflow-cannon.planner-packet",
+      "cliCommand": "get-planner-flow-status",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "ideaId": {
+            "type": "string",
+            "description": "Optional idea id such as I001."
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "workflow-cannon.list-ideas",
+      "cliCommand": "list-ideas",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "open",
+              "planning",
+              "planned"
+            ],
+            "description": "Optional idea status filter."
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "workflow-cannon.get-plan-artifact",
+      "cliCommand": "get-plan-artifact",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "planId": {
+            "type": "string",
+            "description": "PlanArtifact id (UUID)."
+          },
+          "version": {
+            "type": "number",
+            "description": "Optional 1-based version; defaults to latest."
+          },
+          "includeArtifact": {
+            "type": "boolean",
+            "description": "When false, omit the full artifact body from the response."
+          }
+        },
+        "required": [
+          "planId"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "workflow-cannon.plan-review-packet",
+      "cliCommand": "review-plan-artifact",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "planId": {
+            "type": "string",
+            "description": "PlanArtifact id (UUID)."
+          },
+          "version": {
+            "type": "number",
+            "description": "Optional 1-based version; defaults to latest."
+          },
+          "profile": {
+            "type": "string",
+            "enum": [
+              "minimal",
+              "refactor",
+              "full-feature",
+              "sprint-phase"
+            ],
+            "description": "Optional rubric profile; defaults to minimal when omitted."
+          }
+        },
+        "required": [
+          "planId"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "workflow-cannon.finalize-preview-packet",
+      "cliCommand": "finalize-plan-to-phase",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "planId": {
+            "type": "string",
+            "description": "PlanArtifact id (UUID)."
+          },
+          "version": {
+            "type": "number",
+            "description": "Optional 1-based version; defaults to latest."
+          },
+          "targetPhaseKey": {
+            "type": "string",
+            "description": "Optional phase key override for preview resolution."
+          },
+          "targetPhase": {
+            "type": "string",
+            "description": "Optional phase label override for preview resolution."
+          },
+          "desiredStatus": {
+            "type": "string",
+            "enum": [
+              "proposed",
+              "ready"
+            ],
+            "description": "Optional task status for preview drafts; defaults to ready when omitted."
+          },
+          "wbsFilter": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Optional WBS row ids to include in the preview subset."
+          }
+        },
+        "required": [
+          "planId"
+        ],
         "additionalProperties": false
       }
     }

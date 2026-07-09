@@ -191,6 +191,10 @@
       "output": "docs/maintainers/runbooks/plan-artifact-workflow.md"
     },
     {
+      "source": ".ai/runbooks/build-plan-consumer-inventory.md",
+      "output": "docs/maintainers/runbooks/build-plan-consumer-inventory.md"
+    },
+    {
       "source": ".ai/runbooks/planning-workflow.md",
       "output": "docs/maintainers/runbooks/planning-workflow.md"
     },

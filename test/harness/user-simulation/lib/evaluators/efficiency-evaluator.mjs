@@ -2,9 +2,32 @@ export function evaluateEfficiency({ scenario, trace }) {
   const findings = [];
   const avoidBroad = scenario.efficiency?.avoidBroadCommands ?? [];
   const maxBroadInMcp = scenario.efficiency?.mcpModeMaxBroadCommands ?? 0;
+  const expectedCommands = scenario.efficiency?.expectedCommands?.[trace.contextMode];
 
+  if (Array.isArray(expectedCommands)) {
+    const actual = trace.commandsRun ?? [];
+    const expectedKey = expectedCommands.join("|");
+    const actualKey = actual.join("|");
+    if (expectedKey !== actualKey) {
+      findings.push({
+        severity: "error",
+        code: "command-sequence-mismatch",
+        message: `Expected commands [${expectedCommands.join(", ")}], got [${actual.join(", ")}]`,
+        evidence: { expected: expectedCommands, actual }
+      });
+    }
+  }
+
+  if (trace.usedBroadDiscoveryFallback) {
+    findings.push({
+      severity: "warn",
+      code: "broad-discovery-fallback",
+      message: "Harness recorded broad discovery fallback instead of packet-first orchestration",
+      evidence: { commandsRun: trace.commandsRun ?? [] }
+    });
+  }
   if (trace.contextMode === "mcp") {
-    const broadHits = trace.commandsRun.filter((cmd) => avoidBroad.includes(cmd));
+    const broadHits = (trace.commandsRun ?? []).filter((cmd) => avoidBroad.includes(cmd));
     if (broadHits.length > maxBroadInMcp) {
       findings.push({
         severity: "error",
@@ -13,7 +36,7 @@ export function evaluateEfficiency({ scenario, trace }) {
         broadHits
       });
     }
-    if (trace.runbookResourceReads.length > 0) {
+    if ((trace.runbookResourceReads ?? []).length > 0) {
       findings.push({
         severity: "error",
         code: "runbook-resource-in-mcp-mode",
@@ -21,8 +44,8 @@ export function evaluateEfficiency({ scenario, trace }) {
       });
     }
     const orchestrationOnly =
-      trace.mcpToolsCalled.includes("workflow-cannon.phase-release-orchestration-state") &&
-      trace.commandsRun.length === 0;
+      (trace.mcpToolsCalled ?? []).includes("workflow-cannon.phase-release-orchestration-state") &&
+      (trace.commandsRun ?? []).length === 0;
     if (!orchestrationOnly) {
       findings.push({
         severity: "warn",
@@ -51,6 +74,7 @@ export function evaluateEfficiency({ scenario, trace }) {
 
   return {
     passed: findings.every((row) => row.severity !== "error"),
-    findings
+    findings,
+    metrics: trace.metrics ?? null
   };
 }

@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "fragmentKind": "publishArtifacts",
+  "publishArtifacts": [
+    {
+      "kind": "npm",
+      "package": "@workflow-cannon/workspace-kit",
+      "version": "1.0.6",
+      "distTag": "latest",
+      "url": "https://www.npmjs.com/package/@workflow-cannon/workspace-kit/v/1.0.6"
+    },
+    {
+      "kind": "github-release",
+      "tag": "v1.0.6",
+      "url": "https://github.com/NJLaPrell/workflow-cannon/releases/tag/v1.0.6"
+    },
+    {
+      "kind": "ci-publish",
+      "workflow": "publish-npm.yml",
+      "runUrl": "https://github.com/NJLaPrell/workflow-cannon/actions/runs/29004124874",
+      "conclusion": "success"
+    }
+  ]
+}

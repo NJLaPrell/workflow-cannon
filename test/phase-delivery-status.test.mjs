@@ -197,6 +197,32 @@ test("collectDeliveredPhaseKeys excludes rolled-out phases without closeout read
   db.close();
 });
 
+test("collectDeliveredPhaseKeys includes drained phases without rollover events", () => {
+  const db = openStatusDb();
+  const tasks = [
+    {
+      id: "T1",
+      status: "completed",
+      phaseKey: "134",
+      type: "phase_delivery",
+      title: "Done",
+      createdAt: "",
+      updatedAt: ""
+    },
+    {
+      id: "T2",
+      status: "ready",
+      phaseKey: "145",
+      type: "phase_delivery",
+      title: "Open",
+      createdAt: "",
+      updatedAt: ""
+    }
+  ];
+  assert.deepEqual(collectDeliveredPhaseKeys(db, tasks), ["134"]);
+  db.close();
+});
+
 test("buildDashboardCurrentPhaseDelivery marks released after rollover event for prior phase", () => {
   const db = openStatusDb();
   db.prepare(

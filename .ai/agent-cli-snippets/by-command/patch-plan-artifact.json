@@ -1,0 +1,42 @@
+{
+  "ok": true,
+  "code": "run-args-schema",
+  "command": "patch-plan-artifact",
+  "schema": {
+    "type": "object",
+    "additionalProperties": true,
+    "description": "Permissive fallback args schema for 'patch-plan-artifact'. Use instructionPath for command-specific field guidance until a stricter schema is added."
+  },
+  "schemaSource": "manifest-permissive-fallback",
+  "sampleArgs": {},
+  "examples": [
+    {
+      "description": "Minimal argv example",
+      "argv": "workspace-kit run patch-plan-artifact '{}'"
+    }
+  ],
+  "instructionPath": "src/modules/planning/instructions/patch-plan-artifact.md",
+  "moduleId": "planning",
+  "description": "Apply a section-scoped partial patch to a unified IdeaPlan planning draft.",
+  "policy": {
+    "sensitivity": "sensitive",
+    "operationId": "planning.patch-plan-artifact",
+    "jsonApprovalRequired": true
+  },
+  "planningGeneration": {
+    "cliPrelude": false,
+    "expectedPlanningGeneration": "not required by CLI prelude"
+  },
+  "idempotency": {
+    "clientMutationId": false
+  },
+  "responseTemplate": {
+    "defaultResponseTemplateId": "default"
+  },
+  "remediationContract": ".ai/runbooks/agent-task-engine-ergonomics.md",
+  "discovery": {
+    "listCommands": "pnpm exec wk run --list-commands",
+    "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
+  },
+  "invocationId": "06ff8fb4-0acf-4e84-a407-636588db37b4"
+}

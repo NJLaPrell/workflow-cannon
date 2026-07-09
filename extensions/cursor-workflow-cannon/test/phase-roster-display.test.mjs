@@ -139,6 +139,55 @@ test("buildPhaseRosterRowsWhenNoCurrent hides explicit delivered phases even wit
   );
 });
 
+test("buildPhaseRosterRowsWhenNoCurrent prefers lastDeliveredPhaseKey over higher ordinals", () => {
+  const slice = { currentKitPhase: null, nextKitPhase: null };
+  const phases = [
+    { phaseKey: "132", shortDescription: "Latest ship", inCatalog: true },
+    { phaseKey: "144", shortDescription: "Older ship", inCatalog: true },
+    { phaseKey: "145", shortDescription: "Upcoming", inCatalog: true }
+  ];
+  const rows = buildPhaseRosterRowsWhenNoCurrent(
+    phases,
+    slice,
+    ["132", "144"],
+    120,
+    ["145"],
+    "132"
+  );
+  assert.deepEqual(
+    rows.map((x) => ({ k: x.phaseKey, s: x.status })),
+    [
+      { k: "132", s: "delivered" },
+      { k: "145", s: "future" }
+    ]
+  );
+});
+
+test("buildPhaseRosterRowsWhenNoCurrent hides superseded catalog gaps below latest delivered", () => {
+  const slice = { currentKitPhase: null, nextKitPhase: null };
+  const phases = [
+    { phaseKey: "132", shortDescription: "Latest ship", inCatalog: true },
+    { phaseKey: "134", shortDescription: "Drained gap", inCatalog: true },
+    { phaseKey: "135", shortDescription: "Empty placeholder", inCatalog: true },
+    { phaseKey: "137", shortDescription: "Another drained gap", inCatalog: true },
+    { phaseKey: "145", shortDescription: "Upcoming", inCatalog: true }
+  ];
+  const rows = buildPhaseRosterRowsWhenNoCurrent(
+    phases,
+    slice,
+    ["132", "134", "137", "139", "140", "143", "144"],
+    120,
+    ["145"]
+  );
+  assert.deepEqual(
+    rows.map((x) => ({ k: x.phaseKey, s: x.status })),
+    [
+      { k: "144", s: "delivered" },
+      { k: "145", s: "future" }
+    ]
+  );
+});
+
 test("buildNarrowPhaseRosterRows returns no-workspace-ordinal when phase not parseable", () => {
   const r = buildNarrowPhaseRosterRows(
     [{ phaseKey: "1", shortDescription: null, inCatalog: true }],
