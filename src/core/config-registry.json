@@ -1149,7 +1149,7 @@
   "skills.discoveryRoots": {
     "key": "skills.discoveryRoots",
     "type": "array",
-    "description": "Workspace-relative directories scanned for skill packs (Claude-shaped: <root>/<skill-id>/SKILL.md).",
+    "description": "Workspace-relative directories scanned for skill packs (Claude-shaped: <root>/<skill-id>/SKILL.md). Default remains `.claude/skills` (Claude Code + kit dual-install). Module-authored packs may live under `src/modules/<module>/skills/<id>/` as the source copy — mirror into a discovery root (do not list both the module source and `.claude/skills` for the same skill id; discovery fails closed on duplicates). Example: agent-bug-reporting ships `wc-bug-report` under `src/modules/agent-bug-reporting/skills/wc-bug-report/` mirrored to `.claude/skills/wc-bug-report/`.",
     "default": [".claude/skills"],
     "domainScope": "project",
     "owningModule": "skills",
