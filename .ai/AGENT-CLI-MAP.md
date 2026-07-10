@@ -93,6 +93,8 @@ Seed the builtin `wc-bug-reporter` definition (Tier B / `subagents.persist`; pre
 - `pnpm exec wk run seed-wc-bug-reporter '{}'`
 - `pnpm exec wk run seed-wc-bug-reporter '{"apply":true,"expectedPlanningGeneration":<n>,"policyApproval":{"confirmed":true,"rationale":"seed wc-bug-reporter definition"}}'`
 
+**Disable / fallback:** set `modules.disabled` to include `agent-bug-reporting` — router drops both commands (`unknown-command`). Agents skip filing or use proposed-only `create-task` (see runbook *Module disable / fallback*).
+
 ## Contract: no hand-editing lifecycle in the task store
 
 Use **`workspace-kit run run-transition`** (and related commands). Do not edit SQLite/JSON task stores for routine status motion.
