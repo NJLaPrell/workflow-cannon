@@ -1,7 +1,7 @@
 meta|doc=backlog|truth=canonical|schema=base.v2|status=active|profile=skills
 
 project|name=workflow-cannon|type=skill_pack_backlog|scope=repo
-epic|id=skill-pack-first-party-v1|phase=109|status=active
+epic|id=skill-pack-first-party-v1|phase=unphased|status=active|note=phase-109-drained-2026-07-10
 
 # First-party Workflow Cannon skill pack backlog (v1)
 
