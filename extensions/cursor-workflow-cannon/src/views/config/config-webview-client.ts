@@ -832,8 +832,8 @@ export const CONFIG_WEBVIEW_STYLES = `
       min-height: 1.35em;
     }
     .cfg-field-hint[hidden] { display: none; }
-    .cfg-field-hint--ok { color: var(--vscode-testing-iconPassed, #3fb950); }
-    .cfg-field-hint--err { color: var(--vscode-errorForeground, #f85149); }
+    .cfg-field-hint--ok { color: var(--vscode-testing-iconPassed, #4ec9b0); }
+    .cfg-field-hint--err { color: var(--vscode-errorForeground, #f44747); }
     .cfg-field-hint--info { opacity: 0.85; }
     .cfg-explain-table { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 6px; }
     .cfg-explain-table th, .cfg-explain-table td { border: 1px solid var(--vscode-widget-border); padding: 4px 6px; text-align: left; vertical-align: top; }

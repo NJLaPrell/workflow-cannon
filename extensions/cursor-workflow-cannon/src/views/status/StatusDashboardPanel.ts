@@ -159,7 +159,7 @@ export class StatusDashboardPanel {
     }
     .wc-title { margin: 0; font-size: 15px; font-weight: 600; }
     .wc-status-head { margin-bottom: 12px; }
-    .wc-status-head .wc-title { font-size: 18px; }
+    .wc-status-head .wc-title { font-size: 15px; }
     .wc-sub { margin: 4px 0 0; opacity: 0.8; font-size: 12px; }
     .wc-card {
       border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.35));
