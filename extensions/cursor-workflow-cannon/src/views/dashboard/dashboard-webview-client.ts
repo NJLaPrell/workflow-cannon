@@ -465,6 +465,11 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
     var configState = captureConfigTabState(root);
     var preservedQueue = captureQueueSectionUiState(root);
     root.innerHTML = html;
+    // Defensive: never leave shell-initial after a successful root replace.
+    var shell = root.firstElementChild;
+    if (shell && shell.classList) {
+      shell.classList.remove('wc-dashboard-shell-initial');
+    }
     restoreDashboardExpandableUiState(root, preservedUi);
     restoreConfigTabState(root, configState);
     applyTab(activeTab, activeTab === 'task-engine' || activeTab === 'status' || activeTab === 'config' || activeTab === 'cae');
@@ -734,6 +739,15 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
     );
     el.classList.add('wc-dash-section--' + st);
     el.setAttribute('aria-busy', st === 'loading' ? 'true' : 'false');
+    // Section patches can hydrate content while the outer shell still carries
+    // wc-dashboard-shell-initial (lost wcReplaceRoot). Clear it so the startup
+    // timeout probe does not treat a usable dashboard as still loading.
+    if (st === 'ready' || st === 'stale' || st === 'error') {
+      var shell = root.firstElementChild;
+      if (shell && shell.classList && shell.classList.contains('wc-dashboard-shell-initial')) {
+        shell.classList.remove('wc-dashboard-shell-initial');
+      }
+    }
     if (sectionId === 'plan-artifact' || sectionId === 'ideas' || sectionId === 'planning-roster') {
       renderPlanMermaidDiagrams(el);
     }
