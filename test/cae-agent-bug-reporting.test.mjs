@@ -33,12 +33,6 @@ async function workspaceWithJsonRegistry() {
   prepareKitSqliteDatabase(db);
   db.close();
   await cp(path.join(root, ".ai"), path.join(ws, ".ai"), { recursive: true });
-  await mkdir(path.join(ws, "src", "modules", "agent-bug-reporting", "cae"), { recursive: true });
-  await cp(
-    path.join(root, "src", "modules", "agent-bug-reporting", "cae"),
-    path.join(ws, "src", "modules", "agent-bug-reporting", "cae"),
-    { recursive: true }
-  );
   return ws;
 }
 
@@ -101,7 +95,7 @@ test("registry seed includes advisory do activations for agent bug filing", asyn
 
   const art = artifacts.artifacts.find((a) => a.artifactId === AGENT_BUG_FILING_ARTIFACT_ID);
   assert.ok(art, "artifact seed missing");
-  assert.equal(art.ref.path, "src/modules/agent-bug-reporting/cae/friction-to-file-nudge.md");
+  assert.equal(art.ref.path, ".ai/cae/agent-bug-filing-nudge.md");
 
   for (const id of [AGENT_BUG_FILING_ACTIVATION_TOOL_FAILURES, AGENT_BUG_FILING_ACTIVATION_FRICTION_KIND]) {
     const act = activations.activations.find((a) => a.activationId === id);
@@ -189,10 +183,7 @@ test("cae-guidance-preview surfaces filing nudge with spawn/file-bug-report next
   assert.doesNotMatch(String(filing.title), /\bready\b.*(?:promote|grant|status)/i);
   assert.doesNotMatch(String(filing.title), /release closeout|cut a release/i);
 
-  const nudgeMd = await readFile(
-    path.join(root, "src", "modules", "agent-bug-reporting", "cae", "friction-to-file-nudge.md"),
-    "utf8"
-  );
+  const nudgeMd = await readFile(path.join(root, ".ai", "cae", "agent-bug-filing-nudge.md"), "utf8");
   assert.match(nudgeMd, /file-bug-report/);
   assert.match(nudgeMd, /wc-bug-reporter/);
   assert.match(nudgeMd, /host-agnostic|Spawn/i);

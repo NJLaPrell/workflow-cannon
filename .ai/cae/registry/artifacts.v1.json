@@ -6,7 +6,7 @@
       "schemaVersion": 1,
       "artifactId": "cae.runbook.agent-bug-filing-nudge",
       "artifactType": "runbook",
-      "ref": { "path": "src/modules/agent-bug-reporting/cae/friction-to-file-nudge.md" },
+      "ref": { "path": ".ai/cae/agent-bug-filing-nudge.md" },
       "title": "Spawn wc-bug-reporter / file-bug-report on WC friction (advisory)",
       "tags": ["cae", "agent-bug-reporting", "file-bug-report", "wc-bug-reporter", "advisory"]
     },
