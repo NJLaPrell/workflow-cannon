@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "fragmentKind": "approval",
+  "approval": {
+    "actor": "operator via chat closeout",
+    "timestamp": "2026-07-10T03:25:01.022Z",
+    "rationale": "Explicit operator approval to publish @workflow-cannon/workspace-kit@1.0.10 dist-tag latest. Mid-stream dashboard UX patch after Phase 148 (PRs #779-#783). Validation gates green (build/check/test/parity/maintainer-gates).",
+    "scope": "mid-stream publish @workflow-cannon/workspace-kit@1.0.10 dist-tag latest"
+  }
+}
