@@ -86,6 +86,13 @@ function describeScopeCondition(cond: Record<string, unknown>): string | null {
   if (kind === "taskIdPattern" && typeof cond.pattern === "string") {
     return `task id matches /${cond.pattern}/`;
   }
+  if (kind === "agentFailureSignal" && typeof cond.field === "string") {
+    const op = typeof cond.operator === "string" ? cond.operator : "==";
+    const val = Array.isArray(cond.value)
+      ? cond.value.filter((x): x is string => typeof x === "string").join("|")
+      : JSON.stringify(cond.value ?? null);
+    return `agentSignals.${cond.field} ${op} ${val}`;
+  }
   return null;
 }
 

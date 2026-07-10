@@ -4,6 +4,14 @@
   "artifacts": [
     {
       "schemaVersion": 1,
+      "artifactId": "cae.runbook.agent-bug-filing-nudge",
+      "artifactType": "runbook",
+      "ref": { "path": ".ai/cae/agent-bug-filing-nudge.md" },
+      "title": "Spawn wc-bug-reporter / file-bug-report on WC friction (advisory)",
+      "tags": ["cae", "agent-bug-reporting", "file-bug-report", "wc-bug-reporter", "advisory"]
+    },
+    {
+      "schemaVersion": 1,
       "artifactId": "cae.playbook.improvement-discovery",
       "artifactType": "playbook",
       "ref": { "path": ".ai/playbooks/improvement-task-discovery.md" },
