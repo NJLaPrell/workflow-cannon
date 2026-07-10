@@ -108,18 +108,13 @@ export function planArtifactTitleLabel(row: Record<string, unknown>): string {
   return title.length > 0 ? title : "Untitled Plan";
 }
 
-const GENERIC_PLAN_ROLLUP_TITLES = new Set(["idea plan", "untitled plan"]);
-
-/** User-facing label for plan rollups/cards; disambiguates generic migration titles. */
+/** User-facing label for plan rollups/cards: `ID - Title` when a source idea exists. */
 export function planArtifactRollupDisplayLabel(row: Record<string, unknown>): string {
   const sourceIdeaTitle = String(row.sourceIdeaTitle ?? "").trim();
-  const title = planArtifactTitleLabel(row);
-  if (sourceIdeaTitle.length > 0) {
-    return sourceIdeaTitle;
-  }
+  const title = sourceIdeaTitle.length > 0 ? sourceIdeaTitle : planArtifactTitleLabel(row);
   const sourceIdeaId = String(row.sourceIdeaId ?? "").trim();
-  if (sourceIdeaId.length > 0 && GENERIC_PLAN_ROLLUP_TITLES.has(title.toLowerCase())) {
-    return `${title} · ${sourceIdeaId}`;
+  if (sourceIdeaId.length > 0) {
+    return `${sourceIdeaId} - ${title}`;
   }
   return title;
 }

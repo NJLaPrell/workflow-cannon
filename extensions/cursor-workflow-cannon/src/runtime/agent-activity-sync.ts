@@ -1,6 +1,5 @@
 import * as vscode from "vscode";
 import fs from "node:fs";
-import type { DashboardAgentStatusKind } from "@workflow-cannon/workspace-kit/contracts/dashboard-summary-run";
 import type { CommandClient, CommandClientActivityEnvelope } from "./command-client.js";
 import {
   buildCursorProjectsAgentTranscriptsPath,
@@ -8,7 +7,9 @@ import {
   type CursorTranscriptActiveSubagent
 } from "./cursor-transcript-agent-activity-bridge.js";
 import { thinkingLevelFromModelSlug } from "./agent-activity-profile.js";
+import { classifyOrchestratorActivityKind } from "./classify-orchestrator-activity-kind.js";
 import { logWc } from "./workflow-cannon-log.js";
+import type { DashboardAgentStatusKind } from "@workflow-cannon/workspace-kit/contracts/dashboard-summary-run";
 
 export type AgentActivitySyncSettings = {
   enabled: boolean;
@@ -71,7 +72,6 @@ export class AgentActivitySyncCoordinator {
   private transcriptWatcher: fs.FSWatcher | undefined;
   private idleTimer: ReturnType<typeof setInterval> | undefined;
   private debounceTimer: ReturnType<typeof setTimeout> | undefined;
-  private lastDashboardActivityAt = 0;
   private lastParentSessionId: string | null = null;
   private started = false;
 
@@ -109,8 +109,9 @@ export class AgentActivitySyncCoordinator {
     };
   }
 
+  /** Kept for CommandClient dashboard-boundary hooks; no longer suppresses orchestrator sync. */
   noteDashboardActivity(): void {
-    this.lastDashboardActivityAt = Date.now();
+    // Intentionally empty — idle downgrades must not be gated while the dashboard is open.
   }
 
   start(): void {
@@ -199,25 +200,18 @@ export class AgentActivitySyncCoordinator {
     }
     this.lastParentSessionId = context.parentSessionId;
 
-    const dashboardRecent = Date.now() - this.lastDashboardActivityAt < 30_000;
-    const orchestratorKind: DashboardAgentStatusKind =
+    const orchestratorKind = classifyOrchestratorActivityKind({
+      activeSubagentCount: context.activeSubagents.length
+    });
+    await this.recordOrchestratorActivity(
+      settings,
+      orchestratorKind,
       context.activeSubagents.length > 0
-        ? "delegating_task"
-        : Date.now() - context.parentUpdatedAtMs < settings.activeSubagentWindowSeconds * 1000
-          ? "working_task"
-          : "awaiting_instruction";
-
-    if (!dashboardRecent) {
-      await this.recordOrchestratorActivity(
-        settings,
-        orchestratorKind,
-        context.activeSubagents.length > 0
-          ? `Delegating ${String(context.activeSubagents.length)} subagent${context.activeSubagents.length === 1 ? "" : "s"}`
-          : null,
-        reason,
-        context.parentSessionId
-      );
-    }
+        ? `Delegating ${String(context.activeSubagents.length)} subagent${context.activeSubagents.length === 1 ? "" : "s"}`
+        : null,
+      reason,
+      context.parentSessionId
+    );
 
     for (const subagent of context.activeSubagents) {
       await this.recordSubagentActivity(settings, subagent, context.parentSessionId, reason);

@@ -1309,13 +1309,6 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       if (msg?.type === "undoDeleteIdea") {
         await this.onUndoDeleteIdeaFromDashboard();
       }
-      if (msg?.type === "reorderIdeas") {
-        const rawIds = Array.isArray(msg.ideaIds) ? msg.ideaIds : [];
-        const ideaIds = rawIds
-          .map((value: unknown) => (typeof value === "string" ? value.trim() : ""))
-          .filter((value: string) => value.length > 0);
-        await this.onReorderIdeasFromDashboard(ideaIds);
-      }
       if (msg?.type === "prefillIdeaPlanningChat") {
         const ideaId = typeof msg.ideaId === "string" ? msg.ideaId.trim() : "";
         const title = typeof msg.title === "string" ? msg.title.trim() : "";
@@ -3791,54 +3784,6 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     await this.view?.webview.postMessage({ type: "wcIdeaMutationResult", operation: "undo-delete", ok: true });
   }
 
-  private async onReorderIdeasFromDashboard(visibleIdeaIds: string[]): Promise<void> {
-    const orderedVisible = [...new Set(visibleIdeaIds.map((id) => id.trim()).filter((id) => id.length > 0))];
-    if (orderedVisible.length < 2) {
-      await this.view?.webview.postMessage({ type: "wcIdeaMutationResult", operation: "reorder", ok: false, message: "At least two ideas are required to reorder." });
-      return;
-    }
-    const listed = await this.client.run("list-ideas", {});
-    if (!listed.ok) {
-      const message = (listed.message ?? String(listed.code ?? "list-ideas failed")).slice(0, 900);
-      await this.view?.webview.postMessage({ type: "wcIdeaMutationResult", operation: "reorder", ok: false, message });
-      return;
-    }
-    const data = listed.data && typeof listed.data === "object" ? (listed.data as Record<string, unknown>) : {};
-    const allIdeas = Array.isArray(data.ideas) ? data.ideas : [];
-    const currentIds = allIdeas
-      .map((idea) => {
-        if (!idea || typeof idea !== "object") {
-          return "";
-        }
-        const id = (idea as Record<string, unknown>).id;
-        return typeof id === "string" ? id.trim() : "";
-      })
-      .filter((id) => id.length > 0);
-    const current = new Set(currentIds);
-    const ordered = orderedVisible.filter((id) => current.has(id));
-    const remaining = currentIds.filter((id) => !ordered.includes(id));
-    const ideaIds = [...ordered, ...remaining];
-    if (ideaIds.length !== currentIds.length || ordered.length < 2) {
-      await this.view?.webview.postMessage({ type: "wcIdeaMutationResult", operation: "reorder", ok: false, message: "Idea order changed; refresh and try again." });
-      return;
-    }
-    const out = await this.client.run("reorder-ideas", {
-      ideaIds,
-      policyApproval: dashboardPolicyApproval(
-        { workflowId: "ideas", action: "reorder", command: "reorder-ideas" },
-        {}
-      )
-    });
-    if (!out.ok) {
-      const message = (out.message ?? String(out.code ?? "reorder-ideas failed")).slice(0, 900);
-      await this.view?.webview.postMessage({ type: "wcIdeaMutationResult", operation: "reorder", ok: false, message });
-      return;
-    }
-    ingestPlanningMetaFromData(out.data as Record<string, unknown> | undefined);
-    await this.applyDashboardMutationInvalidation("ideas");
-    await this.view?.webview.postMessage({ type: "wcIdeaMutationResult", operation: "reorder", ok: true });
-  }
-
   private async onPrefillIdeaPlanningChat(ideaId: string, title: string, note: string): Promise<void> {
     const existing = this.inFlightIdeaPlan.get(ideaId);
     if (existing) {
@@ -6216,60 +6161,21 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       white-space: nowrap;
       overflow: hidden;
     }
-    .wc-ideas-list {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      margin: 6px 0 8px;
-    }
     .wc-ideas-row {
-      display: flex;
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 6px;
-      padding: 4px 6px;
-      border-radius: 4px;
-      background: var(--vscode-textCodeBlock-background);
-      border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.35));
-    }
-    .wc-ideas-row-dragging {
-      opacity: 0.55;
-      border-color: var(--vscode-focusBorder);
-    }
-    .wc-ideas-row-view {
-      display: flex;
-      align-items: flex-start;
-      gap: 6px;
-      width: 100%;
-    }
-    .wc-ideas-row-main {
-      flex: 1;
-      min-width: 0;
-      overflow-wrap: anywhere;
-    }
-    .wc-ideas-row-main p {
-      margin-top: 2px;
-    }
-    .wc-ideas-drag-handle {
-      flex: 0 0 auto;
-      color: var(--vscode-descriptionForeground, var(--vscode-foreground));
-      font-family: var(--vscode-editor-font-family);
-      font-size: 11px;
-      line-height: 1.4;
-      padding-top: 2px;
-      cursor: grab;
-    }
-    .wc-ideas-row-actions {
-      display: flex;
       flex-wrap: wrap;
-      gap: 4px;
-      justify-content: flex-end;
+    }
+    .wc-ideas-row .dash-row-label p {
+      margin: 2px 0 0;
+    }
+    .wc-ideas-row .dash-row-actions {
+      opacity: 1;
     }
     .wc-ideas-edit-form {
       display: flex;
       flex-direction: column;
       gap: 6px;
       width: 100%;
+      flex-basis: 100%;
     }
     .wc-ideas-edit-form[hidden] {
       display: none;
@@ -7253,7 +7159,10 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       justify-content: space-between;
       gap: 8px;
       list-style: none;
+      cursor: pointer;
+      user-select: none;
     }
+    .wc-plan-card-rollup-summary::-webkit-details-marker { display: none; }
     .wc-plan-card-rollup-title-wrap {
       display: flex;
       flex-direction: column;
@@ -7262,11 +7171,6 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       flex: 1;
     }
     .wc-plan-card-rollup-title { overflow-wrap: anywhere; }
-    .wc-plan-card-rollup-idea-id {
-      font-size: 10px;
-      font-weight: 600;
-      letter-spacing: 0.02em;
-    }
     .wc-plan-card-rollup-subtitle {
       display: block;
       font-size: 11px;
@@ -7298,10 +7202,6 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       outline-offset: 1px;
       background: color-mix(in srgb, var(--vscode-focusBorder, #4fc1ff) 12%, var(--vscode-textCodeBlock-background));
     }
-    .wc-plan-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
-    .wc-plan-card-title-wrap { min-width: 0; flex: 1; }
-    .wc-plan-card-title { margin: 0; overflow-wrap: anywhere; }
-    .wc-plan-card-desc { margin: 2px 0 0 0; font-size: 11px; overflow-wrap: anywhere; }
     .wc-plan-status-pill {
       display: inline-flex;
       align-items: center;

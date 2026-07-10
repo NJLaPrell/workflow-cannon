@@ -221,7 +221,11 @@ test("renderDashboardRootInnerHtml places planning cards on the Planning tab", (
   assert.match(planningPanel, /wc-ideas-head/);
   assert.match(planningPanel, /data-wc-action="idea-add"/);
   assert.match(planningPanel, />New Idea</);
-  assert.match(planningPanel, /wc-ideas-drag-handle/);
+  assert.doesNotMatch(planningPanel, /wc-ideas-drag-handle/);
+  assert.doesNotMatch(planningPanel, /draggable="true"/);
+  assert.doesNotMatch(planningPanel, /Drag to reorder/);
+  assert.doesNotMatch(planningPanel, /<span class="wc-tag">open<\/span>/);
+  assert.match(planningPanel, /dash-row wc-ideas-row/);
   assert.match(planningPanel, /data-wc-action="idea-edit"/);
   assert.match(planningPanel, /data-wc-action="idea-delete"/);
   assert.match(planningPanel, /data-wc-action="idea-update"/);
@@ -232,8 +236,6 @@ test("renderDashboardRootInnerHtml places planning cards on the Planning tab", (
   assert.match(planningPanel, /data-wc-ideas-toast="1"/);
   assert.match(planningPanel, /data-wc-ideas-edit-form="1"/);
   assert.match(planningPanel, /data-wc-ideas-list="1"/);
-  assert.match(planningPanel, /draggable="true"/);
-  assert.match(planningPanel, /Drag to reorder/);
 });
 
 test("renderDashboardRootInnerHtml truncates long idea notes", () => {
@@ -693,6 +695,11 @@ test("renderDashboardRootInnerHtml renders PlanArtifact card grid for a draft pl
   assert.match(html, /wc-plan-execution-linkages-table/);
   assert.match(html, /data-wc-ui-state-key="plan-123-execution-linkages"/);
   assert.match(html, /wc-plan-status-pill wc-plan-status-draft">Draft/);
+  assert.match(html, /wc-plan-card-rollup-summary/);
+  assert.doesNotMatch(html, /wc-plan-card-head/);
+  assert.doesNotMatch(html, /wc-plan-card-title/);
+  assert.doesNotMatch(html, /wc-plan-card-desc/);
+  assert.equal((html.match(/wc-plan-status-pill wc-plan-status-draft">Draft/g) || []).length, 1);
   assert.match(html, /data-wc-ui-state-key="plan-state-new"/);
   assert.match(html, /<details class="wc-plan-state-bucket"[^>]*data-wc-ui-state-key="plan-state-new"[^>]*open/);
   assert.match(html, /Plans<\/b> · 1 total/);
@@ -1116,10 +1123,10 @@ test("renderDashboardRootInnerHtml disambiguates generic Idea plan drafts in Dra
     }
   });
 
-  assert.match(html, /Merge Ideas and Planning modules/);
+  assert.match(html, /I006 - Merge Ideas and Planning modules/);
   assert.match(html, /Ideas and Planning modules have overlapping concerns\./);
-  assert.match(html, /Test Ideaasdfasdfas/);
-  assert.match(html, /wc-plan-card-rollup-idea-id/);
+  assert.match(html, /I007 - Test Ideaasdfasdfas/);
+  assert.doesNotMatch(html, /wc-plan-card-rollup-idea-id/);
   assert.doesNotMatch(html, />Idea plan \(2\)</);
   assert.doesNotMatch(html, /wc-plan-title-group/);
 });
@@ -1745,6 +1752,87 @@ test("renderDashboardRootInnerHtml renders MCP status on Status tab when provide
   assert.match(statusPanel, /dash-status-mcp/);
   assert.match(statusPanel, /data-wc-mcp-status="not_configured"/);
   assert.match(statusPanel, /CLI fallback/);
+});
+
+test("renderDashboardRootInnerHtml shows empty Agent Activity for idle-only orchestrator lease", () => {
+  const html = renderDashboardRootInnerHtml({
+    ok: true,
+    data: {
+      agentStatus: {
+        schemaVersion: 1,
+        source: "live_activity",
+        kind: "awaiting_instruction",
+        label: "Awaiting instruction",
+        confidence: "high",
+        updatedAt: "2026-05-06T00:00:00.000Z"
+      },
+      agentActivitySummary: {
+        schemaVersion: 1,
+        generatedAt: "2026-05-06T00:00:00.000Z",
+        source: "live_activity",
+        activeCount: 1,
+        staleCount: 0,
+        needsAttentionCount: 0,
+        main: {
+          schemaVersion: 1,
+          rowId: "cursor-orchestrator",
+          displayName: "cursor-orchestrator",
+          role: "orchestrator",
+          source: "live_activity",
+          sourceConfidence: "high",
+          status: "awaiting_instruction",
+          statusLabel: "Idle",
+          work: {
+            taskId: null,
+            title: null,
+            command: null,
+            phaseKey: null,
+            taskStatus: null,
+            assignmentId: null,
+            sessionId: "cursor-main",
+            currentStep: null
+          },
+          refs: {
+            activityId: "cursor:cursor-main",
+            agentId: "cursor-orchestrator",
+            sessionId: "cursor-main",
+            assignmentId: null,
+            agentDefinitionId: "orchestrator",
+            subagentDefinitionId: null,
+            taskId: null,
+            prNumber: null
+          },
+          freshness: {
+            updatedAt: "2026-05-06T00:00:00.000Z",
+            startedAt: null,
+            expiresAt: null,
+            state: "fresh"
+          },
+          attention: { state: "none", message: null }
+        },
+        active: [],
+        needsAttention: [],
+        inferredFallback: null,
+        sourceMap: {
+          liveActivityCount: 1,
+          teamExecutionCount: 0,
+          subagentSessionCount: 0,
+          derivedFallbackUsed: false
+        }
+      },
+      stateSummary: { proposed: 0, ready: 0, in_progress: 0, completed: 0, total: 0 },
+      suggestedNext: null,
+      planningSession: null,
+      taskStoreLastUpdated: "2026-01-01T00:00:00.000Z",
+      workspaceStatus: { currentKitPhase: "1", nextKitPhase: "2", activeFocus: "Test" },
+      blockingAnalysis: [],
+      dependencyOverview: deliverTestDepOverview
+    }
+  });
+  assert.match(html, /No agents active/);
+  assert.match(html, /data-agent-activity-state="idle"/);
+  assert.doesNotMatch(html, /Main Agent/);
+  assert.doesNotMatch(html, /cursor-orchestrator/);
 });
 
 test("renderDashboardRootInnerHtml renders escaped WC Agent status banner from agentStatus", () => {

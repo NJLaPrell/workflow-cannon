@@ -164,10 +164,10 @@ test("filterPlanArtifactRowsForRollup drops accepted rows superseded by delivere
   assert.equal(buckets.get("delivered")?.length, 1);
 });
 
-test("planArtifactRollupDisplayLabel disambiguates generic Idea plan titles", () => {
+test("planArtifactRollupDisplayLabel formats as ID - Title", () => {
   assert.equal(
     planArtifactRollupDisplayLabel({ title: "Idea plan", sourceIdeaId: "I006" }),
-    "Idea plan · I006"
+    "I006 - Idea plan"
   );
   assert.equal(
     planArtifactRollupDisplayLabel({
@@ -175,11 +175,15 @@ test("planArtifactRollupDisplayLabel disambiguates generic Idea plan titles", ()
       sourceIdeaId: "I006",
       sourceIdeaTitle: "Merge Ideas and Planning modules"
     }),
-    "Merge Ideas and Planning modules"
+    "I006 - Merge Ideas and Planning modules"
   );
   assert.equal(
     planArtifactRollupDisplayLabel({ title: "Agent Planning Tools v1", sourceIdeaId: "I011" }),
-    "Agent Planning Tools v1"
+    "I011 - Agent Planning Tools v1"
+  );
+  assert.equal(
+    planArtifactRollupDisplayLabel({ title: "Standalone plan" }),
+    "Standalone plan"
   );
 });
 
@@ -199,7 +203,7 @@ test("groupPlanRowsForStateBucket keeps draft rows flat with idea labels", () =>
     { planId: "b", title: "Idea plan", sourceIdeaId: "I007", updatedAt: "2026-07-07T00:00:00.000Z" }
   ]);
   assert.equal(groups.length, 2);
-  assert.equal(groups[0].titleLabel, "Idea plan · I006");
-  assert.equal(groups[1].titleLabel, "Idea plan · I007");
+  assert.equal(groups[0].titleLabel, "I006 - Idea plan");
+  assert.equal(groups[1].titleLabel, "I007 - Idea plan");
   assert.equal(groups[0].rows.length, 1);
 });
