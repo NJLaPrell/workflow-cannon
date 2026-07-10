@@ -8,6 +8,19 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [1.0.9] - 2026-07-10
+
+Patch — **Phase 148 Agent Bug Reporting** (Tier C `file-bug-report`, `wc-bug-report` skill, host-agnostic spawn adapters, advisory CAE nudges, critical-path tests).
+
+### Added
+
+- **agent-bug-reporting WorkflowModule** — module registration, config, and instruction surface for agent-filed proposed improvements (T100855).
+- **`file-bug-report` (Tier C)** — creates `improvement@proposed` with rich evidence metadata, planningGeneration one-shot under `require`, and `evidenceKey`/`clientMutationId` dedupe; fail-closed for ready/non-improvement (T100856).
+- **`wc-bug-report` skill pack** — dual-install discoverable skill with parent fire-and-forget spawn contract, structured handoff, cheap `composer-2.5` child filing, and CLI fallback (T100857).
+- **wc-bug-reporter seed + host adapters** — Cursor + CLI spawn adapters; Antigravity / VS Code Copilot stub contracts; runbook for host-agnostic filing (T100858).
+- **CAE advisory do activations** — nudge spawn `wc-bug-reporter` / `file-bug-report` on WC failure and agent friction without ready/release powers (T100859).
+- **Critical-path tests and disable docs** — empty/first-run filing coverage, module-disable → `unknown-command` / create-task fallback path documented (T100860).
+
 ## [1.0.8] - 2026-07-09
 
 Patch — **Phase 146 Dashboard Loading & Sync (first paint)** (single startup owner, CLI-primary cold bootstrap, quiet service promote, SLA/empty/fallback coverage).
