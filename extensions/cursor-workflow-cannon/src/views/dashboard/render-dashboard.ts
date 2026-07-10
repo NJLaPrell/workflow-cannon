@@ -2794,7 +2794,6 @@ function renderDashboardIdeasSectionInnerHtml(
       const id = String(row.id ?? "").trim();
       const title = String(row.title ?? id).trim();
       const note = typeof row.note === "string" ? row.note.trim() : "";
-      const status = String(row.status ?? "open").trim();
       const planningChatSession = row.planningChatSession && typeof row.planningChatSession === "object"
         ? (row.planningChatSession as Record<string, unknown>)
         : null;
@@ -2839,30 +2838,25 @@ function renderDashboardIdeasSectionInnerHtml(
         ideasUnifiedModelEnabled
       });
       return (
-        '<div class="wc-ideas-row" draggable="true" data-wc-idea-id="' +
+        '<div class="dash-row wc-ideas-row" role="listitem" data-wc-idea-id="' +
         idAttr +
         '" data-wc-idea-title="' +
         titleAttr +
         '" data-wc-idea-note="' +
         noteAttr +
         '">' +
-        '<div class="wc-ideas-row-view">' +
-        '<span class="wc-ideas-drag-handle" aria-hidden="true" title="Drag to reorder">::</span>' +
-        '<div class="wc-ideas-row-main"><b data-wc-idea-title-view="1">' +
+        '<span class="dash-row-label">' +
+        (id ? '<span class="dash-task-row-id" data-wc-idea-id-view="1">' + escapeHtml(id) + "</span> " : "") +
+        '<span class="dash-task-row-summary" data-wc-idea-title-view="1">' +
         escapeHtml(title) +
-        "</b>" +
-        (id ? " <code>" + escapeHtml(id) + "</code>" : "") +
-        (displayNote ? '<p class="muted" data-wc-idea-note-view="1">' + escapeHtml(displayNote) + "</p>" : "") +
-        "</div>" +
-        '<span class="wc-tag">' +
-        escapeHtml(status) +
         "</span>" +
-        '<span class="wc-ideas-row-actions">' +
+        (displayNote ? '<p class="muted" data-wc-idea-note-view="1">' + escapeHtml(displayNote) + "</p>" : "") +
+        "</span>" +
+        '<span class="dash-row-actions">' +
         lifecycleActions +
         '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="idea-edit">Edit</button>' +
         '<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-wc-action="idea-delete">Delete</button>' +
         "</span>" +
-        "</div>" +
         '<div class="wc-ideas-edit-form" data-wc-ideas-edit-form="1" hidden>' +
         '<input class="wc-input" data-wc-idea-edit-title="1" type="text" maxlength="180" value="' +
         titleAttr +
@@ -2885,7 +2879,7 @@ function renderDashboardIdeasSectionInnerHtml(
     ? '<p class="muted">Ideas unavailable.</p>'
     : rows.length === 0
       ? '<p class="muted">No ideas yet.</p>'
-      : '<div class="wc-ideas-list" data-wc-ideas-list="1">' + rows + "</div>";
+      : '<div class="dash-row-list wc-ideas-list" data-wc-ideas-list="1" role="list">' + rows + "</div>";
   const addBtn = available
     ? '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="idea-add" title="create-idea">New Idea</button>'
     : "";
@@ -4958,10 +4952,6 @@ function renderPlanArtifactCard(row: Record<string, unknown>, ideasUnifiedModelE
     phaseKey
   );
 
-  const ideaIdChipHtml =
-    sourceIdeaId.length > 0
-      ? '<span class="wc-plan-card-rollup-idea-id muted">' + escapeHtml(sourceIdeaId) + "</span>"
-      : "";
   const rollupSubtitleHtml =
     summaryText.length > 0
       ? '<span class="wc-plan-card-rollup-subtitle muted">' + escapeHtml(summaryText) + "</span>"
@@ -4982,7 +4972,6 @@ function renderPlanArtifactCard(row: Record<string, unknown>, ideasUnifiedModelE
     '<span class="wc-plan-card-rollup-title"><b>' +
     escapeHtml(title) +
     "</b></span>" +
-    ideaIdChipHtml +
     rollupSubtitleHtml +
     "</span>" +
     '<span class="wc-plan-status-pill ' +
@@ -4994,19 +4983,6 @@ function renderPlanArtifactCard(row: Record<string, unknown>, ideasUnifiedModelE
     '<article class="wc-plan-card ' +
     statusMeta.className +
     '">' +
-    '<div class="wc-plan-card-head">' +
-    '<div class="wc-plan-card-title-wrap">' +
-    '<p class="wc-plan-card-title"><b>' +
-    escapeHtml(title) +
-    "</b></p>" +
-    (summaryText.length > 0 ? '<p class="wc-plan-card-desc muted">' + escapeHtml(summaryText) + "</p>" : "") +
-    "</div>" +
-    '<span class="wc-plan-status-pill ' +
-    statusMeta.className +
-    '">' +
-    escapeHtml(statusMeta.label) +
-    "</span>" +
-    "</div>" +
     factsHtml +
     wbsHtml +
     risksHtml +
@@ -6351,17 +6327,62 @@ function renderDashboardAgentActivityFooter(summary: DashboardAgentActivitySumma
   );
 }
 
+function isIdleAgentStatus(status: unknown): boolean {
+  const value = String(status ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/[-\s]+/g, "_");
+  return value === "awaiting_instruction" || value === "idle";
+}
+
+/** True when the board would only show an idle orchestrator / idle inferred fallback. */
+function isIdleOnlyAgentActivitySummary(summary: DashboardAgentActivitySummary): boolean {
+  const mainRow = summary.main?.freshness.state === "expired" ? null : summary.main;
+  const mainRowId = mainRow?.rowId ?? "";
+  if (mainRow && !isIdleAgentStatus(mainRow.status)) {
+    return false;
+  }
+  const hasActiveOthers = summary.active.some(
+    (row: DashboardAgentActivityRow) =>
+      row.rowId !== mainRowId &&
+      row.attention.state === "none" &&
+      row.freshness.state !== "expired" &&
+      !isIdleAgentStatus(row.status)
+  );
+  if (hasActiveOthers) {
+    return false;
+  }
+  const hasAttention = summary.needsAttention.some(
+    (row: DashboardAgentActivityRow) => row.rowId !== mainRowId && row.freshness.state !== "expired"
+  );
+  if (hasAttention) {
+    return false;
+  }
+  const fallback = summary.inferredFallback;
+  if (!mainRow && fallback && !isIdleAgentStatus(fallback.kind)) {
+    return false;
+  }
+  return true;
+}
+
+function renderDashboardAgentActivityEmptyBoard(): string {
+  return (
+    '<section class="wc-agent-board dash-agent-status-banner dash-agent-activity-board" aria-label="Agent Activity" data-agent-activity-state="idle">' +
+    '<div class="wc-agent-empty">' +
+    '<span class="wc-agent-empty-icon" aria-hidden="true">◎</span>' +
+    '<div class="wc-agent-empty-msg">No agents active</div>' +
+    '<div class="wc-agent-empty-sub">Awaiting instruction</div>' +
+    "</div>" +
+    "</section>"
+  );
+}
+
 function renderDashboardAgentActivityBoard(summary: DashboardAgentActivitySummary | null | undefined): string {
   if (!summary || typeof summary !== "object") {
-    return (
-      '<section class="wc-agent-board dash-agent-status-banner dash-agent-activity-board" aria-label="Agent Activity">' +
-      '<div class="wc-agent-empty">' +
-      '<span class="wc-agent-empty-icon" aria-hidden="true">◎</span>' +
-      '<div class="wc-agent-empty-msg">No agents active</div>' +
-      '<div class="wc-agent-empty-sub">Awaiting instruction</div>' +
-      "</div>" +
-      "</section>"
-    );
+    return renderDashboardAgentActivityEmptyBoard();
+  }
+  if (isIdleOnlyAgentActivitySummary(summary)) {
+    return renderDashboardAgentActivityEmptyBoard();
   }
   const mainRow = summary.main?.freshness.state === "expired" ? null : summary.main;
   const mainRowHtml = mainRow ? renderDashboardAgentActivityRow(mainRow, "main") : renderDashboardAgentActivityFallback(summary);

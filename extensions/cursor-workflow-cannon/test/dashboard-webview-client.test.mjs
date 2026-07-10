@@ -33,13 +33,13 @@ test("buildDashboardWebviewBootstrapScript returns drawer + refresh client", () 
   assert.match(script, /type: 'updateIdea'/);
   assert.match(script, /type: 'deleteIdea'/);
   assert.match(script, /type:'undoDeleteIdea'/);
-  assert.match(script, /type: 'reorderIdeas'/);
+  assert.doesNotMatch(script, /type: 'reorderIdeas'/);
   assert.match(script, /prefillIdeaPlanningChat/);
   assert.match(script, /wcIdeaMutationResult/);
   assert.match(script, /data-wc-idea-title/);
   assert.match(script, /idea-undo-delete/);
-  assert.match(script, /dragstart/);
-  assert.match(script, /drop/);
+  assert.doesNotMatch(script, /dragstart/);
+  assert.doesNotMatch(script, /addEventListener\('drop'/);
   assert.match(script, /open-queue-task/);
   assert.match(script, /requestRevealQueueTask/);
   assert.match(script, /renderPlanMermaidDiagrams/);
