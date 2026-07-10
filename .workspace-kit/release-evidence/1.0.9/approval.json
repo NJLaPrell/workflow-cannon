@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "fragmentKind": "approval",
+  "approval": {
+    "actor": "operator via chat closeout",
+    "timestamp": "2026-07-10T01:00:32.841Z",
+    "rationale": "Phase 148 merged to main via PR #777; CI test/parity/release-readiness green. Explicit operator approval to publish @workflow-cannon/workspace-kit@1.0.9 dist-tag latest.",
+    "scope": "phase-148 publish @workflow-cannon/workspace-kit@1.0.9 dist-tag latest"
+  }
+}

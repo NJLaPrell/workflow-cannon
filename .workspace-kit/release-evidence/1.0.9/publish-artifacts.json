@@ -1,0 +1,208 @@
+{
+  "schemaVersion": 1,
+  "fragmentKind": "publishArtifacts",
+  "version": "1.0.9",
+  "packageName": "@workflow-cannon/workspace-kit",
+  "fragment": {
+    "schemaVersion": 1,
+    "fragmentKind": "publishArtifacts",
+    "version": "1.0.9",
+    "packageName": "@workflow-cannon/workspace-kit",
+    "publishArtifacts": [
+      {
+        "kind": "git-tag",
+        "ref": "v1.0.9",
+        "version": "1.0.9",
+        "present": true,
+        "commit": "497921f4db7d796576c4a246e5a5df333eeac781"
+      },
+      {
+        "kind": "github-release",
+        "url": "https://github.com/NJLaPrell/workflow-cannon/releases/tag/v1.0.9",
+        "tagName": "v1.0.9",
+        "publishedAt": "2026-07-10T01:00:33Z"
+      },
+      {
+        "kind": "npm",
+        "package": "@workflow-cannon/workspace-kit",
+        "version": "1.0.9",
+        "distTag": "latest",
+        "state": "already-published"
+      }
+    ],
+    "readinessChecks": [
+      {
+        "code": "release-version-present",
+        "state": "pass",
+        "blocking": false,
+        "summary": "package.json release version 1.0.9 is a valid semver tag candidate.",
+        "refs": [
+          {
+            "kind": "artifact",
+            "value": "package.json"
+          },
+          {
+            "kind": "command",
+            "value": "pnpm exec wk run propose-release-version '{}'",
+            "instructionPath": "src/modules/task-engine/instructions/propose-release-version.md"
+          }
+        ]
+      },
+      {
+        "code": "root-changelog-entry-present",
+        "state": "pass",
+        "blocking": false,
+        "summary": "CHANGELOG.md includes a 1.0.9 heading.",
+        "refs": [
+          {
+            "kind": "artifact",
+            "value": "CHANGELOG.md"
+          },
+          {
+            "kind": "command",
+            "value": "node scripts/check-release-diff-shape.mjs"
+          }
+        ]
+      },
+      {
+        "code": "maintainer-changelog-entry-present",
+        "state": "pass",
+        "blocking": false,
+        "summary": "docs/maintainers/CHANGELOG.md includes a 1.0.9 heading.",
+        "refs": [
+          {
+            "kind": "artifact",
+            "value": "docs/maintainers/CHANGELOG.md"
+          },
+          {
+            "kind": "command",
+            "value": "node scripts/check-release-diff-shape.mjs"
+          }
+        ]
+      },
+      {
+        "code": "task-engine-run-contracts-schema-aligned",
+        "state": "pass",
+        "blocking": false,
+        "summary": "schemas/task-engine-run-contracts.schema.json mirrors package version 1.0.9.",
+        "refs": [
+          {
+            "kind": "artifact",
+            "value": "schemas/task-engine-run-contracts.schema.json"
+          },
+          {
+            "kind": "command",
+            "value": "node scripts/check-task-engine-run-contracts.mjs"
+          }
+        ]
+      },
+      {
+        "code": "pilot-run-args-snapshot-aligned",
+        "state": "pass",
+        "blocking": false,
+        "summary": "schemas/pilot-run-args.snapshot.json mirrors package version 1.0.9.",
+        "refs": [
+          {
+            "kind": "artifact",
+            "value": "schemas/pilot-run-args.snapshot.json"
+          },
+          {
+            "kind": "command",
+            "value": "node scripts/check-pilot-run-args-snapshot.mjs"
+          },
+          {
+            "kind": "command",
+            "value": "node scripts/refresh-pilot-run-args-snapshot.mjs"
+          }
+        ]
+      },
+      {
+        "code": "git-tag-already-present",
+        "state": "info",
+        "blocking": false,
+        "summary": "Git tag v1.0.9 already exists at 497921f4db7d796576c4a246e5a5df333eeac781.",
+        "refs": [
+          {
+            "kind": "artifact",
+            "value": "refs/tags/v1.0.9"
+          },
+          {
+            "kind": "command",
+            "value": "git tag -l 'v1.0.9'"
+          },
+          {
+            "kind": "command",
+            "value": "pnpm exec wk run propose-release-version '{}'",
+            "instructionPath": "src/modules/task-engine/instructions/propose-release-version.md"
+          }
+        ]
+      },
+      {
+        "code": "github-release-already-published",
+        "state": "info",
+        "blocking": false,
+        "summary": "GitHub release for v1.0.9 already exists.",
+        "refs": [
+          {
+            "kind": "artifact",
+            "value": "https://github.com/NJLaPrell/workflow-cannon/releases/tag/v1.0.9"
+          },
+          {
+            "kind": "command",
+            "value": "gh release view v1.0.9 --json url,tagName,publishedAt"
+          }
+        ]
+      },
+      {
+        "code": "npm-version-already-published",
+        "state": "info",
+        "blocking": false,
+        "summary": "@workflow-cannon/workspace-kit@1.0.9 is already published on dist-tag latest.",
+        "refs": [
+          {
+            "kind": "artifact",
+            "value": "@workflow-cannon/workspace-kit@1.0.9"
+          },
+          {
+            "kind": "command",
+            "value": "npm view @workflow-cannon/workspace-kit version --json --tag=latest"
+          },
+          {
+            "kind": "command",
+            "value": "pnpm exec wk run propose-release-version '{}'",
+            "instructionPath": "src/modules/task-engine/instructions/propose-release-version.md"
+          }
+        ]
+      }
+    ],
+    "degraded": []
+  },
+  "planningGeneration": 356,
+  "planningGenerationPolicy": "require",
+  "cae": {
+    "schemaVersion": 1,
+    "evalMode": "shadow",
+    "traceId": "cae.trace.faa7e7fd17b1fd42b927a03592a4de5cad6f36fd",
+    "shadow": true,
+    "summary": {
+      "policyCount": 0,
+      "thinkCount": 0,
+      "doCount": 1,
+      "reviewCount": 0,
+      "shadowObservationCount": 1
+    }
+  },
+  "presentation": {
+    "templateId": "default",
+    "matchedSections": [
+      "cae"
+    ],
+    "cae": {
+      "kind": "shadow_preflight_v1",
+      "traceId": "cae.trace.faa7e7fd17b1fd42b927a03592a4de5cad6f36fd",
+      "evalMode": "shadow",
+      "degraded": false,
+      "agentRenderHint": "If present, summarize CAE shadow outcome in one short paragraph; when traceId is set, operators can run cae-explain / cae-get-trace."
+    }
+  }
+}

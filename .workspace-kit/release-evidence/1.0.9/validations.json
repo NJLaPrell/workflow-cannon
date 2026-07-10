@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "fragmentKind": "validations",
+  "fragment": {
+    "schemaVersion": 1,
+    "fragmentKind": "validations",
+    "phaseKey": null,
+    "validations": [
+      {
+        "command": "pnpm run build",
+        "conclusion": "success",
+        "source": "closeout-canonical"
+      },
+      {
+        "command": "pnpm run check",
+        "conclusion": "success",
+        "source": "closeout-canonical"
+      },
+      {
+        "command": "pnpm run test",
+        "conclusion": "success",
+        "source": "closeout-canonical"
+      },
+      {
+        "command": "pnpm run parity",
+        "conclusion": "success",
+        "source": "closeout-canonical"
+      },
+      {
+        "command": "node scripts/check-release-metadata.mjs",
+        "conclusion": "success",
+        "source": "closeout-canonical"
+      },
+      {
+        "command": "pnpm run pre-merge-gates",
+        "conclusion": "success",
+        "source": "closeout-canonical"
+      }
+    ],
+    "source": "closeout-canonical"
+  },
+  "planningGeneration": 356,
+  "planningGenerationPolicy": "require",
+  "cae": {
+    "schemaVersion": 1,
+    "evalMode": "shadow",
+    "traceId": "cae.trace.183b7971fb9a7c32974d9120f3370331396409f1",
+    "shadow": true,
+    "summary": {
+      "policyCount": 0,
+      "thinkCount": 0,
+      "doCount": 1,
+      "reviewCount": 0,
+      "shadowObservationCount": 1
+    }
+  },
+  "presentation": {
+    "templateId": "default",
+    "matchedSections": [
+      "cae"
+    ],
+    "cae": {
+      "kind": "shadow_preflight_v1",
+      "traceId": "cae.trace.183b7971fb9a7c32974d9120f3370331396409f1",
+      "evalMode": "shadow",
+      "degraded": false,
+      "agentRenderHint": "If present, summarize CAE shadow outcome in one short paragraph; when traceId is set, operators can run cae-explain / cae-get-trace."
+    }
+  }
+}

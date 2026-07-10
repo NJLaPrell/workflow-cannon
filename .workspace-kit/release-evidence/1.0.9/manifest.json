@@ -1,0 +1,324 @@
+{
+  "schemaVersion": 1,
+  "createdAt": "2026-07-10T01:06:27.429Z",
+  "releaseVersion": "1.0.9",
+  "packageName": "@workflow-cannon/workspace-kit",
+  "phaseKey": "148",
+  "git": {},
+  "approval": {
+    "actor": "operator via chat closeout",
+    "timestamp": "2026-07-10T01:00:32.841Z",
+    "rationale": "Phase 148 merged to main via PR #777; CI test/parity/release-readiness green. Explicit operator approval to publish @workflow-cannon/workspace-kit@1.0.9 dist-tag latest.",
+    "scope": "phase-148 publish @workflow-cannon/workspace-kit@1.0.9 dist-tag latest"
+  },
+  "releaseNotes": {
+    "source": "docs/maintainers/CHANGELOG.md",
+    "entries": [
+      "1.0.9 — Phase 148 Agent Bug Reporting",
+      "agent-bug-reporting WorkflowModule (T100855)",
+      "Tier C file-bug-report (T100856)",
+      "wc-bug-report skill pack (T100857)",
+      "wc-bug-reporter seed + host adapters (T100858)",
+      "advisory CAE bug-filing nudges (T100859)",
+      "critical-path tests + module-disable docs (T100860)"
+    ]
+  },
+  "validations": [
+    {
+      "command": "pnpm run build",
+      "result": "pass",
+      "at": "2026-07-10T00:29:57.437Z"
+    },
+    {
+      "command": "pnpm run check",
+      "result": "pass",
+      "at": "2026-07-10T00:29:57.437Z"
+    },
+    {
+      "command": "pnpm run check-release-metadata",
+      "result": "pass",
+      "at": "2026-07-10T00:29:57.437Z"
+    },
+    {
+      "command": "phase-closeout-readiness",
+      "result": "pass",
+      "at": "2026-07-10T00:29:57.437Z"
+    },
+    {
+      "command": "phase-delivery-preflight",
+      "result": "pass",
+      "at": "2026-07-10T00:29:57.437Z"
+    }
+  ],
+  "risks": [
+    {
+      "code": "team-assignment-projection-wipe",
+      "severity": "medium",
+      "message": "kit_team_assignments rows vanish after task-sync during Phase 148 drain; handoffs returned assignment-not-found. Delivery completed via PR + run-transition."
+    },
+    {
+      "code": "host-adapter-stubs",
+      "severity": "low",
+      "message": "Antigravity and VS Code Copilot adapters are stubs; Cursor + CLI cover the v1 filing path."
+    },
+    {
+      "code": "duplicate-publish-workflow-race",
+      "severity": "low",
+      "message": "Tag push + release.published both triggered publish-npm.yml; one run succeeded (29061367035), the other failed after package already published (29061366989)."
+    },
+    {
+      "code": "duplicate-publish-workflow-race",
+      "severity": "low",
+      "message": "Tag push + release.published both triggered publish-npm.yml; success run 29061367035; duplicate 29061366989 failed E403 already-published."
+    }
+  ],
+  "publishArtifacts": [
+    {
+      "kind": "ci-publish-run",
+      "url": "https://github.com/NJLaPrell/workflow-cannon/actions/runs/29061367035",
+      "conclusion": "success",
+      "note": "publish-npm.yml via release.published; sibling tag-push run 29061366989 failed with E403 after already-published"
+    }
+  ],
+  "readinessChecks": [],
+  "taskDeliveryEvidence": [
+    {
+      "taskId": "T100855",
+      "title": "Register agent-bug-reporting WorkflowModule",
+      "phaseKey": "148",
+      "deliveryEvidence": {
+        "schemaVersion": 1,
+        "branchName": "feature/T100855-register-agent-bug-reporting-workflowmodule",
+        "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/771",
+        "prNumber": 771,
+        "baseBranch": "release/phase-148",
+        "mergeSha": "b4b03313ad73a9e8a88fd44b6fb0d52887d0831c",
+        "checks": [
+          {
+            "name": "test",
+            "conclusion": "success"
+          }
+        ],
+        "validationCommands": [
+          {
+            "command": "pnpm run build",
+            "exitCode": 0
+          },
+          {
+            "command": "pnpm run check",
+            "exitCode": 0
+          },
+          {
+            "command": "node --test test/module-registry.test.mjs",
+            "exitCode": 0
+          }
+        ]
+      },
+      "deliveryEvidenceSummary": {
+        "schemaVersion": 1,
+        "mode": null
+      },
+      "deliveryWaiver": null
+    },
+    {
+      "taskId": "T100856",
+      "title": "Add file-bug-report command with rich evidence intake",
+      "phaseKey": "148",
+      "deliveryEvidence": {
+        "schemaVersion": 1,
+        "branchName": "feature/T100856-add-file-bug-report-command-with-rich-evidence-i",
+        "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/773",
+        "prNumber": 773,
+        "baseBranch": "release/phase-148",
+        "mergeSha": "0cfd3b0c0b6bcb29d2934f03dd422ef501d03823",
+        "checks": [
+          {
+            "name": "test",
+            "conclusion": "success"
+          },
+          {
+            "name": "parity",
+            "conclusion": "skipped"
+          },
+          {
+            "name": "release-readiness",
+            "conclusion": "skipped"
+          }
+        ],
+        "validationCommands": [
+          {
+            "command": "pnpm run build",
+            "result": "pass"
+          },
+          {
+            "command": "pnpm run check",
+            "result": "pass"
+          },
+          {
+            "command": "node --test test/file-bug-report.test.mjs",
+            "result": "pass"
+          }
+        ]
+      },
+      "deliveryEvidenceSummary": {
+        "schemaVersion": 1,
+        "mode": null
+      },
+      "deliveryWaiver": null
+    },
+    {
+      "taskId": "T100857",
+      "title": "Author wc-bug-report skill pack",
+      "phaseKey": "148",
+      "deliveryEvidence": {
+        "schemaVersion": 1,
+        "branchName": "feature/T100857-author-wc-bug-report-skill-pack",
+        "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/772",
+        "prNumber": 772,
+        "baseBranch": "release/phase-148",
+        "mergeSha": "7a2fea97f09e4e14b589a8f36758e4e0cf8e3d7e",
+        "checks": [
+          {
+            "name": "test",
+            "conclusion": "success"
+          }
+        ],
+        "validationCommands": [
+          {
+            "command": "pnpm run check",
+            "exitCode": 0
+          },
+          {
+            "command": "node --test test/skills-module.test.mjs",
+            "exitCode": 0
+          },
+          {
+            "command": "pnpm exec wk run list-skills '{}'",
+            "exitCode": 0
+          }
+        ]
+      },
+      "deliveryEvidenceSummary": {
+        "schemaVersion": 1,
+        "mode": null
+      },
+      "deliveryWaiver": null
+    },
+    {
+      "taskId": "T100858",
+      "title": "Add subagent seed and host spawn adapters",
+      "phaseKey": "148",
+      "deliveryEvidence": {
+        "schemaVersion": 1,
+        "branchName": "feature/T100858-add-subagent-seed-and-host-spawn-adapters",
+        "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/775",
+        "prNumber": 775,
+        "baseBranch": "release/phase-148",
+        "mergeSha": "332320d08d93315d2318ac5b98e392641f3998dc",
+        "checks": [
+          {
+            "name": "test",
+            "result": "pass"
+          }
+        ],
+        "validationCommands": [
+          {
+            "command": "pnpm run check",
+            "result": "pass"
+          },
+          {
+            "command": "node --test test/agent-bug-reporting-adapters.test.mjs",
+            "result": "pass"
+          }
+        ]
+      },
+      "deliveryEvidenceSummary": {
+        "schemaVersion": 1,
+        "mode": null
+      },
+      "deliveryWaiver": null
+    },
+    {
+      "taskId": "T100859",
+      "title": "Add CAE guidance/do activations for agent bug filing",
+      "phaseKey": "148",
+      "deliveryEvidence": {
+        "schemaVersion": 1,
+        "branchName": "feature/T100859-add-cae-guidance-do-activations-for-agent-bug-fi",
+        "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/774",
+        "prNumber": 774,
+        "baseBranch": "release/phase-148",
+        "mergeSha": "a0704dc43794fe850279b1bf04de383e76b64644",
+        "checks": [
+          {
+            "name": "test",
+            "conclusion": "success"
+          }
+        ],
+        "validationCommands": [
+          {
+            "command": "pnpm run check",
+            "exitCode": 0
+          },
+          {
+            "command": "node --test test/cae-agent-bug-reporting.test.mjs",
+            "exitCode": 0
+          }
+        ]
+      },
+      "deliveryEvidenceSummary": {
+        "schemaVersion": 1,
+        "mode": null
+      },
+      "deliveryWaiver": null
+    },
+    {
+      "taskId": "T100860",
+      "title": "Lock tests and agent instructions for agent-bug-reporting",
+      "phaseKey": "148",
+      "deliveryEvidence": {
+        "schemaVersion": 1,
+        "branchName": "feature/T100860-lock-tests-and-agent-instructions-for-agent-bug-",
+        "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/776",
+        "prNumber": 776,
+        "baseBranch": "release/phase-148",
+        "mergeSha": "f2925eab08ceec1f12f9578ea5d3bbef1f181ecd",
+        "checks": [
+          {
+            "name": "test",
+            "conclusion": "success"
+          }
+        ],
+        "validationCommands": [
+          {
+            "command": "pnpm run build",
+            "exitCode": 0
+          },
+          {
+            "command": "pnpm run check",
+            "exitCode": 0
+          },
+          {
+            "command": "node --test test/file-bug-report.test.mjs test/file-bug-report-empty-first-run.test.mjs test/agent-bug-reporting-module.test.mjs test/agent-bug-reporting-adapters.test.mjs",
+            "exitCode": 0
+          }
+        ]
+      },
+      "deliveryEvidenceSummary": {
+        "schemaVersion": 1,
+        "mode": null
+      },
+      "deliveryWaiver": null
+    }
+  ],
+  "followUpScan": {
+    "scannedAt": "2026-07-10T01:06:26.350Z",
+    "rationale": "Phase journal notes informational only; no convertible follow-ups. Assignment projection wipe is residual risk for a future improvement outside this closeout."
+  },
+  "followUpTasks": [],
+  "followUpSummary": {
+    "count": 0,
+    "scannedAt": "2026-07-10T01:06:26.350Z",
+    "rationale": "Phase journal notes informational only; no convertible follow-ups. Assignment projection wipe is residual risk for a future improvement outside this closeout."
+  }
+}
