@@ -4957,6 +4957,8 @@ function renderPlanArtifactCard(row: Record<string, unknown>, ideasUnifiedModelE
       ? '<span class="wc-plan-card-rollup-subtitle muted">' + escapeHtml(summaryText) + "</span>"
       : "";
 
+  // Status pills (Draft / Accepted / …) are redundant with the Plans state-bucket
+  // rollup titles — keep statusMeta.className on the card for styling only.
   return (
     '<details class="wc-plan-card-rollup ' +
     statusMeta.className +
@@ -4973,11 +4975,6 @@ function renderPlanArtifactCard(row: Record<string, unknown>, ideasUnifiedModelE
     escapeHtml(title) +
     "</b></span>" +
     rollupSubtitleHtml +
-    "</span>" +
-    '<span class="wc-plan-status-pill ' +
-    statusMeta.className +
-    '">' +
-    escapeHtml(statusMeta.label) +
     "</span>" +
     "</summary>" +
     '<article class="wc-plan-card ' +

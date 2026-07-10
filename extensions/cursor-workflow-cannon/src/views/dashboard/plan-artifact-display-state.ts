@@ -47,7 +47,7 @@ function isTruthyFlag(value: unknown): boolean {
   return value === true;
 }
 
-/** Display bucket for plan section rollups and status pills. */
+/** Display bucket for plan section rollups (and card accent classNames). */
 export function derivePlanArtifactDisplayState(row: Record<string, unknown>): PlanArtifactDisplayState {
   const effectiveStatus = planArtifactEffectiveStatus(row);
   if (effectiveStatus === "superseded") {

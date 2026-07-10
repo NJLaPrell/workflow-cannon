@@ -7202,25 +7202,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       outline-offset: 1px;
       background: color-mix(in srgb, var(--vscode-focusBorder, #4fc1ff) 12%, var(--vscode-textCodeBlock-background));
     }
-    .wc-plan-status-pill {
-      display: inline-flex;
-      align-items: center;
-      flex-shrink: 0;
-      padding: 2px 8px;
-      border-radius: 7px;
-      border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.35));
-      background: var(--vscode-editor-background);
-      font-size: 10px;
-      font-weight: 600;
-      line-height: 1.3;
-      white-space: nowrap;
-    }
-    .wc-plan-status-pill.wc-plan-status-draft, .wc-plan-lifecycle-chip { color: var(--vscode-descriptionForeground, var(--vscode-foreground)); }
-    .wc-plan-status-pill.wc-plan-status-warn { color: var(--vscode-editorWarning-foreground, #cca700); }
-    .wc-plan-status-pill.wc-plan-status-info { color: var(--vscode-textLink-foreground, #4fc1ff); }
-    .wc-plan-status-pill.wc-plan-status-accent { color: var(--vscode-terminal-ansiCyan, #29b8db); }
-    .wc-plan-status-pill.wc-plan-status-done { color: var(--vscode-testing-iconPassed, #4ec9b0); }
-    .wc-plan-status-pill.wc-plan-status-muted { color: var(--vscode-descriptionForeground, var(--vscode-foreground)); text-decoration: line-through; }
+    .wc-plan-lifecycle-chip { color: var(--vscode-descriptionForeground, var(--vscode-foreground)); }
     .wc-plan-card-facts { margin: 0; font-size: 11px; }
     .wc-plan-card-facts-row {
       display: grid;
