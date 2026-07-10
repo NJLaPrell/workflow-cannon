@@ -20,4 +20,8 @@ pnpm exec wk run seed-wc-bug-reporter '{"apply":true,"policyApproval":{"confirme
 
 Spawn plans are host-agnostic: Cursor + CLI are implemented; Antigravity and VS Code Copilot expose stub contracts that fall back to CLI. Core filing never requires a single host — see `.ai/runbooks/bug-reporter-host-spawn.md`.
 
+## Disable / fallback
+
+Set `modules.disabled` to include `agent-bug-reporting` to unregister `file-bug-report` + `seed-wc-bug-reporter`. Agents treat that as `unknown-command` and either skip filing or use proposed-only `create-task` (see `file-bug-report.md`). Task-engine + `create-task` stay available because they are separate modules.
+
 This overview entry is documentation-only (not in the builtin run-command manifest).

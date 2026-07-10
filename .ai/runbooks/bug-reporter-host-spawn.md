@@ -60,8 +60,26 @@ pnpm exec wk run file-bug-report '{"title":"<short>","symptom":"<symptom>","clie
 
 Do **not** hard-code host-specific APIs into module core. Stubs exist so the spawn interface stays portable without shipping full host implementations in v1.
 
+## Module disable / fallback
+
+Toggle the whole module off without breaking agent loops:
+
+```json
+{ "modules": { "disabled": ["agent-bug-reporting"] } }
+```
+
+Effects:
+
+- `file-bug-report` and `seed-wc-bug-reporter` disappear from the enabled command router (`unknown-command` if invoked).
+- Agents must **not** busy-retry the missing command. Prefer skip-filing, or hand-file via Tiered `create-task` as `type: improvement` / `status: proposed` with equivalent metadata (`issue`, `supportingReasoning`, optional `evidenceKey`).
+- Host adapters that map to CLI argv will also fail until the module is re-enabled; treat disable as an operator opt-out of the filing facade.
+- Do **not** invent a receipt bus, rate-limit service, or demote `report-defect` as a substitute — those are DROP-list for Phase 148.
+
+Config key reference: `.ai/CONFIG.md` → `modules.disabled`.
+
 ## Related
 
 - Skill: `src/modules/agent-bug-reporting/skills/wc-bug-report/SKILL.md` (and `.claude/skills/wc-bug-report/`)
 - Subagent registry: [`subagent-registry.md`](./subagent-registry.md)
 - Filing command: `src/modules/agent-bug-reporting/instructions/file-bug-report.md`
+- CLI map: [`.ai/AGENT-CLI-MAP.md`](../AGENT-CLI-MAP.md) → Agent bug reporting

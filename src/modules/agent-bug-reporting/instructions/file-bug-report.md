@@ -54,3 +54,19 @@ Under `tasks.planningGenerationPolicy: require`, the handler **auto-reads** the 
 ## Policy
 
 `policySensitivity: non-sensitive` (Tier C). No interactive `policyApproval` for this command. It cannot create ready tasks.
+
+## Module disable / agent fallback
+
+Operators can turn filing off without breaking agents:
+
+```json
+{ "modules": { "disabled": ["agent-bug-reporting"] } }
+```
+
+When `agent-bug-reporting` is disabled, `file-bug-report` and `seed-wc-bug-reporter` are **not** registered on the command router (`unknown-command`). Agents must **not** retry the missing command in a loop. Fallbacks:
+
+1. **Preferred:** skip filing / continue the parent task (filing is optional).
+2. **Manual equivalent (same proposed-only shape):** `create-task` with `type:"improvement"`, `status:"proposed"`, rich `metadata` (`issue`, `supportingReasoning`, optional `evidenceKey`), and normal `create-task` policy gates.
+3. Host spawn adapters still degrade to the CLI plan when the IDE host is unavailable — but a disabled module means those CLI argv examples will also fail until the module is re-enabled.
+
+See `.ai/runbooks/bug-reporter-host-spawn.md` → *Module disable / fallback*.
