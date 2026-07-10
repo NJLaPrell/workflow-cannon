@@ -511,6 +511,52 @@ export function validateAddWishlistSubmit(values: Record<string, string>): Drawe
   return { ok: true, values: out };
 }
 
+const IDEA_TITLE_MAX = 180;
+const IDEA_NOTE_MAX = 1200;
+
+/** New Idea drawer — same fields as the former inline Ideas create form. */
+export function buildAddIdeaDrawerSpec(): DrawerFormSpec {
+  return {
+    workflowId: "add-idea",
+    title: "New Idea",
+    descriptionHtml: "Capture a short idea title and optional note. Do not paste secrets.",
+    fields: [
+      {
+        id: "title",
+        kind: "text",
+        label: "Title",
+        placeholder: "Title",
+        required: true
+      },
+      {
+        id: "note",
+        kind: "textarea",
+        label: "Note (optional)",
+        placeholder: "Optional note",
+        required: false,
+        rows: 3
+      }
+    ],
+    primaryLabel: "Add idea",
+    cancelLabel: "Cancel"
+  };
+}
+
+export function validateAddIdeaSubmit(values: Record<string, string>): DrawerValidationResult {
+  const title = (values.title ?? "").trim();
+  if (!title) {
+    return { ok: false, error: "Title is required." };
+  }
+  if (title.length > IDEA_TITLE_MAX) {
+    return { ok: false, error: `Title must be at most ${String(IDEA_TITLE_MAX)} characters.` };
+  }
+  const note = (values.note ?? "").trim();
+  if (note.length > IDEA_NOTE_MAX) {
+    return { ok: false, error: `Note must be at most ${String(IDEA_NOTE_MAX)} characters.` };
+  }
+  return { ok: true, values: { title, note } };
+}
+
 /** Mirrors kit `PHASE_NOTE_TYPES` / `PHASE_NOTE_PRIORITIES` (phase-journal-constants). */
 export const ADD_PHASE_NOTE_TYPE_OPTIONS: ReadonlyArray<{ value: string; label: string }> = [
   { value: "", label: "Choose note type…" },

@@ -150,6 +150,7 @@ import { WC_BASE_CSS } from "../shared/wc-base-css.js";
 import { GUIDANCE_PANEL_WEBVIEW_CSS } from "../shared/guidance-panel-webview-css.js";
 import {
   buildAcceptProposedDrawerSpec,
+  buildAddIdeaDrawerSpec,
   buildAddPhaseNoteDrawerSpec,
   buildAddWishlistDrawerSpec,
   buildAssignTaskPhaseDrawerSpec,
@@ -185,6 +186,7 @@ import {
   validateRewindCheckpointSubmit,
   renderDrawerFormHtml,
   validateAcceptProposedSubmit,
+  validateAddIdeaSubmit,
   validateAddPhaseNoteSubmit,
   validateAddWishlistSubmit,
   validateAssignTaskPhaseSubmit,
@@ -218,6 +220,7 @@ type DashboardDrawerSession =
   | { kind: "view-phase-note"; noteId: string }
   | { kind: "edit-phase-note"; noteId: string }
   | { kind: "add-wishlist" }
+  | { kind: "add-idea" }
   | { kind: "assign-task-phase"; taskId: string }
   | { kind: "add-phase-note" }
   | { kind: "convert-phase-note"; noteId: string }
@@ -1249,10 +1252,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       if (msg?.type === "addWishlistItem") {
         await this.openAddWishlistDrawer();
       }
-      if (msg?.type === "createIdea") {
-        const title = typeof msg.title === "string" ? msg.title.trim() : "";
-        const note = typeof msg.note === "string" ? msg.note.trim() : "";
-        await this.onCreateIdeaFromDashboard(title, note);
+      if (msg?.type === "addIdea") {
+        await this.openAddIdeaDrawer();
       }
       if (msg?.type === "updateIdea") {
         const ideaId = typeof msg.ideaId === "string" ? msg.ideaId.trim() : "";
@@ -3612,17 +3613,21 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     const html = renderDrawerFormHtml(buildAddWishlistDrawerSpec());
     this.dashboardDrawerSession = { kind: "add-wishlist" };
-    await this.postWcDrawerOpen(html);
+    await this.postWcDrawerOpen(html, "add-wishlist");
+  }
+
+  private async openAddIdeaDrawer(): Promise<void> {
+    if (this.dashboardDrawerSession) {
+      return;
+    }
+    const html = renderDrawerFormHtml(buildAddIdeaDrawerSpec());
+    this.dashboardDrawerSession = { kind: "add-idea" };
+    await this.postWcDrawerOpen(html, "add-idea");
   }
 
   private async onCreateIdeaFromDashboard(title: string, note: string): Promise<void> {
     if (title.length === 0) {
-      await this.view?.webview.postMessage({
-        type: "wcIdeaCreateResult",
-        ok: false,
-        message: "Title required."
-      });
-      return;
+      throw new Error("Title required.");
     }
     const args: Record<string, unknown> = {
       title,
@@ -3636,12 +3641,9 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     const out = await this.client.run("create-idea", args);
     if (!out.ok) {
-      const message = (out.message ?? String(out.code ?? "create-idea failed")).slice(0, 900);
-      await this.view?.webview.postMessage({ type: "wcIdeaCreateResult", ok: false, message });
-      return;
+      throw new Error((out.message ?? String(out.code ?? "create-idea failed")).slice(0, 900));
     }
     ingestPlanningMetaFromData(out.data as Record<string, unknown> | undefined);
-    await this.view?.webview.postMessage({ type: "wcIdeaCreateResult", ok: true });
     await this.applyDashboardMutationInvalidation("ideas");
   }
 
@@ -4760,6 +4762,23 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       }
       this.closeDashboardDrawer();
       this.wishlistPage = 0;
+      return true;
+    }
+    if (session.kind === "add-idea") {
+      const validated = validateAddIdeaSubmit(values);
+      if (!validated.ok) {
+        await this.postDrawerValidationToWebview(validated.error);
+        return false;
+      }
+      try {
+        await this.onCreateIdeaFromDashboard(validated.values.title, validated.values.note);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        await this.postDrawerValidationToWebview(message.slice(0, 900));
+        return false;
+      }
+      this.closeDashboardDrawer();
+      this.queueDrawerNotify("Idea created");
       return true;
     }
     if (session.kind === "assign-task-phase") {
@@ -6198,21 +6217,21 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     .wc-ideas-toast[hidden] {
       display: none;
     }
-    .wc-ideas-create-form {
+    .wc-ideas-head {
       display: flex;
-      flex-direction: column;
-      gap: 6px;
-      margin-top: 8px;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+    .wc-ideas-head p {
+      margin: 0;
     }
     .wc-ideas-create-actions {
       display: flex;
       align-items: center;
       gap: 6px;
       flex-wrap: wrap;
-    }
-    .wc-ideas-create-status[data-wc-error="1"] {
-      color: var(--vscode-errorForeground, #f44747);
-      opacity: 1;
     }
     .wc-ideas-row-status[data-wc-error="1"] {
       color: var(--vscode-errorForeground, #f44747);

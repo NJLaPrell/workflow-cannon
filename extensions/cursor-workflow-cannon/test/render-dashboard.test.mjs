@@ -216,10 +216,11 @@ test("renderDashboardRootInnerHtml places planning cards on the Planning tab", (
   assert.match(planningPanel, /data-wc-section="phase-roster"/);
   assert.match(planningPanel, /Draft a better dashboard/);
   assert.match(planningPanel, /Open 1 · Planning 0 · Planned 0 · Total 1/);
-  assert.match(planningPanel, /data-wc-ideas-create-form="1"/);
-  assert.match(planningPanel, /data-wc-action="idea-create"/);
-  assert.match(planningPanel, /data-wc-idea-title="1"/);
-  assert.match(planningPanel, /data-wc-idea-note="1"/);
+  assert.doesNotMatch(planningPanel, /data-wc-ideas-create-form/);
+  assert.doesNotMatch(planningPanel, /data-wc-action="idea-create"/);
+  assert.match(planningPanel, /wc-ideas-head/);
+  assert.match(planningPanel, /data-wc-action="idea-add"/);
+  assert.match(planningPanel, />New Idea</);
   assert.match(planningPanel, /wc-ideas-drag-handle/);
   assert.match(planningPanel, /data-wc-action="idea-edit"/);
   assert.match(planningPanel, /data-wc-action="idea-delete"/);
