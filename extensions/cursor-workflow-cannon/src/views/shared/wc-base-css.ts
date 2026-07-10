@@ -3,6 +3,18 @@
  * @see .github/instructions/cursor-workflow-cannon-ui.instructions.md
  */
 export const WC_BASE_CSS = `
+.wc-btn:focus-visible,
+.wc-tab-btn:focus-visible,
+.wc-pill-ready:focus-visible,
+.wc-pill-proposed:focus-visible,
+.wc-pill-blocked:focus-visible,
+.wc-pill-done:focus-visible,
+.wc-pill-human:focus-visible,
+.wc-cae-readiness-toggle:focus-visible,
+.wc-filter-chip:focus-visible {
+  outline: 1px solid var(--vscode-focusBorder, #007fd4);
+  outline-offset: 2px;
+}
 .wc-btn {
   font-family: inherit;
   cursor: pointer;
@@ -69,4 +81,19 @@ export const WC_BASE_CSS = `
 .wc-select { background: var(--vscode-dropdown-background); color: var(--vscode-dropdown-foreground); }
 .wc-textarea { font-family: var(--vscode-editor-font-family); }
 .wc-field-label { display: block; margin-bottom: 4px; font-size: 11px; font-weight: 600; opacity: 0.85; }
+
+.wc-callout {
+  border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.35));
+  border-left-width: 3px;
+  border-radius: 4px;
+  padding: 6px 8px 6px 6px;
+  margin: 8px 0;
+}
+.wc-callout > p:first-child { margin-top: 0; }
+.wc-callout > p:last-child { margin-bottom: 0; }
+.wc-callout--success { border-left-color: var(--vscode-testing-iconPassed, #4ec9b0); }
+.wc-callout--info    { border-left-color: var(--vscode-textLink-foreground, #4fc1ff); }
+.wc-callout--warning { border-left-color: var(--vscode-editorWarning-foreground, #cca700); }
+.wc-callout--danger  { border-left-color: var(--vscode-errorForeground, #f44747); }
+.wc-callout--neutral { border-left-color: var(--vscode-foreground); opacity: 0.85; }
 `;

@@ -19,9 +19,9 @@ html, body { margin: 0; min-height: 100%; }
     .gp-tab-panel.is-active { display: block; }
     .gp-callout { display: flex; gap: 12px; align-items: baseline; margin: 14px 0 0; padding: 10px 12px; border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.35)); border-left-width: 4px; }
     .gp-callout span { opacity: .84; }
-    .gp-ok { border-color: var(--vscode-testing-iconPassed, #3fb950); }
-    .gp-warn { border-color: var(--vscode-inputValidation-warningBorder, #d29922); }
-    .gp-bad { border-color: var(--vscode-errorForeground, #f85149); }
+    .gp-ok { border-color: var(--vscode-testing-iconPassed, #4ec9b0); }
+    .gp-warn { border-color: var(--vscode-editorWarning-foreground, #cca700); }
+    .gp-bad { border-color: var(--vscode-errorForeground, #f44747); }
     .gp-pill-row { display: flex; flex-wrap: wrap; gap: 8px; }
     .gp-pill { display: inline-flex; gap: 8px; align-items: center; border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.35)); border-radius: 999px; padding: 4px 8px; }
     .gp-pill b { font-weight: 650; }
@@ -30,7 +30,7 @@ html, body { margin: 0; min-height: 100%; }
     .gp-status-grid div { padding: 9px 11px; background: var(--vscode-sideBar-background); }
     .gp-status-grid b, .gp-status-grid span { display: block; }
     .gp-status-grid span { margin-top: 4px; word-break: break-word; }
-    .gp-warning-list { border-left: 3px solid var(--vscode-inputValidation-warningBorder, #d29922); padding-left: 10px; margin: 10px 0 12px; }
+    .gp-warning-list { border-left: 3px solid var(--vscode-editorWarning-foreground, #cca700); padding-left: 10px; margin: 10px 0 12px; }
     .gp-warning-list p { display: flex; gap: 8px; margin: 4px 0; }
     .gp-table-tools { display: grid; grid-template-columns: minmax(220px, 1fr) 150px 150px; gap: 8px; margin: 10px 0; }
     .gp-table-tools input, .gp-table-tools select { background: var(--vscode-input-background); color: var(--vscode-input-foreground); border: 1px solid var(--vscode-input-border, var(--vscode-widget-border)); border-radius: 4px; padding: 6px 8px; }

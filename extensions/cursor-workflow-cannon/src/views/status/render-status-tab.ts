@@ -12,7 +12,7 @@ import { escapeHtml } from "../dashboard/render-dashboard.js";
  */
 export const STATUS_PANEL_EMBED_CSS = `
 .wc-status-head { margin-bottom: 12px; }
-.wc-status-head .wc-title { font-size: 18px; }
+.wc-status-head .wc-title { font-size: 15px; }
 .wc-title { margin: 0; font-size: 15px; font-weight: 600; }
 .wc-sub { margin: 4px 0 0; opacity: 0.8; font-size: 12px; }
 .wc-card {

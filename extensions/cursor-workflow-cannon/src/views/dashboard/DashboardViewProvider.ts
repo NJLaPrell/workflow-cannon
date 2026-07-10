@@ -6336,7 +6336,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       align-items: center;
       padding: 1px 6px;
       border-radius: 999px;
-      font-size: 9.5px;
+      font-size: 10px;
       font-weight: 600;
       border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.35));
       background: var(--vscode-sideBar-background);
@@ -6677,7 +6677,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       line-height: 1;
     }
     .wc-banner-tagline {
-      font-size: 9.5px;
+      font-size: 10px;
       font-weight: 500;
       color: var(--wc-muted);
       letter-spacing: 0.04em;
@@ -6729,7 +6729,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     .wc-banner-status-label--idle { color: var(--wc-muted); }
     .wc-banner-status-label--done { color: var(--wc-blue); }
     .wc-banner-task {
-      font-size: 10.5px;
+      font-size: 11px;
       color: var(--wc-muted);
       white-space: nowrap;
       overflow: hidden;
@@ -6767,7 +6767,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     .dash-agent-status-label { overflow-wrap: anywhere; }
     .wc-agent-board-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
     .wc-agent-board-title { font-size: 11px; }
-    .wc-agent-board-meta { font-size: 9.5px; color: var(--vscode-descriptionForeground); margin-left: auto; }
+    .wc-agent-board-meta { font-size: 10px; color: var(--vscode-descriptionForeground); margin-left: auto; }
     .dash-agent-row-list { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
     .dash-agent-row { padding: 4px 5px; border-radius: 6px; background: var(--vscode-textCodeBlock-background); transition: background 0.12s; }
     .dash-agent-row:hover { background: var(--vscode-list-hoverBackground, var(--vscode-textCodeBlock-background)); }
@@ -6786,10 +6786,10 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     .dash-agent-row-main b, .dash-agent-row-detail { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .dash-agent-row-detail { min-width: 0; font-size: 11px; }
     .dash-agent-row-meta { display: inline-flex; align-items: center; justify-content: flex-end; gap: 4px; flex-wrap: wrap; min-width: 0; font-size: 10px; }
-    .dash-agent-row-chip { display: inline-flex; align-items: center; padding: 1px 5px; border-radius: 6px; border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.35)); background: var(--vscode-sideBar-background); font-size: 9.5px; line-height: 1.3; }
+    .dash-agent-row-chip { display: inline-flex; align-items: center; padding: 1px 5px; border-radius: 6px; border: 1px solid var(--vscode-widget-border, rgba(127,127,127,.35)); background: var(--vscode-sideBar-background); font-size: 10px; line-height: 1.3; }
     .dash-agent-row-chip-sub { color: var(--vscode-textLink-foreground); }
     .wc-agent-section-label {
-      font-size: 9.5px;
+      font-size: 10px;
       font-weight: 700;
       letter-spacing: 0.08em;
       text-transform: uppercase;
@@ -6799,7 +6799,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       align-items: center;
       gap: 6px;
     }
-    .wc-agent-section-label span { margin-left: auto; font-size: 9.5px; color: var(--vscode-descriptionForeground); }
+    .wc-agent-section-label span { margin-left: auto; font-size: 10px; color: var(--vscode-descriptionForeground); }
     .wc-agent-card {
       display: flex !important;
       flex-direction: column !important;
@@ -6893,7 +6893,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       text-overflow: ellipsis;
     }
     .wc-agent-card-status-chip {
-      font-size: 9.5px;
+      font-size: 10px;
       font-weight: 700;
       padding: 1px 6px;
       border-radius: 999px;
@@ -6930,7 +6930,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.04em;
-      font-size: 9px;
+      font-size: 10px;
     }
     .wc-agent-card-chevron {
       font-size: 10px;
@@ -6959,7 +6959,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     .wc-agent-card[data-status="blocked"] .wc-agent-card-now,
     .wc-agent-card[data-status="error"] .wc-agent-card-now { --wc-now-color: var(--wc-red); }
     .wc-agent-card-now-label {
-      font-size: 9.5px;
+      font-size: 10px;
       font-weight: 700;
       letter-spacing: 0.10em;
       text-transform: uppercase;
@@ -7006,12 +7006,12 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       text-overflow: ellipsis;
     }
     .wc-agent-card-timing {
-      font-size: 9.5px;
+      font-size: 10px;
       color: var(--wc-muted);
       white-space: nowrap;
     }
     .wc-agent-card-sub-count {
-      font-size: 9.5px;
+      font-size: 10px;
       color: var(--wc-muted);
       background: var(--vscode-textCodeBlock-background);
       padding: 1px 5px;
@@ -7028,7 +7028,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     .wc-agent-tree[hidden] { display: none !important; }
     .wc-agent-tree-label {
-      font-size: 9px;
+      font-size: 10px;
       font-weight: 700;
       letter-spacing: 0.12em;
       text-transform: uppercase;
@@ -7084,7 +7084,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     .wc-agent-sub-inner[data-status="blocked"],
     .wc-agent-sub-inner[data-status="error"] { border-color: var(--wc-red-border); }
     .wc-agent-sub-name {
-      font-size: 10.5px;
+      font-size: 11px;
       font-weight: 600;
       color: var(--wc-fg);
       white-space: nowrap;
@@ -7093,7 +7093,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       flex: 1;
     }
     .wc-agent-sub-chip {
-      font-size: 9.5px;
+      font-size: 10px;
       font-weight: 600;
       padding: 1px 5px;
       border-radius: 999px;
@@ -7148,7 +7148,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       margin-bottom: 8px;
     }
     .wc-agent-empty-icon {
-      font-size: 18px;
+      font-size: 15px;
       opacity: 0.40;
       margin-bottom: 6px;
       display: block;
@@ -7504,7 +7504,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       color: var(--vscode-foreground);
     }
     .wc-brainstorm-readiness-pill.wc-brainstorm-readiness-ready {
-      background: var(--vscode-testing-iconPassed, #3fb950);
+      background: var(--vscode-testing-iconPassed, #4ec9b0);
       color: var(--vscode-editor-background, #fff);
     }
     .wc-brainstorm-session-history { margin-top: 8px; font-size: 11px; }
@@ -7765,7 +7765,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       display: flex; align-items: center; gap: 6px;
     }
     .wc-section-chevron {
-      font-size: 9px; color: var(--vscode-descriptionForeground);
+      font-size: 10px; color: var(--vscode-descriptionForeground);
       transition: transform 0.2s; flex-shrink: 0; display: inline-block;
     }
     details[open] > summary .wc-section-chevron { transform: rotate(90deg); }
@@ -7934,7 +7934,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       margin-bottom: 5px;
     }
     .wc-rec-label {
-      font-size: 9.5px;
+      font-size: 10px;
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.07em;
@@ -7991,7 +7991,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       align-items: center;
       padding: 2px 7px;
       border-radius: 4px;
-      font-size: 9.5px;
+      font-size: 10px;
       font-weight: 600;
       line-height: 1.25;
       border: 1px solid var(--vscode-widget-border, var(--vscode-panel-border, transparent));
@@ -8048,7 +8048,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       align-items: center;
       padding: 2px 8px;
       border-radius: 4px;
-      font-size: 9.5px;
+      font-size: 10px;
       font-weight: 700;
       line-height: 1.25;
       letter-spacing: 0.02em;
@@ -8265,7 +8265,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     button.wc-filter-chip {
       padding: 2px 9px;
-      font-size: 10.5px;
+      font-size: 11px;
       font-weight: 500;
       border-radius: 12px;
       cursor: pointer;
@@ -8308,7 +8308,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       align-items: center;
       gap: 6px;
       margin-left: auto;
-      font-size: 10.5px;
+      font-size: 11px;
       color: var(--vscode-descriptionForeground);
     }
     .wc-phase-filter-select {
@@ -8463,7 +8463,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       flex-wrap: wrap;
       gap: 6px 12px;
       margin-bottom: 8px;
-      font-size: 10.5px;
+      font-size: 11px;
     }
     .wc-phase-progress-legend-item {
       display: inline-flex;
@@ -8482,7 +8482,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       color: var(--vscode-testing-iconPassed, #4ec9b0);
     }
     .wc-cae-score-badge {
-      font-size: 18px;
+      font-size: 15px;
       font-weight: 700;
       font-variant-numeric: tabular-nums;
       line-height: 1;
@@ -8507,7 +8507,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       width: 14px;
       height: 14px;
       border-radius: 50%;
-      font-size: 9px;
+      font-size: 10px;
       font-weight: 700;
       flex-shrink: 0;
     }
@@ -8672,11 +8672,16 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       min-width: 14px;
       height: 14px;
       padding: 0 3px;
+      margin-left: 4px;
       border-radius: 999px;
-      font-size: 9px;
+      font-size: 10px;
       font-weight: 700;
       line-height: 1;
       flex-shrink: 0;
+    }
+    .wc-tab-label {
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     .wc-tab-badge-ready {
       background: var(--wc-green-border);
