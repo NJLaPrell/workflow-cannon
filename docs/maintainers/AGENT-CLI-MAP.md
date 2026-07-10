@@ -201,6 +201,7 @@ ADR: **`docs/maintainers/adrs/ADR-planning-generation-optimistic-concurrency.md`
 | List agent sessions | `workspace-kit run list-agent-sessions '<json>'` | `task-engine.agent-sessions.persist` | Lists AgentSession v1 rows |
 | Apply skill pack (non-preview) | `workspace-kit run apply-skill '<json>'` | `skills.apply-skill` | Sensitive unless `options.dryRun === true` (default preview is dry-run; see instruction file) |
 | Register subagent definition | `workspace-kit run register-subagent '<json>'` | `subagents.persist` | Declares id + explicit `allowedCommands` (no wildcards) |
+| Seed wc-bug-reporter definition | `workspace-kit run seed-wc-bug-reporter '<json>'` | `subagents.persist` | Preview seed (default) or `apply:true` to upsert builtin bug-reporter (`file-bug-report` + model pin) |
 | Retire subagent definition | `workspace-kit run retire-subagent '<json>'` | `subagents.persist` | Sets **`retired`**; does not delete rows |
 | Spawn subagent session (record) | `workspace-kit run spawn-subagent '<json>'` | `subagents.persist` | Persists session; host (e.g. Cursor) runs the agent |
 | Append subagent message | `workspace-kit run message-subagent '<json>'` | `subagents.persist` | Append-only handoff log |
@@ -294,6 +295,8 @@ workspace-kit run apply-skill '{"skillId":"sample-wc-skill","options":{"dryRun":
 ```bash
 workspace-kit run register-subagent '{"subagentId":"researcher","allowedCommands":["list-tasks","get-task"],"policyApproval":{"confirmed":true,"rationale":"register delegated agent"}}'
 workspace-kit run spawn-subagent '{"subagentId":"researcher","sessionId":"sess-20260404-1","hostHint":"cursor","policyApproval":{"confirmed":true,"rationale":"record spawn"}}'
+# Builtin bug-reporter seed (or use preview without apply):
+workspace-kit run seed-wc-bug-reporter '{"apply":true,"policyApproval":{"confirmed":true,"rationale":"seed wc-bug-reporter definition"}}'
 ```
 
 **Copy-paste — install plugin (copy tree into first discovery root):**

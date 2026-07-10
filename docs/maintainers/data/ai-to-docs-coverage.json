@@ -7,6 +7,10 @@
       "output": "docs/maintainers/playbooks/README.md"
     },
     {
+      "source": ".ai/playbooks/brainstorm-session.md",
+      "output": "docs/maintainers/playbooks/brainstorm-session.md"
+    },
+    {
       "source": ".ai/playbooks/improvement-scout.md",
       "output": "docs/maintainers/playbooks/improvement-scout.md"
     },
@@ -25,10 +29,6 @@
     {
       "source": ".ai/playbooks/planner-chat.md",
       "output": "docs/maintainers/playbooks/planner-chat.md"
-    },
-    {
-      "source": ".ai/playbooks/brainstorm-session.md",
-      "output": "docs/maintainers/playbooks/brainstorm-session.md"
     },
     {
       "source": ".ai/playbooks/skill-attachments.md",
@@ -89,6 +89,14 @@
     {
       "source": ".ai/runbooks/agent-task-engine-ergonomics.md",
       "output": "docs/maintainers/runbooks/agent-task-engine-ergonomics.md"
+    },
+    {
+      "source": ".ai/runbooks/bug-reporter-host-spawn.md",
+      "output": "docs/maintainers/runbooks/bug-reporter-host-spawn.md"
+    },
+    {
+      "source": ".ai/runbooks/build-plan-consumer-inventory.md",
+      "output": "docs/maintainers/runbooks/build-plan-consumer-inventory.md"
     },
     {
       "source": ".ai/runbooks/cae-debug.md",
@@ -189,10 +197,6 @@
     {
       "source": ".ai/runbooks/plan-artifact-workflow.md",
       "output": "docs/maintainers/runbooks/plan-artifact-workflow.md"
-    },
-    {
-      "source": ".ai/runbooks/build-plan-consumer-inventory.md",
-      "output": "docs/maintainers/runbooks/build-plan-consumer-inventory.md"
     },
     {
       "source": ".ai/runbooks/planning-workflow.md",

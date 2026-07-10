@@ -18,6 +18,7 @@ import { checkpointsModule } from "./checkpoints/index.js";
 import { contextActivationModule } from "./context-activation/index.js";
 import { projectMemoryModule } from "./project-memory/index.js";
 import { modelSelectionModule } from "./model-selection/index.js";
+import { agentBugReportingModule } from "./agent-bug-reporting/index.js";
 
 export const defaultRegistryModules: WorkflowModule[] = [
   workspaceConfigModule,
@@ -35,7 +36,8 @@ export const defaultRegistryModules: WorkflowModule[] = [
   approvalsModule,
   planningModule,
   improvementModule,
-  modelSelectionModule
+  modelSelectionModule,
+  agentBugReportingModule
 ];
 
 export {
@@ -89,6 +91,7 @@ export { contextActivationModule } from "./context-activation/index.js";
 export { projectMemoryModule } from "./project-memory/index.js";
 export { planningModule } from "./planning/index.js";
 export { modelSelectionModule } from "./model-selection/index.js";
+export { agentBugReportingModule } from "./agent-bug-reporting/index.js";
 export {
   taskEngineModule,
   TaskStore,

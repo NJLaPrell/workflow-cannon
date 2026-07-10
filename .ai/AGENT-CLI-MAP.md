@@ -82,6 +82,19 @@ Playbook: [`.ai/playbooks/task-to-phase-branch.md`](./playbooks/task-to-phase-br
 - `pnpm exec wk run complete-brainstorm '{"planRef":"plan-artifact:<planId>","operatorConfirmedBrainstormComplete":true,"policyApproval":{"confirmed":true,"rationale":"operator confirmed brainstorming is finished and planning should start"}}'` — only after the operator explicitly says brainstorming is finished.
 - `pnpm exec wk run check-delivery-status '{"planRef":"plan-artifact:<planId>","policyApproval":{"confirmed":true,"rationale":"check IdeaPlan delivery task completion"}}'`
 
+## Agent bug reporting (Tier C + seed Tier B)
+
+Proposed-only filing (no interactive `policyApproval`). Hard-rejects `status:ready` / non-`improvement` types. Auto-fills `expectedPlanningGeneration` under `tasks.planningGenerationPolicy: require`.
+
+- `pnpm exec wk run file-bug-report '{"title":"CLI parse failure","symptom":"wk run args mangled in zsh","command":"pnpm exec wk run create-task","code":"exit 2","issueKind":"agent-ergonomics","evidenceKey":"bug:cli-parse:zsh","clientMutationId":"bug:cli-parse:zsh"}'`
+
+Seed the builtin `wc-bug-reporter` definition (Tier B / `subagents.persist`; preview is default — pass `apply:true` to persist). Host spawn adapters: [`.ai/runbooks/bug-reporter-host-spawn.md`](./runbooks/bug-reporter-host-spawn.md).
+
+- `pnpm exec wk run seed-wc-bug-reporter '{}'`
+- `pnpm exec wk run seed-wc-bug-reporter '{"apply":true,"expectedPlanningGeneration":<n>,"policyApproval":{"confirmed":true,"rationale":"seed wc-bug-reporter definition"}}'`
+
+**Disable / fallback:** set `modules.disabled` to include `agent-bug-reporting` — router drops both commands (`unknown-command`). Agents skip filing or use proposed-only `create-task` (see runbook *Module disable / fallback*).
+
 ## Contract: no hand-editing lifecycle in the task store
 
 Use **`workspace-kit run run-transition`** (and related commands). Do not edit SQLite/JSON task stores for routine status motion.
