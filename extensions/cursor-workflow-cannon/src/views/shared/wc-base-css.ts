@@ -3,6 +3,18 @@
  * @see .github/instructions/cursor-workflow-cannon-ui.instructions.md
  */
 export const WC_BASE_CSS = `
+.wc-btn:focus-visible,
+.wc-tab-btn:focus-visible,
+.wc-pill-ready:focus-visible,
+.wc-pill-proposed:focus-visible,
+.wc-pill-blocked:focus-visible,
+.wc-pill-done:focus-visible,
+.wc-pill-human:focus-visible,
+.wc-cae-readiness-toggle:focus-visible,
+.wc-filter-chip:focus-visible {
+  outline: 1px solid var(--vscode-focusBorder, #007fd4);
+  outline-offset: 2px;
+}
 .wc-btn {
   font-family: inherit;
   cursor: pointer;

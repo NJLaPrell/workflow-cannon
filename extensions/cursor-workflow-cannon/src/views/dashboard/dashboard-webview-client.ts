@@ -1491,6 +1491,8 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
       var isActive = b.getAttribute('data-wc-tab') === tab;
       if (isActive) b.classList.add('wc-tab-active');
       else b.classList.remove('wc-tab-active');
+      b.setAttribute('aria-selected', isActive ? 'true' : 'false');
+      b.setAttribute('tabindex', isActive ? '0' : '-1');
     });
     if (tab === 'config' && window.wcConfigTab) {
       if (window.wcConfigTab.afterDomUpdate) window.wcConfigTab.afterDomUpdate();

@@ -598,7 +598,11 @@ export function renderDashboardTabBarHtml(args?: {
         return (
           '<button type="button" class="wc-tab-btn' +
           (active ? " wc-tab-active" : "") +
-          '" role="tab" data-wc-tab="' +
+          '" role="tab" aria-selected="' +
+          (active ? "true" : "false") +
+          '" tabindex="' +
+          (active ? "0" : "-1") +
+          '" data-wc-tab="' +
           escapeHtmlAttr(tab.id) +
           '">' +
           '<span class="wc-tab-icon">' +
