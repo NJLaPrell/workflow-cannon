@@ -41,6 +41,8 @@ test("buildDashboardWebviewBootstrapScript returns drawer + refresh client", () 
   assert.match(script, /requestRevealQueueTask/);
   assert.match(script, /renderPlanMermaidDiagrams/);
   assert.match(script, /wc-queue-task-highlight/);
+  // Lost-replace recovery: clear shell-initial when sections hydrate or root is replaced.
+  assert.match(script, /wc-dashboard-shell-initial/);
   assert.doesNotMatch(readFileSync(path.join(__dirname, "../src/views/dashboard/DashboardViewProvider.ts"), "utf8"), /function setDrawerBusy\(busy, label\)/);
 });
 

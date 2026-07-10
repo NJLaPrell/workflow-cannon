@@ -75,7 +75,9 @@ test("boot ready and timeout startup triggers coalesce through the startup contr
     providerSrc.indexOf("webview.onDidReceiveMessage"),
     providerSrc.indexOf("webviewView.onDidChangeVisibility")
   );
+  assert.match(messageBlock, /dashboardWebviewBoot[\s\S]*repaintCachedDashboardRoot\("webview-boot"\)/);
   assert.match(messageBlock, /dashboardWebviewBoot[\s\S]*requestDashboardStartup\("webview-boot"\)/);
+  assert.match(messageBlock, /dashboardStartupTimeout[\s\S]*repaintCachedDashboardRoot\("startup-timeout"\)/);
   assert.match(messageBlock, /dashboardStartupTimeout[\s\S]*requestDashboardStartup\("startup-timeout"\)/);
   assert.match(messageBlock, /dashboardWebviewReady[\s\S]*requestDashboardStartup\("webview-ready"\)/);
   assert.match(messageBlock, /dashboardStartupRefresh[\s\S]*requestDashboardStartup\("startup-refresh"\)/);
@@ -89,13 +91,28 @@ test("first dashboard data render patches the painted shell root", () => {
     providerSrc.indexOf("private async postSectionPatch")
   );
   assert.match(startupBlock, /applyBootstrapSnapshot/);
-  assert.match(startupBlock, /postMessage\(\{ type: "wcReplaceRoot", html: rootInner \}\)/);
+  assert.match(startupBlock, /postReplaceRootHtml\(webview, rootInner/);
   assert.doesNotMatch(startupBlock, /webview\.html = this\.buildHtml\(webview, rootInner\)/);
   const refreshBlock = providerSrc.slice(
     providerSrc.indexOf("private async executeDashboardRefresh"),
     providerSrc.indexOf("scheduleConfigTabRefresh")
   );
   assert.match(refreshBlock, /pushUpdate applied first root patch over shell/);
+});
+
+test("startup timeout probe does not wipe a shell that already has ready sections", () => {
+  const providerSrc = fs.readFileSync(providerPath, "utf8");
+  const probeStart = providerSrc.indexOf("const startupProbe = `(function(){");
+  assert.ok(probeStart >= 0, "startupProbe expected");
+  const probeEnd = providerSrc.indexOf("})();`;", probeStart);
+  const probe = providerSrc.slice(probeStart, probeEnd);
+  assert.match(probe, /dashboardStartupAck/);
+  assert.match(probe, /cancelStartupTimeout/);
+  assert.match(probe, /shell-initial-with-ready-sections/);
+  assert.match(probe, /wc-dash-section--ready/);
+  assert.match(probe, /Dashboard is still loading/);
+  // Recovery path must ask host to repaint instead of blanking ready content.
+  assert.match(probe, /hasReadySection/);
 });
 
 test("startup timeout and refresh failures preserve actionable recovery without blanking a good dashboard", () => {
@@ -109,6 +126,11 @@ test("startup timeout and refresh failures preserve actionable recovery without 
   assert.match(startupBlock, /\\"projection\\":\\"overview\\"/);
   assert.doesNotMatch(startupBlock, /create-idea/);
 
+  assert.match(providerSrc, /lastDashboardRootHtml/);
+  assert.match(providerSrc, /postReplaceRootHtml/);
+  assert.match(providerSrc, /repaintCachedDashboardRoot/);
+  assert.match(providerSrc, /dashboardStartupAck/);
+
   const refreshFailureBlock = providerSrc.slice(
     providerSrc.indexOf("pushUpdate preserving last good dashboard after failure"),
     providerSrc.indexOf("this.lastDashboardSummaryData = null")
@@ -118,6 +140,16 @@ test("startup timeout and refresh failures preserve actionable recovery without 
   assert.doesNotMatch(refreshFailureBlock, /this\.lastDashboardSummaryData = null/);
 });
 
+test("mermaid loads after startup probe and bootstrap so early wcReplaceRoot is not delayed", () => {
+  const providerSrc = fs.readFileSync(providerPath, "utf8");
+  const bodyStart = providerSrc.lastIndexOf("<body>");
+  const body = providerSrc.slice(bodyStart);
+  const probeIdx = body.indexOf("${startupProbe}");
+  const bootstrapIdx = body.indexOf("${bootstrap}");
+  const mermaidIdx = body.indexOf("${mermaidScriptUri}");
+  assert.ok(probeIdx >= 0 && bootstrapIdx > probeIdx, "bootstrap follows startup probe");
+  assert.ok(mermaidIdx > bootstrapIdx, "mermaid script loads after bootstrap listener");
+});
 function taskEnginePanelHtml(html) {
   const taskEngineStart = html.indexOf('<div class="wc-tab-panel" data-wc-tab="task-engine"');
   const statusStart = html.indexOf('<div class="wc-tab-panel" data-wc-tab="status"', taskEngineStart);
