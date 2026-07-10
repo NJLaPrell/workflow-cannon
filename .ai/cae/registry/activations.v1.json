@@ -220,6 +220,52 @@
     },
     {
       "schemaVersion": 1,
+      "activationId": "cae.activation.do.agent-bug-filing-tool-failures",
+      "family": "do",
+      "lifecycleState": "active",
+      "priority": 70,
+      "scope": {
+        "conditions": [
+          {
+            "kind": "agentFailureSignal",
+            "field": "recentToolFailures",
+            "operator": ">=",
+            "value": 1
+          }
+        ]
+      },
+      "artifactRefs": [{ "artifactId": "cae.runbook.agent-bug-filing-nudge" }],
+      "acknowledgement": { "strength": "recommend", "token": "agent-bug-filing-tool-failures" },
+      "flags": { "advisoryOnly": true, "shadowEligible": true }
+    },
+    {
+      "schemaVersion": 1,
+      "activationId": "cae.activation.do.agent-bug-filing-friction-kind",
+      "family": "do",
+      "lifecycleState": "active",
+      "priority": 69,
+      "scope": {
+        "conditions": [
+          {
+            "kind": "agentFailureSignal",
+            "field": "lastFailureKind",
+            "operator": "in",
+            "value": [
+              "wc-cli-failure",
+              "wc-mcp-failure",
+              "policy-friction",
+              "schema-friction",
+              "agent-facing-friction"
+            ]
+          }
+        ]
+      },
+      "artifactRefs": [{ "artifactId": "cae.runbook.agent-bug-filing-nudge" }],
+      "acknowledgement": { "strength": "recommend", "token": "agent-bug-filing-friction-kind" },
+      "flags": { "advisoryOnly": true, "shadowEligible": true }
+    },
+    {
+      "schemaVersion": 1,
       "activationId": "cae.activation.think.planning-session-draft",
       "family": "think",
       "lifecycleState": "active",

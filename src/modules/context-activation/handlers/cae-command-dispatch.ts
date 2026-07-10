@@ -65,6 +65,12 @@ import {
   prependMaintainerDeliveryPolicyGuidanceCard
 } from "../maintainer-delivery-guidance.js";
 import { prependTaskIntakePolicyGuidanceCard } from "../task-intake-guidance.js";
+import {
+  AGENT_BUG_FILING_ACTIVATION_FRICTION_KIND,
+  AGENT_BUG_FILING_ACTIVATION_TOOL_FAILURES,
+  AGENT_BUG_FILING_NEXT_STEP,
+  parsePreviewAgentSignals
+} from "../agent-bug-filing-guidance.js";
 
 type SqliteDatabase = NonNullable<ReturnType<typeof openKitSqliteReadWrite>>;
 
@@ -1018,6 +1024,10 @@ export async function runContextActivationOnCommand(
         argvSummary,
         currentKitPhase: phase
       });
+      const agentSignals = parsePreviewAgentSignals((args as Record<string, unknown>).agentSignals);
+      if (agentSignals) {
+        evaluationContext.agentSignals = agentSignals;
+      }
       const { bundle, trace, traceId } = evaluateActivationBundle(evaluationContext, overlayRegistry, {
         evalMode
       });
@@ -1036,6 +1046,19 @@ export async function runContextActivationOnCommand(
         );
       }
       const cards = summarizeGuidanceCards(bundle, overlayRegistry);
+      for (const card of cards.do) {
+        const activationId = String(card.activationId ?? "");
+        if (
+          activationId === AGENT_BUG_FILING_ACTIVATION_TOOL_FAILURES ||
+          activationId === AGENT_BUG_FILING_ACTIVATION_FRICTION_KIND
+        ) {
+          // Keep schema-stable keys; encode the explicit next-step in title for agents.
+          card.title = AGENT_BUG_FILING_NEXT_STEP;
+          if (Array.isArray(card.sourceTitles) && !card.sourceTitles.includes(AGENT_BUG_FILING_NEXT_STEP)) {
+            card.sourceTitles = [AGENT_BUG_FILING_NEXT_STEP, ...card.sourceTitles].slice(0, 5);
+          }
+        }
+      }
       await prependMaintainerDeliveryPolicyGuidanceCard(ws, effective, taskId, cards);
       await prependTaskIntakePolicyGuidanceCard(ws, effective, taskId, commandName, commandArgs, cards);
       await prependMaintainerDeliveryLoopGuidanceCard(ws, effective, taskId, cards);
