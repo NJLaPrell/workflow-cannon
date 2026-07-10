@@ -8,6 +8,27 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [1.0.10] - 2026-07-10
+
+Patch — **Dashboard UX polish** (post–Phase 148 mid-stream ship from `main`: Ideas drawer, startup timeout fix, Replit visual pass, plan/idea list polish, false Agent Activity idle).
+
+### Added
+
+- **New Idea drawer** — Ideas section uses a Phase Notes-style header button that opens create-idea in the shared drawer modal instead of an always-visible inline form (PR #781).
+
+### Changed
+
+- **Dashboard visual consistency** — card expansion defaults, callout styling for pending decisions, focus-visible keyboard navigation, and CSS-variable color/font alignment across dashboard/config/status webviews (PR #782).
+- **Plans list rollups** — render as `ID - Title` with description underneath; expanded cards no longer duplicate title/description/status; rollup summaries use a pointer cursor (PR #783).
+- **Ideas rows** — match Wishlist `dash-row` chrome; remove drag-sort handle and stray `open` status tag (PR #783).
+- **Phase 109 skill-pack backlog** — retarget first-party skill-pack epic to unphased after draining the Phase 109 bucket (PR #779).
+
+### Fixed
+
+- **Startup timeout false positive** — hydrated dashboard no longer wiped by the webview shell probe after a successful first paint (PR #780).
+- **False Agent Activity “active”** — parent transcript mtime no longer classified as orchestrator `working_task`; idle-only boards show the empty state (PR #783).
+- **Task-state snapshot pointer** — rollback empty `snap-2026-06-30` manifest pointer to a valid snapshot for hydrate safety.
+
 ## [1.0.9] - 2026-07-10
 
 Patch — **Phase 148 Agent Bug Reporting** (Tier C `file-bug-report`, `wc-bug-report` skill, host-agnostic spawn adapters, advisory CAE nudges, critical-path tests).
