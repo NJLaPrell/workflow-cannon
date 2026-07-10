@@ -1,1 +1,2 @@
 - [cursor-workflow-cannon build quirk](cursor-workflow-cannon-build.md) — root `pnpm run build` doesn't rebuild the extension's dist/; build it directly or dist stays stale.
+- [cursor-workflow-cannon UI styling gaps](cursor-workflow-cannon-ui-gaps.md) — some dashboard classes have zero matching CSS; grep the whole styling surface before trusting a class name is styled.

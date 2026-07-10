@@ -189,7 +189,9 @@ function renderPhaseOrderingRiskHtml(risk: PhaseCloseoutOrderingRisk | null): st
     return "";
   }
   return (
-    '<p class="wc-phase-ordering-risk" role="alert">' + escapeHtml(risk.message) + "</p>"
+    '<div class="wc-phase-ordering-risk wc-callout wc-callout--danger" role="alert">' +
+    "<p>" + escapeHtml(risk.message) + "</p>" +
+    "</div>"
   );
 }
 
@@ -2092,7 +2094,8 @@ function renderPhaseReadinessCard(
   ws: Record<string, unknown> | null,
   snapshot: PhaseSnapshot | null,
   orderingInputs?: PhaseOrderingInputs,
-  phaseKickoff?: Record<string, unknown> | null
+  phaseKickoff?: Record<string, unknown> | null,
+  lastUpdated?: string | null
 ): string {
   const curPhase = workspaceCurrentPhaseKey(ws);
   if (curPhase.length === 0) {
@@ -2181,6 +2184,13 @@ function renderPhaseReadinessCard(
         })
       : "";
 
+  const readinessFooter =
+    typeof lastUpdated === "string" && lastUpdated.trim().length > 0
+      ? '<div class="wc-card-footer"><span class="wc-card-meta">Updated ' +
+        escapeHtml(lastUpdated.trim()) +
+        "</span></div>"
+      : "";
+
   return (
     '<section class="dash-card wc-cae-readiness" aria-label="' +
     escapeHtmlAttr(sectionAriaLabel) +
@@ -2207,6 +2217,7 @@ function renderPhaseReadinessCard(
     checksSection +
     kickoffBlock +
     pendingBlock +
+    readinessFooter +
     "</div>" +
     "</section>"
   );
@@ -2217,7 +2228,8 @@ function renderPhaseProgressCard(
   ws: Record<string, unknown> | null,
   snapshot: PhaseSnapshot | null,
   humanGateCount: number,
-  orderingInputs?: PhaseOrderingInputs
+  orderingInputs?: PhaseOrderingInputs,
+  lastUpdated?: string | null
 ): string {
   const curPhase = workspaceCurrentPhaseKey(ws);
   if (curPhase.length === 0 || !snapshot) {
@@ -2269,6 +2281,13 @@ function renderPhaseProgressCard(
     "</div>";
   const markCompleteReady = phaseMarkCompleteReady(snapshot, humanGateCount);
 
+  const progressFooter =
+    typeof lastUpdated === "string" && lastUpdated.trim().length > 0
+      ? '<div class="wc-card-footer"><span class="wc-card-meta">Updated ' +
+        escapeHtml(lastUpdated.trim()) +
+        "</span></div>"
+      : "";
+
   return (
     '<section class="dash-card wc-phase-progress" aria-label="Phase progress · Phase ' +
     escapeHtmlAttr(curPhase) +
@@ -2297,6 +2316,7 @@ function renderPhaseProgressCard(
     progressChecksSection +
     closeoutLine +
     renderPhaseMarkCompleteButton(curPhase, markCompleteReady) +
+    progressFooter +
     "</div>" +
     "</section>"
   );
@@ -5388,7 +5408,11 @@ function renderTeamExecutionSection(team: unknown): string {
       statusLine +
       '<p class="muted">Delegate an execution task to a worker agent, then reconcile their handoff when they submit.</p>' +
       toolbar +
-      '<p class="muted">No active assignments yet — use <b>Create assignment</b> to register the first handoff.</p>' +
+      '<div class="wc-agent-empty">' +
+      '<span class="wc-agent-empty-icon" aria-hidden="true">&#9673;</span>' +
+      '<div class="wc-agent-empty-msg">No active assignments</div>' +
+      '<div class="wc-agent-empty-sub">Use <b>Create assignment</b> to register the first handoff</div>' +
+      "</div>" +
       "</section>"
     );
   }
@@ -7592,13 +7616,15 @@ function renderOverviewSectionInnerHtml(
       ws,
       phaseSnapshot,
       phaseCtx.phaseOrderingInputs,
-      (d.phaseKickoff as Record<string, unknown> | undefined) ?? null
+      (d.phaseKickoff as Record<string, unknown> | undefined) ?? null,
+      typeof d.taskStoreLastUpdated === "string" ? d.taskStoreLastUpdated : null
     ) +
     renderPhaseProgressCard(
       ws,
       phaseSnapshot,
       queueCtx.humanGatesCount,
-      phaseCtx.phaseOrderingInputs
+      phaseCtx.phaseOrderingInputs,
+      typeof d.taskStoreLastUpdated === "string" ? d.taskStoreLastUpdated : null
     ) +
     renderWorkspaceBlockersPendingSection(ws) +
     renderTeamExecutionSection(d.teamExecution) +
