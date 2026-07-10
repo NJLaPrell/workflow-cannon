@@ -47,5 +47,5 @@ args = "cd artifacts/mockup-sandbox && PORT=8000 BASE_PATH=/__mockup/ npx vite -
 waitForPort = 8000
 
 [[ports]]
-localPort = 8000
+localPort = 5000
 externalPort = 80
