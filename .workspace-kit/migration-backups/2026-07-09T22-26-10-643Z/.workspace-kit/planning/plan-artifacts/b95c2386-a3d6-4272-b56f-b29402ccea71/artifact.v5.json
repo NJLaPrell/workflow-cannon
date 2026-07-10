@@ -1,0 +1,2237 @@
+{
+  "schemaVersion": 1,
+  "planId": "b95c2386-a3d6-4272-b56f-b29402ccea71",
+  "planRef": "plan-artifact:b95c2386-a3d6-4272-b56f-b29402ccea71",
+  "status": "draft",
+  "identity": {
+    "title": "Agent Orchestration Foundation v1",
+    "planningType": "sprint-phase",
+    "summary": "Host-agnostic agent orchestration foundation: AgentDefinition, AgentSession, TeamAssignment metadata bridge, Activity v1, Handoff v2, profiles, and dashboard projection — operationalized from AGENT_ORCHESTRATION_FOUNDATION.md and AGENT_ORCHESTRATION_TASKS.md.",
+    "tags": [
+      "agent-orchestration",
+      "subagents",
+      "team-execution",
+      "agent-activity",
+      "handoff-v2",
+      "activity-v1",
+      "host-agnostic",
+      "model-cost",
+      "resource-ownership",
+      "dashboard-projection"
+    ]
+  },
+  "goals": [
+    "Make multi-agent software work observable, bounded, cost-aware, host-agnostic, and trustworthy",
+    "Separate Agent Registry, Assignment/Orchestration, and Activity/Visibility layers",
+    "Enable Orchestration Agent to plan, assign, monitor, reconcile without direct host control in v1",
+    "Enable Task Work Agent bounded execution with Handoff v2 and blocker reporting",
+    "Provide dashboard projection source without dashboard owning orchestration state",
+    "Phase 1: human-approved A-* contract artifacts before implementation",
+    "Phase 2: validators, registry/session bridge, assignment metadata, handoff/activity commands",
+    "Phase 3: prompts, projection bridge, compatibility and E2E hardening"
+  ],
+  "nonGoals": [
+    "Automatic Cursor/VS Code agent launching",
+    "Cross-host process control",
+    "Full model/provider routing and cost telemetry",
+    "Enforced resource locks or hard runtime sandboxing",
+    "Event-stream runtime service for activity projection",
+    "Dashboard owns orchestration state",
+    "Replace Team Execution module immediately"
+  ],
+  "userStories": [
+    {
+      "id": "US-1",
+      "asA": "Workflow Cannon operator",
+      "iWant": "see who is working, on what task, and whether they are active or blocked",
+      "soThat": "I never guess whether an agent is stuck",
+      "priority": "must"
+    },
+    {
+      "id": "US-2",
+      "asA": "Workflow Cannon operator",
+      "iWant": "delegate a phase outcome to an Orchestration Agent with bounded assignments",
+      "soThat": "I delegate outcomes instead of babysitting every step",
+      "priority": "must"
+    },
+    {
+      "id": "US-3",
+      "asA": "Orchestration Agent",
+      "iWant": "receive compact Handoff v2 from workers",
+      "soThat": "I can reconcile without rereading full transcripts",
+      "priority": "must"
+    },
+    {
+      "id": "US-4",
+      "asA": "Task Work Agent",
+      "iWant": "clear owned/forbidden path rules and blocker escalation",
+      "soThat": "I stay in scope and stop safely when blocked",
+      "priority": "must"
+    }
+  ],
+  "valueAssessment": {
+    "impact": "High — unlocks multi-agent command center and Agent Activity Dashboard UX",
+    "confidence": "high",
+    "rationale": "Foundation and WBS are human-authored; builds on existing subagent registry and Team Execution with additive metadata bridge."
+  },
+  "riskAssessment": [
+    {
+      "id": "R1",
+      "description": "Breaking existing subagent/team execution flows",
+      "severity": "high",
+      "mitigation": "A-COMPAT artifact, additive metadata, compatibility test suite T-AO-710"
+    },
+    {
+      "id": "R2",
+      "description": "Worker overreach mutating task DB or self-reconciling",
+      "severity": "high",
+      "mitigation": "A-POLICY + T-AO-340 authority hardening"
+    },
+    {
+      "id": "R3",
+      "description": "Dashboard becomes orchestration source of truth",
+      "severity": "medium",
+      "mitigation": "A-PROJECTION boundary + read-only projection builder T-AO-610"
+    },
+    {
+      "id": "R4",
+      "description": "Implementation starts before A-* artifacts approved",
+      "severity": "high",
+      "mitigation": "Phase 1 gate: all WP-A tasks produce approved artifacts before Phase 2 WBS"
+    }
+  ],
+  "technicalImpact": {
+    "systemsTouched": [
+      "src/modules/task-engine",
+      "src/contracts",
+      "src/core/validation",
+      "src/core/state",
+      "extensions/cursor-workflow-cannon",
+      ".ai/runbooks",
+      "AGENT_ORCHESTRATION_FOUNDATION.md",
+      "AGENT_ORCHESTRATION_TASKS.md",
+      "AGENT_CARD_PLAN.md"
+    ],
+    "compatibilityNotes": "TeamAssignment remains storage bridge; subagent registry extended or bridged per A-ARCH; additive metadata only until approved migration.",
+    "migrationImpact": "Phased: contracts (126) → implementation (127) → projection/docs (128)"
+  },
+  "architecture": {
+    "overview": "Three-layer model: AgentDefinition (registry) + TeamAssignment metadata (orchestration) + AgentActivity (visibility). Handoff v2 for evidence. DashboardAgentActivitySummary as read-only projection.",
+    "decisions": [
+      {
+        "id": "D1",
+        "decision": "Strict separation of registry, assignment, and activity layers",
+        "rationale": "AGENT_ORCHESTRATION_FOUNDATION.md core design principle"
+      },
+      {
+        "id": "D2",
+        "decision": "TeamAssignment as AgentAssignment bridge via structured metadata v1",
+        "rationale": "Avoid new AgentAssignment module in v1"
+      },
+      {
+        "id": "D3",
+        "decision": "Orchestrator coordinates via commands; does not launch hosts in v1",
+        "rationale": "Host-agnostic foundation before host adapters"
+      },
+      {
+        "id": "D4",
+        "decision": "Human-approved A-* artifacts gate Phase 2 implementation",
+        "rationale": "AGENT_ORCHESTRATION_TASKS.md Requires rule"
+      }
+    ],
+    "diagrams": [
+      {
+        "title": "Three-layer orchestration model",
+        "mermaid": "flowchart TD\n  AD[AgentDefinition Registry] --> AS[AgentSession]\n  AS --> TA[TeamAssignment + metadata]\n  TA --> AA[AgentActivity]\n  TA --> H2[Handoff v2]\n  AA --> DAS[DashboardAgentActivitySummary projection]\n  H2 --> OA[Orchestration Agent reconcile]"
+      }
+    ]
+  },
+  "uiUxDirection": {
+    "hasUiChanges": true,
+    "summary": "Dashboard consumes DashboardAgentActivitySummary projection; detailed UX in AGENT_CARD_PLAN.md — this plan owns orchestration source contracts only.",
+    "mockupRefs": [
+      "AGENT_CARD_PLAN.md"
+    ]
+  },
+  "testingStrategy": {
+    "layers": [
+      "unit",
+      "contract",
+      "integration",
+      "dashboard-projection",
+      "e2e-cli"
+    ],
+    "criticalPaths": [
+      "A-* artifact approval before Phase 2 code",
+      "Validator + assignment metadata happy path",
+      "Handoff v2 submit and reconcile",
+      "Activity v1 stale/expired lifecycle",
+      "Worker blocker flow without self-unblock",
+      "Projection merge with empty-store first-run",
+      "Legacy subagent/team execution compatibility"
+    ],
+    "outOfScopeTesting": [
+      "Full host adapter routing",
+      "Real-time event stream load tests"
+    ]
+  },
+  "implementationGuidance": [
+    "Source design: AGENT_ORCHESTRATION_FOUNDATION.md; WBS: AGENT_ORCHESTRATION_TASKS.md",
+    "Do not start Phase 2 tasks until relevant A-* artifacts have explicit human approval",
+    "Follow maintainer delivery loop: branch from release/phase-N, run-transition start/complete",
+    "Use workspace-kit commands for all task/assignment mutations — no hand-edited SQLite",
+    "One WBS item = one focused agent session; split if module boundaries blur"
+  ],
+  "whatNotToDo": [
+    "Do not launch Cursor/VS Code agents from Workflow Cannon in v1",
+    "Do not let dashboard mutate orchestration state",
+    "Do not let workers self-reconcile or self-unblock",
+    "Do not skip A-* artifact approval gates",
+    "Do not replace Team Execution with a parallel assignment store in v1"
+  ],
+  "assumptions": [
+    "Phases 126–128 registered in kit_phase_catalog when kickoff runs",
+    "AGENT_CARD_PLAN.md remains separate UX consumer of this foundation",
+    "Existing subagent registry and team execution commands remain supported",
+    "All 11 A-* artifacts (A-INV through A-COMPAT) produced in Phase 126 before Phase 127 coding"
+  ],
+  "openQuestions": [
+    "Extend subagent registry vs new agent-orchestration module for AgentDefinition/AgentSession? (blocks WBS-AO-010 / A-ARCH)",
+    "Strict accept on plan-artifact review warnings during phase finalize?"
+  ],
+  "wbs": [
+    {
+      "wbsId": "WBS-AO-000",
+      "path": "1.1",
+      "title": "Inventory current orchestration surfaces",
+      "goalMapping": [
+        "Phase 1 — Contracts & Design Gates",
+        "Phase 1: human-approved A-* contract artifacts before implementation",
+        "Make multi-agent software work observable, bounded, cost-aware, host-agnostic, and trustworthy",
+        "Separate Agent Registry, Assignment/Orchestration, and Activity/Visibility layers",
+        "Enable Orchestration Agent to plan, assign, monitor, reconcile without direct host control in v1",
+        "Enable Task Work Agent bounded execution with Handoff v2 and blocker reporting",
+        "Provide dashboard projection source without dashboard owning orchestration state"
+      ],
+      "suggestedTaskTitle": "Inventory current orchestration surfaces",
+      "approach": "Inventory subagent registry, Team Execution, agent activity store, task/blocker paths, policy surfaces, dashboard summary touch points, agent docs, and test coverage; produce A-INV.",
+      "technicalScope": [
+        "src/modules/task-engine/**/subagent*",
+        "src/modules/task-engine/**/team-execution*",
+        "src/modules/task-engine/**/agent-activity*",
+        ".ai/runbooks/subagent-registry.md",
+        "AGENT_ORCHESTRATION_FOUNDATION.md"
+      ],
+      "acceptanceCriteria": [
+        "A-INV lists all relevant modules, commands, schemas, and docs",
+        "A-INV identifies reusable pieces versus missing pieces",
+        "A-INV identifies breaking-change risks",
+        "A-INV includes recommended reuse strategy"
+      ],
+      "testingVerification": [
+        "integration test: Code references included",
+        "integration test: Search terms and inspected files recorded"
+      ],
+      "dependsOn": [],
+      "recommendedPhase": "126",
+      "sizingConfidence": "high",
+      "doneMeans": "T-AO-000 complete when acceptance criteria pass, verification runs green, and artifact A-INV has explicit human approval",
+      "generatedTaskPayload": {
+        "title": "Inventory current orchestration surfaces",
+        "type": "research",
+        "priority": "P1",
+        "phaseKey": "126",
+        "phase": "Phase 126",
+        "approach": "Inventory subagent registry, Team Execution, agent activity store, task/blocker paths, policy surfaces, dashboard summary touch points, agent docs, and test coverage; produce A-INV.",
+        "technicalScope": [
+          "src/modules/task-engine/**/subagent*",
+          "src/modules/task-engine/**/team-execution*",
+          "src/modules/task-engine/**/agent-activity*",
+          ".ai/runbooks/subagent-registry.md",
+          "AGENT_ORCHESTRATION_FOUNDATION.md"
+        ],
+        "acceptanceCriteria": [
+          "A-INV lists all relevant modules, commands, schemas, and docs",
+          "A-INV identifies reusable pieces versus missing pieces",
+          "A-INV identifies breaking-change risks",
+          "A-INV includes recommended reuse strategy"
+        ],
+        "dependsOn": [],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-AO-010",
+      "path": "1.2",
+      "title": "Draft orchestration architecture decision document",
+      "goalMapping": [
+        "Agent Registry vs Assignment vs Activity ownership",
+        "Phase 1: human-approved A-* contract artifacts before implementation",
+        "Make multi-agent software work observable, bounded, cost-aware, host-agnostic, and trustworthy",
+        "Separate Agent Registry, Assignment/Orchestration, and Activity/Visibility layers",
+        "Enable Orchestration Agent to plan, assign, monitor, reconcile without direct host control in v1",
+        "Enable Task Work Agent bounded execution with Handoff v2 and blocker reporting",
+        "Provide dashboard projection source without dashboard owning orchestration state"
+      ],
+      "suggestedTaskTitle": "Draft orchestration architecture decision document",
+      "approach": "Create AGENT_ORCHESTRATION_ARCHITECTURE.md covering three-layer separation, AgentDefinition/AgentSession storage strategy, TeamAssignment bridge, compatibility, persistence, migration, dashboard boundary, and v1 non-goals.",
+      "technicalScope": [
+        "AGENT_ORCHESTRATION_ARCHITECTURE.md",
+        "AGENT_ORCHESTRATION_FOUNDATION.md",
+        "src/modules/task-engine/**"
+      ],
+      "acceptanceCriteria": [
+        "Architecture references AGENT_ORCHESTRATION_FOUNDATION.md decisions",
+        "Storage/module strategy is explicit",
+        "Existing subagent/team execution compatibility is preserved",
+        "Human approval recorded before dependent implementation",
+        "Verification evidence is recorded in the deliverable with explicit operator review sign-off"
+      ],
+      "testingVerification": [
+        "integration test: Peer review against foundation doc",
+        "integration test: No implementation code in this task"
+      ],
+      "dependsOn": [
+        "WBS-AO-000"
+      ],
+      "recommendedPhase": "126",
+      "sizingConfidence": "high",
+      "doneMeans": "T-AO-010 complete when acceptance criteria pass, verification runs green, and artifact A-ARCH has explicit human approval",
+      "riskNotes": "Requires approved artifacts: A-INV",
+      "generatedTaskPayload": {
+        "title": "Draft orchestration architecture decision document",
+        "type": "improvement",
+        "priority": "P1",
+        "phaseKey": "126",
+        "phase": "Phase 126",
+        "approach": "Create AGENT_ORCHESTRATION_ARCHITECTURE.md covering three-layer separation, AgentDefinition/AgentSession storage strategy, TeamAssignment bridge, compatibility, persistence, migration, dashboard boundary, and v1 non-goals.",
+        "technicalScope": [
+          "AGENT_ORCHESTRATION_ARCHITECTURE.md",
+          "AGENT_ORCHESTRATION_FOUNDATION.md",
+          "src/modules/task-engine/**"
+        ],
+        "acceptanceCriteria": [
+          "Architecture references AGENT_ORCHESTRATION_FOUNDATION.md decisions",
+          "Storage/module strategy is explicit",
+          "Existing subagent/team execution compatibility is preserved",
+          "Human approval recorded before dependent implementation",
+          "Verification evidence is recorded in the deliverable with explicit operator review sign-off"
+        ],
+        "dependsOn": [],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-AO-020",
+      "path": "1.3",
+      "title": "Draft orchestration schema and contract pack",
+      "goalMapping": [
+        "AgentDefinition v1",
+        "AgentSession v1",
+        "Handoff v2",
+        "AgentActivity v1",
+        "Phase 1: human-approved A-* contract artifacts before implementation",
+        "Make multi-agent software work observable, bounded, cost-aware, host-agnostic, and trustworthy",
+        "Separate Agent Registry, Assignment/Orchestration, and Activity/Visibility layers",
+        "Enable Orchestration Agent to plan, assign, monitor, reconcile without direct host control in v1",
+        "Enable Task Work Agent bounded execution with Handoff v2 and blocker reporting",
+        "Provide dashboard projection source without dashboard owning orchestration state"
+      ],
+      "suggestedTaskTitle": "Draft orchestration schema and contract pack",
+      "approach": "Create AGENT_ORCHESTRATION_CONTRACTS.md with AgentDefinition v1, AgentSession v1, assignment metadata v1, AgentActivity v1, Handoff v2 schemas, enums, examples, and malformed-field behavior.",
+      "technicalScope": [
+        "AGENT_ORCHESTRATION_CONTRACTS.md",
+        "schemas/**",
+        "fixtures/agent-orchestration/**"
+      ],
+      "acceptanceCriteria": [
+        "Schemas match the foundation document",
+        "Examples exist for Orchestration Agent and Task Work Agent",
+        "Assignment metadata includes resource ownership and profile references",
+        "Handoff v2 has examples for completed, blocked, partial, failed, and needs_review",
+        "Verification evidence is recorded in the deliverable with explicit operator review sign-off"
+      ],
+      "testingVerification": [
+        "integration test: JSON examples validate against draft JSON Schema",
+        "integration test: Review against A-ARCH"
+      ],
+      "dependsOn": [
+        "WBS-AO-010"
+      ],
+      "recommendedPhase": "126",
+      "sizingConfidence": "high",
+      "doneMeans": "T-AO-020 complete when acceptance criteria pass, verification runs green, and artifact A-SCHEMA has explicit human approval",
+      "riskNotes": "Requires approved artifacts: A-ARCH",
+      "generatedTaskPayload": {
+        "title": "Draft orchestration schema and contract pack",
+        "type": "improvement",
+        "priority": "P1",
+        "phaseKey": "126",
+        "phase": "Phase 126",
+        "approach": "Create AGENT_ORCHESTRATION_CONTRACTS.md with AgentDefinition v1, AgentSession v1, assignment metadata v1, AgentActivity v1, Handoff v2 schemas, enums, examples, and malformed-field behavior.",
+        "technicalScope": [
+          "AGENT_ORCHESTRATION_CONTRACTS.md",
+          "schemas/**",
+          "fixtures/agent-orchestration/**"
+        ],
+        "acceptanceCriteria": [
+          "Schemas match the foundation document",
+          "Examples exist for Orchestration Agent and Task Work Agent",
+          "Assignment metadata includes resource ownership and profile references",
+          "Handoff v2 has examples for completed, blocked, partial, failed, and needs_review",
+          "Verification evidence is recorded in the deliverable with explicit operator review sign-off"
+        ],
+        "dependsOn": [],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-AO-030",
+      "path": "1.4",
+      "title": "Draft orchestration command contract pack",
+      "goalMapping": [
+        "Orchestration command support",
+        "Phase 1: human-approved A-* contract artifacts before implementation",
+        "Make multi-agent software work observable, bounded, cost-aware, host-agnostic, and trustworthy",
+        "Separate Agent Registry, Assignment/Orchestration, and Activity/Visibility layers",
+        "Enable Orchestration Agent to plan, assign, monitor, reconcile without direct host control in v1",
+        "Enable Task Work Agent bounded execution with Handoff v2 and blocker reporting",
+        "Provide dashboard projection source without dashboard owning orchestration state"
+      ],
+      "suggestedTaskTitle": "Draft orchestration command contract pack",
+      "approach": "Define command extensions and new commands for agent definitions, sessions, assignments, Handoff v2, blocker/bug paths, Activity v1, and orchestration status reads with policy/idempotency/dry-run semantics.",
+      "technicalScope": [
+        "src/modules/task-engine/instructions/**",
+        ".ai/AGENT-CLI-MAP.md",
+        "AGENT_ORCHESTRATION_COMMANDS.md"
+      ],
+      "acceptanceCriteria": [
+        "Existing commands to reuse/extend are identified",
+        "New commands proposed only where current commands are insufficient",
+        "Orchestrator and worker flows are both represented",
+        "Policy surfaces are flagged for A-POLICY",
+        "Verification evidence is recorded in the deliverable with explicit operator review sign-off"
+      ],
+      "testingVerification": [
+        "integration test: Command matrix reviewed",
+        "integration test: Tier A/B/C policy hints documented"
+      ],
+      "dependsOn": [
+        "WBS-AO-010",
+        "WBS-AO-020"
+      ],
+      "recommendedPhase": "126",
+      "sizingConfidence": "high",
+      "doneMeans": "T-AO-030 complete when acceptance criteria pass, verification runs green, and artifact A-COMMANDS has explicit human approval",
+      "riskNotes": "Requires approved artifacts: A-ARCH, A-SCHEMA",
+      "generatedTaskPayload": {
+        "title": "Draft orchestration command contract pack",
+        "type": "improvement",
+        "priority": "P1",
+        "phaseKey": "126",
+        "phase": "Phase 126",
+        "approach": "Define command extensions and new commands for agent definitions, sessions, assignments, Handoff v2, blocker/bug paths, Activity v1, and orchestration status reads with policy/idempotency/dry-run semantics.",
+        "technicalScope": [
+          "src/modules/task-engine/instructions/**",
+          ".ai/AGENT-CLI-MAP.md",
+          "AGENT_ORCHESTRATION_COMMANDS.md"
+        ],
+        "acceptanceCriteria": [
+          "Existing commands to reuse/extend are identified",
+          "New commands proposed only where current commands are insufficient",
+          "Orchestrator and worker flows are both represented",
+          "Policy surfaces are flagged for A-POLICY",
+          "Verification evidence is recorded in the deliverable with explicit operator review sign-off"
+        ],
+        "dependsOn": [],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-AO-040",
+      "path": "1.5",
+      "title": "Draft mutation authority and policy map",
+      "goalMapping": [
+        "Task DB mutation authority",
+        "Worker blocker flow",
+        "Phase 1: human-approved A-* contract artifacts before implementation",
+        "Make multi-agent software work observable, bounded, cost-aware, host-agnostic, and trustworthy",
+        "Separate Agent Registry, Assignment/Orchestration, and Activity/Visibility layers",
+        "Enable Orchestration Agent to plan, assign, monitor, reconcile without direct host control in v1",
+        "Enable Task Work Agent bounded execution with Handoff v2 and blocker reporting",
+        "Provide dashboard projection source without dashboard owning orchestration state"
+      ],
+      "suggestedTaskTitle": "Draft mutation authority and policy map",
+      "approach": "Document orchestrator vs worker mutation authority, blocker/bug rules, task transitions, reconcile/cancel/unblock rules, policyApproval surfaces, and forbidden manual DB edits.",
+      "technicalScope": [
+        ".ai/POLICY-APPROVAL.md",
+        "AGENT_ORCHESTRATION_POLICY.md",
+        "src/modules/task-engine/**/policy*"
+      ],
+      "acceptanceCriteria": [
+        "Tiered mutation authority is explicit",
+        "Worker blocker flow is supported and bounded",
+        "No path lets worker self-reconcile or self-unblock",
+        "Policy approval requirements are clear",
+        "Verification evidence is recorded in the deliverable with explicit operator review sign-off"
+      ],
+      "testingVerification": [
+        "integration test: Policy map cross-checked with A-COMMANDS",
+        "integration test: Forbidden mutation list complete"
+      ],
+      "dependsOn": [
+        "WBS-AO-030",
+        "WBS-AO-020"
+      ],
+      "recommendedPhase": "126",
+      "sizingConfidence": "high",
+      "doneMeans": "T-AO-040 complete when acceptance criteria pass, verification runs green, and artifact A-POLICY has explicit human approval",
+      "riskNotes": "Requires approved artifacts: A-COMMANDS, A-SCHEMA",
+      "generatedTaskPayload": {
+        "title": "Draft mutation authority and policy map",
+        "type": "improvement",
+        "priority": "P1",
+        "phaseKey": "126",
+        "phase": "Phase 126",
+        "approach": "Document orchestrator vs worker mutation authority, blocker/bug rules, task transitions, reconcile/cancel/unblock rules, policyApproval surfaces, and forbidden manual DB edits.",
+        "technicalScope": [
+          ".ai/POLICY-APPROVAL.md",
+          "AGENT_ORCHESTRATION_POLICY.md",
+          "src/modules/task-engine/**/policy*"
+        ],
+        "acceptanceCriteria": [
+          "Tiered mutation authority is explicit",
+          "Worker blocker flow is supported and bounded",
+          "No path lets worker self-reconcile or self-unblock",
+          "Policy approval requirements are clear",
+          "Verification evidence is recorded in the deliverable with explicit operator review sign-off"
+        ],
+        "dependsOn": [],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-AO-050",
+      "path": "1.6",
+      "title": "Draft profile catalog",
+      "goalMapping": [
+        "Context profiles",
+        "Access profiles",
+        "Model/cost tiers",
+        "Phase 1: human-approved A-* contract artifacts before implementation",
+        "Make multi-agent software work observable, bounded, cost-aware, host-agnostic, and trustworthy",
+        "Separate Agent Registry, Assignment/Orchestration, and Activity/Visibility layers",
+        "Enable Orchestration Agent to plan, assign, monitor, reconcile without direct host control in v1",
+        "Enable Task Work Agent bounded execution with Handoff v2 and blocker reporting",
+        "Provide dashboard projection source without dashboard owning orchestration state"
+      ],
+      "suggestedTaskTitle": "Draft profile catalog",
+      "approach": "Define orchestrator_access_v1, task_worker_strict_v1, context profiles, model/cost tiers, host capability vocabulary, and resource ownership metadata rules.",
+      "technicalScope": [
+        "AGENT_ORCHESTRATION_PROFILES.md",
+        "AGENT_ORCHESTRATION_FOUNDATION.md"
+      ],
+      "acceptanceCriteria": [
+        "Profiles match foundation doc decisions",
+        "Profiles are reusable by AgentDefinition records",
+        "Profiles do not grant workers broad permissions",
+        "Model tier rubric is usable by an Orchestration Agent",
+        "Verification evidence is recorded in the deliverable with explicit operator review sign-off"
+      ],
+      "testingVerification": [
+        "integration test: Profile examples map to AgentDefinition samples",
+        "integration test: Review against A-POLICY"
+      ],
+      "dependsOn": [
+        "WBS-AO-040",
+        "WBS-AO-020"
+      ],
+      "recommendedPhase": "126",
+      "sizingConfidence": "high",
+      "doneMeans": "T-AO-050 complete when acceptance criteria pass, verification runs green, and artifact A-PROFILES has explicit human approval",
+      "riskNotes": "Requires approved artifacts: A-SCHEMA, A-POLICY",
+      "generatedTaskPayload": {
+        "title": "Draft profile catalog",
+        "type": "improvement",
+        "priority": "P1",
+        "phaseKey": "126",
+        "phase": "Phase 126",
+        "approach": "Define orchestrator_access_v1, task_worker_strict_v1, context profiles, model/cost tiers, host capability vocabulary, and resource ownership metadata rules.",
+        "technicalScope": [
+          "AGENT_ORCHESTRATION_PROFILES.md",
+          "AGENT_ORCHESTRATION_FOUNDATION.md"
+        ],
+        "acceptanceCriteria": [
+          "Profiles match foundation doc decisions",
+          "Profiles are reusable by AgentDefinition records",
+          "Profiles do not grant workers broad permissions",
+          "Model tier rubric is usable by an Orchestration Agent",
+          "Verification evidence is recorded in the deliverable with explicit operator review sign-off"
+        ],
+        "dependsOn": [],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-AO-060",
+      "path": "1.7",
+      "title": "Draft Handoff v2 examples and validation rubric",
+      "goalMapping": [
+        "Handoff v2 contract",
+        "Phase 1: human-approved A-* contract artifacts before implementation",
+        "Make multi-agent software work observable, bounded, cost-aware, host-agnostic, and trustworthy",
+        "Separate Agent Registry, Assignment/Orchestration, and Activity/Visibility layers",
+        "Enable Orchestration Agent to plan, assign, monitor, reconcile without direct host control in v1",
+        "Enable Task Work Agent bounded execution with Handoff v2 and blocker reporting",
+        "Provide dashboard projection source without dashboard owning orchestration state"
+      ],
+      "suggestedTaskTitle": "Draft Handoff v2 examples and validation rubric",
+      "approach": "Create Handoff v2 examples and validation rules for completed, blocked, partial, failed, needs_review with evidence, compactness, and next-action requirements.",
+      "technicalScope": [
+        "fixtures/agent-orchestration/handoff-v2/**",
+        "AGENT_ORCHESTRATION_HANDOFF.md"
+      ],
+      "acceptanceCriteria": [
+        "Orchestrator can reconcile using handoff without reading full transcript",
+        "Handoff examples are machine-readable JSON",
+        "Compactness guidance prevents transcript dumps"
+      ],
+      "testingVerification": [
+        "integration test: Fixture JSON review",
+        "integration test: Rubric checklist for each status"
+      ],
+      "dependsOn": [
+        "WBS-AO-020"
+      ],
+      "recommendedPhase": "126",
+      "sizingConfidence": "high",
+      "doneMeans": "T-AO-060 complete when acceptance criteria pass, verification runs green, and artifact A-HANDOFF has explicit human approval",
+      "riskNotes": "Requires approved artifacts: A-SCHEMA",
+      "generatedTaskPayload": {
+        "title": "Draft Handoff v2 examples and validation rubric",
+        "type": "improvement",
+        "priority": "P1",
+        "phaseKey": "126",
+        "phase": "Phase 126",
+        "approach": "Create Handoff v2 examples and validation rules for completed, blocked, partial, failed, needs_review with evidence, compactness, and next-action requirements.",
+        "technicalScope": [
+          "fixtures/agent-orchestration/handoff-v2/**",
+          "AGENT_ORCHESTRATION_HANDOFF.md"
+        ],
+        "acceptanceCriteria": [
+          "Orchestrator can reconcile using handoff without reading full transcript",
+          "Handoff examples are machine-readable JSON",
+          "Compactness guidance prevents transcript dumps"
+        ],
+        "dependsOn": [],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-AO-070",
+      "path": "1.8",
+      "title": "Draft Activity v1 lifecycle spec",
+      "goalMapping": [
+        "Activity v1 contract and lifecycle rules",
+        "Phase 1: human-approved A-* contract artifacts before implementation",
+        "Make multi-agent software work observable, bounded, cost-aware, host-agnostic, and trustworthy",
+        "Separate Agent Registry, Assignment/Orchestration, and Activity/Visibility layers",
+        "Enable Orchestration Agent to plan, assign, monitor, reconcile without direct host control in v1",
+        "Enable Task Work Agent bounded execution with Handoff v2 and blocker reporting",
+        "Provide dashboard projection source without dashboard owning orchestration state"
+      ],
+      "suggestedTaskTitle": "Draft Activity v1 lifecycle spec",
+      "approach": "Document Activity v1 fields, lifecycle, heartbeat/TTL, fresh/aging/stale/expired rules, activity kinds, clear vs expire behavior, and future command-boundary hook candidates.",
+      "technicalScope": [
+        "AGENT_ORCHESTRATION_ACTIVITY.md",
+        "src/modules/task-engine/**/agent-activity*"
+      ],
+      "acceptanceCriteria": [
+        "Lifecycle supports dashboard visibility goal",
+        "Activity remains live-state, not assignment/handoff source of truth",
+        "Stale/expired rules are unambiguous",
+        "Verification evidence is recorded in the deliverable with explicit operator review sign-off"
+      ],
+      "testingVerification": [
+        "integration test: Timing table reviewed",
+        "integration test: Lifecycle diagram included"
+      ],
+      "dependsOn": [
+        "WBS-AO-020",
+        "WBS-AO-040"
+      ],
+      "recommendedPhase": "126",
+      "sizingConfidence": "high",
+      "doneMeans": "T-AO-070 complete when acceptance criteria pass, verification runs green, and artifact A-ACTIVITY has explicit human approval",
+      "riskNotes": "Requires approved artifacts: A-SCHEMA, A-POLICY",
+      "generatedTaskPayload": {
+        "title": "Draft Activity v1 lifecycle spec",
+        "type": "improvement",
+        "priority": "P1",
+        "phaseKey": "126",
+        "phase": "Phase 126",
+        "approach": "Document Activity v1 fields, lifecycle, heartbeat/TTL, fresh/aging/stale/expired rules, activity kinds, clear vs expire behavior, and future command-boundary hook candidates.",
+        "technicalScope": [
+          "AGENT_ORCHESTRATION_ACTIVITY.md",
+          "src/modules/task-engine/**/agent-activity*"
+        ],
+        "acceptanceCriteria": [
+          "Lifecycle supports dashboard visibility goal",
+          "Activity remains live-state, not assignment/handoff source of truth",
+          "Stale/expired rules are unambiguous",
+          "Verification evidence is recorded in the deliverable with explicit operator review sign-off"
+        ],
+        "dependsOn": [],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-AO-080",
+      "path": "1.9",
+      "title": "Draft dashboard projection source contract",
+      "goalMapping": [
+        "Dashboard orchestration projection source contract",
+        "Phase 1: human-approved A-* contract artifacts before implementation",
+        "Make multi-agent software work observable, bounded, cost-aware, host-agnostic, and trustworthy",
+        "Separate Agent Registry, Assignment/Orchestration, and Activity/Visibility layers",
+        "Enable Orchestration Agent to plan, assign, monitor, reconcile without direct host control in v1",
+        "Enable Task Work Agent bounded execution with Handoff v2 and blocker reporting",
+        "Provide dashboard projection source without dashboard owning orchestration state"
+      ],
+      "suggestedTaskTitle": "Draft dashboard projection source contract",
+      "approach": "Define DashboardAgentActivitySummary source contract: merge keys, precedence, confidence, stale/blocked derivation, no-dashboard-mutation rule, AGENT_CARD_PLAN compatibility.",
+      "technicalScope": [
+        "AGENT_ORCHESTRATION_PROJECTION.md",
+        "AGENT_CARD_PLAN.md",
+        "src/modules/task-engine/dashboard/**"
+      ],
+      "acceptanceCriteria": [
+        "Projection contract can feed DashboardAgentActivitySummary",
+        "Dashboard remains read-only for orchestration state",
+        "Duplicate source rows can be collapsed",
+        "Documents empty-store and first-run dashboard behavior when no orchestration activity rows exist",
+        "Verification evidence is recorded in the deliverable with explicit operator review sign-off"
+      ],
+      "testingVerification": [
+        "integration test: Projection merge examples documented",
+        "integration test: Cross-review with Agent Card plan"
+      ],
+      "dependsOn": [
+        "WBS-AO-070",
+        "WBS-AO-020"
+      ],
+      "recommendedPhase": "126",
+      "sizingConfidence": "high",
+      "doneMeans": "T-AO-080 complete when acceptance criteria pass, verification runs green, and artifact A-PROJECTION has explicit human approval",
+      "riskNotes": "Requires approved artifacts: A-SCHEMA, A-ACTIVITY",
+      "generatedTaskPayload": {
+        "title": "Draft dashboard projection source contract",
+        "type": "improvement",
+        "priority": "P1",
+        "phaseKey": "126",
+        "phase": "Phase 126",
+        "approach": "Define DashboardAgentActivitySummary source contract: merge keys, precedence, confidence, stale/blocked derivation, no-dashboard-mutation rule, AGENT_CARD_PLAN compatibility.",
+        "technicalScope": [
+          "AGENT_ORCHESTRATION_PROJECTION.md",
+          "AGENT_CARD_PLAN.md",
+          "src/modules/task-engine/dashboard/**"
+        ],
+        "acceptanceCriteria": [
+          "Projection contract can feed DashboardAgentActivitySummary",
+          "Dashboard remains read-only for orchestration state",
+          "Duplicate source rows can be collapsed",
+          "Documents empty-store and first-run dashboard behavior when no orchestration activity rows exist",
+          "Verification evidence is recorded in the deliverable with explicit operator review sign-off"
+        ],
+        "dependsOn": [],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-AO-090",
+      "path": "1.10",
+      "title": "Draft orchestration test strategy",
+      "goalMapping": [
+        "Test strategy and fixture matrix",
+        "Phase 1: human-approved A-* contract artifacts before implementation",
+        "Make multi-agent software work observable, bounded, cost-aware, host-agnostic, and trustworthy",
+        "Separate Agent Registry, Assignment/Orchestration, and Activity/Visibility layers",
+        "Enable Orchestration Agent to plan, assign, monitor, reconcile without direct host control in v1",
+        "Enable Task Work Agent bounded execution with Handoff v2 and blocker reporting",
+        "Provide dashboard projection source without dashboard owning orchestration state"
+      ],
+      "suggestedTaskTitle": "Draft orchestration test strategy",
+      "approach": "Define unit, contract, command, integration, dashboard-projection, and E2E test scope with fixture matrix for happy, blocked, malformed, and compatibility cases.",
+      "technicalScope": [
+        "AGENT_ORCHESTRATION_TEST_STRATEGY.md",
+        "test/**",
+        "fixtures/agent-orchestration/**"
+      ],
+      "acceptanceCriteria": [
+        "Fixture matrix covers happy path, blocked path, malformed payloads, and compatibility cases",
+        "E2E operator checklist exists",
+        "Required CI/test commands are identified"
+      ],
+      "testingVerification": [
+        "Test matrix peer review",
+        "integration test: CI command list validated"
+      ],
+      "dependsOn": [
+        "WBS-AO-020",
+        "WBS-AO-030"
+      ],
+      "recommendedPhase": "126",
+      "sizingConfidence": "high",
+      "doneMeans": "T-AO-090 complete when acceptance criteria pass, verification runs green, and artifact A-TEST has explicit human approval",
+      "riskNotes": "Requires approved artifacts: A-SCHEMA, A-COMMANDS",
+      "generatedTaskPayload": {
+        "title": "Draft orchestration test strategy",
+        "type": "improvement",
+        "priority": "P1",
+        "phaseKey": "126",
+        "phase": "Phase 126",
+        "approach": "Define unit, contract, command, integration, dashboard-projection, and E2E test scope with fixture matrix for happy, blocked, malformed, and compatibility cases.",
+        "technicalScope": [
+          "AGENT_ORCHESTRATION_TEST_STRATEGY.md",
+          "test/**",
+          "fixtures/agent-orchestration/**"
+        ],
+        "acceptanceCriteria": [
+          "Fixture matrix covers happy path, blocked path, malformed payloads, and compatibility cases",
+          "E2E operator checklist exists",
+          "Required CI/test commands are identified"
+        ],
+        "dependsOn": [],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-AO-100",
+      "path": "1.11",
+      "title": "Draft compatibility and migration note",
+      "goalMapping": [
+        "Compatibility / migration note",
+        "Phase 1: human-approved A-* contract artifacts before implementation",
+        "Make multi-agent software work observable, bounded, cost-aware, host-agnostic, and trustworthy",
+        "Separate Agent Registry, Assignment/Orchestration, and Activity/Visibility layers",
+        "Enable Orchestration Agent to plan, assign, monitor, reconcile without direct host control in v1",
+        "Enable Task Work Agent bounded execution with Handoff v2 and blocker reporting",
+        "Provide dashboard projection source without dashboard owning orchestration state"
+      ],
+      "suggestedTaskTitle": "Draft compatibility and migration note",
+      "approach": "Document supported subagent registry and Team Execution behavior, additive metadata bridge, optional new fields, deprecation wording, and fallback when metadata absent.",
+      "technicalScope": [
+        "AGENT_ORCHESTRATION_COMPAT.md",
+        ".ai/runbooks/subagent-registry.md"
+      ],
+      "acceptanceCriteria": [
+        "Existing workflows remain valid",
+        "New orchestration metadata is additive where possible",
+        "Fallback behavior is explicit",
+        "Verification evidence is recorded in the deliverable with explicit operator review sign-off"
+      ],
+      "testingVerification": [
+        "integration test: Compatibility checklist reviewed",
+        "integration test: No silent breaking changes listed"
+      ],
+      "dependsOn": [
+        "WBS-AO-000",
+        "WBS-AO-010"
+      ],
+      "recommendedPhase": "126",
+      "sizingConfidence": "medium",
+      "doneMeans": "T-AO-100 complete when acceptance criteria pass, verification runs green, and artifact A-COMPAT has explicit human approval",
+      "riskNotes": "Requires approved artifacts: A-INV, A-ARCH",
+      "generatedTaskPayload": {
+        "title": "Draft compatibility and migration note",
+        "type": "improvement",
+        "priority": "P1",
+        "phaseKey": "126",
+        "phase": "Phase 126",
+        "approach": "Document supported subagent registry and Team Execution behavior, additive metadata bridge, optional new fields, deprecation wording, and fallback when metadata absent.",
+        "technicalScope": [
+          "AGENT_ORCHESTRATION_COMPAT.md",
+          ".ai/runbooks/subagent-registry.md"
+        ],
+        "acceptanceCriteria": [
+          "Existing workflows remain valid",
+          "New orchestration metadata is additive where possible",
+          "Fallback behavior is explicit",
+          "Verification evidence is recorded in the deliverable with explicit operator review sign-off"
+        ],
+        "dependsOn": [],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-AO-110",
+      "path": "2.1",
+      "title": "Add shared orchestration contract types",
+      "goalMapping": [
+        "Phase 2 — Core Orchestration Implementation",
+        "Phase 2: validators, registry/session bridge, assignment metadata, handoff/activity commands",
+        "Make multi-agent software work observable, bounded, cost-aware, host-agnostic, and trustworthy",
+        "Separate Agent Registry, Assignment/Orchestration, and Activity/Visibility layers",
+        "Enable Orchestration Agent to plan, assign, monitor, reconcile without direct host control in v1",
+        "Enable Task Work Agent bounded execution with Handoff v2 and blocker reporting",
+        "Provide dashboard projection source without dashboard owning orchestration state"
+      ],
+      "suggestedTaskTitle": "Add shared orchestration contract types",
+      "approach": "Add TypeScript types for AgentDefinition, AgentSession, AgentAssignmentMetadata, AgentActivity, Handoff v2, and profile refs in src/contracts.",
+      "technicalScope": [
+        "src/contracts/agent-orchestration.ts",
+        "src/contracts/agent-session*.ts",
+        "src/contracts/agent-activity*.ts",
+        "src/contracts/team-execution*.ts"
+      ],
+      "acceptanceCriteria": [
+        "Types compile",
+        "Existing command types remain compatible",
+        "No runtime behavior changes yet",
+        "Verification evidence is recorded in the deliverable with explicit operator review sign-off"
+      ],
+      "testingVerification": [
+        "integration test: pnpm run build typecheck",
+        "Existing tests pass"
+      ],
+      "dependsOn": [
+        "WBS-AO-020",
+        "WBS-AO-010"
+      ],
+      "recommendedPhase": "127",
+      "sizingConfidence": "high",
+      "doneMeans": "T-AO-110 complete when acceptance criteria pass, verification runs green, and operator confirms deliverable matches AGENT_ORCHESTRATION_TASKS.md scope",
+      "riskNotes": "Requires approved artifacts: A-SCHEMA, A-ARCH",
+      "generatedTaskPayload": {
+        "title": "Add shared orchestration contract types",
+        "type": "improvement",
+        "priority": "P1",
+        "phaseKey": "127",
+        "phase": "Phase 127",
+        "approach": "Add TypeScript types for AgentDefinition, AgentSession, AgentAssignmentMetadata, AgentActivity, Handoff v2, and profile refs in src/contracts.",
+        "technicalScope": [
+          "src/contracts/agent-orchestration.ts",
+          "src/contracts/agent-session*.ts",
+          "src/contracts/agent-activity*.ts",
+          "src/contracts/team-execution*.ts"
+        ],
+        "acceptanceCriteria": [
+          "Types compile",
+          "Existing command types remain compatible",
+          "No runtime behavior changes yet",
+          "Verification evidence is recorded in the deliverable with explicit operator review sign-off"
+        ],
+        "dependsOn": [],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-AO-120",
+      "path": "2.2",
+      "title": "Add runtime validators for orchestration contracts",
+      "goalMapping": [
+        "Contract validators",
+        "Phase 2: validators, registry/session bridge, assignment metadata, handoff/activity commands",
+        "Make multi-agent software work observable, bounded, cost-aware, host-agnostic, and trustworthy",
+        "Separate Agent Registry, Assignment/Orchestration, and Activity/Visibility layers",
+        "Enable Orchestration Agent to plan, assign, monitor, reconcile without direct host control in v1",
+        "Enable Task Work Agent bounded execution with Handoff v2 and blocker reporting",
+        "Provide dashboard projection source without dashboard owning orchestration state"
+      ],
+      "suggestedTaskTitle": "Add runtime validators for orchestration contracts",
+      "approach": "Add runtime validation for AgentDefinition, AgentSession, assignment metadata, AgentActivity, and Handoff v2 with agent-readable errors.",
+      "technicalScope": [
+        "src/core/validation/agent-orchestration/**",
+        "test/agent-orchestration/**"
+      ],
+      "acceptanceCriteria": [
+        "Valid examples pass",
+        "Missing required fields fail clearly",
+        "Unknown metadata handled per A-SCHEMA",
+        "Error messages are agent-readable"
+      ],
+      "testingVerification": [
+        "Unit tests for each validator",
+        "Malformed fixture tests",
+        "pnpm run check"
+      ],
+      "dependsOn": [
+        "WBS-AO-110"
+      ],
+      "recommendedPhase": "127",
+      "sizingConfidence": "high",
+      "doneMeans": "T-AO-120 complete when acceptance criteria pass, verification runs green, and operator confirms deliverable matches AGENT_ORCHESTRATION_TASKS.md scope",
+      "riskNotes": "Requires approved artifacts: A-TEST",
+      "generatedTaskPayload": {
+        "title": "Add runtime validators for orchestration contracts",
+        "type": "improvement",
+        "priority": "P1",
+        "phaseKey": "127",
+        "phase": "Phase 127",
+        "approach": "Add runtime validation for AgentDefinition, AgentSession, assignment metadata, AgentActivity, and Handoff v2 with agent-readable errors.",
+        "technicalScope": [
+          "src/core/validation/agent-orchestration/**",
+          "test/agent-orchestration/**"
+        ],
+        "acceptanceCriteria": [
+          "Valid examples pass",
+          "Missing required fields fail clearly",
+          "Unknown metadata handled per A-SCHEMA",
+          "Error messages are agent-readable"
+        ],
+        "dependsOn": [],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-AO-130",
+      "path": "2.3",
+      "title": "Add canonical example fixtures",
+      "goalMapping": [
+        "Canonical example fixtures",
+        "Phase 2: validators, registry/session bridge, assignment metadata, handoff/activity commands",
+        "Make multi-agent software work observable, bounded, cost-aware, host-agnostic, and trustworthy",
+        "Separate Agent Registry, Assignment/Orchestration, and Activity/Visibility layers",
+        "Enable Orchestration Agent to plan, assign, monitor, reconcile without direct host control in v1",
+        "Enable Task Work Agent bounded execution with Handoff v2 and blocker reporting",
+        "Provide dashboard projection source without dashboard owning orchestration state"
+      ],
+      "suggestedTaskTitle": "Add canonical example fixtures",
+      "approach": "Add fixture JSON for agent definitions, sessions, assignment metadata, activity, Handoff v2, and blocked-worker examples.",
+      "technicalScope": [
+        "fixtures/agent-orchestration/**",
+        "test/agent-orchestration/**"
+      ],
+      "acceptanceCriteria": [
+        "Fixtures are valid under validators",
+        "Fixtures are referenced by docs or tests"
+      ],
+      "testingVerification": [
+        "Fixture validation test suite",
+        "integration test: Docs reference fixtures"
+      ],
+      "dependsOn": [
+        "WBS-AO-120"
+      ],
+      "recommendedPhase": "127",
+      "sizingConfidence": "medium",
+      "doneMeans": "T-AO-130 complete when acceptance criteria pass, verification runs green, and operator confirms deliverable matches AGENT_ORCHESTRATION_TASKS.md scope",
+      "generatedTaskPayload": {
+        "title": "Add canonical example fixtures",
+        "type": "improvement",
+        "priority": "P1",
+        "phaseKey": "127",
+        "phase": "Phase 127",
+        "approach": "Add fixture JSON for agent definitions, sessions, assignment metadata, activity, Handoff v2, and blocked-worker examples.",
+        "technicalScope": [
+          "fixtures/agent-orchestration/**",
+          "test/agent-orchestration/**"
+        ],
+        "acceptanceCriteria": [
+          "Fixtures are valid under validators",
+          "Fixtures are referenced by docs or tests"
+        ],
+        "dependsOn": [],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-AO-210",
+      "path": "3.1",
+      "title": "Implement AgentDefinition v1 storage bridge",
+      "goalMapping": [
+        "AgentDefinition v1 storage bridge",
+        "Phase 2: validators, registry/session bridge, assignment metadata, handoff/activity commands",
+        "Make multi-agent software work observable, bounded, cost-aware, host-agnostic, and trustworthy",
+        "Separate Agent Registry, Assignment/Orchestration, and Activity/Visibility layers",
+        "Enable Orchestration Agent to plan, assign, monitor, reconcile without direct host control in v1",
+        "Enable Task Work Agent bounded execution with Handoff v2 and blocker reporting",
+        "Provide dashboard projection source without dashboard owning orchestration state"
+      ],
+      "suggestedTaskTitle": "Implement AgentDefinition v1 storage bridge",
+      "approach": "Implement approved A-ARCH AgentDefinition storage: register/update/list/get, retired/version, profile and host/capability fields.",
+      "technicalScope": [
+        "src/modules/task-engine/**",
+        "src/core/state/**"
+      ],
+      "acceptanceCriteria": [
+        "Orchestration Agent and Task Work Agent definitions can be represented",
+        "Existing subagent definitions remain compatible",
+        "Invalid definitions are rejected",
+        "Verification evidence is recorded in the deliverable with explicit operator review sign-off"
+      ],
+      "testingVerification": [
+        "Unit tests for CRUD",
+        "Compatibility tests with subagent registry"
+      ],
+      "dependsOn": [
+        "WBS-AO-120",
+        "WBS-AO-010",
+        "WBS-AO-100"
+      ],
+      "recommendedPhase": "127",
+      "sizingConfidence": "high",
+      "doneMeans": "T-AO-210 complete when acceptance criteria pass, verification runs green, and operator confirms deliverable matches AGENT_ORCHESTRATION_TASKS.md scope",
+      "riskNotes": "Requires approved artifacts: A-ARCH, A-COMPAT",
+      "generatedTaskPayload": {
+        "title": "Implement AgentDefinition v1 storage bridge",
+        "type": "improvement",
+        "priority": "P1",
+        "phaseKey": "127",
+        "phase": "Phase 127",
+        "approach": "Implement approved A-ARCH AgentDefinition storage: register/update/list/get, retired/version, profile and host/capability fields.",
+        "technicalScope": [
+          "src/modules/task-engine/**",
+          "src/core/state/**"
+        ],
+        "acceptanceCriteria": [
+          "Orchestration Agent and Task Work Agent definitions can be represented",
+          "Existing subagent definitions remain compatible",
+          "Invalid definitions are rejected",
+          "Verification evidence is recorded in the deliverable with explicit operator review sign-off"
+        ],
+        "dependsOn": [],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-AO-220",
+      "path": "3.2",
+      "title": "Implement AgentSession v1 record path",
+      "goalMapping": [
+        "AgentSession v1 record path",
+        "Phase 2: validators, registry/session bridge, assignment metadata, handoff/activity commands",
+        "Make multi-agent software work observable, bounded, cost-aware, host-agnostic, and trustworthy",
+        "Separate Agent Registry, Assignment/Orchestration, and Activity/Visibility layers",
+        "Enable Orchestration Agent to plan, assign, monitor, reconcile without direct host control in v1",
+        "Enable Task Work Agent bounded execution with Handoff v2 and blocker reporting",
+        "Provide dashboard projection source without dashboard owning orchestration state"
+      ],
+      "suggestedTaskTitle": "Implement AgentSession v1 record path",
+      "approach": "Implement session open/update/list/get/close with hostHint, modelTier, and current assignment/task/activity pointers without owning assignment or activity state.",
+      "technicalScope": [
+        "src/modules/task-engine/**",
+        "src/core/state/**"
+      ],
+      "acceptanceCriteria": [
+        "Sessions can be recorded for cursor/vscode/cli/manual hosts",
+        "Existing subagent sessions can be represented or bridged",
+        "Session does not own assignment or live activity state",
+        "Verification evidence is recorded in the deliverable with explicit operator review sign-off"
+      ],
+      "testingVerification": [
+        "Session lifecycle unit tests",
+        "Bridge compatibility tests"
+      ],
+      "dependsOn": [
+        "WBS-AO-120",
+        "WBS-AO-010",
+        "WBS-AO-100"
+      ],
+      "recommendedPhase": "127",
+      "sizingConfidence": "high",
+      "doneMeans": "T-AO-220 complete when acceptance criteria pass, verification runs green, and operator confirms deliverable matches AGENT_ORCHESTRATION_TASKS.md scope",
+      "riskNotes": "Requires approved artifacts: A-ARCH, A-COMPAT",
+      "generatedTaskPayload": {
+        "title": "Implement AgentSession v1 record path",
+        "type": "improvement",
+        "priority": "P1",
+        "phaseKey": "127",
+        "phase": "Phase 127",
+        "approach": "Implement session open/update/list/get/close with hostHint, modelTier, and current assignment/task/activity pointers without owning assignment or activity state.",
+        "technicalScope": [
+          "src/modules/task-engine/**",
+          "src/core/state/**"
+        ],
+        "acceptanceCriteria": [
+          "Sessions can be recorded for cursor/vscode/cli/manual hosts",
+          "Existing subagent sessions can be represented or bridged",
+          "Session does not own assignment or live activity state",
+          "Verification evidence is recorded in the deliverable with explicit operator review sign-off"
+        ],
+        "dependsOn": [],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-AO-230",
+      "path": "3.3",
+      "title": "Add agent registry/session dashboard read summaries",
+      "goalMapping": [
+        "Agent registry/session read summaries",
+        "Phase 2: validators, registry/session bridge, assignment metadata, handoff/activity commands",
+        "Make multi-agent software work observable, bounded, cost-aware, host-agnostic, and trustworthy",
+        "Separate Agent Registry, Assignment/Orchestration, and Activity/Visibility layers",
+        "Enable Orchestration Agent to plan, assign, monitor, reconcile without direct host control in v1",
+        "Enable Task Work Agent bounded execution with Handoff v2 and blocker reporting",
+        "Provide dashboard projection source without dashboard owning orchestration state"
+      ],
+      "suggestedTaskTitle": "Add agent registry/session dashboard read summaries",
+      "approach": "Add read-only summaries for agent definitions, active sessions, host/capability availability, and assignment/activity pointers for projection consumption.",
+      "technicalScope": [
+        "src/modules/task-engine/dashboard/**",
+        "src/modules/task-engine/commands/**"
+      ],
+      "acceptanceCriteria": [
+        "Summary is read-only",
+        "Missing DB/version support returns safe unavailable summary",
+        "Projection source contract can consume it",
+        "Documents empty-store and first-run dashboard behavior when no orchestration activity rows exist",
+        "Verification evidence is recorded in the deliverable with explicit operator review sign-off"
+      ],
+      "testingVerification": [
+        "Read summary unit tests",
+        "integration test: Empty-store first-run returns safe unavailable summary"
+      ],
+      "dependsOn": [
+        "WBS-AO-210",
+        "WBS-AO-220"
+      ],
+      "recommendedPhase": "127",
+      "sizingConfidence": "medium",
+      "doneMeans": "T-AO-230 complete when acceptance criteria pass, verification runs green, and operator confirms deliverable matches AGENT_ORCHESTRATION_TASKS.md scope",
+      "generatedTaskPayload": {
+        "title": "Add agent registry/session dashboard read summaries",
+        "type": "improvement",
+        "priority": "P1",
+        "phaseKey": "127",
+        "phase": "Phase 127",
+        "approach": "Add read-only summaries for agent definitions, active sessions, host/capability availability, and assignment/activity pointers for projection consumption.",
+        "technicalScope": [
+          "src/modules/task-engine/dashboard/**",
+          "src/modules/task-engine/commands/**"
+        ],
+        "acceptanceCriteria": [
+          "Summary is read-only",
+          "Missing DB/version support returns safe unavailable summary",
+          "Projection source contract can consume it",
+          "Documents empty-store and first-run dashboard behavior when no orchestration activity rows exist",
+          "Verification evidence is recorded in the deliverable with explicit operator review sign-off"
+        ],
+        "dependsOn": [],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-AO-310",
+      "path": "4.1",
+      "title": "Add structured assignment metadata validation to Team Execution",
+      "goalMapping": [
+        "TeamAssignment-as-AgentAssignment bridge",
+        "Phase 2: validators, registry/session bridge, assignment metadata, handoff/activity commands",
+        "Make multi-agent software work observable, bounded, cost-aware, host-agnostic, and trustworthy",
+        "Separate Agent Registry, Assignment/Orchestration, and Activity/Visibility layers",
+        "Enable Orchestration Agent to plan, assign, monitor, reconcile without direct host control in v1",
+        "Enable Task Work Agent bounded execution with Handoff v2 and blocker reporting",
+        "Provide dashboard projection source without dashboard owning orchestration state"
+      ],
+      "suggestedTaskTitle": "Add structured assignment metadata validation to Team Execution",
+      "approach": "Validate optional structured assignment metadata on register/update: profiles, resource ownership, blockingPolicy, agentDefinitionId, agentSessionId.",
+      "technicalScope": [
+        "src/modules/task-engine/**/team-execution*",
+        "test/**"
+      ],
+      "acceptanceCriteria": [
+        "Existing assignments without metadata still work",
+        "Metadata is validated when present",
+        "Invalid path/resource/profile metadata fails clearly",
+        "Tests cover old and new assignment rows"
+      ],
+      "testingVerification": [
+        "Assignment metadata validator tests",
+        "Legacy row compatibility tests"
+      ],
+      "dependsOn": [
+        "WBS-AO-120",
+        "WBS-AO-040"
+      ],
+      "recommendedPhase": "127",
+      "sizingConfidence": "high",
+      "doneMeans": "T-AO-310 complete when acceptance criteria pass, verification runs green, and operator confirms deliverable matches AGENT_ORCHESTRATION_TASKS.md scope",
+      "riskNotes": "Requires approved artifacts: A-SCHEMA, A-POLICY",
+      "generatedTaskPayload": {
+        "title": "Add structured assignment metadata validation to Team Execution",
+        "type": "improvement",
+        "priority": "P1",
+        "phaseKey": "127",
+        "phase": "Phase 127",
+        "approach": "Validate optional structured assignment metadata on register/update: profiles, resource ownership, blockingPolicy, agentDefinitionId, agentSessionId.",
+        "technicalScope": [
+          "src/modules/task-engine/**/team-execution*",
+          "test/**"
+        ],
+        "acceptanceCriteria": [
+          "Existing assignments without metadata still work",
+          "Metadata is validated when present",
+          "Invalid path/resource/profile metadata fails clearly",
+          "Tests cover old and new assignment rows"
+        ],
+        "dependsOn": [],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-AO-320",
+      "path": "4.2",
+      "title": "Extend register-assignment flow for orchestration metadata",
+      "goalMapping": [
+        "Assignment registration with orchestration metadata",
+        "Phase 2: validators, registry/session bridge, assignment metadata, handoff/activity commands",
+        "Make multi-agent software work observable, bounded, cost-aware, host-agnostic, and trustworthy",
+        "Separate Agent Registry, Assignment/Orchestration, and Activity/Visibility layers",
+        "Enable Orchestration Agent to plan, assign, monitor, reconcile without direct host control in v1",
+        "Enable Task Work Agent bounded execution with Handoff v2 and blocker reporting",
+        "Provide dashboard projection source without dashboard owning orchestration state"
+      ],
+      "suggestedTaskTitle": "Extend register-assignment flow for orchestration metadata",
+      "approach": "Extend register-assignment to accept structured metadata, agent/session/profile/resource info with policy and idempotency per A-COMMANDS.",
+      "technicalScope": [
+        "src/modules/task-engine/instructions/register-assignment.md",
+        "src/modules/task-engine/commands/**"
+      ],
+      "acceptanceCriteria": [
+        "Orchestrator can register a bounded assignment with metadata",
+        "Response includes assignment id, task id, worker id, metadata summary",
+        "Policy approval behavior matches A-POLICY",
+        "Idempotency behavior is defined if applicable",
+        "Verification evidence is recorded in the deliverable with explicit operator review sign-off"
+      ],
+      "testingVerification": [
+        "Command contract tests",
+        "Policy approval integration tests"
+      ],
+      "dependsOn": [
+        "WBS-AO-310",
+        "WBS-AO-030"
+      ],
+      "recommendedPhase": "127",
+      "sizingConfidence": "high",
+      "doneMeans": "T-AO-320 complete when acceptance criteria pass, verification runs green, and operator confirms deliverable matches AGENT_ORCHESTRATION_TASKS.md scope",
+      "riskNotes": "Requires approved artifacts: A-COMMANDS",
+      "generatedTaskPayload": {
+        "title": "Extend register-assignment flow for orchestration metadata",
+        "type": "improvement",
+        "priority": "P1",
+        "phaseKey": "127",
+        "phase": "Phase 127",
+        "approach": "Extend register-assignment to accept structured metadata, agent/session/profile/resource info with policy and idempotency per A-COMMANDS.",
+        "technicalScope": [
+          "src/modules/task-engine/instructions/register-assignment.md",
+          "src/modules/task-engine/commands/**"
+        ],
+        "acceptanceCriteria": [
+          "Orchestrator can register a bounded assignment with metadata",
+          "Response includes assignment id, task id, worker id, metadata summary",
+          "Policy approval behavior matches A-POLICY",
+          "Idempotency behavior is defined if applicable",
+          "Verification evidence is recorded in the deliverable with explicit operator review sign-off"
+        ],
+        "dependsOn": [],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-AO-330",
+      "path": "4.3",
+      "title": "Add worker blocker/bug creation path",
+      "goalMapping": [
+        "Worker blocker flow",
+        "Phase 2: validators, registry/session bridge, assignment metadata, handoff/activity commands",
+        "Make multi-agent software work observable, bounded, cost-aware, host-agnostic, and trustworthy",
+        "Separate Agent Registry, Assignment/Orchestration, and Activity/Visibility layers",
+        "Enable Orchestration Agent to plan, assign, monitor, reconcile without direct host control in v1",
+        "Enable Task Work Agent bounded execution with Handoff v2 and blocker reporting",
+        "Provide dashboard projection source without dashboard owning orchestration state"
+      ],
+      "suggestedTaskTitle": "Add worker blocker/bug creation path",
+      "approach": "Implement command path for Task Work Agent to create linked blocking task or bug report tied to assignment, then report/block assignment.",
+      "technicalScope": [
+        "src/modules/task-engine/commands/**",
+        "src/modules/task-engine/instructions/**"
+      ],
+      "acceptanceCriteria": [
+        "Worker can create only linked blocker/bug tasks",
+        "Created task has provenance back to assignment and worker",
+        "Worker cannot create broad unrelated feature tasks through this path",
+        "Orchestrator remains responsible for unblocking/continuation",
+        "Verification evidence is recorded in the deliverable with explicit operator review sign-off"
+      ],
+      "testingVerification": [
+        "Blocker creation command tests",
+        "Forbidden broad task creation tests"
+      ],
+      "dependsOn": [
+        "WBS-AO-040",
+        "WBS-AO-030"
+      ],
+      "recommendedPhase": "127",
+      "sizingConfidence": "high",
+      "doneMeans": "T-AO-330 complete when acceptance criteria pass, verification runs green, and operator confirms deliverable matches AGENT_ORCHESTRATION_TASKS.md scope",
+      "riskNotes": "Requires approved artifacts: A-COMMANDS, A-POLICY",
+      "generatedTaskPayload": {
+        "title": "Add worker blocker/bug creation path",
+        "type": "improvement",
+        "priority": "P1",
+        "phaseKey": "127",
+        "phase": "Phase 127",
+        "approach": "Implement command path for Task Work Agent to create linked blocking task or bug report tied to assignment, then report/block assignment.",
+        "technicalScope": [
+          "src/modules/task-engine/commands/**",
+          "src/modules/task-engine/instructions/**"
+        ],
+        "acceptanceCriteria": [
+          "Worker can create only linked blocker/bug tasks",
+          "Created task has provenance back to assignment and worker",
+          "Worker cannot create broad unrelated feature tasks through this path",
+          "Orchestrator remains responsible for unblocking/continuation",
+          "Verification evidence is recorded in the deliverable with explicit operator review sign-off"
+        ],
+        "dependsOn": [],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-AO-340",
+      "path": "4.4",
+      "title": "Harden assignment lifecycle authority",
+      "goalMapping": [
+        "Assignment lifecycle authority",
+        "Phase 2: validators, registry/session bridge, assignment metadata, handoff/activity commands",
+        "Make multi-agent software work observable, bounded, cost-aware, host-agnostic, and trustworthy",
+        "Separate Agent Registry, Assignment/Orchestration, and Activity/Visibility layers",
+        "Enable Orchestration Agent to plan, assign, monitor, reconcile without direct host control in v1",
+        "Enable Task Work Agent bounded execution with Handoff v2 and blocker reporting",
+        "Provide dashboard projection source without dashboard owning orchestration state"
+      ],
+      "suggestedTaskTitle": "Harden assignment lifecycle authority",
+      "approach": "Enforce orchestrator vs worker mutation boundaries on submit handoff, block, reconcile, cancel, and unblock paths with policy checks.",
+      "technicalScope": [
+        "src/modules/task-engine/**",
+        "test/**"
+      ],
+      "acceptanceCriteria": [
+        "Unauthorized mutations fail clearly",
+        "Tests cover worker allowed/forbidden actions",
+        "Orchestrator actions require expected policy approval where appropriate"
+      ],
+      "testingVerification": [
+        "Authority matrix tests",
+        "Policy denial tests"
+      ],
+      "dependsOn": [
+        "WBS-AO-310",
+        "WBS-AO-040"
+      ],
+      "recommendedPhase": "127",
+      "sizingConfidence": "high",
+      "doneMeans": "T-AO-340 complete when acceptance criteria pass, verification runs green, and operator confirms deliverable matches AGENT_ORCHESTRATION_TASKS.md scope",
+      "riskNotes": "Requires approved artifacts: A-POLICY",
+      "generatedTaskPayload": {
+        "title": "Harden assignment lifecycle authority",
+        "type": "improvement",
+        "priority": "P1",
+        "phaseKey": "127",
+        "phase": "Phase 127",
+        "approach": "Enforce orchestrator vs worker mutation boundaries on submit handoff, block, reconcile, cancel, and unblock paths with policy checks.",
+        "technicalScope": [
+          "src/modules/task-engine/**",
+          "test/**"
+        ],
+        "acceptanceCriteria": [
+          "Unauthorized mutations fail clearly",
+          "Tests cover worker allowed/forbidden actions",
+          "Orchestrator actions require expected policy approval where appropriate"
+        ],
+        "dependsOn": [],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-AO-410",
+      "path": "5.1",
+      "title": "Implement Handoff v2 submission support",
+      "goalMapping": [
+        "Handoff v2 submission",
+        "Phase 2: validators, registry/session bridge, assignment metadata, handoff/activity commands",
+        "Make multi-agent software work observable, bounded, cost-aware, host-agnostic, and trustworthy",
+        "Separate Agent Registry, Assignment/Orchestration, and Activity/Visibility layers",
+        "Enable Orchestration Agent to plan, assign, monitor, reconcile without direct host control in v1",
+        "Enable Task Work Agent bounded execution with Handoff v2 and blocker reporting",
+        "Provide dashboard projection source without dashboard owning orchestration state"
+      ],
+      "suggestedTaskTitle": "Implement Handoff v2 submission support",
+      "approach": "Extend submit-assignment-handoff to accept Handoff v2 with v1 compatibility bridge and persist evidence, filesChanged, commandsRun, risks, blockers.",
+      "technicalScope": [
+        "src/modules/task-engine/commands/**",
+        "src/core/state/**"
+      ],
+      "acceptanceCriteria": [
+        "Completed, blocked, partial, failed, and needs_review handoffs validate",
+        "Handoff v1 compatibility is preserved or explicitly bridged",
+        "Handoff response is suitable for Orchestrator reconciliation",
+        "Evidence refs, commandsRun, filesChanged, risks, blockers, and nextRecommendedAction are persisted or safely stored",
+        "Verification evidence is recorded in the deliverable with explicit operator review sign-off"
+      ],
+      "testingVerification": [
+        "Handoff v2 submission unit tests",
+        "v1 compatibility tests"
+      ],
+      "dependsOn": [
+        "WBS-AO-120",
+        "WBS-AO-340",
+        "WBS-AO-060"
+      ],
+      "recommendedPhase": "127",
+      "sizingConfidence": "high",
+      "doneMeans": "T-AO-410 complete when acceptance criteria pass, verification runs green, and operator confirms deliverable matches AGENT_ORCHESTRATION_TASKS.md scope",
+      "riskNotes": "Requires approved artifacts: A-HANDOFF",
+      "generatedTaskPayload": {
+        "title": "Implement Handoff v2 submission support",
+        "type": "improvement",
+        "priority": "P1",
+        "phaseKey": "127",
+        "phase": "Phase 127",
+        "approach": "Extend submit-assignment-handoff to accept Handoff v2 with v1 compatibility bridge and persist evidence, filesChanged, commandsRun, risks, blockers.",
+        "technicalScope": [
+          "src/modules/task-engine/commands/**",
+          "src/core/state/**"
+        ],
+        "acceptanceCriteria": [
+          "Completed, blocked, partial, failed, and needs_review handoffs validate",
+          "Handoff v1 compatibility is preserved or explicitly bridged",
+          "Handoff response is suitable for Orchestrator reconciliation",
+          "Evidence refs, commandsRun, filesChanged, risks, blockers, and nextRecommendedAction are persisted or safely stored",
+          "Verification evidence is recorded in the deliverable with explicit operator review sign-off"
+        ],
+        "dependsOn": [],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-AO-420",
+      "path": "5.2",
+      "title": "Update reconcile flow to consume Handoff v2",
+      "goalMapping": [
+        "Orchestrator reconcile with Handoff v2",
+        "Phase 2: validators, registry/session bridge, assignment metadata, handoff/activity commands",
+        "Make multi-agent software work observable, bounded, cost-aware, host-agnostic, and trustworthy",
+        "Separate Agent Registry, Assignment/Orchestration, and Activity/Visibility layers",
+        "Enable Orchestration Agent to plan, assign, monitor, reconcile without direct host control in v1",
+        "Enable Task Work Agent bounded execution with Handoff v2 and blocker reporting",
+        "Provide dashboard projection source without dashboard owning orchestration state"
+      ],
+      "suggestedTaskTitle": "Update reconcile flow to consume Handoff v2",
+      "approach": "Update reconcile/summary paths to surface Handoff v2 fields and support reconcile, rework, blocker, review, cancel/supersede decisions.",
+      "technicalScope": [
+        "src/modules/task-engine/commands/**",
+        "test/**"
+      ],
+      "acceptanceCriteria": [
+        "Orchestrator can inspect structured handoff data",
+        "Reconcile checkpoint can summarize Handoff v2",
+        "Tests cover blocked/partial/needs_review handling"
+      ],
+      "testingVerification": [
+        "Reconcile flow integration tests",
+        "Handoff v2 summary tests"
+      ],
+      "dependsOn": [
+        "WBS-AO-410",
+        "WBS-AO-040"
+      ],
+      "recommendedPhase": "127",
+      "sizingConfidence": "medium",
+      "doneMeans": "T-AO-420 complete when acceptance criteria pass, verification runs green, and operator confirms deliverable matches AGENT_ORCHESTRATION_TASKS.md scope",
+      "riskNotes": "Requires approved artifacts: A-POLICY",
+      "generatedTaskPayload": {
+        "title": "Update reconcile flow to consume Handoff v2",
+        "type": "improvement",
+        "priority": "P1",
+        "phaseKey": "127",
+        "phase": "Phase 127",
+        "approach": "Update reconcile/summary paths to surface Handoff v2 fields and support reconcile, rework, blocker, review, cancel/supersede decisions.",
+        "technicalScope": [
+          "src/modules/task-engine/commands/**",
+          "test/**"
+        ],
+        "acceptanceCriteria": [
+          "Orchestrator can inspect structured handoff data",
+          "Reconcile checkpoint can summarize Handoff v2",
+          "Tests cover blocked/partial/needs_review handling"
+        ],
+        "dependsOn": [],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-AO-430",
+      "path": "5.3",
+      "title": "Implement Activity v1 command compatibility",
+      "goalMapping": [
+        "Activity v1 command compatibility",
+        "Phase 2: validators, registry/session bridge, assignment metadata, handoff/activity commands",
+        "Make multi-agent software work observable, bounded, cost-aware, host-agnostic, and trustworthy",
+        "Separate Agent Registry, Assignment/Orchestration, and Activity/Visibility layers",
+        "Enable Orchestration Agent to plan, assign, monitor, reconcile without direct host control in v1",
+        "Enable Task Work Agent bounded execution with Handoff v2 and blocker reporting",
+        "Provide dashboard projection source without dashboard owning orchestration state"
+      ],
+      "suggestedTaskTitle": "Implement Activity v1 command compatibility",
+      "approach": "Extend set-agent-activity/activity store for Activity v1 fields, TTL, stale/expired behavior, and assignment/session/task linkage.",
+      "technicalScope": [
+        "src/modules/task-engine/**/agent-activity*",
+        "test/**"
+      ],
+      "acceptanceCriteria": [
+        "Existing activity calls still work",
+        "Activity v1 examples validate",
+        "Stale/expired behavior matches A-ACTIVITY",
+        "Activity can be linked to assignment/session/task",
+        "Verification evidence is recorded in the deliverable with explicit operator review sign-off"
+      ],
+      "testingVerification": [
+        "Activity v1 command tests",
+        "Stale/expired lifecycle tests"
+      ],
+      "dependsOn": [
+        "WBS-AO-120",
+        "WBS-AO-070"
+      ],
+      "recommendedPhase": "127",
+      "sizingConfidence": "high",
+      "doneMeans": "T-AO-430 complete when acceptance criteria pass, verification runs green, and operator confirms deliverable matches AGENT_ORCHESTRATION_TASKS.md scope",
+      "riskNotes": "Requires approved artifacts: A-ACTIVITY",
+      "generatedTaskPayload": {
+        "title": "Implement Activity v1 command compatibility",
+        "type": "improvement",
+        "priority": "P1",
+        "phaseKey": "127",
+        "phase": "Phase 127",
+        "approach": "Extend set-agent-activity/activity store for Activity v1 fields, TTL, stale/expired behavior, and assignment/session/task linkage.",
+        "technicalScope": [
+          "src/modules/task-engine/**/agent-activity*",
+          "test/**"
+        ],
+        "acceptanceCriteria": [
+          "Existing activity calls still work",
+          "Activity v1 examples validate",
+          "Stale/expired behavior matches A-ACTIVITY",
+          "Activity can be linked to assignment/session/task",
+          "Verification evidence is recorded in the deliverable with explicit operator review sign-off"
+        ],
+        "dependsOn": [],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-AO-440",
+      "path": "6.1",
+      "title": "Add activity lifecycle docs/snippets for agents",
+      "goalMapping": [
+        "Phase 3 — Projection, Docs & Hardening",
+        "Phase 3: prompts, projection bridge, compatibility and E2E hardening",
+        "Make multi-agent software work observable, bounded, cost-aware, host-agnostic, and trustworthy",
+        "Separate Agent Registry, Assignment/Orchestration, and Activity/Visibility layers",
+        "Enable Orchestration Agent to plan, assign, monitor, reconcile without direct host control in v1",
+        "Enable Task Work Agent bounded execution with Handoff v2 and blocker reporting",
+        "Provide dashboard projection source without dashboard owning orchestration state"
+      ],
+      "suggestedTaskTitle": "Add activity lifecycle docs/snippets for agents",
+      "approach": "Document agent activity lifecycle requirements with copyable command examples for orchestrator and task worker prompts.",
+      "technicalScope": [
+        ".ai/runbooks/agent-orchestration-activity.md",
+        ".ai/AGENT-CLI-MAP.md"
+      ],
+      "acceptanceCriteria": [
+        "Agent-facing docs include copyable command examples",
+        "Orchestrator and Task Work Agent prompts reference lifecycle",
+        "Verification evidence is recorded in the deliverable with explicit operator review sign-off"
+      ],
+      "testingVerification": [
+        "integration test: Docs lint/review",
+        "integration test: Snippet generation if applicable"
+      ],
+      "dependsOn": [
+        "WBS-AO-430",
+        "WBS-AO-070"
+      ],
+      "recommendedPhase": "128",
+      "sizingConfidence": "medium",
+      "doneMeans": "T-AO-440 complete when acceptance criteria pass, verification runs green, and operator confirms deliverable matches AGENT_ORCHESTRATION_TASKS.md scope",
+      "riskNotes": "Requires approved artifacts: A-ACTIVITY",
+      "generatedTaskPayload": {
+        "title": "Add activity lifecycle docs/snippets for agents",
+        "type": "improvement",
+        "priority": "P1",
+        "phaseKey": "128",
+        "phase": "Phase 128",
+        "approach": "Document agent activity lifecycle requirements with copyable command examples for orchestrator and task worker prompts.",
+        "technicalScope": [
+          ".ai/runbooks/agent-orchestration-activity.md",
+          ".ai/AGENT-CLI-MAP.md"
+        ],
+        "acceptanceCriteria": [
+          "Agent-facing docs include copyable command examples",
+          "Orchestrator and Task Work Agent prompts reference lifecycle",
+          "Verification evidence is recorded in the deliverable with explicit operator review sign-off"
+        ],
+        "dependsOn": [],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-AO-510",
+      "path": "6.2",
+      "title": "Add Orchestration Agent prompt/contract",
+      "goalMapping": [
+        "Orchestration Agent prompt/contract",
+        "Phase 3: prompts, projection bridge, compatibility and E2E hardening",
+        "Make multi-agent software work observable, bounded, cost-aware, host-agnostic, and trustworthy",
+        "Separate Agent Registry, Assignment/Orchestration, and Activity/Visibility layers",
+        "Enable Orchestration Agent to plan, assign, monitor, reconcile without direct host control in v1",
+        "Enable Task Work Agent bounded execution with Handoff v2 and blocker reporting",
+        "Provide dashboard projection source without dashboard owning orchestration state"
+      ],
+      "suggestedTaskTitle": "Add Orchestration Agent prompt/contract",
+      "approach": "Create orchestrator agent-facing prompt/contract covering authority, profiles, model rubric, assignment rules, blocker handling, reconciliation, and forbidden implementation behavior.",
+      "technicalScope": [
+        ".ai/prompts/orchestration-agent.md",
+        ".cursor/rules/**"
+      ],
+      "acceptanceCriteria": [
+        "Prompt reflects foundation decisions",
+        "Prompt tells orchestrator not to code unless assigned as worker",
+        "Prompt includes model/cost selection expectations",
+        "Prompt includes structured assignment output guidance",
+        "Verification evidence is recorded in the deliverable with explicit operator review sign-off"
+      ],
+      "testingVerification": [
+        "integration test: Prompt review checklist",
+        "integration test: Cross-reference with A-PROFILES and A-POLICY"
+      ],
+      "dependsOn": [
+        "WBS-AO-050",
+        "WBS-AO-030",
+        "WBS-AO-040"
+      ],
+      "recommendedPhase": "128",
+      "sizingConfidence": "high",
+      "doneMeans": "T-AO-510 complete when acceptance criteria pass, verification runs green, and operator confirms deliverable matches AGENT_ORCHESTRATION_TASKS.md scope",
+      "riskNotes": "Requires approved artifacts: A-PROFILES, A-COMMANDS, A-POLICY",
+      "generatedTaskPayload": {
+        "title": "Add Orchestration Agent prompt/contract",
+        "type": "improvement",
+        "priority": "P1",
+        "phaseKey": "128",
+        "phase": "Phase 128",
+        "approach": "Create orchestrator agent-facing prompt/contract covering authority, profiles, model rubric, assignment rules, blocker handling, reconciliation, and forbidden implementation behavior.",
+        "technicalScope": [
+          ".ai/prompts/orchestration-agent.md",
+          ".cursor/rules/**"
+        ],
+        "acceptanceCriteria": [
+          "Prompt reflects foundation decisions",
+          "Prompt tells orchestrator not to code unless assigned as worker",
+          "Prompt includes model/cost selection expectations",
+          "Prompt includes structured assignment output guidance",
+          "Verification evidence is recorded in the deliverable with explicit operator review sign-off"
+        ],
+        "dependsOn": [],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-AO-520",
+      "path": "6.3",
+      "title": "Add Task Work Agent prompt/contract",
+      "goalMapping": [
+        "Task Work Agent prompt/contract",
+        "Phase 3: prompts, projection bridge, compatibility and E2E hardening",
+        "Make multi-agent software work observable, bounded, cost-aware, host-agnostic, and trustworthy",
+        "Separate Agent Registry, Assignment/Orchestration, and Activity/Visibility layers",
+        "Enable Orchestration Agent to plan, assign, monitor, reconcile without direct host control in v1",
+        "Enable Task Work Agent bounded execution with Handoff v2 and blocker reporting",
+        "Provide dashboard projection source without dashboard owning orchestration state"
+      ],
+      "suggestedTaskTitle": "Add Task Work Agent prompt/contract",
+      "approach": "Create task worker prompt/contract for bounded scope, path rules, activity lifecycle, blocker/bug creation, Handoff v2, escalation, and forbidden self-reconcile/unblock.",
+      "technicalScope": [
+        ".ai/prompts/task-work-agent.md",
+        ".cursor/rules/**"
+      ],
+      "acceptanceCriteria": [
+        "Prompt reflects foundation decisions",
+        "Prompt emphasizes scope discipline",
+        "Prompt includes blocked/partial/completed handoff examples",
+        "Prompt gives clear stop/escalate conditions",
+        "Verification evidence is recorded in the deliverable with explicit operator review sign-off"
+      ],
+      "testingVerification": [
+        "integration test: Prompt review checklist",
+        "integration test: Handoff examples referenced"
+      ],
+      "dependsOn": [
+        "WBS-AO-050",
+        "WBS-AO-060",
+        "WBS-AO-070",
+        "WBS-AO-040"
+      ],
+      "recommendedPhase": "128",
+      "sizingConfidence": "high",
+      "doneMeans": "T-AO-520 complete when acceptance criteria pass, verification runs green, and operator confirms deliverable matches AGENT_ORCHESTRATION_TASKS.md scope",
+      "riskNotes": "Requires approved artifacts: A-PROFILES, A-HANDOFF, A-ACTIVITY, A-POLICY",
+      "generatedTaskPayload": {
+        "title": "Add Task Work Agent prompt/contract",
+        "type": "improvement",
+        "priority": "P1",
+        "phaseKey": "128",
+        "phase": "Phase 128",
+        "approach": "Create task worker prompt/contract for bounded scope, path rules, activity lifecycle, blocker/bug creation, Handoff v2, escalation, and forbidden self-reconcile/unblock.",
+        "technicalScope": [
+          ".ai/prompts/task-work-agent.md",
+          ".cursor/rules/**"
+        ],
+        "acceptanceCriteria": [
+          "Prompt reflects foundation decisions",
+          "Prompt emphasizes scope discipline",
+          "Prompt includes blocked/partial/completed handoff examples",
+          "Prompt gives clear stop/escalate conditions",
+          "Verification evidence is recorded in the deliverable with explicit operator review sign-off"
+        ],
+        "dependsOn": [],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-AO-530",
+      "path": "6.4",
+      "title": "Add profile catalog docs",
+      "goalMapping": [
+        "Profile catalog docs",
+        "Phase 3: prompts, projection bridge, compatibility and E2E hardening",
+        "Make multi-agent software work observable, bounded, cost-aware, host-agnostic, and trustworthy",
+        "Separate Agent Registry, Assignment/Orchestration, and Activity/Visibility layers",
+        "Enable Orchestration Agent to plan, assign, monitor, reconcile without direct host control in v1",
+        "Enable Task Work Agent bounded execution with Handoff v2 and blocker reporting",
+        "Provide dashboard projection source without dashboard owning orchestration state"
+      ],
+      "suggestedTaskTitle": "Add profile catalog docs",
+      "approach": "Document access profiles, context profiles, model tiers, host capabilities, resource ownership metadata, and AgentDefinition assignment examples.",
+      "technicalScope": [
+        ".ai/runbooks/agent-orchestration-profiles.md",
+        "AGENT_ORCHESTRATION_PROFILES.md"
+      ],
+      "acceptanceCriteria": [
+        "Agents can understand which profile applies",
+        "Examples match schemas and validators",
+        "Verification evidence is recorded in the deliverable with explicit operator review sign-off"
+      ],
+      "testingVerification": [
+        "integration test: Docs cross-check with A-PROFILES fixtures"
+      ],
+      "dependsOn": [
+        "WBS-AO-050"
+      ],
+      "recommendedPhase": "128",
+      "sizingConfidence": "medium",
+      "doneMeans": "T-AO-530 complete when acceptance criteria pass, verification runs green, and operator confirms deliverable matches AGENT_ORCHESTRATION_TASKS.md scope",
+      "riskNotes": "Requires approved artifacts: A-PROFILES",
+      "generatedTaskPayload": {
+        "title": "Add profile catalog docs",
+        "type": "improvement",
+        "priority": "P1",
+        "phaseKey": "128",
+        "phase": "Phase 128",
+        "approach": "Document access profiles, context profiles, model tiers, host capabilities, resource ownership metadata, and AgentDefinition assignment examples.",
+        "technicalScope": [
+          ".ai/runbooks/agent-orchestration-profiles.md",
+          "AGENT_ORCHESTRATION_PROFILES.md"
+        ],
+        "acceptanceCriteria": [
+          "Agents can understand which profile applies",
+          "Examples match schemas and validators",
+          "Verification evidence is recorded in the deliverable with explicit operator review sign-off"
+        ],
+        "dependsOn": [],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-AO-610",
+      "path": "7.1",
+      "title": "Add orchestration projection source builder",
+      "goalMapping": [
+        "DashboardAgentActivitySummary projection bridge",
+        "Phase 3: prompts, projection bridge, compatibility and E2E hardening",
+        "Make multi-agent software work observable, bounded, cost-aware, host-agnostic, and trustworthy",
+        "Separate Agent Registry, Assignment/Orchestration, and Activity/Visibility layers",
+        "Enable Orchestration Agent to plan, assign, monitor, reconcile without direct host control in v1",
+        "Enable Task Work Agent bounded execution with Handoff v2 and blocker reporting",
+        "Provide dashboard projection source without dashboard owning orchestration state"
+      ],
+      "suggestedTaskTitle": "Add orchestration projection source builder",
+      "approach": "Build projection builder consuming definitions, sessions, assignments, activities, subagent sessions, handoffs, resource/model/host metadata for DashboardAgentActivitySummary.",
+      "technicalScope": [
+        "src/modules/task-engine/dashboard/build-dashboard-agent-activity-summary.ts",
+        "src/contracts/dashboard-summary-run.ts"
+      ],
+      "acceptanceCriteria": [
+        "Projection builder does not mutate orchestration state",
+        "Missing metadata falls back safely",
+        "Duplicate sources can be merged/collapsed",
+        "Projection includes enough data for the Agent Activity Dashboard UX plan",
+        "Documents empty-store and first-run dashboard behavior when no orchestration activity rows exist",
+        "Verification evidence is recorded in the deliverable with explicit operator review sign-off"
+      ],
+      "testingVerification": [
+        "Projection builder unit tests",
+        "Empty-store first-run projection test"
+      ],
+      "dependsOn": [
+        "WBS-AO-210",
+        "WBS-AO-220",
+        "WBS-AO-310",
+        "WBS-AO-430",
+        "WBS-AO-080"
+      ],
+      "recommendedPhase": "128",
+      "sizingConfidence": "medium",
+      "doneMeans": "T-AO-610 complete when acceptance criteria pass, verification runs green, and operator confirms deliverable matches AGENT_ORCHESTRATION_TASKS.md scope",
+      "riskNotes": "Requires approved artifacts: A-PROJECTION",
+      "generatedTaskPayload": {
+        "title": "Add orchestration projection source builder",
+        "type": "improvement",
+        "priority": "P1",
+        "phaseKey": "128",
+        "phase": "Phase 128",
+        "approach": "Build projection builder consuming definitions, sessions, assignments, activities, subagent sessions, handoffs, resource/model/host metadata for DashboardAgentActivitySummary.",
+        "technicalScope": [
+          "src/modules/task-engine/dashboard/build-dashboard-agent-activity-summary.ts",
+          "src/contracts/dashboard-summary-run.ts"
+        ],
+        "acceptanceCriteria": [
+          "Projection builder does not mutate orchestration state",
+          "Missing metadata falls back safely",
+          "Duplicate sources can be merged/collapsed",
+          "Projection includes enough data for the Agent Activity Dashboard UX plan",
+          "Documents empty-store and first-run dashboard behavior when no orchestration activity rows exist",
+          "Verification evidence is recorded in the deliverable with explicit operator review sign-off"
+        ],
+        "dependsOn": [],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-AO-620",
+      "path": "7.2",
+      "title": "Add projection tests for orchestration sources",
+      "goalMapping": [
+        "Projection source tests",
+        "Phase 3: prompts, projection bridge, compatibility and E2E hardening",
+        "Make multi-agent software work observable, bounded, cost-aware, host-agnostic, and trustworthy",
+        "Separate Agent Registry, Assignment/Orchestration, and Activity/Visibility layers",
+        "Enable Orchestration Agent to plan, assign, monitor, reconcile without direct host control in v1",
+        "Enable Task Work Agent bounded execution with Handoff v2 and blocker reporting",
+        "Provide dashboard projection source without dashboard owning orchestration state"
+      ],
+      "suggestedTaskTitle": "Add projection tests for orchestration sources",
+      "approach": "Test projection merge cases: live activity + assignment + session, subagent fallback, missing activity, stale/blocked, completed handoff, malformed metadata, legacy rows.",
+      "technicalScope": [
+        "test/dashboard-agent-activity-summary.test.mjs",
+        "fixtures/agent-orchestration/**"
+      ],
+      "acceptanceCriteria": [
+        "Tests prove dashboard can consume stable projection data",
+        "Existing dashboard summary behavior is not broken"
+      ],
+      "testingVerification": [
+        "pnpm test -- dashboard-agent-activity-summary",
+        "Regression on dashboard-summary tests"
+      ],
+      "dependsOn": [
+        "WBS-AO-610",
+        "WBS-AO-090"
+      ],
+      "recommendedPhase": "128",
+      "sizingConfidence": "medium",
+      "doneMeans": "T-AO-620 complete when acceptance criteria pass, verification runs green, and operator confirms deliverable matches AGENT_ORCHESTRATION_TASKS.md scope",
+      "riskNotes": "Requires approved artifacts: A-TEST",
+      "generatedTaskPayload": {
+        "title": "Add projection tests for orchestration sources",
+        "type": "improvement",
+        "priority": "P1",
+        "phaseKey": "128",
+        "phase": "Phase 128",
+        "approach": "Test projection merge cases: live activity + assignment + session, subagent fallback, missing activity, stale/blocked, completed handoff, malformed metadata, legacy rows.",
+        "technicalScope": [
+          "test/dashboard-agent-activity-summary.test.mjs",
+          "fixtures/agent-orchestration/**"
+        ],
+        "acceptanceCriteria": [
+          "Tests prove dashboard can consume stable projection data",
+          "Existing dashboard summary behavior is not broken"
+        ],
+        "dependsOn": [],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-AO-710",
+      "path": "8.1",
+      "title": "Add compatibility tests for existing subagent and team execution flows",
+      "goalMapping": [
+        "Compatibility tests",
+        "Phase 3: prompts, projection bridge, compatibility and E2E hardening",
+        "Make multi-agent software work observable, bounded, cost-aware, host-agnostic, and trustworthy",
+        "Separate Agent Registry, Assignment/Orchestration, and Activity/Visibility layers",
+        "Enable Orchestration Agent to plan, assign, monitor, reconcile without direct host control in v1",
+        "Enable Task Work Agent bounded execution with Handoff v2 and blocker reporting",
+        "Provide dashboard projection source without dashboard owning orchestration state"
+      ],
+      "suggestedTaskTitle": "Add compatibility tests for existing subagent and team execution flows",
+      "approach": "Test existing subagent registry, session, assignment, handoff, reconcile/cancel/block flows remain compatible with additive orchestration metadata.",
+      "technicalScope": [
+        "test/subagent-registry*.test.mjs",
+        "test/team-execution*.test.mjs"
+      ],
+      "acceptanceCriteria": [
+        "Existing behavior remains compatible",
+        "Additive fields do not force migration unless approved"
+      ],
+      "testingVerification": [
+        "Compatibility test suite in CI",
+        "pnpm run check"
+      ],
+      "dependsOn": [
+        "WBS-AO-210",
+        "WBS-AO-220",
+        "WBS-AO-310",
+        "WBS-AO-410",
+        "WBS-AO-100",
+        "WBS-AO-090"
+      ],
+      "recommendedPhase": "128",
+      "sizingConfidence": "high",
+      "doneMeans": "T-AO-710 complete when acceptance criteria pass, verification runs green, and operator confirms deliverable matches AGENT_ORCHESTRATION_TASKS.md scope",
+      "riskNotes": "Requires approved artifacts: A-COMPAT, A-TEST",
+      "generatedTaskPayload": {
+        "title": "Add compatibility tests for existing subagent and team execution flows",
+        "type": "improvement",
+        "priority": "P1",
+        "phaseKey": "128",
+        "phase": "Phase 128",
+        "approach": "Test existing subagent registry, session, assignment, handoff, reconcile/cancel/block flows remain compatible with additive orchestration metadata.",
+        "technicalScope": [
+          "test/subagent-registry*.test.mjs",
+          "test/team-execution*.test.mjs"
+        ],
+        "acceptanceCriteria": [
+          "Existing behavior remains compatible",
+          "Additive fields do not force migration unless approved"
+        ],
+        "dependsOn": [],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-AO-720",
+      "path": "8.2",
+      "title": "Add orchestration happy-path E2E fixture",
+      "goalMapping": [
+        "Happy-path E2E fixture",
+        "Phase 3: prompts, projection bridge, compatibility and E2E hardening",
+        "Make multi-agent software work observable, bounded, cost-aware, host-agnostic, and trustworthy",
+        "Separate Agent Registry, Assignment/Orchestration, and Activity/Visibility layers",
+        "Enable Orchestration Agent to plan, assign, monitor, reconcile without direct host control in v1",
+        "Enable Task Work Agent bounded execution with Handoff v2 and blocker reporting",
+        "Provide dashboard projection source without dashboard owning orchestration state"
+      ],
+      "suggestedTaskTitle": "Add orchestration happy-path E2E fixture",
+      "approach": "E2E: register agents, open session, register assignment with metadata, set activity, submit Handoff v2, reconcile, project dashboard source.",
+      "technicalScope": [
+        "test/agent-orchestration-happy-path.e2e.test.mjs",
+        "fixtures/agent-orchestration/**"
+      ],
+      "acceptanceCriteria": [
+        "E2E fixture passes through CLI/test runner",
+        "Evidence shows assignment and activity are linked",
+        "Handoff v2 is usable for reconciliation"
+      ],
+      "testingVerification": [
+        "E2E test in CI",
+        "integration test: Manual CLI replay documented"
+      ],
+      "dependsOn": [
+        "WBS-AO-410",
+        "WBS-AO-320",
+        "WBS-AO-430",
+        "WBS-AO-610"
+      ],
+      "recommendedPhase": "128",
+      "sizingConfidence": "medium",
+      "doneMeans": "T-AO-720 complete when acceptance criteria pass, verification runs green, and operator confirms deliverable matches AGENT_ORCHESTRATION_TASKS.md scope",
+      "riskNotes": "Requires approved artifacts: A-TEST",
+      "generatedTaskPayload": {
+        "title": "Add orchestration happy-path E2E fixture",
+        "type": "improvement",
+        "priority": "P1",
+        "phaseKey": "128",
+        "phase": "Phase 128",
+        "approach": "E2E: register agents, open session, register assignment with metadata, set activity, submit Handoff v2, reconcile, project dashboard source.",
+        "technicalScope": [
+          "test/agent-orchestration-happy-path.e2e.test.mjs",
+          "fixtures/agent-orchestration/**"
+        ],
+        "acceptanceCriteria": [
+          "E2E fixture passes through CLI/test runner",
+          "Evidence shows assignment and activity are linked",
+          "Handoff v2 is usable for reconciliation"
+        ],
+        "dependsOn": [],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-AO-730",
+      "path": "8.3",
+      "title": "Add blocked-worker E2E fixture",
+      "goalMapping": [
+        "Blocked-worker E2E fixture",
+        "Phase 3: prompts, projection bridge, compatibility and E2E hardening",
+        "Make multi-agent software work observable, bounded, cost-aware, host-agnostic, and trustworthy",
+        "Separate Agent Registry, Assignment/Orchestration, and Activity/Visibility layers",
+        "Enable Orchestration Agent to plan, assign, monitor, reconcile without direct host control in v1",
+        "Enable Task Work Agent bounded execution with Handoff v2 and blocker reporting",
+        "Provide dashboard projection source without dashboard owning orchestration state"
+      ],
+      "suggestedTaskTitle": "Add blocked-worker E2E fixture",
+      "approach": "E2E: worker starts, discovers blocker, creates linked blocker task, blocks assignment, orchestrator resolves; worker cannot self-unblock.",
+      "technicalScope": [
+        "test/agent-orchestration-blocked-worker.e2e.test.mjs",
+        "fixtures/agent-orchestration/**"
+      ],
+      "acceptanceCriteria": [
+        "Worker cannot self-unblock",
+        "Blocker task is linked to original assignment/task",
+        "Dashboard projection can show blocked state"
+      ],
+      "testingVerification": [
+        "Blocked-worker E2E in CI",
+        "integration test: Projection blocked-state assertion"
+      ],
+      "dependsOn": [
+        "WBS-AO-330",
+        "WBS-AO-430",
+        "WBS-AO-610"
+      ],
+      "recommendedPhase": "128",
+      "sizingConfidence": "medium",
+      "doneMeans": "T-AO-730 complete when acceptance criteria pass, verification runs green, and operator confirms deliverable matches AGENT_ORCHESTRATION_TASKS.md scope",
+      "riskNotes": "Requires approved artifacts: A-TEST",
+      "generatedTaskPayload": {
+        "title": "Add blocked-worker E2E fixture",
+        "type": "improvement",
+        "priority": "P1",
+        "phaseKey": "128",
+        "phase": "Phase 128",
+        "approach": "E2E: worker starts, discovers blocker, creates linked blocker task, blocks assignment, orchestrator resolves; worker cannot self-unblock.",
+        "technicalScope": [
+          "test/agent-orchestration-blocked-worker.e2e.test.mjs",
+          "fixtures/agent-orchestration/**"
+        ],
+        "acceptanceCriteria": [
+          "Worker cannot self-unblock",
+          "Blocker task is linked to original assignment/task",
+          "Dashboard projection can show blocked state"
+        ],
+        "dependsOn": [],
+        "status": "proposed"
+      }
+    },
+    {
+      "wbsId": "WBS-AO-740",
+      "path": "8.4",
+      "title": "Add release readiness checklist",
+      "goalMapping": [
+        "Release readiness checklist",
+        "Phase 3: prompts, projection bridge, compatibility and E2E hardening",
+        "Make multi-agent software work observable, bounded, cost-aware, host-agnostic, and trustworthy",
+        "Separate Agent Registry, Assignment/Orchestration, and Activity/Visibility layers",
+        "Enable Orchestration Agent to plan, assign, monitor, reconcile without direct host control in v1",
+        "Enable Task Work Agent bounded execution with Handoff v2 and blocker reporting",
+        "Provide dashboard projection source without dashboard owning orchestration state"
+      ],
+      "suggestedTaskTitle": "Add release readiness checklist",
+      "approach": "Create maintainer release checklist for schemas, commands, docs, compatibility, E2E paths, projection bridge, and known limitations/future-work buckets.",
+      "technicalScope": [
+        ".ai/runbooks/agent-orchestration-release-checklist.md",
+        ".ai/RELEASING.md"
+      ],
+      "acceptanceCriteria": [
+        "Release checklist enumerates schema, command, docs, compatibility, E2E, and projection gates with pass/fail evidence columns",
+        "Maintainer can walk the checklist before enabling orchestration-driven delivery without undocumented gaps"
+      ],
+      "testingVerification": [
+        "integration test: Checklist walkthrough dry-run",
+        "Links to A-TEST and A-COMPAT artifacts"
+      ],
+      "dependsOn": [
+        "WBS-AO-710",
+        "WBS-AO-720",
+        "WBS-AO-730",
+        "WBS-AO-090",
+        "WBS-AO-100"
+      ],
+      "recommendedPhase": "128",
+      "sizingConfidence": "low",
+      "doneMeans": "T-AO-740 complete when acceptance criteria pass, verification runs green, and operator confirms deliverable matches AGENT_ORCHESTRATION_TASKS.md scope",
+      "riskNotes": "Requires approved artifacts: A-TEST, A-COMPAT",
+      "generatedTaskPayload": {
+        "title": "Add release readiness checklist",
+        "type": "improvement",
+        "priority": "P2",
+        "phaseKey": "128",
+        "phase": "Phase 128",
+        "approach": "Create maintainer release checklist for schemas, commands, docs, compatibility, E2E paths, projection bridge, and known limitations/future-work buckets.",
+        "technicalScope": [
+          ".ai/runbooks/agent-orchestration-release-checklist.md",
+          ".ai/RELEASING.md"
+        ],
+        "acceptanceCriteria": [
+          "Release checklist enumerates schema, command, docs, compatibility, E2E, and projection gates with pass/fail evidence columns",
+          "Maintainer can walk the checklist before enabling orchestration-driven delivery without undocumented gaps"
+        ],
+        "dependsOn": [],
+        "status": "proposed"
+      }
+    }
+  ],
+  "phaseRecommendations": [
+    {
+      "phaseKey": "126",
+      "label": "Phase 126",
+      "rationale": "Phase 1 — Contracts & Design Gates (A-* artifacts, WP-A)",
+      "isPrimary": true
+    },
+    {
+      "phaseKey": "127",
+      "label": "Phase 127",
+      "rationale": "Phase 2 — Core Orchestration Implementation (WP-1 through WP-4)",
+      "isPrimary": false
+    },
+    {
+      "phaseKey": "128",
+      "label": "Phase 128",
+      "rationale": "Phase 3 — Projection, Docs & Hardening (WP-5 through WP-7)",
+      "isPrimary": false
+    }
+  ],
+  "provenance": {
+    "createdAt": "2026-05-31T06:02:48.760Z",
+    "updatedAt": "2026-05-31T07:39:06.369Z",
+    "createdBy": "agent@workflow-cannon",
+    "source": "draft-plan-artifact",
+    "chatSessionRef": "agent-orchestration-batch-review-fix"
+  },
+  "version": 5
+}

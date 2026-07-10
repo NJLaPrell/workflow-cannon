@@ -1,0 +1,991 @@
+{
+  "schemaVersion": 1,
+  "planId": "fc9f300e-a20e-4d6c-97a7-31a9f75d7d9e",
+  "planRef": "plan-artifact:fc9f300e-a20e-4d6c-97a7-31a9f75d7d9e",
+  "status": "draft",
+  "identity": {
+    "title": "Token Reduction Packet-First Orchestration Plan",
+    "planningType": "sprint-phase",
+    "summary": "Three-phase delivery plan to reduce AI token/credit usage by replacing broad discovery with compact orchestration, worker, reconciliation, delta, and release packets.",
+    "tags": [
+      "token-reduction",
+      "orchestration",
+      "planner",
+      "phase-release",
+      "agent-packets"
+    ]
+  },
+  "goals": [
+    "Reduce Complete & Release startup/context tokens by replacing broad discovery with compact phase orchestration packets.",
+    "Reduce subagent worker prompt tokens by giving workers bounded execution packets with ownership, validation, and handoff requirements.",
+    "Reduce long-running orchestration refresh and handoff review tokens through deterministic reconciliation verdicts and delta refresh.",
+    "Reduce release closeout discovery tokens through release-state, artifact-preparation, and final-result packets.",
+    "Preserve release safety by keeping policyApproval gates, schema validation, evidence references, and fallback-to-full-refresh behavior."
+  ],
+  "nonGoals": [
+    "Do not remove policyApproval gates or human publish approval requirements.",
+    "Do not hide raw evidence; packets should reference expandable evidence instead of embedding it.",
+    "Do not finalize execution tasks until the plan artifact has been reviewed and accepted.",
+    "Do not replace existing runbooks; make routine prompts reference them selectively."
+  ],
+  "userStories": [
+    {
+      "id": "US-1",
+      "asA": "release orchestrator",
+      "iWant": "one compact command that classifies the phase path",
+      "soThat": "I can start Complete & Release without rereading broad task state and runbooks",
+      "priority": "must"
+    },
+    {
+      "id": "US-2",
+      "asA": "subagent worker",
+      "iWant": "a bounded execution packet",
+      "soThat": "I can implement safely without rediscovering Workflow Cannon operating rules",
+      "priority": "must"
+    },
+    {
+      "id": "US-3",
+      "asA": "release orchestrator",
+      "iWant": "structured reconciliation verdicts and deltas",
+      "soThat": "I can manage parallel work without repeatedly expanding logs, diffs, and handoffs",
+      "priority": "should"
+    },
+    {
+      "id": "US-4",
+      "asA": "maintainer",
+      "iWant": "release closeout packets and deterministic artifact prep",
+      "soThat": "publish safety improves while closeout tokens decrease",
+      "priority": "should"
+    }
+  ],
+  "valueAssessment": {
+    "impact": "High — directly targets the largest repeated token sinks in Complete & Release orchestration, worker startup, handoff reconciliation, and release closeout.",
+    "confidence": "medium",
+    "rationale": "The plan builds on existing command/readiness/delivery evidence patterns and keeps raw evidence expandable by reference."
+  },
+  "riskAssessment": [
+    {
+      "id": "R1",
+      "description": "Packets may omit context that an agent needs for safe action.",
+      "severity": "high",
+      "mitigation": "Include stop conditions, expansion refs, conservative needs_full_refresh/needs_user_decision verdicts, and schema tests."
+    },
+    {
+      "id": "R2",
+      "description": "Delta refresh can become stale or inconsistent with canonical task state.",
+      "severity": "medium",
+      "mitigation": "Use generation/cursor validation and fall back to full packet refresh on mismatch."
+    },
+    {
+      "id": "R3",
+      "description": "Prompt shortening could accidentally remove policy or approval reminders.",
+      "severity": "medium",
+      "mitigation": "Keep dashboard authorization semantics and policy reminders as required prompt fields with snapshot tests."
+    },
+    {
+      "id": "R4",
+      "description": "Release artifact automation could edit ambiguous changelog/schema content incorrectly.",
+      "severity": "medium",
+      "mitigation": "Require dry-run, exact file change reporting, policyApproval on apply, and safe failure on ambiguity."
+    }
+  ],
+  "technicalImpact": {
+    "systemsTouched": [
+      "task-engine",
+      "planning",
+      "team-execution",
+      "dashboard",
+      "release workflow",
+      "agent prompts",
+      "schemas"
+    ],
+    "compatibilityNotes": "Adds packet/verdict commands and prompt references without removing existing broad commands or runbooks.",
+    "migrationImpact": "No data migration expected in Phase 1; Team Assignment packet metadata may require additive schema/store changes."
+  },
+  "architecture": {
+    "overview": "Introduce reference-first packet commands as compact projections over existing task, team assignment, delivery evidence, and release readiness state. Commands return bounded JSON packets with digests, verdicts, refs, and safe fallback recommendations; existing raw evidence remains available through referenced commands/files.",
+    "decisions": [
+      {
+        "id": "D1",
+        "decision": "Packet-first, refs-over-content",
+        "rationale": "Reduces repeated prompt and context expansion while preserving auditability."
+      },
+      {
+        "id": "D2",
+        "decision": "Conservative verdicts over inference",
+        "rationale": "Agents should stop or refresh when packet classification is ambiguous rather than inventing release state."
+      },
+      {
+        "id": "D3",
+        "decision": "Plan remains staged across three releases",
+        "rationale": "Ships highest savings first while keeping each release independently valuable and testable."
+      },
+      {
+        "id": "D4",
+        "decision": "Task materialization waits for accept/finalize",
+        "rationale": "The planner artifact should be reviewed before creating execution rows."
+      },
+      {
+        "id": "D5",
+        "decision": "Refine Phase 1 before finalizing into Phase 130",
+        "rationale": "Maintainer chose to tighten acceptance criteria and sizing before materializing execution tasks, reducing downstream task churn."
+      },
+      {
+        "id": "D6",
+        "decision": "Store packet digests both on Team Assignment metadata and in a packet registry",
+        "rationale": "Assignment metadata provides direct audit linkage, while the registry preserves packet lookup and stale-context analysis."
+      },
+      {
+        "id": "D7",
+        "decision": "Use existing guidance tier labels for worker model recommendations",
+        "rationale": "agent-execution-packet should emit tier_1, tier_2, and tier_3 aligned to current kit.agentGuidance.tier semantics with rationale, avoiding stale model-family names."
+      },
+      {
+        "id": "D8",
+        "decision": "Implement prepare-release-artifacts as deterministic script plus wk command",
+        "rationale": "File-edit mechanics should live in a deterministic script while dry-run/apply orchestration and policy approval live in a wk command."
+      },
+      {
+        "id": "D9",
+        "decision": "Split oversized medium WBS rows into focused packet, script, command, and evidence-check rows before Phase 130 finalization.",
+        "rationale": "Focused rows clear review sizing warnings and make task finalization produce executable delivery units without hiding complexity behind low confidence."
+      }
+    ]
+  },
+  "uiUxDirection": {
+    "hasUiChanges": true,
+    "summary": "Dashboard Complete & Release prompt and assignment launch flows should become packet-first, shorter, and reference packet/verdict commands instead of embedding full procedures.",
+    "mockupRefs": [
+      "TOKEN_PLAN.md",
+      "docs/maintainers/runbooks/dashboard-data-map.md"
+    ]
+  },
+  "testingStrategy": {
+    "layers": [
+      "unit",
+      "contract",
+      "fixture",
+      "dashboard prompt snapshot",
+      "integration",
+      "release dry-run"
+    ],
+    "criticalPaths": [
+      "Complete & Release starts from phase-release-orchestration-state.",
+      "Worker assignment uses agent-execution-packet and stores packet digest.",
+      "Clean handoff reconciliation avoids raw diff/log expansion.",
+      "Delta refresh falls back safely on stale cursor.",
+      "Release closeout packets expose missing evidence/version/publish safety."
+    ],
+    "outOfScopeTesting": [
+      "Exact token accounting automation beyond metric hooks",
+      "Replacing all existing runbooks or broad commands"
+    ]
+  },
+  "implementationGuidance": [
+    "Prefer new read-only packet commands over prompt-only changes for token savings.",
+    "Keep packet bodies bounded and include references to runbooks, schemas, commands, files, and evidence instead of embedded prose.",
+    "Add stable schemas/contracts and snapshot fixtures for each packet/verdict shape.",
+    "Use existing readiness, delivery evidence, release evidence, recommendation, and team assignment helpers where possible.",
+    "Preserve JSON policyApproval and human publish approval gates for mutating or dangerous actions."
+  ],
+  "whatNotToDo": [
+    "Do not make packets so terse that agents lose safety boundaries.",
+    "Do not embed full runbooks, task histories, logs, or diffs in packet output by default.",
+    "Do not allow stale deltas to silently apply.",
+    "Do not create execution tasks directly from this draft without review/accept/finalize.",
+    "Do not make release artifact preparation apply changes without a dry-run and policy approval."
+  ],
+  "assumptions": [
+    "Current Phase 130 is the first candidate phase for Phase 1 delivery planning.",
+    "Existing task-engine, team-execution, dashboard, and release evidence command patterns can be extended without replacing canonical task state.",
+    "Token savings can initially be assessed through prompt size, broad-read count, and packet output bounds before exact accounting is automated.",
+    "Phase 1 will be refined before any Phase 130 execution tasks are finalized from this PlanArtifact.",
+    "Packet persistence should support both assignment-level audit metadata and a packet registry for later lookup.",
+    "Worker model recommendations should use existing guidance tier labels: tier_1, tier_2, and tier_3, plus rationale.",
+    "prepare-release-artifacts should split deterministic file-edit logic into a script and expose policy-gated dry-run/apply through a wk command."
+  ],
+  "openQuestions": [],
+  "wbs": [
+    {
+      "wbsId": "WBS-1",
+      "path": "1.1",
+      "title": "Phase release orchestration packet",
+      "goalMapping": [
+        "Reduce Complete & Release startup/context tokens by replacing broad discovery with compact phase orchestration packets.",
+        "Preserve release safety by keeping policyApproval gates, schema validation, evidence references, and fallback-to-full-refresh behavior."
+      ],
+      "suggestedTaskTitle": "Add phase-release-orchestration-state packet",
+      "approach": "Implement a bounded read-only task-engine command that classifies the current phase path and returns compact next-action packet references instead of broad task history/runbook content.",
+      "technicalScope": [
+        "src/modules/task-engine/commands",
+        "src/modules/task-engine/dashboard",
+        "schemas/task-engine-run-contracts.schema.json",
+        "src/modules/task-engine/instructions"
+      ],
+      "acceptanceCriteria": [
+        "Command returns phase key, workspace current/next phase, integration branch, task counts, terminal/non-terminal counts, ready summaries, blocked summaries, path classification, next action, and packet/runbook refs.",
+        "Supports empty, completed-only, active-work, blocked-needs-decision, release-ready, and release-blocked paths.",
+        "Output is bounded and excludes full task histories and full runbook text.",
+        "Dashboard-launched Complete & Release agent can run one command and know the appropriate path."
+      ],
+      "testingVerification": [
+        "Unit test fixtures cover empty, completed-only, active-work, blocked, and release-ready phases",
+        "Contract snapshot test verifies packet schema and bounded reference fields",
+        "Dashboard prompt smoke test fixture verifies the command can launch from Complete & Release when applicable"
+      ],
+      "dependsOn": [],
+      "recommendedPhase": "130",
+      "recommendedOrder": 1,
+      "sizingConfidence": "medium",
+      "riskNotes": "Classification must be conservative when task sync or evidence state is ambiguous.",
+      "doneMeans": "Orchestrator can classify phase release path from one compact packet.",
+      "generatedTaskPayload": {
+        "title": "Add phase-release-orchestration-state packet",
+        "type": "execution",
+        "priority": "P1",
+        "phase": "Phase 130",
+        "phaseKey": "130",
+        "approach": "Implement bounded phase classification packet command with conservative verdicts and refs-over-content.",
+        "technicalScope": [
+          "task-engine command/runtime",
+          "phase closeout/readiness projections",
+          "instruction and contract docs"
+        ],
+        "acceptanceCriteria": [
+          "One command classifies phase path",
+          "All six path verdicts covered by tests",
+          "Output is bounded and reference-first"
+        ],
+        "dependsOn": [],
+        "status": "ready"
+      }
+    },
+    {
+      "wbsId": "WBS-2",
+      "path": "1.2",
+      "title": "Worker execution packet core",
+      "goalMapping": [
+        "Reduce subagent worker prompt tokens by giving workers bounded execution packets with ownership, validation, and handoff requirements.",
+        "Preserve release safety by keeping policyApproval gates, schema validation, evidence references, and fallback-to-full-refresh behavior."
+      ],
+      "suggestedTaskTitle": "Add agent-execution-packet core for bounded worker starts",
+      "approach": "Implement task-scoped worker packet command with ownership, validation, handoff, and stop-condition fields.",
+      "technicalScope": [
+        "src/modules/task-engine packet command/runtime",
+        "team-execution assignment context projection",
+        "agent orchestration handoff contract refs"
+      ],
+      "acceptanceCriteria": [
+        "Packet includes task id, phase key, assignment intent, title/summary, acceptance criteria, owned/read-only/forbidden paths, base branch, suggested worker branch, validation commands, handoff contract, and stop conditions.",
+        "Worker can start without reading the full task queue.",
+        "Packet uses references over embedded playbook text.",
+        "Forbidden and read-only path boundaries are explicit in every packet."
+      ],
+      "testingVerification": [
+        "Unit tests verify path ownership and forbidden path projection",
+        "Contract test fixture verifies worker packet shape stays reference-first",
+        "Instruction snapshot test verifies packet refs replace broad queue-reading guidance"
+      ],
+      "dependsOn": [
+        "WBS-1"
+      ],
+      "recommendedPhase": "130",
+      "recommendedOrder": 2,
+      "sizingConfidence": "medium",
+      "riskNotes": "Overly narrow packets could hide necessary safety context; include explicit expansion refs.",
+      "doneMeans": "A worker packet provides bounded task context, ownership boundaries, validation commands, and explicit handoff refs for safe execution.",
+      "generatedTaskPayload": {
+        "title": "Add agent-execution-packet core for bounded worker starts",
+        "type": "execution",
+        "priority": "P1",
+        "phase": "Phase 130",
+        "phaseKey": "130",
+        "approach": "Implement task-scoped worker packet command with ownership, validation, handoff, and stop-condition fields.",
+        "technicalScope": [
+          "src/modules/task-engine packet command/runtime",
+          "team-execution assignment context projection",
+          "agent orchestration handoff contract refs"
+        ],
+        "acceptanceCriteria": [
+          "Packet includes task id, phase key, assignment intent, title/summary, acceptance criteria, owned/read-only/forbidden paths, base branch, suggested worker branch, validation commands, handoff contract, and stop conditions.",
+          "Worker can start without reading the full task queue.",
+          "Packet uses references over embedded playbook text.",
+          "Forbidden and read-only path boundaries are explicit in every packet."
+        ],
+        "dependsOn": [
+          "WBS-1"
+        ],
+        "status": "ready"
+      }
+    },
+    {
+      "wbsId": "WBS-2A",
+      "path": "1.2",
+      "title": "Worker packet tier and digest contract",
+      "goalMapping": [
+        "Reduce subagent worker prompt tokens by giving workers bounded execution packets with ownership, validation, and handoff requirements.",
+        "Preserve release safety by keeping policyApproval gates, schema validation, evidence references, and fallback-to-full-refresh behavior."
+      ],
+      "suggestedTaskTitle": "Add worker packet model-tier and digest contract",
+      "approach": "Add deterministic model-tier recommendation and packet digest fields to the worker packet without expanding worker prompt context.",
+      "technicalScope": [
+        "existing agent guidance tier mapping",
+        "packet digest computation and change detection",
+        "worker packet contract fixtures"
+      ],
+      "acceptanceCriteria": [
+        "Packet includes model tier recommendation using existing tier_1, tier_2, or tier_3 labels with a rationale field.",
+        "Packet includes a stable digest for relevant task and assignment context.",
+        "Packet digest changes when relevant task or assignment context changes.",
+        "Digest and tier fields are available for assignment metadata persistence."
+      ],
+      "testingVerification": [
+        "Unit test verifies model tier label mapping against existing agent guidance semantics",
+        "Unit test verifies digest stability and relevant-context change behavior",
+        "Contract test fixture verifies tier and digest fields are present without embedding runbook text"
+      ],
+      "dependsOn": [
+        "WBS-2"
+      ],
+      "recommendedPhase": "130",
+      "recommendedOrder": 2,
+      "sizingConfidence": "medium",
+      "riskNotes": "Overly narrow packets could hide necessary safety context; include explicit expansion refs.",
+      "doneMeans": "Worker packets carry deterministic tier guidance and digest fields that downstream assignment metadata can audit.",
+      "generatedTaskPayload": {
+        "title": "Add worker packet model-tier and digest contract",
+        "type": "execution",
+        "priority": "P2",
+        "phase": "Phase 130",
+        "phaseKey": "130",
+        "approach": "Add deterministic model-tier recommendation and packet digest fields to the worker packet without expanding worker prompt context.",
+        "technicalScope": [
+          "existing agent guidance tier mapping",
+          "packet digest computation and change detection",
+          "worker packet contract fixtures"
+        ],
+        "acceptanceCriteria": [
+          "Packet includes model tier recommendation using existing tier_1, tier_2, or tier_3 labels with a rationale field.",
+          "Packet includes a stable digest for relevant task and assignment context.",
+          "Packet digest changes when relevant task or assignment context changes.",
+          "Digest and tier fields are available for assignment metadata persistence."
+        ],
+        "dependsOn": [
+          "WBS-2"
+        ],
+        "status": "ready"
+      }
+    },
+    {
+      "wbsId": "WBS-3",
+      "path": "1.3",
+      "title": "Team Assignment packet metadata",
+      "goalMapping": [
+        "Reduce subagent worker prompt tokens by giving workers bounded execution packets with ownership, validation, and handoff requirements.",
+        "Preserve release safety by keeping policyApproval gates, schema validation, evidence references, and fallback-to-full-refresh behavior."
+      ],
+      "suggestedTaskTitle": "Persist packet metadata on Team Assignments",
+      "approach": "Extend Team Assignment creation/storage to reference the packet used for worker assignment, including digest, model tier, path bounds, handoff contract, and validation commands.",
+      "technicalScope": [
+        "team-execution store",
+        "assignment creation commands",
+        "dashboard assignment projections",
+        "packet registry storage/lookup"
+      ],
+      "acceptanceCriteria": [
+        "Assignment records can store packetId or packetDigest, modelTier, ownedPaths, forbiddenPaths, handoffContractId, and validationCommands.",
+        "Orchestrator can audit which context a worker received.",
+        "Stale packet context can be detected from assignment metadata.",
+        "Packet registry stores or resolves packet bodies/digests for later lookup alongside assignment metadata."
+      ],
+      "testingVerification": [
+        "Store migration/compat tests",
+        "Assignment creation tests",
+        "Dashboard projection tests if surfaced",
+        "Integration test covers assignment metadata plus packet registry lookup."
+      ],
+      "dependsOn": [
+        "WBS-2A"
+      ],
+      "recommendedPhase": "130",
+      "recommendedOrder": 3,
+      "sizingConfidence": "medium",
+      "doneMeans": "Assignments durably reference packet metadata and operators can look up the registered packet body/digest used for worker context.",
+      "generatedTaskPayload": {
+        "title": "Persist packet metadata on Team Assignments",
+        "type": "execution",
+        "priority": "P2",
+        "phase": "Phase 130",
+        "phaseKey": "130",
+        "approach": "Extend assignment metadata to record packet digest, model tier, path bounds, handoff contract, and validation commands.",
+        "technicalScope": [
+          "team-execution store",
+          "assignment creation commands",
+          "dashboard assignment projections",
+          "packet registry storage/lookup"
+        ],
+        "acceptanceCriteria": [
+          "Assignment records can store packetId or packetDigest, modelTier, ownedPaths, forbiddenPaths, handoffContractId, and validationCommands.",
+          "Orchestrator can audit which context a worker received.",
+          "Stale packet context can be detected from assignment metadata.",
+          "Packet registry stores or resolves packet bodies/digests for later lookup alongside assignment metadata."
+        ],
+        "dependsOn": [
+          "WBS-2A"
+        ],
+        "status": "ready"
+      }
+    },
+    {
+      "wbsId": "WBS-4",
+      "path": "1.4",
+      "title": "Packet-first Complete & Release prompt",
+      "goalMapping": [
+        "Reduce Complete & Release startup/context tokens by replacing broad discovery with compact phase orchestration packets.",
+        "Reduce subagent worker prompt tokens by giving workers bounded execution packets with ownership, validation, and handoff requirements."
+      ],
+      "suggestedTaskTitle": "Shorten Complete & Release prompt around packet-first flow",
+      "approach": "Update dashboard prompt generation to direct agents to phase-release-orchestration-state first and agent-execution-packet for worker assignment, while removing command-by-command runbook restatement.",
+      "technicalScope": [
+        "dashboard prompt generation",
+        "Complete & Release prompt templates",
+        ".ai runbook references"
+      ],
+      "acceptanceCriteria": [
+        "Prompt is shorter than current Complete & Release prompt.",
+        "Prompt starts with phase-release-orchestration-state.",
+        "Prompt directs worker starts through agent-execution-packet.",
+        "Prompt preserves dashboard authorization semantics and policy reminders.",
+        "Prompt instructs maintainers to refine/review the Phase 1 plan before finalizing execution tasks when review warnings remain."
+      ],
+      "testingVerification": [
+        "Prompt snapshot/fixture comparison",
+        "No full runbook restatement in prompt",
+        "Dashboard command smoke test",
+        "Prompt snapshot verifies refine-before-finalize guidance is present when the plan has warnings."
+      ],
+      "dependsOn": [
+        "WBS-1",
+        "WBS-2A"
+      ],
+      "recommendedPhase": "130",
+      "recommendedOrder": 4,
+      "sizingConfidence": "high",
+      "doneMeans": "Dashboard Complete & Release starts with compact packet commands and a shorter prompt.",
+      "generatedTaskPayload": {
+        "title": "Shorten Complete & Release prompt around packet-first flow",
+        "type": "execution",
+        "priority": "P2",
+        "phase": "Phase 130",
+        "phaseKey": "130",
+        "approach": "Update Complete & Release prompt to reference packet commands and remove routine release mechanics from prompt body.",
+        "technicalScope": [
+          "dashboard prompt templates",
+          "agent runbook refs"
+        ],
+        "acceptanceCriteria": [
+          "Prompt is shorter than current Complete & Release prompt.",
+          "Prompt starts with phase-release-orchestration-state.",
+          "Prompt directs worker starts through agent-execution-packet.",
+          "Prompt preserves dashboard authorization semantics and policy reminders.",
+          "Prompt instructs maintainers to refine/review the Phase 1 plan before finalizing execution tasks when review warnings remain."
+        ],
+        "dependsOn": [
+          "WBS-1",
+          "WBS-2A"
+        ],
+        "status": "ready"
+      }
+    },
+    {
+      "wbsId": "WBS-5",
+      "path": "2.1",
+      "title": "Assignment reconciliation preflight",
+      "goalMapping": [
+        "Reduce long-running orchestration refresh and handoff review tokens through deterministic reconciliation verdicts and delta refresh.",
+        "Preserve release safety by keeping policyApproval gates, schema validation, evidence references, and fallback-to-full-refresh behavior."
+      ],
+      "suggestedTaskTitle": "Add assignment-reconciliation-preflight verdict command",
+      "approach": "Implement a deterministic handoff/reconciliation preflight that checks structured handoff evidence, path ownership, validation records, PR target, and policy risks before the orchestrator reads raw logs or diffs.",
+      "technicalScope": [
+        "team-execution commands",
+        "handoff contracts",
+        "git/PR evidence helpers",
+        "delivery evidence vocabulary"
+      ],
+      "acceptanceCriteria": [
+        "Verdicts include ready_to_reconcile, needs_worker_followup, needs_orchestrator_review, needs_user_decision, and unsafe.",
+        "Clean handoff returns ready_to_reconcile with compact evidence refs.",
+        "Missing validation or PR evidence returns specific remediation.",
+        "Forbidden path changes return unsafe or needs-review verdict."
+      ],
+      "testingVerification": [
+        "Unit test fixture covers clean handoff verdict",
+        "Unit test fixture covers missing validation or PR evidence remediation",
+        "Integration test fixture covers forbidden path changes",
+        "Contract test fixture verifies PR target evidence refs"
+      ],
+      "dependsOn": [
+        "WBS-3"
+      ],
+      "recommendedPhase": "131",
+      "recommendedOrder": 1,
+      "sizingConfidence": "medium",
+      "riskNotes": "Needs clear separation between advisory warnings and hard unsafe verdicts.",
+      "doneMeans": "Orchestrator can reconcile clean worker handoffs from a compact verdict packet.",
+      "generatedTaskPayload": {
+        "title": "Add assignment-reconciliation-preflight verdict command",
+        "type": "execution",
+        "priority": "P1",
+        "phase": "Phase 131",
+        "phaseKey": "131",
+        "approach": "Implement structured assignment handoff preflight with compact verdicts and evidence refs.",
+        "technicalScope": [
+          "team-execution command/runtime",
+          "handoff validation",
+          "git/PR evidence helpers"
+        ],
+        "acceptanceCriteria": [
+          "All verdicts are represented",
+          "Clean handoff can reconcile without raw diff expansion",
+          "Unsafe path changes are detected"
+        ],
+        "dependsOn": [
+          "WBS-3"
+        ],
+        "status": "ready"
+      }
+    },
+    {
+      "wbsId": "WBS-6",
+      "path": "2.2",
+      "title": "JSON-first worker handoff enforcement",
+      "goalMapping": [
+        "Reduce long-running orchestration refresh and handoff review tokens through deterministic reconciliation verdicts and delta refresh.",
+        "Preserve release safety by keeping policyApproval gates, schema validation, evidence references, and fallback-to-full-refresh behavior."
+      ],
+      "suggestedTaskTitle": "Make worker handoffs JSON-first and machine-checkable",
+      "approach": "Define and enforce a structured handoff schema for task id, assignment id, summary, changed files, commands run, acceptance criteria status, PR/ref, risks, blockers, and follow-ups, with prose as secondary.",
+      "technicalScope": [
+        "handoff schema/contracts",
+        "team-execution assignment update/report commands",
+        "agent instructions"
+      ],
+      "acceptanceCriteria": [
+        "Structured handoff fields are validated.",
+        "Assignment reconciliation preflight consumes handoff data as source of truth.",
+        "Prose summary remains optional/secondary.",
+        "Missing required handoff fields produce actionable findings."
+      ],
+      "testingVerification": [
+        "Schema test fixtures validate required and missing worker handoff fields",
+        "Integration test verifies preflight consumes JSON handoff as the source of truth",
+        "Instruction snapshot test verifies prose remains secondary to structured handoff data"
+      ],
+      "dependsOn": [
+        "WBS-5"
+      ],
+      "recommendedPhase": "131",
+      "recommendedOrder": 2,
+      "sizingConfidence": "medium",
+      "doneMeans": "Worker handoffs validate as structured JSON, drive reconciliation preflight, and preserve prose as secondary context.",
+      "generatedTaskPayload": {
+        "title": "Make worker handoffs JSON-first and machine-checkable",
+        "type": "execution",
+        "priority": "P2",
+        "phase": "Phase 131",
+        "phaseKey": "131",
+        "approach": "Add structured handoff schema/enforcement and update worker instructions to make JSON fields authoritative.",
+        "technicalScope": [
+          "handoff schema",
+          "team assignment commands",
+          "agent instruction surfaces"
+        ],
+        "acceptanceCriteria": [
+          "Required handoff fields validate",
+          "Preflight uses JSON handoff",
+          "Prose is secondary"
+        ],
+        "dependsOn": [
+          "WBS-5"
+        ],
+        "status": "ready"
+      }
+    },
+    {
+      "wbsId": "WBS-7",
+      "path": "2.3",
+      "title": "Phase drain delta refresh",
+      "goalMapping": [
+        "Reduce long-running orchestration refresh and handoff review tokens through deterministic reconciliation verdicts and delta refresh."
+      ],
+      "suggestedTaskTitle": "Add phase-drain-delta for generation-aware refresh",
+      "approach": "Implement a generation/cursor-aware delta command that returns changed tasks, newly ready work, completed assignments, active assignments, blocked tasks, updated phase path, next action, and new cursor after the initial packet.",
+      "technicalScope": [
+        "task-engine phase projections",
+        "team-execution projections",
+        "task sync/planning generation metadata"
+      ],
+      "acceptanceCriteria": [
+        "Command returns only material changes since a valid generation/cursor.",
+        "Stale or invalid cursor returns safe full-refresh recommendation.",
+        "Newly ready work and blocked decisions are easy to assign/review from delta output.",
+        "Delta output caps changed task and assignment arrays to configured limits and returns overflow refs when limits are exceeded."
+      ],
+      "testingVerification": [
+        "Unit test fixture covers delta output after task transition",
+        "Integration test fixture covers delta output after assignment completion",
+        "Unit test fixture covers stale cursor full-refresh recommendation",
+        "Contract test assertion verifies bounded output and overflow refs"
+      ],
+      "dependsOn": [
+        "WBS-1",
+        "WBS-3"
+      ],
+      "recommendedPhase": "131",
+      "recommendedOrder": 3,
+      "sizingConfidence": "medium",
+      "doneMeans": "Long-running orchestrators refresh from deltas instead of broad state reads.",
+      "generatedTaskPayload": {
+        "title": "Add phase-drain-delta for generation-aware refresh",
+        "type": "execution",
+        "priority": "P2",
+        "phase": "Phase 131",
+        "phaseKey": "131",
+        "approach": "Implement a generation/cursor-aware delta command that returns changed tasks, newly ready work, completed assignments, active assignments, blocked tasks, updated phase path, next action, and new cursor after the initial packet.",
+        "technicalScope": [
+          "task-engine phase projections",
+          "team-execution projections",
+          "task sync/planning generation metadata"
+        ],
+        "acceptanceCriteria": [
+          "Command returns only material changes since a valid generation/cursor.",
+          "Stale or invalid cursor returns safe full-refresh recommendation.",
+          "Newly ready work and blocked decisions are easy to assign/review from delta output.",
+          "Delta output caps changed task and assignment arrays to configured limits and returns overflow refs when limits are exceeded."
+        ],
+        "dependsOn": [
+          "WBS-1",
+          "WBS-3"
+        ],
+        "status": "ready"
+      }
+    },
+    {
+      "wbsId": "WBS-8",
+      "path": "3.1",
+      "title": "Release readiness packet core",
+      "goalMapping": [
+        "Reduce release closeout discovery tokens through release-state, artifact-preparation, and final-result packets.",
+        "Preserve release safety by keeping policyApproval gates, schema validation, evidence references, and fallback-to-full-refresh behavior."
+      ],
+      "suggestedTaskTitle": "Add phase-release-state readiness core packet",
+      "approach": "Implement compact release readiness packet with phase state, missing artifact summaries, publish safety, and next-action refs.",
+      "technicalScope": [
+        "release status/readiness command",
+        "phase closeout evidence projection",
+        "publish safety summary fields"
+      ],
+      "acceptanceCriteria": [
+        "Agent can determine closeout readiness without broad file reads.",
+        "Missing artifacts are explicitly listed with compact evidence refs.",
+        "Publish safety is represented as a structured field.",
+        "Packet points to exact commands/refs for next action."
+      ],
+      "testingVerification": [
+        "Unit test fixture covers completed-only phase readiness",
+        "Contract test fixture covers missing artifact and publish safety fields",
+        "Contract test assertion verifies bounded output and next-action refs"
+      ],
+      "dependsOn": [
+        "WBS-1"
+      ],
+      "recommendedPhase": "132",
+      "recommendedOrder": 1,
+      "sizingConfidence": "medium",
+      "doneMeans": "Release closeout readiness is available as a compact packet with evidence refs and safe next actions.",
+      "generatedTaskPayload": {
+        "title": "Add phase-release-state readiness core packet",
+        "type": "execution",
+        "priority": "P1",
+        "phase": "Phase 132",
+        "phaseKey": "132",
+        "approach": "Implement compact release readiness packet with phase state, missing artifact summaries, publish safety, and next-action refs.",
+        "technicalScope": [
+          "release status/readiness command",
+          "phase closeout evidence projection",
+          "publish safety summary fields"
+        ],
+        "acceptanceCriteria": [
+          "Agent can determine closeout readiness without broad file reads.",
+          "Missing artifacts are explicitly listed with compact evidence refs.",
+          "Publish safety is represented as a structured field.",
+          "Packet points to exact commands/refs for next action."
+        ],
+        "dependsOn": [
+          "WBS-1"
+        ],
+        "status": "ready"
+      }
+    },
+    {
+      "wbsId": "WBS-8A",
+      "path": "3.1",
+      "title": "Release version and evidence readiness checks",
+      "goalMapping": [
+        "Reduce release closeout discovery tokens through release-state, artifact-preparation, and final-result packets.",
+        "Preserve release safety by keeping policyApproval gates, schema validation, evidence references, and fallback-to-full-refresh behavior."
+      ],
+      "suggestedTaskTitle": "Add release version and evidence readiness checks",
+      "approach": "Add version, changelog, schema mirror, and already-published checks as focused readiness inputs for the release packet.",
+      "technicalScope": [
+        "version/changelog/schema checks",
+        "release evidence manifest integration",
+        "already-published state detection"
+      ],
+      "acceptanceCriteria": [
+        "Missing changelog, version, or schema mirror problems are explicitly listed.",
+        "Already-published package or tag state is represented without blocking unrelated readiness checks.",
+        "Readiness output links each finding to the exact command or artifact ref needed for remediation.",
+        "Release packet consumes these checks without embedding full changelog or schema content."
+      ],
+      "testingVerification": [
+        "Unit test fixture covers missing changelog/version/schema mirror findings",
+        "Integration test fixture covers already-published package or tag state",
+        "Contract test fixture verifies finding refs remain compact and actionable"
+      ],
+      "dependsOn": [
+        "WBS-8"
+      ],
+      "recommendedPhase": "132",
+      "recommendedOrder": 1,
+      "sizingConfidence": "medium",
+      "doneMeans": "Release version and evidence checks feed the readiness packet without broad file reads or embedded artifacts.",
+      "generatedTaskPayload": {
+        "title": "Add release version and evidence readiness checks",
+        "type": "execution",
+        "priority": "P2",
+        "phase": "Phase 132",
+        "phaseKey": "132",
+        "approach": "Add version, changelog, schema mirror, and already-published checks as focused readiness inputs for the release packet.",
+        "technicalScope": [
+          "version/changelog/schema checks",
+          "release evidence manifest integration",
+          "already-published state detection"
+        ],
+        "acceptanceCriteria": [
+          "Missing changelog, version, or schema mirror problems are explicitly listed.",
+          "Already-published package or tag state is represented without blocking unrelated readiness checks.",
+          "Readiness output links each finding to the exact command or artifact ref needed for remediation.",
+          "Release packet consumes these checks without embedding full changelog or schema content."
+        ],
+        "dependsOn": [
+          "WBS-8"
+        ],
+        "status": "ready"
+      }
+    },
+    {
+      "wbsId": "WBS-9",
+      "path": "3.2",
+      "title": "Deterministic release artifact preparation script",
+      "goalMapping": [
+        "Reduce release closeout discovery tokens through release-state, artifact-preparation, and final-result packets.",
+        "Preserve release safety by keeping policyApproval gates, schema validation, evidence references, and fallback-to-full-refresh behavior."
+      ],
+      "suggestedTaskTitle": "Add deterministic release artifact preparation script",
+      "approach": "Implement deterministic file-edit script mechanics for release artifact preparation with dry-run diff generation and ambiguity checks.",
+      "technicalScope": [
+        "release prep script",
+        "package.json and schema version mirrors",
+        "CHANGELOG.md and docs/maintainers/CHANGELOG.md edit detection"
+      ],
+      "acceptanceCriteria": [
+        "Dry-run reports exact files and changes the script would make.",
+        "Script preserves existing manual changelog context and fails safely on ambiguous edits.",
+        "Routine release prep does not require reading full changelog or schema content.",
+        "Script can run independently of wk command policy handling."
+      ],
+      "testingVerification": [
+        "Unit test verifies dry-run diff generation independent of wk command policy handling",
+        "Unit test fixture covers ambiguous changelog failure",
+        "Integration test fixture applies script changes in a temp workspace"
+      ],
+      "dependsOn": [
+        "WBS-8A"
+      ],
+      "recommendedPhase": "132",
+      "recommendedOrder": 2,
+      "sizingConfidence": "medium",
+      "doneMeans": "Release artifact file edits are deterministic, dry-runnable, and safe on ambiguous changelog or version state.",
+      "generatedTaskPayload": {
+        "title": "Add deterministic release artifact preparation script",
+        "type": "execution",
+        "priority": "P2",
+        "phase": "Phase 132",
+        "phaseKey": "132",
+        "approach": "Implement deterministic file-edit script mechanics for release artifact preparation with dry-run diff generation and ambiguity checks.",
+        "technicalScope": [
+          "release prep script",
+          "package.json and schema version mirrors",
+          "CHANGELOG.md and docs/maintainers/CHANGELOG.md edit detection"
+        ],
+        "acceptanceCriteria": [
+          "Dry-run reports exact files and changes the script would make.",
+          "Script preserves existing manual changelog context and fails safely on ambiguous edits.",
+          "Routine release prep does not require reading full changelog or schema content.",
+          "Script can run independently of wk command policy handling."
+        ],
+        "dependsOn": [
+          "WBS-8A"
+        ],
+        "status": "ready"
+      }
+    },
+    {
+      "wbsId": "WBS-9A",
+      "path": "3.2",
+      "title": "prepare-release-artifacts wk command orchestration",
+      "goalMapping": [
+        "Reduce release closeout discovery tokens through release-state, artifact-preparation, and final-result packets.",
+        "Preserve release safety by keeping policyApproval gates, schema validation, evidence references, and fallback-to-full-refresh behavior."
+      ],
+      "suggestedTaskTitle": "Add prepare-release-artifacts wk command orchestration",
+      "approach": "Wrap the deterministic script in a policy-gated wk command that provides dry-run/apply orchestration and release evidence refs.",
+      "technicalScope": [
+        "prepare-release-artifacts wk command",
+        "policyApproval dry-run/apply handling",
+        "release evidence fragments"
+      ],
+      "acceptanceCriteria": [
+        "Dry-run mode reports script diff output without requiring policyApproval.",
+        "Apply mode requires policyApproval where appropriate.",
+        "Command records release evidence refs for changed artifacts.",
+        "Command delegates deterministic file edits to the script rather than duplicating mutation logic."
+      ],
+      "testingVerification": [
+        "Integration test verifies dry-run command output from script diff results",
+        "Policy test verifies apply mode is denied without required approval",
+        "Integration test verifies apply mode records release evidence refs"
+      ],
+      "dependsOn": [
+        "WBS-9"
+      ],
+      "recommendedPhase": "132",
+      "recommendedOrder": 2,
+      "sizingConfidence": "medium",
+      "doneMeans": "The wk command safely orchestrates dry-run and approved apply flows around the deterministic release script.",
+      "generatedTaskPayload": {
+        "title": "Add prepare-release-artifacts wk command orchestration",
+        "type": "execution",
+        "priority": "P2",
+        "phase": "Phase 132",
+        "phaseKey": "132",
+        "approach": "Wrap the deterministic script in a policy-gated wk command that provides dry-run/apply orchestration and release evidence refs.",
+        "technicalScope": [
+          "prepare-release-artifacts wk command",
+          "policyApproval dry-run/apply handling",
+          "release evidence fragments"
+        ],
+        "acceptanceCriteria": [
+          "Dry-run mode reports script diff output without requiring policyApproval.",
+          "Apply mode requires policyApproval where appropriate.",
+          "Command records release evidence refs for changed artifacts.",
+          "Command delegates deterministic file edits to the script rather than duplicating mutation logic."
+        ],
+        "dependsOn": [
+          "WBS-9"
+        ],
+        "status": "ready"
+      }
+    },
+    {
+      "wbsId": "WBS-10",
+      "path": "3.3",
+      "title": "Release closeout result and final prompt chain",
+      "goalMapping": [
+        "Reduce release closeout discovery tokens through release-state, artifact-preparation, and final-result packets.",
+        "Preserve release safety by keeping policyApproval gates, schema validation, evidence references, and fallback-to-full-refresh behavior."
+      ],
+      "suggestedTaskTitle": "Add release-closeout-result and final packet-first prompt chain",
+      "approach": "Implement a final release result packet and update the Complete & Release prompt to reference the full packet/verdict chain for orchestration, worker assignment, reconciliation, deltas, release state, artifact prep, and final reporting.",
+      "technicalScope": [
+        "release closeout command",
+        "dashboard prompt generation",
+        "phase ship response template",
+        "release evidence refs"
+      ],
+      "acceptanceCriteria": [
+        "release-closeout-result returns phase key, version, tag, main PR, published package, CI/watch status, workspace phase result, release evidence refs, and remaining follow-ups.",
+        "Final response can be generated from the compact packet without placeholders.",
+        "Complete & Release prompt remains short and references the packet chain instead of restating mechanics."
+      ],
+      "testingVerification": [
+        "Contract test fixture verifies final release result packet fields and evidence refs",
+        "Prompt snapshot test verifies the final packet chain remains reference-first",
+        "Integration test fixtures cover published and not-yet-published release states"
+      ],
+      "dependsOn": [
+        "WBS-8A",
+        "WBS-9A"
+      ],
+      "recommendedPhase": "132",
+      "recommendedOrder": 3,
+      "sizingConfidence": "medium",
+      "doneMeans": "Final release reporting and prompt strategy are packet-first end to end.",
+      "generatedTaskPayload": {
+        "title": "Add release-closeout-result and final packet-first prompt chain",
+        "type": "execution",
+        "priority": "P2",
+        "phase": "Phase 132",
+        "phaseKey": "132",
+        "approach": "Implement final release result packet and update Complete & Release prompt to use the complete packet/verdict sequence.",
+        "technicalScope": [
+          "release result command",
+          "dashboard prompt templates",
+          "response template/evidence refs"
+        ],
+        "acceptanceCriteria": [
+          "Final result has concrete refs",
+          "Prompt references full packet chain",
+          "No placeholders needed for final report"
+        ],
+        "dependsOn": [
+          "WBS-8A",
+          "WBS-9A"
+        ],
+        "status": "ready"
+      }
+    }
+  ],
+  "phaseRecommendations": [
+    {
+      "phaseKey": "130",
+      "label": "Phase 130",
+      "rationale": "Phase 1: highest-savings orchestration and worker packet work.",
+      "isPrimary": true
+    },
+    {
+      "phaseKey": "131",
+      "label": "Phase 131",
+      "rationale": "Phase 2: reconciliation and delta-refresh efficiency for active phase drain."
+    },
+    {
+      "phaseKey": "132",
+      "label": "Phase 132",
+      "rationale": "Phase 3: release closeout packets and deterministic artifact preparation."
+    }
+  ],
+  "provenance": {
+    "createdAt": "2026-06-03T15:24:47.455Z",
+    "updatedAt": "2026-06-03T16:13:07.399Z",
+    "createdBy": "Codex",
+    "source": "draft-plan-artifact",
+    "chatSessionRef": "TOKEN_PLAN.md",
+    "sourceAnswers": {
+      "sourceFile": "TOKEN_PLAN.md",
+      "operatorRequest": "Enter this into the planner so we can work on a delivery plan."
+    }
+  },
+  "version": 3
+}

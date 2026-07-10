@@ -1,0 +1,69 @@
+{
+  "exportedAt": "2026-07-09T22:26:10.643Z",
+  "ideas": [
+    {
+      "id": "I004",
+      "title": "Phase Work Tree",
+      "note": "Add a diagram to the Overview tab to display the current phase tasks as a diagram with links showing dependencies and blockers to other tasks. Use blue to denote tasks ready to work, Yellow for tasks that are blocked and not yet ready., Red for tasks that are blocked and will not be unblocked by completing other tasks.",
+      "status": "open",
+      "sortOrder": 3,
+      "linkedPlanArtifact": "plan-artifact:349c70f8-9a5b-4016-96b9-63b55209da27",
+      "previousPlanArtifacts": [],
+      "createdAt": "2026-06-30T16:04:40.162Z",
+      "updatedAt": "2026-07-03T08:40:39.265Z"
+    },
+    {
+      "id": "I006",
+      "title": "Merge Ideas and Planning modules",
+      "note": "Ideas and Planning modules have overlapping concerns now that the Planning module drives document status transitions (planning→reviewed→accepted) on the unified IdeaPlan document. A merged module would eliminate the cross-module import boundary and make the document lifecycle ownership fully explicit. The planning module also has generic commands (build-plan, execute-plan-artifact, list-planning-types) that are not idea-specific — those would need to stay separate or be reorganized. Scope and impact need evaluation before committing.",
+      "status": "open",
+      "sortOrder": 5,
+      "previousPlanArtifacts": [],
+      "createdAt": "2026-07-02T05:40:35.548Z",
+      "updatedAt": "2026-07-02T05:40:35.548Z"
+    },
+    {
+      "id": "I009",
+      "title": "Make brainstorming a real guided ideation session that seeds the plan",
+      "note": "# Problem\nIdeas brainstorming is a scoring survey, not guided ideation.\n\n# Goal\nGuided ideation chat that seeds the plan draft.\n\n# Execution policy\nWBS materializes tasks at finalize/execute only (PQ-11). T100807 cancelled — superseded by WBS-1..7.\n\n# Locked decisions\nD-1..D-5 and PQ-6..PQ-12 recorded on plan v10+ and brainstorm session.\n\n# Tracking\nplan-artifact:08de149e-e528-4404-9e3a-885870fdf810",
+      "status": "planned",
+      "sortOrder": 8,
+      "linkedPlanArtifact": "plan-artifact:08de149e-e528-4404-9e3a-885870fdf810",
+      "previousPlanArtifacts": [],
+      "createdAt": "2026-07-07T21:27:12.540Z",
+      "updatedAt": "2026-07-09T18:24:22.330Z"
+    },
+    {
+      "id": "I010",
+      "title": "Agent Bug Reporting",
+      "note": "Use CAE to cause the agent to file bug report tasks when it encounters any issues related to workflow cannon or encounters agent facing features that are not easy for the agent to use.",
+      "status": "open",
+      "sortOrder": 9,
+      "previousPlanArtifacts": [],
+      "createdAt": "2026-07-07T21:31:50.289Z",
+      "updatedAt": "2026-07-07T21:31:50.289Z"
+    },
+    {
+      "id": "I011",
+      "title": "Agent Planning Tools",
+      "note": "Equip agents with MCP/CLI tools to run Idea→Plan→Tasks without hand-editing files. Captured from comprehensive planner module review (2026-07-08).",
+      "status": "planning",
+      "sortOrder": 10,
+      "linkedPlanArtifact": "plan-artifact:d0283a5e-a782-4700-83c0-7a5824d6dd3c",
+      "previousPlanArtifacts": [],
+      "createdAt": "2026-07-08T15:54:45.366Z",
+      "updatedAt": "2026-07-08T16:19:15.272Z"
+    },
+    {
+      "id": "I012",
+      "title": "Improve Dashboard Loading & Sync",
+      "note": "See ./DASHBOARD_LOADING_REPORT.md for the work we will do.",
+      "status": "planned",
+      "sortOrder": 11,
+      "linkedPlanArtifact": "plan-artifact:60075304-3c0c-46c6-9c8f-468dd8ef6379",
+      "previousPlanArtifacts": [],
+      "createdAt": "2026-07-09T16:09:22.955Z",
+      "updatedAt": "2026-07-09T18:25:45.799Z"
+    }
+  ]
+}

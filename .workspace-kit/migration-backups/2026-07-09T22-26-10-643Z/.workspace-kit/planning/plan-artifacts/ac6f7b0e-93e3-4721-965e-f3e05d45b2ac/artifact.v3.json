@@ -1,0 +1,124 @@
+{
+  "schemaVersion": 1,
+  "planId": "ac6f7b0e-93e3-4721-965e-f3e05d45b2ac",
+  "planRef": "plan-artifact:ac6f7b0e-93e3-4721-965e-f3e05d45b2ac",
+  "status": "accepted",
+  "identity": {
+    "title": "Path A — PlanArtifact operator kickoff",
+    "planningType": "change",
+    "summary": "First real PlanArtifact: validate, persist, review, accept, finalize dry-run on this workspace."
+  },
+  "goals": [
+    "Operator can run draft → review → accept → finalize dry-run without hand-editing plan files",
+    "Dashboard plan lifecycle panel shows the persisted draft"
+  ],
+  "nonGoals": [
+    "Shipping new planner features in this plan"
+  ],
+  "valueAssessment": {
+    "impact": "Unblocks command implementation",
+    "confidence": "high"
+  },
+  "riskAssessment": [],
+  "technicalImpact": {
+    "systemsTouched": [
+      "src/core/planning",
+      "schemas/planning"
+    ]
+  },
+  "testingStrategy": {
+    "layers": [
+      "unit"
+    ],
+    "criticalPaths": [
+      "schema validates minimal fixture"
+    ]
+  },
+  "implementationGuidance": [
+    "Mirror fields in PLANNER_SCHEMA.md"
+  ],
+  "whatNotToDo": [
+    "Do not hand-edit task store for plan status"
+  ],
+  "assumptions": [
+    "A-SCHEMA approved before WP-1 coding"
+  ],
+  "openQuestions": [],
+  "wbs": [
+    {
+      "wbsId": "WBS-1",
+      "title": "Validate and persist PlanArtifact draft",
+      "goalMapping": [
+        "Operator can run draft → review → accept → finalize dry-run without hand-editing plan files",
+        "Dashboard plan lifecycle panel shows the persisted draft"
+      ],
+      "suggestedTaskTitle": "Run Path A planner lifecycle smoke",
+      "approach": "Use draft-plan-artifact persist:false then persist:true; review-plan-artifact; accept-plan-artifact; finalize-plan-to-phase dryRun:true",
+      "technicalScope": [
+        "pnpm exec wk run draft-plan-artifact",
+        "pnpm exec wk run review-plan-artifact",
+        "pnpm exec wk run accept-plan-artifact",
+        "pnpm exec wk run finalize-plan-to-phase"
+      ],
+      "acceptanceCriteria": [
+        "draft-plan-artifact persist:false returns plan-artifact-draft-validated",
+        "Persisted artifact appears under .workspace-kit/planning/plan-artifacts/{planId}/",
+        "finalize-plan-to-phase dryRun:true returns preview without task writes"
+      ],
+      "testingVerification": [
+        "unit test: plan-artifact review and finalize dry-run smoke",
+        "Manual CLI on workflow-cannon workspace"
+      ],
+      "dependsOn": [],
+      "sizingConfidence": "high",
+      "doneMeans": "All four lifecycle commands succeed with policyApproval where required",
+      "generatedTaskPayload": {
+        "title": "Run Path A planner lifecycle smoke",
+        "approach": "Execute PlanArtifact golden path from .ai/runbooks/plan-artifact-workflow.md",
+        "technicalScope": [
+          "draft-plan-artifact",
+          "review-plan-artifact",
+          "accept-plan-artifact",
+          "finalize-plan-to-phase"
+        ],
+        "acceptanceCriteria": [
+          "Lifecycle smoke documented in session notes"
+        ]
+      }
+    }
+  ],
+  "phaseRecommendations": [
+    {
+      "phaseKey": "110",
+      "label": "Phase 110",
+      "rationale": "Current kit phase",
+      "isPrimary": true
+    }
+  ],
+  "provenance": {
+    "createdAt": "2026-05-27T22:03:50.084Z",
+    "updatedAt": "2026-05-27T22:04:50.462Z",
+    "createdBy": "operator",
+    "source": "draft-plan-artifact"
+  },
+  "architecture": {
+    "overview": "PlanArtifact files under .workspace-kit/planning/; lifecycle via wk run; dashboard reads dashboard-summary.planArtifact",
+    "decisions": [
+      {
+        "id": "D1",
+        "decision": "CLI-first kickoff",
+        "rationale": "Operator learns Path A before dashboard-only flow"
+      }
+    ]
+  },
+  "approvalRecord": {
+    "schemaVersion": 1,
+    "confirmed": true,
+    "approvedVersion": 2,
+    "approvedAt": "2026-05-27T22:04:47.593Z",
+    "approvedBy": "nicklaprell",
+    "planRef": "plan-artifact:ac6f7b0e-93e3-4721-965e-f3e05d45b2ac",
+    "reviewSummary": "0 blockers, 1 warning(s)"
+  },
+  "version": 3
+}
