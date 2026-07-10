@@ -2886,20 +2886,12 @@ function renderDashboardIdeasSectionInnerHtml(
     : rows.length === 0
       ? '<p class="muted">No ideas yet.</p>'
       : '<div class="wc-ideas-list" data-wc-ideas-list="1">' + rows + "</div>";
-  const form = available
-    ? '<form class="wc-ideas-create-form" data-wc-ideas-create-form="1">' +
-      '<label class="wc-field-label" for="wc-idea-title">New idea</label>' +
-      '<input id="wc-idea-title" class="wc-input" data-wc-idea-title="1" type="text" required maxlength="180" placeholder="Title" autocomplete="off" />' +
-      '<textarea class="wc-textarea" data-wc-idea-note="1" rows="2" maxlength="1200" placeholder="Optional note"></textarea>' +
-      '<div class="wc-ideas-create-actions">' +
-      '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="idea-create">Add idea</button>' +
-      '<span class="muted wc-ideas-create-status" data-wc-ideas-create-status="1" role="status" aria-live="polite"></span>' +
-      "</div>" +
-      "</form>"
+  const addBtn = available
+    ? '<button type="button" class="wc-btn wc-btn-sm wc-btn-primary" data-wc-action="idea-add" title="create-idea">New Idea</button>'
     : "";
   return (
     '<section class="dash-card wc-ideas-section" aria-label="Ideas">' +
-    "<p><b>Ideas</b> · Open " +
+    '<div class="wc-ideas-head"><p><b>Ideas</b> · Open ' +
     escapeHtml(String(openCount)) +
     " · Planning " +
     escapeHtml(String(planningCount)) +
@@ -2908,9 +2900,10 @@ function renderDashboardIdeasSectionInnerHtml(
     " · Total " +
     escapeHtml(String(totalCount)) +
     "</p>" +
+    addBtn +
+    "</div>" +
     '<div class="wc-ideas-toast" data-wc-ideas-toast="1" role="status" aria-live="polite" hidden></div>' +
     body +
-    form +
     "</section>"
   );
 }

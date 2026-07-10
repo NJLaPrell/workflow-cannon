@@ -1,0 +1,560 @@
+{
+  "schemaVersion": 1,
+  "planId": "08de149e-e528-4404-9e3a-885870fdf810",
+  "version": 11,
+  "planRef": "plan-artifact:08de149e-e528-4404-9e3a-885870fdf810",
+  "status": "planning",
+  "ideaId": "I009",
+  "createdAt": "2026-07-07T21:27:12.540Z",
+  "updatedAt": "2026-07-07T22:22:57.302Z",
+  "agentDirective": {
+    "schemaVersion": 1,
+    "state": "planning",
+    "questions": [
+      {
+        "phase": "context",
+        "fieldName": "planTitle",
+        "prompt": "What title should the structured plan use?",
+        "type": "text",
+        "guidance": "Initialize the plan section title before invoking planner-chat."
+      },
+      {
+        "phase": "context",
+        "fieldName": "planSummary",
+        "prompt": "Summarize the plan scope that planner-chat should expand into WBS rows.",
+        "type": "text",
+        "guidance": "Ground the summary in synthesized brainstorm scores; do not re-run brainstorming scoring here."
+      },
+      {
+        "phase": "session-notes",
+        "fieldName": "plannerChatInvocation",
+        "prompt": "Invoke planner-chat to author structured plan sections and WBS from the brainstorm synthesis.",
+        "type": "text",
+        "guidance": "Follow the planner-chat playbook after plan.title and plan.summary are set. Transition to reviewed when rubric review is recorded."
+      }
+    ]
+  },
+  "brainstorm": {
+    "sessions": [
+      {
+        "sessionId": "bsess-a1dc20dc-0567-4af8-b4e3-8f0dbf40d3e3",
+        "startedAt": "2026-07-07T21:28:58.669Z",
+        "updatedAt": "2026-07-07T22:22:57.302Z",
+        "inputs": {
+          "valueImpact": 8,
+          "valueReach": 7,
+          "valueUrgency": 6,
+          "valueStrategicFit": 9,
+          "riskTechnical": 4,
+          "riskOperational": 3,
+          "riskUnknowns": 5,
+          "riskReversibility": 3,
+          "tShirtSize": "M",
+          "complexity": 6,
+          "confidenceEvidence": 8,
+          "confidenceExpertise": 8,
+          "confidenceClarity": 7,
+          "contextProblem": "Ideas brainstorming is a hollow scoring survey: no guided ideation chat, no structured storage for agent-generated ideas/perspectives, and no mechanical seeding of plan drafts from brainstorm output.",
+          "contextAudience": "Workflow Cannon operators capturing ideas and maintainers delivering Ideas→Plan improvements.",
+          "unknownsNotes": "Ideation field shapes; transcript vs curated-only; qualitative synthesis across sessions; scoring optional ordering; dashboard rollup for qualitative content (see I005).",
+          "alternativesConsidered": "Rejected: survey-only, sessionNotes blob, transcript-only, external brainstorm store. Preferred: additive ideation object + directive reframe + seed map + per-idea doc init on create-idea.",
+          "sessionNotes": "## Status\nManual capture after dogfood brainstorm. Session completed without further guided chat rounds — operator directed manual enrichment of idea/plan record.\n\n## Current behavior (broken)\n- agentDirective.questions[] is a 18-field scoring/elicitation form (score-1-10, text, enum only).\n- brainstormSessionInputs is additionalProperties:false: 13 scores + contextProblem, contextAudience, unknownsNotes, alternativesConsidered, sessionNotes.\n- update-brainstorm-session-handler SESSION_INPUT_FIELDS allowlist drops unknown keys.\n- complete-brainstorm seeds plan.title from idea title and plan.summary from hardcoded placeholder unless planSummary passed manually.\n- buildIdeaPlanningPrompt ignores brainstorm content entirely.\n- applyBrainstormSectionSynthesis / synthesizeBrainstormScores only blend numeric scores across sessions.\n\n## Target UX\n- Natural chat: agent proposes feature ideas, perspectives, expectations, risks, alternatives — not only asks operator to score.\n- Each turn ends with operator choice: save session & return later (partial update-brainstorm-session) OR finish brainstorming & start planning (complete-brainstorm).\n- Qualitative outputs persist in structured session fields, not a sessionNotes blob.\n- On promotion, brainstorm content mechanically stubs plan.summary, goals, openQuestions, assumptions, and warms planner-chat prompt.\n\n## Proposed schema additions (ideation object on session)\nideation: {\n  featureIdeas: [{ text, rationale? }],\n  perspectives: [{ text }],\n  expectations: [{ text }],\n  openThreads: [{ text }],\n  decisions: [{ text, rationale? }],\n  transcript?: [{ role: \"agent\"|\"operator\", text, at }]\n}\nKeep existing scoring inputs separate. Both may be partial; ideation-rich completion should not require all 13 scores.\n\n## Proposed agentDirective reframe\n- Phases: context → ideation (agent contributes + elicits) → scoring (optional convergent) → checkpoint → session-notes.\n- Add question types: agent-proposal, agent-perspective (not only score-1-10|text|enum).\n- Add explicit checkpoint phase with save-vs-finish guidance.\n\n## Plan seed map (complete-brainstorm / planning init)\n- featureIdeas → goals[] + userStories[]\n- openThreads → openQuestions[]\n- perspectives + expectations → assumptions[] + valueAssessment narrative\n- synthesized scores → valueAssessment metrics (existing)\n- ideation digest → plan.summary + buildIdeaPlanningPrompt opening context\n\n## Additional pipeline fixes discovered in dogfood\n- create-idea should call buildIdeaOnlyUnifiedDocument and link planRef immediately.\n- migrate-ideas-to-unified-document should not be the only path for new ideas.\n- Align migrate dry-run policy tier docs with runtime (or exempt dry-run from policy gate).\n- Related idea I005 tracks brainstorming dashboard rollup UX.\n\n## Alternatives rejected\n- Do nothing / keep survey-only brainstorm.\n- sessionNotes-only blob storage (current workaround; not machine-seedable).\n- Full transcript only without curated ideation fields.\n- Separate brainstorm store outside unified IdeaPlan document.\n\n## Open questions\n- Field shape: plain string[] vs {text,rationale}[] for featureIdeas.\n- Transcript capture: full vs curated-only.\n- Qualitative multi-session synthesis: concatenate + agent summarize for v1?\n- Should scoring move to post-ideation optional step in directive ordering?\n\n## Acceptance criteria (for implementation task)\n1. Structured ideation fields persist through update-brainstorm-session.\n2. Agent directive supports ideation + checkpoint turns.\n3. complete-brainstorm seeds plan sections from ideation + scores.\n4. buildIdeaPlanningPrompt includes brainstorm digest.\n5. create-idea auto-creates unified document.\n6. Existing brainstorm sessions still validate.\n\n## Dashboard projection (added)\n\n## Dashboard projection (dogfood finding)\nUnified IdeaPlan writes did not update the plan-artifact SQLite index, so dashboard Plans showed stale \"Idea plan\" titles and empty summaries even when plan.title/plan.summary were correct on disk.\n\nFix (in progress on branch):\n- upsertIdeaPlanArtifactIndexFromDocument on every writeIdeaPlanArtifactVersion when sqliteDb is provided\n- buildDashboardPlanArtifactSummary reads plan.title, plan.summary, version, updatedAt from unified IdeaPlan documents\n- reconcileIdeaPlanArtifactIndexes(workspacePath, db) backfills stale index rows for existing workspaces\n\nAcceptance: after any IdeaPlan mutation, dashboard-summary shows the current plan title/summary without manual reconcile."
+        },
+        "scores": {
+          "value": 7.6,
+          "risk": 3.85,
+          "effort": 6,
+          "confidence": 7.65,
+          "priority": 68,
+          "tShirtSize": "M",
+          "complexity": 6
+        },
+        "completedAt": "2026-07-07T21:36:36.969Z",
+        "synthesized": {
+          "value": 7.6,
+          "risk": 3.85,
+          "effort": 6,
+          "confidence": 7.65,
+          "priority": 68,
+          "tShirtSize": "M",
+          "complexity": 6
+        },
+        "ideation": {
+          "decisions": [
+            {
+              "text": "D-1 Transcript vs curated ideation: Curated-only by default; transcript[] is opt-in per session only.",
+              "rationale": "Operator choice 1-A. Planning seeds read ideation.* arrays, not raw chat logs."
+            },
+            {
+              "text": "D-2 featureIdeas field shape: Plain string[] for featureIdeas and decisions (not {text,rationale} objects).",
+              "rationale": "Operator choice 2-B. Follow-up: align schema/handler with shipped rationale-object shape."
+            },
+            {
+              "text": "D-3 Multi-session qualitative synthesis: Add synthesizeBrainstormIdeation() to dedupe, rank, and summarize across sessions before complete-brainstorm.",
+              "rationale": "Operator choice 3-B. Extends beyond concatenate-only v1 stub."
+            },
+            {
+              "text": "D-4 Scoring requirement vs ideation paths: Two explicit completion paths: ideation-complete OR scoring-complete (both valid for promotion).",
+              "rationale": "Operator choice 4-B. Scoring is computationally cheap but UX-expensive (13+ survey fields); not quick for guided chat."
+            },
+            {
+              "text": "D-5 Dashboard brainstorming rollup: Rich Ideas-card rollup: surface top featureIdeas and openThreads snippets during brainstorming.",
+              "rationale": "Operator choice 5-C. Scope with I005 / new dashboard slice; plan metadata sync alone is insufficient."
+            },
+            {
+              "text": "PQ-6 Ideation-complete bar: Explicit operator confirmation at checkpoint; persist ideationComplete:true on session when operator confirms readiness (no item-count rule).",
+              "rationale": "Operator choice PQ-6-C."
+            },
+            {
+              "text": "PQ-7 synthesizeBrainstormIdeation algorithm: Deterministic merge: concatenate sessions, dedupe by normalized text, preserve latest-session ordering, cap each curated list (default top 10 per field).",
+              "rationale": "Operator choice PQ-7-A. No LLM in command path."
+            },
+            {
+              "text": "PQ-8 Ideation field shapes: Plain string[] for featureIdeas and decisions only; perspectives/expectations/openThreads remain {text} objects.",
+              "rationale": "Operator choice PQ-8-A."
+            },
+            {
+              "text": "PQ-9 Transcript opt-in mechanism: Implicit opt-in: omit transcript unless agent intentionally writes it; directive instructs no transcript by default.",
+              "rationale": "Operator choice PQ-9-A."
+            },
+            {
+              "text": "PQ-10 Dashboard ideation surfaces: Dedicated Brainstorming rollup slice (I005-aligned) with ideation snippets; Ideas card shows badge+link. Ideas rollup also lists idea rows that are not brainstorming and not yet promoted to a plan.",
+              "rationale": "Operator choice PQ-10-C with Ideas-rollup inclusion amendment."
+            },
+            {
+              "text": "PQ-11 Execution task model: WBS is source of truth; materialize execution tasks only at plan finalize/execute. T100807 retired (superseded by WBS-1..7).",
+              "rationale": "Operator choice PQ-11-A."
+            },
+            {
+              "text": "PQ-12 Plan accept gate: Accept plan now as execution blueprint; implementation gaps remain tracked on WBS follow-ups until execute.",
+              "rationale": "Operator choice PQ-12-A."
+            }
+          ]
+        }
+      }
+    ],
+    "activeSessionId": "bsess-a1dc20dc-0567-4af8-b4e3-8f0dbf40d3e3",
+    "synthesis": {
+      "value": 7.6,
+      "risk": 3.85,
+      "effort": 6,
+      "confidence": 7.65,
+      "priority": 68,
+      "tShirtSize": "M",
+      "complexity": 6
+    }
+  },
+  "plan": {
+    "title": "Make brainstorming a real guided ideation session that seeds the plan",
+    "summary": "Transform Ideas brainstorming from a scoring survey into guided ideation that seeds the plan draft, persists structured session output, and keeps dashboard plan metadata in sync.",
+    "planningType": "new-feature",
+    "wbsRowCount": 7
+  },
+  "identity": {
+    "title": "Make brainstorming a real guided ideation session that seeds the plan",
+    "planningType": "new-feature",
+    "summary": "Transform Ideas brainstorming from a scoring survey into guided ideation that seeds the plan draft, persists structured session output, and keeps dashboard plan metadata in sync."
+  },
+  "goals": [
+    "Operators get a guided ideation brainstorm with agent contributions and save/finish checkpoints",
+    "Brainstorm content mechanically seeds plan.summary, goals, open questions, and planner-chat context",
+    "New ideas auto-create a linked unified IdeaPlan document without a global migration",
+    "Dashboard Plans show current unified plan titles and summaries after IdeaPlan writes",
+    "Brainstorming rollup slice surfaces qualitative ideation snippets across active brainstorm sessions",
+    "Ideas rollup shows open ideas including those not yet brainstorming and not yet promoted to a plan"
+  ],
+  "nonGoals": [],
+  "userStories": [
+    {
+      "id": "US-1",
+      "asA": "operator",
+      "iWant": "the brainstorm agent to propose feature ideas and perspectives",
+      "soThat": "ideation is collaborative instead of a scoring form",
+      "priority": "must"
+    },
+    {
+      "id": "US-2",
+      "asA": "operator",
+      "iWant": "to save partial brainstorm progress and return later",
+      "soThat": "guided sessions can span multiple chats",
+      "priority": "must"
+    },
+    {
+      "id": "US-3",
+      "asA": "maintainer",
+      "iWant": "complete-brainstorm to seed the first plan draft",
+      "soThat": "planner-chat starts warm instead of cold",
+      "priority": "must"
+    }
+  ],
+  "valueAssessment": {
+    "impact": "Fixes the core Ideas→Plan handoff gap discovered in I009 dogfood; unblocks trustworthy planning from brainstorm output.",
+    "confidence": "high",
+    "rationale": "Dogfood on I009 reproduced the failure mode and validated the v1 design."
+  },
+  "riskAssessment": [
+    {
+      "id": "R-1",
+      "description": "Schema changes could break legacy brainstorm sessions",
+      "severity": "medium",
+      "mitigation": "Additive ideation fields and ideation-rich validation fallback; keep existing scoring path."
+    }
+  ],
+  "technicalImpact": {
+    "systemsTouched": [
+      "schemas/ideas",
+      "src/modules/ideas",
+      "src/modules/task-engine/dashboard",
+      "extensions/cursor-workflow-cannon"
+    ],
+    "compatibilityNotes": "Backward compatible with I005/I007 style score-only sessions."
+  },
+  "testingStrategy": {
+    "layers": [
+      "unit",
+      "integration"
+    ],
+    "criticalPaths": [
+      "update-brainstorm-session persists ideation",
+      "complete-brainstorm seeds plan sections",
+      "create-idea links unified document",
+      "dashboard-summary reads unified plan.title/plan.summary"
+    ]
+  },
+  "implementationGuidance": [
+    "PQ-6: add session.ideationComplete set only when operator confirms at checkpoint directive turn.",
+    "PQ-7: implement deterministic synthesizeBrainstormIdeation with dedupe, latest-session order, per-field cap (10).",
+    "PQ-8: migrate featureIdeas/decisions to string[]; keep {text} wrappers for perspectives/expectations/openThreads.",
+    "PQ-9: update brainstorming directive — do not capture transcript unless operator/agent explicitly opts in.",
+    "PQ-10: Brainstorming dashboard slice + Ideas rollup rules (non-brainstorm, not-yet-planned ideas); Ideas card badge links to slice.",
+    "PQ-11: do not create execution tasks until WBS materialization; T100807 cancelled/superseded.",
+    "PQ-12: accept plan as blueprint; land implementation via WBS-generated tasks at execute.",
+    "Retired task T100807 (proposed→cancelled): superseded by plan WBS-1..7; materialize tasks at finalize only.",
+    "Index sync belongs on every IdeaPlan write path.",
+    "Record D-1..D-5 and PQ-6..PQ-12 in plan review evidence."
+  ],
+  "whatNotToDo": [
+    "Do not store qualitative ideation only in sessionNotes",
+    "Do not require migrate-ideas-to-unified-document for new ideas",
+    "Do not pre-materialize WBS rows as execution tasks before plan finalize/execute"
+  ],
+  "assumptions": [
+    "Transcript capture is implicit opt-in only; curated ideation arrays are the default planning seed source.",
+    "featureIdeas and decisions use plain string[]; perspectives/expectations/openThreads use {text} objects.",
+    "Brainstorm promotion accepts ideation-complete (operator-confirmed ideationComplete flag) OR scoring-complete sessions.",
+    "Multi-session ideation uses deterministic synthesizeBrainstormIdeation before plan seeding.",
+    "Plan is an execution blueprint (PQ-12-A); task materialization waits for finalize/execute from WBS.",
+    "Ideas rollup includes open ideas not yet in brainstorming and not yet promoted to a plan."
+  ],
+  "openQuestions": [],
+  "wbs": [
+    {
+      "wbsId": "WBS-1",
+      "title": "Ideation schema and session persistence",
+      "goalMapping": [
+        "Operators get a guided ideation brainstorm with agent contributions and save/finish checkpoints"
+      ],
+      "suggestedTaskTitle": "Add brainstorm session ideation object and handler support",
+      "approach": "Extend brainstorm-session schema/types; parse and merge ideation in update-brainstorm-session; allow ideation-rich planning validation. Add ideationComplete flag on operator checkpoint confirmation (PQ-6). Align featureIdeas/decisions to string[] (PQ-8-A).",
+      "technicalScope": [
+        "schemas/ideas/brainstorm-session.schema.json",
+        "src/modules/ideas/brainstorm-ideation.ts",
+        "src/modules/ideas/update-brainstorm-session-handler.ts",
+        "src/modules/ideas/validate-brainstorm-section.ts"
+      ],
+      "acceptanceCriteria": [
+        "update-brainstorm-session persists ideation fields per PQ-8 shapes",
+        "ideationComplete:true is set only on operator-confirmed checkpoint (PQ-6)",
+        "validateBrainstormSectionForPlanning accepts ideationComplete OR scoring-complete"
+      ],
+      "testingVerification": [
+        "test/brainstorm-ideation.test.mjs",
+        "test/start-brainstorm-session.test.mjs"
+      ],
+      "dependsOn": [],
+      "recommendedPhase": "130",
+      "sizingConfidence": "medium",
+      "doneMeans": "Structured ideation survives session updates and validates for planning promotion.",
+      "generatedTaskPayload": {
+        "title": "Add brainstorm session ideation object and handler support",
+        "type": "improvement",
+        "approach": "Extend brainstorm-session schema/types; parse and merge ideation in update-brainstorm-session.",
+        "technicalScope": [
+          "schemas/ideas/brainstorm-session.schema.json",
+          "src/modules/ideas/brainstorm-ideation.ts",
+          "src/modules/ideas/update-brainstorm-session-handler.ts"
+        ],
+        "acceptanceCriteria": [
+          "update-brainstorm-session persists ideation without dropping fields",
+          "Ideation-rich sessions validate for planning without all 13 scores"
+        ]
+      }
+    },
+    {
+      "wbsId": "WBS-2",
+      "title": "Brainstorm directive reframe",
+      "goalMapping": [
+        "Operators get a guided ideation brainstorm with agent contributions and save/finish checkpoints"
+      ],
+      "suggestedTaskTitle": "Reframe brainstorming agentDirective for ideation and checkpoints",
+      "approach": "Add ideation and checkpoint phases to brainstorming.schema.json canonicalAgentDirective before scoring prompts.",
+      "technicalScope": [
+        "schemas/ideas/states/brainstorming.schema.json",
+        "test/brainstorming-schema.test.mjs"
+      ],
+      "acceptanceCriteria": [
+        "Directive includes ideation-feature, ideation-perspective, ideation-expectation, and checkpoint phases",
+        "Checkpoint guidance distinguishes save-and-return vs complete-brainstorm",
+        "Directive states transcript is not captured unless explicitly opted in (PQ-9)"
+      ],
+      "testingVerification": [
+        "test/brainstorming-schema.test.mjs"
+      ],
+      "dependsOn": [
+        "WBS-1"
+      ],
+      "recommendedPhase": "130",
+      "sizingConfidence": "medium",
+      "doneMeans": "Agents receive ideation-first directive ordering and checkpoint guidance from schema.",
+      "generatedTaskPayload": {
+        "title": "Reframe brainstorming agentDirective for ideation and checkpoints",
+        "approach": "Extend brainstorming.schema.json canonicalAgentDirective with ideation and checkpoint questions.",
+        "technicalScope": [
+          "schemas/ideas/states/brainstorming.schema.json"
+        ],
+        "acceptanceCriteria": [
+          "Ideation phases precede scoring in canonical directive order",
+          "Checkpoint guidance documents save vs finish behavior"
+        ]
+      }
+    },
+    {
+      "wbsId": "WBS-3",
+      "title": "Plan seeding and planner prompt digest",
+      "goalMapping": [
+        "Brainstorm content mechanically seeds plan.summary, goals, open questions, and planner-chat context"
+      ],
+      "suggestedTaskTitle": "Seed planning sections from brainstorm ideation",
+      "approach": "Map ideation to goals/userStories/openQuestions/assumptions in complete-brainstorm after deterministic synthesizeBrainstormIdeation (PQ-7-A); include brainstorm digest in buildIdeaPlanningPrompt.",
+      "technicalScope": [
+        "src/modules/ideas/brainstorm-plan-seed.ts",
+        "src/modules/ideas/complete-brainstorm-handler.ts",
+        "src/modules/ideas/build-idea-planning-prompt.ts",
+        "src/modules/ideas/start-idea-planning-handler.ts"
+      ],
+      "acceptanceCriteria": [
+        "complete-brainstorm seeds plan.summary and planning payload from ideation when planSummary omitted",
+        "start-idea-planning prompt includes brainstorm digest for linked unified documents"
+      ],
+      "testingVerification": [
+        "test/brainstorm-plan-seed.test.mjs",
+        "test/complete-brainstorm.test.mjs",
+        "test/build-idea-planning-prompt.test.mjs"
+      ],
+      "dependsOn": [
+        "WBS-1",
+        "WBS-7"
+      ],
+      "recommendedPhase": "130",
+      "sizingConfidence": "medium",
+      "doneMeans": "Promotion and planner-chat warm-start from brainstorm content without manual planSummary.",
+      "generatedTaskPayload": {
+        "title": "Seed planning sections from brainstorm ideation",
+        "approach": "Implement brainstorm-plan-seed and wire complete-brainstorm plus planner prompt digest.",
+        "technicalScope": [
+          "src/modules/ideas/brainstorm-plan-seed.ts",
+          "src/modules/ideas/complete-brainstorm-handler.ts",
+          "src/modules/ideas/build-idea-planning-prompt.ts"
+        ],
+        "acceptanceCriteria": [
+          "complete-brainstorm maps featureIdeas to goals and openThreads to openQuestions",
+          "Planner prompt includes brainstorm digest when unified document has brainstorm sessions"
+        ]
+      }
+    },
+    {
+      "wbsId": "WBS-4",
+      "title": "create-idea unified document auto-init",
+      "goalMapping": [
+        "New ideas auto-create a linked unified IdeaPlan document without a global migration"
+      ],
+      "suggestedTaskTitle": "Auto-create unified IdeaPlan document on create-idea",
+      "approach": "Call createUnifiedIdeaPlanDocumentForIdea when create-idea omits linkedPlanArtifact.",
+      "technicalScope": [
+        "src/modules/ideas/migrate-ideas-to-unified-document.ts",
+        "src/modules/ideas/index.ts",
+        "test/ideas-module.test.mjs"
+      ],
+      "acceptanceCriteria": [
+        "create-idea without linkedPlanArtifact returns idea.linkedPlanArtifact",
+        "Unified document exists on disk at returned planRef"
+      ],
+      "testingVerification": [
+        "test/ideas-module.test.mjs"
+      ],
+      "dependsOn": [],
+      "recommendedPhase": "130",
+      "sizingConfidence": "low",
+      "doneMeans": "New ideas no longer require migrate-ideas-to-unified-document before brainstorming or planning.",
+      "generatedTaskPayload": {
+        "title": "Auto-create unified IdeaPlan document on create-idea",
+        "approach": "Create and link unified document in create-idea when planRef is omitted.",
+        "technicalScope": [
+          "src/modules/ideas/index.ts",
+          "src/modules/ideas/migrate-ideas-to-unified-document.ts"
+        ],
+        "acceptanceCriteria": [
+          "create-idea auto-links plan-artifact ref for new ideas"
+        ]
+      }
+    },
+    {
+      "wbsId": "WBS-5",
+      "title": "Dashboard plan projection sync",
+      "goalMapping": [
+        "Dashboard Plans show current unified plan titles and summaries after IdeaPlan writes"
+      ],
+      "suggestedTaskTitle": "Sync plan-artifact index and dashboard summary for unified IdeaPlan writes",
+      "approach": "Upsert plan-artifact index on IdeaPlan writes; read plan.title/plan.summary in dashboard summary builder; add reconcile helper and tests.",
+      "technicalScope": [
+        "src/modules/ideas/idea-plan-artifact-storage.ts",
+        "src/modules/task-engine/dashboard/build-dashboard-base.ts",
+        "extensions/cursor-workflow-cannon/src/views/dashboard/dashboard-store-bridge.ts"
+      ],
+      "acceptanceCriteria": [
+        "dashboard-summary shows unified plan title and summary without manual reconcile",
+        "writeNextIdeaPlanArtifactVersion upserts SQLite plan-artifact index"
+      ],
+      "testingVerification": [
+        "test/idea-plan-artifact-index.test.mjs",
+        "extensions/cursor-workflow-cannon/test/dashboard-store-bridge.test.mjs"
+      ],
+      "dependsOn": [],
+      "recommendedPhase": "130",
+      "sizingConfidence": "low",
+      "doneMeans": "Dashboard Plans list reflects IdeaPlan mutations immediately after writes.",
+      "generatedTaskPayload": {
+        "title": "Sync plan-artifact index and dashboard summary for unified IdeaPlan writes",
+        "approach": "Index upsert on write plus dashboard fallback to unified document fields.",
+        "technicalScope": [
+          "src/modules/ideas/idea-plan-artifact-storage.ts",
+          "src/modules/task-engine/dashboard/build-dashboard-base.ts"
+        ],
+        "acceptanceCriteria": [
+          "I009 and other unified plans show real titles in dashboard-summary"
+        ]
+      }
+    },
+    {
+      "wbsId": "WBS-6",
+      "title": "Plan accept, dogfood replay, and WBS execution handoff",
+      "goalMapping": [
+        "Operators get a guided ideation brainstorm with agent contributions and save/finish checkpoints",
+        "Brainstorm content mechanically seeds plan.summary, goals, open questions, and planner-chat context"
+      ],
+      "suggestedTaskTitle": "Accept I009 plan blueprint and materialize WBS tasks at execute",
+      "approach": "Accept plan as execution blueprint (PQ-12-A). Record T100807 retirement. At execute/finalize, materialize WBS-1..7 into execution tasks (not before). Run end-to-end I009 dogfood replay as acceptance evidence.",
+      "technicalScope": [
+        "I009",
+        "plan-artifact:08de149e-e528-4404-9e3a-885870fdf810",
+        "src/modules/planning/instructions/finalize-plan-to-phase.md"
+      ],
+      "acceptanceCriteria": [
+        "Plan accepted as execution blueprint with PQ-6..PQ-12 and retired tasks recorded",
+        "T100807 cancelled with supersededBy plan WBS reference",
+        "End-to-end dogfood replay documented before WBS task materialization",
+        "Execution tasks created only from WBS rows at finalize/execute (not pre-materialized)"
+      ],
+      "testingVerification": [
+        "pnpm test on touched modules",
+        "I009 dogfood replay from create-idea through start-idea-planning"
+      ],
+      "dependsOn": [
+        "WBS-1",
+        "WBS-2",
+        "WBS-3",
+        "WBS-4",
+        "WBS-5"
+      ],
+      "recommendedPhase": "130",
+      "sizingConfidence": "medium",
+      "doneMeans": "Plan is accepted; umbrella task retired; WBS ready for task generation at execute.",
+      "generatedTaskPayload": {
+        "title": "Accept I009 plan and prepare WBS execution handoff",
+        "type": "improvement",
+        "approach": "Plan accept + retire T100807 + dogfood evidence; defer WBS task materialization to finalize.",
+        "technicalScope": [
+          "I009",
+          "plan-artifact:08de149e-e528-4404-9e3a-885870fdf810",
+          "persist-planning-execution-drafts"
+        ],
+        "acceptanceCriteria": [
+          "Plan accepted as execution blueprint with PQ-6..PQ-12 and retired tasks recorded",
+          "T100807 cancelled with supersededBy plan WBS reference",
+          "End-to-end dogfood replay documented before WBS task materialization",
+          "Execution tasks created only from WBS rows at finalize/execute (not pre-materialized)"
+        ]
+      }
+    },
+    {
+      "wbsId": "WBS-7",
+      "title": "Qualitative ideation synthesis and dashboard rollup",
+      "goalMapping": [
+        "Operators get a guided ideation brainstorm with agent contributions and save/finish checkpoints",
+        "Ideas dashboard cards show qualitative brainstorm snippets (featureIdeas, openThreads) while sessions are in progress"
+      ],
+      "suggestedTaskTitle": "Synthesize multi-session ideation and show Ideas-card brainstorm snippets",
+      "approach": "Implement deterministic synthesizeBrainstormIdeation (PQ-7-A). Add Brainstorming dashboard rollup slice and Ideas rollup rules: show non-brainstorming, not-yet-planned ideas plus ideation snippets (PQ-10).",
+      "technicalScope": [
+        "src/modules/ideas/brainstorm-section-synthesis.ts",
+        "src/modules/task-engine/dashboard/build-dashboard-ideas-summary.ts",
+        "extensions/cursor-workflow-cannon/src/views/dashboard"
+      ],
+      "acceptanceCriteria": [
+        "synthesizeBrainstormIdeation dedupes, orders by latest session, caps lists (10 per field)",
+        "Brainstorming rollup slice shows ideation snippets for active brainstorm sessions",
+        "Ideas rollup includes ideas not in brainstorming and not yet promoted to a plan",
+        "Ideas card shows ideation badge linking to Brainstorming slice"
+      ],
+      "testingVerification": [
+        "test/brainstorm-plan-seed.test.mjs",
+        "test/dashboard-brainstorming-ideas-rollup.test.mjs"
+      ],
+      "dependsOn": [
+        "WBS-1",
+        "WBS-5"
+      ],
+      "recommendedPhase": "130",
+      "sizingConfidence": "medium",
+      "doneMeans": "Operator decisions D-3 and D-5 are implemented in synthesis and dashboard surfaces.",
+      "generatedTaskPayload": {
+        "title": "Synthesize ideation and add Ideas-card brainstorm rollup",
+        "type": "improvement",
+        "approach": "synthesizeBrainstormIdeation + dashboard ideation snippets",
+        "technicalScope": [
+          "src/modules/ideas",
+          "src/modules/task-engine/dashboard"
+        ],
+        "acceptanceCriteria": [
+          "D-3 and D-5 satisfied"
+        ]
+      }
+    }
+  ],
+  "phaseRecommendations": [
+    {
+      "phaseKey": "130",
+      "label": "Phase 130",
+      "rationale": "Ideas and planning pipeline improvements",
+      "isPrimary": true
+    }
+  ],
+  "provenance": {
+    "createdAt": "2026-07-07T22:00:00.000Z",
+    "updatedAt": "2026-07-07T22:22:48.966Z",
+    "createdBy": "agent",
+    "source": "draft-plan-artifact",
+    "sourceIdeaId": "I009",
+    "chatSessionRef": "pcs-0c602173-406d-455b-92cd-77fc0b613dd0"
+  }
+}

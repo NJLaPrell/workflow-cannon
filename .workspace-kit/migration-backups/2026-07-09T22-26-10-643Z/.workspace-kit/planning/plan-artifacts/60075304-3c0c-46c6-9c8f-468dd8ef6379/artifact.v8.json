@@ -1,0 +1,478 @@
+{
+  "schemaVersion": 1,
+  "planId": "60075304-3c0c-46c6-9c8f-468dd8ef6379",
+  "version": 8,
+  "planRef": "plan-artifact:60075304-3c0c-46c6-9c8f-468dd8ef6379",
+  "status": "brainstorming",
+  "ideaId": "I012",
+  "createdAt": "2026-07-09T16:09:22.955Z",
+  "updatedAt": "2026-07-09T18:06:56.868Z",
+  "agentDirective": {
+    "schemaVersion": 1,
+    "state": "brainstorming",
+    "questions": [
+      {
+        "phase": "ideation-feature",
+        "fieldName": "featureIdeas",
+        "prompt": "What feature ideas or solution directions should we capture for this idea?",
+        "type": "text",
+        "guidance": "Contribute proposals yourself; do not only ask the operator. Persist with update-brainstorm-session ideation.featureIdeas as {text,rationale?} items."
+      },
+      {
+        "phase": "ideation-perspective",
+        "fieldName": "perspectives",
+        "prompt": "What perspectives, constraints, or framing should shape this idea?",
+        "type": "text",
+        "guidance": "Offer at least one perspective the operator may not have stated. Persist with update-brainstorm-session ideation.perspectives."
+      },
+      {
+        "phase": "ideation-expectation",
+        "fieldName": "expectations",
+        "prompt": "What should success look like if this idea ships?",
+        "type": "text",
+        "guidance": "Capture operator-visible outcomes and expectations. Persist with update-brainstorm-session ideation.expectations."
+      },
+      {
+        "phase": "checkpoint",
+        "fieldName": "sessionCheckpoint",
+        "prompt": "Save brainstorm progress or finish and move toward planning?",
+        "type": "text",
+        "guidance": "After each ideation turn, offer save-and-return (update-brainstorm-session without completedAt) vs finish-session (set completedAt when the operator confirms). Run complete-brainstorm only when the operator explicitly says brainstorming is finished."
+      },
+      {
+        "phase": "context",
+        "fieldName": "contextProblem",
+        "prompt": "In one or two sentences, what problem or opportunity does this idea address?",
+        "type": "text",
+        "guidance": "Restate the operator's idea in plain language before scoring. Capture the core pain or opportunity, not implementation details."
+      },
+      {
+        "phase": "context",
+        "fieldName": "contextAudience",
+        "prompt": "Who benefits first if this idea succeeds?",
+        "type": "text",
+        "guidance": "Name the primary user or operator persona. Secondary audiences can be noted in session notes later."
+      },
+      {
+        "phase": "value-scoring",
+        "fieldName": "valueImpact",
+        "prompt": "How strong is the expected impact if this idea succeeds (1=minimal, 10=transformative)?",
+        "type": "score-1-10",
+        "validRange": {
+          "min": 1,
+          "max": 10
+        },
+        "guidance": "Score the magnitude of outcome improvement, not confidence that it will happen."
+      },
+      {
+        "phase": "value-scoring",
+        "fieldName": "valueReach",
+        "prompt": "How many users, workflows, or systems would materially benefit (1=narrow, 10=broad)?",
+        "type": "score-1-10",
+        "validRange": {
+          "min": 1,
+          "max": 10
+        },
+        "guidance": "Count durable beneficiaries across the workspace, not one-off convenience."
+      },
+      {
+        "phase": "value-scoring",
+        "fieldName": "valueUrgency",
+        "prompt": "How time-sensitive is pursuing this idea now (1=can wait, 10=blocking now)?",
+        "type": "score-1-10",
+        "validRange": {
+          "min": 1,
+          "max": 10
+        },
+        "guidance": "Higher scores mean delay has clear cost or risk; lower scores mean the idea is valuable but not urgent."
+      },
+      {
+        "phase": "value-scoring",
+        "fieldName": "valueStrategicFit",
+        "prompt": "How well does this idea align with current roadmap and strategic goals (1=orthogonal, 10=core)?",
+        "type": "score-1-10",
+        "validRange": {
+          "min": 1,
+          "max": 10
+        },
+        "guidance": "Score alignment with active phase goals and maintainer priorities, not generic importance."
+      },
+      {
+        "phase": "risk-scoring",
+        "fieldName": "riskTechnical",
+        "prompt": "How high is the technical execution risk (1=well understood, 10=high unknowns)?",
+        "type": "score-1-10",
+        "validRange": {
+          "min": 1,
+          "max": 10
+        },
+        "guidance": "Consider architecture novelty, dependency risk, and verification difficulty."
+      },
+      {
+        "phase": "risk-scoring",
+        "fieldName": "riskOperational",
+        "prompt": "How high is the operational or rollout risk (1=low blast radius, 10=wide blast radius)?",
+        "type": "score-1-10",
+        "validRange": {
+          "min": 1,
+          "max": 10
+        },
+        "guidance": "Include support burden, migration pain, and failure impact on active workflows."
+      },
+      {
+        "phase": "risk-scoring",
+        "fieldName": "riskUnknowns",
+        "prompt": "How many unresolved unknowns remain (1=few, 10=many critical gaps)?",
+        "type": "score-1-10",
+        "validRange": {
+          "min": 1,
+          "max": 10
+        },
+        "guidance": "Score open questions that could invalidate the approach if left unanswered."
+      },
+      {
+        "phase": "risk-scoring",
+        "fieldName": "riskReversibility",
+        "prompt": "If this idea fails or must roll back, how hard is recovery (1=easy rollback, 10=hard to unwind)?",
+        "type": "score-1-10",
+        "validRange": {
+          "min": 1,
+          "max": 10
+        },
+        "guidance": "Higher scores mean partial delivery or bad assumptions would be costly to reverse."
+      },
+      {
+        "phase": "effort-scoring",
+        "fieldName": "tShirtSize",
+        "prompt": "What T-shirt size best fits the first shippable slice?",
+        "type": "enum",
+        "validValues": [
+          "XS",
+          "S",
+          "M",
+          "L",
+          "XL"
+        ],
+        "guidance": "Estimate relative delivery size for a focused implementation slice, not the entire multi-phase vision."
+      },
+      {
+        "phase": "effort-scoring",
+        "fieldName": "complexity",
+        "prompt": "How complex is the work independent of calendar time (1=straightforward, 10=deeply complex)?",
+        "type": "score-1-10",
+        "validRange": {
+          "min": 1,
+          "max": 10
+        },
+        "guidance": "T-shirt size and complexity are weighted independently in effortScore — a high-complexity M item intentionally scores higher than a low-complexity L item because complexity carries 60% of the effort blend."
+      },
+      {
+        "phase": "confidence-scoring",
+        "fieldName": "confidenceEvidence",
+        "prompt": "How strong is the supporting evidence (1=anecdotal, 10=strong proof)?",
+        "type": "score-1-10",
+        "validRange": {
+          "min": 1,
+          "max": 10
+        },
+        "guidance": "Include prior art, operator feedback, telemetry, or prior experiments."
+      },
+      {
+        "phase": "confidence-scoring",
+        "fieldName": "confidenceExpertise",
+        "prompt": "How available is the expertise needed to execute (1=scarce, 10=ready now)?",
+        "type": "score-1-10",
+        "validRange": {
+          "min": 1,
+          "max": 10
+        },
+        "guidance": "Consider team familiarity with affected modules and required review depth."
+      },
+      {
+        "phase": "confidence-scoring",
+        "fieldName": "confidenceClarity",
+        "prompt": "How clear is the problem and solution boundary (1=vague, 10=crisp)?",
+        "type": "score-1-10",
+        "validRange": {
+          "min": 1,
+          "max": 10
+        },
+        "guidance": "Higher clarity means acceptance criteria and scope boundaries are already obvious."
+      },
+      {
+        "phase": "unknowns",
+        "fieldName": "unknownsNotes",
+        "prompt": "List the top unknowns that could change the scores or scope.",
+        "type": "text",
+        "guidance": "Prefer concrete questions over generic risk statements. Unknowns here inform planning, not session scoring."
+      },
+      {
+        "phase": "alternatives",
+        "fieldName": "alternativesConsidered",
+        "prompt": "What alternatives did you consider and why is this approach preferred?",
+        "type": "text",
+        "guidance": "Capture at least one credible alternative, including doing nothing, and why it was deprioritized."
+      },
+      {
+        "phase": "session-notes",
+        "fieldName": "sessionNotes",
+        "prompt": "Add any session notes, assumptions, or follow-ups for the planning phase.",
+        "type": "text",
+        "guidance": "Keep notes concise and actionable. Do not duplicate computed scores here. After setting completedAt with update-brainstorm-session, stop and summarize the session; do not transition to planning unless the operator explicitly confirms brainstorming is finished."
+      }
+    ],
+    "computeSteps": [
+      {
+        "id": "valueScore",
+        "formula": "valueScore = (valueImpact × 0.30) + (valueReach × 0.25) + (valueUrgency × 0.20) + (valueStrategicFit × 0.25)",
+        "description": "Weighted average of value sub-inputs."
+      },
+      {
+        "id": "riskScore",
+        "formula": "riskScore = (riskTechnical × 0.35) + (riskOperational × 0.25) + (riskUnknowns × 0.25) + (riskReversibility × 0.15)",
+        "description": "Weighted average of risk sub-inputs."
+      },
+      {
+        "id": "effortScore",
+        "formula": "effortScore = (tShirtSizeScore × 0.40) + (complexity × 0.60); tShirtSizeScore map: XS=2, S=4, M=6, L=8, XL=10",
+        "description": "Blend of T-shirt size and complexity. High-complexity M intentionally scores higher than low-complexity L."
+      },
+      {
+        "id": "confidenceScore",
+        "formula": "confidenceScore = (confidenceEvidence × 0.35) + (confidenceExpertise × 0.30) + (confidenceClarity × 0.35)",
+        "description": "Weighted average of confidence sub-inputs."
+      },
+      {
+        "id": "priorityScore",
+        "formula": "rawPriority = ((valueScore × 0.40) + (confidenceScore × 0.20) − (riskScore × 0.25) − (effortScore × 0.15)) × 10; priorityScore = Math.round(((rawPriority + 34) / 90) × 100)",
+        "description": "Priority blends upside and confidence minus risk and effort, scaled to 0–100 via rawPriority normalization."
+      }
+    ],
+    "synthesisStep": {
+      "formula": "if sessions.length===1 then synthesized=session.scores else for each score field synthesized[field]=latest[field]×0.60+mean(prior[field])×0.40",
+      "description": "N=1 edge case: when sessions.length===1, synthesized=session scores; else synthesized=latest×0.60+mean(prior)×0.40."
+    }
+  },
+  "brainstorm": {
+    "sessions": [
+      {
+        "sessionId": "bsess-731063fd-bb15-4ac5-a208-703723dcbfb3",
+        "startedAt": "2026-07-09T17:54:47.252Z",
+        "updatedAt": "2026-07-09T17:55:39.271Z",
+        "ideation": {
+          "featureIdeas": [
+            {
+              "text": "DashboardStartupController with a single startup state machine (idle → shell-painted → bootstrap-loading → hydrated → background-hydrating → ready/error)",
+              "rationale": "Competing webview boot/ready/timeout/refresh paths currently race before read ownership is settled."
+            },
+            {
+              "text": "Move dashboard-service cold start off the critical first-paint path; paint from cache or lightweight CLI bootstrap first, promote to service in background",
+              "rationale": "Auto mode can burn up to ~30s on service health before fallback, matching the stuck-loading symptom."
+            },
+            {
+              "text": "Command-level poller fanout: execute a minimal shared command set once, then fan results into dependent store slices",
+              "rationale": "Slice-based single-flight still duplicates underlying reads and invites generation skew."
+            },
+            {
+              "text": "Authoritative mutation patches: CRUD returns changedSlices so the store updates immediately, with background reconcile as safety only",
+              "rationale": "Today mutations mark stale and rely on refresh; when refresh fails, manual refresh becomes the recovery path."
+            },
+            {
+              "text": "Replace JSON.stringify store equality with per-slice revision/fingerprint comparisons",
+              "rationale": "Deep stringify is expensive and unstable under key/order churn, driving unnecessary UI patches."
+            }
+          ],
+          "perspectives": [
+            {
+              "text": "Operator UX first: a usable overview must appear quickly even when the dashboard service is cold or broken."
+            },
+            {
+              "text": "Architecture simplification over more caches/timeouts: one startup owner, one read owner, one store, mutation patches first."
+            },
+            {
+              "text": "Cross-cutting blast radius: extension host, webview, dashboard service, and store contracts must stay coherent across phases."
+            },
+            {
+              "text": "Manual refresh should become a convenience, not the primary recovery mechanism for normal mutations or startup races."
+            }
+          ],
+          "expectations": [
+            {
+              "text": "Dashboard always paints usable overview data quickly without waiting on detached service startup."
+            },
+            {
+              "text": "Exactly one startup owner and one startup promise; webview messages request retry through that controller only."
+            },
+            {
+              "text": "When the service is healthy it owns reads; CLI is bootstrap/fallback only."
+            },
+            {
+              "text": "CRUD feels instant via authoritative patches; manual refresh is not required to recover from normal writes."
+            },
+            {
+              "text": "Fewer redundant reads, fewer generation mismatches, and less webview churn under steady-state polling."
+            }
+          ],
+          "openThreads": [
+            {
+              "text": "What is the acceptance bar for 'usable first paint' (which slices, max latency)?"
+            },
+            {
+              "text": "Should Phase 1 ship alone as the first PR, or bundle Phase 1+2 ownership rules?"
+            }
+          ],
+          "decisions": [
+            {
+              "text": "Prefer phased remediation starting with first-paint stabilization (startup controller + off-critical-path service start) before poller fanout and mutation-patch contracts.",
+              "rationale": "Report sequence Phase 1→2 unlocks operator-visible reliability before deeper sync redesign."
+            }
+          ]
+        },
+        "completedAt": "2026-07-09T17:55:38.000Z",
+        "inputs": {
+          "valueImpact": 8,
+          "valueReach": 7,
+          "valueUrgency": 7,
+          "valueStrategicFit": 8,
+          "riskTechnical": 6,
+          "riskOperational": 5,
+          "riskUnknowns": 5,
+          "riskReversibility": 4,
+          "tShirtSize": "M",
+          "complexity": 7,
+          "confidenceEvidence": 8,
+          "confidenceExpertise": 8,
+          "confidenceClarity": 7,
+          "contextProblem": "Dashboard loading and sync feel brittle because multiple competing startup and refresh paths fight over data ownership, so the UI can stick on loading or only recover after manual refresh.",
+          "contextAudience": "Workflow Cannon maintainers and operators who rely on the Cursor dashboard webview for queue, phase, and Ideas work every day.",
+          "unknownsNotes": "1) What is the acceptance bar for usable first paint (which slices, max latency)? 2) Ship Phase 1 alone vs bundle Phase 1+2 ownership rules in the first PR? 3) How much of the mutation changedSlices contract can land without a broader service API bump? 4) Are there existing telemetry hooks to prove first-paint and refresh recovery improvements?",
+          "alternativesConsidered": "Do nothing / keep adding timeouts and caches — rejected because the report shows ownership ambiguity, not missing retries. Big-bang rewrite of the whole dashboard sync stack — rejected as high blast radius; prefer phased remediation. Service-only fix without a startup controller — rejected because competing webview/extension startup paths would remain. Preferred: Phase 1 first-paint stabilization (single startup controller + off-critical-path service start), then ownership, fanout, mutation patches, and slice revisions.",
+          "sessionNotes": "Grounded in DASHBOARD_LOADING_REPORT.md. First shippable slice sized as M (Phase 1) with elevated complexity due to cross-cutting races. Planning should turn Phase 1 into concrete WBS with measurable first-paint acceptance; defer poller fanout and mutation-patch API until after startup ownership is stable."
+        },
+        "scores": {
+          "value": 7.55,
+          "risk": 5.2,
+          "effort": 6.6,
+          "confidence": 7.65,
+          "priority": 63,
+          "tShirtSize": "M",
+          "complexity": 7
+        },
+        "synthesized": {
+          "value": 7.55,
+          "risk": 5.2,
+          "effort": 6.6,
+          "confidence": 7.65,
+          "priority": 63,
+          "tShirtSize": "M",
+          "complexity": 7
+        }
+      },
+      {
+        "sessionId": "bsess-f37aa604-d59b-4838-ae9e-6a1907720a76",
+        "startedAt": "2026-07-09T17:59:35.930Z",
+        "updatedAt": "2026-07-09T17:59:50.618Z",
+        "ideation": {
+          "featureIdeas": [
+            {
+              "text": "DashboardStartupController as the sole owner of startup, retries, timeout, and webview boot/ready coordination",
+              "rationale": "Removes competing startup renders without rewriting the read/store stack."
+            },
+            {
+              "text": "First paint from cache or lightweight CLI bootstrap; start/promote dashboard service only in the background",
+              "rationale": "Directly kills the ~30s cold-service wait that matches the stuck-loading symptom."
+            },
+            {
+              "text": "Measurable first-paint acceptance: overview usable within a fixed latency budget even when the service is cold",
+              "rationale": "Turns the slice into a proven operator win and raises evidence for follow-on phases."
+            }
+          ],
+          "perspectives": [
+            {
+              "text": "Session 0 scoped the full remediation arc; session 1 deliberately shrinks to Phase 1 only to cut complexity and raise priority."
+            },
+            {
+              "text": "Value is time-to-usable-dashboard, not architectural purity. Dual service/CLI paths can remain until a later phase."
+            },
+            {
+              "text": "Manual refresh recovery for startup races is the daily pain; mutation-patch CRUD and poller fanout are separate product wins."
+            },
+            {
+              "text": "Park Phase 2–5 (one read owner rewrite, command fanout, changedSlices, slice fingerprints) as follow-on work after Phase 1 proves first paint."
+            }
+          ],
+          "expectations": [
+            {
+              "text": "Dashboard paints a usable overview quickly without waiting on detached service startup."
+            },
+            {
+              "text": "Exactly one startup owner and one startup promise; webview messages only request retry through that controller."
+            },
+            {
+              "text": "Cold or broken service still yields a usable first paint via cache/CLI bootstrap."
+            },
+            {
+              "text": "Acceptance criteria include an explicit latency/slice bar so planning can verify the win."
+            }
+          ],
+          "openThreads": [
+            {
+              "text": "Confirm first-paint SLA: which slices count as usable, and what max latency?"
+            },
+            {
+              "text": "Is existing cache/CLI bootstrap sufficient to wire through the controller, or is a thin bootstrap snapshot adapter needed?"
+            }
+          ],
+          "decisions": [
+            {
+              "text": "First shippable plan slice is Phase 1 only: startup controller + off-critical-path service start + first-paint SLA. Defer ownership rewrite, fanout, mutation patches, and fingerprints.",
+              "rationale": "Lowers effort (complexity) while concentrating value on the operator-visible stuck-loading failure."
+            }
+          ]
+        },
+        "completedAt": "2026-07-09T17:59:49.000Z",
+        "inputs": {
+          "valueImpact": 9,
+          "valueReach": 7,
+          "valueUrgency": 8,
+          "valueStrategicFit": 8,
+          "riskTechnical": 4,
+          "riskOperational": 3,
+          "riskUnknowns": 3,
+          "riskReversibility": 2,
+          "tShirtSize": "S",
+          "complexity": 4,
+          "confidenceEvidence": 8,
+          "confidenceExpertise": 8,
+          "confidenceClarity": 9,
+          "contextProblem": "Operators hit stuck or slow dashboard loading because cold service startup sits on the critical first-paint path and competing startup owners race. Narrowing to Phase 1 fixes that pain without rewriting the full sync stack.",
+          "contextAudience": "Workflow Cannon maintainers and operators who open the dashboard every session and currently rely on manual refresh when first paint stalls.",
+          "unknownsNotes": "1) Exact first-paint SLA: which slices are required and what max latency? 2) Can existing cache/CLI bootstrap be wired through the controller as-is, or is a thin adapter needed? 3) How do we verify cold-service first paint in automated tests without flaking on service timing?",
+          "alternativesConsidered": "Keep session-0 full remediation arc in one plan — rejected; effort/complexity too high for the first ship. Bundle Phase 1+2 ownership rewrite — rejected for this session; dual paths can remain until first paint is proven. Do nothing / more timeouts — still rejected. Preferred: Phase-1-only plan (startup controller + off-critical-path service + SLA), park Phase 2–5.",
+          "sessionNotes": "Re-score vs session 0 after operator ask to reduce effort and increase value. Synthesis should weight this session 60% as latest. Planning should author WBS for Phase 1 only; capture Phase 2–5 as deferred follow-ons, not in-scope rows."
+        },
+        "scores": {
+          "value": 8.05,
+          "risk": 3.2,
+          "effort": 4,
+          "confidence": 8.35,
+          "priority": 77,
+          "tShirtSize": "S",
+          "complexity": 4
+        },
+        "synthesized": {
+          "value": 7.85,
+          "risk": 4,
+          "effort": 5.04,
+          "confidence": 8.07
+        }
+      },
+      {
+        "sessionId": "bsess-cc349d7e-4caf-420d-9ade-7d3f9d082d0c",
+        "startedAt": "2026-07-09T18:06:56.868Z",
+        "updatedAt": "2026-07-09T18:06:56.868Z"
+      }
+    ],
+    "activeSessionId": "bsess-cc349d7e-4caf-420d-9ade-7d3f9d082d0c"
+  }
+}

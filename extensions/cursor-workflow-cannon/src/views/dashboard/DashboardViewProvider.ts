@@ -150,6 +150,7 @@ import { WC_BASE_CSS } from "../shared/wc-base-css.js";
 import { GUIDANCE_PANEL_WEBVIEW_CSS } from "../shared/guidance-panel-webview-css.js";
 import {
   buildAcceptProposedDrawerSpec,
+  buildAddIdeaDrawerSpec,
   buildAddPhaseNoteDrawerSpec,
   buildAddWishlistDrawerSpec,
   buildAssignTaskPhaseDrawerSpec,
@@ -185,6 +186,7 @@ import {
   validateRewindCheckpointSubmit,
   renderDrawerFormHtml,
   validateAcceptProposedSubmit,
+  validateAddIdeaSubmit,
   validateAddPhaseNoteSubmit,
   validateAddWishlistSubmit,
   validateAssignTaskPhaseSubmit,
@@ -218,6 +220,7 @@ type DashboardDrawerSession =
   | { kind: "view-phase-note"; noteId: string }
   | { kind: "edit-phase-note"; noteId: string }
   | { kind: "add-wishlist" }
+  | { kind: "add-idea" }
   | { kind: "assign-task-phase"; taskId: string }
   | { kind: "add-phase-note" }
   | { kind: "convert-phase-note"; noteId: string }
@@ -494,6 +497,13 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   /** Last successful `dashboard-summary` `data` — used for phase QuickPick targets. */
   private lastDashboardSummaryData: Record<string, unknown> | null = null;
 
+  /**
+   * Last `#root` inner HTML posted via `wcReplaceRoot`.
+   * Re-sent on webview boot / startup-timeout when the host is already hydrated but the
+   * webview still shows the loading shell (lost early postMessage race).
+   */
+  private lastDashboardRootHtml: string | null = null;
+
   /** Cached CAE tab HTML for light dashboard refreshes. */
   private lastEmbeddedCaePanelHtml: string | null = null;
 
@@ -739,6 +749,33 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     this.dashboardRootHydrated = true;
     this.onFirstDashboardPaint?.();
+  }
+
+  /** Post `wcReplaceRoot` and retain HTML for boot/timeout recovery repaints. */
+  private async postReplaceRootHtml(
+    webview: vscode.Webview,
+    html: string,
+    reason: string
+  ): Promise<void> {
+    this.lastDashboardRootHtml = html;
+    await webview.postMessage({ type: "wcReplaceRoot", html });
+    // Ack cancels the webview startup timeout probe when the host already painted.
+    await webview.postMessage({ type: "dashboardStartupAck", reason });
+  }
+
+  /**
+   * Re-send the last successful root HTML when the webview still shows the loading shell
+   * after the host already reached hydrated/ready (early `wcReplaceRoot` can be dropped).
+   */
+  private async repaintCachedDashboardRoot(reason: string): Promise<boolean> {
+    const webview = this.view?.webview;
+    const html = this.lastDashboardRootHtml;
+    if (!webview || !html || !this.startupController.isHydrated()) {
+      return false;
+    }
+    logWc("dashboard", `startup recovery repaint via cached wcReplaceRoot reason=${reason}`);
+    await this.postReplaceRootHtml(webview, html, `recovery:${reason}`);
+    return true;
   }
 
   /**
@@ -1145,12 +1182,19 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       }
       if (msg?.type === "dashboardWebviewBoot") {
         logWc("dashboard", "webview boot");
+        // Host may have posted wcReplaceRoot before the webview listener existed.
+        await this.repaintCachedDashboardRoot("webview-boot");
         await this.requestDashboardStartup("webview-boot");
         return;
       }
       if (msg?.type === "dashboardStartupTimeout") {
         const rootClass = typeof msg.rootClass === "string" ? msg.rootClass : "";
         logWc("dashboard", `startup timeout rootClass=${rootClass}`);
+        // Prefer re-sending the last good paint over ignoring a false-positive timeout.
+        const recovered = await this.repaintCachedDashboardRoot("startup-timeout");
+        if (recovered) {
+          return;
+        }
         await this.requestDashboardStartup("startup-timeout");
         return;
       }
@@ -1249,10 +1293,8 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       if (msg?.type === "addWishlistItem") {
         await this.openAddWishlistDrawer();
       }
-      if (msg?.type === "createIdea") {
-        const title = typeof msg.title === "string" ? msg.title.trim() : "";
-        const note = typeof msg.note === "string" ? msg.note.trim() : "";
-        await this.onCreateIdeaFromDashboard(title, note);
+      if (msg?.type === "addIdea") {
+        await this.openAddIdeaDrawer();
       }
       if (msg?.type === "updateIdea") {
         const ideaId = typeof msg.ideaId === "string" ? msg.ideaId.trim() : "";
@@ -1741,6 +1783,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     webviewView.onDidDispose(() => {
       this.dashboardRootShellReady = false;
       this.dashboardRootHydrated = false;
+      this.lastDashboardRootHtml = null;
       this.startupController.reset();
       this.queueRollupHydrationInFlight = undefined;
       this.kitStateRefreshInFlight = undefined;
@@ -1767,6 +1810,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     });
     // Shell-first paint (T100395): document before any dashboard-summary await.
     this.dashboardRootHydrated = false;
+    this.lastDashboardRootHtml = null;
     this.startupController.reset();
     webview.html = this.buildHtml(webview, renderDashboardShellInnerHtml());
     this.dashboardRootShellReady = true;
@@ -1933,7 +1977,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     for (const sectionId of ["queue", "status", "config", "cae", "phase-journal"] as const) {
       this.staleDashboardSections.add(sectionId);
     }
-    await webview.postMessage({ type: "wcReplaceRoot", html: rootInner });
+    await this.postReplaceRootHtml(webview, rootInner, `bootstrap-${snapshot.provenance}`);
   }
 
   private async postSectionPatch(
@@ -3612,17 +3656,21 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     const html = renderDrawerFormHtml(buildAddWishlistDrawerSpec());
     this.dashboardDrawerSession = { kind: "add-wishlist" };
-    await this.postWcDrawerOpen(html);
+    await this.postWcDrawerOpen(html, "add-wishlist");
+  }
+
+  private async openAddIdeaDrawer(): Promise<void> {
+    if (this.dashboardDrawerSession) {
+      return;
+    }
+    const html = renderDrawerFormHtml(buildAddIdeaDrawerSpec());
+    this.dashboardDrawerSession = { kind: "add-idea" };
+    await this.postWcDrawerOpen(html, "add-idea");
   }
 
   private async onCreateIdeaFromDashboard(title: string, note: string): Promise<void> {
     if (title.length === 0) {
-      await this.view?.webview.postMessage({
-        type: "wcIdeaCreateResult",
-        ok: false,
-        message: "Title required."
-      });
-      return;
+      throw new Error("Title required.");
     }
     const args: Record<string, unknown> = {
       title,
@@ -3636,12 +3684,9 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     const out = await this.client.run("create-idea", args);
     if (!out.ok) {
-      const message = (out.message ?? String(out.code ?? "create-idea failed")).slice(0, 900);
-      await this.view?.webview.postMessage({ type: "wcIdeaCreateResult", ok: false, message });
-      return;
+      throw new Error((out.message ?? String(out.code ?? "create-idea failed")).slice(0, 900));
     }
     ingestPlanningMetaFromData(out.data as Record<string, unknown> | undefined);
-    await this.view?.webview.postMessage({ type: "wcIdeaCreateResult", ok: true });
     await this.applyDashboardMutationInvalidation("ideas");
   }
 
@@ -4762,6 +4807,23 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       this.wishlistPage = 0;
       return true;
     }
+    if (session.kind === "add-idea") {
+      const validated = validateAddIdeaSubmit(values);
+      if (!validated.ok) {
+        await this.postDrawerValidationToWebview(validated.error);
+        return false;
+      }
+      try {
+        await this.onCreateIdeaFromDashboard(validated.values.title, validated.values.note);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        await this.postDrawerValidationToWebview(message.slice(0, 900));
+        return false;
+      }
+      this.closeDashboardDrawer();
+      this.queueDrawerNotify("Idea created");
+      return true;
+    }
     if (session.kind === "assign-task-phase") {
       const validated = validateAssignTaskPhaseSubmit(values);
       if (!validated.ok) {
@@ -5854,7 +5916,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
     try {
       if (!this.dashboardRootHydrated) {
-        await webview.postMessage({ type: "wcReplaceRoot", html: rootInner });
+        await this.postReplaceRootHtml(webview, rootInner, "push-update-first");
         logWc("dashboard", "pushUpdate applied first root patch over shell");
         this.markDashboardRootHydrated();
         if (useDeferredSecondary) {
@@ -5863,7 +5925,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         return;
       }
       // Full-root refresh stays the compatibility path while section slices land (T100396+).
-      await webview.postMessage({ type: "wcReplaceRoot", html: rootInner });
+      await this.postReplaceRootHtml(webview, rootInner, "push-update");
       if (useDeferredSecondary) {
         logWc("dashboard", "pushUpdate deferred secondary hydration: queue/status/full not launched");
       }
@@ -5980,8 +6042,21 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     );
     const startupProbe = `(function(){
   var vscode = window.__wfcVscode || (window.__wfcVscode = acquireVsCodeApi());
+  var startupTimeoutCancelled = false;
+  var startupTimeoutId = null;
+  function cancelStartupTimeout() {
+    startupTimeoutCancelled = true;
+    if (startupTimeoutId) {
+      clearTimeout(startupTimeoutId);
+      startupTimeoutId = null;
+    }
+  }
   window.addEventListener('message', function(ev){
     var msg = ev.data || {};
+    if (msg.type === 'dashboardStartupAck' || msg.type === 'wcReplaceRoot') {
+      cancelStartupTimeout();
+      return;
+    }
     if (msg.type !== 'dashboardStartupError') return;
     var status = document.querySelector('[data-wc-startup-status]');
     if (status) {
@@ -5995,12 +6070,27 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     }
   });
   try { vscode.postMessage({ type: 'dashboardWebviewBoot' }); } catch (e) {}
-  setTimeout(function(){
+  startupTimeoutId = setTimeout(function(){
+    startupTimeoutId = null;
+    if (startupTimeoutCancelled) return;
     var root = document.getElementById('root');
     if (!root) return;
     var first = root.firstElementChild;
     var shell = !!(first && first.classList && first.classList.contains('wc-dashboard-shell-initial'));
     if (!shell) return;
+    // Section patches can fill the shell without clearing shell-initial. Do not wipe
+    // a dashboard that already has ready content — ask the host to re-send root HTML.
+    var hasReadySection = !!root.querySelector('.wc-dash-section--ready, [data-wc-section-refreshing]');
+    if (hasReadySection) {
+      try {
+        vscode.postMessage({
+          type: 'dashboardStartupTimeout',
+          rootClass: first.className || '',
+          reason: 'shell-initial-with-ready-sections'
+        });
+      } catch (e) {}
+      return;
+    }
     root.innerHTML = '<section class="wc-card wc-dashboard-startup-timeout" role="status">' +
       '<h3>Dashboard is still loading</h3>' +
       '<p class="muted">Workflow Cannon started the webview, but the first data render did not replace the loading shell.</p>' +
@@ -6198,21 +6288,21 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     .wc-ideas-toast[hidden] {
       display: none;
     }
-    .wc-ideas-create-form {
+    .wc-ideas-head {
       display: flex;
-      flex-direction: column;
-      gap: 6px;
-      margin-top: 8px;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+    .wc-ideas-head p {
+      margin: 0;
     }
     .wc-ideas-create-actions {
       display: flex;
       align-items: center;
       gap: 6px;
       flex-wrap: wrap;
-    }
-    .wc-ideas-create-status[data-wc-error="1"] {
-      color: var(--vscode-errorForeground, #f44747);
-      opacity: 1;
     }
     .wc-ideas-row-status[data-wc-error="1"] {
       color: var(--vscode-errorForeground, #f44747);
@@ -8661,10 +8751,10 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   <footer class="dash-footer">
     <button type="button" id="btn" class="wc-btn wc-btn-lg wc-btn-primary dash-refresh-btn" title="Refresh the dashboard now. The panel also updates when you return to it or when planning data changes.">Refresh</button>
   </footer>
-  <script src="${mermaidScriptUri}"></script>
   <script>${startupProbe}</script>
   <script>${bootstrap}</script>
   <script>${buildConfigWebviewBootstrapScript({ autoLoad: false })}</script>
+  <script src="${mermaidScriptUri}"></script>
 </body>
 </html>`;
   }

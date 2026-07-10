@@ -43,6 +43,27 @@ test("drawer: dismiss normal skips rationale requirement", async () => {
   assert.equal(good.ok, true);
 });
 
+test("drawer: add idea markup and validation", async () => {
+  const mod = await import("../dist/views/dashboard/dashboard-input-drawer.js");
+  const spec = mod.buildAddIdeaDrawerSpec();
+  const html = mod.renderDrawerFormHtml(spec);
+  assert.equal(spec.workflowId, "add-idea");
+  assert.equal(spec.primaryLabel, "Add idea");
+  assert.match(html, /data-wc-drawer-field="title"/);
+  assert.match(html, /data-wc-drawer-field="note"/);
+  assert.match(html, /New Idea/);
+  const empty = mod.validateAddIdeaSubmit({ title: "  ", note: "" });
+  assert.equal(empty.ok, false);
+  const good = mod.validateAddIdeaSubmit({ title: " Ship it ", note: " optional " });
+  assert.equal(good.ok, true);
+  if (good.ok) {
+    assert.equal(good.values.title, "Ship it");
+    assert.equal(good.values.note, "optional");
+  }
+  const longTitle = mod.validateAddIdeaSubmit({ title: "x".repeat(181), note: "" });
+  assert.equal(longTitle.ok, false);
+});
+
 test("drawer: normalizeDrawerValues trims", async () => {
   const mod = await import("../dist/views/dashboard/dashboard-input-drawer.js");
   const v = mod.normalizeDrawerValues({ a: "  x  ", b: 3 });

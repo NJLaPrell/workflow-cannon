@@ -1,0 +1,816 @@
+{
+  "schemaVersion": 1,
+  "planId": "60075304-3c0c-46c6-9c8f-468dd8ef6379",
+  "version": 18,
+  "planRef": "plan-artifact:60075304-3c0c-46c6-9c8f-468dd8ef6379",
+  "status": "accepted",
+  "ideaId": "I012",
+  "createdAt": "2026-07-09T16:09:22.955Z",
+  "updatedAt": "2026-07-09T19:33:46.767Z",
+  "agentDirective": {
+    "schemaVersion": 1,
+    "state": "planning",
+    "questions": [
+      {
+        "phase": "context",
+        "fieldName": "planTitle",
+        "prompt": "What title should the structured plan use?",
+        "type": "text",
+        "guidance": "Initialize the plan section title before invoking planner-chat."
+      },
+      {
+        "phase": "context",
+        "fieldName": "planSummary",
+        "prompt": "Summarize the plan scope that planner-chat should expand into WBS rows.",
+        "type": "text",
+        "guidance": "Ground the summary in synthesized brainstorm scores; do not re-run brainstorming scoring here."
+      },
+      {
+        "phase": "session-notes",
+        "fieldName": "plannerChatInvocation",
+        "prompt": "Invoke planner-chat to author structured plan sections and WBS from the brainstorm synthesis.",
+        "type": "text",
+        "guidance": "Follow the planner-chat playbook after plan.title and plan.summary are set. Transition to reviewed when rubric review is recorded."
+      }
+    ]
+  },
+  "brainstorm": {
+    "sessions": [
+      {
+        "sessionId": "bsess-731063fd-bb15-4ac5-a208-703723dcbfb3",
+        "startedAt": "2026-07-09T17:54:47.252Z",
+        "updatedAt": "2026-07-09T17:55:39.271Z",
+        "ideation": {
+          "featureIdeas": [
+            {
+              "text": "DashboardStartupController with a single startup state machine (idle → shell-painted → bootstrap-loading → hydrated → background-hydrating → ready/error)",
+              "rationale": "Competing webview boot/ready/timeout/refresh paths currently race before read ownership is settled."
+            },
+            {
+              "text": "Move dashboard-service cold start off the critical first-paint path; paint from cache or lightweight CLI bootstrap first, promote to service in background",
+              "rationale": "Auto mode can burn up to ~30s on service health before fallback, matching the stuck-loading symptom."
+            },
+            {
+              "text": "Command-level poller fanout: execute a minimal shared command set once, then fan results into dependent store slices",
+              "rationale": "Slice-based single-flight still duplicates underlying reads and invites generation skew."
+            },
+            {
+              "text": "Authoritative mutation patches: CRUD returns changedSlices so the store updates immediately, with background reconcile as safety only",
+              "rationale": "Today mutations mark stale and rely on refresh; when refresh fails, manual refresh becomes the recovery path."
+            },
+            {
+              "text": "Replace JSON.stringify store equality with per-slice revision/fingerprint comparisons",
+              "rationale": "Deep stringify is expensive and unstable under key/order churn, driving unnecessary UI patches."
+            }
+          ],
+          "perspectives": [
+            {
+              "text": "Operator UX first: a usable overview must appear quickly even when the dashboard service is cold or broken."
+            },
+            {
+              "text": "Architecture simplification over more caches/timeouts: one startup owner, one read owner, one store, mutation patches first."
+            },
+            {
+              "text": "Cross-cutting blast radius: extension host, webview, dashboard service, and store contracts must stay coherent across phases."
+            },
+            {
+              "text": "Manual refresh should become a convenience, not the primary recovery mechanism for normal mutations or startup races."
+            }
+          ],
+          "expectations": [
+            {
+              "text": "Dashboard always paints usable overview data quickly without waiting on detached service startup."
+            },
+            {
+              "text": "Exactly one startup owner and one startup promise; webview messages request retry through that controller only."
+            },
+            {
+              "text": "When the service is healthy it owns reads; CLI is bootstrap/fallback only."
+            },
+            {
+              "text": "CRUD feels instant via authoritative patches; manual refresh is not required to recover from normal writes."
+            },
+            {
+              "text": "Fewer redundant reads, fewer generation mismatches, and less webview churn under steady-state polling."
+            }
+          ],
+          "openThreads": [
+            {
+              "text": "What is the acceptance bar for 'usable first paint' (which slices, max latency)?"
+            },
+            {
+              "text": "Should Phase 1 ship alone as the first PR, or bundle Phase 1+2 ownership rules?"
+            }
+          ],
+          "decisions": [
+            {
+              "text": "Prefer phased remediation starting with first-paint stabilization (startup controller + off-critical-path service start) before poller fanout and mutation-patch contracts.",
+              "rationale": "Report sequence Phase 1→2 unlocks operator-visible reliability before deeper sync redesign."
+            }
+          ]
+        },
+        "completedAt": "2026-07-09T17:55:38.000Z",
+        "inputs": {
+          "valueImpact": 8,
+          "valueReach": 7,
+          "valueUrgency": 7,
+          "valueStrategicFit": 8,
+          "riskTechnical": 6,
+          "riskOperational": 5,
+          "riskUnknowns": 5,
+          "riskReversibility": 4,
+          "tShirtSize": "M",
+          "complexity": 7,
+          "confidenceEvidence": 8,
+          "confidenceExpertise": 8,
+          "confidenceClarity": 7,
+          "contextProblem": "Dashboard loading and sync feel brittle because multiple competing startup and refresh paths fight over data ownership, so the UI can stick on loading or only recover after manual refresh.",
+          "contextAudience": "Workflow Cannon maintainers and operators who rely on the Cursor dashboard webview for queue, phase, and Ideas work every day.",
+          "unknownsNotes": "1) What is the acceptance bar for usable first paint (which slices, max latency)? 2) Ship Phase 1 alone vs bundle Phase 1+2 ownership rules in the first PR? 3) How much of the mutation changedSlices contract can land without a broader service API bump? 4) Are there existing telemetry hooks to prove first-paint and refresh recovery improvements?",
+          "alternativesConsidered": "Do nothing / keep adding timeouts and caches — rejected because the report shows ownership ambiguity, not missing retries. Big-bang rewrite of the whole dashboard sync stack — rejected as high blast radius; prefer phased remediation. Service-only fix without a startup controller — rejected because competing webview/extension startup paths would remain. Preferred: Phase 1 first-paint stabilization (single startup controller + off-critical-path service start), then ownership, fanout, mutation patches, and slice revisions.",
+          "sessionNotes": "Grounded in DASHBOARD_LOADING_REPORT.md. First shippable slice sized as M (Phase 1) with elevated complexity due to cross-cutting races. Planning should turn Phase 1 into concrete WBS with measurable first-paint acceptance; defer poller fanout and mutation-patch API until after startup ownership is stable."
+        },
+        "scores": {
+          "value": 7.55,
+          "risk": 5.2,
+          "effort": 6.6,
+          "confidence": 7.65,
+          "priority": 63,
+          "tShirtSize": "M",
+          "complexity": 7
+        },
+        "synthesized": {
+          "value": 7.55,
+          "risk": 5.2,
+          "effort": 6.6,
+          "confidence": 7.65,
+          "priority": 63,
+          "tShirtSize": "M",
+          "complexity": 7
+        }
+      },
+      {
+        "sessionId": "bsess-f37aa604-d59b-4838-ae9e-6a1907720a76",
+        "startedAt": "2026-07-09T17:59:35.930Z",
+        "updatedAt": "2026-07-09T17:59:50.618Z",
+        "ideation": {
+          "featureIdeas": [
+            {
+              "text": "DashboardStartupController as the sole owner of startup, retries, timeout, and webview boot/ready coordination",
+              "rationale": "Removes competing startup renders without rewriting the read/store stack."
+            },
+            {
+              "text": "First paint from cache or lightweight CLI bootstrap; start/promote dashboard service only in the background",
+              "rationale": "Directly kills the ~30s cold-service wait that matches the stuck-loading symptom."
+            },
+            {
+              "text": "Measurable first-paint acceptance: overview usable within a fixed latency budget even when the service is cold",
+              "rationale": "Turns the slice into a proven operator win and raises evidence for follow-on phases."
+            }
+          ],
+          "perspectives": [
+            {
+              "text": "Session 0 scoped the full remediation arc; session 1 deliberately shrinks to Phase 1 only to cut complexity and raise priority."
+            },
+            {
+              "text": "Value is time-to-usable-dashboard, not architectural purity. Dual service/CLI paths can remain until a later phase."
+            },
+            {
+              "text": "Manual refresh recovery for startup races is the daily pain; mutation-patch CRUD and poller fanout are separate product wins."
+            },
+            {
+              "text": "Park Phase 2–5 (one read owner rewrite, command fanout, changedSlices, slice fingerprints) as follow-on work after Phase 1 proves first paint."
+            }
+          ],
+          "expectations": [
+            {
+              "text": "Dashboard paints a usable overview quickly without waiting on detached service startup."
+            },
+            {
+              "text": "Exactly one startup owner and one startup promise; webview messages only request retry through that controller."
+            },
+            {
+              "text": "Cold or broken service still yields a usable first paint via cache/CLI bootstrap."
+            },
+            {
+              "text": "Acceptance criteria include an explicit latency/slice bar so planning can verify the win."
+            }
+          ],
+          "openThreads": [
+            {
+              "text": "Confirm first-paint SLA: which slices count as usable, and what max latency?"
+            },
+            {
+              "text": "Is existing cache/CLI bootstrap sufficient to wire through the controller, or is a thin bootstrap snapshot adapter needed?"
+            }
+          ],
+          "decisions": [
+            {
+              "text": "First shippable plan slice is Phase 1 only: startup controller + off-critical-path service start + first-paint SLA. Defer ownership rewrite, fanout, mutation patches, and fingerprints.",
+              "rationale": "Lowers effort (complexity) while concentrating value on the operator-visible stuck-loading failure."
+            }
+          ]
+        },
+        "completedAt": "2026-07-09T17:59:49.000Z",
+        "inputs": {
+          "valueImpact": 9,
+          "valueReach": 7,
+          "valueUrgency": 8,
+          "valueStrategicFit": 8,
+          "riskTechnical": 4,
+          "riskOperational": 3,
+          "riskUnknowns": 3,
+          "riskReversibility": 2,
+          "tShirtSize": "S",
+          "complexity": 4,
+          "confidenceEvidence": 8,
+          "confidenceExpertise": 8,
+          "confidenceClarity": 9,
+          "contextProblem": "Operators hit stuck or slow dashboard loading because cold service startup sits on the critical first-paint path and competing startup owners race. Narrowing to Phase 1 fixes that pain without rewriting the full sync stack.",
+          "contextAudience": "Workflow Cannon maintainers and operators who open the dashboard every session and currently rely on manual refresh when first paint stalls.",
+          "unknownsNotes": "1) Exact first-paint SLA: which slices are required and what max latency? 2) Can existing cache/CLI bootstrap be wired through the controller as-is, or is a thin adapter needed? 3) How do we verify cold-service first paint in automated tests without flaking on service timing?",
+          "alternativesConsidered": "Keep session-0 full remediation arc in one plan — rejected; effort/complexity too high for the first ship. Bundle Phase 1+2 ownership rewrite — rejected for this session; dual paths can remain until first paint is proven. Do nothing / more timeouts — still rejected. Preferred: Phase-1-only plan (startup controller + off-critical-path service + SLA), park Phase 2–5.",
+          "sessionNotes": "Re-score vs session 0 after operator ask to reduce effort and increase value. Synthesis should weight this session 60% as latest. Planning should author WBS for Phase 1 only; capture Phase 2–5 as deferred follow-ons, not in-scope rows."
+        },
+        "scores": {
+          "value": 8.05,
+          "risk": 3.2,
+          "effort": 4,
+          "confidence": 8.35,
+          "priority": 77,
+          "tShirtSize": "S",
+          "complexity": 4
+        },
+        "synthesized": {
+          "value": 7.85,
+          "risk": 4,
+          "effort": 5.04,
+          "confidence": 8.07
+        }
+      },
+      {
+        "sessionId": "bsess-cc349d7e-4caf-420d-9ade-7d3f9d082d0c",
+        "startedAt": "2026-07-09T18:06:56.868Z",
+        "updatedAt": "2026-07-09T18:07:12.855Z",
+        "ideation": {
+          "featureIdeas": [
+            {
+              "text": "First-paint SLA: overview slice usable within 3s of webview shell paint when service is cold or unavailable",
+              "rationale": "Concrete acceptance bar replaces the open 'usable first paint' thread; overview is the daily operator surface."
+            },
+            {
+              "text": "Bootstrap path preference order: last-good cache → lightweight CLI/bootstrap snapshot → healthy service snapshot; never block shell on service start",
+              "rationale": "Reuses existing sources; controller only sequences them."
+            },
+            {
+              "text": "Thin BootstrapSnapshotAdapter that normalizes cache/CLI/service payloads into one store-hydrate shape; no new data plane",
+              "rationale": "Answers the adapter question: yes thin adapter, no rewrite. Keeps Phase 1 small."
+            },
+            {
+              "text": "Deterministic cold-path test: force service-unavailable and assert overview hydrates from cache/CLI within the 3s budget (fake timers / stubbed reads, not live service races)",
+              "rationale": "Closes the flake concern without depending on real service startup timing."
+            }
+          ],
+          "perspectives": [
+            {
+              "text": "Session 1 narrowed to Phase 1; session 2 makes Phase 1 plannable by locking SLA, bootstrap order, and test strategy."
+            },
+            {
+              "text": "3s is a planning default, not sacred — operator can tighten/loosen in planning, but brainstorm should not leave it blank."
+            },
+            {
+              "text": "Adapter is glue, not architecture: map existing payloads; do not invent a third read authority."
+            },
+            {
+              "text": "Background service promote remains best-effort after first paint; failure must not regress the already-painted overview."
+            }
+          ],
+          "expectations": [
+            {
+              "text": "With service cold: shell paints, then overview is usable within 3s via cache or CLI bootstrap."
+            },
+            {
+              "text": "With service healthy later: quiet promote/patch without forcing a full restart render."
+            },
+            {
+              "text": "Webview boot/ready/timeout/refresh only talk to DashboardStartupController; no parallel full startup renders."
+            },
+            {
+              "text": "Automated test proves cold-path first paint without live service timing flakes."
+            }
+          ],
+          "openThreads": [
+            {
+              "text": "Operator confirm or adjust the 3s overview SLA before or during planning."
+            },
+            {
+              "text": "Whether last-good cache already exists in a reusable form, or CLI bootstrap is the primary cold path on day one."
+            }
+          ],
+          "decisions": [
+            {
+              "text": "Adopt planning defaults: overview usable ≤3s on cold service; bootstrap order cache→CLI→healthy service; thin BootstrapSnapshotAdapter; cold-path test with stubs/fake timers.",
+              "rationale": "Closes session-1 open threads so planning can author WBS without re-litigating acceptance."
+            },
+            {
+              "text": "Keep Phase 2–5 deferred; session 2 does not expand scope back to fanout/mutation patches/fingerprints.",
+              "rationale": "Preserve the effort/value win from session 1."
+            }
+          ]
+        },
+        "completedAt": "2026-07-09T18:07:11.000Z",
+        "inputs": {
+          "valueImpact": 9,
+          "valueReach": 7,
+          "valueUrgency": 8,
+          "valueStrategicFit": 8,
+          "riskTechnical": 3,
+          "riskOperational": 3,
+          "riskUnknowns": 2,
+          "riskReversibility": 2,
+          "tShirtSize": "S",
+          "complexity": 4,
+          "confidenceEvidence": 8,
+          "confidenceExpertise": 8,
+          "confidenceClarity": 9,
+          "contextProblem": "Phase 1 still needed concrete acceptance and bootstrap decisions. Stuck loading is fixed by a single startup owner that paints overview from cache/CLI within 3s while service starts in the background.",
+          "contextAudience": "Maintainers/operators who need a reliable dashboard first paint every session, plus planners who need a crisp WBS acceptance bar.",
+          "unknownsNotes": "1) Operator may adjust the 3s overview SLA in planning. 2) Confirm whether a reusable last-good cache already exists; if not, CLI bootstrap is the day-one cold path and cache can be a fast follow inside Phase 1 only if cheap. 3) Exact overview fields that count as 'usable' should be listed in the plan acceptance criteria.",
+          "alternativesConsidered": "Leave SLA unspecified until planning — rejected; that recreates session-1 open threads. Expand scope to include mutation patches/fanout now that clarity is high — rejected; would undo the effort win. Require full cache infrastructure before shipping controller — rejected; CLI bootstrap alone can satisfy cold path if cache is missing. Preferred: lock 3s overview SLA, cache→CLI→service order, thin adapter, stubbed cold-path test.",
+          "sessionNotes": "Session 2 is the planning-readiness pass. Use these defaults in WBS unless operator overrides the 3s SLA. Deferred Phase 2–5 remain out of scope. After completedAt, stop for operator direction; do not complete-brainstorm unless they say brainstorming is finished."
+        },
+        "scores": {
+          "value": 8.05,
+          "risk": 2.6,
+          "effort": 4,
+          "confidence": 8.35,
+          "priority": 78,
+          "tShirtSize": "S",
+          "complexity": 4
+        },
+        "synthesized": {
+          "value": 7.95,
+          "risk": 3.24,
+          "effort": 4.52,
+          "confidence": 8.21
+        }
+      }
+    ],
+    "activeSessionId": "bsess-cc349d7e-4caf-420d-9ade-7d3f9d082d0c",
+    "synthesis": {
+      "value": 7.95,
+      "risk": 3.24,
+      "effort": 4.52,
+      "confidence": 8.21
+    }
+  },
+  "plan": {
+    "title": "Improve Dashboard Loading & Sync (Phase 1 first paint)",
+    "summary": "Stabilize dashboard first paint with a single startup controller, off-critical-path service start, CLI-primary cold bootstrap (cache opportunistic), quiet service promote for steady-state, and a ≤3s overview cold-path SLA. Defer poller fanout, mutation patches, and slice fingerprints.",
+    "planningType": "change",
+    "wbsRowCount": 6
+  },
+  "goals": [
+    "Dashboard overview becomes usable within 3 seconds of shell paint when the service is cold or unavailable",
+    "Exactly one startup owner coordinates shell paint, bootstrap, retries, and webview boot/ready/timeout/refresh",
+    "Cold first paint uses CLI bootstrap as the guaranteed path; last-good cache only if already reusable",
+    "When the service is already healthy or becomes healthy after first paint, prefer service reads without regressing the painted overview"
+  ],
+  "userStories": [
+    {
+      "id": "US-1",
+      "asA": "Workflow Cannon maintainer",
+      "iWant": "the dashboard overview to appear quickly even when the dashboard service is cold",
+      "soThat": "I do not depend on manual refresh to recover from stuck loading",
+      "priority": "must"
+    },
+    {
+      "id": "US-2",
+      "asA": "Workflow Cannon maintainer",
+      "iWant": "the dashboard to quietly prefer the service once it is healthy",
+      "soThat": "steady-state reads stay on the faster path after first paint",
+      "priority": "should"
+    }
+  ],
+  "assumptions": [
+    "A lightweight CLI/bootstrap snapshot path already exists and can supply overview fields",
+    "No active kit phase is currently set; finalize target phase will be chosen at task materialization time",
+    "3s SLA is wall-clock from shell paint to usable overview under stubbed cold-service conditions in tests, and a practical target in normal local use",
+    "Resolved: usable overview for the 3s SLA is phase/status line, queue counts (ready/in-progress/blocked), and no stuck loading shell; Ideas/detail may hydrate later. Exact field names follow the current overview slice shape during implementation without expanding the acceptance bar.",
+    "Resolved: day-one cold path is CLI-primary; last-good cache is opportunistic only if already reusable. Phase 1 does not build new cache infrastructure; CLI-only cold path is acceptable."
+  ],
+  "openQuestions": [],
+  "valueAssessment": {
+    "impact": "Removes the daily stuck-loading / manual-refresh recovery path for dashboard first open, while preserving service as the preferred steady-state read owner.",
+    "confidence": "high",
+    "rationale": "Grounded in DASHBOARD_LOADING_REPORT.md and three brainstorm sessions; Phase 1 scope deliberately narrowed to raise priority."
+  },
+  "identity": {
+    "title": "Improve Dashboard Loading & Sync (Phase 1 first paint)",
+    "planningType": "change",
+    "summary": "Stabilize dashboard first paint with a single startup controller, off-critical-path service start, CLI-primary cold bootstrap (cache opportunistic), quiet service promote for steady-state, and a ≤3s overview cold-path SLA. Defer poller fanout, mutation patches, and slice fingerprints.",
+    "tags": [
+      "dashboard",
+      "first-paint",
+      "I012",
+      "phase-1"
+    ]
+  },
+  "nonGoals": [
+    "Command-level poller fanout across slices",
+    "Authoritative mutation changedSlices contracts",
+    "Replacing store equality with per-slice fingerprints",
+    "Full rewrite to a single read owner that removes CLI dual-path entirely",
+    "Building new last-good cache infrastructure unless an existing reusable cache can be wired cheaply"
+  ],
+  "riskAssessment": [
+    {
+      "id": "R-1",
+      "description": "Existing startup call sites may still trigger parallel full renders if not fully routed through the controller.",
+      "severity": "high",
+      "mitigation": "WBS-1: inventory every webview boot/ready/timeout/refresh and extension startup entrypoint and route each through DashboardStartupController only; enforce a single in-flight startup promise (coalesce/queue concurrent requests); prove with unit + regression tests that a second full startup render cannot start while one is in flight."
+    },
+    {
+      "id": "R-2",
+      "description": "CLI bootstrap latency could approach or exceed the 3s budget on a cold machine.",
+      "severity": "medium",
+      "mitigation": "WBS-2/WBS-4: keep cold CLI bootstrap overview-minimal (phase/status + queue counts only; Ideas/detail later); never await service health or non-overview work before clearing the loading shell; use opportunistic last-good cache only when already cheap/reusable; prove ≤3s usable overview with fake-timer cold-path tests, including a negative case that fails when hydration is delayed past 3s."
+    },
+    {
+      "id": "R-3",
+      "description": "Service promote after first paint could flash or regress overview if it forces a full restart render.",
+      "severity": "medium",
+      "mitigation": "WBS-3/WBS-6: promote must quiet-patch/hydrate only and must not restart the startup pipeline after overview is usable; on failed/unhealthy/worse promote, fall back to the already-usable CLI/cache overview without clearing it; ship a feature-flag/config toggle to disable or revert service-primary promote; prove with tests that promote never returns to stuck loading and that fallback/disable retain the cold-path overview."
+    }
+  ],
+  "technicalImpact": {
+    "systemsTouched": [
+      "extensions/cursor-workflow-cannon",
+      "dashboard webview startup/render paths",
+      "dashboard service startup/health handoff",
+      "dashboard data store hydrate path"
+    ]
+  },
+  "testingStrategy": {
+    "layers": [
+      "unit",
+      "integration"
+    ],
+    "criticalPaths": [
+      "Cold service: shell paints then overview usable within 3s via CLI (or opportunistic cache)",
+      "Healthy service at open: service path used without unnecessary CLI detour",
+      "Service becomes healthy after cold first paint: quiet promote without regressing overview",
+      "Webview boot/ready/timeout/refresh do not invoke parallel full startup renders"
+    ]
+  },
+  "implementationGuidance": [
+    "Introduce DashboardStartupController with explicit state machine: idle → shell-painted → bootstrap-loading → hydrated → background-hydrating → ready/error",
+    "Never block first paint on detached service start/health; start or promote service only after overview hydrate begins or completes",
+    "Cold path preference: opportunistic last-good cache if reusable → CLI bootstrap guaranteed → healthy service when already available",
+    "Add thin BootstrapSnapshotAdapter that normalizes cache/CLI/service payloads into one store-hydrate shape; no new data plane",
+    "Usable overview means phase/status line, queue counts (ready/in-progress/blocked), and no stuck loading shell; Ideas/detail may hydrate later",
+    "Prove cold path with stubbed reads and fake timers; do not rely on live service startup timing"
+  ],
+  "whatNotToDo": [
+    "Do not wait on dashboard-service cold start before painting overview",
+    "Do not invent a third read authority beyond cache/CLI/service sequencing",
+    "Do not expand Phase 1 into poller fanout, mutation patches, or fingerprint equality",
+    "Do not force a full dashboard restart render when promoting to a healthy service",
+    "Do not start a second full startup render while one is already in flight (R-1)",
+    "Do not block cold first paint on Ideas/detail or other non-overview bootstrap work (R-2)",
+    "Do not clear a usable overview when service promote fails; fall back instead (R-3)"
+  ],
+  "wbs": [
+    {
+      "wbsId": "WBS-1",
+      "title": "Add DashboardStartupController and route startup messages through it",
+      "goalMapping": [
+        "Exactly one startup owner coordinates shell paint, bootstrap, retries, and webview boot/ready/timeout/refresh"
+      ],
+      "suggestedTaskTitle": "Add DashboardStartupController as sole startup owner",
+      "approach": "Create a single startup controller with the agreed state machine. Inventory extension and webview entrypoints that currently trigger startup/render and redirect them to request paint, retry, or diagnostics through the controller. Ensure only one startup promise exists.",
+      "technicalScope": [
+        "extensions/cursor-workflow-cannon/src",
+        "dashboard webview message handlers"
+      ],
+      "acceptanceCriteria": [
+        "DashboardStartupController owns idle → shell-painted → bootstrap-loading → hydrated → background-hydrating → ready/error",
+        "Inventory of webview boot/ready/timeout/refresh and extension startup entrypoints is documented; each site requests paint/retry/diagnostics through the controller only",
+        "Webview boot, ready, timeout, and refresh messages do not invoke a parallel full startup render",
+        "Only one in-flight startup promise exists for a dashboard session; concurrent requests coalesce or queue behind it"
+      ],
+      "testingVerification": [
+        "Unit tests for controller state transitions and single-flight startup promise",
+        "Tests that boot/ready/timeout/refresh request retry through the controller only",
+        "Regression test fails if a second full startup render starts while one is in flight"
+      ],
+      "dependsOn": [],
+      "sizingConfidence": "high",
+      "doneMeans": "Controller owns startup; inventoried call sites are routed through it; single-flight is proven by tests (mitigates R-1).",
+      "path": "1",
+      "recommendedPhase": "next",
+      "recommendedOrder": 1,
+      "riskNotes": "R-1: Missed call sites leave residual parallel renders; inventory + single-flight gate are mandatory.",
+      "generatedTaskPayload": {
+        "title": "Add DashboardStartupController as sole startup owner",
+        "type": "implementation",
+        "priority": "P1",
+        "approach": "Create a single startup controller with the agreed state machine and route webview/extension startup messages through it.",
+        "technicalScope": [
+          "extensions/cursor-workflow-cannon/src",
+          "dashboard webview message handlers"
+        ],
+        "acceptanceCriteria": [
+          "Controller owns the startup state machine",
+          "Inventoried boot/ready/timeout/refresh and extension startup sites route through the controller only",
+          "No parallel full startup renders; concurrent requests coalesce behind one in-flight promise"
+        ],
+        "status": "ready"
+      }
+    },
+    {
+      "wbsId": "WBS-2",
+      "title": "Cold-path bootstrap: CLI-primary with opportunistic cache and thin adapter",
+      "goalMapping": [
+        "Dashboard overview becomes usable within 3 seconds of shell paint when the service is cold or unavailable",
+        "Cold first paint uses CLI bootstrap as the guaranteed path; last-good cache only if already reusable"
+      ],
+      "suggestedTaskTitle": "Wire CLI-primary cold bootstrap and BootstrapSnapshotAdapter",
+      "approach": "Implement cold-path sequencing after shell paint: try reusable last-good cache if present, otherwise CLI bootstrap. Add a thin BootstrapSnapshotAdapter that maps cache/CLI/service payloads into the existing store hydrate shape. Do not block on service start. Keep the hydrate payload overview-minimal (phase/status + queue counts).",
+      "technicalScope": [
+        "extensions/cursor-workflow-cannon/src",
+        "dashboard bootstrap/CLI snapshot path",
+        "dashboard data store hydrate path"
+      ],
+      "acceptanceCriteria": [
+        "With service unavailable, overview hydrates from CLI (or opportunistic cache) without waiting on service health",
+        "BootstrapSnapshotAdapter normalizes sources into one hydrate shape without a new data plane",
+        "Cold CLI bootstrap payload is overview-minimal (phase/status + queue counts only); Ideas/detail hydrate later",
+        "Usable overview includes phase/status, queue counts, and clears stuck loading shell; Ideas/detail may load later"
+      ],
+      "testingVerification": [
+        "Stubbed cold-service test hydrates overview from CLI within 3s budget using fake timers",
+        "Adapter unit tests for cache/CLI/service payload normalization",
+        "Assert cold CLI bootstrap path does not await Ideas/detail before clearing the loading shell"
+      ],
+      "dependsOn": [
+        "WBS-1"
+      ],
+      "sizingConfidence": "medium",
+      "doneMeans": "CLI-primary cold bootstrap paints usable overview within budget with overview-minimal payload (mitigates R-2).",
+      "path": "2",
+      "recommendedPhase": "next",
+      "recommendedOrder": 2,
+      "riskNotes": "R-2: CLI-only cold path must stay overview-minimal to hold the 3s budget when no cache exists.",
+      "generatedTaskPayload": {
+        "title": "Wire CLI-primary cold bootstrap and BootstrapSnapshotAdapter",
+        "type": "implementation",
+        "priority": "P1",
+        "approach": "Sequence opportunistic cache then CLI bootstrap after shell paint; adapt payloads into existing store hydrate shape; never wait on cold service.",
+        "technicalScope": [
+          "extensions/cursor-workflow-cannon/src",
+          "dashboard bootstrap/CLI snapshot path",
+          "dashboard data store hydrate path"
+        ],
+        "acceptanceCriteria": [
+          "Service-unavailable cold path hydrates from CLI or opportunistic cache without waiting on service health",
+          "Cold CLI bootstrap is overview-minimal; Ideas/detail hydrate later",
+          "Usable overview clears stuck loading shell within the 3s budget path"
+        ],
+        "dependsOn": [],
+        "status": "ready"
+      }
+    },
+    {
+      "wbsId": "WBS-3",
+      "title": "Background service start and quiet promote to service-primary steady-state",
+      "goalMapping": [
+        "When the service is already healthy or becomes healthy after first paint, prefer service reads without regressing the painted overview"
+      ],
+      "suggestedTaskTitle": "Promote to service after first paint without regressing overview",
+      "approach": "Start or health-check the dashboard service off the critical path. If service is already healthy at open, prefer it for bootstrap. If it becomes healthy after cold first paint, quietly promote/patch store from service without restarting the startup pipeline or flashing the overview back to loading.",
+      "technicalScope": [
+        "extensions/cursor-workflow-cannon/src",
+        "dashboard service startup/health handoff",
+        "dashboard data store"
+      ],
+      "acceptanceCriteria": [
+        "Service start/health is not on the critical path for first overview paint",
+        "Healthy-at-open path uses service without unnecessary CLI detour",
+        "Post-paint promote to healthy service does not clear or regress the already-usable overview",
+        "Promote patches/hydrates the store quietly and never restarts the startup pipeline after overview is usable"
+      ],
+      "testingVerification": [
+        "Test healthy-at-open prefers service",
+        "Test cold-then-promote patches store without restarting startup or returning to stuck loading",
+        "Assert promote path does not transition back through shell-painted/bootstrap-loading after hydrated"
+      ],
+      "dependsOn": [
+        "WBS-1",
+        "WBS-2"
+      ],
+      "sizingConfidence": "medium",
+      "doneMeans": "Quiet promote never restarts startup or flashes loading after first usable overview (mitigates R-3).",
+      "path": "3",
+      "recommendedPhase": "next",
+      "recommendedOrder": 3,
+      "riskNotes": "R-3: Promote must quiet-patch only; restarting startup after usable overview reintroduces flashes.",
+      "generatedTaskPayload": {
+        "title": "Promote to service after first paint without regressing overview",
+        "type": "implementation",
+        "priority": "P1",
+        "approach": "Keep service start off critical path; prefer service when healthy; quietly promote after cold first paint.",
+        "technicalScope": [
+          "extensions/cursor-workflow-cannon/src",
+          "dashboard service startup/health handoff",
+          "dashboard data store"
+        ],
+        "acceptanceCriteria": [
+          "Service start/health is off the critical path for first overview paint",
+          "Post-paint promote does not clear or regress the already-usable overview",
+          "Promote never restarts the startup pipeline after overview is usable"
+        ],
+        "status": "ready"
+      }
+    },
+    {
+      "wbsId": "WBS-4",
+      "title": "Prove ≤3s cold-path first-paint SLA with deterministic tests",
+      "goalMapping": [
+        "Dashboard overview becomes usable within 3 seconds of shell paint when the service is cold or unavailable"
+      ],
+      "suggestedTaskTitle": "Add deterministic cold-path first-paint SLA tests",
+      "approach": "Add focused tests that force service-unavailable, drive the startup controller with stubbed CLI/cache reads and fake timers, and assert overview usable within 3s of shell paint. Document the usable-overview field checklist in the test assertions.",
+      "technicalScope": [
+        "extensions/cursor-workflow-cannon/test",
+        "test/"
+      ],
+      "acceptanceCriteria": [
+        "Automated cold-path test asserts usable overview within 3s using fake timers/stubs",
+        "Test does not depend on live dashboard-service startup timing",
+        "Assertions cover phase/status, queue counts, and absence of stuck loading shell",
+        "Cold-path SLA test fails if overview hydration waits on Ideas/detail or non-overview bootstrap work"
+      ],
+      "testingVerification": [
+        "New cold-path first-paint test passes in CI",
+        "Existing dashboard render/startup tests still pass",
+        "Negative/stub case proves SLA assertion trips when overview hydration is delayed past 3s"
+      ],
+      "dependsOn": [
+        "WBS-1",
+        "WBS-2",
+        "WBS-3"
+      ],
+      "sizingConfidence": "high",
+      "doneMeans": "Deterministic cold-path SLA tests prove ≤3s usable overview and catch budget regressions (mitigates R-2).",
+      "path": "4",
+      "recommendedPhase": "next",
+      "recommendedOrder": 4,
+      "riskNotes": "R-2: Keep stubs narrow so the SLA test fails on real regressions (payload bloat / blocked awaits), not timer noise.",
+      "generatedTaskPayload": {
+        "title": "Add deterministic cold-path first-paint SLA tests",
+        "type": "test",
+        "priority": "P1",
+        "approach": "Force service-unavailable; stub CLI/cache; fake timers; assert usable overview within 3s.",
+        "technicalScope": [
+          "extensions/cursor-workflow-cannon/test",
+          "test/"
+        ],
+        "acceptanceCriteria": [
+          "Cold-path test asserts usable overview within 3s with fake timers/stubs",
+          "Test does not depend on live dashboard-service startup timing",
+          "Negative case fails when overview hydration is delayed past 3s"
+        ],
+        "status": "ready"
+      }
+    },
+    {
+      "wbsId": "WBS-5",
+      "title": "Empty and first-run overview behavior for cold bootstrap",
+      "goalMapping": [
+        "Usable overview within 3s without a stuck loading shell, including empty/first-run workspaces"
+      ],
+      "suggestedTaskTitle": "Cover empty and first-run overview cold-path behavior",
+      "approach": "Define and implement empty / first-run / no-data overview behavior on the CLI-primary cold path: fresh workspace and blank queue states must still paint a usable overview (phase/status line, zeroed or empty queue counts, no stuck loading shell) without waiting on the dashboard service.",
+      "technicalScope": [
+        "extensions/cursor-workflow-cannon/src/views/dashboard",
+        "empty and first-run overview fixtures",
+        "BootstrapSnapshotAdapter empty/no-data mapping"
+      ],
+      "acceptanceCriteria": [
+        "Fresh workspace / first-run cold path paints usable overview with empty or zero queue counts and no stuck loading shell",
+        "No-data / blank queue states remain readable and do not block shell-painted to hydrated transition",
+        "Deterministic test covers empty and first-run overview behavior with stubbed CLI/cache reads"
+      ],
+      "testingVerification": [
+        "Unit/integration test for empty and first-run cold-path overview with stubbed CLI reads",
+        "Assert no stuck loading shell when queue counts are empty or zero"
+      ],
+      "dependsOn": [
+        "WBS-2",
+        "WBS-4"
+      ],
+      "sizingConfidence": "medium",
+      "doneMeans": "Empty and first-run cold paths paint a usable overview and are covered by deterministic tests.",
+      "path": "5",
+      "recommendedPhase": "next",
+      "recommendedOrder": 5,
+      "riskNotes": "Empty-state UX can be missed if fixtures only cover populated queues.",
+      "generatedTaskPayload": {
+        "title": "Cover empty and first-run overview cold-path behavior",
+        "type": "implementation",
+        "priority": "P1",
+        "approach": "Implement empty / first-run / no-data overview behavior on the CLI-primary cold path so fresh workspaces still paint a usable overview without waiting on the dashboard service.",
+        "technicalScope": [
+          "extensions/cursor-workflow-cannon/src/views/dashboard",
+          "empty and first-run overview fixtures",
+          "BootstrapSnapshotAdapter empty/no-data mapping"
+        ],
+        "acceptanceCriteria": [
+          "Fresh workspace / first-run cold path paints usable overview with empty or zero queue counts and no stuck loading shell",
+          "No-data / blank queue states remain readable and do not block shell-painted to hydrated transition",
+          "Deterministic test covers empty and first-run overview behavior with stubbed CLI/cache reads"
+        ],
+        "status": "ready"
+      }
+    },
+    {
+      "wbsId": "WBS-6",
+      "title": "Safe fallback and rollback for service promote after first paint",
+      "goalMapping": [
+        "Quiet promote to service-primary without regressing an already-usable overview"
+      ],
+      "suggestedTaskTitle": "Add fallback and rollback for post-paint service promote",
+      "approach": "When post-paint promote to the dashboard service fails or returns worse data, keep the already-usable CLI/cache overview (fallback) and allow disable/revert of the promote path so operators are not stuck on a broken service-primary view. Document the activation toggle for service-primary promote.",
+      "technicalScope": [
+        "extensions/cursor-workflow-cannon/src/views/dashboard",
+        "service promote fallback path",
+        "feature flag or config toggle to disable service-primary promote"
+      ],
+      "acceptanceCriteria": [
+        "Failed or unhealthy service promote falls back to the already-usable CLI/cache overview without clearing it",
+        "Operators can disable or revert service-primary promote via feature flag or config toggle and remain on the cold-path overview",
+        "Deterministic test covers promote failure fallback and rollback/disable behavior"
+      ],
+      "testingVerification": [
+        "Unit test for promote failure fallback retaining CLI/cache overview",
+        "Unit test for disable/revert toggle keeping cold-path overview active"
+      ],
+      "dependsOn": [
+        "WBS-3",
+        "WBS-4"
+      ],
+      "sizingConfidence": "medium",
+      "doneMeans": "Promote failure falls back to CLI/cache overview; disable/revert toggle works; both tested (completes R-3 mitigation).",
+      "path": "6",
+      "recommendedPhase": "next",
+      "recommendedOrder": 6,
+      "riskNotes": "R-3: Fallback/disable is the safety net when quiet promote fails or regresses overview.",
+      "generatedTaskPayload": {
+        "title": "Add fallback and rollback for post-paint service promote",
+        "type": "implementation",
+        "priority": "P1",
+        "approach": "Keep CLI/cache overview on failed service promote and provide a feature-flag/config toggle to disable or revert service-primary promote.",
+        "technicalScope": [
+          "extensions/cursor-workflow-cannon/src/views/dashboard",
+          "service promote fallback path",
+          "feature flag or config toggle to disable service-primary promote"
+        ],
+        "acceptanceCriteria": [
+          "Failed or unhealthy service promote falls back to the already-usable CLI/cache overview without clearing it",
+          "Operators can disable or revert service-primary promote via feature flag or config toggle and remain on the cold-path overview",
+          "Deterministic test covers promote failure fallback and rollback/disable behavior"
+        ],
+        "status": "ready"
+      }
+    }
+  ],
+  "phaseRecommendations": [
+    {
+      "phaseKey": "next",
+      "label": "Next delivery phase",
+      "rationale": "No active kit phase is set (Phase 132 complete). Materialize these WBS rows into the next chosen delivery phase at finalize time.",
+      "isPrimary": true
+    }
+  ],
+  "provenance": {
+    "createdAt": "2026-07-09T16:09:22.955Z",
+    "createdBy": "agent",
+    "source": "draft-plan-artifact",
+    "sourceIdeaId": "I012",
+    "chatSessionRef": "pcs-84178e22-4f98-47d3-993b-77ae33fc17fb",
+    "updatedAt": "2026-07-09T18:17:17.055Z"
+  },
+  "review": {
+    "passed": true,
+    "blockerCount": 0,
+    "warningCount": 0,
+    "openQuestionCount": 0,
+    "reviewedAt": "2026-07-09T18:19:12.299Z"
+  },
+  "acceptance": {
+    "acceptedAt": "2026-07-09T18:19:16.000Z",
+    "acceptedBy": "operator",
+    "acceptedVersion": 15
+  }
+}

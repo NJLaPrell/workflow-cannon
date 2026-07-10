@@ -1,0 +1,277 @@
+{
+  "schemaVersion": 1,
+  "planId": "08de149e-e528-4404-9e3a-885870fdf810",
+  "version": 4,
+  "planRef": "plan-artifact:08de149e-e528-4404-9e3a-885870fdf810",
+  "status": "brainstorming",
+  "ideaId": "I009",
+  "createdAt": "2026-07-07T21:27:12.540Z",
+  "updatedAt": "2026-07-07T21:36:37.845Z",
+  "agentDirective": {
+    "schemaVersion": 1,
+    "state": "brainstorming",
+    "questions": [
+      {
+        "phase": "context",
+        "fieldName": "contextProblem",
+        "prompt": "In one or two sentences, what problem or opportunity does this idea address?",
+        "type": "text",
+        "guidance": "Restate the operator's idea in plain language before scoring. Capture the core pain or opportunity, not implementation details."
+      },
+      {
+        "phase": "context",
+        "fieldName": "contextAudience",
+        "prompt": "Who benefits first if this idea succeeds?",
+        "type": "text",
+        "guidance": "Name the primary user or operator persona. Secondary audiences can be noted in session notes later."
+      },
+      {
+        "phase": "value-scoring",
+        "fieldName": "valueImpact",
+        "prompt": "How strong is the expected impact if this idea succeeds (1=minimal, 10=transformative)?",
+        "type": "score-1-10",
+        "validRange": {
+          "min": 1,
+          "max": 10
+        },
+        "guidance": "Score the magnitude of outcome improvement, not confidence that it will happen."
+      },
+      {
+        "phase": "value-scoring",
+        "fieldName": "valueReach",
+        "prompt": "How many users, workflows, or systems would materially benefit (1=narrow, 10=broad)?",
+        "type": "score-1-10",
+        "validRange": {
+          "min": 1,
+          "max": 10
+        },
+        "guidance": "Count durable beneficiaries across the workspace, not one-off convenience."
+      },
+      {
+        "phase": "value-scoring",
+        "fieldName": "valueUrgency",
+        "prompt": "How time-sensitive is pursuing this idea now (1=can wait, 10=blocking now)?",
+        "type": "score-1-10",
+        "validRange": {
+          "min": 1,
+          "max": 10
+        },
+        "guidance": "Higher scores mean delay has clear cost or risk; lower scores mean the idea is valuable but not urgent."
+      },
+      {
+        "phase": "value-scoring",
+        "fieldName": "valueStrategicFit",
+        "prompt": "How well does this idea align with current roadmap and strategic goals (1=orthogonal, 10=core)?",
+        "type": "score-1-10",
+        "validRange": {
+          "min": 1,
+          "max": 10
+        },
+        "guidance": "Score alignment with active phase goals and maintainer priorities, not generic importance."
+      },
+      {
+        "phase": "risk-scoring",
+        "fieldName": "riskTechnical",
+        "prompt": "How high is the technical execution risk (1=well understood, 10=high unknowns)?",
+        "type": "score-1-10",
+        "validRange": {
+          "min": 1,
+          "max": 10
+        },
+        "guidance": "Consider architecture novelty, dependency risk, and verification difficulty."
+      },
+      {
+        "phase": "risk-scoring",
+        "fieldName": "riskOperational",
+        "prompt": "How high is the operational or rollout risk (1=low blast radius, 10=wide blast radius)?",
+        "type": "score-1-10",
+        "validRange": {
+          "min": 1,
+          "max": 10
+        },
+        "guidance": "Include support burden, migration pain, and failure impact on active workflows."
+      },
+      {
+        "phase": "risk-scoring",
+        "fieldName": "riskUnknowns",
+        "prompt": "How many unresolved unknowns remain (1=few, 10=many critical gaps)?",
+        "type": "score-1-10",
+        "validRange": {
+          "min": 1,
+          "max": 10
+        },
+        "guidance": "Score open questions that could invalidate the approach if left unanswered."
+      },
+      {
+        "phase": "risk-scoring",
+        "fieldName": "riskReversibility",
+        "prompt": "If this idea fails or must roll back, how hard is recovery (1=easy rollback, 10=hard to unwind)?",
+        "type": "score-1-10",
+        "validRange": {
+          "min": 1,
+          "max": 10
+        },
+        "guidance": "Higher scores mean partial delivery or bad assumptions would be costly to reverse."
+      },
+      {
+        "phase": "effort-scoring",
+        "fieldName": "tShirtSize",
+        "prompt": "What T-shirt size best fits the first shippable slice?",
+        "type": "enum",
+        "validValues": [
+          "XS",
+          "S",
+          "M",
+          "L",
+          "XL"
+        ],
+        "guidance": "Estimate relative delivery size for a focused implementation slice, not the entire multi-phase vision."
+      },
+      {
+        "phase": "effort-scoring",
+        "fieldName": "complexity",
+        "prompt": "How complex is the work independent of calendar time (1=straightforward, 10=deeply complex)?",
+        "type": "score-1-10",
+        "validRange": {
+          "min": 1,
+          "max": 10
+        },
+        "guidance": "T-shirt size and complexity are weighted independently in effortScore — a high-complexity M item intentionally scores higher than a low-complexity L item because complexity carries 60% of the effort blend."
+      },
+      {
+        "phase": "confidence-scoring",
+        "fieldName": "confidenceEvidence",
+        "prompt": "How strong is the supporting evidence (1=anecdotal, 10=strong proof)?",
+        "type": "score-1-10",
+        "validRange": {
+          "min": 1,
+          "max": 10
+        },
+        "guidance": "Include prior art, operator feedback, telemetry, or prior experiments."
+      },
+      {
+        "phase": "confidence-scoring",
+        "fieldName": "confidenceExpertise",
+        "prompt": "How available is the expertise needed to execute (1=scarce, 10=ready now)?",
+        "type": "score-1-10",
+        "validRange": {
+          "min": 1,
+          "max": 10
+        },
+        "guidance": "Consider team familiarity with affected modules and required review depth."
+      },
+      {
+        "phase": "confidence-scoring",
+        "fieldName": "confidenceClarity",
+        "prompt": "How clear is the problem and solution boundary (1=vague, 10=crisp)?",
+        "type": "score-1-10",
+        "validRange": {
+          "min": 1,
+          "max": 10
+        },
+        "guidance": "Higher clarity means acceptance criteria and scope boundaries are already obvious."
+      },
+      {
+        "phase": "unknowns",
+        "fieldName": "unknownsNotes",
+        "prompt": "List the top unknowns that could change the scores or scope.",
+        "type": "text",
+        "guidance": "Prefer concrete questions over generic risk statements. Unknowns here inform planning, not session scoring."
+      },
+      {
+        "phase": "alternatives",
+        "fieldName": "alternativesConsidered",
+        "prompt": "What alternatives did you consider and why is this approach preferred?",
+        "type": "text",
+        "guidance": "Capture at least one credible alternative, including doing nothing, and why it was deprioritized."
+      },
+      {
+        "phase": "session-notes",
+        "fieldName": "sessionNotes",
+        "prompt": "Add any session notes, assumptions, or follow-ups for the planning phase.",
+        "type": "text",
+        "guidance": "Keep notes concise and actionable. Do not duplicate computed scores here. After setting completedAt with update-brainstorm-session, stop and summarize the session; do not transition to planning unless the operator explicitly confirms brainstorming is finished."
+      }
+    ],
+    "computeSteps": [
+      {
+        "id": "valueScore",
+        "formula": "valueScore = (valueImpact × 0.30) + (valueReach × 0.25) + (valueUrgency × 0.20) + (valueStrategicFit × 0.25)",
+        "description": "Weighted average of value sub-inputs."
+      },
+      {
+        "id": "riskScore",
+        "formula": "riskScore = (riskTechnical × 0.35) + (riskOperational × 0.25) + (riskUnknowns × 0.25) + (riskReversibility × 0.15)",
+        "description": "Weighted average of risk sub-inputs."
+      },
+      {
+        "id": "effortScore",
+        "formula": "effortScore = (tShirtSizeScore × 0.40) + (complexity × 0.60); tShirtSizeScore map: XS=2, S=4, M=6, L=8, XL=10",
+        "description": "Blend of T-shirt size and complexity. High-complexity M intentionally scores higher than low-complexity L."
+      },
+      {
+        "id": "confidenceScore",
+        "formula": "confidenceScore = (confidenceEvidence × 0.35) + (confidenceExpertise × 0.30) + (confidenceClarity × 0.35)",
+        "description": "Weighted average of confidence sub-inputs."
+      },
+      {
+        "id": "priorityScore",
+        "formula": "rawPriority = ((valueScore × 0.40) + (confidenceScore × 0.20) − (riskScore × 0.25) − (effortScore × 0.15)) × 10; priorityScore = Math.round(((rawPriority + 34) / 90) × 100)",
+        "description": "Priority blends upside and confidence minus risk and effort, scaled to 0–100 via rawPriority normalization."
+      }
+    ],
+    "synthesisStep": {
+      "formula": "if sessions.length===1 then synthesized=session.scores else for each score field synthesized[field]=latest[field]×0.60+mean(prior[field])×0.40",
+      "description": "N=1 edge case: when sessions.length===1, synthesized=session scores; else synthesized=latest×0.60+mean(prior)×0.40."
+    }
+  },
+  "brainstorm": {
+    "sessions": [
+      {
+        "sessionId": "bsess-a1dc20dc-0567-4af8-b4e3-8f0dbf40d3e3",
+        "startedAt": "2026-07-07T21:28:58.669Z",
+        "updatedAt": "2026-07-07T21:36:37.845Z",
+        "inputs": {
+          "valueImpact": 8,
+          "valueReach": 7,
+          "valueUrgency": 6,
+          "valueStrategicFit": 9,
+          "riskTechnical": 4,
+          "riskOperational": 3,
+          "riskUnknowns": 5,
+          "riskReversibility": 3,
+          "tShirtSize": "M",
+          "complexity": 6,
+          "confidenceEvidence": 8,
+          "confidenceExpertise": 8,
+          "confidenceClarity": 7,
+          "contextProblem": "Ideas brainstorming is a hollow scoring survey: no guided ideation chat, no structured storage for agent-generated ideas/perspectives, and no mechanical seeding of plan drafts from brainstorm output.",
+          "contextAudience": "Workflow Cannon operators capturing ideas and maintainers delivering Ideas→Plan improvements.",
+          "unknownsNotes": "Ideation field shapes; transcript vs curated-only; qualitative synthesis across sessions; scoring optional ordering; dashboard rollup for qualitative content (see I005).",
+          "alternativesConsidered": "Rejected: survey-only, sessionNotes blob, transcript-only, external brainstorm store. Preferred: additive ideation object + directive reframe + seed map + per-idea doc init on create-idea.",
+          "sessionNotes": "## Status\nManual capture after dogfood brainstorm. Session completed without further guided chat rounds — operator directed manual enrichment of idea/plan record.\n\n## Current behavior (broken)\n- agentDirective.questions[] is a 18-field scoring/elicitation form (score-1-10, text, enum only).\n- brainstormSessionInputs is additionalProperties:false: 13 scores + contextProblem, contextAudience, unknownsNotes, alternativesConsidered, sessionNotes.\n- update-brainstorm-session-handler SESSION_INPUT_FIELDS allowlist drops unknown keys.\n- complete-brainstorm seeds plan.title from idea title and plan.summary from hardcoded placeholder unless planSummary passed manually.\n- buildIdeaPlanningPrompt ignores brainstorm content entirely.\n- applyBrainstormSectionSynthesis / synthesizeBrainstormScores only blend numeric scores across sessions.\n\n## Target UX\n- Natural chat: agent proposes feature ideas, perspectives, expectations, risks, alternatives — not only asks operator to score.\n- Each turn ends with operator choice: save session & return later (partial update-brainstorm-session) OR finish brainstorming & start planning (complete-brainstorm).\n- Qualitative outputs persist in structured session fields, not a sessionNotes blob.\n- On promotion, brainstorm content mechanically stubs plan.summary, goals, openQuestions, assumptions, and warms planner-chat prompt.\n\n## Proposed schema additions (ideation object on session)\nideation: {\n  featureIdeas: [{ text, rationale? }],\n  perspectives: [{ text }],\n  expectations: [{ text }],\n  openThreads: [{ text }],\n  decisions: [{ text, rationale? }],\n  transcript?: [{ role: \"agent\"|\"operator\", text, at }]\n}\nKeep existing scoring inputs separate. Both may be partial; ideation-rich completion should not require all 13 scores.\n\n## Proposed agentDirective reframe\n- Phases: context → ideation (agent contributes + elicits) → scoring (optional convergent) → checkpoint → session-notes.\n- Add question types: agent-proposal, agent-perspective (not only score-1-10|text|enum).\n- Add explicit checkpoint phase with save-vs-finish guidance.\n\n## Plan seed map (complete-brainstorm / planning init)\n- featureIdeas → goals[] + userStories[]\n- openThreads → openQuestions[]\n- perspectives + expectations → assumptions[] + valueAssessment narrative\n- synthesized scores → valueAssessment metrics (existing)\n- ideation digest → plan.summary + buildIdeaPlanningPrompt opening context\n\n## Additional pipeline fixes discovered in dogfood\n- create-idea should call buildIdeaOnlyUnifiedDocument and link planRef immediately.\n- migrate-ideas-to-unified-document should not be the only path for new ideas.\n- Align migrate dry-run policy tier docs with runtime (or exempt dry-run from policy gate).\n- Related idea I005 tracks brainstorming dashboard rollup UX.\n\n## Alternatives rejected\n- Do nothing / keep survey-only brainstorm.\n- sessionNotes-only blob storage (current workaround; not machine-seedable).\n- Full transcript only without curated ideation fields.\n- Separate brainstorm store outside unified IdeaPlan document.\n\n## Open questions\n- Field shape: plain string[] vs {text,rationale}[] for featureIdeas.\n- Transcript capture: full vs curated-only.\n- Qualitative multi-session synthesis: concatenate + agent summarize for v1?\n- Should scoring move to post-ideation optional step in directive ordering?\n\n## Acceptance criteria (for implementation task)\n1. Structured ideation fields persist through update-brainstorm-session.\n2. Agent directive supports ideation + checkpoint turns.\n3. complete-brainstorm seeds plan sections from ideation + scores.\n4. buildIdeaPlanningPrompt includes brainstorm digest.\n5. create-idea auto-creates unified document.\n6. Existing brainstorm sessions still validate."
+        },
+        "scores": {
+          "value": 7.6,
+          "risk": 3.85,
+          "effort": 6,
+          "confidence": 7.65,
+          "priority": 68,
+          "tShirtSize": "M",
+          "complexity": 6
+        },
+        "completedAt": "2026-07-07T21:36:36.969Z",
+        "synthesized": {
+          "value": 7.6,
+          "risk": 3.85,
+          "effort": 6,
+          "confidence": 7.65,
+          "priority": 68,
+          "tShirtSize": "M",
+          "complexity": 6
+        }
+      }
+    ],
+    "activeSessionId": "bsess-a1dc20dc-0567-4af8-b4e3-8f0dbf40d3e3"
+  }
+}

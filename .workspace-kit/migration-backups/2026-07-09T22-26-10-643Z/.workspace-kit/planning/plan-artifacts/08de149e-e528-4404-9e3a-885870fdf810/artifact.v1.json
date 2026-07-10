@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "planId": "08de149e-e528-4404-9e3a-885870fdf810",
+  "version": 1,
+  "planRef": "plan-artifact:08de149e-e528-4404-9e3a-885870fdf810",
+  "status": "idea",
+  "ideaId": "I009",
+  "createdAt": "2026-07-07T21:27:12.540Z",
+  "updatedAt": "2026-07-07T21:28:41.152Z",
+  "agentDirective": {
+    "schemaVersion": 1,
+    "state": "idea",
+    "questions": [
+      {
+        "phase": "context",
+        "fieldName": "ideaTitle",
+        "prompt": "What short title captures this idea?",
+        "type": "text",
+        "guidance": "Use a concise operator-facing title. Detailed scoring and WBS authoring belong in later states."
+      },
+      {
+        "phase": "context",
+        "fieldName": "ideaSummary",
+        "prompt": "Summarize the idea in one or two sentences before brainstorming begins.",
+        "type": "text",
+        "guidance": "Capture intent and desired outcome only — do not draft plan sections or run scoring here."
+      },
+      {
+        "phase": "session-notes",
+        "fieldName": "readinessNote",
+        "prompt": "Is the idea ready to enter brainstorming?",
+        "type": "text",
+        "guidance": "No active agent scoring session runs in idea state. When ready, transition to brainstorming and run start-brainstorm-session."
+      }
+    ]
+  }
+}

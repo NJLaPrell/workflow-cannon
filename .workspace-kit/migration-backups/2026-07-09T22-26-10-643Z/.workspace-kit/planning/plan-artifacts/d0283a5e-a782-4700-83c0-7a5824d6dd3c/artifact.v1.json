@@ -1,0 +1,699 @@
+{
+  "schemaVersion": 1,
+  "planId": "d0283a5e-a782-4700-83c0-7a5824d6dd3c",
+  "planRef": "plan-artifact:d0283a5e-a782-4700-83c0-7a5824d6dd3c",
+  "status": "draft",
+  "identity": {
+    "title": "Agent Planning Tools v1",
+    "planningType": "new-feature",
+    "summary": "v1: CLI planner reads and authoring (flow-status, template, append/patch WBS) ship before MCP read wrappers (planner-packet, list-ideas, get-plan-artifact, plan-review-packet, finalize-preview-packet) plus agent_start routing. MCP stays read-only per ADR. Legacy build-plan interview deprecated and removed; primary planner-chat remains separate (no unification)."
+  },
+  "goals": [
+    "Agents complete Idea→Plan→Tasks without hand-editing files or slurping schemas/playbooks",
+    "CLI planner commands ship before MCP wrappers for every v1 read surface",
+    "Full P0 MCP read set in v1: planner-packet, list-ideas, get-plan-artifact, plan-review-packet, finalize-preview-packet",
+    "Incremental plan authoring via append-wbs-row and patch-plan-artifact in v1",
+    "Deprecate and remove legacy build-plan interview path; keep separate from primary planner-chat (no build-plan-for-idea)"
+  ],
+  "nonGoals": [
+    "MCP mutation tools — read-only MCP per ADR-mcp-adapter-boundary-v1; CLI owns all writes",
+    "build-plan-for-idea unification with planner-chat",
+    "Full WBS payload in planner-packet (truncated preview only)",
+    "Generic wk run MCP passthrough"
+  ],
+  "assumptions": [
+    "Ideas module enabled in target workspaces",
+    "Existing review-plan-artifact and finalize-plan-to-phase handlers remain canonical"
+  ],
+  "openQuestions": [],
+  "valueAssessment": {
+    "impact": "Unblocks agent planner flow end-to-end with read + incremental authoring",
+    "confidence": "high",
+    "rationale": "Thin CLI-first then MCP wrappers; brainstorm synthesis value 8.0 risk 3.1"
+  },
+  "riskAssessment": [
+    {
+      "id": "R1",
+      "description": "MCP output budget overflow",
+      "severity": "medium",
+      "mitigation": "20KB planner-packet; 16KB satellite read tools; truncation ladder in D3"
+    },
+    {
+      "id": "R2",
+      "description": "agent_start bloat",
+      "severity": "low",
+      "mitigation": "Routing branch only; deep reads via planner-packet"
+    },
+    {
+      "id": "R3",
+      "description": "Legacy build-plan removal breaks existing consumers",
+      "severity": "medium",
+      "mitigation": "Deprecation window; dashboard/build-plan session migration notes; keep paths separate not merged"
+    }
+  ],
+  "technicalImpact": {
+    "systemsTouched": [
+      "src/mcp/server.ts",
+      "src/mcp/output-budgets.ts",
+      "src/modules/planning",
+      "src/modules/ideas",
+      "src/modules/task-engine",
+      ".ai/agent-cli-snippets"
+    ],
+    "compatibilityNotes": "build-plan interview deprecated then removed; planner-chat is primary path"
+  },
+  "architecture": {
+    "overview": "CLI-first then MCP read wrappers. agent_start routes; planner-packet deep-reads per idea. MCP read-only only.",
+    "decisions": [
+      {
+        "id": "D1",
+        "decision": "planner-packet includes truncated WBS preview (max 5 rows: wbsId, title, dependsOn, sizingConfidence)",
+        "rationale": "Bounded decomposition preview per MCP output budgets"
+      },
+      {
+        "id": "D2",
+        "decision": "agent_start lightweight planner routing branch in v1",
+        "rationale": "Routing without duplicating packet payload"
+      },
+      {
+        "id": "D3",
+        "decision": "MCP output budgets: planner-packet 20KB; list-ideas/get-plan-artifact/plan-review-packet/finalize-preview-packet 16KB each. Truncation ladder: drop ideation transcript → reduce WBS 5→3 rows → drop brainstorm synthesis scores → never drop recommendedNextCommand",
+        "rationale": "Align with agent-execution-packet (20KB) and phase packet tools (16KB); deterministic overflow handling"
+      },
+      {
+        "id": "D4",
+        "decision": "All CLI planner commands ship before their MCP wrapper counterparts",
+        "rationale": "Shared runtime source of truth; MCP is adapter not authority"
+      },
+      {
+        "id": "D5",
+        "decision": "Full P0 MCP read set in v1 (not v1.1)",
+        "rationale": "Operator directive: complete read surface in first release"
+      },
+      {
+        "id": "D6",
+        "decision": "append-wbs-row and patch-plan-artifact CLI included in v1",
+        "rationale": "Incremental authoring reduces full-artifact resubmit burden"
+      },
+      {
+        "id": "D7",
+        "decision": "Legacy build-plan interview deprecated and removed; primary planner-chat stays separate — no build-plan-for-idea merge",
+        "rationale": "Operator directive: remove legacy, keep paths separate not unified"
+      },
+      {
+        "id": "D8",
+        "decision": "MCP remains read-only; mutations stay CLI with existing policyApproval and planningGeneration standards",
+        "rationale": "ADR-mcp-adapter-boundary-v1; no planner mutation profile in v1"
+      }
+    ]
+  },
+  "testingStrategy": {
+    "layers": [
+      "unit",
+      "integration"
+    ],
+    "criticalPaths": [
+      "CLI commands exist and pass tests before MCP tool registration",
+      "MCP/CLI parity per planner read tool",
+      "Golden-path test without file reads",
+      "append-wbs-row and patch-plan-artifact validate against plan-artifact schema"
+    ]
+  },
+  "implementationGuidance": [
+    "Implement and merge CLI commands before MCP wrappers in dependency order",
+    "Register all planner MCP tools in output-budgets.ts before shipping",
+    "Deprecation notices on build-plan before removal PR"
+  ],
+  "whatNotToDo": [
+    "Do not enable MCP mutation tools for planner commands in v1",
+    "Do not merge build-plan interview into planner-chat",
+    "Do not ship MCP wrapper before CLI handler parity exists"
+  ],
+  "wbs": [
+    {
+      "wbsId": "WBS-1",
+      "path": "1",
+      "title": "get-planner-flow-status CLI",
+      "goalMapping": [
+        "CLI planner commands ship before MCP wrappers"
+      ],
+      "suggestedTaskTitle": "Add get-planner-flow-status read command",
+      "approach": "Return golden-path stage, blockers, recommendedNextCommand with readyRun argv",
+      "technicalScope": [
+        "src/modules/ideas or task-engine",
+        "instructions",
+        "agent-cli-snippets"
+      ],
+      "acceptanceCriteria": [
+        "Tier C read-only",
+        "Tests and snippet",
+        "Ships before WBS-6"
+      ],
+      "testingVerification": [
+        "test/get-planner-flow-status.test.mjs"
+      ],
+      "dependsOn": [],
+      "sizingConfidence": "high",
+      "doneMeans": "Flow orchestration available via CLI",
+      "generatedTaskPayload": {
+        "title": "Add get-planner-flow-status read command",
+        "approach": "Stage, blockers, recommendedNextCommand",
+        "technicalScope": [
+          "src/modules/ideas"
+        ],
+        "acceptanceCriteria": [
+          "CLI ships with tests before MCP planner-packet"
+        ]
+      }
+    },
+    {
+      "wbsId": "WBS-2",
+      "path": "2",
+      "title": "get-plan-artifact-template CLI",
+      "goalMapping": [
+        "Agents complete Idea→Plan→Tasks without hand-editing files or slurping schemas/playbooks"
+      ],
+      "suggestedTaskTitle": "Add get-plan-artifact-template read command",
+      "approach": "Return minimal valid PlanArtifact skeleton from fixtures/kernel",
+      "technicalScope": [
+        "src/modules/planning",
+        "fixtures/planning/plan-artifact-minimal.valid.v1.json"
+      ],
+      "acceptanceCriteria": [
+        "Tier C",
+        "Validates against schema",
+        "Ships before WBS-6"
+      ],
+      "testingVerification": [
+        "test/get-plan-artifact-template.test.mjs"
+      ],
+      "dependsOn": [],
+      "sizingConfidence": "high",
+      "doneMeans": "Template available without schema file reads",
+      "generatedTaskPayload": {
+        "title": "Add get-plan-artifact-template read command",
+        "approach": "Expose minimal fixture-shaped template",
+        "technicalScope": [
+          "src/modules/planning"
+        ],
+        "acceptanceCriteria": [
+          "Ships before MCP planner-packet"
+        ]
+      }
+    },
+    {
+      "wbsId": "WBS-3",
+      "path": "3",
+      "title": "append-wbs-row CLI",
+      "goalMapping": [
+        "Incremental plan authoring via append-wbs-row and patch-plan-artifact in v1"
+      ],
+      "suggestedTaskTitle": "Add append-wbs-row mutation command",
+      "approach": "Append one WBS row to latest draft on unified IdeaPlan; validate via plan-artifact schema",
+      "technicalScope": [
+        "src/modules/planning",
+        "src/core/planning"
+      ],
+      "acceptanceCriteria": [
+        "Tier B with policyApproval",
+        "No full artifact resubmit required",
+        "Tests"
+      ],
+      "testingVerification": [
+        "test/append-wbs-row.test.mjs"
+      ],
+      "dependsOn": [
+        "WBS-2"
+      ],
+      "sizingConfidence": "medium",
+      "doneMeans": "Agents add WBS rows incrementally",
+      "generatedTaskPayload": {
+        "title": "Add append-wbs-row command",
+        "approach": "Incremental WBS append on unified IdeaPlan draft",
+        "technicalScope": [
+          "src/modules/planning"
+        ],
+        "acceptanceCriteria": [
+          "Schema-valid append with tests"
+        ]
+      }
+    },
+    {
+      "wbsId": "WBS-4",
+      "path": "4",
+      "title": "patch-plan-artifact CLI",
+      "goalMapping": [
+        "Incremental plan authoring via append-wbs-row and patch-plan-artifact in v1"
+      ],
+      "suggestedTaskTitle": "Add patch-plan-artifact mutation command",
+      "approach": "Patch named sections (identity, goals, single wbs row by id) on latest draft",
+      "technicalScope": [
+        "src/modules/planning",
+        "src/core/planning"
+      ],
+      "acceptanceCriteria": [
+        "Tier B",
+        "Partial updates without full artifact rebuild",
+        "Tests"
+      ],
+      "testingVerification": [
+        "test/patch-plan-artifact.test.mjs"
+      ],
+      "dependsOn": [
+        "WBS-2"
+      ],
+      "sizingConfidence": "medium",
+      "doneMeans": "Agents patch plan sections incrementally",
+      "generatedTaskPayload": {
+        "title": "Add patch-plan-artifact command",
+        "approach": "Section-scoped patch on unified IdeaPlan draft",
+        "technicalScope": [
+          "src/modules/planning"
+        ],
+        "acceptanceCriteria": [
+          "Partial patch with validation tests"
+        ]
+      }
+    },
+    {
+      "wbsId": "WBS-5",
+      "path": "5",
+      "title": "Register planner MCP output budgets",
+      "goalMapping": [
+        "Full P0 MCP read set in v1"
+      ],
+      "suggestedTaskTitle": "Register planner MCP tool output budgets",
+      "approach": "Add budgets per D3: planner-packet 20KB; satellite tools 16KB; document truncation ladder",
+      "technicalScope": [
+        "src/mcp/output-budgets.ts",
+        ".ai/mcp-tool-version-policy.md"
+      ],
+      "acceptanceCriteria": [
+        "All v1 planner MCP tools in budget map",
+        "Truncation ladder documented"
+      ],
+      "testingVerification": [
+        "test/mcp-output-budgets.test.mjs"
+      ],
+      "dependsOn": [
+        "WBS-1",
+        "WBS-2"
+      ],
+      "sizingConfidence": "high",
+      "doneMeans": "Budget contract ready before MCP tool registration",
+      "generatedTaskPayload": {
+        "title": "Register planner MCP output budgets",
+        "approach": "output-budgets.ts entries per architecture D3",
+        "technicalScope": [
+          "src/mcp/output-budgets.ts"
+        ],
+        "acceptanceCriteria": [
+          "Budget map includes all planner read tools"
+        ]
+      }
+    },
+    {
+      "wbsId": "WBS-6",
+      "path": "6",
+      "title": "workflow-cannon.planner-packet MCP read tool",
+      "goalMapping": [
+        "Full P0 MCP read set in v1"
+      ],
+      "suggestedTaskTitle": "Add planner-packet MCP read tool",
+      "approach": "Thin wrapper after WBS-1/2 CLI; truncated wbsPreview max 5 rows; recommendedNextCommand; read-only",
+      "technicalScope": [
+        "src/mcp/server.ts"
+      ],
+      "acceptanceCriteria": [
+        "CLI ships first",
+        "20KB budget",
+        "Read-only only"
+      ],
+      "testingVerification": [
+        "test/mcp-planner-packet.test.mjs"
+      ],
+      "dependsOn": [
+        "WBS-1",
+        "WBS-2",
+        "WBS-5"
+      ],
+      "sizingConfidence": "medium",
+      "doneMeans": "Single MCP bootstrap for planner-chat",
+      "generatedTaskPayload": {
+        "title": "Add workflow-cannon.planner-packet MCP tool",
+        "approach": "CLI-first wrapper with truncated WBS preview",
+        "technicalScope": [
+          "src/mcp/server.ts"
+        ],
+        "acceptanceCriteria": [
+          "Ships after get-planner-flow-status and template CLI"
+        ]
+      }
+    },
+    {
+      "wbsId": "WBS-7",
+      "path": "7",
+      "title": "workflow-cannon.list-ideas MCP read tool",
+      "goalMapping": [
+        "Full P0 MCP read set in v1"
+      ],
+      "suggestedTaskTitle": "Add list-ideas MCP read tool",
+      "approach": "Thin wrapper over list-ideas CLI; 16KB budget; read-only",
+      "technicalScope": [
+        "src/mcp/server.ts"
+      ],
+      "acceptanceCriteria": [
+        "CLI list-ideas unchanged as source of truth",
+        "MCP wrapper after CLI stable"
+      ],
+      "testingVerification": [
+        "test/mcp-list-ideas.test.mjs"
+      ],
+      "dependsOn": [
+        "WBS-5"
+      ],
+      "sizingConfidence": "high",
+      "doneMeans": "Ideas inventory via MCP",
+      "generatedTaskPayload": {
+        "title": "Add list-ideas MCP read tool",
+        "approach": "Wrapper over existing list-ideas command",
+        "technicalScope": [
+          "src/mcp/server.ts"
+        ],
+        "acceptanceCriteria": [
+          "16KB budget; read-only"
+        ]
+      }
+    },
+    {
+      "wbsId": "WBS-8",
+      "path": "8",
+      "title": "workflow-cannon.get-plan-artifact MCP read tool",
+      "goalMapping": [
+        "Full P0 MCP read set in v1"
+      ],
+      "suggestedTaskTitle": "Add get-plan-artifact MCP read tool",
+      "approach": "Thin wrapper over get-plan-artifact CLI with includeArtifact bounded",
+      "technicalScope": [
+        "src/mcp/server.ts"
+      ],
+      "acceptanceCriteria": [
+        "16KB budget",
+        "Optional includeArtifact flag"
+      ],
+      "testingVerification": [
+        "test/mcp-get-plan-artifact.test.mjs"
+      ],
+      "dependsOn": [
+        "WBS-5"
+      ],
+      "sizingConfidence": "high",
+      "doneMeans": "Plan read via MCP without file access",
+      "generatedTaskPayload": {
+        "title": "Add get-plan-artifact MCP read tool",
+        "approach": "Bounded wrapper over get-plan-artifact CLI",
+        "technicalScope": [
+          "src/mcp/server.ts"
+        ],
+        "acceptanceCriteria": [
+          "Read-only MCP tool with budget"
+        ]
+      }
+    },
+    {
+      "wbsId": "WBS-9",
+      "path": "9",
+      "title": "workflow-cannon.plan-review-packet MCP read tool",
+      "goalMapping": [
+        "Full P0 MCP read set in v1"
+      ],
+      "suggestedTaskTitle": "Add plan-review-packet MCP read tool",
+      "approach": "Thin wrapper over review-plan-artifact CLI (no recordReview); rubric blockers/warnings packet",
+      "technicalScope": [
+        "src/mcp/server.ts"
+      ],
+      "acceptanceCriteria": [
+        "16KB budget",
+        "Read-only preview"
+      ],
+      "testingVerification": [
+        "test/mcp-plan-review-packet.test.mjs"
+      ],
+      "dependsOn": [
+        "WBS-5"
+      ],
+      "sizingConfidence": "medium",
+      "doneMeans": "Review rubric via MCP",
+      "generatedTaskPayload": {
+        "title": "Add plan-review-packet MCP read tool",
+        "approach": "Wrapper over review-plan-artifact Tier C path",
+        "technicalScope": [
+          "src/mcp/server.ts"
+        ],
+        "acceptanceCriteria": [
+          "Read-only review packet"
+        ]
+      }
+    },
+    {
+      "wbsId": "WBS-10",
+      "path": "10",
+      "title": "workflow-cannon.finalize-preview-packet MCP read tool",
+      "goalMapping": [
+        "Full P0 MCP read set in v1"
+      ],
+      "suggestedTaskTitle": "Add finalize-preview-packet MCP read tool",
+      "approach": "Thin wrapper over finalize-plan-to-phase dryRun:true",
+      "technicalScope": [
+        "src/mcp/server.ts"
+      ],
+      "acceptanceCriteria": [
+        "16KB budget",
+        "Read-only task draft preview"
+      ],
+      "testingVerification": [
+        "test/mcp-finalize-preview-packet.test.mjs"
+      ],
+      "dependsOn": [
+        "WBS-5"
+      ],
+      "sizingConfidence": "medium",
+      "doneMeans": "Finalize preview via MCP",
+      "generatedTaskPayload": {
+        "title": "Add finalize-preview-packet MCP read tool",
+        "approach": "Wrapper over finalize-plan-to-phase dryRun",
+        "technicalScope": [
+          "src/mcp/server.ts"
+        ],
+        "acceptanceCriteria": [
+          "Read-only preview packet"
+        ]
+      }
+    },
+    {
+      "wbsId": "WBS-11",
+      "path": "11",
+      "title": "agent_start lightweight planner routing branch",
+      "goalMapping": [
+        "Agents complete Idea→Plan→Tasks without hand-editing files or slurping schemas/playbooks"
+      ],
+      "suggestedTaskTitle": "Extend agent_start with planner routing branch",
+      "approach": "workflows.planner: enabled, whenToUse, nextTool, cliFallbackPointer; no packet duplication",
+      "technicalScope": [
+        "src/mcp/server.ts"
+      ],
+      "acceptanceCriteria": [
+        "Bounded payload",
+        "Lists v1 planner MCP tool names"
+      ],
+      "testingVerification": [
+        "test/mcp-agent-start-planner-branch.test.mjs"
+      ],
+      "dependsOn": [
+        "WBS-6"
+      ],
+      "sizingConfidence": "high",
+      "doneMeans": "Cold-start routes to planner tools",
+      "generatedTaskPayload": {
+        "title": "Extend agent_start planner routing",
+        "approach": "Lightweight routing metadata only",
+        "technicalScope": [
+          "src/mcp/server.ts"
+        ],
+        "acceptanceCriteria": [
+          "Planner branch when ideas module enabled"
+        ]
+      }
+    },
+    {
+      "wbsId": "WBS-12",
+      "path": "12",
+      "title": "MCP/CLI parity tests for all planner read tools",
+      "goalMapping": [
+        "Full P0 MCP read set in v1"
+      ],
+      "suggestedTaskTitle": "Add planner MCP/CLI parity test suite",
+      "approach": "Field-by-field envelope parity for WBS-6 through WBS-10",
+      "technicalScope": [
+        "test/mcp-planner-parity.test.mjs"
+      ],
+      "acceptanceCriteria": [
+        "CI gate for all five MCP read tools"
+      ],
+      "testingVerification": [
+        "test/mcp-planner-parity.test.mjs"
+      ],
+      "dependsOn": [
+        "WBS-6",
+        "WBS-7",
+        "WBS-8",
+        "WBS-9",
+        "WBS-10"
+      ],
+      "sizingConfidence": "high",
+      "doneMeans": "Adapter parity evidence",
+      "generatedTaskPayload": {
+        "title": "Planner MCP/CLI parity tests",
+        "approach": "Parity suite for all v1 planner read tools",
+        "technicalScope": [
+          "test/"
+        ],
+        "acceptanceCriteria": [
+          "CI parity gate passes"
+        ]
+      }
+    },
+    {
+      "wbsId": "WBS-13",
+      "path": "13",
+      "title": "Deprecate and remove build-plan legacy path",
+      "goalMapping": [
+        "Deprecate and remove legacy build-plan interview path; keep separate from primary planner-chat"
+      ],
+      "suggestedTaskTitle": "Deprecate and remove build-plan interview legacy path",
+      "approach": "Deprecation notices; migrate dashboard build-plan session UX to Ideas/planner-chat; remove build-plan command and runbook references in follow-on commits — do not merge into planner-chat",
+      "technicalScope": [
+        "src/modules/planning/build-plan*",
+        ".ai/runbooks/planning-workflow.md",
+        "extensions/cursor-workflow-cannon"
+      ],
+      "acceptanceCriteria": [
+        "Deprecation period documented",
+        "build-plan removed",
+        "No build-plan-for-idea bridge",
+        "planner-chat remains sole primary path"
+      ],
+      "testingVerification": [
+        "test/build-plan-removal.test.mjs"
+      ],
+      "dependsOn": [
+        "WBS-6"
+      ],
+      "sizingConfidence": "medium",
+      "doneMeans": "Legacy interview path removed; paths stayed separate",
+      "generatedTaskPayload": {
+        "title": "Remove build-plan legacy interview path",
+        "approach": "Deprecate then delete; no merge with planner-chat",
+        "technicalScope": [
+          "src/modules/planning"
+        ],
+        "acceptanceCriteria": [
+          "build-plan removed; planner-chat primary"
+        ]
+      }
+    },
+    {
+      "wbsId": "WBS-14",
+      "path": "14",
+      "title": "wc-planner-chat skill pack and golden-path test",
+      "goalMapping": [
+        "Agents complete Idea→Plan→Tasks without hand-editing files or slurping schemas/playbooks"
+      ],
+      "suggestedTaskTitle": "Ship wc-planner-chat skill pack and golden-path test",
+      "approach": "Skill pack documents all v1 MCP tools and CLI fallbacks; integration test without file reads",
+      "technicalScope": [
+        ".cursor/skills",
+        "test/planner-golden-path-agent.test.mjs"
+      ],
+      "acceptanceCriteria": [
+        "Skill pack covers v1 tool set",
+        "Golden-path CI test passes"
+      ],
+      "testingVerification": [
+        "test/planner-golden-path-agent.test.mjs"
+      ],
+      "dependsOn": [
+        "WBS-11",
+        "WBS-12"
+      ],
+      "sizingConfidence": "medium",
+      "doneMeans": "Adoption and regression harness",
+      "generatedTaskPayload": {
+        "title": "wc-planner-chat skill pack and golden-path test",
+        "approach": "Adoption layer plus no-file-read test",
+        "technicalScope": [
+          ".ai/backlogs/skill-pack-first-party-v1.md",
+          "test/"
+        ],
+        "acceptanceCriteria": [
+          "Skill pack and test land"
+        ]
+      }
+    },
+    {
+      "wbsId": "WBS-15",
+      "path": "15",
+      "title": "Dogfood I011 through accept and finalize preview",
+      "goalMapping": [
+        "Agents complete Idea→Plan→Tasks without hand-editing files or slurping schemas/playbooks"
+      ],
+      "suggestedTaskTitle": "Dogfood Agent Planning Tools on I011",
+      "approach": "Review, accept, finalize dryRun using new tools; dogfood append/patch for WBS edits",
+      "technicalScope": [
+        "I011 IdeaPlan"
+      ],
+      "acceptanceCriteria": [
+        "Plan accepted",
+        "Finalize dryRun previews tasks",
+        "Dogfood evidence recorded"
+      ],
+      "testingVerification": [
+        "Manual dogfood evidence"
+      ],
+      "dependsOn": [
+        "WBS-3",
+        "WBS-4",
+        "WBS-12",
+        "WBS-14"
+      ],
+      "sizingConfidence": "medium",
+      "doneMeans": "Real idea proves v1 toolset end-to-end",
+      "generatedTaskPayload": {
+        "title": "Dogfood I011 planner tools",
+        "approach": "Accept plan and finalize preview with new tools",
+        "technicalScope": [
+          "I011"
+        ],
+        "acceptanceCriteria": [
+          "Dogfood complete"
+        ]
+      }
+    }
+  ],
+  "phaseRecommendations": [
+    {
+      "phaseKey": "143",
+      "label": "Phase 143",
+      "rationale": "Current workspace phase",
+      "isPrimary": true
+    }
+  ],
+  "provenance": {
+    "source": "draft-plan-artifact",
+    "sourceIdeaId": "I011",
+    "createdAt": "2026-07-08T16:58:17.812Z",
+    "updatedAt": "2026-07-08T16:58:17.812Z",
+    "createdBy": "agent"
+  },
+  "version": 1
+}
