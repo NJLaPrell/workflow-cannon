@@ -602,7 +602,9 @@ export function renderDashboardTabBarHtml(args?: {
           '<span class="wc-tab-icon">' +
           escapeHtml(tab.icon) +
           "</span>" +
+          '<span class="wc-tab-label">' +
           escapeHtml(tab.label) +
+          "</span>" +
           (tab.badge ?? "") +
           "</button>"
         );
@@ -2180,13 +2182,13 @@ function renderPhaseReadinessCard(
       : "";
 
   return (
-    '<section class="dash-card wc-cae-readiness wc-cae-readiness-collapsed" aria-label="' +
+    '<section class="dash-card wc-cae-readiness" aria-label="' +
     escapeHtmlAttr(sectionAriaLabel) +
     '" data-wc-preserve-expanded="phase-readiness"' +
     wcUiStateAttr("phase-readiness-" + curPhase) +
     ">" +
     '<div class="wc-cae-readiness-head">' +
-    '<button type="button" class="wc-cae-readiness-toggle" data-wc-action="phase-readiness-toggle" aria-expanded="false" aria-controls="wc-cae-readiness-body">' +
+    '<button type="button" class="wc-cae-readiness-toggle" data-wc-action="phase-readiness-toggle" aria-expanded="true" aria-controls="wc-cae-readiness-body">' +
     '<span class="wc-cae-readiness-title">' +
     readinessTitle +
     "</span>" +
@@ -2268,13 +2270,13 @@ function renderPhaseProgressCard(
   const markCompleteReady = phaseMarkCompleteReady(snapshot, humanGateCount);
 
   return (
-    '<section class="dash-card wc-phase-progress wc-phase-progress-collapsed" aria-label="Phase progress · Phase ' +
+    '<section class="dash-card wc-phase-progress" aria-label="Phase progress · Phase ' +
     escapeHtmlAttr(curPhase) +
     '" data-wc-preserve-expanded="phase-progress"' +
     wcUiStateAttr("phase-progress-" + curPhase) +
     ">" +
     '<div class="wc-phase-progress-head">' +
-    '<button type="button" class="wc-cae-readiness-toggle" data-wc-action="phase-progress-toggle" aria-expanded="false" aria-controls="wc-phase-progress-body">' +
+    '<button type="button" class="wc-cae-readiness-toggle" data-wc-action="phase-progress-toggle" aria-expanded="true" aria-controls="wc-phase-progress-body">' +
     '<span class="wc-cae-readiness-title"><b>Phase Progress · Phase ' +
     escapeHtml(curPhase) +
     "</b></span>" +
@@ -6332,11 +6334,11 @@ function renderDashboardAgentActivityBoard(summary: DashboardAgentActivitySummar
   if (!summary || typeof summary !== "object") {
     return (
       '<section class="wc-agent-board dash-agent-status-banner dash-agent-activity-board" aria-label="Agent Activity">' +
-      '<div class="wc-agent-board-header">' +
-      '<span class="wc-agent-board-title"><b>Agent Activity</b></span>' +
-      '<span class="wc-agent-board-meta">Unknown</span>' +
+      '<div class="wc-agent-empty">' +
+      '<span class="wc-agent-empty-icon" aria-hidden="true">◎</span>' +
+      '<div class="wc-agent-empty-msg">No agents active</div>' +
+      '<div class="wc-agent-empty-sub">Awaiting instruction</div>' +
       "</div>" +
-      '<p class="muted">No agent activity summary is available.</p>' +
       "</section>"
     );
   }

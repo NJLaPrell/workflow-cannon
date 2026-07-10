@@ -8582,11 +8582,16 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       min-width: 14px;
       height: 14px;
       padding: 0 3px;
+      margin-left: 4px;
       border-radius: 999px;
-      font-size: 9px;
+      font-size: 10px;
       font-weight: 700;
       line-height: 1;
       flex-shrink: 0;
+    }
+    .wc-tab-label {
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     .wc-tab-badge-ready {
       background: var(--wc-green-border);

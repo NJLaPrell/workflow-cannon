@@ -1,0 +1,1 @@
+- [cursor-workflow-cannon build quirk](cursor-workflow-cannon-build.md) — root `pnpm run build` doesn't rebuild the extension's dist/; build it directly or dist stays stale.
