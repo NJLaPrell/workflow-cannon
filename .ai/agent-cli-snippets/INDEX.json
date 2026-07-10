@@ -1223,6 +1223,11 @@
       "moduleId": "improvement"
     },
     {
+      "name": "seed-wc-bug-reporter",
+      "path": ".ai/agent-cli-snippets/by-command/seed-wc-bug-reporter.json",
+      "moduleId": "agent-bug-reporting"
+    },
+    {
       "name": "set-active-behavior-profile",
       "path": ".ai/agent-cli-snippets/by-command/set-active-behavior-profile.json",
       "moduleId": "agent-behavior"

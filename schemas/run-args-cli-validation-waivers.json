@@ -4,7 +4,6 @@
   "commands": [
     "accept-plan-artifact",
     "append-wbs-row",
-    "patch-plan-artifact",
     "apply-skill",
     "approve-memory",
     "block-assignment",
@@ -31,6 +30,7 @@
     "install-plugin",
     "message-subagent",
     "migrate-ideas-to-unified-document",
+    "patch-plan-artifact",
     "prepare-release-artifacts",
     "prune-memory",
     "reconcile-assignment",
@@ -41,6 +41,7 @@
     "review-item",
     "review-plan-artifact",
     "rewind-to-checkpoint",
+    "seed-wc-bug-reporter",
     "spawn-subagent",
     "start-brainstorm-session",
     "start-idea-planning",

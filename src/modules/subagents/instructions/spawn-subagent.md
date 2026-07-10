@@ -9,3 +9,5 @@ workspace-kit run spawn-subagent '{"subagentId":"my-agent","executionTaskId":"T6
 ```
 
 Creates a session row (`status` `open`). Does not launch Cursor; host executes separately. Optional `sessionId` (UUID default).
+
+For the platform-agnostic bug-reporter child (`wc-bug-reporter`), prefer host adapters + CLI fallback documented in `.ai/runbooks/bug-reporter-host-spawn.md` — this command only records provenance.

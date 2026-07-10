@@ -6,14 +6,18 @@ agentCapsule|v=1|command=agent-bug-reporting-overview|module=agent-bug-reporting
 
 Overview for the **agent-bug-reporting** WorkflowModule (Phase 148 / I010).
 
-## Shipped command
+## Shipped commands
 
-Use **`file-bug-report`** to create a proposed improvement with rich evidence:
+- **`file-bug-report`** — create a proposed improvement with rich evidence.
+- **`seed-wc-bug-reporter`** — preview/apply the builtin `wc-bug-reporter` subagent seed.
 
 ```
 pnpm exec wk run file-bug-report '{"title":"…","symptom":"…","evidenceKey":"…"}'
+pnpm exec wk run seed-wc-bug-reporter '{"apply":true,"policyApproval":{"confirmed":true,"rationale":"seed wc-bug-reporter"}}'
 ```
 
-See `src/modules/agent-bug-reporting/instructions/file-bug-report.md`.
+## Host adapters
+
+Spawn plans are host-agnostic: Cursor + CLI are implemented; Antigravity and VS Code Copilot expose stub contracts that fall back to CLI. Core filing never requires a single host — see `.ai/runbooks/bug-reporter-host-spawn.md`.
 
 This overview entry is documentation-only (not in the builtin run-command manifest).

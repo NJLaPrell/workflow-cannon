@@ -11,7 +11,7 @@ Record **subagent definitions** and **session/message** provenance in kit SQLite
 
 ## Typical flow
 
-1. **Define** — `workspace-kit run register-subagent` with `subagentId`, `allowedCommands` (explicit command names), optional `displayName` / `description`. Use JSON `policyApproval` and `expectedPlanningGeneration` when your workspace requires them.
+1. **Define** — `workspace-kit run register-subagent` with `subagentId`, `allowedCommands` (explicit command names), optional `displayName` / `description`. Use JSON `policyApproval` and `expectedPlanningGeneration` when your workspace requires them. For the builtin bug reporter, prefer `workspace-kit run seed-wc-bug-reporter` (see [`bug-reporter-host-spawn.md`](./bug-reporter-host-spawn.md)).
 2. **Spawn (record)** — `workspace-kit run spawn-subagent` with `subagentId`, optional `executionTaskId` (`T###`), `hostHint` (e.g. `cursor`), `promptSummary`. Run the Cursor subagent in the product UI; this command only **persists** the session row.
 3. **Handoff log** — `workspace-kit run message-subagent` with `sessionId`, `direction` (`outbound` | `inbound` | `system`), `body`.
 4. **Close** — `workspace-kit run close-subagent-session` when the delegated work ends.

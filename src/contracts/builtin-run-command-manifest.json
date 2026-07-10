@@ -132,6 +132,16 @@
     "executionClass": "mutation"
   },
   {
+    "moduleId": "agent-bug-reporting",
+    "name": "seed-wc-bug-reporter",
+    "file": "seed-wc-bug-reporter.md",
+    "description": "Preview or apply the builtin wc-bug-reporter subagent seed (allowedCommands centered on file-bug-report; model pin).",
+    "policyOperationId": "subagents.persist",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive",
+    "executionClass": "mutation"
+  },
+  {
     "moduleId": "task-engine",
     "name": "run-transition",
     "file": "run-transition.md",
