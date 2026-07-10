@@ -2145,8 +2145,8 @@ function renderPhaseReadinessCard(
 
   const pendingBlock =
     pending.length > 0
-      ? '<div class="wc-cae-decisions">' +
-        '<p><span style="color:var(--vscode-editorWarning-foreground,#cca700);">&#9888;</span> <b>Pending Decisions</b></p>' +
+      ? '<div class="wc-cae-decisions wc-callout wc-callout--warning">' +
+        '<p>&#9888; <b>Pending Decisions</b></p>' +
         pending
           .slice(0, 3)
           .map(
@@ -6593,8 +6593,8 @@ function renderWorkspaceBlockersPendingSection(ws: Record<string, unknown> | nul
   }
 
   let html =
-    '<section class="dash-card dashboard-overview' +
-    (blockers.length > 0 ? " wc-blocker-card" : "") +
+    '<section class="dash-card dashboard-overview wc-callout' +
+    (blockers.length > 0 ? " wc-blocker-card wc-callout--danger" : " wc-callout--warning") +
     '" aria-label="Workspace blockers and decisions">';
   if (blockers.length > 0) {
     const shown = blockers
@@ -6611,7 +6611,7 @@ function renderWorkspaceBlockersPendingSection(ws: Record<string, unknown> | nul
       .slice(0, 2)
       .map((b) => renderMarkdownBoldAfterEscape(escapeHtml(truncateOverviewLine(b, 100))));
     const more = pending.length > 2 ? " …" : "";
-    html += '<p><span style="color:var(--vscode-editorWarning-foreground,#cca700);">&#9888;</span> <b>Pending Decisions</b> ' + shown.join(" · ") + more + "</p>";
+    html += "<p>&#9888; <b>Pending Decisions</b> " + shown.join(" · ") + more + "</p>";
   }
   html += "</section>";
   return html;
