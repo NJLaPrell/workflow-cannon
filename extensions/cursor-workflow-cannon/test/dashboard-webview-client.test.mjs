@@ -25,13 +25,16 @@ test("buildDashboardWebviewBootstrapScript returns drawer + refresh client", () 
   assert.match(script, /wcHostSnapshot/);
   assert.match(script, /wcDashboardReadMode/);
   assert.match(script, /wcReinitEmbeddedCae/);
-  assert.match(script, /type: 'createIdea'/);
+  assert.match(script, /type: 'addIdea'/);
+  assert.doesNotMatch(script, /type: 'createIdea'/);
+  assert.doesNotMatch(script, /wcIdeaCreateResult/);
+  assert.match(script, /add-idea/);
+  assert.match(script, /Creating idea/);
   assert.match(script, /type: 'updateIdea'/);
   assert.match(script, /type: 'deleteIdea'/);
   assert.match(script, /type:'undoDeleteIdea'/);
   assert.match(script, /type: 'reorderIdeas'/);
   assert.match(script, /prefillIdeaPlanningChat/);
-  assert.match(script, /wcIdeaCreateResult/);
   assert.match(script, /wcIdeaMutationResult/);
   assert.match(script, /data-wc-idea-title/);
   assert.match(script, /idea-undo-delete/);

@@ -81,6 +81,7 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
     }
     if (workflowId === 'register-phase-catalog') return 'Updating phase catalog…';
     if (workflowId === 'add-wishlist') return 'Creating wishlist item…';
+    if (workflowId === 'add-idea') return 'Creating idea…';
     if (workflowId === 'add-phase-note') return 'Adding phase note…';
     return 'Saving changes…';
   }
@@ -156,40 +157,6 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
     el.disabled = false;
     var original = el.getAttribute('data-wc-original-html');
     if (original) el.innerHTML = original;
-  }
-
-  function setIdeasCreateStatus(form, message, isError) {
-    if (!form) return;
-    var status = form.querySelector('[data-wc-ideas-create-status]');
-    if (!status) return;
-    status.textContent = message || '';
-    if (isError) status.setAttribute('data-wc-error', '1');
-    else status.removeAttribute('data-wc-error');
-  }
-
-  function setIdeasCreateBusy(form, busy) {
-    if (!form) return;
-    var button = form.querySelector('[data-wc-action="idea-create"]');
-    if (button) setButtonBusy(button, busy, 'Saving...');
-    form.querySelectorAll('input, textarea, button').forEach(function(el) {
-      el.disabled = !!busy;
-    });
-  }
-
-  function submitIdeaCreate(form) {
-    if (!form) return;
-    var titleEl = form.querySelector('[data-wc-idea-title]');
-    var noteEl = form.querySelector('[data-wc-idea-note]');
-    var title = titleEl && titleEl.value != null ? String(titleEl.value).trim() : '';
-    var note = noteEl && noteEl.value != null ? String(noteEl.value).trim() : '';
-    if (!title) {
-      setIdeasCreateStatus(form, 'Title required.', true);
-      if (titleEl && titleEl.focus) titleEl.focus();
-      return;
-    }
-    setIdeasCreateStatus(form, '', false);
-    setIdeasCreateBusy(form, true);
-    vscode.postMessage({ type: 'createIdea', title: title, note: note });
   }
 
   function ideaRowFor(el) {
@@ -1602,21 +1569,6 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
       applyDashboardReadModeBadge(m.badge);
       return;
     }
-    if (m && m.type === 'wcIdeaCreateResult') {
-      var ideaForm = document.querySelector('[data-wc-ideas-create-form]');
-      if (!ideaForm) return;
-      setIdeasCreateBusy(ideaForm, false);
-      if (m.ok === true) {
-        var ideaTitle = ideaForm.querySelector('[data-wc-idea-title]');
-        var ideaNote = ideaForm.querySelector('[data-wc-idea-note]');
-        if (ideaTitle) ideaTitle.value = '';
-        if (ideaNote) ideaNote.value = '';
-        setIdeasCreateStatus(ideaForm, 'Saved.', false);
-      } else {
-        setIdeasCreateStatus(ideaForm, typeof m.message === 'string' ? m.message : 'Unable to save idea.', true);
-      }
-      return;
-    }
     if (m && m.type === 'wcIdeaMutationResult') {
       var op = typeof m.operation === 'string' ? m.operation : '';
       var mutRow = typeof m.ideaId === 'string' ? document.querySelector('[data-wc-idea-id="' + m.ideaId.replace(/"/g, '\\"') + '"]') : null;
@@ -2084,7 +2036,7 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
       return;
     }
     if (act === 'wishlist-view') { var wv = (t.getAttribute('data-wishlist-id') || '').trim(); if (wv) vscode.postMessage({type:'openWishlistDetail',wishlistId:wv}); return; }
-    if (act === 'idea-create') { submitIdeaCreate(t.closest('[data-wc-ideas-create-form]')); return; }
+    if (act === 'idea-add') { vscode.postMessage({ type: 'addIdea' }); return; }
     if (act === 'idea-edit') { setIdeaEditMode(ideaRowFor(t), true); return; }
     if (act === 'idea-edit-cancel') { setIdeaEditMode(ideaRowFor(t), false); return; }
     if (act === 'idea-update') { submitIdeaUpdate(ideaRowFor(t)); return; }
@@ -2111,11 +2063,6 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
 
   if (rootEl) rootEl.addEventListener('keydown', function(ev) {
     var target = ev.target;
-    if (target && target.matches && target.matches('[data-wc-idea-title]') && ev.key === 'Enter') {
-      ev.preventDefault();
-      submitIdeaCreate(target.closest('[data-wc-ideas-create-form]'));
-      return;
-    }
     if (target && target.matches && target.matches('[data-wc-idea-edit-title]')) {
       if (ev.key === 'Enter') {
         ev.preventDefault();
