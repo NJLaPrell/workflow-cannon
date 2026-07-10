@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "fragmentKind": "releaseNotes",
+  "releaseNotes": {
+    "source": "docs/maintainers/CHANGELOG.md + github-release-notes.md",
+    "entries": [
+      "Dashboard UX polish mid-stream patch after Phase 148 (v1.0.9)",
+      "New Idea opens in shared drawer (PR #781)",
+      "Startup timeout no longer wipes hydrated dashboard (PR #780)",
+      "Replit visual pass: callouts, focus, CSS variables (PR #782)",
+      "Plan/idea list polish + false Agent Activity idle fix (PR #783)",
+      "Phase 109 skill-pack backlog drain/retarget (PR #779)",
+      "Task-state snapshot pointer repair"
+    ]
+  }
+}
