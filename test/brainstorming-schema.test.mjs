@@ -80,7 +80,7 @@ test("canonical agentDirective question phases are ordered", () => {
 });
 
 test("brainstorming state schema documents brainstorming to planning transitions", () => {
-  assert.deepEqual(schema["x-validTransitions"], ["brainstorming", "planning"]);
+  assert.deepEqual(schema["x-validTransitions"], ["brainstorming", "planning", "cancelled"]);
 });
 
 test("brainstorming state schema distinguishes session completion from planning transition", () => {
