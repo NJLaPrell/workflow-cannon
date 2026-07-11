@@ -81,6 +81,8 @@ Playbook: [`.ai/playbooks/task-to-phase-branch.md`](./playbooks/task-to-phase-br
 - `pnpm exec wk run update-brainstorm-session '{"planRef":"plan-artifact:<planId>","sessionIndex":0,"inputs":{"valueImpact":8},"policyApproval":{"confirmed":true,"rationale":"update brainstorm inputs"}}'` — use `completedAt` here to finish the guided session, then stop for operator direction.
 - `pnpm exec wk run complete-brainstorm '{"planRef":"plan-artifact:<planId>","operatorConfirmedBrainstormComplete":true,"policyApproval":{"confirmed":true,"rationale":"operator confirmed brainstorming is finished and planning should start"}}'` — only after the operator explicitly says brainstorming is finished.
 - `pnpm exec wk run check-delivery-status '{"planRef":"plan-artifact:<planId>","policyApproval":{"confirmed":true,"rationale":"check IdeaPlan delivery task completion"}}'`
+- `pnpm exec wk run cancel-plan-artifact '{"planRef":"plan-artifact:<planId>","policyApproval":{"confirmed":true,"rationale":"cancel unused plan"}}'` — soft-archive to `cancelled` (IdeaPlan or classic PlanArtifact); revive via Brainstorm/Plan when a linked idea exists.
+- `pnpm exec wk run delete-plan-artifact '{"planRef":"plan-artifact:<planId>","confirmDelete":true,"policyApproval":{"confirmed":true,"rationale":"remove abandoned plan and idea"}}'` — hard-delete plan files/index and linked idea row when present.
 
 ## Agent bug reporting (Tier C + seed Tier B)
 
