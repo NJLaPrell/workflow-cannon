@@ -20,6 +20,8 @@ export const DASHBOARD_POLICY_TIER_MATRIX: readonly DashboardPolicyTierRow[] = [
   { workflowId: "accept-proposed", action: "accept-batch", command: "run-transition", tier: "routine" },
   { workflowId: "plan-artifact", action: "accept", command: "accept-plan-artifact", tier: "routine" },
   { workflowId: "plan-artifact", action: "finalize", command: "finalize-plan-to-phase", tier: "routine" },
+  { workflowId: "plan-artifact", action: "cancel", command: "cancel-plan-artifact", tier: "routine" },
+  { workflowId: "plan-artifact", action: "delete", command: "delete-plan-artifact", tier: "elevated" },
   { workflowId: "dismiss-phase-note", action: "critical", command: "dismiss-phase-note", tier: "elevated" },
   { workflowId: "dismiss-phase-note", action: "normal", command: "dismiss-phase-note", tier: "routine" },
   { workflowId: "assign-task-phase", action: "assign", command: "assign-task-phase", tier: "routine" },
@@ -88,6 +90,8 @@ export const ELEVATED_POLICY_EXPLAINER_LEAD_BY_PATH: Readonly<Record<string, str
     "<p><b>Block assignment.</b> Stops the worker handoff path until reconciled or cancelled.</p>",
   "cancel-team-assignment:cancel":
     "<p><b>Cancel assignment.</b> Ends the assignment record; use when the handoff should not continue.</p>",
+  "plan-artifact:delete":
+    "<p><b>Delete plan.</b> Permanently removes PlanArtifact files, the plan index row, and the linked idea row. This cannot be undone from the dashboard.</p>",
   "register-subagent:register":
     "<p><b>Register subagent role.</b> Persists an allowlist of kit commands this subagent may invoke — " +
     "review commands before registering.</p>"

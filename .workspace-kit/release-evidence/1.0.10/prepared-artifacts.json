@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 1,
+  "fragmentKind": "preparedArtifacts",
+  "releaseVersion": "1.0.10",
+  "date": "2026-07-10",
+  "createdAt": "2026-07-10T03:06:22.510Z",
+  "changedArtifacts": [
+    {
+      "path": "package.json",
+      "refs": [
+        {
+          "kind": "artifact",
+          "value": "package.json"
+        },
+        {
+          "kind": "command",
+          "value": "pnpm exec wk run prepare-release-artifacts '{\"version\":\"1.0.10\",\"date\":\"2026-07-10\"}'",
+          "instructionPath": "src/modules/task-engine/instructions/prepare-release-artifacts.md"
+        }
+      ],
+      "replacements": [
+        {
+          "description": "package version field",
+          "oldText": "\"version\": \"1.0.9\"",
+          "newText": "\"version\": \"1.0.10\""
+        }
+      ]
+    },
+    {
+      "path": "CHANGELOG.md",
+      "refs": [
+        {
+          "kind": "artifact",
+          "value": "CHANGELOG.md"
+        },
+        {
+          "kind": "command",
+          "value": "pnpm exec wk run prepare-release-artifacts '{\"version\":\"1.0.10\",\"date\":\"2026-07-10\"}'",
+          "instructionPath": "src/modules/task-engine/instructions/prepare-release-artifacts.md"
+        }
+      ],
+      "replacements": [
+        {
+          "description": "insert root changelog release pointer",
+          "oldText": "",
+          "newText": "## [1.0.10] - 2026-07-10\n\n- See `docs/maintainers/CHANGELOG.md` for release notes, migration notes, and historical entries.\n\n"
+        }
+      ]
+    },
+    {
+      "path": "docs/maintainers/CHANGELOG.md",
+      "refs": [
+        {
+          "kind": "artifact",
+          "value": "docs/maintainers/CHANGELOG.md"
+        },
+        {
+          "kind": "command",
+          "value": "pnpm exec wk run prepare-release-artifacts '{\"version\":\"1.0.10\",\"date\":\"2026-07-10\"}'",
+          "instructionPath": "src/modules/task-engine/instructions/prepare-release-artifacts.md"
+        }
+      ],
+      "replacements": [
+        {
+          "description": "roll maintainer changelog unreleased notes into a release section",
+          "oldText": "\n\nPatch — **Dashboard UX polish** (post–Phase 148 mid-stream ship from `main`: Ideas drawer, startup timeout fix, Replit visual pass, plan/idea list polish, false Agent Activity idle).\n\n### Added\n\n- **New Idea drawer** — Ideas section uses a Phase Notes-style header button that opens create-idea in the shared drawer modal instead of an always-visible inline form (PR #781).\n\n### Changed\n\n- **Dashboard visual consistency** — card expansion defaults, callout styling for pending decisions, focus-visible keyboard navigation, and CSS-variable color/font alignment across dashboard/config/status webviews (PR #782).\n- **Plans list rollups** — render as `ID - Title` with description underneath; expanded cards no longer duplicate title/description/status; rollup summaries use a pointer cursor (PR #783).\n- **Ideas rows** — match Wishlist `dash-row` chrome; remove drag-sort handle and stray `open` status tag (PR #783).\n- **Phase 109 skill-pack backlog** — retarget first-party skill-pack epic to unphased after draining the Phase 109 bucket (PR #779).\n\n### Fixed\n\n- **Startup timeout false positive** — hydrated dashboard no longer wiped by the webview shell probe after a successful first paint (PR #780).\n- **False Agent Activity “active”** — parent transcript mtime no longer classified as orchestrator `working_task`; idle-only boards show the empty state (PR #783).\n- **Task-state snapshot pointer** — rollback empty `snap-2026-06-30` manifest pointer to a valid snapshot for hydrate safety.\n\n",
+          "newText": "\n\n## [1.0.10] - 2026-07-10\n\nPatch — **Dashboard UX polish** (post–Phase 148 mid-stream ship from `main`: Ideas drawer, startup timeout fix, Replit visual pass, plan/idea list polish, false Agent Activity idle).\n\n### Added\n\n- **New Idea drawer** — Ideas section uses a Phase Notes-style header button that opens create-idea in the shared drawer modal instead of an always-visible inline form (PR #781).\n\n### Changed\n\n- **Dashboard visual consistency** — card expansion defaults, callout styling for pending decisions, focus-visible keyboard navigation, and CSS-variable color/font alignment across dashboard/config/status webviews (PR #782).\n- **Plans list rollups** — render as `ID - Title` with description underneath; expanded cards no longer duplicate title/description/status; rollup summaries use a pointer cursor (PR #783).\n- **Ideas rows** — match Wishlist `dash-row` chrome; remove drag-sort handle and stray `open` status tag (PR #783).\n- **Phase 109 skill-pack backlog** — retarget first-party skill-pack epic to unphased after draining the Phase 109 bucket (PR #779).\n\n### Fixed\n\n- **Startup timeout false positive** — hydrated dashboard no longer wiped by the webview shell probe after a successful first paint (PR #780).\n- **False Agent Activity “active”** — parent transcript mtime no longer classified as orchestrator `working_task`; idle-only boards show the empty state (PR #783).\n- **Task-state snapshot pointer** — rollback empty `snap-2026-06-30` manifest pointer to a valid snapshot for hydrate safety.\n\n"
+        }
+      ]
+    },
+    {
+      "path": "schemas/task-engine-run-contracts.schema.json",
+      "refs": [
+        {
+          "kind": "artifact",
+          "value": "schemas/task-engine-run-contracts.schema.json"
+        },
+        {
+          "kind": "command",
+          "value": "pnpm exec wk run prepare-release-artifacts '{\"version\":\"1.0.10\",\"date\":\"2026-07-10\"}'",
+          "instructionPath": "src/modules/task-engine/instructions/prepare-release-artifacts.md"
+        }
+      ],
+      "replacements": [
+        {
+          "description": "schema packageVersion const",
+          "oldText": "\"packageVersion\": {\n      \"const\": \"1.0.9\"",
+          "newText": "\"packageVersion\": {\n      \"const\": \"1.0.10\""
+        }
+      ]
+    },
+    {
+      "path": "schemas/pilot-run-args.snapshot.json",
+      "refs": [
+        {
+          "kind": "artifact",
+          "value": "schemas/pilot-run-args.snapshot.json"
+        },
+        {
+          "kind": "command",
+          "value": "pnpm exec wk run prepare-release-artifacts '{\"version\":\"1.0.10\",\"date\":\"2026-07-10\"}'",
+          "instructionPath": "src/modules/task-engine/instructions/prepare-release-artifacts.md"
+        }
+      ],
+      "replacements": [
+        {
+          "description": "pilot snapshot sourceSchemaPackageVersion",
+          "oldText": "\"sourceSchemaPackageVersion\": \"1.0.9\"",
+          "newText": "\"sourceSchemaPackageVersion\": \"1.0.10\""
+        }
+      ]
+    }
+  ]
+}

@@ -322,3 +322,39 @@ test("drawer: rewind checkpoint requires longer rationale", async () => {
     assert.equal(good.values.force, "yes");
   }
 });
+
+test("drawer: cancel plan artifact confirm is optional-rationale", async () => {
+  const mod = await import("../dist/views/dashboard/dashboard-input-drawer.js");
+  const html = mod.renderDrawerFormHtml(
+    mod.buildCancelPlanArtifactDrawerSpec({
+      planId: "p1",
+      planRef: "plan-artifact:p1",
+      ideaId: "I001",
+      title: "Demo"
+    })
+  );
+  assert.match(html, /Cancel plan/);
+  assert.match(html, /Cancelled/);
+  const ok = mod.validateCancelPlanArtifactSubmit({ rationale: "not needed" });
+  assert.equal(ok.ok, true);
+});
+
+test("drawer: delete plan artifact requires elevated policy rationale", async () => {
+  const mod = await import("../dist/views/dashboard/dashboard-input-drawer.js");
+  const html = mod.renderDrawerFormHtml(
+    mod.buildDeletePlanArtifactDrawerSpec({
+      planId: "p1",
+      planRef: "plan-artifact:p1",
+      ideaId: "I001",
+      title: "Demo"
+    })
+  );
+  assert.match(html, /Delete plan and idea/);
+  assert.match(html, /policyRationale|Policy rationale/);
+  const bad = mod.validateDeletePlanArtifactSubmit({ policyRationale: "" });
+  assert.equal(bad.ok, false);
+  const good = mod.validateDeletePlanArtifactSubmit({
+    policyRationale: "remove abandoned test plan and idea from dashboard"
+  });
+  assert.equal(good.ok, true);
+});

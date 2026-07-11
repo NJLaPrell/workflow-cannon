@@ -164,6 +164,8 @@ import {
   buildReconcileTeamAssignmentDrawerSpec,
   buildBlockTeamAssignmentDrawerSpec,
   buildCancelTeamAssignmentDrawerSpec,
+  buildCancelPlanArtifactDrawerSpec,
+  buildDeletePlanArtifactDrawerSpec,
   buildRegisterSubagentDrawerSpec,
   buildSpawnSubagentDrawerSpec,
   buildCloseSubagentSessionDrawerSpec,
@@ -178,6 +180,8 @@ import {
   validateReconcileTeamAssignmentSubmit,
   validateBlockTeamAssignmentSubmit,
   validateCancelTeamAssignmentSubmit,
+  validateCancelPlanArtifactSubmit,
+  validateDeletePlanArtifactSubmit,
   validateRegisterSubagentSubmit,
   validateSpawnSubagentSubmit,
   validateCloseSubagentSessionSubmit,
@@ -231,6 +235,20 @@ type DashboardDrawerSession =
   | { kind: "reconcile-team-assignment"; assignmentId: string; supervisorId: string }
   | { kind: "block-team-assignment"; assignmentId: string; supervisorId: string }
   | { kind: "cancel-team-assignment"; assignmentId: string; supervisorId: string }
+  | {
+      kind: "cancel-plan-artifact";
+      planId: string;
+      planRef: string;
+      ideaId?: string;
+      title?: string;
+    }
+  | {
+      kind: "delete-plan-artifact";
+      planId: string;
+      planRef: string;
+      ideaId?: string;
+      title?: string;
+    }
   | { kind: "register-subagent" }
   | { kind: "spawn-subagent"; subagentId?: string; executionTaskId?: string }
   | { kind: "close-subagent-session"; sessionId: string; definitionId: string }
@@ -1538,6 +1556,34 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         const supervisorId = typeof msg.supervisorId === "string" ? msg.supervisorId.trim() : "";
         if (assignmentId) {
           await this.openCancelTeamAssignmentDrawer(assignmentId, supervisorId);
+        }
+      }
+      if (msg?.type === "cancelPlanArtifact") {
+        const planId = typeof msg.planId === "string" ? msg.planId.trim() : "";
+        const planRef = typeof msg.planRef === "string" ? msg.planRef.trim() : "";
+        const ideaId = typeof msg.ideaId === "string" ? msg.ideaId.trim() : "";
+        const title = typeof msg.title === "string" ? msg.title.trim() : "";
+        if (planId && planRef) {
+          await this.openCancelPlanArtifactDrawer({
+            planId,
+            planRef,
+            ...(ideaId ? { ideaId } : {}),
+            ...(title ? { title } : {})
+          });
+        }
+      }
+      if (msg?.type === "deletePlanArtifact") {
+        const planId = typeof msg.planId === "string" ? msg.planId.trim() : "";
+        const planRef = typeof msg.planRef === "string" ? msg.planRef.trim() : "";
+        const ideaId = typeof msg.ideaId === "string" ? msg.ideaId.trim() : "";
+        const title = typeof msg.title === "string" ? msg.title.trim() : "";
+        if (planId && planRef) {
+          await this.openDeletePlanArtifactDrawer({
+            planId,
+            planRef,
+            ...(ideaId ? { ideaId } : {}),
+            ...(title ? { title } : {})
+          });
         }
       }
       if (msg?.type === "prefillSubagentRegistryChat") {
@@ -5077,6 +5123,73 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       this.queueDrawerNotify(r.message ?? "Assignment cancelled");
       return true;
     }
+    if (session.kind === "cancel-plan-artifact") {
+      const validated = validateCancelPlanArtifactSubmit(values);
+      if (!validated.ok) {
+        await this.postDrawerValidationToWebview(validated.error);
+        return false;
+      }
+      await this.ingestPlanningGenFromDashboard();
+      const args: Record<string, unknown> = {
+        planRef: session.planRef,
+        planId: session.planId,
+        policyApproval: dashboardPolicyApproval(
+          { workflowId: "plan-artifact", action: "cancel", command: "cancel-plan-artifact" },
+          {
+            humanRationale:
+              validated.values.rationale.length > 0
+                ? validated.values.rationale
+                : "Cancel PlanArtifact from Dashboard"
+          }
+        )
+      };
+      if (session.ideaId) {
+        args.ideaId = session.ideaId;
+      }
+      if (validated.values.rationale.length > 0) {
+        args.rationale = validated.values.rationale;
+      }
+      const r = await this.runMutationWithGenerationRetry("cancel-plan-artifact", args);
+      if (!r.ok) {
+        await this.postDrawerValidationToWebview((r.message ?? r.code ?? JSON.stringify(r)).slice(0, 900));
+        return false;
+      }
+      ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
+      this.closeDashboardDrawer();
+      this.queueDrawerNotify(r.message ?? "Plan cancelled");
+      await this.applyDashboardMutationInvalidation("plan-artifact");
+      return true;
+    }
+    if (session.kind === "delete-plan-artifact") {
+      const validated = validateDeletePlanArtifactSubmit(values);
+      if (!validated.ok) {
+        await this.postDrawerValidationToWebview(validated.error);
+        return false;
+      }
+      await this.ingestPlanningGenFromDashboard();
+      const args: Record<string, unknown> = {
+        planRef: session.planRef,
+        planId: session.planId,
+        confirmDelete: true,
+        policyApproval: dashboardPolicyApproval(
+          { workflowId: "plan-artifact", action: "delete", command: "delete-plan-artifact" },
+          { humanRationale: validated.values.policyRationale }
+        )
+      };
+      if (session.ideaId) {
+        args.ideaId = session.ideaId;
+      }
+      const r = await this.runMutationWithGenerationRetry("delete-plan-artifact", args);
+      if (!r.ok) {
+        await this.postDrawerValidationToWebview((r.message ?? r.code ?? JSON.stringify(r)).slice(0, 900));
+        return false;
+      }
+      ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
+      this.closeDashboardDrawer();
+      this.queueDrawerNotify(r.message ?? "Plan deleted");
+      await this.applyDashboardMutationInvalidation("workspace-wide");
+      return true;
+    }
     if (session.kind === "register-subagent") {
       const validated = validateRegisterSubagentSubmit(values);
       if (!validated.ok) {
@@ -5353,6 +5466,46 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       supervisorId: supervisorId || "operator"
     };
     await this.postWcDrawerOpen(html);
+  }
+
+  private async openCancelPlanArtifactDrawer(p: {
+    planId: string;
+    planRef: string;
+    ideaId?: string;
+    title?: string;
+  }): Promise<void> {
+    if (this.dashboardDrawerSession) {
+      return;
+    }
+    const html = renderDrawerFormHtml(buildCancelPlanArtifactDrawerSpec(p));
+    this.dashboardDrawerSession = {
+      kind: "cancel-plan-artifact",
+      planId: p.planId,
+      planRef: p.planRef,
+      ...(p.ideaId ? { ideaId: p.ideaId } : {}),
+      ...(p.title ? { title: p.title } : {})
+    };
+    await this.postWcDrawerOpen(html, "cancel-plan-artifact");
+  }
+
+  private async openDeletePlanArtifactDrawer(p: {
+    planId: string;
+    planRef: string;
+    ideaId?: string;
+    title?: string;
+  }): Promise<void> {
+    if (this.dashboardDrawerSession) {
+      return;
+    }
+    const html = renderDrawerFormHtml(buildDeletePlanArtifactDrawerSpec(p));
+    this.dashboardDrawerSession = {
+      kind: "delete-plan-artifact",
+      planId: p.planId,
+      planRef: p.planRef,
+      ...(p.ideaId ? { ideaId: p.ideaId } : {}),
+      ...(p.title ? { title: p.title } : {})
+    };
+    await this.postWcDrawerOpen(html, "delete-plan-artifact");
   }
 
   private async openRegisterSubagentDrawer(): Promise<void> {

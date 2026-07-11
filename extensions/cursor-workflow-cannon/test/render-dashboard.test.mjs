@@ -782,8 +782,57 @@ test("renderDashboardRootInnerHtml shows PlanArtifact finalize after accept", ()
   });
   assert.doesNotMatch(html, /data-wc-action="plan-artifact-accept"/);
   assert.match(html, /data-wc-action="plan-artifact-finalize"/);
+  assert.match(html, /data-wc-action="plan-artifact-cancel"/);
   assert.match(html, /data-plan-id="plan-ready-to-finalize"/);
   assert.match(html, /data-plan-version="4"/);
+});
+
+test("renderDashboardRootInnerHtml shows Cancelled rollup with Brainstorm/Plan/Delete", () => {
+  const html = renderDashboardRootInnerHtml(
+    {
+      ok: true,
+      data: {
+        workspaceStatus: { activeFocus: "Planning" },
+        stateSummary: { proposed: 0, ready: 0, in_progress: 0, completed: 0, total: 0 },
+        planningSession: null,
+        planArtifact: {
+          count: 1,
+          current: {
+            planId: "plan-cancelled-1",
+            planRef: "plan-artifact:plan-cancelled-1",
+            title: "Shelved plan",
+            status: "cancelled",
+            lifecycleStatus: "cancelled",
+            sourceIdeaId: "I042",
+            planningType: "change",
+            version: 5,
+            updatedAt: "2026-07-10T17:00:00.000Z",
+            wbsRowCount: 1,
+            openQuestionCount: 0
+          },
+          recent: []
+        },
+        readyExecutionSummary: { count: 0, top: [] },
+        readyImprovementsSummary: { count: 0, top: [] },
+        proposedExecutionSummary: { count: 0, top: [] },
+        proposedImprovementsSummary: { count: 0, top: [] },
+        transcriptChurnResearchSummary: { count: 0, top: [] },
+        wishlistSummary: { count: 0, top: [] }
+      }
+    },
+    null,
+    null,
+    null,
+    null,
+    { ideasUnifiedModelEnabled: true }
+  );
+  assert.match(html, /data-wc-ui-state-key="plan-state-cancelled"/);
+  assert.match(html, />Cancelled \(/);
+  assert.match(html, /data-wc-action="plan-artifact-brainstorm"/);
+  assert.match(html, /data-wc-action="plan-artifact-resume"/);
+  assert.match(html, /data-wc-action="plan-artifact-delete"/);
+  assert.doesNotMatch(html, /data-wc-action="plan-artifact-cancel"/);
+  assert.doesNotMatch(html, /data-wc-action="plan-artifact-finalize"/);
 });
 
 test("renderDashboardRootInnerHtml blocks PlanArtifact accept with blockers or open questions", () => {

@@ -36,6 +36,8 @@ import { runUpdateIdeaPlanningSession } from "./update-idea-planning-session-han
 import { runUpdateBrainstormSession } from "./update-brainstorm-session-handler.js";
 import { runCompleteBrainstorm } from "./complete-brainstorm-handler.js";
 import { runCheckDeliveryStatus } from "./check-delivery-status-handler.js";
+import { runCancelPlanArtifact } from "./cancel-plan-artifact-handler.js";
+import { runDeletePlanArtifact } from "./delete-plan-artifact-handler.js";
 import { runGetPlannerFlowStatus } from "./get-planner-flow-status-handler.js";
 import { runMigrateIdeasToUnifiedDocument } from "./migrate-ideas-to-unified-document-handler.js";
 
@@ -537,6 +539,22 @@ export const ideasModule: WorkflowModule = {
         args as Record<string, unknown>,
         ctx,
         "src/modules/ideas/instructions/check-delivery-status.md"
+      );
+    }
+
+    if (command.name === "cancel-plan-artifact") {
+      return runCancelPlanArtifact(
+        args as Record<string, unknown>,
+        ctx,
+        "src/modules/ideas/instructions/cancel-plan-artifact.md"
+      );
+    }
+
+    if (command.name === "delete-plan-artifact") {
+      return runDeletePlanArtifact(
+        args as Record<string, unknown>,
+        ctx,
+        "src/modules/ideas/instructions/delete-plan-artifact.md"
       );
     }
 

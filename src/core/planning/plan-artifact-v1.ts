@@ -15,7 +15,8 @@ export type PlanArtifactStatus =
   | "reviewed"
   | "accepted"
   | "finalized"
-  | "superseded";
+  | "superseded"
+  | "cancelled";
 
 /**
  * Aligns with `build-plan` / `PLANNING_WORKFLOW_TYPES` in `src/modules/planning/types.ts`.

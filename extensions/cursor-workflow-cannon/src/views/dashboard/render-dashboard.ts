@@ -2632,7 +2632,12 @@ function planCardSecondaryBrainstormButton(
   if (!unifiedModelEnabled) {
     return "";
   }
-  if (effectiveStatusRaw === "idea" || effectiveStatusRaw === "brainstorming" || effectiveStatusRaw === "superseded") {
+  if (
+    effectiveStatusRaw === "idea" ||
+    effectiveStatusRaw === "brainstorming" ||
+    effectiveStatusRaw === "superseded" ||
+    effectiveStatusRaw === "cancelled"
+  ) {
     return "";
   }
   const planRef = String(row.planRef ?? "").trim();
@@ -2647,6 +2652,23 @@ function planCardSecondaryBrainstormButton(
     secondary: true,
     title: "Append a new brainstorm session without changing document status"
   });
+}
+
+function planCancelButton(row: Record<string, unknown>): string {
+  const attrs = planActionAttrs(row);
+  const sourceIdeaId = String(row.sourceIdeaId ?? "").trim();
+  const ideaAttr = sourceIdeaId.length > 0 ? ` data-idea-id="${escapeHtmlAttr(sourceIdeaId)}"` : "";
+  return ideaPlanButton("Cancel Plan", "plan-artifact-cancel", attrs + ideaAttr, {
+    secondary: true,
+    title: "Soft-cancel this plan into the Cancelled rollup (artifacts kept for revive)"
+  });
+}
+
+function withPlanCancelAction(actionsHtml: string, row: Record<string, unknown>, effectiveStatusRaw: string): string {
+  if (effectiveStatusRaw === "cancelled" || effectiveStatusRaw === "superseded") {
+    return actionsHtml;
+  }
+  return actionsHtml + planCancelButton(row);
 }
 
 /**
@@ -4765,20 +4787,47 @@ function renderPlanArtifactCardActions(
     : { disabled: true, title: "Plan identity is incomplete. Refresh the dashboard and try again." };
   const viewPlanButton = ideaPlanButton("View plan", "idea-view-plan", attrs, { secondary: true });
   const secondaryBrainstorm = planCardSecondaryBrainstormButton(row, effectiveStatusRaw, ideasUnifiedModelEnabled);
+  const sourceIdeaId = String(row.sourceIdeaId ?? "").trim();
   switch (effectiveStatusRaw) {
+    case "cancelled": {
+      const canRevive =
+        ideasUnifiedModelEnabled && sourceIdeaId.length > 0 && planRef.length > 0;
+      const brainstormAttrs =
+        ` data-plan-ref="${escapeHtmlAttr(planRef)}"` +
+        ` data-idea-id="${escapeHtmlAttr(sourceIdeaId)}"`;
+      const brainstormBtn = canRevive
+        ? ideaPlanButton("Brainstorm", "plan-artifact-brainstorm", brainstormAttrs, {
+            title: "Revive this cancelled plan into brainstorming"
+          })
+        : "";
+      const planBtn = canRevive
+        ? ideaPlanButton("Plan", "plan-artifact-resume", ` data-idea-id="${escapeHtmlAttr(sourceIdeaId)}"`, {
+            title: "Revive this cancelled plan into planning"
+          })
+        : "";
+      const deleteAttrs = attrs + (sourceIdeaId.length > 0 ? ` data-idea-id="${escapeHtmlAttr(sourceIdeaId)}"` : "");
+      const deleteBtn = ideaPlanButton("Delete", "plan-artifact-delete", deleteAttrs, {
+        secondary: true,
+        title: sourceIdeaId.length > 0
+          ? "Permanently delete this plan and its linked idea row"
+          : "Permanently delete this plan (no linked idea row)"
+      });
+      return brainstormBtn + planBtn + deleteBtn + viewPlanButton;
+    }
     case "draft":
-      return (
+      return withPlanCancelAction(
         ideaPlanButton(
           "Review",
           "plan-artifact-review",
           attrs,
           identityOptions ?? { title: "Review this draft plan with the PlanArtifact rubric" }
         ) +
-        viewPlanButton +
-        secondaryBrainstorm
+          viewPlanButton +
+          secondaryBrainstorm,
+        row,
+        effectiveStatusRaw
       );
     case "needs_revision": {
-      const sourceIdeaId = String(row.sourceIdeaId ?? "").trim();
       const resumeButton =
         sourceIdeaId.length > 0
           ? ideaPlanButton(
@@ -4788,7 +4837,7 @@ function renderPlanArtifactCardActions(
               { title: "Resume planning to resolve review blockers" }
             )
           : "";
-      return resumeButton + viewPlanButton + secondaryBrainstorm;
+      return withPlanCancelAction(resumeButton + viewPlanButton + secondaryBrainstorm, row, effectiveStatusRaw);
     }
     case "approval_ready": {
       const blockerCount = numberOrZero(row.blockerCount);
@@ -4800,44 +4849,56 @@ function renderPlanArtifactCardActions(
           : openQuestions > 0
             ? "Open questions must be resolved or deferred before accepting this plan."
             : "Accept this reviewed plan.";
-      return (
+      return withPlanCancelAction(
         ideaPlanButton(
           "Accept",
           "plan-artifact-accept",
           attrs,
           identityOptions ?? (canAccept ? undefined : { disabled: true, title: acceptTitle })
         ) +
-        viewPlanButton +
-        secondaryBrainstorm
+          viewPlanButton +
+          secondaryBrainstorm,
+        row,
+        effectiveStatusRaw
       );
     }
     case "accepted": {
       if (row.tasksGenerated === true) {
-        return renderPlanArtifactViewTasksButton(row) + viewPlanButton + secondaryBrainstorm;
+        return withPlanCancelAction(
+          renderPlanArtifactViewTasksButton(row) + viewPlanButton + secondaryBrainstorm,
+          row,
+          effectiveStatusRaw
+        );
       }
-      return (
+      return withPlanCancelAction(
         ideaPlanButton(
           "Finalize",
           "plan-artifact-finalize",
           attrs,
           identityOptions ?? { title: "Finalize this accepted plan into ready queue tasks" }
         ) +
-        viewPlanButton +
-        secondaryBrainstorm
+          viewPlanButton +
+          secondaryBrainstorm,
+        row,
+        effectiveStatusRaw
       );
     }
     case "finalized": {
-      return renderPlanArtifactViewTasksButton(row) + viewPlanButton + secondaryBrainstorm;
+      return withPlanCancelAction(
+        renderPlanArtifactViewTasksButton(row) + viewPlanButton + secondaryBrainstorm,
+        row,
+        effectiveStatusRaw
+      );
     }
     case "superseded":
       return viewPlanButton;
     case "delivered":
-      return viewPlanButton;
+      return withPlanCancelAction(viewPlanButton, row, effectiveStatusRaw);
     case "planning":
     case "reviewed":
-      return viewPlanButton + secondaryBrainstorm;
+      return withPlanCancelAction(viewPlanButton + secondaryBrainstorm, row, effectiveStatusRaw);
     default:
-      return viewPlanButton + secondaryBrainstorm;
+      return withPlanCancelAction(viewPlanButton + secondaryBrainstorm, row, effectiveStatusRaw);
   }
 }
 

@@ -33,7 +33,7 @@
     "planRef": { "type": "string", "minLength": 1 },
     "status": {
       "type": "string",
-      "enum": ["draft", "reviewed", "accepted", "finalized", "superseded"]
+      "enum": ["draft", "reviewed", "accepted", "finalized", "superseded", "cancelled"]
     },
     "identity": { "$ref": "#/$defs/identity" },
     "goals": {

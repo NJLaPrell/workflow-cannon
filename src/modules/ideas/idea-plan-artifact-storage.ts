@@ -26,6 +26,9 @@ export type WriteIdeaPlanArtifactOptions = {
 function mapIdeaPlanStatusToPlanArtifactIndexStatus(
   status: IdeaPlanStatus
 ): PlanArtifactIndexStateV1["status"] {
+  if (status === "cancelled") {
+    return "cancelled";
+  }
   if (status === "reviewed") {
     return "reviewed";
   }
@@ -173,6 +176,8 @@ function ideaPlanRecoveryRank(status: IdeaPlanStatus): number {
       return 4;
     case "delivered":
       return 5;
+    case "cancelled":
+      return -1;
   }
 }
 

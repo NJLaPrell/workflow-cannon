@@ -1,5 +1,5 @@
 /**
- * Unified IdeaPlan document types and six-state lifecycle machine.
+ * Unified IdeaPlan document types and seven-state lifecycle machine.
  *
  * Storage decision: `.ai/adrs/ADR-idea-plan-unified-document-storage-v1.md`
  * Persisted artifact path: `.workspace-kit/planning/plan-artifacts/<uuid>/artifact.vN.json`
@@ -9,14 +9,15 @@ export const IDEA_PLAN_DOCUMENT_SCHEMA_VERSION = 1 as const;
 
 export type IdeaPlanDocumentSchemaVersion = typeof IDEA_PLAN_DOCUMENT_SCHEMA_VERSION;
 
-/** Six-state unified IdeaPlan lifecycle (Phase 140). */
+/** Seven-state unified IdeaPlan lifecycle (Phase 140 + cancelled soft-archive). */
 export const IDEA_PLAN_STATUSES = [
   "idea",
   "brainstorming",
   "planning",
   "reviewed",
   "accepted",
-  "delivered"
+  "delivered",
+  "cancelled"
 ] as const;
 
 export type IdeaPlanStatus = (typeof IDEA_PLAN_STATUSES)[number];
@@ -26,7 +27,7 @@ export const IDEA_PLAN_STATUS_LEGACY_ALIASES = ["open", "planning", "planned"] a
 
 export type IdeaPlanStatusLegacyAlias = (typeof IDEA_PLAN_STATUS_LEGACY_ALIASES)[number];
 
-/** Nine accepted status strings: six canonical states plus three legacy aliases. */
+/** Ten accepted status strings: seven canonical states plus open/planned legacy aliases. */
 export const IDEA_PLAN_STATUS_INPUTS = [
   ...IDEA_PLAN_STATUSES,
   "open",
@@ -45,14 +46,16 @@ const IDEA_PLAN_STATUS_LEGACY_TO_CANONICAL: Record<IdeaPlanStatusLegacyAlias, Id
  * Allowed status transitions for the unified IdeaPlan document.
  * Same-state entries support idempotent updates and in-place session mutation.
  * `idea` may skip brainstorming and advance directly to `planning`.
+ * Any active state may soft-archive to `cancelled`; revive via Brainstorm/Plan.
  */
 export const IDEA_PLAN_STATUS_TRANSITIONS: Record<IdeaPlanStatus, readonly IdeaPlanStatus[]> = {
-  idea: ["brainstorming", "planning"],
-  brainstorming: ["brainstorming", "planning"],
-  planning: ["planning", "reviewed"],
-  reviewed: ["reviewed", "planning", "accepted"],
-  accepted: ["accepted", "delivered"],
-  delivered: ["delivered"]
+  idea: ["brainstorming", "planning", "cancelled"],
+  brainstorming: ["brainstorming", "planning", "cancelled"],
+  planning: ["planning", "reviewed", "cancelled"],
+  reviewed: ["reviewed", "planning", "accepted", "cancelled"],
+  accepted: ["accepted", "delivered", "cancelled"],
+  delivered: ["delivered", "cancelled"],
+  cancelled: ["cancelled", "brainstorming", "planning"]
 };
 
 export function isIdeaPlanStatus(value: string): value is IdeaPlanStatus {
@@ -252,6 +255,13 @@ export type IdeaPlanDeliverySection = {
   taskRefs?: string[];
 };
 
+export type IdeaPlanCancellationSection = {
+  cancelledAt: string;
+  previousStatus: IdeaPlanStatus;
+  cancelledBy?: string;
+  rationale?: string;
+};
+
 /**
  * Unified IdeaPlan document envelope. Progressive sections are optional until their state is reached.
  */
@@ -270,4 +280,5 @@ export type IdeaPlanDocument = {
   review?: IdeaPlanReviewSection;
   acceptance?: IdeaPlanAcceptanceSection;
   delivery?: IdeaPlanDeliverySection;
+  cancellation?: IdeaPlanCancellationSection;
 };
