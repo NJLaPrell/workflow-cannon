@@ -28,7 +28,8 @@ const STATE_SCHEMA_FILES = [
   "planning.schema.json",
   "reviewed.schema.json",
   "accepted.schema.json",
-  "delivered.schema.json"
+  "delivered.schema.json",
+  "cancelled.schema.json"
 ];
 
 function loadValidators() {
@@ -71,7 +72,7 @@ function ajvErrors(validateFn) {
   return validateFn.errors?.map((error) => `${error.instancePath} ${error.message}`).join("; ");
 }
 
-test("unified-idea-plan.schema.json oneOf covers all six IdeaPlan statuses", () => {
+test("unified-idea-plan.schema.json oneOf covers all seven IdeaPlan statuses", () => {
   const unifiedSchema = JSON.parse(fs.readFileSync(UNIFIED_SCHEMA_PATH, "utf8"));
   assert.equal(unifiedSchema.oneOf.length, IDEA_PLAN_STATUSES.length);
   for (const status of IDEA_PLAN_STATUSES) {

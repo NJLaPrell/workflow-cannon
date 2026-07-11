@@ -14,7 +14,7 @@ import {
   enforceIdeaPlanStatusTransition
 } from "../dist/modules/ideas/idea-plan-status-machine.js";
 
-test("parseIdeaPlanStatus accepts all nine status inputs", () => {
+test("parseIdeaPlanStatus accepts all ten status inputs", () => {
   const expected = {
     idea: "idea",
     brainstorming: "brainstorming",
@@ -22,6 +22,7 @@ test("parseIdeaPlanStatus accepts all nine status inputs", () => {
     reviewed: "reviewed",
     accepted: "accepted",
     delivered: "delivered",
+    cancelled: "cancelled",
     open: "idea",
     planned: "accepted"
   };
@@ -39,6 +40,9 @@ test("enforceIdeaPlanStatusTransition allows documented valid transitions", () =
   assert.equal(enforceIdeaPlanStatusTransition("planning", "reviewed"), "reviewed");
   assert.equal(enforceIdeaPlanStatusTransition("reviewed", "accepted"), "accepted");
   assert.equal(enforceIdeaPlanStatusTransition("accepted", "delivered"), "delivered");
+  assert.equal(enforceIdeaPlanStatusTransition("accepted", "cancelled"), "cancelled");
+  assert.equal(enforceIdeaPlanStatusTransition("cancelled", "brainstorming"), "brainstorming");
+  assert.equal(enforceIdeaPlanStatusTransition("cancelled", "planning"), "planning");
 });
 
 test("enforceIdeaPlanStatusTransition normalizes legacy aliases before checking", () => {

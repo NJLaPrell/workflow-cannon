@@ -2,13 +2,14 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://workflow-cannon.dev/schemas/ideas/unified-idea-plan.schema.json",
   "title": "Unified IdeaPlan envelope",
-  "description": "Full envelope for the six-state IdeaPlan document persisted at .workspace-kit/planning/plan-artifacts/<uuid>/artifact.vN.json. Progressive sections (brainstorm, plan, review, acceptance, delivery) are enforced per status via oneOf over per-state schemas in schemas/ideas/states/.",
+  "description": "Full envelope for the seven-state IdeaPlan document persisted at .workspace-kit/planning/plan-artifacts/<uuid>/artifact.vN.json. Progressive sections (brainstorm, plan, review, acceptance, delivery, cancellation) are enforced per status via oneOf over per-state schemas in schemas/ideas/states/.",
   "oneOf": [
     { "$ref": "https://workflow-cannon.dev/schemas/ideas/states/idea.schema.json" },
     { "$ref": "https://workflow-cannon.dev/schemas/ideas/states/brainstorming.schema.json" },
     { "$ref": "https://workflow-cannon.dev/schemas/ideas/states/planning.schema.json" },
     { "$ref": "https://workflow-cannon.dev/schemas/ideas/states/reviewed.schema.json" },
     { "$ref": "https://workflow-cannon.dev/schemas/ideas/states/accepted.schema.json" },
-    { "$ref": "https://workflow-cannon.dev/schemas/ideas/states/delivered.schema.json" }
+    { "$ref": "https://workflow-cannon.dev/schemas/ideas/states/delivered.schema.json" },
+    { "$ref": "https://workflow-cannon.dev/schemas/ideas/states/cancelled.schema.json" }
   ]
 }

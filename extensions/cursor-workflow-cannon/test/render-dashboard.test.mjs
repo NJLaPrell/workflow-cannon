@@ -694,13 +694,13 @@ test("renderDashboardRootInnerHtml renders PlanArtifact card grid for a draft pl
   assert.match(html, />1 Execution Linkage</);
   assert.match(html, /wc-plan-execution-linkages-table/);
   assert.match(html, /data-wc-ui-state-key="plan-123-execution-linkages"/);
-  assert.match(html, /wc-plan-status-pill wc-plan-status-draft">Draft/);
   assert.match(html, /wc-plan-card-rollup-summary/);
   assert.doesNotMatch(html, /wc-plan-card-head/);
   assert.doesNotMatch(html, /wc-plan-card-title/);
   assert.doesNotMatch(html, /wc-plan-card-desc/);
-  assert.equal((html.match(/wc-plan-status-pill wc-plan-status-draft">Draft/g) || []).length, 1);
+  assert.doesNotMatch(html, /wc-plan-status-pill/);
   assert.match(html, /data-wc-ui-state-key="plan-state-new"/);
+  assert.match(html, />Draft \(/);
   assert.match(html, /<details class="wc-plan-state-bucket"[^>]*data-wc-ui-state-key="plan-state-new"[^>]*open/);
   assert.match(html, /Plans<\/b> · 1 total/);
   assert.doesNotMatch(html, /wc-plan-card-meta/);
@@ -739,15 +739,15 @@ test("renderDashboardRootInnerHtml enables PlanArtifact accept after review pass
       wishlistSummary: { count: 0, top: [] }
     }
   });
-  assert.match(html, />Reviewed</);
   assert.match(html, /data-wc-action="plan-artifact-accept"/);
   assert.match(html, /data-plan-id="plan-accepted-ready"/);
   assert.match(html, /data-plan-ref="plan-artifact:plan-accepted-ready"/);
   assert.match(html, /data-plan-version="3"/);
   const button = html.match(/<button[^>]+data-wc-action="plan-artifact-accept"[^>]*>/)?.[0] ?? "";
   assert.doesNotMatch(button, /disabled/);
-  assert.match(html, /wc-plan-status-pill wc-plan-status-info">Reviewed/);
-  assert.doesNotMatch(html, /wc-plan-status-pill[^>]*>Approval ready</);
+  assert.doesNotMatch(html, /wc-plan-status-pill/);
+  assert.match(html, />Reviewed \(/);
+  assert.doesNotMatch(html, />Approval ready/);
 });
 
 test("renderDashboardRootInnerHtml shows PlanArtifact finalize after accept", () => {
@@ -782,8 +782,57 @@ test("renderDashboardRootInnerHtml shows PlanArtifact finalize after accept", ()
   });
   assert.doesNotMatch(html, /data-wc-action="plan-artifact-accept"/);
   assert.match(html, /data-wc-action="plan-artifact-finalize"/);
+  assert.match(html, /data-wc-action="plan-artifact-cancel"/);
   assert.match(html, /data-plan-id="plan-ready-to-finalize"/);
   assert.match(html, /data-plan-version="4"/);
+});
+
+test("renderDashboardRootInnerHtml shows Cancelled rollup with Brainstorm/Plan/Delete", () => {
+  const html = renderDashboardRootInnerHtml(
+    {
+      ok: true,
+      data: {
+        workspaceStatus: { activeFocus: "Planning" },
+        stateSummary: { proposed: 0, ready: 0, in_progress: 0, completed: 0, total: 0 },
+        planningSession: null,
+        planArtifact: {
+          count: 1,
+          current: {
+            planId: "plan-cancelled-1",
+            planRef: "plan-artifact:plan-cancelled-1",
+            title: "Shelved plan",
+            status: "cancelled",
+            lifecycleStatus: "cancelled",
+            sourceIdeaId: "I042",
+            planningType: "change",
+            version: 5,
+            updatedAt: "2026-07-10T17:00:00.000Z",
+            wbsRowCount: 1,
+            openQuestionCount: 0
+          },
+          recent: []
+        },
+        readyExecutionSummary: { count: 0, top: [] },
+        readyImprovementsSummary: { count: 0, top: [] },
+        proposedExecutionSummary: { count: 0, top: [] },
+        proposedImprovementsSummary: { count: 0, top: [] },
+        transcriptChurnResearchSummary: { count: 0, top: [] },
+        wishlistSummary: { count: 0, top: [] }
+      }
+    },
+    null,
+    null,
+    null,
+    null,
+    { ideasUnifiedModelEnabled: true }
+  );
+  assert.match(html, /data-wc-ui-state-key="plan-state-cancelled"/);
+  assert.match(html, />Cancelled \(/);
+  assert.match(html, /data-wc-action="plan-artifact-brainstorm"/);
+  assert.match(html, /data-wc-action="plan-artifact-resume"/);
+  assert.match(html, /data-wc-action="plan-artifact-delete"/);
+  assert.doesNotMatch(html, /data-wc-action="plan-artifact-cancel"/);
+  assert.doesNotMatch(html, /data-wc-action="plan-artifact-finalize"/);
 });
 
 test("renderDashboardRootInnerHtml blocks PlanArtifact accept with blockers or open questions", () => {
@@ -824,7 +873,8 @@ test("renderDashboardRootInnerHtml blocks PlanArtifact accept with blockers or o
     }
   });
   assert.doesNotMatch(blockerHtml, /data-wc-action="plan-artifact-accept"/);
-  assert.match(blockerHtml, /wc-plan-status-pill wc-plan-status-warn">Needs revision/);
+  assert.doesNotMatch(blockerHtml, /wc-plan-status-pill/);
+  assert.match(blockerHtml, />Needs revision \(/);
 
   const openQuestionsHtml = renderDashboardRootInnerHtml({
     ok: true,
@@ -889,7 +939,8 @@ test("renderDashboardRootInnerHtml shows resume action for needs-revision curren
       wishlistSummary: { count: 0, top: [] }
     }
   });
-  assert.match(html, /wc-plan-status-pill wc-plan-status-warn">Needs revision/);
+  assert.doesNotMatch(html, /wc-plan-status-pill/);
+  assert.match(html, />Needs revision \(/);
   assert.match(html, /<dt>Review summary<\/dt><dd>2 blocker\(s\), 1 warning\(s\)<\/dd>/);
   assert.match(html, /data-wc-action="plan-artifact-resume"/);
   assert.match(html, /data-idea-id="I-plan-99"/);
@@ -929,7 +980,8 @@ test("renderDashboardRootInnerHtml hides PlanArtifact lifecycle actions after fi
   });
   assert.match(html, /data-wc-ui-state-key="plan-state-finalized"/);
   assert.match(html, /<details class="wc-plan-state-bucket"[^>]*data-wc-ui-state-key="plan-state-finalized"[^>]*open/);
-  assert.match(html, /wc-plan-status-pill wc-plan-status-done">Finalized/);
+  assert.doesNotMatch(html, /wc-plan-status-pill/);
+  assert.match(html, />Finalized \(/);
   assert.doesNotMatch(html, /data-wc-action="plan-artifact-accept"/);
   assert.doesNotMatch(html, /data-wc-action="plan-artifact-finalize"/);
 });
@@ -1000,8 +1052,9 @@ test("renderDashboardRootInnerHtml groups plans by lifecycle state and title", (
   );
   assert.match(html, /data-wc-ui-state-key="plan-title-scheduled-shared-feature"/);
   assert.match(html, />Shared Feature \(2\)</);
-  assert.match(html, /wc-plan-status-pill wc-plan-status-info">Scheduled/);
-  assert.match(html, /wc-plan-status-pill wc-plan-status-done">Delivered/);
+  assert.doesNotMatch(html, /wc-plan-status-pill/);
+  assert.match(html, />Scheduled \(/);
+  assert.match(html, />Delivered \(/);
 });
 
 test("renderDashboardRootInnerHtml hides stale drafts when idea has advanced plan state", () => {

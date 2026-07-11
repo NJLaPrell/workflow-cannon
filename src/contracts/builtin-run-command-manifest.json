@@ -1775,6 +1775,24 @@
   },
   {
     "moduleId": "ideas",
+    "name": "cancel-plan-artifact",
+    "file": "cancel-plan-artifact.md",
+    "description": "Soft-cancel a unified IdeaPlan (any status → cancelled) while keeping artifacts for revive via Brainstorm/Plan.",
+    "policyOperationId": "ideas.persist",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "ideas",
+    "name": "delete-plan-artifact",
+    "file": "delete-plan-artifact.md",
+    "description": "Hard-delete a PlanArtifact (files + index) and its linked idea row. Requires confirmDelete: true.",
+    "policyOperationId": "ideas.persist",
+    "defaultResponseTemplateId": "default",
+    "policySensitivity": "sensitive"
+  },
+  {
+    "moduleId": "ideas",
     "name": "migrate-ideas-to-unified-document",
     "file": "migrate-ideas-to-unified-document.md",
     "description": "Promote legacy Ideas rows and PlanArtifact files into unified IdeaPlan documents with dry-run and snapshot safety.",

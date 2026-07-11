@@ -11,7 +11,8 @@ export const IDEA_PLAN_STATE_SCHEMA_FILE_NAMES: Record<IdeaPlanStatus, string> =
   planning: "planning.schema.json",
   reviewed: "reviewed.schema.json",
   accepted: "accepted.schema.json",
-  delivered: "delivered.schema.json"
+  delivered: "delivered.schema.json",
+  cancelled: "cancelled.schema.json"
 };
 
 export type IdeaPlanStateSchemaDocument = {

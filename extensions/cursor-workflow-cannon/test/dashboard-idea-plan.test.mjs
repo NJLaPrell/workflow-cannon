@@ -42,21 +42,28 @@ function renderIdeas(top) {
     },
     { openCount: 0, planningCount: 0, plannedCount: 0 }
   );
-  return renderDashboardRootInnerHtml({
-    ok: true,
-    data: {
-      stateSummary: {},
-      workspaceStatus: {},
-      ideas: {
-        available: true,
-        totalCount: top.length,
-        openCount: counts.openCount,
-        planningCount: counts.planningCount,
-        plannedCount: counts.plannedCount,
-        top
+  return renderDashboardRootInnerHtml(
+    {
+      ok: true,
+      data: {
+        stateSummary: {},
+        workspaceStatus: {},
+        ideas: {
+          available: true,
+          totalCount: top.length,
+          openCount: counts.openCount,
+          planningCount: counts.planningCount,
+          plannedCount: counts.plannedCount,
+          top
+        }
       }
-    }
-  });
+    },
+    null,
+    null,
+    null,
+    null,
+    { ideasUnifiedModelEnabled: true }
+  );
 }
 
 test("Ideas Plan posts prefillIdeaPlanningChat from the webview", () => {
@@ -71,6 +78,10 @@ test("Ideas Brainstorm posts prefillIdeaBrainstormChat from the webview", () => 
 
 test("Plan card secondary Brainstorm posts prefillIdeaBrainstormChat from the webview", () => {
   assert.match(webviewClientSrc, /act === 'plan-artifact-brainstorm'/);
+  assert.match(webviewClientSrc, /act === 'plan-artifact-cancel'/);
+  assert.match(webviewClientSrc, /act === 'plan-artifact-delete'/);
+  assert.match(webviewClientSrc, /type: 'cancelPlanArtifact'/);
+  assert.match(webviewClientSrc, /type: 'deletePlanArtifact'/);
   assert.match(webviewClientSrc, /submitPlanBrainstorm/);
 });
 
@@ -420,31 +431,39 @@ test("finalized ideas are filtered from the Ideas section (only shown as a plan 
 });
 
 test("plan card renders secondary Brainstorm for post-brainstorming planning state", () => {
-  const html = renderDashboardRootInnerHtml({
-    ok: true,
-    data: {
-      stateSummary: {},
-      workspaceStatus: {},
-      planArtifact: {
-        schemaVersion: 1,
-        count: 1,
-        current: {
-          planId: "planning-doc",
-          planRef: "plan-artifact:planning-doc",
-          version: 3,
-          status: "planning",
-          title: "In planning",
-          sourceIdeaId: "I010",
-          updatedAt: "2026-07-02T00:00:00.000Z",
-          wbsRowCount: 0,
-          openQuestionCount: 0
-        },
-        recent: []
+  const html = renderDashboardRootInnerHtml(
+    {
+      ok: true,
+      data: {
+        stateSummary: {},
+        workspaceStatus: {},
+        planArtifact: {
+          schemaVersion: 1,
+          count: 1,
+          current: {
+            planId: "planning-doc",
+            planRef: "plan-artifact:planning-doc",
+            version: 3,
+            status: "planning",
+            title: "In planning",
+            sourceIdeaId: "I010",
+            updatedAt: "2026-07-02T00:00:00.000Z",
+            wbsRowCount: 0,
+            openQuestionCount: 0
+          },
+          recent: []
+        }
       }
-    }
-  });
+    },
+    null,
+    null,
+    null,
+    null,
+    { ideasUnifiedModelEnabled: true }
+  );
   assert.match(html, /data-wc-action="plan-artifact-brainstorm"/);
   assert.match(html, /data-plan-ref="plan-artifact:planning-doc"/);
+  assert.match(html, /data-wc-action="plan-artifact-cancel"/);
 });
 
 test("Open plan click scrolls to and highlights the matching plan card in the webview", () => {

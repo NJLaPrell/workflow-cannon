@@ -21,7 +21,8 @@ const STATE_SCHEMA_FILES = [
   "planning.schema.json",
   "reviewed.schema.json",
   "accepted.schema.json",
-  "delivered.schema.json"
+  "delivered.schema.json",
+  "cancelled.schema.json"
 ];
 
 function loadStateSchemas() {
@@ -47,7 +48,7 @@ function loadStateSchemas() {
 
 const { schemas, validators } = loadStateSchemas();
 
-test("all six IdeaPlan state schema files parse as valid JSON Schema", () => {
+test("all seven IdeaPlan state schema files parse as valid JSON Schema", () => {
   for (const status of IDEA_PLAN_STATUSES) {
     const validator = validators.get(status);
     assert.ok(validator, `validator for ${status} should register`);
@@ -83,7 +84,9 @@ test("forward-only transition spine is acyclic and reaches delivered", () => {
     visited.add(state);
     state = forwardSpine[state];
   }
-  assert.equal(visited.size, IDEA_PLAN_STATUSES.length);
+  // Forward spine excludes cancelled (soft-archive side branch).
+  assert.equal(visited.size, 6);
+  assert.ok(IDEA_PLAN_STATUSES.includes("cancelled"));
 });
 
 test("reviewed may return to planning for revision without blocking forward acceptance", () => {
@@ -104,7 +107,7 @@ test("forward lifecycle chain is reachable: idea through delivered", () => {
 });
 
 test("non-brainstorming state schemas do not define scoring computeSteps", () => {
-  for (const status of ["idea", "planning", "reviewed", "accepted", "delivered"]) {
+  for (const status of ["idea", "planning", "reviewed", "accepted", "delivered", "cancelled"]) {
     const schema = schemas.get(status);
     const directive = schema.$defs?.canonicalAgentDirective;
     assert.ok(directive, `${status} should define canonicalAgentDirective`);

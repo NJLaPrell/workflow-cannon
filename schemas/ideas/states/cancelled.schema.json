@@ -1,10 +1,10 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://workflow-cannon.dev/schemas/ideas/states/idea.schema.json",
-  "title": "IdeaPlan idea state",
-  "description": "Unified IdeaPlan document shape and agent contract when status is idea. The idea is captured but brainstorming has not started; progressive sections must be absent.",
+  "$id": "https://workflow-cannon.dev/schemas/ideas/states/cancelled.schema.json",
+  "title": "IdeaPlan cancelled state",
+  "description": "Unified IdeaPlan document when status is cancelled. Soft-archived; may revive to brainstorming or planning. Progressive sections from prior states are optional.",
   "type": "object",
-  "additionalProperties": false,
+  "additionalProperties": true,
   "required": [
     "schemaVersion",
     "planId",
@@ -33,7 +33,7 @@
       "minLength": 1
     },
     "status": {
-      "const": "idea"
+      "const": "cancelled"
     },
     "ideaId": {
       "type": "string",
@@ -50,21 +50,68 @@
     "agentDirective": {
       "$ref": "#/$defs/agentDirective"
     },
-    "brainstorm": false,
-    "plan": false,
-    "review": false,
-    "acceptance": false,
-    "delivery": false
+    "cancellation": {
+      "$ref": "#/$defs/cancellationSection"
+    },
+    "brainstorm": {
+      "type": "object"
+    },
+    "plan": {
+      "type": "object"
+    },
+    "review": {
+      "type": "object"
+    },
+    "acceptance": {
+      "type": "object"
+    },
+    "delivery": {
+      "type": "object"
+    }
   },
   "x-validTransitions": [
+    "cancelled",
     "brainstorming",
-    "planning",
-    "cancelled"
+    "planning"
   ],
   "x-canonicalAgentDirective": {
     "$ref": "#/$defs/canonicalAgentDirective"
   },
   "$defs": {
+    "cancellationSection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cancelledAt",
+        "previousStatus"
+      ],
+      "properties": {
+        "cancelledAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "previousStatus": {
+          "type": "string",
+          "enum": [
+            "idea",
+            "brainstorming",
+            "planning",
+            "reviewed",
+            "accepted",
+            "delivered",
+            "cancelled"
+          ]
+        },
+        "cancelledBy": {
+          "type": "string",
+          "minLength": 1
+        },
+        "rationale": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
     "agentDirectiveQuestion": {
       "type": "object",
       "additionalProperties": false,
@@ -124,7 +171,7 @@
           "const": 1
         },
         "state": {
-          "const": "idea"
+          "const": "cancelled"
         },
         "questions": {
           "type": "array",
@@ -137,28 +184,19 @@
     },
     "canonicalAgentDirective": {
       "schemaVersion": 1,
-      "state": "idea",
+      "state": "cancelled",
       "questions": [
         {
-          "phase": "context",
-          "fieldName": "ideaTitle",
-          "prompt": "What short title captures this idea?",
-          "type": "text",
-          "guidance": "Use a concise operator-facing title. Detailed scoring and WBS authoring belong in later states."
-        },
-        {
-          "phase": "context",
-          "fieldName": "ideaSummary",
-          "prompt": "Summarize the idea in one or two sentences before brainstorming begins.",
-          "type": "text",
-          "guidance": "Capture intent and desired outcome only \u2014 do not draft plan sections or run scoring here."
-        },
-        {
           "phase": "session-notes",
-          "fieldName": "readinessNote",
-          "prompt": "Is the idea ready to enter brainstorming?",
-          "type": "text",
-          "guidance": "No active agent scoring session runs in idea state. When ready, transition to brainstorming and run start-brainstorm-session."
+          "fieldName": "reviveIntent",
+          "prompt": "Should this cancelled plan be revived via Brainstorm or Plan?",
+          "type": "enum",
+          "validValues": [
+            "brainstorm",
+            "plan",
+            "leave-cancelled"
+          ],
+          "guidance": "Brainstorm returns to ideation; Plan resumes structured planning on this same document."
         }
       ]
     }

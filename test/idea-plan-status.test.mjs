@@ -17,8 +17,10 @@ const FORWARD_CHAIN = [
   "delivered"
 ];
 
-test("IDEA_PLAN_STATUSES defines all six lifecycle states", () => {
-  assert.deepEqual([...IDEA_PLAN_STATUSES], FORWARD_CHAIN);
+const ALL_STATUSES = [...FORWARD_CHAIN, "cancelled"];
+
+test("IDEA_PLAN_STATUSES defines all seven lifecycle states", () => {
+  assert.deepEqual([...IDEA_PLAN_STATUSES], ALL_STATUSES);
 });
 
 test("isIdeaPlanStatus accepts known states and rejects unknown values", () => {
@@ -39,6 +41,9 @@ test("isIdeaPlanStatusTransitionAllowed accepts documented valid transitions", (
   assert.equal(isIdeaPlanStatusTransitionAllowed("reviewed", "planning"), true);
   assert.equal(isIdeaPlanStatusTransitionAllowed("accepted", "delivered"), true);
   assert.equal(isIdeaPlanStatusTransitionAllowed("delivered", "delivered"), true);
+  assert.equal(isIdeaPlanStatusTransitionAllowed("planning", "cancelled"), true);
+  assert.equal(isIdeaPlanStatusTransitionAllowed("cancelled", "brainstorming"), true);
+  assert.equal(isIdeaPlanStatusTransitionAllowed("cancelled", "planning"), true);
 });
 
 test("isIdeaPlanStatusTransitionAllowed rejects invalid transitions", () => {

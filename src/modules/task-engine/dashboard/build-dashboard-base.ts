@@ -849,7 +849,8 @@ function resolveDashboardPlanArtifactRowStatus(
     unified === "planning" ||
     unified === "reviewed" ||
     unified === "accepted" ||
-    unified === "delivered"
+    unified === "delivered" ||
+    unified === "cancelled"
   ) {
     return unified;
   }

@@ -165,7 +165,7 @@ export async function runStartBrainstormSession(
   let transitioned = false;
   let nextStatus = existing.status;
   try {
-    if (existing.status === "idea") {
+    if (existing.status === "idea" || existing.status === "cancelled") {
       nextStatus = enforceIdeaPlanStatusTransition(existing.status, "brainstorming");
       transitioned = true;
     }

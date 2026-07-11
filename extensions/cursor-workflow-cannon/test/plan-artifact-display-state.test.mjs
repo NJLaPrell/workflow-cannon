@@ -38,6 +38,10 @@ test("derivePlanArtifactDisplayState follows planning to execution progression",
   assert.equal(derivePlanArtifactDisplayState({ status: "accepted" }), "accepted");
   assert.equal(derivePlanArtifactDisplayState({ status: "finalized" }), "finalized");
   assert.equal(
+    derivePlanArtifactDisplayState({ status: "cancelled", executed: true, tasksGenerated: true }),
+    "cancelled"
+  );
+  assert.equal(
     derivePlanArtifactDisplayState({ status: "finalized", tasksGenerated: true, executed: false }),
     "scheduled"
   );

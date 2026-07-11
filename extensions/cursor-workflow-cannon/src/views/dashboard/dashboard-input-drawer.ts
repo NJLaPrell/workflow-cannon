@@ -1770,3 +1770,109 @@ export function buildViewCheckpointCompareDrawerSpec(p: {
     cancelLabel: "Cancel"
   };
 }
+
+export function buildCancelPlanArtifactDrawerSpec(p: {
+  planId: string;
+  planRef: string;
+  ideaId?: string;
+  title?: string;
+}): DrawerFormSpec {
+  const title = (p.title ?? "").trim() || "Untitled plan";
+  const ideaLine =
+    p.ideaId && p.ideaId.trim().length > 0
+      ? "<div><b>Idea:</b> " + escapeDrawerHtml(p.ideaId.trim()) + "</div>"
+      : "";
+  return {
+    workflowId: "cancel-plan-artifact",
+    title: "Cancel plan",
+    descriptionHtml:
+      "Moves this plan into the <b>Cancelled</b> rollup. Artifacts stay on disk so Brainstorm/Plan can revive the same document.",
+    fields: [
+      {
+        id: "ctx",
+        kind: "summary",
+        label: "Target",
+        body:
+          "<div><b>Title:</b> " +
+          escapeDrawerHtml(title) +
+          "</div>" +
+          "<div><b>Plan ref:</b> " +
+          escapeDrawerHtml(p.planRef) +
+          "</div>" +
+          ideaLine
+      },
+      {
+        id: "rationale",
+        kind: "textarea",
+        label: "Reason (optional)",
+        placeholder: "Why cancel this plan?",
+        required: false,
+        rows: 3
+      }
+    ],
+    primaryLabel: "Cancel plan",
+    cancelLabel: "Keep"
+  };
+}
+
+export function validateCancelPlanArtifactSubmit(
+  values: Record<string, string>
+): DrawerValidationResult {
+  return { ok: true, values: { rationale: (values.rationale ?? "").trim() } };
+}
+
+export function buildDeletePlanArtifactDrawerSpec(p: {
+  planId: string;
+  planRef: string;
+  ideaId?: string;
+  title?: string;
+}): DrawerFormSpec {
+  const title = (p.title ?? "").trim() || "Untitled plan";
+  const ideaId = (p.ideaId ?? "").trim();
+  const ideaLine =
+    ideaId.length > 0
+      ? "<div><b>Idea:</b> " + escapeDrawerHtml(ideaId) + " (will also be deleted)</div>"
+      : "<div><b>Idea:</b> (unresolved — delete will fail closed)</div>";
+  return {
+    workflowId: "delete-plan-artifact",
+    title: "Delete plan",
+    descriptionHtml: appendElevatedPolicyExplainer(
+      "This permanently removes plan files, the plan index, and the linked idea row. There is no undo.",
+      "plan-artifact",
+      "delete"
+    ),
+    fields: [
+      {
+        id: "ctx",
+        kind: "summary",
+        label: "Target",
+        body:
+          "<div><b>Title:</b> " +
+          escapeDrawerHtml(title) +
+          "</div>" +
+          "<div><b>Plan ref:</b> " +
+          escapeDrawerHtml(p.planRef) +
+          "</div>" +
+          ideaLine
+      },
+      ...policyRationaleDrawerFields(
+        "plan-artifact",
+        "delete",
+        "Policy rationale (required)",
+        "Shown in policy trace / approval"
+      )
+    ],
+    primaryLabel: "Delete plan and idea",
+    cancelLabel: "Keep"
+  };
+}
+
+export function validateDeletePlanArtifactSubmit(
+  values: Record<string, string>
+): DrawerValidationResult {
+  const policyErr = validateDrawerPolicyRationale("plan-artifact", "delete", values);
+  if (policyErr) {
+    return { ok: false, error: policyErr };
+  }
+  return { ok: true, values: { policyRationale: (values.policyRationale ?? "").trim() } };
+}

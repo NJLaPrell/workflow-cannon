@@ -6,6 +6,7 @@ export type PlanArtifactDisplayState =
   | "finalized"
   | "scheduled"
   | "delivered"
+  | "cancelled"
   | "superseded";
 
 export type PlanArtifactStateBucket = {
@@ -22,6 +23,7 @@ export const PLAN_STATE_BUCKETS: readonly PlanArtifactStateBucket[] = [
   { key: "finalized", label: "Finalized", defaultOpen: true },
   { key: "scheduled", label: "Scheduled", defaultOpen: false },
   { key: "delivered", label: "Delivered", defaultOpen: false },
+  { key: "cancelled", label: "Cancelled", defaultOpen: false },
   { key: "superseded", label: "Superseded", defaultOpen: false }
 ] as const;
 
@@ -47,11 +49,14 @@ function isTruthyFlag(value: unknown): boolean {
   return value === true;
 }
 
-/** Display bucket for plan section rollups and status pills. */
+/** Display bucket for plan section rollups (and card accent classNames). */
 export function derivePlanArtifactDisplayState(row: Record<string, unknown>): PlanArtifactDisplayState {
   const effectiveStatus = planArtifactEffectiveStatus(row);
   if (effectiveStatus === "superseded") {
     return "superseded";
+  }
+  if (effectiveStatus === "cancelled") {
+    return "cancelled";
   }
   if (isTruthyFlag(row.executed)) {
     return "delivered";
@@ -80,6 +85,8 @@ export function planArtifactDisplayStateMeta(
   switch (state) {
     case "superseded":
       return { label: "Superseded", className: "wc-plan-status-muted" };
+    case "cancelled":
+      return { label: "Cancelled", className: "wc-plan-status-muted" };
     case "delivered":
       return { label: "Delivered", className: "wc-plan-status-done" };
     case "scheduled":
@@ -183,6 +190,7 @@ export function bucketPlanRowsByDisplayState(
 
 const PLAN_DISPLAY_STATE_PRIORITY: Readonly<Record<PlanArtifactDisplayState, number>> = {
   superseded: 0,
+  cancelled: 0,
   new: 1,
   needs_revision: 2,
   reviewed: 3,
