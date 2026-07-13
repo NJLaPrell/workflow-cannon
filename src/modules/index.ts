@@ -90,6 +90,13 @@ export {
 export { contextActivationModule } from "./context-activation/index.js";
 export { projectMemoryModule } from "./project-memory/index.js";
 export { planningModule } from "./planning/index.js";
+export {
+  PLANNING_IDEAS_DISPATCH_COMMANDS,
+  dispatchPlanningCommand,
+  manifestInstructionPath,
+  type PlanningDispatchShell,
+  type PlanningIdeasDispatchCommand
+} from "./planning/shared/dispatch.js";
 export { modelSelectionModule } from "./model-selection/index.js";
 export { agentBugReportingModule } from "./agent-bug-reporting/index.js";
 export {
