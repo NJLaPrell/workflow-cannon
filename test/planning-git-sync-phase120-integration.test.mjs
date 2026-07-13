@@ -391,3 +391,32 @@ test("disabled planning sync domains skip publish and hydrate for that domain", 
   assert.equal(consumerSnapshot.notes[0].summary, "Phase notes domain enabled on restricted publisher");
   assert.equal(consumerSnapshot.ideas.length, 0);
 });
+
+test("ideas git-sync domain contract: domain id, event kinds, and frozen command.moduleId", async () => {
+  const {
+    ALL_PLANNING_SYNC_DOMAINS,
+    planningEventKindToSyncDomain
+  } = await import("../dist/modules/task-engine/persistence/planning-canonical-sync-domains.js");
+  const { PLANNING_STATE_EVENT_KINDS } = await import(
+    "../dist/modules/task-engine/task-state-events/planning-event-payloads.js"
+  );
+
+  assert.ok(ALL_PLANNING_SYNC_DOMAINS.includes("ideas"), "sync domain id must remain ideas");
+
+  const ideaKinds = PLANNING_STATE_EVENT_KINDS.filter((kind) => kind.startsWith("planning.idea."));
+  assert.deepEqual(ideaKinds, ["planning.idea.created", "planning.idea.updated"]);
+
+  for (const kind of ideaKinds) {
+    assert.equal(planningEventKindToSyncDomain(kind), "ideas");
+  }
+
+  for (const fixtureName of [
+    "golden-planning-idea-created.v1.json",
+    "golden-planning-idea-updated.v1.json",
+    "golden-planning-idea-removed.v1.json"
+  ]) {
+    const envelope = loadFixture(fixtureName);
+    assert.equal(envelope.command.moduleId, "ideas", `${fixtureName} command.moduleId frozen`);
+    assert.match(envelope.kind, /^planning\.idea\./);
+  }
+});
