@@ -125,6 +125,7 @@ test("Phase6a: sync returns runId and respects maxBytesPerFile budget", async ()
     documentationModule,
     taskEngineModule,
     approvalsModule,
+    planningModule,
     improvementModule
   ]);
   const router = new ModuleCommandRouter(registry);
@@ -165,6 +166,7 @@ test("Phase6a: generate-recommendations returns dedupe metrics and runId", async
     documentationModule,
     taskEngineModule,
     approvalsModule,
+    planningModule,
     improvementModule
   ]);
   const router = new ModuleCommandRouter(registry);
@@ -201,6 +203,7 @@ test("Phase6a: generate-recommendations dryRun skips persistence", async () => {
     documentationModule,
     taskEngineModule,
     approvalsModule,
+    planningModule,
     improvementModule
   ]);
   const router = new ModuleCommandRouter(registry);
@@ -302,6 +305,7 @@ test("Phase6a: malformed policy trace lines are skipped", async () => {
     documentationModule,
     taskEngineModule,
     approvalsModule,
+    planningModule,
     improvementModule
   ]);
   const router = new ModuleCommandRouter(registry);
