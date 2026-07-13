@@ -30,3 +30,18 @@ export const planningModule: WorkflowModule = {
     return dispatchPlanningCommand(command, ctx, "planning");
   }
 };
+
+export {
+  deriveIdeaPlanningLifecycleState,
+  type DeriveIdeaPlanningLifecycleStateInput,
+  type IdeaPlanningLifecycleState,
+  type PlanFinalizeSummary
+} from "./idea-plan/derive-idea-planning-lifecycle-state.js";
+export { listIdeas } from "./idea-row/idea-store.js";
+export { listIdeaPlanArtifacts, readIdeaPlanArtifact } from "./idea-plan/idea-plan-artifact-storage.js";
+export { computeBrainstormReadiness } from "./brainstorm/brainstorm-readiness.js";
+export type {
+  BrainstormSession,
+  IdeaPlanBrainstormSection,
+  IdeaPlanDocument
+} from "./idea-plan/idea-plan-types.js";

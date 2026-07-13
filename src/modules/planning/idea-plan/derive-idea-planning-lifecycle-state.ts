@@ -1,7 +1,7 @@
-/**
- * Vendored from `src/modules/planning/idea-plan/derive-idea-planning-lifecycle-state.ts`.
- * The VSIX ships without `@workflow-cannon/workspace-kit` node_modules — keep this mirror aligned.
- */
+import type { PlanArtifactReviewRecordV1 } from "../../../core/planning/plan-artifact-review-record.js";
+import type { PlanArtifactIndexStateV1 } from "../../../core/planning/plan-artifact-storage.js";
+import type { IdeaRecord } from "../idea-row/idea-store.js";
+import type { PlanningChatSessionRecord, PlanningChatSessionResponse } from "../../ideas/planning-chat-session.js";
 
 export type IdeaPlanningLifecycleState =
   | "open"
@@ -14,6 +14,7 @@ export type IdeaPlanningLifecycleState =
   | "superseded";
 
 type IdeaLifecycleIdeaLike =
+  | Pick<IdeaRecord, "status" | "linkedPlanArtifact">
   | {
       status?: string | null;
       linkedPlanArtifact?: string | null;
@@ -22,15 +23,16 @@ type IdeaLifecycleIdeaLike =
   | undefined;
 
 type PlanningChatSessionLike =
+  | Pick<PlanningChatSessionRecord, "status" | "currentPlanRef" | "completedAt">
+  | Pick<PlanningChatSessionResponse, "status" | "currentPlanRef" | "completedAt">
   | {
       status?: string | null;
       currentPlanRef?: string | null;
       completedAt?: string | null;
-    }
-  | null
-  | undefined;
+    };
 
 type PlanArtifactLike =
+  | Pick<PlanArtifactIndexStateV1, "planRef" | "status">
   | {
       planRef?: string | null;
       status?: string | null;
@@ -40,6 +42,7 @@ type PlanArtifactLike =
   | undefined;
 
 type PlanArtifactReviewLike =
+  | Pick<PlanArtifactReviewRecordV1, "planRef" | "passed" | "blockerCount" | "openQuestionCount" | "warningCount">
   | {
       planRef?: string | null;
       passed?: boolean | null;

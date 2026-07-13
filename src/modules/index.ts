@@ -55,7 +55,7 @@ export {
   type DeriveIdeaPlanningLifecycleStateInput,
   type IdeaPlanningLifecycleState,
   type PlanFinalizeSummary
-} from "./ideas/derive-idea-planning-lifecycle-state.js";
+} from "./planning/idea-plan/derive-idea-planning-lifecycle-state.js";
 export type {
   DocumentationConflict,
   DocumentationGenerateOptions,
@@ -89,7 +89,14 @@ export {
 } from "./checkpoints/index.js";
 export { contextActivationModule } from "./context-activation/index.js";
 export { projectMemoryModule } from "./project-memory/index.js";
-export { planningModule } from "./planning/index.js";
+export {
+  planningModule,
+  computeBrainstormReadiness,
+  listIdeas,
+  listIdeaPlanArtifacts,
+  readIdeaPlanArtifact
+} from "./planning/index.js";
+export type { BrainstormSession, IdeaPlanBrainstormSection, IdeaPlanDocument } from "./planning/index.js";
 export {
   PLANNING_IDEAS_DISPATCH_COMMANDS,
   dispatchPlanningCommand,
