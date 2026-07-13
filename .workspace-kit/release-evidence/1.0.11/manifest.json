@@ -1,0 +1,399 @@
+{
+  "schemaVersion": 1,
+  "createdAt": "2026-07-13T04:54:43.978Z",
+  "releaseVersion": "1.0.11",
+  "packageName": "@workflow-cannon/workspace-kit",
+  "phaseKey": "149",
+  "git": {
+    "tag": "v1.0.11",
+    "sha": "33bb10abfebd75a827719dbff728d102056d5aa2"
+  },
+  "approval": {
+    "actor": "operator via dashboard complete-and-release",
+    "timestamp": "2026-07-13T04:26:45.171Z",
+    "rationale": "Dashboard authorization complete-and-release for Phase 149; gates green path after drain of T100861-T100870. Publish @workflow-cannon/workspace-kit@1.0.11 dist-tag latest.",
+    "scope": "phase-149 closeout publish @workflow-cannon/workspace-kit@1.0.11 dist-tag latest"
+  },
+  "releaseNotes": {
+    "source": "docs/maintainers/CHANGELOG.md + github-release-notes.md",
+    "entries": [
+      "Phase 149: hard-merge Ideas into Planning (Planning owns Ideas lifecycle)",
+      "IdeaPlan kernel, idea-row, and brainstorm live under planning/",
+      "Shared dispatcher + Planning-only registry cutover (28 commands)",
+      "MCP/dashboard/extension retarget to Planning authority",
+      "Unified IdeaPlan dashboard default-on with emergency kill-switch",
+      "Ideas WorkflowModule shell deleted; frozen command/sync/MCP contracts preserved",
+      "Ideas git-sync domain contract verified (ideas domain, planning.idea.* kinds)"
+    ]
+  },
+  "validations": [],
+  "risks": [
+    {
+      "summary": "task-sync-hydrate rebuilds workspace-kit.db and drops kit_team_assignments (not in git-event-log)",
+      "severity": "medium"
+    },
+    {
+      "summary": "Unified IdeaPlan default-on; emergency kill-switch via IDEAS_UNIFIED_MODEL_ENABLED=0 or VS Code setting false",
+      "severity": "low"
+    }
+  ],
+  "publishArtifacts": [],
+  "readinessChecks": [],
+  "taskDeliveryEvidence": [
+    {
+      "taskId": "T100861",
+      "title": "Extract IdeaPlan kernel under planning/idea-plan",
+      "phaseKey": "149",
+      "deliveryEvidence": {
+        "schemaVersion": 1,
+        "branchName": "feature/T100861-extract-ideaplan-kernel-under-planning-idea-plan",
+        "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/788",
+        "prNumber": 788,
+        "baseBranch": "release/phase-149",
+        "mergeSha": "8dc671654f1a61ed550d77f500aee89174b0dbe8",
+        "checks": [
+          {
+            "name": "test",
+            "conclusion": "success"
+          }
+        ],
+        "validationCommands": [
+          {
+            "command": "pnpm run check",
+            "exitCode": 0
+          },
+          {
+            "command": "node --test test/unified-idea-plan*.test.mjs test/idea-plan*.test.mjs",
+            "exitCode": 0
+          }
+        ]
+      },
+      "deliveryEvidenceSummary": {
+        "schemaVersion": 1,
+        "mode": null
+      },
+      "deliveryWaiver": null
+    },
+    {
+      "taskId": "T100862",
+      "title": "Move idea-row and brainstorm handlers into Planning",
+      "phaseKey": "149",
+      "deliveryEvidence": {
+        "schemaVersion": 1,
+        "branchName": "feature/T100862-move-idea-row-and-brainstorm-handlers-into-plann",
+        "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/789",
+        "prNumber": 789,
+        "baseBranch": "release/phase-149",
+        "mergeSha": "dc06bf735ff40480645f7a9214b423177ae85b07",
+        "checks": [
+          {
+            "name": "test",
+            "conclusion": "success"
+          }
+        ],
+        "validationCommands": [
+          {
+            "command": "pnpm run check",
+            "exitCode": 0
+          },
+          {
+            "command": "node --test test/ideas-module.test.mjs test/start-brainstorm-session.test.mjs test/complete-brainstorm.test.mjs",
+            "exitCode": 0
+          }
+        ]
+      },
+      "deliveryEvidenceSummary": {
+        "schemaVersion": 1,
+        "mode": null
+      },
+      "deliveryWaiver": null
+    },
+    {
+      "taskId": "T100863",
+      "title": "Add Planning dispatcher with dual-registration shim",
+      "phaseKey": "149",
+      "deliveryEvidence": {
+        "schemaVersion": 1,
+        "branchName": "feature/T100863-add-planning-dispatcher-with-dual-registration-s",
+        "baseBranch": "release/phase-149",
+        "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/790",
+        "prNumber": 790,
+        "mergeSha": "b3c77738d431237c612d34c05ba49ff330d934c0",
+        "validationCommands": [
+          {
+            "command": "pnpm run check",
+            "result": "success"
+          },
+          {
+            "command": "node --test test/module-command-router.test.mjs",
+            "result": "success"
+          }
+        ],
+        "checks": [
+          {
+            "name": "test",
+            "conclusion": "success",
+            "url": "https://github.com/NJLaPrell/workflow-cannon/actions/runs/29220949035"
+          }
+        ]
+      },
+      "deliveryEvidenceSummary": {
+        "schemaVersion": 1,
+        "mode": null
+      },
+      "deliveryWaiver": null
+    },
+    {
+      "taskId": "T100864",
+      "title": "Add merge contract gates (golden path + standalone + MCP)",
+      "phaseKey": "149",
+      "deliveryEvidence": {
+        "schemaVersion": 1,
+        "branchName": "feature/T100864-add-merge-contract-gates-golden-path-standalone-",
+        "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/791",
+        "prNumber": 791,
+        "baseBranch": "release/phase-149",
+        "mergeSha": "378a2b9f724e01023df8be82b8fba7b5458015a6",
+        "checks": [
+          {
+            "name": "test",
+            "conclusion": "success"
+          }
+        ],
+        "validationCommands": [
+          {
+            "command": "node --test test/planner-flow-contract.test.mjs test/planner-golden-path-agent.test.mjs test/plan-artifact-e2e-cli.test.mjs test/mcp-agent-start-planner-branch.test.mjs",
+            "exitCode": 0
+          }
+        ]
+      },
+      "deliveryEvidenceSummary": {
+        "schemaVersion": 1,
+        "mode": null
+      },
+      "deliveryWaiver": null
+    },
+    {
+      "taskId": "T100865",
+      "title": "Migrate instructions and agent docs before moduleId flip",
+      "phaseKey": "149",
+      "deliveryEvidence": {
+        "schemaVersion": 1,
+        "branchName": "feature/T100865-migrate-instructions-and-agent-docs-before-modul",
+        "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/792",
+        "prNumber": 792,
+        "baseBranch": "release/phase-149",
+        "mergeSha": "354e7a2fdfe1ce56a6a1c74794765ccb920d6d6a",
+        "checks": [
+          {
+            "name": "test",
+            "conclusion": "success"
+          }
+        ],
+        "validationCommands": [
+          {
+            "command": "pnpm run check",
+            "exitCode": 0
+          },
+          {
+            "command": "pnpm test",
+            "exitCode": 0
+          }
+        ]
+      },
+      "deliveryEvidenceSummary": {
+        "schemaVersion": 1,
+        "mode": null
+      },
+      "deliveryWaiver": null
+    },
+    {
+      "taskId": "T100866",
+      "title": "Retarget MCP, dashboard, barrels, and allowlists to Planning",
+      "phaseKey": "149",
+      "deliveryEvidence": {
+        "schemaVersion": 1,
+        "branchName": "feature/T100866-retarget-mcp-dashboard-barrels-and-allowlists-to",
+        "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/793",
+        "prNumber": 793,
+        "baseBranch": "release/phase-149",
+        "mergeSha": "03abcc92b7121ff6c6659ef14328471c232898f9",
+        "checks": [
+          {
+            "name": "test",
+            "conclusion": "success"
+          }
+        ],
+        "validationCommands": [
+          {
+            "command": "pnpm run check",
+            "exitCode": 0
+          },
+          {
+            "command": "node --test test/mcp-agent-start-planner-branch.test.mjs test/planner-flow-contract.test.mjs test/planner-golden-path-agent.test.mjs test/plan-artifact-e2e-cli.test.mjs",
+            "exitCode": 0
+          }
+        ]
+      },
+      "deliveryEvidenceSummary": {
+        "schemaVersion": 1,
+        "mode": null
+      },
+      "deliveryWaiver": null
+    },
+    {
+      "taskId": "T100867",
+      "title": "Cut over registry and manifest to Planning-only module id",
+      "phaseKey": "149",
+      "deliveryEvidence": {
+        "schemaVersion": 1,
+        "branchName": "feature/T100867-cut-over-registry-and-manifest-to-planning-only-",
+        "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/794",
+        "prNumber": 794,
+        "baseBranch": "release/phase-149",
+        "mergeSha": "27bb128b",
+        "checks": [
+          {
+            "name": "test",
+            "conclusion": "success"
+          }
+        ],
+        "validationCommands": [
+          {
+            "command": "pnpm run check",
+            "exitCode": 0
+          },
+          {
+            "command": "node --test test/module-command-router.test.mjs test/accept-plan-artifact-instruction.test.mjs test/finalize-plan-to-phase-instruction.test.mjs test/review-plan-artifact-instruction.test.mjs",
+            "exitCode": 0
+          }
+        ]
+      },
+      "deliveryEvidenceSummary": {
+        "schemaVersion": 1,
+        "mode": null
+      },
+      "deliveryWaiver": null
+    },
+    {
+      "taskId": "T100868",
+      "title": "Verify git-sync domain ideas and planning.idea events",
+      "phaseKey": "149",
+      "deliveryEvidence": {
+        "schemaVersion": 1,
+        "branchName": "feature/T100868-verify-git-sync-domain-ideas-and-planning-idea-e",
+        "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/795",
+        "prNumber": 795,
+        "baseBranch": "release/phase-149",
+        "mergeSha": "f48463dccecbbb728f17062f7fa5571caa45d259",
+        "checks": [
+          {
+            "name": "test",
+            "conclusion": "success"
+          }
+        ],
+        "validationCommands": [
+          {
+            "command": "node --test test/planning-git-sync-phase120-integration.test.mjs",
+            "exitCode": 0
+          },
+          {
+            "command": "pnpm run test:plan-artifact-fixtures",
+            "exitCode": 0
+          }
+        ]
+      },
+      "deliveryEvidenceSummary": {
+        "schemaVersion": 1,
+        "mode": null
+      },
+      "deliveryWaiver": null
+    },
+    {
+      "taskId": "T100869",
+      "title": "Cut over IDEAS_UNIFIED_MODEL flag to unified-only",
+      "phaseKey": "149",
+      "deliveryEvidence": {
+        "schemaVersion": 1,
+        "branchName": "feature/T100869-cut-over-ideas-unified-model-flag-to-unified-onl",
+        "baseBranch": "release/phase-149",
+        "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/796",
+        "prNumber": 796,
+        "mergeSha": "23f2177176121bf6f14a6b717e316c6bc371185c",
+        "checks": [
+          {
+            "name": "test",
+            "conclusion": "success"
+          }
+        ],
+        "validationCommands": [
+          {
+            "command": "node --test test/ideas-unified-model-flag-rollback.test.mjs extensions/cursor-workflow-cannon/test/ideas-unified-model-feature-flag.test.mjs",
+            "exitCode": 0
+          },
+          {
+            "command": "pnpm run check",
+            "exitCode": 0
+          },
+          {
+            "command": "pnpm run ext:compile",
+            "exitCode": 0
+          }
+        ]
+      },
+      "deliveryEvidenceSummary": {
+        "schemaVersion": 1,
+        "mode": null
+      },
+      "deliveryWaiver": null
+    },
+    {
+      "taskId": "T100870",
+      "title": "Delete Ideas module shell and verify merge complete",
+      "phaseKey": "149",
+      "deliveryEvidence": {
+        "schemaVersion": 1,
+        "branchName": "feature/T100870-delete-ideas-module-shell-and-verify-merge-compl",
+        "prUrl": "https://github.com/NJLaPrell/workflow-cannon/pull/797",
+        "prNumber": 797,
+        "baseBranch": "release/phase-149",
+        "mergeSha": "4a6dd42558cd46ea7056d717a6065f47a2987c63",
+        "checks": [
+          {
+            "name": "test",
+            "conclusion": "success"
+          }
+        ],
+        "validationCommands": [
+          {
+            "command": "pnpm run build",
+            "exitCode": 0
+          },
+          {
+            "command": "pnpm run check",
+            "exitCode": 0
+          },
+          {
+            "command": "pnpm exec wk doctor",
+            "exitCode": 0
+          }
+        ]
+      },
+      "deliveryEvidenceSummary": {
+        "schemaVersion": 1,
+        "mode": null
+      },
+      "deliveryWaiver": null
+    }
+  ],
+  "followUpScan": {
+    "scannedAt": "2026-07-13T05:00:00.000Z",
+    "rationale": "Post-publish scan: no new execution follow-ups; informational phase notes only; known hydrate assignment wipe residual."
+  },
+  "followUpTasks": [],
+  "followUpSummary": {
+    "count": 0,
+    "scannedAt": "2026-07-13T05:00:00.000Z",
+    "rationale": "Post-publish scan: no new execution follow-ups; informational phase notes only; known hydrate assignment wipe residual."
+  }
+}
