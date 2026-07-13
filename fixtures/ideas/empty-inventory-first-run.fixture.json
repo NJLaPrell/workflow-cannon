@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "description": "T100864 merge contract gate — frozen first-run / empty-inventory expectations for dual-shim hermetic tests.",
+  "mandatoryRerunAfterWbs": ["WBS-7", "WBS-10"],
+  "mandatoryRerunTaskIds": ["T100822", "T100825"],
+  "listIdeas": {
+    "command": "list-ideas",
+    "code": "ideas-listed",
+    "emptyInventory": {
+      "count": 0,
+      "ideas": []
+    }
+  },
+  "plannerFlowStatus": {
+    "command": "get-planner-flow-status",
+    "code": "planner-flow-status",
+    "firstRun": {
+      "goldenPathStage": "first_run",
+      "ideaCount": 0,
+      "blockerCode": "ideas-inventory-empty",
+      "recommendedNextCommand": "create-idea"
+    }
+  },
+  "plannerPacket": {
+    "tool": "workflow-cannon.planner-packet",
+    "firstRun": {
+      "goldenPathStage": "first_run",
+      "recommendedNextCommand": "create-idea"
+    }
+  },
+  "frozenMcpToolNames": [
+    "workflow-cannon.planner-packet",
+    "workflow-cannon.list-ideas",
+    "workflow-cannon.get-plan-artifact",
+    "workflow-cannon.plan-review-packet",
+    "workflow-cannon.finalize-preview-packet"
+  ]
+}
