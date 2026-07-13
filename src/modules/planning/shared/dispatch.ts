@@ -1,11 +1,9 @@
 /**
- * Shared Planning + Ideas command dispatcher.
+ * Shared Planning command dispatcher.
  *
- * Transitional dual-registration shim: `planningModule` and `ideasModule` remain separately
- * registered in the module registry, but both shells delegate here so handler logic stays in one
- * place. This is a rollback aid only — not a long-term pattern for independently disabling either
- * module. Registry cutover to Planning-only is a later phase; until then preserve command names,
- * argv shapes, policy opIds, and response codes.
+ * Planning module owns Ideas lifecycle commands (create-idea, list-ideas, planner flow, etc.)
+ * while preserving frozen contracts: command names, `ideas.persist` opId, sync domain id `ideas`,
+ * `planning.idea.*` event kinds, and MCP tool names.
  */
 import type {
   ModuleCommand,
@@ -46,15 +44,15 @@ import { planningConcurrencySaveOpts, readIdempotencyValue } from "../../../modu
 import { TaskEngineError } from "../../../modules/task-engine/transitions.js";
 import { isPlanningGitSyncPublishActive } from "../../../modules/task-engine/persistence/planning-canonical-sync-domains.js";
 import { isIdeaCrudCommand, runIdeaCrudCommand } from "../idea-row/idea-crud-commands.js";
-import { runStartIdeaPlanning } from "../../ideas/start-idea-planning-handler.js";
+import { runStartIdeaPlanning } from "../idea-plan/start-idea-planning-handler.js";
 import { runStartBrainstormSession } from "../brainstorm/start-brainstorm-session-handler.js";
-import { runUpdateIdeaPlanningSession } from "../../ideas/update-idea-planning-session-handler.js";
+import { runUpdateIdeaPlanningSession } from "../idea-plan/update-idea-planning-session-handler.js";
 import { runUpdateBrainstormSession } from "../brainstorm/update-brainstorm-session-handler.js";
 import { runCompleteBrainstorm } from "../brainstorm/complete-brainstorm-handler.js";
-import { runCheckDeliveryStatus } from "../../ideas/check-delivery-status-handler.js";
-import { runCancelPlanArtifact } from "../../ideas/cancel-plan-artifact-handler.js";
-import { runDeletePlanArtifact } from "../../ideas/delete-plan-artifact-handler.js";
-import { runGetPlannerFlowStatus } from "../../ideas/get-planner-flow-status-handler.js";
+import { runCheckDeliveryStatus } from "../idea-plan/check-delivery-status-handler.js";
+import { runCancelPlanArtifact } from "../idea-plan/cancel-plan-artifact-handler.js";
+import { runDeletePlanArtifact } from "../idea-plan/delete-plan-artifact-handler.js";
+import { runGetPlannerFlowStatus } from "../idea-plan/get-planner-flow-status-handler.js";
 import { runMigrateIdeasToUnifiedDocument } from "../idea-row/migrate-ideas-to-unified-document-handler.js";
 
 /** All operator commands owned by Planning + Ideas modules (manifest rows). */

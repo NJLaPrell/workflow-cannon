@@ -1,11 +1,11 @@
-import type { ModuleCommandResult, ModuleLifecycleContext } from "../../contracts/module-contract.js";
-import { openPlanningStores } from "../../core/planning/index.js";
-import { attachPolicyMeta } from "../task-engine/attach-planning-response-meta.js";
-import { getPlanningGenerationPolicy } from "../task-engine/planning-config.js";
-import { TaskEngineError } from "../task-engine/transitions.js";
+import type { ModuleCommandResult, ModuleLifecycleContext } from "../../../contracts/module-contract.js";
+import { openPlanningStores } from "../../../core/planning/index.js";
+import { attachPolicyMeta } from "../../task-engine/attach-planning-response-meta.js";
+import { getPlanningGenerationPolicy } from "../../task-engine/planning-config.js";
+import { TaskEngineError } from "../../task-engine/transitions.js";
 import { readIdeaPlanArtifact } from "./idea-plan-artifact-storage.js";
 import { readActiveDraftPlanArtifact } from "./idea-planning-metadata.js";
-import { getIdea, isIdeaId, listIdeas } from "./idea-store.js";
+import { getIdea, isIdeaId, listIdeas } from "../idea-row/idea-store.js";
 import {
   buildPlannerFlowStatusSnapshot,
   type PlannerFlowStatusSnapshot

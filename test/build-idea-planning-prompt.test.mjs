@@ -4,7 +4,7 @@ import test from "node:test";
 import {
   buildIdeaPlanningPrompt,
   formatPlanLineageSummary
-} from "../dist/modules/ideas/build-idea-planning-prompt.js";
+} from "../dist/modules/planning/idea-plan/build-idea-planning-prompt.js";
 
 function assertPromptBasics(prompt) {
   assert.match(prompt, /planner-chat/);

@@ -6,7 +6,7 @@ import {
   IDEA_PLAN_STATUS_TRANSITIONS,
   isIdeaPlanStatus,
   isIdeaPlanStatusTransitionAllowed
-} from "../dist/modules/ideas/idea-plan-types.js";
+} from "../dist/modules/planning/idea-plan/idea-plan-types.js";
 
 const FORWARD_CHAIN = [
   "idea",

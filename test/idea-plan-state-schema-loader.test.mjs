@@ -4,13 +4,13 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { IDEA_PLAN_STATUSES } from "../dist/modules/ideas/idea-plan-types.js";
+import { IDEA_PLAN_STATUSES } from "../dist/modules/planning/idea-plan/idea-plan-types.js";
 import {
   IDEA_PLAN_STATE_SCHEMA_FILE_NAMES,
   loadIdeaPlanStateSchema,
   resolveIdeaPlanStateSchemaPath,
   resolveIdeaPlanStateSchemaRoot
-} from "../dist/modules/ideas/idea-plan-state-schema-loader.js";
+} from "../dist/modules/planning/idea-plan/idea-plan-state-schema-loader.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 

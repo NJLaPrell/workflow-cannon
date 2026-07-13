@@ -10,10 +10,10 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
 
-import { ideasModule, planningModule } from "../dist/index.js";
+import { planningModule } from "../dist/index.js";
 import { readLatestPlanArtifact } from "../dist/core/planning/plan-artifact-storage.js";
-import { readActiveDraftPlanArtifact } from "../dist/modules/ideas/idea-planning-metadata.js";
-import { getPlanningChatSession } from "../dist/modules/ideas/planning-chat-session.js";
+import { readActiveDraftPlanArtifact } from "../dist/modules/planning/idea-plan/idea-planning-metadata.js";
+import { getPlanningChatSession } from "../dist/modules/planning/idea-plan/planning-chat-session.js";
 import { SqliteDualPlanningStore } from "../dist/modules/task-engine/persistence/sqlite-dual-planning.js";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -58,7 +58,7 @@ function planningDb(workspace) {
 }
 
 async function createIdea(workspace, args = {}) {
-  const created = await ideasModule.onCommand(
+  const created = await planningModule.onCommand(
     {
       name: "create-idea",
       args: { title: "Accept test idea", policyApproval: { confirmed: true, rationale: "plan accept test create idea" }, ...args }
@@ -70,7 +70,7 @@ async function createIdea(workspace, args = {}) {
 }
 
 async function startPlanning(workspace, ideaId) {
-  const started = await ideasModule.onCommand(
+  const started = await planningModule.onCommand(
     {
       name: "start-idea-planning",
       args: { ideaId, policyApproval: { confirmed: true, rationale: "plan accept test start idea planning" } }
@@ -82,7 +82,7 @@ async function startPlanning(workspace, ideaId) {
 }
 
 async function getIdea(workspace, ideaId) {
-  const result = await ideasModule.onCommand(
+  const result = await planningModule.onCommand(
     { name: "get-idea", args: { ideaId } },
     { runtimeVersion: "0.1", workspacePath: workspace, effectiveConfig: SQLITE_CFG }
   );

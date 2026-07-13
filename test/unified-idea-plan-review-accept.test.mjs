@@ -10,14 +10,14 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
 
-import { ideasModule, planningModule } from "../dist/index.js";
+import { planningModule } from "../dist/index.js";
 import { reviewPlanArtifact } from "../dist/core/planning/review-plan-artifact.js";
 import { getPlanArtifactStoragePaths } from "../dist/core/planning/plan-artifact-storage.js";
 import {
   isIdeaPlanDocument,
   readIdeaPlanArtifact
-} from "../dist/modules/ideas/idea-plan-artifact-storage.js";
-import { synthesizePlanArtifactFromStoredDocument } from "../dist/modules/ideas/idea-plan-planning-init.js";
+} from "../dist/modules/planning/idea-plan/idea-plan-artifact-storage.js";
+import { synthesizePlanArtifactFromStoredDocument } from "../dist/modules/planning/idea-plan/idea-plan-planning-init.js";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const fixturesDir = path.join(repoRoot, "fixtures", "planning");
@@ -66,11 +66,11 @@ async function writeIdeaPlanFixture(workspace, fixtureName, ideaId) {
 }
 
 async function planningGeneration(workspace) {
-  return (await ideasModule.onCommand({ name: "list-ideas", args: {} }, ctx(workspace))).data.planningGeneration;
+  return (await planningModule.onCommand({ name: "list-ideas", args: {} }, ctx(workspace))).data.planningGeneration;
 }
 
 async function createIdeaWithUnifiedPlan(workspace, fixtureName) {
-  const created = await ideasModule.onCommand(
+  const created = await planningModule.onCommand(
     {
       name: "create-idea",
       args: { title: "Unified review accept idea", policyApproval: policyApproval() }
@@ -79,7 +79,7 @@ async function createIdeaWithUnifiedPlan(workspace, fixtureName) {
   );
   assert.equal(created.ok, true);
   const fixture = await writeIdeaPlanFixture(workspace, fixtureName, created.data.idea.id);
-  const linked = await ideasModule.onCommand(
+  const linked = await planningModule.onCommand(
     {
       name: "update-idea",
       args: {
@@ -134,7 +134,7 @@ describe("unified IdeaPlan review/accept commands (T100786)", () => {
   it("review-plan-artifact transitions planning→reviewed on unified document", async () => {
     const workspace = await tmpWorkspace();
     const { idea, fixture } = await createIdeaWithUnifiedPlan(workspace, "planning-state.fixture.json");
-    const started = await ideasModule.onCommand(
+    const started = await planningModule.onCommand(
       {
         name: "start-idea-planning",
         args: { ideaId: idea.id, policyApproval: policyApproval() }
@@ -176,7 +176,7 @@ describe("unified IdeaPlan review/accept commands (T100786)", () => {
   it("review-plan-artifact rejects recordReview when unified document status is not planning", async () => {
     const workspace = await tmpWorkspace();
     const { idea, fixture } = await createIdeaWithUnifiedPlan(workspace, "planning-state.fixture.json");
-    const started = await ideasModule.onCommand(
+    const started = await planningModule.onCommand(
       {
         name: "start-idea-planning",
         args: { ideaId: idea.id, policyApproval: policyApproval() }
@@ -219,7 +219,7 @@ describe("unified IdeaPlan review/accept commands (T100786)", () => {
   it("accept-plan-artifact transitions reviewed→accepted on unified document", async () => {
     const workspace = await tmpWorkspace();
     const { idea, fixture } = await createIdeaWithUnifiedPlan(workspace, "planning-state.fixture.json");
-    const started = await ideasModule.onCommand(
+    const started = await planningModule.onCommand(
       {
         name: "start-idea-planning",
         args: { ideaId: idea.id, policyApproval: policyApproval() }
@@ -307,7 +307,7 @@ describe("unified IdeaPlan review/accept commands (T100786)", () => {
   it("preserves backward-compatible argv shapes for review and accept", async () => {
     const workspace = await tmpWorkspace();
     const { idea, fixture } = await createIdeaWithUnifiedPlan(workspace, "planning-state.fixture.json");
-    const started = await ideasModule.onCommand(
+    const started = await planningModule.onCommand(
       {
         name: "start-idea-planning",
         args: { ideaId: idea.id, policyApproval: policyApproval() }

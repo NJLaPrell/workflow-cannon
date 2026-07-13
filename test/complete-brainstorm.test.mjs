@@ -5,11 +5,11 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 
-import { ideasModule } from "../dist/index.js";
-import { applyBrainstormSectionSynthesis } from "../dist/modules/ideas/brainstorm-section-synthesis.js";
-import { synthesizeBrainstormScores } from "../dist/modules/ideas/brainstorm-scoring.js";
-import { writeIdeaPlanArtifactVersion } from "../dist/modules/ideas/idea-plan-artifact-storage.js";
-import { validateBrainstormSectionForPlanning } from "../dist/modules/ideas/validate-brainstorm-section.js";
+import { planningModule } from "../dist/index.js";
+import { applyBrainstormSectionSynthesis } from "../dist/modules/planning/brainstorm/brainstorm-section-synthesis.js";
+import { synthesizeBrainstormScores } from "../dist/modules/planning/brainstorm/brainstorm-scoring.js";
+import { writeIdeaPlanArtifactVersion } from "../dist/modules/planning/idea-plan/idea-plan-artifact-storage.js";
+import { validateBrainstormSectionForPlanning } from "../dist/modules/planning/brainstorm/validate-brainstorm-section.js";
 import { SqliteDualPlanningStore } from "../dist/modules/task-engine/persistence/sqlite-dual-planning.js";
 
 const root = path.resolve(import.meta.dirname, "..");
@@ -40,7 +40,7 @@ function policyApproval() {
 }
 
 async function planningGeneration(workspace) {
-  const listed = await ideasModule.onCommand({ name: "list-ideas", args: {} }, ctx(workspace));
+  const listed = await planningModule.onCommand({ name: "list-ideas", args: {} }, ctx(workspace));
   return listed.data.planningGeneration;
 }
 
@@ -104,7 +104,7 @@ test("validateBrainstormSectionForPlanning rejects empty sessions", () => {
 
 test("complete-brainstorm transitions brainstorming to planning when valid", async () => {
   const { workspace } = await tmpWorkspace();
-  const created = await ideasModule.onCommand(
+  const created = await planningModule.onCommand(
     {
       name: "create-idea",
       args: {
@@ -119,7 +119,7 @@ test("complete-brainstorm transitions brainstorming to planning when valid", asy
   seedBrainstormingDocument(workspace, { ideaId: created.data.idea.id });
 
   const generation = await planningGeneration(workspace);
-  const out = await ideasModule.onCommand(
+  const out = await planningModule.onCommand(
     {
       name: "complete-brainstorm",
       args: {
@@ -140,7 +140,7 @@ test("complete-brainstorm transitions brainstorming to planning when valid", asy
 
 test("complete-brainstorm requires explicit operator confirmation", async () => {
   const { workspace } = await tmpWorkspace();
-  const created = await ideasModule.onCommand(
+  const created = await planningModule.onCommand(
     {
       name: "create-idea",
       args: {
@@ -155,7 +155,7 @@ test("complete-brainstorm requires explicit operator confirmation", async () => 
   seedBrainstormingDocument(workspace, { ideaId: created.data.idea.id });
 
   const generation = await planningGeneration(workspace);
-  const out = await ideasModule.onCommand(
+  const out = await planningModule.onCommand(
     {
       name: "complete-brainstorm",
       args: {
@@ -177,7 +177,7 @@ test("complete-brainstorm rejects empty brainstorm sessions", async () => {
   });
 
   const generation = await planningGeneration(workspace);
-  const out = await ideasModule.onCommand(
+  const out = await planningModule.onCommand(
     {
       name: "complete-brainstorm",
       args: {
@@ -195,7 +195,7 @@ test("complete-brainstorm rejects empty brainstorm sessions", async () => {
 
 test("get-idea returns unified ideaPlan with brainstorm synthesis", async () => {
   const { workspace } = await tmpWorkspace();
-  const created = await ideasModule.onCommand(
+  const created = await planningModule.onCommand(
     {
       name: "create-idea",
       args: {
@@ -211,7 +211,7 @@ test("get-idea returns unified ideaPlan with brainstorm synthesis", async () => 
   const withSynthesis = applyBrainstormSectionSynthesis(document.brainstorm);
   writeIdeaPlanArtifactVersion(workspace, { ...document, brainstorm: withSynthesis });
 
-  const out = await ideasModule.onCommand(
+  const out = await planningModule.onCommand(
     { name: "get-idea", args: { ideaId: created.data.idea.id } },
     ctx(workspace)
   );
@@ -224,7 +224,7 @@ test("get-idea returns unified ideaPlan with brainstorm synthesis", async () => 
 
 test("complete-brainstorm seeds plan summary and goals from ideation when planSummary omitted", async () => {
   const { workspace } = await tmpWorkspace();
-  const created = await ideasModule.onCommand(
+  const created = await planningModule.onCommand(
     {
       name: "create-idea",
       args: {
@@ -249,7 +249,7 @@ test("complete-brainstorm seeds plan summary and goals from ideation when planSu
   });
 
   const generation = await planningGeneration(workspace);
-  const out = await ideasModule.onCommand(
+  const out = await planningModule.onCommand(
     {
       name: "complete-brainstorm",
       args: {
@@ -263,7 +263,7 @@ test("complete-brainstorm seeds plan summary and goals from ideation when planSu
   );
   assert.equal(out.ok, true, out.message);
   assert.match(out.data.plan.summary, /Persist structured ideation/);
-  const persisted = await ideasModule.onCommand(
+  const persisted = await planningModule.onCommand(
     { name: "get-idea", args: { ideaId: created.data.idea.id } },
     ctx(workspace)
   );

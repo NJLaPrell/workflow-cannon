@@ -8,7 +8,7 @@ import Ajv2020 from "ajv/dist/2020.js";
 import {
   IDEA_PLAN_STATUSES,
   IDEA_PLAN_STATUS_TRANSITIONS
-} from "../dist/modules/ideas/idea-plan-types.js";
+} from "../dist/modules/planning/idea-plan/idea-plan-types.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const statesDir = path.join(root, "schemas", "ideas", "states");

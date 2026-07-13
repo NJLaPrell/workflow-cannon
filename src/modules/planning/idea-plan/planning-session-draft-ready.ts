@@ -1,6 +1,6 @@
 import type Sqlite from "better-sqlite3";
-import type { PlanArtifactV1 } from "../../core/planning/plan-artifact-v1.js";
-import { isIdeaId } from "./idea-store.js";
+import type { PlanArtifactV1 } from "../../../core/planning/plan-artifact-v1.js";
+import { isIdeaId } from "../idea-row/idea-store.js";
 import {
   getPlanningChatSession,
   updatePlanningChatSession,

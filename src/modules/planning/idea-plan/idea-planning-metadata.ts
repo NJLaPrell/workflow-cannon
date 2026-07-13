@@ -1,6 +1,6 @@
 import type Sqlite from "better-sqlite3";
-import type { PlanArtifactV1 } from "../../core/planning/plan-artifact-v1.js";
-import { getIdea, isIdeaId, updateIdea, type IdeaRecord } from "./idea-store.js";
+import type { PlanArtifactV1 } from "../../../core/planning/plan-artifact-v1.js";
+import { getIdea, isIdeaId, updateIdea, type IdeaRecord } from "../idea-row/idea-store.js";
 
 const ACTIVE_DRAFT_MODULE_PREFIX = "ideas-active-draft-plan:";
 

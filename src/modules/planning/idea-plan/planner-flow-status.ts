@@ -1,5 +1,5 @@
 import type { IdeaPlanDocument, IdeaPlanStatus } from "./idea-plan-types.js";
-import { computeBrainstormReadiness } from "./brainstorm-readiness.js";
+import { computeBrainstormReadiness } from "../brainstorm/brainstorm-readiness.js";
 import type { PlanningChatSessionStatus } from "./planning-chat-session.js";
 
 export const PLANNER_GOLDEN_PATH_STAGES = [

@@ -1,18 +1,18 @@
 import crypto from "node:crypto";
 import type Database from "better-sqlite3";
-import type { ModuleCommandResult, ModuleLifecycleContext } from "../../contracts/module-contract.js";
-import { openPlanningStores } from "../../core/planning/index.js";
-import { attachPolicyMeta } from "../task-engine/attach-planning-response-meta.js";
-import { planningGenPolicyGate } from "../task-engine/planning-generation-gate.js";
-import { digestPayload, readIdempotencyValue } from "../task-engine/mutation-utils.js";
-import { resolveCanonicalPhase } from "../task-engine/phase-resolution.js";
-import { readWorkspaceStatusSnapshotFromDual } from "../task-engine/persistence/workspace-status-store.js";
-import { TaskEngineError } from "../task-engine/transitions.js";
+import type { ModuleCommandResult, ModuleLifecycleContext } from "../../../contracts/module-contract.js";
+import { openPlanningStores } from "../../../core/planning/index.js";
+import { attachPolicyMeta } from "../../task-engine/attach-planning-response-meta.js";
+import { planningGenPolicyGate } from "../../task-engine/planning-generation-gate.js";
+import { digestPayload, readIdempotencyValue } from "../../task-engine/mutation-utils.js";
+import { resolveCanonicalPhase } from "../../task-engine/phase-resolution.js";
+import { readWorkspaceStatusSnapshotFromDual } from "../../task-engine/persistence/workspace-status-store.js";
+import { TaskEngineError } from "../../task-engine/transitions.js";
 import { buildIdeaPlanningPrompt } from "./build-idea-planning-prompt.js";
-import { buildBrainstormDigest } from "./brainstorm-plan-seed.js";
+import { buildBrainstormDigest } from "../brainstorm/brainstorm-plan-seed.js";
 import { readIdeaPlanArtifact } from "./idea-plan-artifact-storage.js";
 import { initializeIdeaPlanPlanningSectionForStart } from "./idea-plan-planning-init.js";
-import { getIdea, isIdeaId, updateIdea, type IdeaRecord } from "./idea-store.js";
+import { getIdea, isIdeaId, updateIdea, type IdeaRecord } from "../idea-row/idea-store.js";
 import { readActiveDraftPlanArtifact } from "./idea-planning-metadata.js";
 import {
   getPlanningChatSession,

@@ -9,13 +9,13 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 
-import { ideasModule } from "../dist/index.js";
-import { writeIdeaPlanArtifactVersion } from "../dist/modules/ideas/idea-plan-artifact-storage.js";
+import { planningModule } from "../dist/index.js";
+import { writeIdeaPlanArtifactVersion } from "../dist/modules/planning/idea-plan/idea-plan-artifact-storage.js";
 import {
   getPlanningChatSession,
   persistPlanningChatSession,
   updatePlanningChatSession
-} from "../dist/modules/ideas/planning-chat-session.js";
+} from "../dist/modules/planning/idea-plan/planning-chat-session.js";
 import { SqliteDualPlanningStore } from "../dist/modules/task-engine/persistence/sqlite-dual-planning.js";
 
 const root = path.resolve(import.meta.dirname, "..");
@@ -58,11 +58,11 @@ function policyApproval() {
 }
 
 async function planningGeneration(workspace) {
-  return (await ideasModule.onCommand({ name: "list-ideas", args: {} }, ctx(workspace))).data.planningGeneration;
+  return (await planningModule.onCommand({ name: "list-ideas", args: {} }, ctx(workspace))).data.planningGeneration;
 }
 
 async function createIdea(workspace, title = "Planner flow contract idea") {
-  const created = await ideasModule.onCommand(
+  const created = await planningModule.onCommand(
     {
       name: "create-idea",
       args: {
@@ -78,7 +78,7 @@ async function createIdea(workspace, title = "Planner flow contract idea") {
 }
 
 async function startPlanning(workspace, ideaId) {
-  const out = await ideasModule.onCommand(
+  const out = await planningModule.onCommand(
     {
       name: "start-idea-planning",
       args: {
@@ -94,7 +94,7 @@ async function startPlanning(workspace, ideaId) {
 }
 
 async function runSessionUpdate(workspace, args) {
-  return ideasModule.onCommand(
+  return planningModule.onCommand(
     {
       name: "update-idea-planning-session",
       args: {
@@ -108,11 +108,11 @@ async function runSessionUpdate(workspace, args) {
 }
 
 async function runFlowStatus(workspace, args = {}) {
-  return ideasModule.onCommand({ name: "get-planner-flow-status", args }, ctx(workspace));
+  return planningModule.onCommand({ name: "get-planner-flow-status", args }, ctx(workspace));
 }
 
 async function runListIdeas(workspace, args = {}) {
-  return ideasModule.onCommand({ name: "list-ideas", args }, ctx(workspace));
+  return planningModule.onCommand({ name: "list-ideas", args }, ctx(workspace));
 }
 
 function writeDocument(workspace, idea, fixture, statusOverride) {
@@ -155,7 +155,7 @@ test("fresh dual-shim workspace: get-planner-flow-status returns frozen first-ru
 
 test("golden-path mutations keep frozen command codes on dual-shim dispatcher", async () => {
   const { workspace } = await tmpWorkspace();
-  const created = await ideasModule.onCommand(
+  const created = await planningModule.onCommand(
     {
       name: "create-idea",
       args: {
@@ -318,7 +318,7 @@ test("start-idea-planning aligns Ideas row, IdeaPlan document, and planning sess
   const started = await startPlanning(workspace, idea.id);
   assert.equal(started.code, FROZEN_COMMAND_CODES["start-idea-planning"]);
   const ideaRow = (
-    await ideasModule.onCommand({ name: "get-idea", args: { ideaId: idea.id } }, ctx(workspace))
+    await planningModule.onCommand({ name: "get-idea", args: { ideaId: idea.id } }, ctx(workspace))
   ).data.idea;
   const session = getPlanningChatSession(dual.getDatabase(), idea.id);
 

@@ -12,9 +12,8 @@ import {
   documentationModule,
   formatUnknownCommandMessage,
   getAtPath,
-  ideasModule,
-  manifestInstructionPath,
   planningModule,
+  manifestInstructionPath,
   taskEngineModule,
   workspaceConfigModule
 } from "../dist/index.js";
@@ -45,7 +44,7 @@ test("manifestInstructionPath resolves builtin manifest rows for Planning comman
   );
 });
 
-test("ideas module shell still delegates list-planning-types through shared dispatcher", async () => {
+test("planning module handles list-planning-types via shared dispatcher", async () => {
   const registry = new ModuleRegistry([planningModule, taskEngineModule]);
   const router = new ModuleCommandRouter(registry);
   const ctx = { ...lifecycleContext, moduleRegistry: registry };
@@ -54,8 +53,8 @@ test("ideas module shell still delegates list-planning-types through shared disp
   assert.equal(viaPlanning.ok, true);
   assert.equal(viaPlanning.code, "planning-types-listed");
 
-  const directIdeas = await ideasModule.onCommand({ name: "list-planning-types", args: {} }, ctx);
-  assert.deepEqual(directIdeas, viaPlanning);
+  const directPlanning = await planningModule.onCommand({ name: "list-planning-types", args: {} }, ctx);
+  assert.deepEqual(directPlanning, viaPlanning);
 });
 
 test("ModuleCommandRouter lists commands from enabled modules", () => {

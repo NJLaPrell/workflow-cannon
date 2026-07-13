@@ -26,9 +26,9 @@ import { planningGenPolicyGate } from "../task-engine/planning-generation-gate.j
 import { attachPolicyMeta } from "../task-engine/attach-planning-response-meta.js";
 import { TaskEngineError } from "../task-engine/transitions.js";
 import { digestPayload, planningConcurrencySaveOpts, readIdempotencyValue, stableStringify } from "../task-engine/mutation-utils.js";
-import { promoteAcceptedPlanArtifactFromAcceptedDraft } from "../ideas/idea-planning-metadata.js";
-import { completePlanningSessionAfterPlanAccept } from "../ideas/planning-session-completed-after-accept.js";
-import { toPlanningChatSessionResponse } from "../ideas/planning-chat-session.js";
+import { promoteAcceptedPlanArtifactFromAcceptedDraft } from "./idea-plan/idea-planning-metadata.js";
+import { completePlanningSessionAfterPlanAccept } from "./idea-plan/planning-session-completed-after-accept.js";
+import { toPlanningChatSessionResponse } from "./idea-plan/planning-chat-session.js";
 import {
   attachGeneratedPlanDocPath,
   bestEffortGeneratePlanDocument

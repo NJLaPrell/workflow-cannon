@@ -11,12 +11,12 @@ import { fileURLToPath } from "node:url";
 import {
   clearIdeaPlanStateSchemaCache,
   loadIdeaPlanStateSchema
-} from "../dist/modules/ideas/idea-plan-state-schema-loader.js";
-import { isDegradedAgentDirective } from "../dist/modules/ideas/idea-plan-types.js";
+} from "../dist/modules/planning/idea-plan/idea-plan-state-schema-loader.js";
+import { isDegradedAgentDirective } from "../dist/modules/planning/idea-plan/idea-plan-types.js";
 import {
   isIdeasUnifiedModelEnabled,
   resolveIdeasUnifiedModelEnabled
-} from "../dist/modules/ideas/ideas-unified-model-feature-flag.js";
+} from "../dist/modules/planning/idea-plan/ideas-unified-model-feature-flag.js";
 import { renderDashboardRootInnerHtml } from "../extensions/cursor-workflow-cannon/dist/views/dashboard/render-dashboard.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");

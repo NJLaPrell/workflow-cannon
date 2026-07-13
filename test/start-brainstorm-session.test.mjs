@@ -5,9 +5,9 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 
-import { ideasModule } from "../dist/index.js";
+import { planningModule } from "../dist/index.js";
 import { getPlanArtifactStoragePaths } from "../dist/core/planning/plan-artifact-storage.js";
-import { readIdeaPlanArtifact } from "../dist/modules/ideas/idea-plan-artifact-storage.js";
+import { readIdeaPlanArtifact } from "../dist/modules/planning/idea-plan/idea-plan-artifact-storage.js";
 import { SqliteDualPlanningStore } from "../dist/modules/task-engine/persistence/sqlite-dual-planning.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -43,12 +43,12 @@ async function writeIdeaPlanFixture(workspace, fixtureName) {
 }
 
 async function planningGeneration(workspace) {
-  return (await ideasModule.onCommand({ name: "list-ideas", args: {} }, ctx(workspace))).data.planningGeneration;
+  return (await planningModule.onCommand({ name: "list-ideas", args: {} }, ctx(workspace))).data.planningGeneration;
 }
 
 async function runStart(workspace, args) {
   const generation = await planningGeneration(workspace);
-  return ideasModule.onCommand(
+  return planningModule.onCommand(
     {
       name: "start-brainstorm-session",
       args: {
@@ -63,7 +63,7 @@ async function runStart(workspace, args) {
 
 async function runUpdate(workspace, args) {
   const generation = await planningGeneration(workspace);
-  return ideasModule.onCommand(
+  return planningModule.onCommand(
     {
       name: "update-brainstorm-session",
       args: {

@@ -44,8 +44,8 @@ import {
 import {
   clearActiveDraftPlanArtifact,
   readActiveDraftPlanArtifact
-} from "../../ideas/idea-planning-metadata.js";
-import { getPlanningChatSession } from "../../ideas/planning-chat-session.js";
+} from "../idea-plan/idea-planning-metadata.js";
+import { getPlanningChatSession } from "../idea-plan/planning-chat-session.js";
 import { listIdeas, updateIdea, type IdeaRecord } from "./idea-store.js";
 
 export type MigrateIdeaOutcomeAction =

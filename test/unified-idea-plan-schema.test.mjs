@@ -5,7 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import Ajv2020 from "ajv/dist/2020.js";
 
-import { IDEA_PLAN_STATUSES } from "../dist/modules/ideas/idea-plan-types.js";
+import { IDEA_PLAN_STATUSES } from "../dist/modules/planning/idea-plan/idea-plan-types.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const ideasDir = path.join(root, "schemas", "ideas");
