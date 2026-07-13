@@ -1,6 +1,6 @@
 /**
- * IDEAS_UNIFIED_MODEL_ENABLED — gates unified IdeaPlan dashboard UI and six-state commands.
- * Default off until WBS-2A through WBS-3C are deployed and WBS-6 migration has run.
+ * IDEAS_UNIFIED_MODEL_ENABLED — emergency kill-switch for unified IdeaPlan dashboard UI and six-state commands.
+ * Default on after Phase 149 cutover; set env to `0`/`false` to restore legacy Plan-only affordances.
  */
 
 export const IDEAS_UNIFIED_MODEL_ENV_VAR = "IDEAS_UNIFIED_MODEL_ENABLED";
@@ -28,7 +28,7 @@ export type IdeasUnifiedModelFlagResolution = {
 
 /**
  * Resolve whether the unified IdeaPlan model is enabled.
- * Precedence: explicit override → `IDEAS_UNIFIED_MODEL_ENABLED` env → default false.
+ * Precedence: explicit override → `IDEAS_UNIFIED_MODEL_ENABLED` env → default true.
  */
 export function resolveIdeasUnifiedModelEnabled(override?: boolean): IdeasUnifiedModelFlagResolution {
   if (override !== undefined) {
@@ -38,7 +38,7 @@ export function resolveIdeasUnifiedModelEnabled(override?: boolean): IdeasUnifie
   if (fromEnv !== undefined) {
     return { enabled: fromEnv, source: "env" };
   }
-  return { enabled: false, source: "default" };
+  return { enabled: true, source: "default" };
 }
 
 export function isIdeasUnifiedModelEnabled(override?: boolean): boolean {
