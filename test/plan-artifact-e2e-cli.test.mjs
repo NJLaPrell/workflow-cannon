@@ -1,5 +1,6 @@
 /**
- * WP-8 / T100481 — PlanArtifact CLI golden path and blocked path.
+ * T100864 — merge contract gate: standalone PlanArtifact CLI path without Ideas row (dual-shim T100863).
+ * Re-run mandatory after WBS-7 (T100822 list-ideas MCP) and WBS-10 (T100825 finalize-preview-packet MCP).
  */
 import assert from "node:assert/strict";
 import crypto from "node:crypto";
@@ -14,6 +15,21 @@ import { runCli } from "../dist/cli.js";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const fixturesDir = path.join(repoRoot, "fixtures", "planning");
+const ideasFixturesDir = path.join(repoRoot, "fixtures", "ideas");
+const firstRunFixture = JSON.parse(
+  fs.readFileSync(path.join(ideasFixturesDir, "empty-inventory-first-run.fixture.json"), "utf8")
+);
+
+/** Frozen standalone PlanArtifact CLI success/error codes. */
+const FROZEN_STANDALONE_CODES = {
+  "draft-plan-artifact": "plan-artifact-draft-persisted",
+  "review-plan-artifact": "plan-artifact-review-complete",
+  "accept-plan-artifact": "plan-artifact-accepted",
+  "finalize-plan-to-phase-preview": "plan-artifact-finalize-preview",
+  "finalize-plan-to-phase-persisted": "plan-artifact-finalize-persisted",
+  "finalize-plan-to-phase-blocked": "plan-artifact-not-accepted",
+  "list-ideas": "ideas-listed"
+};
 
 function createCapture() {
   const lines = [];
@@ -83,12 +99,37 @@ async function runWk(workspace, command, args, expectedExitCode = 0) {
   return JSON.parse(capture.lines.at(-1));
 }
 
-describe("PlanArtifact CLI E2E golden path (T100481)", () => {
+describe("PlanArtifact CLI E2E merge contract gate (T100864)", () => {
+  it("standalone draft persists without Ideas row and leaves inventory empty", async () => {
+    const workspace = await tmpWorkspace();
+    const artifact = freshArtifact(loadFixture("plan-artifact-minimal.valid.v1.json"));
+    assert.equal(artifact.ideaId, undefined, "fixture must not carry ideaId for standalone contract");
+
+    const listedBefore = await runWk(workspace, "list-ideas", {});
+    assert.equal(listedBefore.code, FROZEN_STANDALONE_CODES["list-ideas"]);
+    assert.equal(listedBefore.data.count, firstRunFixture.listIdeas.emptyInventory.count);
+
+    const draft = await runWk(workspace, "draft-plan-artifact", {
+      persist: true,
+      artifact,
+      expectedPlanningGeneration: 0,
+      policyApproval: { confirmed: true, rationale: "standalone PlanArtifact contract draft" }
+    });
+    assert.equal(draft.ok, true, draft.message);
+    assert.equal(draft.code, FROZEN_STANDALONE_CODES["draft-plan-artifact"]);
+
+    const listedAfter = await runWk(workspace, "list-ideas", {});
+    assert.equal(listedAfter.code, FROZEN_STANDALONE_CODES["list-ideas"]);
+    assert.equal(listedAfter.data.count, firstRunFixture.listIdeas.emptyInventory.count);
+    assert.deepEqual(listedAfter.data.ideas, firstRunFixture.listIdeas.emptyInventory.ideas);
+  });
+
   it("drafts, reviews, accepts, finalizes, and lists ready tasks", async () => {
     const workspace = await tmpWorkspace();
     const artifact = freshArtifact(loadFixture("plan-artifact-full-feature.valid.v1.json"));
     artifact.openQuestions = [];
     enrichWbsForBatchReview(artifact);
+    assert.equal(artifact.ideaId, undefined, "standalone golden path must not require Ideas row");
 
     const draft = await runWk(workspace, "draft-plan-artifact", {
       persist: true,
@@ -97,7 +138,7 @@ describe("PlanArtifact CLI E2E golden path (T100481)", () => {
       policyApproval: { confirmed: true, rationale: "PlanArtifact CLI E2E draft" }
     });
     assert.equal(draft.ok, true, draft.message);
-    assert.equal(draft.code, "plan-artifact-draft-persisted");
+    assert.equal(draft.code, FROZEN_STANDALONE_CODES["draft-plan-artifact"]);
 
     const review = await runWk(workspace, "review-plan-artifact", {
       planId: draft.data.planId,
@@ -107,7 +148,7 @@ describe("PlanArtifact CLI E2E golden path (T100481)", () => {
       policyApproval: { confirmed: true, rationale: "PlanArtifact CLI E2E review" }
     });
     assert.equal(review.ok, true, review.message);
-    assert.equal(review.code, "plan-artifact-review-complete");
+    assert.equal(review.code, FROZEN_STANDALONE_CODES["review-plan-artifact"]);
     assert.equal(review.data.passed, true);
     assert.equal(review.data.status, "reviewed");
 
@@ -118,7 +159,7 @@ describe("PlanArtifact CLI E2E golden path (T100481)", () => {
       policyApproval: { confirmed: true, rationale: "PlanArtifact CLI E2E accept" }
     });
     assert.equal(accepted.ok, true, accepted.message);
-    assert.equal(accepted.code, "plan-artifact-accepted");
+    assert.equal(accepted.code, FROZEN_STANDALONE_CODES["accept-plan-artifact"]);
 
     const preview = await runWk(workspace, "finalize-plan-to-phase", {
       planId: draft.data.planId,
@@ -128,7 +169,7 @@ describe("PlanArtifact CLI E2E golden path (T100481)", () => {
       desiredStatus: "ready"
     });
     assert.equal(preview.ok, true, preview.message);
-    assert.equal(preview.code, "plan-artifact-finalize-preview");
+    assert.equal(preview.code, FROZEN_STANDALONE_CODES["finalize-plan-to-phase-preview"]);
     assert.equal(preview.data.review.passed, true);
     assert.equal(preview.data.taskPreview.length, artifact.wbs.length);
 
@@ -143,7 +184,7 @@ describe("PlanArtifact CLI E2E golden path (T100481)", () => {
       policyApproval: { confirmed: true, rationale: "PlanArtifact CLI E2E persist" }
     });
     assert.equal(persisted.ok, true, persisted.message);
-    assert.equal(persisted.code, "plan-artifact-finalize-persisted");
+    assert.equal(persisted.code, FROZEN_STANDALONE_CODES["finalize-plan-to-phase-persisted"]);
     assert.equal(persisted.data.status, "finalized");
     assert.equal(persisted.data.count, artifact.wbs.length);
 
@@ -170,6 +211,6 @@ describe("PlanArtifact CLI E2E golden path (T100481)", () => {
       1
     );
     assert.equal(blocked.ok, false);
-    assert.equal(blocked.code, "plan-artifact-not-accepted");
+    assert.equal(blocked.code, FROZEN_STANDALONE_CODES["finalize-plan-to-phase-blocked"]);
   });
 });
