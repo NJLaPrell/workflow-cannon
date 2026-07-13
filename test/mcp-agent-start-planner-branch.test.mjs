@@ -98,7 +98,7 @@ test("planner-packet smoke returns frozen first-run contract on empty workspace"
   assert.equal(typeof out.data.planningGeneration, "number");
 });
 
-test("agent_start exposes workflows.planner routing when ideas module is enabled", async () => {
+test("agent_start exposes workflows.planner routing when planning module is enabled", async () => {
   const payload = await callAgentStart();
   const planner = payload.workflows?.planner;
   assert.ok(planner, "workflows.planner branch is present");
@@ -136,12 +136,12 @@ test("agent_start planner routing branch stays within six kilobyte budget", asyn
   assert.notEqual(payload.oversized, true);
 });
 
-test("agent_start planner routing is disabled when ideas module is off", async () => {
+test("agent_start planner routing is disabled when planning module is off", async () => {
   const workspace = await mkdtemp(path.join(os.tmpdir(), "mcp-agent-start-planner-disabled-"));
   await mkdir(path.join(workspace, ".workspace-kit"), { recursive: true });
   await writeFile(
     path.join(workspace, ".workspace-kit/config.json"),
-    JSON.stringify({ modules: { disabled: ["ideas"] } }),
+    JSON.stringify({ modules: { disabled: ["planning", "improvement"] } }),
     "utf8"
   );
   await writeFile(
@@ -156,4 +156,33 @@ test("agent_start planner routing is disabled when ideas module is off", async (
   assert.equal(planner.nextTool, undefined);
   assert.equal(planner.mcpToolNames, undefined);
   assert.match(planner.whenToUse, /disabled/i);
+});
+
+test("extension lifecycle helper matches planning module deriveIdeaPlanningLifecycleState", async () => {
+  const { deriveIdeaPlanningLifecycleState: planningDerive } = await import(
+    "../dist/modules/planning/idea-plan/derive-idea-planning-lifecycle-state.js"
+  );
+  const { deriveIdeaPlanningLifecycleState: extensionDerive } = await import(
+    "../extensions/cursor-workflow-cannon/dist/views/dashboard/derive-idea-planning-lifecycle-state.js"
+  );
+
+  const fixtures = [
+    { idea: { status: "open" } },
+    {
+      idea: { status: "planning" },
+      planningChatSession: { status: "active" }
+    },
+    {
+      activeDraftPlanArtifact: { planRef: "plan-artifact:abc", status: "planning" },
+      latestReview: { planRef: "plan-artifact:abc", passed: false, blockerCount: 1 }
+    },
+    {
+      linkedPlanArtifact: { planRef: "plan-artifact:done", status: "finalized" },
+      finalizeResult: { status: "finalized", count: 2 }
+    }
+  ];
+
+  for (const fixture of fixtures) {
+    assert.equal(extensionDerive(fixture), planningDerive(fixture), JSON.stringify(fixture));
+  }
 });

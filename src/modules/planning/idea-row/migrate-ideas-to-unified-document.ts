@@ -40,7 +40,7 @@ import { normalizeIdeaPlanStatus } from "../idea-plan/idea-plan-types.js";
 import {
   deriveIdeaPlanningLifecycleState,
   type IdeaPlanningLifecycleState
-} from "../../ideas/derive-idea-planning-lifecycle-state.js";
+} from "../idea-plan/derive-idea-planning-lifecycle-state.js";
 import {
   clearActiveDraftPlanArtifact,
   readActiveDraftPlanArtifact

@@ -6,9 +6,12 @@ import type {
 } from "../../../contracts/dashboard-summary-run.js";
 import { readLatestPlanArtifact, readPlanArtifactIndex } from "../../../core/planning/plan-artifact-storage.js";
 import { readActiveDraftPlanArtifact } from "../../ideas/idea-planning-metadata.js";
-import { listIdeaPlanArtifacts, readIdeaPlanArtifact } from "../../ideas/idea-plan-artifact-storage.js";
-import type { IdeaPlanDocument } from "../../ideas/idea-plan-types.js";
-import { listIdeas } from "../../ideas/idea-store.js";
+import {
+  listIdeaPlanArtifacts,
+  listIdeas,
+  readIdeaPlanArtifact,
+  type IdeaPlanDocument
+} from "./planning-barrel-imports.js";
 import { listPlanningChatSessions } from "../../ideas/planning-chat-session.js";
 import { parsePlanIdFromPlanArtifactRef } from "../plan-artifact-execute-policy.js";
 import type { SqliteDualPlanningStore } from "../persistence/sqlite-dual-planning.js";
