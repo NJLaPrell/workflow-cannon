@@ -1,5 +1,5 @@
 /**
- * T100795 — IDEAS_UNIFIED_MODEL_ENABLED dashboard gating and degraded schema loader tests.
+ * T100795 / T100869 — IDEAS_UNIFIED_MODEL_ENABLED dashboard gating, kill-switch, and degraded schema loader tests.
  */
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -13,17 +13,22 @@ import {
   loadIdeaPlanStateSchema
 } from "../dist/modules/ideas/idea-plan-state-schema-loader.js";
 import { isDegradedAgentDirective } from "../dist/modules/ideas/idea-plan-types.js";
-import { isIdeasUnifiedModelEnabled } from "../dist/modules/ideas/ideas-unified-model-feature-flag.js";
+import {
+  isIdeasUnifiedModelEnabled,
+  resolveIdeasUnifiedModelEnabled
+} from "../dist/modules/ideas/ideas-unified-model-feature-flag.js";
 import { renderDashboardRootInnerHtml } from "../extensions/cursor-workflow-cannon/dist/views/dashboard/render-dashboard.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
-test("isIdeasUnifiedModelEnabled defaults false", () => {
+test("isIdeasUnifiedModelEnabled defaults true without env", () => {
   const previous = process.env.IDEAS_UNIFIED_MODEL_ENABLED;
   delete process.env.IDEAS_UNIFIED_MODEL_ENABLED;
   try {
-    assert.equal(isIdeasUnifiedModelEnabled(), false);
+    assert.deepEqual(resolveIdeasUnifiedModelEnabled(), { enabled: true, source: "default" });
+    assert.equal(isIdeasUnifiedModelEnabled(), true);
     assert.equal(isIdeasUnifiedModelEnabled(true), true);
+    assert.equal(isIdeasUnifiedModelEnabled(false), false);
   } finally {
     if (previous === undefined) {
       delete process.env.IDEAS_UNIFIED_MODEL_ENABLED;
@@ -33,7 +38,22 @@ test("isIdeasUnifiedModelEnabled defaults false", () => {
   }
 });
 
-test("isIdeasUnifiedModelEnabled reads env when set", () => {
+test("isIdeasUnifiedModelEnabled env kill-switch disables unified UI", () => {
+  const previous = process.env.IDEAS_UNIFIED_MODEL_ENABLED;
+  process.env.IDEAS_UNIFIED_MODEL_ENABLED = "0";
+  try {
+    assert.deepEqual(resolveIdeasUnifiedModelEnabled(), { enabled: false, source: "env" });
+    assert.equal(isIdeasUnifiedModelEnabled(), false);
+  } finally {
+    if (previous === undefined) {
+      delete process.env.IDEAS_UNIFIED_MODEL_ENABLED;
+    } else {
+      process.env.IDEAS_UNIFIED_MODEL_ENABLED = previous;
+    }
+  }
+});
+
+test("isIdeasUnifiedModelEnabled reads env when set to enable", () => {
   const previous = process.env.IDEAS_UNIFIED_MODEL_ENABLED;
   process.env.IDEAS_UNIFIED_MODEL_ENABLED = "1";
   try {

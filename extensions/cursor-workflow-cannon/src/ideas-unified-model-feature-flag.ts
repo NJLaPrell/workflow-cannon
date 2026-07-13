@@ -18,7 +18,7 @@ function parseTruthyEnv(value: string | undefined): boolean | undefined {
 
 /**
  * Dashboard feature flag: unified IdeaPlan UI (Brainstorm button, brainstorming rollup).
- * Precedence: explicit VS Code workspace/global setting → env → default false.
+ * Precedence: explicit VS Code workspace/global setting → env kill-switch → default true.
  */
 export function isIdeasUnifiedModelEnabledForDashboard(): boolean {
   const inspected = vscode.workspace
@@ -32,5 +32,5 @@ export function isIdeasUnifiedModelEnabledForDashboard(): boolean {
   if (fromEnv !== undefined) {
     return fromEnv;
   }
-  return false;
+  return true;
 }
