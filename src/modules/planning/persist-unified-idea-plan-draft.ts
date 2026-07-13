@@ -1,12 +1,12 @@
 import type Database from "better-sqlite3";
 import type { PlanArtifactV1 } from "../../core/planning/plan-artifact-v1.js";
 import { getPlanArtifactStoragePaths } from "../../core/planning/plan-artifact-storage.js";
-import { writeNextIdeaPlanArtifactVersion } from "../ideas/idea-plan-artifact-storage.js";
+import { writeNextIdeaPlanArtifactVersion } from "./idea-plan/idea-plan-artifact-storage.js";
 import {
   mergePlanArtifactIntoIdeaPlanDocument,
   pinArtifactToUnifiedIdeaPlan,
   resolveUnifiedIdeaPlanDraftTarget
-} from "../ideas/idea-plan-planning-init.js";
+} from "./idea-plan/idea-plan-planning-init.js";
 import { linkActiveDraftPlanArtifactFromPersistedDraft } from "../ideas/idea-planning-metadata.js";
 import { promotePlanningSessionToDraftReadyAfterDraftPersist } from "../ideas/planning-session-draft-ready.js";
 import { toPlanningChatSessionResponse } from "../ideas/planning-chat-session.js";

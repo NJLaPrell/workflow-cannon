@@ -109,13 +109,13 @@
     },
     {
       "file": "src/core/planning/render-plan-document-markdown.ts",
-      "specifier": "../../modules/ideas/idea-plan-planning-init.js",
-      "rationale": "Plan document renderer types unified IdeaPlan planning payload sections; type-only import pending ideas façade."
+      "specifier": "../../modules/planning/idea-plan/idea-plan-planning-init.js",
+      "rationale": "Plan document renderer types unified IdeaPlan planning payload sections."
     },
     {
       "file": "src/core/planning/render-plan-document-markdown.ts",
-      "specifier": "../../modules/ideas/idea-plan-types.js",
-      "rationale": "Plan document renderer types unified IdeaPlan envelope; type-only import pending ideas façade."
+      "specifier": "../../modules/planning/idea-plan/idea-plan-types.js",
+      "rationale": "Plan document renderer types unified IdeaPlan envelope."
     }
   ]
 }

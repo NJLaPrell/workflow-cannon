@@ -4,12 +4,12 @@ import path from "node:path";
 import type { PlanArtifactRiskItem, PlanArtifactWbsItem } from "./plan-artifact-v1.js";
 import { derivePlanDocumentBasename } from "./plan-document-slug.js";
 import { scoreBandForKind } from "./brainstorm-score-bands.js";
-import type { IdeaPlanDocumentWithPlanningPayload } from "../../modules/ideas/idea-plan-planning-init.js";
+import type { IdeaPlanDocumentWithPlanningPayload } from "../../modules/planning/idea-plan/idea-plan-planning-init.js";
 import type {
   BrainstormScoreInputs,
   BrainstormSession,
   IdeaPlanDocument
-} from "../../modules/ideas/idea-plan-types.js";
+} from "../../modules/planning/idea-plan/idea-plan-types.js";
 
 export const PLAN_DOCUMENT_VIEW_FILE = "plan-document.view.yaml";
 export const PLAN_DOCUMENT_TEMPLATE_FILE = "plan-document.md";

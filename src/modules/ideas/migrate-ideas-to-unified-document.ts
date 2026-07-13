@@ -14,7 +14,7 @@ import { isPlanArtifactV1, type PlanArtifactV1 } from "../../core/planning/plan-
 import { parsePlanIdFromPlanArtifactRef } from "../task-engine/plan-artifact-execute-policy.js";
 import {
   buildIdeaPlanReviewSection
-} from "../planning/unified-idea-plan-review-accept.js";
+} from "../planning/idea-plan/unified-idea-plan-review-accept.js";
 import { reviewPlanArtifact } from "../../core/planning/review-plan-artifact.js";
 import {
   isIdeaPlanDocument,

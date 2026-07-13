@@ -1,31 +1,31 @@
 import type Database from "better-sqlite3";
-import type { ModuleCommandResult } from "../../contracts/module-contract.js";
-import type { PlanArtifactV1 } from "../../core/planning/plan-artifact-v1.js";
-import type { PlanArtifactReviewRecordV1 } from "../../core/planning/plan-artifact-review-record.js";
-import type { ReviewPlanArtifactResult } from "../../core/planning/review-plan-artifact.js";
+import type { ModuleCommandResult } from "../../../contracts/module-contract.js";
+import type { PlanArtifactV1 } from "../../../core/planning/plan-artifact-v1.js";
+import type { PlanArtifactReviewRecordV1 } from "../../../core/planning/plan-artifact-review-record.js";
+import type { ReviewPlanArtifactResult } from "../../../core/planning/review-plan-artifact.js";
 import {
   applyLatestReviewToPlanArtifactIndex,
   getPlanArtifactStoragePaths,
   readPlanArtifactIndex,
   resolveLatestPlanArtifactVersion
-} from "../../core/planning/plan-artifact-storage.js";
+} from "../../../core/planning/plan-artifact-storage.js";
 import {
   isIdeaPlanDocument,
   readIdeaPlanArtifactVersion,
   writeNextIdeaPlanArtifactVersion
-} from "../ideas/idea-plan-artifact-storage.js";
+} from "./idea-plan-artifact-storage.js";
 import {
   enforceIdeaPlanStatusTransition,
   IdeaPlanStatusTransitionError
-} from "../ideas/idea-plan-status-machine.js";
+} from "./idea-plan-status-machine.js";
 import {
   type IdeaPlanDocumentWithPlanningPayload,
   synthesizePlanArtifactFromStoredDocument
-} from "../ideas/idea-plan-planning-init.js";
-import { loadIdeaPlanStateSchema } from "../ideas/idea-plan-state-schema-loader.js";
-import { requireIdeaPlanAgentDirective } from "../ideas/idea-plan-state-schema-guard.js";
-import type { IdeaPlanDocument, IdeaPlanReviewSection } from "../ideas/idea-plan-types.js";
-import { buildPlanArtifactReviewRecord } from "../../core/planning/plan-artifact-review-record.js";
+} from "./idea-plan-planning-init.js";
+import { loadIdeaPlanStateSchema } from "./idea-plan-state-schema-loader.js";
+import { requireIdeaPlanAgentDirective } from "./idea-plan-state-schema-guard.js";
+import type { IdeaPlanDocument, IdeaPlanReviewSection } from "./idea-plan-types.js";
+import { buildPlanArtifactReviewRecord } from "../../../core/planning/plan-artifact-review-record.js";
 
 export type ResolvedStoredPlanArtifact =
   | { kind: "plan-artifact"; artifact: PlanArtifactV1 }

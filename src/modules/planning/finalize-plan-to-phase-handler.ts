@@ -13,15 +13,15 @@ import {
   resolveLatestPlanArtifactVersion,
   writeNextPlanArtifactVersion
 } from "../../core/planning/plan-artifact-storage.js";
-import type { IdeaPlanDocumentWithPlanningPayload } from "../ideas/idea-plan-planning-init.js";
-import type { IdeaPlanDocument } from "../ideas/idea-plan-types.js";
+import type { IdeaPlanDocumentWithPlanningPayload } from "./idea-plan/idea-plan-planning-init.js";
+import type { IdeaPlanDocument } from "./idea-plan/idea-plan-types.js";
 import { openPlanningStores } from "../../core/planning/index.js";
 import {
   ideaPlanStatusInvalidResult,
   persistUnifiedIdeaPlanDeliveryRefs,
   readStoredPlanArtifactVersion,
   unifiedIdeaPlanStoragePath
-} from "./unified-idea-plan-review-accept.js";
+} from "./idea-plan/unified-idea-plan-review-accept.js";
 import { inferTaskPhaseKey } from "../task-engine/phase-resolution.js";
 import { reviewPlanningExecutionDraftGaps } from "../task-engine/planning-execution-draft-review.js";
 import { runTaskRowMutationCommands } from "../task-engine/commands/task-row-mutation-commands.js";

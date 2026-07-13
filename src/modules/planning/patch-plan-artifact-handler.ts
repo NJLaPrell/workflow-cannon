@@ -8,8 +8,8 @@ import { validatePlanArtifactWbsItemShape } from "../../core/planning/normalize-
 import { openPlanningStores } from "../../core/planning/index.js";
 import { PlanArtifactVersionImmutableError } from "../../core/planning/plan-artifact-immutability.js";
 import { validatePlanArtifactDraftInput } from "../../core/planning/validate-plan-artifact.js";
-import { isIdeaPlanDocument, readIdeaPlanArtifact } from "../ideas/idea-plan-artifact-storage.js";
-import type { IdeaPlanDocumentWithPlanningPayload } from "../ideas/idea-plan-planning-init.js";
+import { isIdeaPlanDocument, readIdeaPlanArtifact } from "./idea-plan/idea-plan-artifact-storage.js";
+import type { IdeaPlanDocumentWithPlanningPayload } from "./idea-plan/idea-plan-planning-init.js";
 import { attachPolicyMeta } from "../task-engine/attach-planning-response-meta.js";
 import { planningGenPolicyGate } from "../task-engine/planning-generation-gate.js";
 import { planningConcurrencySaveOpts, readIdempotencyValue } from "../task-engine/mutation-utils.js";
