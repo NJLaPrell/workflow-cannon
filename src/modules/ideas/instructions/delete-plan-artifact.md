@@ -1,1 +1,0 @@
-../../planning/instructions/delete-plan-artifact.md

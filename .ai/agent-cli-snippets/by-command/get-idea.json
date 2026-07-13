@@ -15,8 +15,8 @@
       "argv": "workspace-kit run get-idea '{}'"
     }
   ],
-  "instructionPath": "src/modules/ideas/instructions/get-idea.md",
-  "moduleId": "ideas",
+  "instructionPath": "src/modules/planning/instructions/get-idea.md",
+  "moduleId": "planning",
   "description": "Read one lightweight operator idea by I### id.",
   "policy": {
     "sensitivity": "non-sensitive",
@@ -38,5 +38,5 @@
     "listCommands": "pnpm exec wk run --list-commands",
     "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
   },
-  "invocationId": "93fa7dd9-ed85-43a6-ae4c-6397be32d22b"
+  "invocationId": "c2dc5e9f-6157-4f83-a952-22efb02c8e6e"
 }

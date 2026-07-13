@@ -15,8 +15,8 @@
       "argv": "workspace-kit run get-planner-flow-status '{}'"
     }
   ],
-  "instructionPath": "src/modules/ideas/instructions/get-planner-flow-status.md",
-  "moduleId": "ideas",
+  "instructionPath": "src/modules/planning/instructions/get-planner-flow-status.md",
+  "moduleId": "planning",
   "description": "Read-only planner golden-path stage, blockers, mismatches, and recommendedNextCommand with readyRun argv.",
   "policy": {
     "sensitivity": "non-sensitive",
@@ -38,5 +38,5 @@
     "listCommands": "pnpm exec wk run --list-commands",
     "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
   },
-  "invocationId": "350bfdac-8abc-437b-971f-8eac26e95d31"
+  "invocationId": "63bd2d03-a775-49e8-bdfa-8a3e626bcd54"
 }

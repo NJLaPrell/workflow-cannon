@@ -15,8 +15,8 @@
       "argv": "workspace-kit run cancel-plan-artifact '{}'"
     }
   ],
-  "instructionPath": "src/modules/ideas/instructions/cancel-plan-artifact.md",
-  "moduleId": "ideas",
+  "instructionPath": "src/modules/planning/instructions/cancel-plan-artifact.md",
+  "moduleId": "planning",
   "description": "Soft-cancel a unified IdeaPlan (any status → cancelled) while keeping artifacts for revive via Brainstorm/Plan.",
   "policy": {
     "sensitivity": "sensitive",
@@ -38,5 +38,5 @@
     "listCommands": "pnpm exec wk run --list-commands",
     "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
   },
-  "invocationId": "62710e5e-7d71-4d42-941a-db69a531f2eb"
+  "invocationId": "a4e09381-9d7e-4cc4-b33b-c38354fc8149"
 }

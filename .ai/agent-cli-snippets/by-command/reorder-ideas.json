@@ -15,8 +15,8 @@
       "argv": "workspace-kit run reorder-ideas '{}'"
     }
   ],
-  "instructionPath": "src/modules/ideas/instructions/reorder-ideas.md",
-  "moduleId": "ideas",
+  "instructionPath": "src/modules/planning/instructions/reorder-ideas.md",
+  "moduleId": "planning",
   "description": "Replace the sort order for all lightweight operator ideas.",
   "policy": {
     "sensitivity": "sensitive",
@@ -38,5 +38,5 @@
     "listCommands": "pnpm exec wk run --list-commands",
     "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
   },
-  "invocationId": "85deffca-d08e-4ce5-862c-551883544d82"
+  "invocationId": "48386843-3a12-4d7f-8904-e2d49454fb50"
 }

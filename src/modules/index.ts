@@ -31,7 +31,6 @@ export const defaultRegistryModules: WorkflowModule[] = [
   taskEngineModule,
   checkpointsModule,
   contextActivationModule,
-  ideasModule,
   projectMemoryModule,
   approvalsModule,
   planningModule,

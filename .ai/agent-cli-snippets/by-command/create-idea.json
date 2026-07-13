@@ -15,8 +15,8 @@
       "argv": "workspace-kit run create-idea '{}'"
     }
   ],
-  "instructionPath": "src/modules/ideas/instructions/create-idea.md",
-  "moduleId": "ideas",
+  "instructionPath": "src/modules/planning/instructions/create-idea.md",
+  "moduleId": "planning",
   "description": "Create a lightweight operator idea in kit SQLite for later planner-chat workflows.",
   "policy": {
     "sensitivity": "sensitive",
@@ -38,5 +38,5 @@
     "listCommands": "pnpm exec wk run --list-commands",
     "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
   },
-  "invocationId": "cf5851ff-044c-49ac-b361-691a38a8e1ef"
+  "invocationId": "ecfdb399-cca8-416c-abd7-7790b5636a21"
 }

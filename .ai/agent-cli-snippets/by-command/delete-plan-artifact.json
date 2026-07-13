@@ -15,8 +15,8 @@
       "argv": "workspace-kit run delete-plan-artifact '{}'"
     }
   ],
-  "instructionPath": "src/modules/ideas/instructions/delete-plan-artifact.md",
-  "moduleId": "ideas",
+  "instructionPath": "src/modules/planning/instructions/delete-plan-artifact.md",
+  "moduleId": "planning",
   "description": "Hard-delete a PlanArtifact (files + index) and its linked idea row. Requires confirmDelete: true.",
   "policy": {
     "sensitivity": "sensitive",
@@ -38,5 +38,5 @@
     "listCommands": "pnpm exec wk run --list-commands",
     "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
   },
-  "invocationId": "40a18f58-81a8-4ef0-a6b2-904a0c3d33fa"
+  "invocationId": "d8bcb43b-dee2-444a-a352-5b14e9342473"
 }

@@ -1,1 +1,0 @@
-../../planning/instructions/update-brainstorm-session.md

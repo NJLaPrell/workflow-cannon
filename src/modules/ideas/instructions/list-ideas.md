@@ -1,1 +1,0 @@
-../../planning/instructions/list-ideas.md

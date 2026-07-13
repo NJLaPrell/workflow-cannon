@@ -1,1 +1,0 @@
-../../planning/instructions/get-idea.md

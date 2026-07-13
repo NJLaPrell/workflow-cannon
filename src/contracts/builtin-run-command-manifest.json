@@ -1660,7 +1660,7 @@
     "policySensitivity": "sensitive"
   },
   {
-    "moduleId": "ideas",
+    "moduleId": "planning",
     "name": "create-idea",
     "file": "create-idea.md",
     "description": "Create a lightweight operator idea in kit SQLite for later planner-chat workflows.",
@@ -1669,7 +1669,7 @@
     "policySensitivity": "sensitive"
   },
   {
-    "moduleId": "ideas",
+    "moduleId": "planning",
     "name": "get-idea",
     "file": "get-idea.md",
     "description": "Read one lightweight operator idea by I### id.",
@@ -1677,7 +1677,7 @@
     "policySensitivity": "non-sensitive"
   },
   {
-    "moduleId": "ideas",
+    "moduleId": "planning",
     "name": "get-planner-flow-status",
     "file": "get-planner-flow-status.md",
     "description": "Read-only planner golden-path stage, blockers, mismatches, and recommendedNextCommand with readyRun argv.",
@@ -1685,7 +1685,7 @@
     "policySensitivity": "non-sensitive"
   },
   {
-    "moduleId": "ideas",
+    "moduleId": "planning",
     "name": "list-ideas",
     "file": "list-ideas.md",
     "description": "List lightweight operator ideas in sort order, optionally filtered by status.",
@@ -1693,7 +1693,7 @@
     "policySensitivity": "non-sensitive"
   },
   {
-    "moduleId": "ideas",
+    "moduleId": "planning",
     "name": "update-idea",
     "file": "update-idea.md",
     "description": "Update a lightweight operator idea in kit SQLite.",
@@ -1702,7 +1702,7 @@
     "policySensitivity": "sensitive"
   },
   {
-    "moduleId": "ideas",
+    "moduleId": "planning",
     "name": "delete-idea",
     "file": "delete-idea.md",
     "description": "Delete a lightweight operator idea from kit SQLite.",
@@ -1711,7 +1711,7 @@
     "policySensitivity": "sensitive"
   },
   {
-    "moduleId": "ideas",
+    "moduleId": "planning",
     "name": "reorder-ideas",
     "file": "reorder-ideas.md",
     "description": "Replace the sort order for all lightweight operator ideas.",
@@ -1720,7 +1720,7 @@
     "policySensitivity": "sensitive"
   },
   {
-    "moduleId": "ideas",
+    "moduleId": "planning",
     "name": "start-idea-planning",
     "file": "start-idea-planning.md",
     "description": "Start or resume a durable planner-chat session for an idea with compact prompt generation.",
@@ -1729,7 +1729,7 @@
     "policySensitivity": "sensitive"
   },
   {
-    "moduleId": "ideas",
+    "moduleId": "planning",
     "name": "update-idea-planning-session",
     "file": "update-idea-planning-session.md",
     "description": "Update durable planning session state with idea/session validation and dashboard-ready output.",
@@ -1738,7 +1738,7 @@
     "policySensitivity": "sensitive"
   },
   {
-    "moduleId": "ideas",
+    "moduleId": "planning",
     "name": "start-brainstorm-session",
     "file": "start-brainstorm-session.md",
     "description": "Start or append a brainstorm session on a unified IdeaPlan artifact with idea→brainstorming transition on first call.",
@@ -1747,7 +1747,7 @@
     "policySensitivity": "sensitive"
   },
   {
-    "moduleId": "ideas",
+    "moduleId": "planning",
     "name": "update-brainstorm-session",
     "file": "update-brainstorm-session.md",
     "description": "Merge partial brainstorm session fields and compute schema-weighted scores at a session index.",
@@ -1756,7 +1756,7 @@
     "policySensitivity": "sensitive"
   },
   {
-    "moduleId": "ideas",
+    "moduleId": "planning",
     "name": "complete-brainstorm",
     "file": "complete-brainstorm.md",
     "description": "Validate brainstorm section and transition unified IdeaPlan from brainstorming to planning.",
@@ -1765,7 +1765,7 @@
     "policySensitivity": "sensitive"
   },
   {
-    "moduleId": "ideas",
+    "moduleId": "planning",
     "name": "check-delivery-status",
     "file": "check-delivery-status.md",
     "description": "Query delivery task refs on an accepted IdeaPlan and transition to delivered when all tasks are terminal.",
@@ -1774,7 +1774,7 @@
     "policySensitivity": "sensitive"
   },
   {
-    "moduleId": "ideas",
+    "moduleId": "planning",
     "name": "cancel-plan-artifact",
     "file": "cancel-plan-artifact.md",
     "description": "Soft-cancel a unified IdeaPlan (any status → cancelled) while keeping artifacts for revive via Brainstorm/Plan.",
@@ -1783,7 +1783,7 @@
     "policySensitivity": "sensitive"
   },
   {
-    "moduleId": "ideas",
+    "moduleId": "planning",
     "name": "delete-plan-artifact",
     "file": "delete-plan-artifact.md",
     "description": "Hard-delete a PlanArtifact (files + index) and its linked idea row. Requires confirmDelete: true.",
@@ -1792,7 +1792,7 @@
     "policySensitivity": "sensitive"
   },
   {
-    "moduleId": "ideas",
+    "moduleId": "planning",
     "name": "migrate-ideas-to-unified-document",
     "file": "migrate-ideas-to-unified-document.md",
     "description": "Promote legacy Ideas rows and PlanArtifact files into unified IdeaPlan documents with dry-run and snapshot safety.",
