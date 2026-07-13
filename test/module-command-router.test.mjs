@@ -6,12 +6,14 @@ import {
   ModuleCommandRouterError,
   ModuleRegistry,
   UNKNOWN_COMMAND_SAMPLE_LIMIT,
+  PLANNING_IDEAS_DISPATCH_COMMANDS,
   agentBehaviorModule,
   createCommandRegistryRuntime,
   documentationModule,
   formatUnknownCommandMessage,
   getAtPath,
   ideasModule,
+  manifestInstructionPath,
   planningModule,
   taskEngineModule,
   workspaceConfigModule
@@ -21,6 +23,40 @@ const lifecycleContext = {
   runtimeVersion: "0.1",
   workspacePath: process.cwd()
 };
+
+test("Planning + Ideas dual registration exposes 28 dispatcher-owned commands", () => {
+  assert.equal(PLANNING_IDEAS_DISPATCH_COMMANDS.length, 28);
+  const registry = new ModuleRegistry([ideasModule, planningModule, taskEngineModule]);
+  const router = new ModuleCommandRouter(registry);
+  const names = new Set(router.listCommands().map((command) => command.name));
+  for (const commandName of PLANNING_IDEAS_DISPATCH_COMMANDS) {
+    assert.ok(names.has(commandName), `missing routed command ${commandName}`);
+  }
+});
+
+test("manifestInstructionPath resolves builtin manifest rows for Planning and Ideas commands", () => {
+  assert.equal(
+    manifestInstructionPath("draft-plan-artifact"),
+    "src/modules/planning/instructions/draft-plan-artifact.md"
+  );
+  assert.equal(
+    manifestInstructionPath("create-idea"),
+    "src/modules/ideas/instructions/create-idea.md"
+  );
+});
+
+test("ideas and planning module shells delegate list-planning-types through shared dispatcher", async () => {
+  const registry = new ModuleRegistry([ideasModule, planningModule, taskEngineModule]);
+  const router = new ModuleCommandRouter(registry);
+  const ctx = { ...lifecycleContext, moduleRegistry: registry };
+
+  const viaPlanning = await router.execute("list-planning-types", {}, ctx);
+  assert.equal(viaPlanning.ok, true);
+  assert.equal(viaPlanning.code, "planning-types-listed");
+
+  const directIdeas = await ideasModule.onCommand({ name: "list-planning-types", args: {} }, ctx);
+  assert.deepEqual(directIdeas, viaPlanning);
+});
 
 test("ModuleCommandRouter lists commands from enabled modules", () => {
   const registry = new ModuleRegistry([
