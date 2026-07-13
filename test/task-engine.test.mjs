@@ -32,7 +32,6 @@ import {
   appendPolicyTrace,
   classifyKitStatePath,
   buildTaskPersistenceReadinessReport,
-  planningModule,
   planningModule
 } from "../dist/index.js";
 import { setAgentActivityLease } from "../dist/modules/task-engine/agent-activity-store.js";

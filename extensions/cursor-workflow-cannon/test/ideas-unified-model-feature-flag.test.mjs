@@ -10,7 +10,7 @@ import { fileURLToPath } from "node:url";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 const serverFlagPath = path.join(
   root,
-  "src/modules/ideas/ideas-unified-model-feature-flag.ts"
+  "src/modules/planning/idea-plan/ideas-unified-model-feature-flag.ts"
 );
 const extensionFlagPath = path.join(
   root,
