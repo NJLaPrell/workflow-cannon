@@ -9,14 +9,14 @@
 
 **Machine authority:** The **`agentDirective`** embedded in [`schemas/ideas/states/brainstorming.schema.json`](../../schemas/ideas/states/brainstorming.schema.json) (`x-canonicalAgentDirective`) is **authoritative** for question order, prompts, scoring sub-inputs, compute formulas, and synthesis updates. **This playbook is a human companion only** — it adds tone, confusion handling, and score-summary guidance. **Do not** invent a different question sequence, reorder phases, or restate formulas here; read the schema and follow it.
 
-**Does not replace:** [`start-brainstorm-session.md`](../../src/modules/ideas/instructions/start-brainstorm-session.md), [`update-brainstorm-session.md`](../../src/modules/ideas/instructions/update-brainstorm-session.md), [`complete-brainstorm.md`](../../src/modules/ideas/instructions/complete-brainstorm.md), or the brainstorming state schema. For planning after brainstorm, attach [`planner-chat.md`](./planner-chat.md).
+**Does not replace:** [`start-brainstorm-session.md`](../../src/modules/planning/instructions/start-brainstorm-session.md), [`update-brainstorm-session.md`](../../src/modules/planning/instructions/update-brainstorm-session.md), [`complete-brainstorm.md`](../../src/modules/planning/instructions/complete-brainstorm.md), or the brainstorming state schema. For planning after brainstorm, attach [`planner-chat.md`](./planner-chat.md).
 
 ## 0) Bootstrap
 
 1. Load the unified IdeaPlan document via **`planRef`** (`plan-artifact:<planId>`). If no document exists yet, capture the idea first and ensure it links a unified document before brainstorming.
-2. When the document is not yet in `brainstorming`, run **`start-brainstorm-session`** to transition `idea` → `brainstorming` and allocate the session slot. Command contract: [`start-brainstorm-session.md`](../../src/modules/ideas/instructions/start-brainstorm-session.md).
+2. When the document is not yet in `brainstorming`, run **`start-brainstorm-session`** to transition `idea` → `brainstorming` and allocate the session slot. Command contract: [`start-brainstorm-session.md`](../../src/modules/planning/instructions/start-brainstorm-session.md).
 3. On resume, read the active session row and `brainstorm.synthesis` from durable storage — not chat memory. Continue from the next unanswered `agentDirective.questions[]` entry in schema order.
-4. Persist each answer with **`update-brainstorm-session`** at the correct `sessionIndex`. Command contract: [`update-brainstorm-session.md`](../../src/modules/ideas/instructions/update-brainstorm-session.md).
+4. Persist each answer with **`update-brainstorm-session`** at the correct `sessionIndex`. Command contract: [`update-brainstorm-session.md`](../../src/modules/planning/instructions/update-brainstorm-session.md).
 5. When all required inputs for a compute step are present, let the command layer compute session scores — **do not hand-calculate** or override formulas in chat.
 
 ## 1) Frame The Session
@@ -86,7 +86,7 @@ Example summary shape:
 
 1. When all required questions are answered and scores are computed, set `completedAt` on the session via **`update-brainstorm-session`** if the operator is done with this round.
 2. Stop after the session update, summarize what was captured, and ask whether the operator wants another brainstorm session or wants to start planning.
-3. Run **`complete-brainstorm`** only after the operator explicitly confirms brainstorming is finished; pass `operatorConfirmedBrainstormComplete:true` to validate the brainstorm section and transition **`brainstorming` → `planning`**. Command contract: [`complete-brainstorm.md`](../../src/modules/ideas/instructions/complete-brainstorm.md).
+3. Run **`complete-brainstorm`** only after the operator explicitly confirms brainstorming is finished; pass `operatorConfirmedBrainstormComplete:true` to validate the brainstorm section and transition **`brainstorming` → `planning`**. Command contract: [`complete-brainstorm.md`](../../src/modules/planning/instructions/complete-brainstorm.md).
 4. After the transition, offer **`planner-chat`** for structured WBS authoring — attach [`.ai/playbooks/planner-chat.md`](./planner-chat.md) and follow the planning state schema [`schemas/ideas/states/planning.schema.json`](../../schemas/ideas/states/planning.schema.json).
 
 ## 7) Error Recovery

@@ -18,6 +18,7 @@ tags: workflow-cannon, ideas, planning, task-type:workspace-kit
 - `.ai/playbooks/planner-chat.md` — primary checklist (bootstrap → draft → review → accept → finalize)
 - `.ai/AGENT-CLI-MAP.md` — Tier B planner mutations (`start-idea-planning`, `draft-plan-artifact`, `accept-plan-artifact`, `finalize-plan-to-phase`)
 - `.ai/POLICY-APPROVAL.md` — JSON `policyApproval` on Tier B `wk run` (chat approval is not enough)
+- `src/modules/planning/instructions/` — command contracts (ideas-era commands migrated here; moduleId flip follows in WBS-7)
 
 **Suggested skillIds:** `wc-planner-chat`, `wc-task-author`
 

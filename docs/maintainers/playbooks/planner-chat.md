@@ -13,9 +13,9 @@
 
 ## 0) Bootstrap
 
-1. Prefer **`start-idea-planning`** when the dashboard has not already supplied canonical context. It loads the Ideas row, detects or resumes the active session, generates the compact chat prompt, and returns `planningChatSession`, plan lineage, and dashboard-ready fields. Command contract: [`src/modules/ideas/instructions/start-idea-planning.md`](../../src/modules/ideas/instructions/start-idea-planning.md).
+1. Prefer **`start-idea-planning`** when the dashboard has not already supplied canonical context. It loads the Ideas row, detects or resumes the active session, generates the compact chat prompt, and returns `planningChatSession`, plan lineage, and dashboard-ready fields. Command contract: [`src/modules/planning/instructions/start-idea-planning.md`](../../src/modules/planning/instructions/start-idea-planning.md).
 2. When the prompt or dashboard already includes `ideaId`, `planningChatSession.sessionId`, and plan lineage, continue from that durable state instead of starting a competing session.
-3. If context is incomplete, use **`get-idea`** before asking the operator to restate data that already exists. Command contract: [`src/modules/ideas/instructions/get-idea.md`](../../src/modules/ideas/instructions/get-idea.md).
+3. If context is incomplete, use **`get-idea`** before asking the operator to restate data that already exists. Command contract: [`src/modules/planning/instructions/get-idea.md`](../../src/modules/planning/instructions/get-idea.md).
 4. On resume, treat the last durable plan draft, review result, or session row as the source of truth — not chat memory.
 5. Keep Ideas provenance attached through the whole workflow on the **unified IdeaPlan document**:
    - `ideaId` on the document is the Ideas row id.
@@ -51,7 +51,7 @@ Stop after each question. Do not stack a survey unless the operator asks for a f
    - `previousPlanArtifacts: [...]` when the idea already has prior artifact refs.
 4. **WBS v1 rules:** each WBS row should include `wbsId`, `path`, `title`, approach, technical scope, acceptance criteria, testing/verification, dependencies, recommended phase/order, sizing confidence, risk notes, and enough payload to materialize one focused execution task. Size rows for one agent/coding session where possible.
 5. Run **`draft-plan-artifact`** first as validate-only (`persist: false`) while the plan is still being shaped, then persist into the unified document once the operator agrees the draft is worth saving. Command contract: [`src/modules/planning/instructions/draft-plan-artifact.md`](../../src/modules/planning/instructions/draft-plan-artifact.md).
-6. After a persisted draft is linked as `activeDraftPlanArtifact` on the Ideas row, call **`update-idea-planning-session`** with `status: "draft_ready"`, the `sessionId` from bootstrap, and `currentPlanRef` / `currentPlanVersion` (the unified document ref and version) when known. Command contract: [`src/modules/ideas/instructions/update-idea-planning-session.md`](../../src/modules/ideas/instructions/update-idea-planning-session.md).
+6. After a persisted draft is linked as `activeDraftPlanArtifact` on the Ideas row, call **`update-idea-planning-session`** with `status: "draft_ready"`, the `sessionId` from bootstrap, and `currentPlanRef` / `currentPlanVersion` (the unified document ref and version) when known. Command contract: [`src/modules/planning/instructions/update-idea-planning-session.md`](../../src/modules/planning/instructions/update-idea-planning-session.md).
 7. **Do not** move the session to `completed` after draft persistence alone. Draft persistence means `draft_ready`, not that planning is done.
 8. When persistence is enabled and the planning generation policy requires a token, use the latest `planningGeneration` from the preceding read or command response.
 
@@ -74,7 +74,7 @@ Acceptance pins the reviewed plan. Finalization materializes tasks. Keep these s
 
 1. When the operator explicitly approves the reviewed plan, run **`accept-plan-artifact`**. It requires a reviewed version, no blockers, resolved/deferred open questions, and allows warnings. Command contract: [`src/modules/planning/instructions/accept-plan-artifact.md`](../../src/modules/planning/instructions/accept-plan-artifact.md).
 2. After acceptance succeeds, call **`update-idea-planning-session`** with `status: "completed"`. Only now is the brainstorming session complete.
-3. Update the Ideas row so `linkedPlanArtifact` reflects the accepted artifact and prior refs are preserved. Command contract: [`src/modules/ideas/instructions/update-idea.md`](../../src/modules/ideas/instructions/update-idea.md).
+3. Update the Ideas row so `linkedPlanArtifact` reflects the accepted artifact and prior refs are preserved. Command contract: [`src/modules/planning/instructions/update-idea.md`](../../src/modules/planning/instructions/update-idea.md).
 4. Summarize what was accepted and what remains optional (warnings, polish, deferred questions).
 
 ## 5) Finalize To Phase Tasks (Separate Confirmation)
@@ -124,7 +124,7 @@ A planner-chat run is complete when:
 
 ## Related
 
-- Ideas commands: [`src/modules/ideas/instructions`](../../src/modules/ideas/instructions)
+- Ideas commands: [`src/modules/planning/instructions`](../../src/modules/planning/instructions)
 - Unified IdeaPlan per-state schemas: [`schemas/ideas/states/`](../../schemas/ideas/states/)
 - Planning state agentDirective: [`schemas/ideas/states/planning.schema.json`](../../schemas/ideas/states/planning.schema.json)
 - Plan section field contract: [`schemas/planning/plan-artifact.v1.schema.json`](../../schemas/planning/plan-artifact.v1.schema.json)

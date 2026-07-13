@@ -100,7 +100,7 @@ test("list-ideas invokes list-ideas CLI with optional status filter", async () =
   assert.ok(envelope.freshness);
   assert.equal(typeof envelope.freshness.planningGeneration, "number");
   assert.match(envelope.governance.note, /read-only through list-ideas/i);
-  assert.ok(envelope.governance.sourceRefs.includes("src/modules/ideas/instructions/list-ideas.md"));
+  assert.ok(envelope.governance.sourceRefs.includes("src/modules/planning/instructions/list-ideas.md"));
 });
 
 test("list-ideas forwards empty args when status is omitted", async () => {
