@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import type DatabaseCtor from "better-sqlite3";
 import type { ModuleLifecycleContext } from "../contracts/module-contract.js";
-import { resolveRegistryAndConfig } from "../core/module-registry-resolve.js";
+import { resolveRegistryAndConfig, collectDeprecatedModuleConfigDoctorSummaryLines } from "../core/module-registry-resolve.js";
 import {
   configKitPhaseKeyFromEffective,
   parseKitPhaseNumberFromYaml
@@ -187,6 +187,7 @@ export function collectPolicyLaneEnvDoctorSummaryLines(): string[] {
 export async function collectTaskPersistenceDoctorSummaryLines(cwd: string): Promise<string[]> {
   const { effective } = await resolveRegistryAndConfig(cwd, defaultRegistryModules, {});
   const lines: string[] = [];
+  lines.push(...collectDeprecatedModuleConfigDoctorSummaryLines(effective as Record<string, unknown>));
   const dbRel = planningSqliteDatabaseRelativePath({
     workspacePath: cwd,
     effectiveConfig: effective,

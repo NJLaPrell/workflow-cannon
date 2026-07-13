@@ -11,7 +11,7 @@ import {
   MCP_PLANNER_SATELLITE_OUTPUT_BYTE_BUDGET,
   STATE_LIKE_MCP_TOOL_NAMES
 } from "../dist/mcp/index.js";
-import { ideasModule } from "../dist/index.js";
+import { planningModule } from "../dist/index.js";
 import { SqliteDualPlanningStore } from "../dist/modules/task-engine/persistence/sqlite-dual-planning.js";
 
 const LIST_IDEAS_TOOL_NAME = "workflow-cannon.list-ideas";
@@ -100,7 +100,7 @@ test("list-ideas invokes list-ideas CLI with optional status filter", async () =
   assert.ok(envelope.freshness);
   assert.equal(typeof envelope.freshness.planningGeneration, "number");
   assert.match(envelope.governance.note, /read-only through list-ideas/i);
-  assert.ok(envelope.governance.sourceRefs.includes("src/modules/ideas/instructions/list-ideas.md"));
+  assert.ok(envelope.governance.sourceRefs.includes("src/modules/planning/instructions/list-ideas.md"));
 });
 
 test("list-ideas forwards empty args when status is omitted", async () => {
@@ -147,8 +147,8 @@ test("list-ideas forwards empty args when status is omitted", async () => {
 
 test("list-ideas integration read on sqlite workspace", async () => {
   const workspace = await tmpWorkspace();
-  await ideasModule.onCommand({ name: "create-idea", args: { title: "Alpha", status: "planned" } }, ideasCtx(workspace));
-  await ideasModule.onCommand({ name: "create-idea", args: { title: "Beta" } }, ideasCtx(workspace));
+  await planningModule.onCommand({ name: "create-idea", args: { title: "Alpha", status: "planned" } }, ideasCtx(workspace));
+  await planningModule.onCommand({ name: "create-idea", args: { title: "Beta" } }, ideasCtx(workspace));
 
   const { createCommandRegistryRuntime } = await import("../dist/core/module-command-router.js");
   const { defaultRegistryModules } = await import("../dist/modules/index.js");

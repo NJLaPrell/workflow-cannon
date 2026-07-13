@@ -15,8 +15,8 @@
       "argv": "workspace-kit run check-delivery-status '{}'"
     }
   ],
-  "instructionPath": "src/modules/ideas/instructions/check-delivery-status.md",
-  "moduleId": "ideas",
+  "instructionPath": "src/modules/planning/instructions/check-delivery-status.md",
+  "moduleId": "planning",
   "description": "Query delivery task refs on an accepted IdeaPlan and transition to delivered when all tasks are terminal.",
   "policy": {
     "sensitivity": "sensitive",
@@ -38,5 +38,5 @@
     "listCommands": "pnpm exec wk run --list-commands",
     "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
   },
-  "invocationId": "f639ec01-d085-48da-a3d1-917ee8ca47e6"
+  "invocationId": "198d24ce-0d4e-4b0d-97f5-c2b87f3c19c9"
 }

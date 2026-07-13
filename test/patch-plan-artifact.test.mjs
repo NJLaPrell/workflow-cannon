@@ -8,9 +8,9 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
 
-import { ideasModule, planningModule } from "../dist/index.js";
+import { planningModule } from "../dist/index.js";
 import { getPlanArtifactStoragePaths } from "../dist/core/planning/plan-artifact-storage.js";
-import { readIdeaPlanArtifact } from "../dist/modules/ideas/idea-plan-artifact-storage.js";
+import { readIdeaPlanArtifact } from "../dist/modules/planning/idea-plan/idea-plan-artifact-storage.js";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const fixturesDir = path.join(repoRoot, "fixtures", "planning");
@@ -50,12 +50,12 @@ function policyApproval() {
 }
 
 async function planningGeneration(workspace) {
-  return (await ideasModule.onCommand({ name: "list-ideas", args: {} }, ctx(workspace))).data.planningGeneration;
+  return (await planningModule.onCommand({ name: "list-ideas", args: {} }, ctx(workspace))).data.planningGeneration;
 }
 
 async function createIdeaWithUnifiedPlan(workspace, fixtureName, title = "Patch plan artifact idea") {
   const fixtureTemplate = loadIdeaFixture(fixtureName);
-  const created = await ideasModule.onCommand(
+  const created = await planningModule.onCommand(
     {
       name: "create-idea",
       args: {
@@ -76,7 +76,7 @@ async function createIdeaWithUnifiedPlan(workspace, fixtureName, title = "Patch 
 
 async function seedPlanningDraft(workspace, idea, fixture) {
   const generation = await planningGeneration(workspace);
-  const started = await ideasModule.onCommand(
+  const started = await planningModule.onCommand(
     {
       name: "start-idea-planning",
       args: {

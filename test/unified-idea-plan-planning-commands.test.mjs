@@ -10,9 +10,9 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
 
-import { ideasModule, planningModule } from "../dist/index.js";
+import { planningModule } from "../dist/index.js";
 import { getPlanArtifactStoragePaths } from "../dist/core/planning/plan-artifact-storage.js";
-import { isIdeaPlanDocument, readIdeaPlanArtifact } from "../dist/modules/ideas/idea-plan-artifact-storage.js";
+import { isIdeaPlanDocument, readIdeaPlanArtifact } from "../dist/modules/planning/idea-plan/idea-plan-artifact-storage.js";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const fixturesDir = path.join(repoRoot, "fixtures", "planning");
@@ -60,12 +60,12 @@ async function writeIdeaPlanFixture(workspace, fixtureName) {
 }
 
 async function planningGeneration(workspace) {
-  return (await ideasModule.onCommand({ name: "list-ideas", args: {} }, ctx(workspace))).data.planningGeneration;
+  return (await planningModule.onCommand({ name: "list-ideas", args: {} }, ctx(workspace))).data.planningGeneration;
 }
 
 async function createIdeaWithUnifiedPlan(workspace, fixtureName, title = "Unified plan idea") {
   const fixtureTemplate = loadIdeaFixture(fixtureName);
-  const created = await ideasModule.onCommand(
+  const created = await planningModule.onCommand(
     {
       name: "create-idea",
       args: {
@@ -96,7 +96,7 @@ describe("unified IdeaPlan planning commands (T100785)", () => {
     await writeFile(paths.artifactFileAbsolute(fixture.version), `${JSON.stringify(withoutPlan, null, 2)}\n`, "utf8");
 
     const generation = await planningGeneration(workspace);
-    const started = await ideasModule.onCommand(
+    const started = await planningModule.onCommand(
       {
         name: "start-idea-planning",
         args: {
@@ -124,7 +124,7 @@ describe("unified IdeaPlan planning commands (T100785)", () => {
     const { idea, fixture } = await createIdeaWithUnifiedPlan(workspace, "planning-state.fixture.json");
 
     const generation = await planningGeneration(workspace);
-    const started = await ideasModule.onCommand(
+    const started = await planningModule.onCommand(
       {
         name: "start-idea-planning",
         args: {
@@ -180,7 +180,7 @@ describe("unified IdeaPlan planning commands (T100785)", () => {
     const { idea, fixture } = await createIdeaWithUnifiedPlan(workspace, "planning-state.fixture.json");
     const generation = await planningGeneration(workspace);
 
-    const startMinimal = await ideasModule.onCommand(
+    const startMinimal = await planningModule.onCommand(
       {
         name: "start-idea-planning",
         args: { ideaId: idea.id, policyApproval: policyApproval() }
@@ -189,7 +189,7 @@ describe("unified IdeaPlan planning commands (T100785)", () => {
     );
     assert.equal(startMinimal.ok, true);
 
-    const startAlias = await ideasModule.onCommand(
+    const startAlias = await planningModule.onCommand(
       {
         name: "start-idea-planning",
         args: { id: idea.id, policyApproval: policyApproval() }

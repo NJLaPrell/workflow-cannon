@@ -9,8 +9,8 @@ import {
   computeValueScore,
   createBrainstormScoringEngine,
   loadBrainstormScoringWeights
-} from "../dist/modules/ideas/brainstorm-scoring.js";
-import { loadIdeaPlanStateSchema } from "../dist/modules/ideas/idea-plan-state-schema-loader.js";
+} from "../dist/modules/planning/brainstorm/brainstorm-scoring.js";
+import { loadIdeaPlanStateSchema } from "../dist/modules/planning/idea-plan/idea-plan-state-schema-loader.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 

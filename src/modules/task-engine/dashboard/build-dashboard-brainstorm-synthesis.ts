@@ -1,6 +1,5 @@
 import type { DashboardBrainstormSynthesisSummary } from "../../../contracts/dashboard-summary-run.js";
-import { computeBrainstormReadiness } from "../../ideas/brainstorm-readiness.js";
-import type { IdeaPlanBrainstormSection } from "../../ideas/idea-plan-types.js";
+import { computeBrainstormReadiness, type IdeaPlanBrainstormSection } from "./planning-barrel-imports.js";
 
 /** Map `brainstorm.synthesis` + session count into dashboard-summary score fields. */
 export function mapBrainstormSynthesisForDashboard(

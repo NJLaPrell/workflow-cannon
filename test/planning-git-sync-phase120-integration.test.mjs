@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url";
 import Database from "better-sqlite3";
 
 import { prepareKitSqliteDatabase } from "../dist/core/state/workspace-kit-sqlite.js";
-import { taskEngineModule, ideasModule } from "../dist/index.js";
+import { taskEngineModule, planningModule } from "../dist/index.js";
 import { saveImprovementState, emptyImprovementState } from "../dist/modules/improvement/improvement-state.js";
 import { TASK_STATE_GIT_BRANCH } from "../dist/modules/task-engine/task-state-git/constants.js";
 import { admitCanonicalStateEventStream } from "../dist/modules/task-engine/task-state-events/canonical-event-admission.js";
@@ -227,7 +227,7 @@ test("dual-worktree fetch + hydrate converges phase note, idea, and module state
   );
   assert.equal(noteRes.ok, true, noteRes.message);
 
-  const ideaRes = await ideasModule.onCommand(
+  const ideaRes = await planningModule.onCommand(
     {
       name: "create-idea",
       args: {
@@ -320,7 +320,7 @@ test("disabled planning sync domains skip publish and hydrate for that domain", 
     planning: { canonicalSync: { domains: ["phase_notes"] } }
   });
 
-  const localIdea = await ideasModule.onCommand(
+  const localIdea = await planningModule.onCommand(
     {
       name: "create-idea",
       args: {
@@ -352,7 +352,7 @@ test("disabled planning sync domains skip publish and hydrate for that domain", 
   assert.match(remoteSegment, /planning\.phase_note\.created/);
   assert.doesNotMatch(remoteSegment, /planning\.idea\.created/);
 
-  const publishedIdea = await ideasModule.onCommand(
+  const publishedIdea = await planningModule.onCommand(
     {
       name: "create-idea",
       args: {
@@ -390,4 +390,33 @@ test("disabled planning sync domains skip publish and hydrate for that domain", 
   assert.equal(consumerSnapshot.notes.length, 1);
   assert.equal(consumerSnapshot.notes[0].summary, "Phase notes domain enabled on restricted publisher");
   assert.equal(consumerSnapshot.ideas.length, 0);
+});
+
+test("ideas git-sync domain contract: domain id, event kinds, and frozen command.moduleId", async () => {
+  const {
+    ALL_PLANNING_SYNC_DOMAINS,
+    planningEventKindToSyncDomain
+  } = await import("../dist/modules/task-engine/persistence/planning-canonical-sync-domains.js");
+  const { PLANNING_STATE_EVENT_KINDS } = await import(
+    "../dist/modules/task-engine/task-state-events/planning-event-payloads.js"
+  );
+
+  assert.ok(ALL_PLANNING_SYNC_DOMAINS.includes("ideas"), "sync domain id must remain ideas");
+
+  const ideaKinds = PLANNING_STATE_EVENT_KINDS.filter((kind) => kind.startsWith("planning.idea."));
+  assert.deepEqual(ideaKinds, ["planning.idea.created", "planning.idea.updated"]);
+
+  for (const kind of ideaKinds) {
+    assert.equal(planningEventKindToSyncDomain(kind), "ideas");
+  }
+
+  for (const fixtureName of [
+    "golden-planning-idea-created.v1.json",
+    "golden-planning-idea-updated.v1.json",
+    "golden-planning-idea-removed.v1.json"
+  ]) {
+    const envelope = loadFixture(fixtureName);
+    assert.equal(envelope.command.moduleId, "ideas", `${fixtureName} command.moduleId frozen`);
+    assert.match(envelope.kind, /^planning\.idea\./);
+  }
 });

@@ -23,9 +23,9 @@ import {
   readLatestStoredPlanArtifact,
   readStoredPlanArtifactVersion,
   unifiedIdeaPlanStoragePath
-} from "./unified-idea-plan-review-accept.js";
-import { promotePlanningSessionAfterReview } from "../ideas/planning-session-after-review.js";
-import { toPlanningChatSessionResponse } from "../ideas/planning-chat-session.js";
+} from "./idea-plan/unified-idea-plan-review-accept.js";
+import { promotePlanningSessionAfterReview } from "./idea-plan/planning-session-after-review.js";
+import { toPlanningChatSessionResponse } from "./idea-plan/planning-chat-session.js";
 import {
   attachGeneratedPlanDocPath,
   bestEffortGeneratePlanDocument
@@ -135,7 +135,7 @@ async function resolveArtifact(
   args: Record<string, unknown>,
   ctx: ModuleLifecycleContext
 ): Promise<
-  | { ok: true; artifact: PlanArtifactV1; planId: string; unifiedDocument?: import("../ideas/idea-plan-types.js").IdeaPlanDocument }
+  | { ok: true; artifact: PlanArtifactV1; planId: string; unifiedDocument?: import("./idea-plan/idea-plan-types.js").IdeaPlanDocument }
   | { ok: false; result: ModuleCommandResult }
 > {
   const artifactRaw = args.artifact;

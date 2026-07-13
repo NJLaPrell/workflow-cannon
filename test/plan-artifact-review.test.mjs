@@ -11,12 +11,12 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
 
-import { ideasModule, planningModule } from "../dist/index.js";
+import { planningModule } from "../dist/index.js";
 import {
   readLatestPlanArtifact,
   readPlanArtifactIndex
 } from "../dist/core/planning/plan-artifact-storage.js";
-import { getPlanningChatSession } from "../dist/modules/ideas/planning-chat-session.js";
+import { getPlanningChatSession } from "../dist/modules/planning/idea-plan/planning-chat-session.js";
 import { SqliteDualPlanningStore } from "../dist/modules/task-engine/persistence/sqlite-dual-planning.js";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -48,7 +48,7 @@ function policyApproval() {
 }
 
 async function createIdea(workspace, title = "Review idea") {
-  const created = await ideasModule.onCommand(
+  const created = await planningModule.onCommand(
     { name: "create-idea", args: { title, policyApproval: policyApproval() } },
     { runtimeVersion: "0.1", workspacePath: workspace, effectiveConfig: SQLITE_CFG }
   );
@@ -57,7 +57,7 @@ async function createIdea(workspace, title = "Review idea") {
 }
 
 async function startPlanning(workspace, ideaId) {
-  const started = await ideasModule.onCommand(
+  const started = await planningModule.onCommand(
     { name: "start-idea-planning", args: { ideaId, policyApproval: policyApproval() } },
     { runtimeVersion: "0.1", workspacePath: workspace, effectiveConfig: SQLITE_CFG }
   );
@@ -89,7 +89,7 @@ async function draftPersist(workspace, artifact) {
 }
 
 async function setDraftReady(workspace, ideaId, sessionId, planRef, version) {
-  return ideasModule.onCommand(
+  return planningModule.onCommand(
     {
       name: "update-idea-planning-session",
       args: {

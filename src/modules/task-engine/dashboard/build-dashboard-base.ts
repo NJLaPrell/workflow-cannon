@@ -37,8 +37,8 @@ import { buildDashboardDependencyOverview } from "./dashboard-dependency-overvie
 import { buildDashboardPhaseBucketsForTasks } from "./dashboard-phase-buckets.js";
 import { readBuildPlanSession, toDashboardPlanningSession } from "../../../core/planning/build-plan-session-file.js";
 import { listPlanArtifactSummaries, readLatestPlanArtifact } from "../../../core/planning/plan-artifact-storage.js";
-import { readIdeaPlanArtifact } from "../../ideas/idea-plan-artifact-storage.js";
-import { listIdeas } from "../../ideas/idea-store.js";
+import { readIdeaPlanArtifact } from "./planning-barrel-imports.js";
+import { listIdeas } from "./planning-barrel-imports.js";
 import { isCriticalOpenQuestion } from "../../../core/planning/review-plan-artifact.js";
 import { reviewPlanArtifact } from "../../../core/planning/review-plan-artifact.js";
 import {

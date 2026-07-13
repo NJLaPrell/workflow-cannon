@@ -1,3 +1,8 @@
+/**
+ * Vendored from `src/modules/planning/idea-plan/derive-idea-planning-lifecycle-state.ts`.
+ * The VSIX ships without `@workflow-cannon/workspace-kit` node_modules — keep this mirror aligned.
+ */
+
 export type IdeaPlanningLifecycleState =
   | "open"
   | "planning"
@@ -55,7 +60,7 @@ export type PlanFinalizeSummary = {
 
 export type DeriveIdeaPlanningLifecycleStateInput = {
   idea?: IdeaLifecycleIdeaLike;
-  planningChatSession?: PlanningChatSessionLike;
+  planningChatSession?: PlanningChatSessionLike | null;
   linkedPlanArtifact?: PlanArtifactLike;
   activeDraftPlanArtifact?: PlanArtifactLike;
   latestReview?: PlanArtifactReviewLike;
@@ -140,7 +145,7 @@ function isPersistedFinalizeResult(value: PlanFinalizeSummary | null | undefined
   return Array.isArray(value.createdTasks) && value.createdTasks.length > 0;
 }
 
-function deriveFromSession(session: PlanningChatSessionLike): IdeaPlanningLifecycleState | null {
+function deriveFromSession(session: PlanningChatSessionLike | null | undefined): IdeaPlanningLifecycleState | null {
   if (!session || typeof session !== "object") {
     return null;
   }
@@ -180,6 +185,10 @@ function deriveFromIdea(idea: IdeaLifecycleIdeaLike): IdeaPlanningLifecycleState
   return "open";
 }
 
+/**
+ * Locked precedence: finalized > accepted > review > active draft > session > idea.
+ * Lower-fidelity signals are only used when higher-precedence evidence is absent.
+ */
 export function deriveIdeaPlanningLifecycleState(
   input: DeriveIdeaPlanningLifecycleStateInput
 ): IdeaPlanningLifecycleState {

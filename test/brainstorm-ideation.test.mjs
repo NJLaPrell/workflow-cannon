@@ -5,8 +5,8 @@ import {
   hasSubstantialBrainstormIdeation,
   mergeBrainstormSessionIdeation,
   parseBrainstormSessionIdeationPatch
-} from "../dist/modules/ideas/brainstorm-ideation.js";
-import { validateBrainstormSectionForPlanning } from "../dist/modules/ideas/validate-brainstorm-section.js";
+} from "../dist/modules/planning/brainstorm/brainstorm-ideation.js";
+import { validateBrainstormSectionForPlanning } from "../dist/modules/planning/brainstorm/validate-brainstorm-section.js";
 
 test("parseBrainstormSessionIdeationPatch accepts structured ideation arrays", () => {
   const patch = parseBrainstormSessionIdeationPatch({

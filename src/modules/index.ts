@@ -5,7 +5,6 @@ import type { WorkflowModule } from "../contracts/module-contract.js";
 import { agentBehaviorModule } from "./agent-behavior/index.js";
 import { approvalsModule } from "./approvals/index.js";
 import { documentationModule } from "./documentation/index.js";
-import { ideasModule } from "./ideas/index.js";
 import { improvementModule } from "./improvement/index.js";
 import { planningModule } from "./planning/index.js";
 import { pluginsModule } from "./plugins/index.js";
@@ -31,7 +30,6 @@ export const defaultRegistryModules: WorkflowModule[] = [
   taskEngineModule,
   checkpointsModule,
   contextActivationModule,
-  ideasModule,
   projectMemoryModule,
   approvalsModule,
   planningModule,
@@ -49,13 +47,12 @@ export {
 } from "./agent-behavior/index.js";
 export { approvalsModule } from "./approvals/index.js";
 export { documentationModule } from "./documentation/index.js";
-export { ideasModule } from "./ideas/index.js";
 export {
   deriveIdeaPlanningLifecycleState,
   type DeriveIdeaPlanningLifecycleStateInput,
   type IdeaPlanningLifecycleState,
   type PlanFinalizeSummary
-} from "./ideas/derive-idea-planning-lifecycle-state.js";
+} from "./planning/idea-plan/derive-idea-planning-lifecycle-state.js";
 export type {
   DocumentationConflict,
   DocumentationGenerateOptions,
@@ -89,7 +86,21 @@ export {
 } from "./checkpoints/index.js";
 export { contextActivationModule } from "./context-activation/index.js";
 export { projectMemoryModule } from "./project-memory/index.js";
-export { planningModule } from "./planning/index.js";
+export {
+  planningModule,
+  computeBrainstormReadiness,
+  listIdeas,
+  listIdeaPlanArtifacts,
+  readIdeaPlanArtifact
+} from "./planning/index.js";
+export type { BrainstormSession, IdeaPlanBrainstormSection, IdeaPlanDocument } from "./planning/index.js";
+export {
+  PLANNING_IDEAS_DISPATCH_COMMANDS,
+  dispatchPlanningCommand,
+  manifestInstructionPath,
+  type PlanningDispatchShell,
+  type PlanningIdeasDispatchCommand
+} from "./planning/shared/dispatch.js";
 export { modelSelectionModule } from "./model-selection/index.js";
 export { agentBugReportingModule } from "./agent-bug-reporting/index.js";
 export {

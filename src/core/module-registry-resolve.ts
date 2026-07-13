@@ -9,6 +9,11 @@ import {
   type EffectiveWorkspaceConfig
 } from "./workspace-kit-config.js";
 
+/** Deprecated module ids in config alias to their successor (doctor warns operators to update config). */
+export const DEPRECATED_MODULE_ID_ALIASES: Readonly<Record<string, string>> = {
+  ideas: "planning"
+};
+
 function moduleContractPackageRoot(): string {
   return resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 }
@@ -40,6 +45,63 @@ function readNonEmptyStringArray(value: unknown): string[] | undefined {
   return out.length > 0 ? out : undefined;
 }
 
+function resolveDeprecatedModuleId(id: string): { resolved: string; deprecated: boolean } {
+  const alias = DEPRECATED_MODULE_ID_ALIASES[id];
+  if (alias) {
+    return { resolved: alias, deprecated: true };
+  }
+  return { resolved: id, deprecated: false };
+}
+
+function normalizeModuleIdList(
+  ids: string[] | undefined
+): { normalized: string[] | undefined; deprecatedHits: string[] } {
+  if (!ids) {
+    return { normalized: undefined, deprecatedHits: [] };
+  }
+  const deprecatedHits: string[] = [];
+  const normalized = [
+    ...new Set(
+      ids.map((id) => {
+        const { resolved, deprecated } = resolveDeprecatedModuleId(id);
+        if (deprecated) {
+          deprecatedHits.push(id);
+        }
+        return resolved;
+      })
+    )
+  ];
+  return { normalized, deprecatedHits };
+}
+
+/** Doctor summary lines when config still references deprecated module ids (e.g. modules.disabled ideas). */
+export function collectDeprecatedModuleConfigDoctorSummaryLines(
+  effective: Record<string, unknown>
+): string[] {
+  const root = effective.modules;
+  if (root === undefined || root === null || typeof root !== "object" || Array.isArray(root)) {
+    return [];
+  }
+  const mod = root as Record<string, unknown>;
+  const enabled = readNonEmptyStringArray(mod.enabled);
+  const disabled = readNonEmptyStringArray(mod.disabled);
+  const hits = new Set<string>();
+  for (const id of [...(enabled ?? []), ...(disabled ?? [])]) {
+    if (DEPRECATED_MODULE_ID_ALIASES[id]) {
+      hits.add(id);
+    }
+  }
+  if (hits.size === 0) {
+    return [];
+  }
+  return [...hits]
+    .sort()
+    .map(
+      (id) =>
+        `Note: modules.* references deprecated module id '${id}' — aliased to '${DEPRECATED_MODULE_ID_ALIASES[id]}'; update .workspace-kit/config.json to use 'planning' instead.`
+    );
+}
+
 /**
  * Reads `modules.enabled` / `modules.disabled` from effective config and maps them
  * to ModuleRegistryOptions. Unknown module ids throw — fail fast on typos.
@@ -47,6 +109,8 @@ function readNonEmptyStringArray(value: unknown): string[] | undefined {
  * Semantics (matches resolveEnabledModuleIds):
  * - If `modules.enabled` is non-empty: only those ids are candidates, then `modules.disabled` subtracts.
  * - If `modules.enabled` is empty/absent: start from each module's enabledByDefault, then subtract disabled.
+ *
+ * Deprecated ids (e.g. `ideas`) alias to their successor (`planning`) for backward-compatible config.
  */
 export function moduleRegistryOptionsFromEffectiveConfig(
   effective: Record<string, unknown>,
@@ -63,8 +127,12 @@ export function moduleRegistryOptionsFromEffectiveConfig(
     );
   }
   const mod = root as Record<string, unknown>;
-  const enabled = readNonEmptyStringArray(mod.enabled);
-  const disabled = readNonEmptyStringArray(mod.disabled);
+  const enabledRaw = readNonEmptyStringArray(mod.enabled);
+  const disabledRaw = readNonEmptyStringArray(mod.disabled);
+  const enabledNorm = normalizeModuleIdList(enabledRaw);
+  const disabledNorm = normalizeModuleIdList(disabledRaw);
+  const enabled = enabledNorm.normalized;
+  const disabled = disabledNorm.normalized;
 
   for (const id of [...(enabled ?? []), ...(disabled ?? [])]) {
     if (!knownModuleIds.has(id)) {

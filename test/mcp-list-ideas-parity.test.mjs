@@ -9,7 +9,7 @@ import { handleRunCommand } from "../dist/cli/run-command.js";
 import { createCommandRegistryRuntime } from "../dist/core/module-command-router.js";
 import { resolveRegistryAndConfig } from "../dist/core/module-registry-resolve.js";
 import { resolveActorWithFallback } from "../dist/core/policy.js";
-import { ideasModule } from "../dist/index.js";
+import { planningModule } from "../dist/index.js";
 import { handleMcpRequest, MCP_ENVELOPE_SCHEMA_VERSION } from "../dist/mcp/index.js";
 import { SqliteDualPlanningStore } from "../dist/modules/task-engine/persistence/sqlite-dual-planning.js";
 
@@ -43,12 +43,12 @@ function ideasCtx(workspace) {
 }
 
 async function seedIdeas(workspace) {
-  await ideasModule.onCommand(
+  await planningModule.onCommand(
     { name: "create-idea", args: { title: "Planned idea", status: "planned" } },
     ideasCtx(workspace)
   );
-  await ideasModule.onCommand({ name: "create-idea", args: { title: "Open idea" } }, ideasCtx(workspace));
-  await ideasModule.onCommand(
+  await planningModule.onCommand({ name: "create-idea", args: { title: "Open idea" } }, ideasCtx(workspace));
+  await planningModule.onCommand(
     { name: "create-idea", args: { title: "Another open", status: "open" } },
     ideasCtx(workspace)
   );

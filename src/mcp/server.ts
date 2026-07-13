@@ -206,7 +206,7 @@ const AGENT_START_TOOL_NAME = "workflow-cannon.agent_start";
 const CAPABILITIES_TOOL_NAME = "workflow-cannon.capabilities";
 const PHASE_RELEASE_ORCHESTRATION_TOOL_NAME = "workflow-cannon.phase-release-orchestration-state";
 const CAPABILITIES_CLI_FALLBACK = "pnpm exec wk -- list-commands";
-const IDEAS_MODULE_ID = "ideas";
+const PLANNING_MODULE_ID = "planning";
 const PLANNER_CLI_FALLBACK_POINTER =
   "pnpm exec wk run get-planner-flow-status '{\"ideaId\":\"<idea>\"}'";
 
@@ -613,8 +613,8 @@ const packetReadToolDefinitions: Omit<ReadOnlyMcpToolDefinition, "outputByteBudg
       bounded: true,
       note: "Planner bootstrap read orchestrates get-planner-flow-status and get-idea; Tier B mutations use recommendedNextCommand.readyRun with policyApproval when required.",
       sourceRefs: [
-        "src/modules/ideas/instructions/get-planner-flow-status.md",
-        "src/modules/ideas/instructions/get-idea.md",
+        "src/modules/planning/instructions/get-planner-flow-status.md",
+        "src/modules/planning/instructions/get-idea.md",
         ".ai/mcp-tool-version-policy.md"
       ]
     }
@@ -643,7 +643,7 @@ const packetReadToolDefinitions: Omit<ReadOnlyMcpToolDefinition, "outputByteBudg
       bounded: true,
       note: "Ideas inventory is read-only through list-ideas; create, update, delete, and planner mutations use Tier B CLI with policyApproval when required.",
       sourceRefs: [
-        "src/modules/ideas/instructions/list-ideas.md",
+        "src/modules/planning/instructions/list-ideas.md",
         ".ai/mcp-tool-version-policy.md"
       ]
     }
@@ -1010,13 +1010,13 @@ async function handleAgentStartToolCall(id: JsonRpcId, options: McpServerOptions
     sessionSummary = undefined;
   }
 
-  const ideasModuleEnabled = await resolveIdeasModuleEnabled(options);
+  const planningModuleEnabled = await resolvePlanningModuleEnabled(options);
   const payload = buildAgentStartPayload(
     workspaceBinding,
     sessionSummary,
     options,
     mutationEnabled,
-    ideasModuleEnabled
+    planningModuleEnabled
   );
   const text = JSON.stringify(payload, null, 2);
   const byteBudget = resolveToolOutputByteBudget(AGENT_START_TOOL_NAME, options);
@@ -1267,21 +1267,21 @@ function handleResourceRead(
   });
 }
 
-async function resolveIdeasModuleEnabled(options: McpServerOptions): Promise<boolean> {
+async function resolvePlanningModuleEnabled(options: McpServerOptions): Promise<boolean> {
   const workspaceBinding = resolveMcpWorkspaceBinding(options);
   const { registry } = await resolveRegistryAndConfig(
     workspaceBinding.workspaceRoot,
     defaultRegistryModules,
     {}
   );
-  return registry.isModuleEnabled(IDEAS_MODULE_ID);
+  return registry.isModuleEnabled(PLANNING_MODULE_ID);
 }
 
-function buildPlannerWorkflowRouting(ideasModuleEnabled: boolean): Record<string, unknown> {
-  if (!ideasModuleEnabled) {
+function buildPlannerWorkflowRouting(planningModuleEnabled: boolean): Record<string, unknown> {
+  if (!planningModuleEnabled) {
     return {
       enabled: false,
-      whenToUse: "Ideas module is disabled in this workspace; planner routing is unavailable.",
+      whenToUse: "Planning module is disabled in this workspace; planner routing is unavailable.",
       cliFallbackPointer: "pnpm exec wk doctor"
     };
   }
@@ -1300,7 +1300,7 @@ function buildAgentStartPayload(
   sessionSummary?: Record<string, unknown>,
   options: McpServerOptions = {},
   mutationEnabled = false,
-  ideasModuleEnabled = true
+  planningModuleEnabled = true
 ): Record<string, unknown> {
   const tools = listAllMcpTools(options).map((tool) => tool.name);
   return {
@@ -1313,7 +1313,7 @@ function buildAgentStartPayload(
     toolsAvailable: tools,
     recommendedNextTool: CAPABILITIES_TOOL_NAME,
     workflows: {
-      planner: buildPlannerWorkflowRouting(ideasModuleEnabled)
+      planner: buildPlannerWorkflowRouting(planningModuleEnabled)
     },
     workflowRecommendations: [
       {

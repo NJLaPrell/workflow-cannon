@@ -7,12 +7,12 @@ import {
   isIdeaPlanStatusTransitionAllowed,
   normalizeIdeaPlanStatus,
   parseIdeaPlanStatus
-} from "../dist/modules/ideas/idea-plan-types.js";
+} from "../dist/modules/planning/idea-plan/idea-plan-types.js";
 import {
   IdeaPlanStatusTransitionError,
   assertIdeaPlanStatusTransitionAllowed,
   enforceIdeaPlanStatusTransition
-} from "../dist/modules/ideas/idea-plan-status-machine.js";
+} from "../dist/modules/planning/idea-plan/idea-plan-status-machine.js";
 
 test("parseIdeaPlanStatus accepts all ten status inputs", () => {
   const expected = {

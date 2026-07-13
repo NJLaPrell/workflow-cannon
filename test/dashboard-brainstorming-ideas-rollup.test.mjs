@@ -5,9 +5,9 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 
-import { ideasModule, taskEngineModule } from "../dist/index.js";
-import { applyBrainstormSectionSynthesis } from "../dist/modules/ideas/brainstorm-section-synthesis.js";
-import { writeIdeaPlanArtifactVersion } from "../dist/modules/ideas/idea-plan-artifact-storage.js";
+import { planningModule, taskEngineModule } from "../dist/index.js";
+import { applyBrainstormSectionSynthesis } from "../dist/modules/planning/brainstorm/brainstorm-section-synthesis.js";
+import { writeIdeaPlanArtifactVersion } from "../dist/modules/planning/idea-plan/idea-plan-artifact-storage.js";
 import { mapBrainstormSynthesisForDashboard } from "../dist/modules/task-engine/dashboard/build-dashboard-brainstorm-synthesis.js";
 import { SqliteDualPlanningStore } from "../dist/modules/task-engine/persistence/sqlite-dual-planning.js";
 
@@ -73,7 +73,7 @@ test("mapBrainstormSynthesisForDashboard exposes score fields and sessionCount",
 
 test("dashboard-summary includes brainstormSynthesis on idea plan summaries for brainstorming state", async () => {
   const { workspace } = await tmpWorkspace();
-  const created = await ideasModule.onCommand(
+  const created = await planningModule.onCommand(
     {
       name: "create-idea",
       args: {
@@ -100,7 +100,7 @@ test("dashboard-summary includes brainstormSynthesis on idea plan summaries for 
 
 test("dashboard-summary brainstormingIdeas rollup aggregates brainstorming-state ideas", async () => {
   const { workspace } = await tmpWorkspace();
-  const created = await ideasModule.onCommand(
+  const created = await planningModule.onCommand(
     {
       name: "create-idea",
       args: {
@@ -129,7 +129,7 @@ test("dashboard-summary brainstormingIdeas rollup aggregates brainstorming-state
 
 test("dashboard-summary overview projection stubs brainstormingIdeas rollup", async () => {
   const { workspace } = await tmpWorkspace();
-  const created = await ideasModule.onCommand(
+  const created = await planningModule.onCommand(
     {
       name: "create-idea",
       args: {
@@ -155,7 +155,7 @@ test("dashboard-summary overview projection stubs brainstormingIdeas rollup", as
 
 test("dashboard-summary queue projection includes brainstormingIdeas rollup", async () => {
   const { workspace } = await tmpWorkspace();
-  const created = await ideasModule.onCommand(
+  const created = await planningModule.onCommand(
     {
       name: "create-idea",
       args: {

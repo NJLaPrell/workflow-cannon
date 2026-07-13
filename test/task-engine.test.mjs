@@ -32,8 +32,7 @@ import {
   appendPolicyTrace,
   classifyKitStatePath,
   buildTaskPersistenceReadinessReport,
-  planningModule,
-  ideasModule
+  planningModule
 } from "../dist/index.js";
 import { setAgentActivityLease } from "../dist/modules/task-engine/agent-activity-store.js";
 import { persistBuildPlanSession } from "../dist/core/planning/build-plan-session-file.js";
@@ -2875,17 +2874,17 @@ test("taskEngineModule dashboard-summary emits ideas slice", async () => {
   const workspace = await tmpDir();
   const ctx = sqliteTaskEngineCtx(workspace);
 
-  const first = await ideasModule.onCommand(
+  const first = await planningModule.onCommand(
     { name: "create-idea", args: { title: "Open idea", note: "Keep visible" } },
     ctx
   );
   assert.equal(first.ok, true, first.message);
-  const second = await ideasModule.onCommand(
+  const second = await planningModule.onCommand(
     { name: "create-idea", args: { title: "Planning idea", status: "planning" } },
     ctx
   );
   assert.equal(second.ok, true, second.message);
-  const third = await ideasModule.onCommand(
+  const third = await planningModule.onCommand(
     { name: "create-idea", args: { title: "Planned idea", status: "planned" } },
     ctx
   );

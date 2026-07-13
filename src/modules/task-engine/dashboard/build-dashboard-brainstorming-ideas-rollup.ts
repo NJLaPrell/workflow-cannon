@@ -3,10 +3,9 @@ import type {
   DashboardBrainstormingIdeasRollup,
   DashboardBrainstormingIdeaRow
 } from "../../../contracts/dashboard-summary-run.js";
-import { listIdeaPlanArtifacts, readIdeaPlanArtifact } from "../../ideas/idea-plan-artifact-storage.js";
-import { readActiveDraftPlanArtifact } from "../../ideas/idea-planning-metadata.js";
-import { listIdeas } from "../../ideas/idea-store.js";
-import { listPlanningChatSessions } from "../../ideas/planning-chat-session.js";
+import { listIdeaPlanArtifacts, listIdeas, readIdeaPlanArtifact } from "./planning-barrel-imports.js";
+import { readActiveDraftPlanArtifact } from "../../planning/idea-plan/idea-planning-metadata.js";
+import { listPlanningChatSessions } from "../../planning/idea-plan/planning-chat-session.js";
 import type { SqliteDualPlanningStore } from "../persistence/sqlite-dual-planning.js";
 import { mapBrainstormSynthesisForDashboard } from "./build-dashboard-brainstorm-synthesis.js";
 import { mapBrainstormSessionsForDashboard } from "./map-dashboard-brainstorm-sessions.js";

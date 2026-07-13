@@ -1,5 +1,5 @@
 import type { DashboardBrainstormSessionSummary } from "../../../contracts/dashboard-summary-run.js";
-import type { BrainstormSession } from "../../ideas/idea-plan-types.js";
+import type { BrainstormSession } from "./planning-barrel-imports.js";
 
 function mapSessionScores(
   scores: BrainstormSession["scores"] | undefined

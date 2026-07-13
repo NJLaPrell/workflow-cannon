@@ -1,6 +1,6 @@
 /**
- * T100841 — Planner golden-path agent integration test.
- * Harness uses public CLI entrypoints only (no direct playbook/schema reads in this file).
+ * T100864 — merge contract gate: CLI golden-path harness on dual-registration shim (T100863).
+ * Re-run mandatory after WBS-7 (T100822 list-ideas MCP) and WBS-10 (T100825 finalize-preview-packet MCP).
  */
 import assert from "node:assert/strict";
 import crypto from "node:crypto";
@@ -15,6 +15,20 @@ import { runCli } from "../dist/cli.js";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const fixturesDir = path.join(repoRoot, "fixtures", "planning");
+const ideasFixturesDir = path.join(repoRoot, "fixtures", "ideas");
+const firstRunFixture = JSON.parse(
+  fs.readFileSync(path.join(ideasFixturesDir, "empty-inventory-first-run.fixture.json"), "utf8")
+);
+
+/** Frozen CLI command success codes exercised by the golden-path harness. */
+const FROZEN_GOLDEN_PATH_CODES = {
+  "get-planner-flow-status": "planner-flow-status",
+  "list-ideas": "ideas-listed",
+  "draft-plan-artifact": "plan-artifact-draft-persisted",
+  "review-plan-artifact": "plan-artifact-review-complete",
+  "accept-plan-artifact": "plan-artifact-accepted",
+  "finalize-plan-to-phase": "plan-artifact-finalize-preview"
+};
 
 function createCapture() {
   const lines = [];
@@ -89,12 +103,26 @@ async function runWk(workspace, command, args, expectedExitCode = 0) {
   return JSON.parse(capture.lines.at(-1));
 }
 
-describe("Planner golden-path agent harness (T100841)", () => {
+describe("Planner golden-path agent harness (T100864 merge contract gate)", () => {
+  it("fresh workspace: list-ideas returns frozen empty-inventory contract", async () => {
+    const workspace = await tmpWorkspace();
+    const listed = await runWk(workspace, "list-ideas", {});
+
+    assert.equal(listed.ok, true, listed.message);
+    assert.equal(listed.code, FROZEN_GOLDEN_PATH_CODES["list-ideas"]);
+    assert.equal(listed.code, firstRunFixture.listIdeas.code);
+    assert.equal(listed.data.count, firstRunFixture.listIdeas.emptyInventory.count);
+    assert.deepEqual(listed.data.ideas, firstRunFixture.listIdeas.emptyInventory.ideas);
+  });
+
   it("empty workspace: get-planner-flow-status then PlanArtifact chain through finalize dryRun", async () => {
     const workspace = await tmpWorkspace();
 
     const flow = await runWk(workspace, "get-planner-flow-status", {});
     assert.equal(flow.ok, true, flow.message);
+    assert.equal(flow.code, FROZEN_GOLDEN_PATH_CODES["get-planner-flow-status"]);
+    assert.equal(flow.data.goldenPathStage, firstRunFixture.plannerFlowStatus.firstRun.goldenPathStage);
+    assert.equal(flow.data.ideaCount, firstRunFixture.plannerFlowStatus.firstRun.ideaCount);
     assert.ok(flow.data.recommendedNextCommand, "flow status recommends next command");
     assert.ok(
       ["create-idea", "start-idea-planning", "list-ideas", "planner-chat"].some((cmd) =>
@@ -115,6 +143,7 @@ describe("Planner golden-path agent harness (T100841)", () => {
       policyApproval: { confirmed: true, rationale: "planner golden-path draft" }
     });
     assert.equal(draft.ok, true, draft.message);
+    assert.equal(draft.code, FROZEN_GOLDEN_PATH_CODES["draft-plan-artifact"]);
 
     const review = await runWk(workspace, "review-plan-artifact", {
       planId: draft.data.planId,
@@ -124,6 +153,7 @@ describe("Planner golden-path agent harness (T100841)", () => {
       policyApproval: { confirmed: true, rationale: "planner golden-path review" }
     });
     assert.equal(review.ok, true, review.message);
+    assert.equal(review.code, FROZEN_GOLDEN_PATH_CODES["review-plan-artifact"]);
     assert.equal(review.data.passed, true);
 
     const accepted = await runWk(workspace, "accept-plan-artifact", {
@@ -133,6 +163,7 @@ describe("Planner golden-path agent harness (T100841)", () => {
       policyApproval: { confirmed: true, rationale: "planner golden-path accept" }
     });
     assert.equal(accepted.ok, true, accepted.message);
+    assert.equal(accepted.code, FROZEN_GOLDEN_PATH_CODES["accept-plan-artifact"]);
 
     const preview = await runWk(workspace, "finalize-plan-to-phase", {
       planId: draft.data.planId,
@@ -142,7 +173,7 @@ describe("Planner golden-path agent harness (T100841)", () => {
       desiredStatus: "ready"
     });
     assert.equal(preview.ok, true, preview.message);
-    assert.equal(preview.code, "plan-artifact-finalize-preview");
+    assert.equal(preview.code, FROZEN_GOLDEN_PATH_CODES["finalize-plan-to-phase"]);
     assert.ok(preview.data.taskPreview.length > 0);
 
     const packet = await runWk(workspace, "get-plan-artifact", { planId: draft.data.planId });

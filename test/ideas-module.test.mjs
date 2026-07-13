@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 
-import { ideasModule } from "../dist/index.js";
+import { planningModule } from "../dist/index.js";
 import { SqliteDualPlanningStore } from "../dist/modules/task-engine/persistence/sqlite-dual-planning.js";
 
 const SQLITE_CFG = { tasks: { persistenceBackend: "sqlite" } };
@@ -21,10 +21,10 @@ function ctx(workspace) {
   return { runtimeVersion: "0.1", workspacePath: workspace, effectiveConfig: SQLITE_CFG };
 }
 
-test("ideasModule creates and retrieves an idea", async () => {
+test("planning module creates and retrieves an idea", async () => {
   const workspace = await tmpWorkspace();
 
-  const created = await ideasModule.onCommand(
+  const created = await planningModule.onCommand(
     { name: "create-idea", args: { title: "Try planner chat from Ideas", note: "Keep the spark." } },
     ctx(workspace)
   );
@@ -40,7 +40,7 @@ test("ideasModule creates and retrieves an idea", async () => {
   assert.deepEqual(created.data.idea.previousPlanArtifacts, []);
   assert.equal(created.data.responseSchemaVersion, 1);
 
-  const retrieved = await ideasModule.onCommand(
+  const retrieved = await planningModule.onCommand(
     { name: "get-idea", args: { ideaId: created.data.idea.id } },
     ctx(workspace)
   );
@@ -50,14 +50,14 @@ test("ideasModule creates and retrieves an idea", async () => {
   assert.deepEqual(retrieved.data.idea, created.data.idea);
 });
 
-test("ideasModule increments id and sort order", async () => {
+test("planning module increments id and sort order", async () => {
   const workspace = await tmpWorkspace();
 
-  const first = await ideasModule.onCommand(
+  const first = await planningModule.onCommand(
     { name: "create-idea", args: { title: "First" } },
     ctx(workspace)
   );
-  const second = await ideasModule.onCommand(
+  const second = await planningModule.onCommand(
     { name: "create-idea", args: { title: "Second", status: "planning" } },
     ctx(workspace)
   );
@@ -69,13 +69,13 @@ test("ideasModule increments id and sort order", async () => {
   assert.equal(second.data.idea.status, "planning");
 });
 
-test("ideasModule lists and filters ideas by status", async () => {
+test("planning module lists and filters ideas by status", async () => {
   const workspace = await tmpWorkspace();
 
-  await ideasModule.onCommand({ name: "create-idea", args: { title: "First", status: "planned" } }, ctx(workspace));
-  await ideasModule.onCommand({ name: "create-idea", args: { title: "Second" } }, ctx(workspace));
+  await planningModule.onCommand({ name: "create-idea", args: { title: "First", status: "planned" } }, ctx(workspace));
+  await planningModule.onCommand({ name: "create-idea", args: { title: "Second" } }, ctx(workspace));
 
-  const all = await ideasModule.onCommand({ name: "list-ideas", args: {} }, ctx(workspace));
+  const all = await planningModule.onCommand({ name: "list-ideas", args: {} }, ctx(workspace));
   assert.equal(all.ok, true);
   assert.equal(all.code, "ideas-listed");
   assert.deepEqual(
@@ -84,7 +84,7 @@ test("ideasModule lists and filters ideas by status", async () => {
   );
   assert.equal(all.data.count, 2);
 
-  const open = await ideasModule.onCommand({ name: "list-ideas", args: { status: "open" } }, ctx(workspace));
+  const open = await planningModule.onCommand({ name: "list-ideas", args: { status: "open" } }, ctx(workspace));
   assert.equal(open.ok, true);
   assert.deepEqual(
     open.data.ideas.map((idea) => idea.title),
@@ -92,14 +92,14 @@ test("ideasModule lists and filters ideas by status", async () => {
   );
 });
 
-test("ideasModule updates and clears optional idea fields", async () => {
+test("planning module updates and clears optional idea fields", async () => {
   const workspace = await tmpWorkspace();
 
-  const created = await ideasModule.onCommand(
+  const created = await planningModule.onCommand(
     { name: "create-idea", args: { title: "Original", note: "Draft", linkedPlanArtifact: "plan-old" } },
     ctx(workspace)
   );
-  const updated = await ideasModule.onCommand(
+  const updated = await planningModule.onCommand(
     {
       name: "update-idea",
       args: {
@@ -125,15 +125,15 @@ test("ideasModule updates and clears optional idea fields", async () => {
   assert.notEqual(updated.data.idea.updatedAt, created.data.idea.updatedAt);
 });
 
-test("ideasModule deletes ideas", async () => {
+test("planning module deletes ideas", async () => {
   const workspace = await tmpWorkspace();
 
-  const created = await ideasModule.onCommand({ name: "create-idea", args: { title: "Remove me" } }, ctx(workspace));
-  const deleted = await ideasModule.onCommand(
+  const created = await planningModule.onCommand({ name: "create-idea", args: { title: "Remove me" } }, ctx(workspace));
+  const deleted = await planningModule.onCommand(
     { name: "delete-idea", args: { ideaId: created.data.idea.id } },
     ctx(workspace)
   );
-  const listed = await ideasModule.onCommand({ name: "list-ideas", args: {} }, ctx(workspace));
+  const listed = await planningModule.onCommand({ name: "list-ideas", args: {} }, ctx(workspace));
 
   assert.equal(deleted.ok, true);
   assert.equal(deleted.code, "idea-deleted");
@@ -142,14 +142,14 @@ test("ideasModule deletes ideas", async () => {
   assert.deepEqual(listed.data.ideas, []);
 });
 
-test("ideasModule reorders full idea order", async () => {
+test("planning module reorders full idea order", async () => {
   const workspace = await tmpWorkspace();
 
-  const first = await ideasModule.onCommand({ name: "create-idea", args: { title: "First" } }, ctx(workspace));
-  const second = await ideasModule.onCommand({ name: "create-idea", args: { title: "Second" } }, ctx(workspace));
-  const third = await ideasModule.onCommand({ name: "create-idea", args: { title: "Third" } }, ctx(workspace));
+  const first = await planningModule.onCommand({ name: "create-idea", args: { title: "First" } }, ctx(workspace));
+  const second = await planningModule.onCommand({ name: "create-idea", args: { title: "Second" } }, ctx(workspace));
+  const third = await planningModule.onCommand({ name: "create-idea", args: { title: "Third" } }, ctx(workspace));
 
-  const reordered = await ideasModule.onCommand(
+  const reordered = await planningModule.onCommand(
     { name: "reorder-ideas", args: { ideaIds: [third.data.idea.id, first.data.idea.id, second.data.idea.id] } },
     ctx(workspace)
   );
@@ -166,52 +166,52 @@ test("ideasModule reorders full idea order", async () => {
   );
 });
 
-test("ideasModule validates create and get args", async () => {
+test("planning module validates create and get args", async () => {
   const workspace = await tmpWorkspace();
 
-  const missingTitle = await ideasModule.onCommand(
+  const missingTitle = await planningModule.onCommand(
     { name: "create-idea", args: { title: "   " } },
     ctx(workspace)
   );
   assert.equal(missingTitle.ok, false);
   assert.equal(missingTitle.code, "invalid-args");
 
-  const invalidGet = await ideasModule.onCommand(
+  const invalidGet = await planningModule.onCommand(
     { name: "get-idea", args: { ideaId: "T100529" } },
     ctx(workspace)
   );
   assert.equal(invalidGet.ok, false);
   assert.equal(invalidGet.code, "invalid-args");
 
-  const missing = await ideasModule.onCommand(
+  const missing = await planningModule.onCommand(
     { name: "get-idea", args: { ideaId: "I999" } },
     ctx(workspace)
   );
   assert.equal(missing.ok, false);
   assert.equal(missing.code, "idea-not-found");
 
-  const invalidList = await ideasModule.onCommand(
+  const invalidList = await planningModule.onCommand(
     { name: "list-ideas", args: { status: "paused" } },
     ctx(workspace)
   );
   assert.equal(invalidList.ok, false);
   assert.equal(invalidList.code, "invalid-args");
 
-  const invalidUpdate = await ideasModule.onCommand(
+  const invalidUpdate = await planningModule.onCommand(
     { name: "update-idea", args: { ideaId: "I999", title: "   " } },
     ctx(workspace)
   );
   assert.equal(invalidUpdate.ok, false);
   assert.equal(invalidUpdate.code, "invalid-args");
 
-  const invalidDelete = await ideasModule.onCommand(
+  const invalidDelete = await planningModule.onCommand(
     { name: "delete-idea", args: { ideaId: "T100530" } },
     ctx(workspace)
   );
   assert.equal(invalidDelete.ok, false);
   assert.equal(invalidDelete.code, "invalid-args");
 
-  const invalidReorder = await ideasModule.onCommand(
+  const invalidReorder = await planningModule.onCommand(
     { name: "reorder-ideas", args: { ideaIds: ["I001"] } },
     ctx(workspace)
   );

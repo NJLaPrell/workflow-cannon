@@ -1,3 +1,7 @@
+/**
+ * T100864 — merge contract gate: IdeaPlan golden-path lifecycle on dual-registration shim (T100863).
+ * Re-run mandatory after WBS-7 (T100822 list-ideas MCP) and WBS-10 (T100825 finalize-preview-packet MCP).
+ */
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { mkdir, mkdtemp } from "node:fs/promises";
@@ -5,13 +9,13 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 
-import { ideasModule } from "../dist/index.js";
-import { writeIdeaPlanArtifactVersion } from "../dist/modules/ideas/idea-plan-artifact-storage.js";
+import { planningModule } from "../dist/index.js";
+import { writeIdeaPlanArtifactVersion } from "../dist/modules/planning/idea-plan/idea-plan-artifact-storage.js";
 import {
   getPlanningChatSession,
   persistPlanningChatSession,
   updatePlanningChatSession
-} from "../dist/modules/ideas/planning-chat-session.js";
+} from "../dist/modules/planning/idea-plan/planning-chat-session.js";
 import { SqliteDualPlanningStore } from "../dist/modules/task-engine/persistence/sqlite-dual-planning.js";
 
 const root = path.resolve(import.meta.dirname, "..");
@@ -21,8 +25,20 @@ const brainstormingFixture = JSON.parse(
 const planningFixture = JSON.parse(
   fs.readFileSync(path.join(root, "fixtures/ideas/planning-state.fixture.json"), "utf8")
 );
+const firstRunFixture = JSON.parse(
+  fs.readFileSync(path.join(root, "fixtures/ideas/empty-inventory-first-run.fixture.json"), "utf8")
+);
 
 const SQLITE_CFG = { tasks: { persistenceBackend: "sqlite" } };
+
+/** Frozen operator command names + success/error codes for dual-shim contract gate. */
+const FROZEN_COMMAND_CODES = {
+  "list-ideas": "ideas-listed",
+  "get-planner-flow-status": "planner-flow-status",
+  "create-idea": "idea-created",
+  "start-idea-planning": "idea-planning-started",
+  "update-idea-planning-session": "idea-planning-session-updated"
+};
 
 async function tmpWorkspace() {
   const workspace = await mkdtemp(path.join(os.tmpdir(), "planner-flow-contract-"));
@@ -42,11 +58,11 @@ function policyApproval() {
 }
 
 async function planningGeneration(workspace) {
-  return (await ideasModule.onCommand({ name: "list-ideas", args: {} }, ctx(workspace))).data.planningGeneration;
+  return (await planningModule.onCommand({ name: "list-ideas", args: {} }, ctx(workspace))).data.planningGeneration;
 }
 
 async function createIdea(workspace, title = "Planner flow contract idea") {
-  const created = await ideasModule.onCommand(
+  const created = await planningModule.onCommand(
     {
       name: "create-idea",
       args: {
@@ -62,7 +78,7 @@ async function createIdea(workspace, title = "Planner flow contract idea") {
 }
 
 async function startPlanning(workspace, ideaId) {
-  const out = await ideasModule.onCommand(
+  const out = await planningModule.onCommand(
     {
       name: "start-idea-planning",
       args: {
@@ -78,7 +94,7 @@ async function startPlanning(workspace, ideaId) {
 }
 
 async function runSessionUpdate(workspace, args) {
-  return ideasModule.onCommand(
+  return planningModule.onCommand(
     {
       name: "update-idea-planning-session",
       args: {
@@ -92,7 +108,11 @@ async function runSessionUpdate(workspace, args) {
 }
 
 async function runFlowStatus(workspace, args = {}) {
-  return ideasModule.onCommand({ name: "get-planner-flow-status", args }, ctx(workspace));
+  return planningModule.onCommand({ name: "get-planner-flow-status", args }, ctx(workspace));
+}
+
+async function runListIdeas(workspace, args = {}) {
+  return planningModule.onCommand({ name: "list-ideas", args }, ctx(workspace));
 }
 
 function writeDocument(workspace, idea, fixture, statusOverride) {
@@ -104,6 +124,55 @@ function writeDocument(workspace, idea, fixture, statusOverride) {
     ...(statusOverride ? { status: statusOverride } : {})
   });
 }
+
+test("fresh dual-shim workspace: list-ideas returns frozen empty-inventory contract", async () => {
+  const { workspace } = await tmpWorkspace();
+  const listed = await runListIdeas(workspace);
+
+  assert.equal(listed.ok, true, listed.message);
+  assert.equal(listed.code, FROZEN_COMMAND_CODES["list-ideas"]);
+  assert.equal(listed.code, firstRunFixture.listIdeas.code);
+  assert.deepEqual(listed.data.ideas, firstRunFixture.listIdeas.emptyInventory.ideas);
+  assert.equal(listed.data.count, firstRunFixture.listIdeas.emptyInventory.count);
+  assert.equal(typeof listed.data.planningGeneration, "number");
+});
+
+test("fresh dual-shim workspace: get-planner-flow-status returns frozen first-run contract", async () => {
+  const { workspace } = await tmpWorkspace();
+  const out = await runFlowStatus(workspace);
+
+  assert.equal(out.ok, true, out.message);
+  assert.equal(out.code, FROZEN_COMMAND_CODES["get-planner-flow-status"]);
+  assert.equal(out.code, firstRunFixture.plannerFlowStatus.code);
+  assert.equal(out.data.goldenPathStage, firstRunFixture.plannerFlowStatus.firstRun.goldenPathStage);
+  assert.equal(out.data.ideaCount, firstRunFixture.plannerFlowStatus.firstRun.ideaCount);
+  assert.ok(out.data.blockers.some((b) => b.code === firstRunFixture.plannerFlowStatus.firstRun.blockerCode));
+  assert.equal(
+    out.data.recommendedNextCommand.command,
+    firstRunFixture.plannerFlowStatus.firstRun.recommendedNextCommand
+  );
+});
+
+test("golden-path mutations keep frozen command codes on dual-shim dispatcher", async () => {
+  const { workspace } = await tmpWorkspace();
+  const created = await planningModule.onCommand(
+    {
+      name: "create-idea",
+      args: {
+        title: "Frozen code contract idea",
+        expectedPlanningGeneration: await planningGeneration(workspace),
+        policyApproval: policyApproval()
+      }
+    },
+    ctx(workspace)
+  );
+  assert.equal(created.ok, true, created.message);
+  assert.equal(created.code, FROZEN_COMMAND_CODES["create-idea"]);
+
+  const started = await startPlanning(workspace, created.data.idea.id);
+  assert.equal(started.ok, true, started.message);
+  assert.equal(started.code, FROZEN_COMMAND_CODES["start-idea-planning"]);
+});
 
 test("brainstorming and planning document statuses are distinct golden-path stages", async () => {
   const { workspace } = await tmpWorkspace();
@@ -247,8 +316,9 @@ test("start-idea-planning aligns Ideas row, IdeaPlan document, and planning sess
   writeDocument(workspace, idea, brainstormingFixture, "brainstorming");
 
   const started = await startPlanning(workspace, idea.id);
+  assert.equal(started.code, FROZEN_COMMAND_CODES["start-idea-planning"]);
   const ideaRow = (
-    await ideasModule.onCommand({ name: "get-idea", args: { ideaId: idea.id } }, ctx(workspace))
+    await planningModule.onCommand({ name: "get-idea", args: { ideaId: idea.id } }, ctx(workspace))
   ).data.idea;
   const session = getPlanningChatSession(dual.getDatabase(), idea.id);
 

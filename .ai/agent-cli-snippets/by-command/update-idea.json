@@ -15,8 +15,8 @@
       "argv": "workspace-kit run update-idea '{}'"
     }
   ],
-  "instructionPath": "src/modules/ideas/instructions/update-idea.md",
-  "moduleId": "ideas",
+  "instructionPath": "src/modules/planning/instructions/update-idea.md",
+  "moduleId": "planning",
   "description": "Update a lightweight operator idea in kit SQLite.",
   "policy": {
     "sensitivity": "sensitive",
@@ -38,5 +38,5 @@
     "listCommands": "pnpm exec wk run --list-commands",
     "schemaOnly": "pnpm exec wk run <command> --schema-only '{}'"
   },
-  "invocationId": "8f78224d-ef40-4072-93b3-95c2f6b1281e"
+  "invocationId": "043a1834-3876-4290-b1ab-a34d9795d747"
 }

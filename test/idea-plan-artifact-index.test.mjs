@@ -13,7 +13,7 @@ import {
   buildIdeaPlanArtifactIndex,
   readIdeaPlanArtifact,
   writeNextIdeaPlanArtifactVersion
-} from "../dist/modules/ideas/idea-plan-artifact-storage.js";
+} from "../dist/modules/planning/idea-plan/idea-plan-artifact-storage.js";
 
 const SQLITE_CFG = { tasks: { persistenceBackend: "sqlite" } };
 

@@ -10,9 +10,9 @@ import {
   renderPlanDocumentMarkdown,
   resolvePlanDocumentOutputPath
 } from "../../core/planning/render-plan-document-markdown.js";
-import { readIdeaPlanArtifactVersion } from "../ideas/idea-plan-artifact-storage.js";
-import type { IdeaPlanDocumentWithPlanningPayload } from "../ideas/idea-plan-planning-init.js";
-import type { IdeaPlanDocument, IdeaPlanStatus } from "../ideas/idea-plan-types.js";
+import { readIdeaPlanArtifactVersion } from "./idea-plan/idea-plan-artifact-storage.js";
+import type { IdeaPlanDocumentWithPlanningPayload } from "./idea-plan/idea-plan-planning-init.js";
+import type { IdeaPlanDocument, IdeaPlanStatus } from "./idea-plan/idea-plan-types.js";
 
 function legacyStatusToIdeaPlanStatus(status: PlanArtifactV1["status"]): IdeaPlanStatus {
   switch (status) {

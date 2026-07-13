@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "fragmentKind": "approval",
+  "approval": {
+    "actor": "operator via dashboard complete-and-release",
+    "timestamp": "2026-07-13T04:26:45.171Z",
+    "rationale": "Dashboard authorization complete-and-release for Phase 149; gates green path after drain of T100861-T100870. Publish @workflow-cannon/workspace-kit@1.0.11 dist-tag latest.",
+    "scope": "phase-149 closeout publish @workflow-cannon/workspace-kit@1.0.11 dist-tag latest"
+  }
+}

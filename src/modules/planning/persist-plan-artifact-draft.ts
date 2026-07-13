@@ -11,14 +11,14 @@ import {
   writeNextPlanArtifactVersion,
   type PlanArtifactStoragePaths
 } from "../../core/planning/plan-artifact-storage.js";
-import { linkActiveDraftPlanArtifactFromPersistedDraft } from "../ideas/idea-planning-metadata.js";
+import { linkActiveDraftPlanArtifactFromPersistedDraft } from "./idea-plan/idea-planning-metadata.js";
 import {
   pinArtifactToUnifiedIdeaPlan,
   resolveUnifiedIdeaPlanDraftTarget,
   synthesizePlanArtifactFromStoredDocument
-} from "../ideas/idea-plan-planning-init.js";
-import { promotePlanningSessionToDraftReadyAfterDraftPersist } from "../ideas/planning-session-draft-ready.js";
-import { toPlanningChatSessionResponse } from "../ideas/planning-chat-session.js";
+} from "./idea-plan/idea-plan-planning-init.js";
+import { promotePlanningSessionToDraftReadyAfterDraftPersist } from "./idea-plan/planning-session-draft-ready.js";
+import { toPlanningChatSessionResponse } from "./idea-plan/planning-chat-session.js";
 import { planningSqliteDatabaseRelativePath } from "../task-engine/planning-config.js";
 import { digestPayload, stableStringify } from "../task-engine/mutation-utils.js";
 import { commitUnifiedIdeaPlanDraftPersist } from "./persist-unified-idea-plan-draft.js";

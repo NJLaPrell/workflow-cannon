@@ -6,13 +6,14 @@ import {
   ModuleCommandRouterError,
   ModuleRegistry,
   UNKNOWN_COMMAND_SAMPLE_LIMIT,
+  PLANNING_IDEAS_DISPATCH_COMMANDS,
   agentBehaviorModule,
   createCommandRegistryRuntime,
   documentationModule,
   formatUnknownCommandMessage,
   getAtPath,
-  ideasModule,
   planningModule,
+  manifestInstructionPath,
   taskEngineModule,
   workspaceConfigModule
 } from "../dist/index.js";
@@ -22,12 +23,45 @@ const lifecycleContext = {
   workspacePath: process.cwd()
 };
 
+test("Planning module registers 28 dispatcher-owned commands", () => {
+  assert.equal(PLANNING_IDEAS_DISPATCH_COMMANDS.length, 28);
+  const registry = new ModuleRegistry([planningModule, taskEngineModule]);
+  const router = new ModuleCommandRouter(registry);
+  const names = new Set(router.listCommands().map((command) => command.name));
+  for (const commandName of PLANNING_IDEAS_DISPATCH_COMMANDS) {
+    assert.ok(names.has(commandName), `missing routed command ${commandName}`);
+  }
+});
+
+test("manifestInstructionPath resolves builtin manifest rows for Planning commands", () => {
+  assert.equal(
+    manifestInstructionPath("draft-plan-artifact"),
+    "src/modules/planning/instructions/draft-plan-artifact.md"
+  );
+  assert.equal(
+    manifestInstructionPath("create-idea"),
+    "src/modules/planning/instructions/create-idea.md"
+  );
+});
+
+test("planning module handles list-planning-types via shared dispatcher", async () => {
+  const registry = new ModuleRegistry([planningModule, taskEngineModule]);
+  const router = new ModuleCommandRouter(registry);
+  const ctx = { ...lifecycleContext, moduleRegistry: registry };
+
+  const viaPlanning = await router.execute("list-planning-types", {}, ctx);
+  assert.equal(viaPlanning.ok, true);
+  assert.equal(viaPlanning.code, "planning-types-listed");
+
+  const directPlanning = await planningModule.onCommand({ name: "list-planning-types", args: {} }, ctx);
+  assert.deepEqual(directPlanning, viaPlanning);
+});
+
 test("ModuleCommandRouter lists commands from enabled modules", () => {
   const registry = new ModuleRegistry([
     workspaceConfigModule,
     documentationModule,
     agentBehaviorModule,
-    ideasModule,
     planningModule,
     taskEngineModule
   ]);
