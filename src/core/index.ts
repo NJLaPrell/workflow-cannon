@@ -13,6 +13,8 @@ export {
 } from "./module-registry.js";
 export {
   moduleRegistryOptionsFromEffectiveConfig,
+  collectDeprecatedModuleConfigDoctorSummaryLines,
+  DEPRECATED_MODULE_ID_ALIASES,
   pickModuleContractWorkspacePath,
   resolveRegistryAndConfig
 } from "./module-registry-resolve.js";

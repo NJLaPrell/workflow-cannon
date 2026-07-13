@@ -24,9 +24,9 @@ const lifecycleContext = {
   workspacePath: process.cwd()
 };
 
-test("Planning + Ideas dual registration exposes 28 dispatcher-owned commands", () => {
+test("Planning module registers 28 dispatcher-owned commands", () => {
   assert.equal(PLANNING_IDEAS_DISPATCH_COMMANDS.length, 28);
-  const registry = new ModuleRegistry([ideasModule, planningModule, taskEngineModule]);
+  const registry = new ModuleRegistry([planningModule, taskEngineModule]);
   const router = new ModuleCommandRouter(registry);
   const names = new Set(router.listCommands().map((command) => command.name));
   for (const commandName of PLANNING_IDEAS_DISPATCH_COMMANDS) {
@@ -34,19 +34,19 @@ test("Planning + Ideas dual registration exposes 28 dispatcher-owned commands", 
   }
 });
 
-test("manifestInstructionPath resolves builtin manifest rows for Planning and Ideas commands", () => {
+test("manifestInstructionPath resolves builtin manifest rows for Planning commands", () => {
   assert.equal(
     manifestInstructionPath("draft-plan-artifact"),
     "src/modules/planning/instructions/draft-plan-artifact.md"
   );
   assert.equal(
     manifestInstructionPath("create-idea"),
-    "src/modules/ideas/instructions/create-idea.md"
+    "src/modules/planning/instructions/create-idea.md"
   );
 });
 
-test("ideas and planning module shells delegate list-planning-types through shared dispatcher", async () => {
-  const registry = new ModuleRegistry([ideasModule, planningModule, taskEngineModule]);
+test("ideas module shell still delegates list-planning-types through shared dispatcher", async () => {
+  const registry = new ModuleRegistry([planningModule, taskEngineModule]);
   const router = new ModuleCommandRouter(registry);
   const ctx = { ...lifecycleContext, moduleRegistry: registry };
 
@@ -63,7 +63,6 @@ test("ModuleCommandRouter lists commands from enabled modules", () => {
     workspaceConfigModule,
     documentationModule,
     agentBehaviorModule,
-    ideasModule,
     planningModule,
     taskEngineModule
   ]);

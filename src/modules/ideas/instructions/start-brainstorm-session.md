@@ -1,1 +1,0 @@
-../../planning/instructions/start-brainstorm-session.md

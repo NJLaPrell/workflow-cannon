@@ -25,24 +25,7 @@ for (const row of manifestRows) {
 const ORPHAN_CHECK_ALLOWLIST = new Set([
   "documentation/documentation-maintainer.md",
   "documentation/release-notes-authoring.md",
-  "task-engine/planning-state-events.md",
-  // T100865 transitional: ideas-era commands physically under planning/instructions until WBS-7 moduleId flip.
-  "planning/cancel-plan-artifact.md",
-  "planning/check-delivery-status.md",
-  "planning/complete-brainstorm.md",
-  "planning/create-idea.md",
-  "planning/delete-idea.md",
-  "planning/delete-plan-artifact.md",
-  "planning/get-idea.md",
-  "planning/get-planner-flow-status.md",
-  "planning/list-ideas.md",
-  "planning/migrate-ideas-to-unified-document.md",
-  "planning/reorder-ideas.md",
-  "planning/start-brainstorm-session.md",
-  "planning/start-idea-planning.md",
-  "planning/update-brainstorm-session.md",
-  "planning/update-idea-planning-session.md",
-  "planning/update-idea.md"
+  "task-engine/planning-state-events.md"
 ]);
 
 const errors = [];

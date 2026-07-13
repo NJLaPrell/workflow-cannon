@@ -4,7 +4,6 @@ import { dispatchPlanningCommand } from "./shared/dispatch.js";
 
 /**
  * Planning module shell — delegates all command handling to `shared/dispatch.ts`.
- * Kept registered alongside `ideasModule` as a transitional dual-registration rollback shim only.
  */
 export const planningModule: WorkflowModule = {
   registration: {

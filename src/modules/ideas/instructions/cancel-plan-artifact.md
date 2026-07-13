@@ -1,1 +1,0 @@
-../../planning/instructions/cancel-plan-artifact.md

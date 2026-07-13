@@ -1,1 +1,0 @@
-../../planning/instructions/check-delivery-status.md
