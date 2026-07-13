@@ -10,9 +10,9 @@ import {
 import { loadIdeaPlanStateSchema } from "./idea-plan-state-schema-loader.js";
 import { requireIdeaPlanAgentDirective } from "./idea-plan-state-schema-guard.js";
 import type { IdeaPlanDocument, IdeaPlanPlanSection } from "./idea-plan-types.js";
-import { getIdea, isIdeaId, updateIdea, type IdeaRecord } from "../../ideas/idea-store.js";
+import { getIdea, isIdeaId, updateIdea, type IdeaRecord } from "../idea-row/idea-store.js";
 import { readActiveDraftPlanArtifact } from "../../ideas/idea-planning-metadata.js";
-import { buildPlanSeedFromBrainstorm } from "../../ideas/brainstorm-plan-seed.js";
+import { buildPlanSeedFromBrainstorm } from "../brainstorm/brainstorm-plan-seed.js";
 
 export type IdeaPlanPlanningPayload = Pick<
   PlanArtifactV1,

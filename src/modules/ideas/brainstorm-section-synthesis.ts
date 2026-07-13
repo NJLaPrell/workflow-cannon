@@ -1,15 +1,2 @@
-import { synthesizeBrainstormScores } from "./brainstorm-scoring.js";
-import type { IdeaPlanBrainstormSection } from "./idea-plan-types.js";
-
-/** Recompute `brainstorm.synthesis` from scored sessions (60/40 recency when N≥2). */
-export function applyBrainstormSectionSynthesis(section: IdeaPlanBrainstormSection): IdeaPlanBrainstormSection {
-  const synthesis = synthesizeBrainstormScores(section.sessions);
-  if (!synthesis) {
-    const { synthesis: _removed, ...rest } = section;
-    return rest;
-  }
-  return {
-    ...section,
-    synthesis
-  };
-}
+/** @deprecated Import from `../planning/brainstorm/brainstorm-section-synthesis.js` — re-export shim for Ideas module callers. */
+export * from "../planning/brainstorm/brainstorm-section-synthesis.js";

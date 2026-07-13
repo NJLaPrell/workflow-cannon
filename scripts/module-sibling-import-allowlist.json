@@ -151,6 +151,144 @@
       "line": "72",
       "importLine": "import { summarizeTeamAssignmentsForDashboard } from \"../../team-execution/assignment-store.js\";",
       "rationale": "Dashboard slice needs team assignment summary; allowlist pending façade."
+    },
+    {
+      "file": "src/modules/planning/brainstorm/complete-brainstorm-handler.ts",
+      "line": "3",
+      "importLine": "import { attachPolicyMeta } from \"../../task-engine/attach-planning-response-meta.js\";",
+      "rationale": "T100862: planning/brainstorm handlers reuse task-engine planning response meta (nested under planning/)."
+    },
+    {
+      "file": "src/modules/planning/brainstorm/complete-brainstorm-handler.ts",
+      "line": "4",
+      "importLine": "import { planningGenPolicyGate } from \"../../task-engine/planning-generation-gate.js\";",
+      "rationale": "T100862: planning/brainstorm handlers reuse task-engine planning generation gate."
+    },
+    {
+      "file": "src/modules/planning/brainstorm/complete-brainstorm-handler.ts",
+      "line": "5",
+      "importLine": "import { digestPayload, readIdempotencyValue } from \"../../task-engine/mutation-utils.js\";",
+      "rationale": "T100862: planning/brainstorm handlers reuse task-engine idempotency helpers."
+    },
+    {
+      "file": "src/modules/planning/brainstorm/complete-brainstorm-handler.ts",
+      "line": "6",
+      "importLine": "import { TaskEngineError } from \"../../task-engine/transitions.js\";",
+      "rationale": "T100862: planning/brainstorm handlers surface task-engine storage errors."
+    },
+    {
+      "file": "src/modules/planning/brainstorm/start-brainstorm-session-handler.ts",
+      "line": "4",
+      "importLine": "import { attachPolicyMeta } from \"../../task-engine/attach-planning-response-meta.js\";",
+      "rationale": "T100862: planning/brainstorm handlers reuse task-engine planning response meta."
+    },
+    {
+      "file": "src/modules/planning/brainstorm/start-brainstorm-session-handler.ts",
+      "line": "5",
+      "importLine": "import { planningGenPolicyGate } from \"../../task-engine/planning-generation-gate.js\";",
+      "rationale": "T100862: planning/brainstorm handlers reuse task-engine planning generation gate."
+    },
+    {
+      "file": "src/modules/planning/brainstorm/start-brainstorm-session-handler.ts",
+      "line": "6",
+      "importLine": "import { digestPayload, readIdempotencyValue } from \"../../task-engine/mutation-utils.js\";",
+      "rationale": "T100862: planning/brainstorm handlers reuse task-engine idempotency helpers."
+    },
+    {
+      "file": "src/modules/planning/brainstorm/start-brainstorm-session-handler.ts",
+      "line": "7",
+      "importLine": "import { TaskEngineError } from \"../../task-engine/transitions.js\";",
+      "rationale": "T100862: planning/brainstorm handlers surface task-engine storage errors."
+    },
+    {
+      "file": "src/modules/planning/brainstorm/update-brainstorm-session-handler.ts",
+      "line": "3",
+      "importLine": "import { attachPolicyMeta } from \"../../task-engine/attach-planning-response-meta.js\";",
+      "rationale": "T100862: planning/brainstorm handlers reuse task-engine planning response meta."
+    },
+    {
+      "file": "src/modules/planning/brainstorm/update-brainstorm-session-handler.ts",
+      "line": "4",
+      "importLine": "import { planningGenPolicyGate } from \"../../task-engine/planning-generation-gate.js\";",
+      "rationale": "T100862: planning/brainstorm handlers reuse task-engine planning generation gate."
+    },
+    {
+      "file": "src/modules/planning/brainstorm/update-brainstorm-session-handler.ts",
+      "line": "5",
+      "importLine": "import { digestPayload, readIdempotencyValue } from \"../../task-engine/mutation-utils.js\";",
+      "rationale": "T100862: planning/brainstorm handlers reuse task-engine idempotency helpers."
+    },
+    {
+      "file": "src/modules/planning/brainstorm/update-brainstorm-session-handler.ts",
+      "line": "6",
+      "importLine": "import { TaskEngineError } from \"../../task-engine/transitions.js\";",
+      "rationale": "T100862: planning/brainstorm handlers surface task-engine storage errors."
+    },
+    {
+      "file": "src/modules/planning/idea-row/idea-crud-commands.ts",
+      "line": "3",
+      "importLine": "import type { OpenedPlanningStores } from \"../../task-engine/persistence/planning-open.js\";",
+      "rationale": "T100862: idea-row CRUD relocated under planning/idea-row; same task-engine persistence coupling as former ideas/index."
+    },
+    {
+      "file": "src/modules/planning/idea-row/idea-crud-commands.ts",
+      "line": "4",
+      "importLine": "import { readIdempotencyValue } from \"../../task-engine/mutation-utils.js\";",
+      "rationale": "T100862: idea-row CRUD uses task-engine idempotency for canonical idea events."
+    },
+    {
+      "file": "src/modules/planning/idea-row/idea-crud-commands.ts",
+      "line": "5",
+      "importLine": "import { getPlanningGenerationPolicy } from \"../../task-engine/planning-config.js\";",
+      "rationale": "T100862: idea-row CRUD attaches planning generation policy metadata."
+    },
+    {
+      "file": "src/modules/planning/idea-row/idea-crud-commands.ts",
+      "line": "9",
+      "importLine": "} from \"../../task-engine/persistence/planning-event-draft.js\";",
+      "rationale": "T100862: idea-row CRUD drafts canonical planning idea events via task-engine."
+    },
+    {
+      "file": "src/modules/planning/idea-row/idea-crud-commands.ts",
+      "line": "10",
+      "importLine": "import { isPlanningGitSyncPublishActive } from \"../../task-engine/persistence/planning-canonical-sync-domains.js\";",
+      "rationale": "T100862: idea-row CRUD branches on git-canonical ideas publish mode."
+    },
+    {
+      "file": "src/modules/planning/idea-row/idea-crud-commands.ts",
+      "line": "11",
+      "importLine": "import { ideaRecordToEventSnapshot } from \"../../task-engine/task-state-events/planning-idea-event-utils.js\";",
+      "rationale": "T100862: idea-row CRUD maps IdeaRecord rows to planning event snapshots."
+    },
+    {
+      "file": "src/modules/planning/idea-row/idea-crud-commands.ts",
+      "line": "12",
+      "importLine": "import type { TaskStore } from \"../../task-engine/persistence/store.js\";",
+      "rationale": "T100862: idea-row CRUD publishes canonical events through task store."
+    },
+    {
+      "file": "src/modules/planning/idea-row/migrate-ideas-to-unified-document-handler.ts",
+      "line": "3",
+      "importLine": "import { attachPolicyMeta } from \"../../task-engine/attach-planning-response-meta.js\";",
+      "rationale": "T100862: unified-document migration handler relocated under planning/idea-row."
+    },
+    {
+      "file": "src/modules/planning/idea-row/migrate-ideas-to-unified-document-handler.ts",
+      "line": "4",
+      "importLine": "import { planningGenPolicyGate } from \"../../task-engine/planning-generation-gate.js\";",
+      "rationale": "T100862: unified-document migration handler uses planning generation gate."
+    },
+    {
+      "file": "src/modules/planning/idea-row/migrate-ideas-to-unified-document-handler.ts",
+      "line": "5",
+      "importLine": "import { TaskEngineError } from \"../../task-engine/transitions.js\";",
+      "rationale": "T100862: unified-document migration handler surfaces task-engine errors."
+    },
+    {
+      "file": "src/modules/planning/idea-row/migrate-ideas-to-unified-document.ts",
+      "line": "14",
+      "importLine": "import { parsePlanIdFromPlanArtifactRef } from \"../../task-engine/plan-artifact-execute-policy.js\";",
+      "rationale": "T100862: unified-document migration parses plan refs via task-engine policy helper."
     }
   ]
 }
