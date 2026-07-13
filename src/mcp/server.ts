@@ -613,8 +613,8 @@ const packetReadToolDefinitions: Omit<ReadOnlyMcpToolDefinition, "outputByteBudg
       bounded: true,
       note: "Planner bootstrap read orchestrates get-planner-flow-status and get-idea; Tier B mutations use recommendedNextCommand.readyRun with policyApproval when required.",
       sourceRefs: [
-        "src/modules/ideas/instructions/get-planner-flow-status.md",
-        "src/modules/ideas/instructions/get-idea.md",
+        "src/modules/planning/instructions/get-planner-flow-status.md",
+        "src/modules/planning/instructions/get-idea.md",
         ".ai/mcp-tool-version-policy.md"
       ]
     }
@@ -643,7 +643,7 @@ const packetReadToolDefinitions: Omit<ReadOnlyMcpToolDefinition, "outputByteBudg
       bounded: true,
       note: "Ideas inventory is read-only through list-ideas; create, update, delete, and planner mutations use Tier B CLI with policyApproval when required.",
       sourceRefs: [
-        "src/modules/ideas/instructions/list-ideas.md",
+        "src/modules/planning/instructions/list-ideas.md",
         ".ai/mcp-tool-version-policy.md"
       ]
     }
