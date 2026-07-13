@@ -8,6 +8,31 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [1.0.11] - 2026-07-13
+
+Patch — **Phase 149 Hard-merge Ideas into Planning** (Planning is the sole registered module owning Ideas capture and the full IdeaPlan lifecycle; frozen command names / `ideas.persist` / sync domain `ideas` / MCP tool names).
+
+### Changed
+
+- **IdeaPlan kernel under Planning** — types, storage, status machine, schema guards, and unified review/accept live in `planning/idea-plan/` (T100861).
+- **Idea CRUD + brainstorm under Planning** — handlers relocated to `planning/idea-row/` and `planning/brainstorm/`; Ideas thin shell removed later in the phase (T100862).
+- **Shared Planning dispatcher** — all former Ideas + Planning commands route through one dispatcher with dual-registration shim during cutover (T100863).
+- **Merge contract gates** — golden-path, standalone PlanArtifact, and MCP planner smoke assert frozen codes/tool names and empty/first-run behavior (T100864).
+- **Instruction docs migrated** — former Ideas instruction markdown now under `planning/instructions/`; MCP sourceRefs and playbooks retargeted (T100865).
+- **MCP/dashboard/extension retarget** — planner enablement and dashboard barrels use Planning authority (T100866).
+- **Registry cutover** — all 28 commands register under `moduleId: planning`; `ideas` removed from `defaultRegistryModules` with config alias + doctor deprecation warning (T100867).
+- **Unified IdeaPlan default-on** — dashboard unified path is default; emergency kill-switch via `IDEAS_UNIFIED_MODEL_ENABLED=0` or VS Code `workflowCannon.ideas.unifiedModelEnabled: false` (T100869).
+- **Ideas module shell deleted** — Planning owns Ideas lifecycle end-to-end; no separate Ideas WorkflowModule remains (T100870).
+
+### Fixed / verified
+
+- **Ideas git-sync contract** — domain id `ideas`, `planning.idea.*` kinds, and frozen `command.moduleId: "ideas"` documented and covered by contract tests post-cutover (T100868).
+
+### Migration
+
+- Operators who previously disabled only the `ideas` module: `modules.disabled: ["ideas"]` now aliases to Planning with a doctor deprecation warning — disable Planning (or use documented kill-switches) intentionally.
+- No command-name, argv, opId, storage-path, or MCP tool-name changes in this release.
+
 ## [1.0.10] - 2026-07-10
 
 Patch — **Dashboard UX polish** (post–Phase 148 mid-stream ship from `main`: Ideas drawer, startup timeout fix, Replit visual pass, plan/idea list polish, false Agent Activity idle).

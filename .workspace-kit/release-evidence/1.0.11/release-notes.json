@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "fragmentKind": "releaseNotes",
+  "releaseNotes": {
+    "source": "docs/maintainers/CHANGELOG.md + github-release-notes.md",
+    "entries": [
+      "Phase 149: hard-merge Ideas into Planning (Planning owns Ideas lifecycle)",
+      "IdeaPlan kernel, idea-row, and brainstorm live under planning/",
+      "Shared dispatcher + Planning-only registry cutover (28 commands)",
+      "MCP/dashboard/extension retarget to Planning authority",
+      "Unified IdeaPlan dashboard default-on with emergency kill-switch",
+      "Ideas WorkflowModule shell deleted; frozen command/sync/MCP contracts preserved",
+      "Ideas git-sync domain contract verified (ideas domain, planning.idea.* kinds)"
+    ]
+  }
+}
