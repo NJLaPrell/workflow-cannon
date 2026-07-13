@@ -19,3 +19,21 @@ The unified IdeaPlan dashboard path (Brainstorm button, brainstorming rollup, si
 | VS Code | `workflowCannon.ideas.unifiedModelEnabled`: `false` |
 
 Precedence matches the server and extension flag modules: explicit VS Code setting → env → default **on**. See `.ai/runbooks/unified-model-rollback.md` for WBS-6 data migration rollback (separate from this UI kill-switch).
+
+## Git canonical sync — ideas domain
+
+Planning owns idea CRUD commands after the ideas→planning cutover, but the **git sync domain id** for workflow ideas remains **`ideas`** (see `ALL_PLANNING_SYNC_DOMAINS` in `planning-canonical-sync-domains.ts`). Configure it with `planning.canonicalSync.domains`; the `phase_journal` alias does not expand to `ideas`.
+
+### Event kinds (stable)
+
+Idea mutations publish **`planning.idea.created`** and **`planning.idea.updated`** only. Do not rename these kinds — remote event segments, golden fixtures, and replay appliers depend on the prefix `planning.idea.`.
+
+### Event draft `command.moduleId` policy (freeze)
+
+Published git-event-log envelopes for idea commands (`create-idea`, `update-idea`, `delete-idea`, `reorder-ideas`) **must keep** `command.moduleId: "ideas"` even though handlers live under the planning module. Rationale:
+
+- Existing canonical segments and golden fixtures record `moduleId: "ideas"`.
+- Hydrate/replay matches on event kind + payload, but operators and tooling filter on `command.moduleId` for provenance.
+- Rewriting to `planning` would fork replay compatibility without a versioned migration.
+
+New drafts set `moduleId: "ideas"` via `ideaDraftCtx()` in `idea-row/idea-crud-commands.ts`. **Prefer freeze** — do not change draft `moduleId` or backfill historical events unless a dedicated migration task ships a new envelope schema version.
