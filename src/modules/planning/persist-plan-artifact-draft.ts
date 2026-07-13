@@ -16,7 +16,7 @@ import {
   pinArtifactToUnifiedIdeaPlan,
   resolveUnifiedIdeaPlanDraftTarget,
   synthesizePlanArtifactFromStoredDocument
-} from "../ideas/idea-plan-planning-init.js";
+} from "./idea-plan/idea-plan-planning-init.js";
 import { promotePlanningSessionToDraftReadyAfterDraftPersist } from "../ideas/planning-session-draft-ready.js";
 import { toPlanningChatSessionResponse } from "../ideas/planning-chat-session.js";
 import { planningSqliteDatabaseRelativePath } from "../task-engine/planning-config.js";

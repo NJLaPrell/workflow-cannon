@@ -10,15 +10,15 @@ import {
   writeNextPlanArtifactVersion
 } from "../../core/planning/plan-artifact-storage.js";
 import { openPlanningStores } from "../../core/planning/index.js";
-import { readIdeaPlanArtifactVersion } from "../ideas/idea-plan-artifact-storage.js";
-import type { IdeaPlanDocumentWithPlanningPayload } from "../ideas/idea-plan-planning-init.js";
+import { readIdeaPlanArtifactVersion } from "./idea-plan/idea-plan-artifact-storage.js";
+import type { IdeaPlanDocumentWithPlanningPayload } from "./idea-plan/idea-plan-planning-init.js";
 import {
   persistUnifiedIdeaPlanAccept,
   readLatestStoredPlanArtifact,
   readStoredPlanArtifactVersion,
   resolveUnifiedIdeaPlanReviewGate,
   unifiedIdeaPlanStoragePath
-} from "./unified-idea-plan-review-accept.js";
+} from "./idea-plan/unified-idea-plan-review-accept.js";
 import { UnifiedStateDb } from "../../core/state/unified-state-db.js";
 import { persistModuleStateRow } from "../../core/state/module-state-sidecar-migration.js";
 import { planningSqliteDatabaseRelativePath } from "../task-engine/planning-config.js";
