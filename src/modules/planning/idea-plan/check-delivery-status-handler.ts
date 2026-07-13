@@ -1,9 +1,9 @@
-import type { ModuleCommandResult, ModuleLifecycleContext } from "../../contracts/module-contract.js";
-import { openPlanningStores } from "../../core/planning/index.js";
-import type { TaskEntity } from "../task-engine/types.js";
-import { attachPolicyMeta } from "../task-engine/attach-planning-response-meta.js";
-import { planningGenPolicyGate } from "../task-engine/planning-generation-gate.js";
-import { TaskEngineError } from "../task-engine/transitions.js";
+import type { ModuleCommandResult, ModuleLifecycleContext } from "../../../contracts/module-contract.js";
+import { openPlanningStores } from "../../../core/planning/index.js";
+import type { TaskEntity } from "../../task-engine/types.js";
+import { attachPolicyMeta } from "../../task-engine/attach-planning-response-meta.js";
+import { planningGenPolicyGate } from "../../task-engine/planning-generation-gate.js";
+import { TaskEngineError } from "../../task-engine/transitions.js";
 import {
   readIdeaPlanArtifact,
   writeNextIdeaPlanArtifactVersion

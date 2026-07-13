@@ -39,7 +39,7 @@ type CachedStateSchema = {
 
 const schemaCache = new Map<string, Map<IdeaPlanStatus, CachedStateSchema>>();
 
-/** Prefer workspace when it ships schemas; else package root (dist/modules/ideas → repo/package). */
+/** Prefer workspace when it ships schemas; else package root (dist/modules/planning/idea-plan → repo/package). */
 export function resolveIdeaPlanStateSchemaRoot(workspacePath?: string): string {
   const cwd = workspacePath ? path.resolve(workspacePath) : process.cwd();
   const inWorkspace = path.join(cwd, "schemas", "ideas", "states", "idea.schema.json");

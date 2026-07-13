@@ -1,16 +1,16 @@
 import fs from "node:fs";
 
-import type { ModuleCommandResult, ModuleLifecycleContext } from "../../contracts/module-contract.js";
-import { getPlanArtifactStoragePaths, openPlanningStores, readLatestPlanArtifact } from "../../core/planning/index.js";
-import { UnifiedStateDb } from "../../core/state/unified-state-db.js";
-import { planningSqliteDatabaseRelativePath } from "../task-engine/planning-config.js";
-import { attachPolicyMeta } from "../task-engine/attach-planning-response-meta.js";
-import { planningGenPolicyGate } from "../task-engine/planning-generation-gate.js";
-import { TaskEngineError } from "../task-engine/transitions.js";
-import { parsePlanIdFromPlanArtifactRef } from "../task-engine/plan-artifact-execute-policy.js";
+import type { ModuleCommandResult, ModuleLifecycleContext } from "../../../contracts/module-contract.js";
+import { getPlanArtifactStoragePaths, openPlanningStores, readLatestPlanArtifact } from "../../../core/planning/index.js";
+import { UnifiedStateDb } from "../../../core/state/unified-state-db.js";
+import { planningSqliteDatabaseRelativePath } from "../../task-engine/planning-config.js";
+import { attachPolicyMeta } from "../../task-engine/attach-planning-response-meta.js";
+import { planningGenPolicyGate } from "../../task-engine/planning-generation-gate.js";
+import { TaskEngineError } from "../../task-engine/transitions.js";
+import { parsePlanIdFromPlanArtifactRef } from "../../task-engine/plan-artifact-execute-policy.js";
 import { readIdeaPlanArtifact } from "./idea-plan-artifact-storage.js";
 import { clearActiveDraftPlanArtifact } from "./idea-planning-metadata.js";
-import { deleteIdea, getIdea, isIdeaId } from "./idea-store.js";
+import { deleteIdea, getIdea, isIdeaId } from "../idea-row/idea-store.js";
 
 export type DeletePlanArtifactResultV1 = {
   responseSchemaVersion: 1;

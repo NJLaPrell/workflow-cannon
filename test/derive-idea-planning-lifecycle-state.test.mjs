@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { deriveIdeaPlanningLifecycleState } from "../dist/modules/ideas/derive-idea-planning-lifecycle-state.js";
+import { deriveIdeaPlanningLifecycleState } from "../dist/modules/planning/idea-plan/derive-idea-planning-lifecycle-state.js";
 
 function baseIdea(overrides = {}) {
   return {

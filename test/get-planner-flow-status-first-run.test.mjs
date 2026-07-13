@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 
-import { ideasModule } from "../dist/index.js";
+import { planningModule } from "../dist/index.js";
 
 const SQLITE_CFG = { tasks: { persistenceBackend: "sqlite" } };
 
@@ -19,7 +19,7 @@ function ctx(workspace) {
 }
 
 async function runFlowStatus(workspace, args = {}) {
-  return ideasModule.onCommand({ name: "get-planner-flow-status", args }, ctx(workspace));
+  return planningModule.onCommand({ name: "get-planner-flow-status", args }, ctx(workspace));
 }
 
 test("get-planner-flow-status returns first-run guidance for empty Ideas inventory", async () => {

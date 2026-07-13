@@ -1,14 +1,14 @@
-import type { ModuleCommandResult, ModuleLifecycleContext } from "../../contracts/module-contract.js";
+import type { ModuleCommandResult, ModuleLifecycleContext } from "../../../contracts/module-contract.js";
 import {
   openPlanningStores,
   readLatestPlanArtifact,
   writeNextPlanArtifactVersion
-} from "../../core/planning/index.js";
-import type { PlanArtifactStatus, PlanArtifactV1 } from "../../core/planning/plan-artifact-v1.js";
-import { attachPolicyMeta } from "../task-engine/attach-planning-response-meta.js";
-import { planningGenPolicyGate } from "../task-engine/planning-generation-gate.js";
-import { parsePlanIdFromPlanArtifactRef } from "../task-engine/plan-artifact-execute-policy.js";
-import { TaskEngineError } from "../task-engine/transitions.js";
+} from "../../../core/planning/index.js";
+import type { PlanArtifactStatus, PlanArtifactV1 } from "../../../core/planning/plan-artifact-v1.js";
+import { attachPolicyMeta } from "../../task-engine/attach-planning-response-meta.js";
+import { planningGenPolicyGate } from "../../task-engine/planning-generation-gate.js";
+import { parsePlanIdFromPlanArtifactRef } from "../../task-engine/plan-artifact-execute-policy.js";
+import { TaskEngineError } from "../../task-engine/transitions.js";
 import {
   readIdeaPlanArtifact,
   writeNextIdeaPlanArtifactVersion

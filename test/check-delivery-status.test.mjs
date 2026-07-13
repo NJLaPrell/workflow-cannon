@@ -4,8 +4,8 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 
-import { ideasModule, taskEngineModule } from "../dist/index.js";
-import { writeIdeaPlanArtifactVersion } from "../dist/modules/ideas/idea-plan-artifact-storage.js";
+import { planningModule, taskEngineModule } from "../dist/index.js";
+import { writeIdeaPlanArtifactVersion } from "../dist/modules/planning/idea-plan/idea-plan-artifact-storage.js";
 
 const SQLITE_CFG = { tasks: { persistenceBackend: "sqlite" } };
 const PLAN_ID = "f7a3b891-c5d2-4e6f-9a08-1b2c3d4e5f60";
@@ -110,9 +110,9 @@ async function createTask(workspace, taskId, status) {
 
 async function runCheck(workspace, extraArgs = {}) {
   const planningGeneration = (
-    await ideasModule.onCommand({ name: "list-ideas", args: {} }, ctx(workspace))
+    await planningModule.onCommand({ name: "list-ideas", args: {} }, ctx(workspace))
   ).data.planningGeneration;
-  return ideasModule.onCommand(
+  return planningModule.onCommand(
     {
       name: "check-delivery-status",
       args: {

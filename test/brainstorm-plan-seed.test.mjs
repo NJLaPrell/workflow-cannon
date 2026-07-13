@@ -5,7 +5,7 @@ import {
   buildBrainstormDigest,
   buildPlanSeedFromBrainstorm,
   collectBrainstormIdeation
-} from "../dist/modules/ideas/brainstorm-plan-seed.js";
+} from "../dist/modules/planning/brainstorm/brainstorm-plan-seed.js";
 
 test("collectBrainstormIdeation merges ideation across sessions", () => {
   const collected = collectBrainstormIdeation({

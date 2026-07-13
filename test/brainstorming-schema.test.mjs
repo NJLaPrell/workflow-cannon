@@ -14,7 +14,7 @@ import {
   computeRiskScore,
   computeValueScore,
   synthesizeBrainstormScores
-} from "../dist/modules/ideas/brainstorm-scoring.js";
+} from "../dist/modules/planning/brainstorm/brainstorm-scoring.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const schemaPath = path.join(root, "schemas", "ideas", "states", "brainstorming.schema.json");

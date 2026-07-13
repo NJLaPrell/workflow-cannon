@@ -9,7 +9,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
 
-import { ideasModule, planningModule } from "../dist/index.js";
+import { planningModule } from "../dist/index.js";
 import { getPlanArtifactStoragePaths } from "../dist/core/planning/plan-artifact-storage.js";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -56,13 +56,13 @@ async function seedIdeaPlanFixture(workspace, fixtureName) {
 describe("plan-document lifecycle hooks (T100794)", () => {
   it("draft-plan-artifact persist returns generatedPlanDocPath and writes markdown", async () => {
     const workspace = await tmpWorkspace();
-    const created = await ideasModule.onCommand(
+    const created = await planningModule.onCommand(
       { name: "create-idea", args: { title: "Hook draft test", policyApproval: policyApproval() } },
       ctx(workspace)
     );
     assert.equal(created.ok, true);
     const ideaId = created.data.idea.id;
-    const started = await ideasModule.onCommand(
+    const started = await planningModule.onCommand(
       { name: "start-idea-planning", args: { ideaId, policyApproval: policyApproval() } },
       ctx(workspace)
     );

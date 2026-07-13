@@ -1,11 +1,11 @@
 import type Database from "better-sqlite3";
-import type { ModuleCommandResult, ModuleLifecycleContext } from "../../contracts/module-contract.js";
-import { openPlanningStores } from "../../core/planning/index.js";
-import { attachPolicyMeta } from "../task-engine/attach-planning-response-meta.js";
-import { planningGenPolicyGate } from "../task-engine/planning-generation-gate.js";
-import { digestPayload, readIdempotencyValue } from "../task-engine/mutation-utils.js";
-import { TaskEngineError } from "../task-engine/transitions.js";
-import { getIdea, isIdeaId } from "./idea-store.js";
+import type { ModuleCommandResult, ModuleLifecycleContext } from "../../../contracts/module-contract.js";
+import { openPlanningStores } from "../../../core/planning/index.js";
+import { attachPolicyMeta } from "../../task-engine/attach-planning-response-meta.js";
+import { planningGenPolicyGate } from "../../task-engine/planning-generation-gate.js";
+import { digestPayload, readIdempotencyValue } from "../../task-engine/mutation-utils.js";
+import { TaskEngineError } from "../../task-engine/transitions.js";
+import { getIdea, isIdeaId } from "../idea-row/idea-store.js";
 import {
   getPlanningChatSession,
   isPlanningChatSessionStatus,

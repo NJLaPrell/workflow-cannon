@@ -4,10 +4,10 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 
-import { ideasModule } from "../dist/index.js";
-import { buildIdeaPlanningPrompt } from "../dist/modules/ideas/build-idea-planning-prompt.js";
-import { writeActiveDraftPlanArtifact } from "../dist/modules/ideas/idea-planning-metadata.js";
-import { getPlanningChatSession, persistPlanningChatSession } from "../dist/modules/ideas/planning-chat-session.js";
+import { planningModule } from "../dist/index.js";
+import { buildIdeaPlanningPrompt } from "../dist/modules/planning/idea-plan/build-idea-planning-prompt.js";
+import { writeActiveDraftPlanArtifact } from "../dist/modules/planning/idea-plan/idea-planning-metadata.js";
+import { getPlanningChatSession, persistPlanningChatSession } from "../dist/modules/planning/idea-plan/planning-chat-session.js";
 import { SqliteDualPlanningStore } from "../dist/modules/task-engine/persistence/sqlite-dual-planning.js";
 
 const SQLITE_CFG = { tasks: { persistenceBackend: "sqlite" } };
@@ -29,7 +29,7 @@ function policyApproval() {
 }
 
 async function createOpenIdea(workspace, title = "Plan this idea") {
-  const created = await ideasModule.onCommand(
+  const created = await planningModule.onCommand(
     { name: "create-idea", args: { title, policyApproval: policyApproval() } },
     ctx(workspace)
   );
@@ -39,8 +39,8 @@ async function createOpenIdea(workspace, title = "Plan this idea") {
 
 async function runStart(workspace, args) {
   const planningGeneration =
-    (await ideasModule.onCommand({ name: "list-ideas", args: {} }, ctx(workspace))).data.planningGeneration;
-  return ideasModule.onCommand(
+    (await planningModule.onCommand({ name: "list-ideas", args: {} }, ctx(workspace))).data.planningGeneration;
+  return planningModule.onCommand(
     {
       name: "start-idea-planning",
       args: {
@@ -100,13 +100,13 @@ test("start-idea-planning starts open idea and returns compact prompt", async ()
   assert.equal(typeof out.data.planningChatSession.sessionId, "string");
   assert.deepEqual(out.data.previousPlanArtifacts, []);
 
-  const retrieved = await ideasModule.onCommand({ name: "get-idea", args: { ideaId: idea.id } }, ctx(workspace));
+  const retrieved = await planningModule.onCommand({ name: "get-idea", args: { ideaId: idea.id } }, ctx(workspace));
   assert.equal(retrieved.data.idea.status, "planning");
 });
 
 test("start-idea-planning includes linked, active draft, and previous plan data", async () => {
   const { workspace, dual } = await tmpWorkspace();
-  const created = await ideasModule.onCommand(
+  const created = await planningModule.onCommand(
     {
       name: "create-idea",
       args: {

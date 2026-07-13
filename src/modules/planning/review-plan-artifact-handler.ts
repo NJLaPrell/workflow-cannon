@@ -24,8 +24,8 @@ import {
   readStoredPlanArtifactVersion,
   unifiedIdeaPlanStoragePath
 } from "./idea-plan/unified-idea-plan-review-accept.js";
-import { promotePlanningSessionAfterReview } from "../ideas/planning-session-after-review.js";
-import { toPlanningChatSessionResponse } from "../ideas/planning-chat-session.js";
+import { promotePlanningSessionAfterReview } from "./idea-plan/planning-session-after-review.js";
+import { toPlanningChatSessionResponse } from "./idea-plan/planning-chat-session.js";
 import {
   attachGeneratedPlanDocPath,
   bestEffortGeneratePlanDocument

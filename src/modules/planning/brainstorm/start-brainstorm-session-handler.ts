@@ -13,7 +13,7 @@ import { enforceIdeaPlanStatusTransition, IdeaPlanStatusTransitionError } from "
 import { loadIdeaPlanStateSchema } from "../idea-plan/idea-plan-state-schema-loader.js";
 import { guardIdeaPlanStateSchemaLoad } from "../idea-plan/idea-plan-state-schema-guard.js";
 import type { BrainstormSession, IdeaPlanDocument } from "../idea-plan/idea-plan-types.js";
-import { writeActiveDraftPlanArtifact } from "../../ideas/idea-planning-metadata.js";
+import { writeActiveDraftPlanArtifact } from "../idea-plan/idea-planning-metadata.js";
 
 const IDEMPOTENCY_MODULE_PREFIX = "ideas-start-brainstorm-session-idempotency:";
 

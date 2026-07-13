@@ -6,9 +6,9 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 
-import { ideasModule } from "../dist/index.js";
+import { planningModule } from "../dist/index.js";
 import { getPlanArtifactStoragePaths } from "../dist/core/planning/plan-artifact-storage.js";
-import { readIdeaPlanArtifact } from "../dist/modules/ideas/idea-plan-artifact-storage.js";
+import { readIdeaPlanArtifact } from "../dist/modules/planning/idea-plan/idea-plan-artifact-storage.js";
 import { SqliteDualPlanningStore } from "../dist/modules/task-engine/persistence/sqlite-dual-planning.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -33,13 +33,13 @@ function policyApproval(rationale = "test cancel/delete plan artifact") {
 }
 
 async function planningGeneration(workspace) {
-  return (await ideasModule.onCommand({ name: "list-ideas", args: {} }, ctx(workspace))).data
+  return (await planningModule.onCommand({ name: "list-ideas", args: {} }, ctx(workspace))).data
     .planningGeneration;
 }
 
 async function createIdea(workspace) {
   const generation = await planningGeneration(workspace);
-  const out = await ideasModule.onCommand(
+  const out = await planningModule.onCommand(
     {
       name: "create-idea",
       args: {
@@ -76,7 +76,7 @@ test("cancel-plan-artifact soft-archives any status to cancelled", async () => {
   const idea = await createIdea(workspace);
   await writeAcceptedFixture(workspace, idea.id);
   const generation = await planningGeneration(workspace);
-  const out = await ideasModule.onCommand(
+  const out = await planningModule.onCommand(
     {
       name: "cancel-plan-artifact",
       args: {
@@ -104,7 +104,7 @@ test("cancel-plan-artifact is idempotent when already cancelled", async () => {
   const idea = await createIdea(workspace);
   await writeAcceptedFixture(workspace, idea.id);
   let generation = await planningGeneration(workspace);
-  await ideasModule.onCommand(
+  await planningModule.onCommand(
     {
       name: "cancel-plan-artifact",
       args: {
@@ -116,7 +116,7 @@ test("cancel-plan-artifact is idempotent when already cancelled", async () => {
     ctx(workspace)
   );
   generation = await planningGeneration(workspace);
-  const out = await ideasModule.onCommand(
+  const out = await planningModule.onCommand(
     {
       name: "cancel-plan-artifact",
       args: {
@@ -137,7 +137,7 @@ test("start-brainstorm-session revives cancelled plan to brainstorming", async (
   const idea = await createIdea(workspace);
   await writeAcceptedFixture(workspace, idea.id);
   let generation = await planningGeneration(workspace);
-  await ideasModule.onCommand(
+  await planningModule.onCommand(
     {
       name: "cancel-plan-artifact",
       args: {
@@ -149,7 +149,7 @@ test("start-brainstorm-session revives cancelled plan to brainstorming", async (
     ctx(workspace)
   );
   generation = await planningGeneration(workspace);
-  const out = await ideasModule.onCommand(
+  const out = await planningModule.onCommand(
     {
       name: "start-brainstorm-session",
       args: {
@@ -174,7 +174,7 @@ test("delete-plan-artifact requires confirmDelete and removes plan + idea", asyn
   assert.equal(existsSync(paths.planDirAbsolute), true);
 
   let generation = await planningGeneration(workspace);
-  const blocked = await ideasModule.onCommand(
+  const blocked = await planningModule.onCommand(
     {
       name: "delete-plan-artifact",
       args: {
@@ -189,7 +189,7 @@ test("delete-plan-artifact requires confirmDelete and removes plan + idea", asyn
   assert.equal(blocked.code, "confirm-delete-required");
 
   generation = await planningGeneration(workspace);
-  const out = await ideasModule.onCommand(
+  const out = await planningModule.onCommand(
     {
       name: "delete-plan-artifact",
       args: {
@@ -229,7 +229,7 @@ test("cancel-plan-artifact soft-cancels classic PlanArtifact without ideaId", as
   await writeFile(paths.artifactFileAbsolute(1), `${JSON.stringify(doc, null, 2)}\n`, "utf8");
 
   const generation = await planningGeneration(workspace);
-  const out = await ideasModule.onCommand(
+  const out = await planningModule.onCommand(
     {
       name: "cancel-plan-artifact",
       args: {

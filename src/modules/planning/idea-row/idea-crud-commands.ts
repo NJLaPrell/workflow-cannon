@@ -10,11 +10,11 @@ import {
 import { isPlanningGitSyncPublishActive } from "../../task-engine/persistence/planning-canonical-sync-domains.js";
 import { ideaRecordToEventSnapshot } from "../../task-engine/task-state-events/planning-idea-event-utils.js";
 import type { TaskStore } from "../../task-engine/persistence/store.js";
-import { readActiveDraftPlanArtifact } from "../../ideas/idea-planning-metadata.js";
-import { publishIdeasPlanningEvents } from "../../ideas/ideas-planning-events-runtime.js";
-import { readIdeaPlanArtifact } from "../../ideas/idea-plan-artifact-storage.js";
+import { readActiveDraftPlanArtifact } from "../idea-plan/idea-planning-metadata.js";
+import { publishIdeasPlanningEvents } from "./ideas-planning-events-runtime.js";
+import { readIdeaPlanArtifact } from "../idea-plan/idea-plan-artifact-storage.js";
 import { createUnifiedIdeaPlanDocumentForIdea } from "./migrate-ideas-to-unified-document.js";
-import { persistPlanningChatSession } from "../../ideas/planning-chat-session.js";
+import { persistPlanningChatSession } from "../idea-plan/planning-chat-session.js";
 import {
   assertIdeasKitSchema,
   allocateNextIdeaId,

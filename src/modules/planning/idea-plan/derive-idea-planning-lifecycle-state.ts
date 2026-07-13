@@ -1,7 +1,7 @@
 import type { PlanArtifactReviewRecordV1 } from "../../../core/planning/plan-artifact-review-record.js";
 import type { PlanArtifactIndexStateV1 } from "../../../core/planning/plan-artifact-storage.js";
 import type { IdeaRecord } from "../idea-row/idea-store.js";
-import type { PlanningChatSessionRecord, PlanningChatSessionResponse } from "../../ideas/planning-chat-session.js";
+import type { PlanningChatSessionRecord, PlanningChatSessionResponse } from "../idea-plan/planning-chat-session.js";
 
 export type IdeaPlanningLifecycleState =
   | "open"

@@ -68,7 +68,9 @@ Runbook: [`.ai/runbooks/plan-artifact-workflow.md`](./runbooks/plan-artifact-wor
 
 Playbook: [`.ai/playbooks/task-to-phase-branch.md`](./playbooks/task-to-phase-branch.md) — branch from phase branch, PR, merge, **`run-transition`** **`complete`** with evidence.
 
-## Ideas capture
+## Ideas capture (Planning module)
+
+Ideas lifecycle commands (`create-idea`, `list-ideas`, planner flow, brainstorm sessions) are owned by the **Planning** module (`src/modules/planning/`). No separate Ideas `WorkflowModule` registration is required — enable Planning for Ideas + PlanArtifact surfaces.
 
 - `pnpm exec wk run create-idea '{"title":"Try planner chat from Ideas","policyApproval":{"confirmed":true,"rationale":"capture operator idea"}}'`
 - `pnpm exec wk run get-idea '{"ideaId":"I001"}'`

@@ -181,7 +181,6 @@ test("Phase3: decline from in_progress uses decline transition", async () => {
     documentationModule,
     taskEngineModule,
     approvalsModule,
-    planningModule,
     improvementModule
   ]);
   const router = new ModuleCommandRouter(registry);
@@ -237,7 +236,6 @@ test("list-approval-queue returns in_progress improvement rows (read-only)", asy
     documentationModule,
     taskEngineModule,
     approvalsModule,
-    planningModule,
     improvementModule
   ]);
   const router = new ModuleCommandRouter(registry);
@@ -316,7 +314,6 @@ test("list-approval-queue excludes retrospective execution imports", async () =>
     documentationModule,
     taskEngineModule,
     approvalsModule,
-    planningModule,
     improvementModule
   ]);
   const router = new ModuleCommandRouter(registry);

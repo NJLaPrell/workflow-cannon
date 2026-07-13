@@ -1,8 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { IDEA_PLAN_STATUS_INPUTS } from "../dist/modules/ideas/idea-plan-types.js";
-import { isIdeaStatusInput, parseIdeaStatus } from "../dist/modules/ideas/idea-store.js";
+import { IDEA_PLAN_STATUS_INPUTS } from "../dist/modules/planning/idea-plan/idea-plan-types.js";
+import { isIdeaStatusInput, parseIdeaStatus } from "../dist/modules/planning/idea-row/idea-store.js";
 
 test("parseIdeaStatus accepts all nine status inputs", () => {
   const sqliteMapped = {

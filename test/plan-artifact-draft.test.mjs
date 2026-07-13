@@ -10,13 +10,13 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
 
-import { ideasModule, planningModule, taskEngineModule } from "../dist/index.js";
+import { planningModule, taskEngineModule } from "../dist/index.js";
 import { readLatestPlanArtifact } from "../dist/core/planning/plan-artifact-storage.js";
 import {
   readActiveDraftPlanArtifact,
   writeActiveDraftPlanArtifact
-} from "../dist/modules/ideas/idea-planning-metadata.js";
-import { getPlanningChatSession } from "../dist/modules/ideas/planning-chat-session.js";
+} from "../dist/modules/planning/idea-plan/idea-planning-metadata.js";
+import { getPlanningChatSession } from "../dist/modules/planning/idea-plan/planning-chat-session.js";
 import { SqliteDualPlanningStore } from "../dist/modules/task-engine/persistence/sqlite-dual-planning.js";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -58,7 +58,7 @@ function policyApproval() {
 }
 
 async function startPlanning(workspace, ideaId) {
-  const started = await ideasModule.onCommand(
+  const started = await planningModule.onCommand(
     { name: "start-idea-planning", args: { ideaId, policyApproval: policyApproval() } },
     { runtimeVersion: "0.1", workspacePath: workspace, effectiveConfig: SQLITE_CFG }
   );
@@ -67,7 +67,7 @@ async function startPlanning(workspace, ideaId) {
 }
 
 async function createIdea(workspace, args = {}) {
-  const created = await ideasModule.onCommand(
+  const created = await planningModule.onCommand(
     {
       name: "create-idea",
       args: { title: "Draft link idea", policyApproval: policyApproval(), ...args }
@@ -309,7 +309,7 @@ describe("draft-plan-artifact fixtures (T100458)", () => {
     const db = planningDb(workspace);
     assert.equal(readActiveDraftPlanArtifact(db, idea.id), result.data.planRef);
 
-    const retrieved = await ideasModule.onCommand(
+    const retrieved = await planningModule.onCommand(
       { name: "get-idea", args: { ideaId: idea.id } },
       { runtimeVersion: "0.1", workspacePath: workspace, effectiveConfig: SQLITE_CFG }
     );
@@ -341,7 +341,7 @@ describe("draft-plan-artifact fixtures (T100458)", () => {
     assert.equal(readActiveDraftPlanArtifact(db, idea.id), result.data.planRef);
     assert.notEqual(readActiveDraftPlanArtifact(db, idea.id), "plan-artifact:old-draft");
 
-    const retrieved = await ideasModule.onCommand(
+    const retrieved = await planningModule.onCommand(
       { name: "get-idea", args: { ideaId: idea.id } },
       { runtimeVersion: "0.1", workspacePath: workspace, effectiveConfig: SQLITE_CFG }
     );

@@ -4,8 +4,8 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 
-import { ideasModule } from "../dist/index.js";
-import { getPlanningChatSession } from "../dist/modules/ideas/planning-chat-session.js";
+import { planningModule } from "../dist/index.js";
+import { getPlanningChatSession } from "../dist/modules/planning/idea-plan/planning-chat-session.js";
 import { SqliteDualPlanningStore } from "../dist/modules/task-engine/persistence/sqlite-dual-planning.js";
 
 const SQLITE_CFG = { tasks: { persistenceBackend: "sqlite" } };
@@ -27,11 +27,11 @@ function policyApproval() {
 }
 
 async function planningGeneration(workspace) {
-  return (await ideasModule.onCommand({ name: "list-ideas", args: {} }, ctx(workspace))).data.planningGeneration;
+  return (await planningModule.onCommand({ name: "list-ideas", args: {} }, ctx(workspace))).data.planningGeneration;
 }
 
 async function createOpenIdea(workspace, title = "Session idea") {
-  const created = await ideasModule.onCommand(
+  const created = await planningModule.onCommand(
     { name: "create-idea", args: { title, policyApproval: policyApproval() } },
     ctx(workspace)
   );
@@ -40,7 +40,7 @@ async function createOpenIdea(workspace, title = "Session idea") {
 }
 
 async function startPlanning(workspace, ideaId) {
-  const out = await ideasModule.onCommand(
+  const out = await planningModule.onCommand(
     {
       name: "start-idea-planning",
       args: {
@@ -56,7 +56,7 @@ async function startPlanning(workspace, ideaId) {
 }
 
 async function runUpdate(workspace, args) {
-  return ideasModule.onCommand(
+  return planningModule.onCommand(
     {
       name: "update-idea-planning-session",
       args: {

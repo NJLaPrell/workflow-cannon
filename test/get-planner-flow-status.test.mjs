@@ -4,9 +4,9 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 
-import { ideasModule } from "../dist/index.js";
-import { writeIdeaPlanArtifactVersion } from "../dist/modules/ideas/idea-plan-artifact-storage.js";
-import { persistPlanningChatSession, updatePlanningChatSession } from "../dist/modules/ideas/planning-chat-session.js";
+import { planningModule } from "../dist/index.js";
+import { writeIdeaPlanArtifactVersion } from "../dist/modules/planning/idea-plan/idea-plan-artifact-storage.js";
+import { persistPlanningChatSession, updatePlanningChatSession } from "../dist/modules/planning/idea-plan/planning-chat-session.js";
 import { SqliteDualPlanningStore } from "../dist/modules/task-engine/persistence/sqlite-dual-planning.js";
 
 const SQLITE_CFG = { tasks: { persistenceBackend: "sqlite" } };
@@ -29,13 +29,13 @@ function policyApproval() {
 }
 
 async function planningGeneration(workspace) {
-  const listed = await ideasModule.onCommand({ name: "list-ideas", args: {} }, ctx(workspace));
+  const listed = await planningModule.onCommand({ name: "list-ideas", args: {} }, ctx(workspace));
   return listed.data.planningGeneration;
 }
 
 async function createIdea(workspace, title = "Planner flow idea") {
   const gen = await planningGeneration(workspace);
-  const created = await ideasModule.onCommand(
+  const created = await planningModule.onCommand(
     {
       name: "create-idea",
       args: { title, expectedPlanningGeneration: gen, policyApproval: policyApproval() }
@@ -47,7 +47,7 @@ async function createIdea(workspace, title = "Planner flow idea") {
 }
 
 async function runFlowStatus(workspace, args = {}) {
-  return ideasModule.onCommand({ name: "get-planner-flow-status", args }, ctx(workspace));
+  return planningModule.onCommand({ name: "get-planner-flow-status", args }, ctx(workspace));
 }
 
 test("get-planner-flow-status recommends start-brainstorm-session for a fresh idea document", async () => {
@@ -66,7 +66,7 @@ test("get-planner-flow-status recommends start-brainstorm-session for a fresh id
 test("get-planner-flow-status reports brainstorming stage and incomplete brainstorm blocker", async () => {
   const { workspace } = await tmpWorkspace();
   const idea = await createIdea(workspace);
-  const existing = await ideasModule.onCommand({ name: "get-idea", args: { ideaId: idea.id } }, ctx(workspace));
+  const existing = await planningModule.onCommand({ name: "get-idea", args: { ideaId: idea.id } }, ctx(workspace));
   const document = existing.data.ideaPlan;
   writeIdeaPlanArtifactVersion(workspace, {
     ...document,
@@ -84,7 +84,7 @@ test("get-planner-flow-status reports brainstorming stage and incomplete brainst
 test("get-planner-flow-status reports session-document mismatch for draft_ready session during brainstorming", async () => {
   const { workspace, dual } = await tmpWorkspace();
   const idea = await createIdea(workspace);
-  const existing = await ideasModule.onCommand({ name: "get-idea", args: { ideaId: idea.id } }, ctx(workspace));
+  const existing = await planningModule.onCommand({ name: "get-idea", args: { ideaId: idea.id } }, ctx(workspace));
   writeIdeaPlanArtifactVersion(workspace, {
     ...existing.data.ideaPlan,
     status: "brainstorming",

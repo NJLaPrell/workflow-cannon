@@ -10,16 +10,16 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, it } from "node:test";
 
-import { ideasModule, planningModule } from "../dist/index.js";
+import { planningModule } from "../dist/index.js";
 import { getPlanArtifactStoragePaths, writePlanArtifactVersion } from "../dist/core/planning/plan-artifact-storage.js";
-import { isIdeaPlanDocument, readIdeaPlanArtifact } from "../dist/modules/ideas/idea-plan-artifact-storage.js";
-import { createIdea } from "../dist/modules/ideas/idea-store.js";
+import { isIdeaPlanDocument, readIdeaPlanArtifact } from "../dist/modules/planning/idea-plan/idea-plan-artifact-storage.js";
+import { createIdea } from "../dist/modules/planning/idea-row/idea-store.js";
 import {
   buildIdeaOnlyUnifiedDocument,
   mapLifecycleToUnifiedStatus,
   migrateIdeasToUnifiedDocument,
   resolveUnifiedStatusForMigration
-} from "../dist/modules/ideas/migrate-ideas-to-unified-document.js";
+} from "../dist/modules/planning/idea-row/migrate-ideas-to-unified-document.js";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const fixturesDir = path.join(repoRoot, "fixtures", "planning");
@@ -80,7 +80,7 @@ describe("migrate-ideas-to-unified-document", () => {
     const workspace = await tmpWorkspace();
     const db = await openDb(workspace);
     // Simulate a legacy idea row persisted before create-idea auto-linked a unified
-    // document (bypasses the ideasModule command, which now auto-creates one).
+    // document (bypasses the planning module command, which now auto-creates one).
     const idea = createIdea(db, { title: "Migrate me" }, new Date().toISOString());
 
     const preview = migrateIdeasToUnifiedDocument({ workspacePath: workspace, db, dryRun: true });
@@ -93,7 +93,7 @@ describe("migrate-ideas-to-unified-document", () => {
 
   it("create-idea already links a unified document, so migration reports already-unified", async () => {
     const workspace = await tmpWorkspace();
-    const created = await ideasModule.onCommand(
+    const created = await planningModule.onCommand(
       {
         name: "create-idea",
         args: { title: "Fresh idea", policyApproval: policyApproval() }
@@ -115,7 +115,7 @@ describe("migrate-ideas-to-unified-document", () => {
 
   it("applies migration for idea-only rows and links linkedPlanArtifact", async () => {
     const workspace = await tmpWorkspace();
-    const created = await ideasModule.onCommand(
+    const created = await planningModule.onCommand(
       {
         name: "create-idea",
         args: { title: "Promote me", policyApproval: policyApproval() }
@@ -130,7 +130,7 @@ describe("migrate-ideas-to-unified-document", () => {
     assert.equal(applied.dataLossReported, false);
     assert.ok(applied.snapshotPath?.startsWith(".workspace-kit/migration-backups/"));
 
-    const got = await ideasModule.onCommand({ name: "get-idea", args: { ideaId } }, ctx(workspace));
+    const got = await planningModule.onCommand({ name: "get-idea", args: { ideaId } }, ctx(workspace));
     assert.equal(got.ok, true);
     assert.ok(got.data.idea.linkedPlanArtifact);
     assert.ok(isIdeaPlanDocument(got.data.ideaPlan));
@@ -140,7 +140,7 @@ describe("migrate-ideas-to-unified-document", () => {
 
   it("merges legacy PlanArtifact v1 into unified document", async () => {
     const workspace = await tmpWorkspace();
-    const created = await ideasModule.onCommand(
+    const created = await planningModule.onCommand(
       {
         name: "create-idea",
         args: { title: "Legacy plan", status: "planning", policyApproval: policyApproval() }
@@ -154,7 +154,7 @@ describe("migrate-ideas-to-unified-document", () => {
     writePlanArtifactVersion(workspace, artifact, { effectiveConfig: SQLITE_CFG });
 
     const db = await openDb(workspace);
-    await ideasModule.onCommand(
+    await planningModule.onCommand(
       {
         name: "update-idea",
         args: {
@@ -181,7 +181,7 @@ describe("migrate-ideas-to-unified-document", () => {
 
   it("command dry-run then apply via module handler", async () => {
     const workspace = await tmpWorkspace();
-    await ideasModule.onCommand(
+    await planningModule.onCommand(
       {
         name: "create-idea",
         args: { title: "CLI path", policyApproval: policyApproval() }
@@ -189,14 +189,14 @@ describe("migrate-ideas-to-unified-document", () => {
       ctx(workspace)
     );
 
-    const dry = await ideasModule.onCommand(
+    const dry = await planningModule.onCommand(
       { name: "migrate-ideas-to-unified-document", args: { dryRun: true } },
       ctx(workspace)
     );
     assert.equal(dry.ok, true);
     assert.equal(dry.code, "ideas-unified-migration-dry-run");
 
-    const live = await ideasModule.onCommand(
+    const live = await planningModule.onCommand(
       {
         name: "migrate-ideas-to-unified-document",
         args: { dryRun: false, policyApproval: policyApproval() }

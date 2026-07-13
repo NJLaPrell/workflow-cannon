@@ -75,7 +75,7 @@ function appendWbsRowSuccessResult(args: {
   storagePath: string;
   appendedWbsId: string;
   replayed: boolean;
-  planningChatSession?: ReturnType<typeof import("../ideas/planning-chat-session.js").toPlanningChatSessionResponse>;
+  planningChatSession?: ReturnType<typeof import("./idea-plan/planning-chat-session.js").toPlanningChatSessionResponse>;
 }): ModuleCommandResult {
   return {
     ok: true,
