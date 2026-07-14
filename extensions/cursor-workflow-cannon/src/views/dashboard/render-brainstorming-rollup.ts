@@ -1,3 +1,5 @@
+import { brainstormScoreBandCssClass, type BrainstormScoreKind } from "../shared/brainstorm-score-colors.js";
+
 function escapeHtml(s: string): string {
   return s
     .replace(/&/g, "&amp;")
@@ -61,25 +63,31 @@ export function renderBrainstormScorePills(scores: BrainstormSynthesisRow | null
   if (!scores || typeof scores !== "object") {
     return '<span class="muted">No scores yet</span>';
   }
-  const items: Array<[string, string]> = [
-    ["Value", formatBrainstormScore(scores.valueScore)],
-    ["Risk", formatBrainstormScore(scores.riskScore)],
-    ["Effort", formatBrainstormScore(scores.effortScore)],
-    ["Confidence", formatBrainstormScore(scores.confidenceScore)],
-    ["Priority", formatBrainstormScore(scores.priorityScore)]
+  const items: Array<[string, BrainstormScoreKind, unknown]> = [
+    ["Value", "value", scores.valueScore],
+    ["Risk", "risk", scores.riskScore],
+    ["Effort", "effort", scores.effortScore],
+    ["Confidence", "confidence", scores.confidenceScore],
+    ["Priority", "priority", scores.priorityScore]
   ];
   return (
     '<span class="wc-brainstorm-score-pills">' +
     renderBrainstormReadinessPill(scores) +
     items
-      .map(
-        ([label, value]) =>
-          '<span class="wc-brainstorm-score-pill"><span class="wc-brainstorm-score-label">' +
+      .map(([label, kind, raw]) => {
+        const value = formatBrainstormScore(raw);
+        const bandCls =
+          typeof raw === "number" && Number.isFinite(raw) ? " " + brainstormScoreBandCssClass(raw, kind) : "";
+        return (
+          '<span class="wc-brainstorm-score-pill' +
+          bandCls +
+          '"><span class="wc-brainstorm-score-label">' +
           escapeHtml(label) +
           '</span><span class="wc-brainstorm-score-value">' +
           escapeHtml(value) +
           "</span></span>"
-      )
+        );
+      })
       .join("") +
     "</span>"
   );

@@ -115,6 +115,13 @@ export class DashboardCoordinator {
   }
 
   private async handleDrawerSubmitIntent(intent: DrawerSubmitIntent): Promise<void> {
+    if (this.mutationActive) {
+      logWc(
+        "dashboard",
+        `drawerSubmit ignored (mutation already active) label=${intent.sessionLabel}`
+      );
+      return;
+    }
     this.deps.resetDrawerSubmitPendingEffects();
     const traceId = intent.sessionLabel.replace(/\s+/g, "-").slice(0, 64);
     let stepAt = Date.now();

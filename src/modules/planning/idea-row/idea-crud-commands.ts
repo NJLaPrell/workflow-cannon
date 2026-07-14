@@ -10,6 +10,12 @@ import {
 import { isPlanningGitSyncPublishActive } from "../../task-engine/persistence/planning-canonical-sync-domains.js";
 import { ideaRecordToEventSnapshot } from "../../task-engine/task-state-events/planning-idea-event-utils.js";
 import type { TaskStore } from "../../task-engine/persistence/store.js";
+import { TASK_STATE_GIT_BRANCH } from "../../task-engine/task-state-git/constants.js";
+import { resolveTaskStateGitRef } from "../../task-engine/task-state-git/git-io.js";
+import {
+  readEventSegmentsJsonl,
+  readTaskStateBranchLayout
+} from "../../task-engine/task-state-git/read-branch-layout.js";
 import { readActiveDraftPlanArtifact } from "../idea-plan/idea-planning-metadata.js";
 import { publishIdeasPlanningEvents } from "./ideas-planning-events-runtime.js";
 import { readIdeaPlanArtifact } from "../idea-plan/idea-plan-artifact-storage.js";
@@ -42,6 +48,115 @@ const CRUD_COMMANDS = new Set([
 
 export function isIdeaCrudCommand(commandName: string): boolean {
   return CRUD_COMMANDS.has(commandName);
+}
+
+function createIdeaPayloadDigest(input: {
+  title: string;
+  note?: string;
+  status?: IdeaStatus;
+}): string {
+  return JSON.stringify({
+    title: input.title,
+    note: input.note ?? null,
+    status: input.status ?? "open"
+  });
+}
+
+function ideaRecordFromCreatedEventPayload(idea: Record<string, unknown>): IdeaRecord | null {
+  const id = typeof idea.id === "string" ? idea.id : "";
+  const title = typeof idea.title === "string" ? idea.title : "";
+  if (!isIdeaId(id) || !title.trim()) {
+    return null;
+  }
+  const status = parseIdeaStatus(idea.status) ?? "open";
+  const sortOrder = typeof idea.sortOrder === "number" ? idea.sortOrder : 0;
+  const createdAt = typeof idea.createdAt === "string" ? idea.createdAt : new Date().toISOString();
+  const updatedAt = typeof idea.updatedAt === "string" ? idea.updatedAt : createdAt;
+  const note = typeof idea.note === "string" && idea.note.trim() ? idea.note.trim() : undefined;
+  const linkedPlanArtifact =
+    typeof idea.linkedPlanArtifact === "string" && idea.linkedPlanArtifact.trim()
+      ? idea.linkedPlanArtifact.trim()
+      : undefined;
+  const previousPlanArtifacts = Array.isArray(idea.previousPlanArtifacts)
+    ? idea.previousPlanArtifacts.filter((v): v is string => typeof v === "string" && v.trim().length > 0)
+    : [];
+  return {
+    id,
+    title: title.trim(),
+    ...(note ? { note } : {}),
+    status,
+    sortOrder,
+    ...(linkedPlanArtifact ? { linkedPlanArtifact } : {}),
+    previousPlanArtifacts,
+    createdAt,
+    updatedAt
+  };
+}
+
+/** Raw JSONL scan (no admission) so idempotent replay still works when tip hydrate is stuck. */
+function findPriorIdeaCreatedByClientMutationId(
+  workspacePath: string,
+  clientMutationId: string
+): { idea: IdeaRecord; digest: string } | null {
+  const key = clientMutationId.trim();
+  if (!key) {
+    return null;
+  }
+  const resolved = resolveTaskStateGitRef(workspacePath, TASK_STATE_GIT_BRANCH);
+  if ("missing" in resolved) {
+    return null;
+  }
+  const layoutRead = readTaskStateBranchLayout(workspacePath, resolved.ref, resolved.tipSha);
+  if (!layoutRead.ok) {
+    return null;
+  }
+  const eventsRead = readEventSegmentsJsonl(
+    workspacePath,
+    layoutRead.layout.ref,
+    layoutRead.layout.eventSegmentPaths
+  );
+  if (!eventsRead.ok) {
+    return null;
+  }
+  for (let idx = eventsRead.lines.length - 1; idx >= 0; idx -= 1) {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(eventsRead.lines[idx] ?? "");
+    } catch {
+      continue;
+    }
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      continue;
+    }
+    const event = parsed as Record<string, unknown>;
+    if (typeof event.clientMutationId !== "string" || event.clientMutationId.trim() !== key) {
+      continue;
+    }
+    if (event.kind !== "planning.idea.created") {
+      continue;
+    }
+    const payload = event.payload;
+    if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+      continue;
+    }
+    const ideaRaw = (payload as { idea?: unknown }).idea;
+    if (!ideaRaw || typeof ideaRaw !== "object" || Array.isArray(ideaRaw)) {
+      continue;
+    }
+    const idea = ideaRecordFromCreatedEventPayload(ideaRaw as Record<string, unknown>);
+    if (!idea) {
+      continue;
+    }
+    return {
+      idea,
+      digest: createIdeaPayloadDigest({
+        title: idea.title,
+        note: idea.note,
+        status: idea.status
+      })
+    };
+  }
+  return null;
 }
 
 function attachPlanningMeta(
@@ -194,6 +309,33 @@ export async function runIdeaCrudCommand(
     const clientMutationId = readIdempotencyValue(args);
     const nowIso = new Date().toISOString();
     const workspacePath = ctx.workspacePath ?? process.cwd();
+    const digest = createIdeaPayloadDigest({ title, note, status });
+
+    if (gitCanonical && clientMutationId) {
+      const prior = findPriorIdeaCreatedByClientMutationId(workspacePath, clientMutationId);
+      if (prior) {
+        if (prior.digest !== digest) {
+          return {
+            ok: false,
+            code: "idempotency-key-conflict",
+            message: `clientMutationId '${clientMutationId}' was already used for a different create-idea payload on ${prior.idea.id}`
+          };
+        }
+        const idea = getIdea(db, prior.idea.id) ?? prior.idea;
+        const data: Record<string, unknown> = {
+          responseSchemaVersion: 1,
+          idea,
+          replayed: true
+        };
+        attachPlanningMeta(data, ctx, planningGeneration);
+        return {
+          ok: true,
+          code: "idea-created-idempotent-replay",
+          message: `Idempotent create replay for idea '${idea.id}'`,
+          data
+        };
+      }
+    }
 
     if (gitCanonical) {
       const id = allocateNextIdeaId(db);

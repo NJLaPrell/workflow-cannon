@@ -54,6 +54,25 @@ test("renderBrainstormScorePills renders all five synthesized scores", () => {
   assert.match(html, /6\.95|7\.0/);
   assert.match(html, /Priority/);
   assert.match(html, />61</);
+  assert.match(html, /wc-brainstorm-score-green/);
+  assert.match(html, /wc-brainstorm-score-amber/);
+  assert.match(html, /wc-brainstorm-score-red/);
+});
+
+test("brainstorm score pill CSS keeps readable foreground on tinted backgrounds", () => {
+  const css = readFileSync(
+    path.join(__dirname, "../src/views/dashboard/DashboardViewProvider.ts"),
+    "utf8"
+  );
+  assert.match(css, /\.wc-brainstorm-readiness-pill\.wc-brainstorm-readiness-ready \{[\s\S]*?color:\s*var\(--vscode-foreground\)/);
+  assert.doesNotMatch(
+    css,
+    /\.wc-brainstorm-readiness-pill\.wc-brainstorm-readiness-ready \{[\s\S]*?color:\s*var\(--vscode-editor-background/
+  );
+  assert.match(css, /\.wc-brainstorm-score-label \{ color: inherit;/);
+  assert.match(css, /\.wc-brainstorm-score-red \{/);
+  assert.match(css, /\.wc-brainstorm-score-amber \{/);
+  assert.match(css, /\.wc-brainstorm-score-green \{/);
 });
 
 test("renderBrainstormingIdeasRollupSection renders brainstorming-state ideas with scores", () => {

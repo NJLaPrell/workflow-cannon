@@ -224,7 +224,7 @@ type DashboardDrawerSession =
   | { kind: "view-phase-note"; noteId: string }
   | { kind: "edit-phase-note"; noteId: string }
   | { kind: "add-wishlist" }
-  | { kind: "add-idea" }
+  | { kind: "add-idea"; clientMutationId: string }
   | { kind: "assign-task-phase"; taskId: string }
   | { kind: "add-phase-note" }
   | { kind: "convert-phase-note"; noteId: string }
@@ -3703,16 +3703,25 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       return;
     }
     const html = renderDrawerFormHtml(buildAddIdeaDrawerSpec());
-    this.dashboardDrawerSession = { kind: "add-idea" };
+    // Stable for this drawer open so timeout retries do not mint duplicate ideas.
+    this.dashboardDrawerSession = {
+      kind: "add-idea",
+      clientMutationId: this.dashboardDrawerMutationId("dashboard-add-idea", "new")
+    };
     await this.postWcDrawerOpen(html, "add-idea");
   }
 
-  private async onCreateIdeaFromDashboard(title: string, note: string): Promise<void> {
+  private async onCreateIdeaFromDashboard(
+    title: string,
+    note: string,
+    clientMutationId: string
+  ): Promise<void> {
     if (title.length === 0) {
       throw new Error("Title required.");
     }
     const args: Record<string, unknown> = {
       title,
+      clientMutationId,
       policyApproval: dashboardPolicyApproval(
         { workflowId: "ideas", action: "create", command: "create-idea" },
         {}
@@ -4805,7 +4814,11 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         return false;
       }
       try {
-        await this.onCreateIdeaFromDashboard(validated.values.title, validated.values.note);
+        await this.onCreateIdeaFromDashboard(
+          validated.values.title,
+          validated.values.note,
+          session.clientMutationId
+        );
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         await this.postDrawerValidationToWebview(message.slice(0, 900));
@@ -7530,17 +7543,36 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
       border-radius: 999px;
       font-size: 10px;
       background: var(--vscode-badge-background, rgba(127,127,127,.2));
-      color: var(--vscode-badge-foreground, inherit);
+      color: var(--vscode-badge-foreground, var(--vscode-foreground));
+      border: 1px solid transparent;
     }
-    .wc-brainstorm-score-label { color: var(--vscode-descriptionForeground); }
-    .wc-brainstorm-score-value { font-weight: 600; }
-    .wc-brainstorm-readiness-pill {
-      background: var(--vscode-inputValidation-warningBackground, rgba(255,196,0,.18));
+    /* Inherit pill foreground — descriptionForeground is page chrome and tanks contrast on badges. */
+    .wc-brainstorm-score-label { color: inherit; opacity: 0.9; font-weight: 500; }
+    .wc-brainstorm-score-value { color: inherit; font-weight: 700; }
+    .wc-brainstorm-score-red {
+      background: color-mix(in srgb, var(--wc-red, #f44747) 18%, var(--vscode-editor-background));
       color: var(--vscode-foreground);
+      border-color: color-mix(in srgb, var(--wc-red, #f44747) 45%, transparent);
+    }
+    .wc-brainstorm-score-amber {
+      background: color-mix(in srgb, var(--wc-amber, #cca700) 18%, var(--vscode-editor-background));
+      color: var(--vscode-foreground);
+      border-color: color-mix(in srgb, var(--wc-amber, #cca700) 45%, transparent);
+    }
+    .wc-brainstorm-score-green {
+      background: color-mix(in srgb, var(--wc-green, #4ec9b0) 18%, var(--vscode-editor-background));
+      color: var(--vscode-foreground);
+      border-color: color-mix(in srgb, var(--wc-green, #4ec9b0) 45%, transparent);
+    }
+    .wc-brainstorm-readiness-pill {
+      background: color-mix(in srgb, var(--vscode-editorWarning-foreground, #cca700) 22%, var(--vscode-editor-background));
+      color: var(--vscode-foreground);
+      border-color: color-mix(in srgb, var(--vscode-editorWarning-foreground, #cca700) 45%, transparent);
     }
     .wc-brainstorm-readiness-pill.wc-brainstorm-readiness-ready {
-      background: var(--vscode-testing-iconPassed, #4ec9b0);
-      color: var(--vscode-editor-background, #fff);
+      background: color-mix(in srgb, var(--vscode-testing-iconPassed, #4ec9b0) 28%, var(--vscode-editor-background));
+      color: var(--vscode-foreground);
+      border-color: color-mix(in srgb, var(--vscode-testing-iconPassed, #4ec9b0) 45%, transparent);
     }
     .wc-brainstorm-session-history { margin-top: 8px; font-size: 11px; }
     .wc-brainstorm-session-history-body { margin-top: 6px; overflow-x: auto; }

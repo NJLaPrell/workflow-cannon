@@ -99,6 +99,15 @@ test("DashboardCoordinator.runMutation holds refresh until fn completes", async 
   assert.ok(sideEffectCalls.some((c) => c[0] === "notify"));
 });
 
+test("dashboard-coordinator ignores concurrent drawer.submit while mutationActive", () => {
+  const src = readFileSync(
+    path.join(__dirname, "../src/views/dashboard/dashboard-coordinator.ts"),
+    "utf8"
+  );
+  assert.match(src, /mutation already active/);
+  assert.match(src, /drawerSubmit ignored/);
+});
+
 test("DashboardCoordinator.runMutation releases hold when fn throws", async () => {
   let holdActive = false;
   const drawer = new DrawerSessionController(() => {});

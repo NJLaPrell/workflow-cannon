@@ -14,6 +14,7 @@ Create a lightweight operator idea row in kit SQLite (`workflow_ideas`). Ideas a
 - `status` — `open`, `planning`, or `planned`; defaults to `open`.
 - `linkedPlanArtifact` — associated plan artifact id/ref when already known.
 - `previousPlanArtifacts` — array of prior plan artifact ids/refs.
+- `clientMutationId` — optional idempotency key; retries with the same key and matching title/note/status return the original idea (`idea-created-idempotent-replay`) instead of minting a duplicate.
 
 ## Policy
 

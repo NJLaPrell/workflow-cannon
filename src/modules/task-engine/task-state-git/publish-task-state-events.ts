@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { admitCanonicalStateEventStream } from "../task-state-events/canonical-event-admission.js";
+import { admitCanonicalStateEventStream, canonicalEventsAreIdempotentDuplicates } from "../task-state-events/canonical-event-admission.js";
 import { admitTaskStateEventStream } from "../task-state-events/event-admission.js";
 import type { CanonicalStateEventV1 } from "../task-state-events/canonical-state-events.js";
 import { isTaskStateEvent } from "../task-state-events/canonical-state-events.js";
@@ -32,6 +32,43 @@ import {
 } from "./remote-projection-versions.js";
 import { resolveEventSegmentRelativePath } from "./layout.js";
 
+function findPriorEventWithClientMutationId(
+  key: string,
+  priorEvents: CanonicalStateEventV1[]
+): CanonicalStateEventV1 | undefined {
+  for (let idx = priorEvents.length - 1; idx >= 0; idx -= 1) {
+    const prior = priorEvents[idx];
+    if (prior?.clientMutationId?.trim() === key) {
+      return prior;
+    }
+  }
+  return undefined;
+}
+
+/** Reject conflicting clientMutationId before admit (headProjection path uses empty priorEvents). */
+function findClientMutationIdConflict(
+  events: CanonicalStateEventV1[],
+  priorEvents: CanonicalStateEventV1[]
+): { code: "duplicate-idempotency-key"; message: string } | null {
+  for (const event of events) {
+    const key = event.clientMutationId?.trim();
+    if (!key) {
+      continue;
+    }
+    const prior = findPriorEventWithClientMutationId(key, priorEvents);
+    if (!prior || prior.eventId === event.eventId) {
+      continue;
+    }
+    if (canonicalEventsAreIdempotentDuplicates(prior, event)) {
+      continue;
+    }
+    return {
+      code: "duplicate-idempotency-key",
+      message: `clientMutationId '${key}' already used by event ${prior.eventId}`
+    };
+  }
+  return null;
+}
 export type PublishTaskStateEventsInput = {
   workspacePath: string;
   branch?: string;
@@ -292,6 +329,16 @@ export async function publishTaskStateEvents(
     const initialPlanningProjection = replayPlanningProjectionFromRawEvents(remoteLoaded.rawEvents);
     // `readRemoteSnapshotProjection` already replays the remote tail on the bootstrap snapshot.
     // Seeding admission with both that head projection and `remoteLoaded.events` would replay tail twice.
+    // clientMutationId conflicts are rejected explicitly below — do not pass full priorEvents here.
+    const idempotencyConflict = findClientMutationIdConflict(publishedEvents, remoteLoaded.events);
+    if (idempotencyConflict) {
+      return {
+        ok: false,
+        code: "task-state-event-admission-rejected",
+        message: idempotencyConflict.message,
+        data: { admissionCode: idempotencyConflict.code }
+      };
+    }
     const admitted = admitCanonicalStateEventStream(publishedEvents, {
       priorEvents: headProjection ? [] : remoteLoaded.events,
       initialTaskProjection: headProjection ?? undefined,
