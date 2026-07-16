@@ -10,6 +10,10 @@ import {
   validateGuidanceLibraryIdentitySubmit,
   type GuidanceLibraryIdentityDrawerMode
 } from "../dashboard/dashboard-input-drawer.js";
+import {
+  GUIDANCE_LIBRARY_ARTIFACT_TYPE_DIRS,
+  GUIDANCE_LIBRARY_ARTIFACTS_ROOT
+} from "./render-guidance.js";
 import { buildGuidanceMutationActionResultMessage } from "./guidance-panel-messages.js";
 
 export type GuidanceAuthoringExtensionSideOptions = {
@@ -103,6 +107,14 @@ export class GuidanceAuthoringExtensionSide {
         void this.openLibraryIdentityDrawer(action, m);
         return;
       }
+      if (action === "artifact-reveal") {
+        void this.revealArtifactInExplorer(String(m.artifactPath ?? ""));
+        return;
+      }
+      if (action === "library-reveal-folder") {
+        void this.revealLibraryArtifactsFolder(typeof m.artifactType === "string" ? m.artifactType : undefined);
+        return;
+      }
       void this.reportAction(action, String(m.artifactId ?? ""));
     }
     if (m.type === "activationAction")
@@ -119,6 +131,14 @@ export class GuidanceAuthoringExtensionSide {
     }
   }
 
+  private resolveWorkspaceUri(relativePath: string): vscode.Uri {
+    if (relativePath.startsWith("/")) {
+      return vscode.Uri.file(relativePath);
+    }
+    const base = this.opts.workspaceFolder?.uri ?? vscode.workspace.workspaceFolders?.[0]?.uri ?? this.opts.extensionUri;
+    return vscode.Uri.joinPath(base, ...relativePath.split(/[\\/]+/));
+  }
+
   private async openArtifact(path: string): Promise<void> {
     const wv = this.opts.getWebview();
     if (!path.trim()) {
@@ -126,15 +146,55 @@ export class GuidanceAuthoringExtensionSide {
       return;
     }
     try {
-      const uri = path.startsWith("/")
-        ? vscode.Uri.file(path)
-        : vscode.Uri.joinPath(
-            this.opts.workspaceFolder?.uri ?? vscode.workspace.workspaceFolders?.[0]?.uri ?? this.opts.extensionUri,
-            ...path.split(/[\\/]+/)
-          );
+      const uri = this.resolveWorkspaceUri(path);
       const doc = await vscode.workspace.openTextDocument(uri);
       await vscode.window.showTextDocument(doc, { preview: true });
       await wv?.postMessage({ type: "actionResult", ok: true, text: `Opened ${path}` });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      await wv?.postMessage({ type: "actionResult", ok: false, text: message });
+    }
+  }
+
+  private async revealArtifactInExplorer(path: string): Promise<void> {
+    const wv = this.opts.getWebview();
+    if (!path.trim()) {
+      await wv?.postMessage({ type: "actionResult", ok: false, text: "Artifact path is missing." });
+      return;
+    }
+    try {
+      const uri = this.resolveWorkspaceUri(path);
+      await vscode.commands.executeCommand("revealInExplorer", uri);
+      await wv?.postMessage({ type: "actionResult", ok: true, text: `Revealed ${path}` });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      await wv?.postMessage({ type: "actionResult", ok: false, text: message });
+    }
+  }
+
+  private async revealLibraryArtifactsFolder(artifactType?: string): Promise<void> {
+    const wv = this.opts.getWebview();
+    const root = this.opts.workspaceFolder?.uri.fsPath ?? vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+    let relativePath = GUIDANCE_LIBRARY_ARTIFACTS_ROOT;
+    const normalizedType = artifactType?.trim();
+    if (normalizedType && normalizedType in GUIDANCE_LIBRARY_ARTIFACT_TYPE_DIRS) {
+      const typeDir = GUIDANCE_LIBRARY_ARTIFACT_TYPE_DIRS[normalizedType as keyof typeof GUIDANCE_LIBRARY_ARTIFACT_TYPE_DIRS];
+      const candidate = path.join(GUIDANCE_LIBRARY_ARTIFACTS_ROOT, typeDir);
+      if (root) {
+        try {
+          const st = await fs.stat(path.join(root, candidate));
+          if (st.isDirectory()) {
+            relativePath = candidate;
+          }
+        } catch {
+          // Prefer parent until first write.
+        }
+      }
+    }
+    try {
+      const uri = this.resolveWorkspaceUri(relativePath);
+      await vscode.commands.executeCommand("revealInExplorer", uri);
+      await wv?.postMessage({ type: "actionResult", ok: true, text: `Revealed ${relativePath}` });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       await wv?.postMessage({ type: "actionResult", ok: false, text: message });

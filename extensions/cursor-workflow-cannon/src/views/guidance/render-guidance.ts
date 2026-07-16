@@ -37,7 +37,7 @@ function shortTraceId(traceId: string): string {
   return `${traceId.slice(0, 12)}...${traceId.slice(-6)}`;
 }
 
-function mutationFailureRemediation(code: unknown): string | null {
+export function mutationFailureRemediation(code: unknown): string | null {
   const c = String(code ?? "");
   switch (c) {
     case "cae-mutation-disabled":
@@ -851,6 +851,128 @@ export const GUIDANCE_LIBRARY_ARTIFACT_TYPES = [
 
 export type GuidanceLibraryArtifactType = (typeof GUIDANCE_LIBRARY_ARTIFACT_TYPES)[number];
 
+/** Locked library browse copy (Phase 151 / T100873). */
+export const GUIDANCE_LIBRARY_INTRO =
+  "Browse shipped defaults and your workspace guidance files here. Open or Reveal to edit in Cursor — bodies are never edited in this panel.";
+
+export const GUIDANCE_LIBRARY_FOLDER_HINT =
+  "Workspace copies live under .ai/cae/artifacts/. Reveal folder opens that tree (created on first Create/Copy).";
+
+export const GUIDANCE_LIBRARY_ARTIFACTS_ROOT = ".ai/cae/artifacts";
+
+export const GUIDANCE_LIBRARY_ARTIFACT_TYPE_DIRS: Record<GuidanceLibraryArtifactType, string> = {
+  playbook: "playbooks",
+  runbook: "runbooks",
+  checklist: "checklists",
+  "review-template": "review-templates",
+  "reasoning-template": "reasoning-templates",
+  "policy-doc": "policy-docs"
+};
+
+/** Soft remediation lines for library browse — never blocks listing. */
+export function guidanceLibraryBrowseRemediationLines(data: UnknownRecord): string[] {
+  const health = asRecord(data.health);
+  const readiness = asRecord(data.readiness);
+  const lines: string[] = [];
+  if (health.caeEnabled === false) {
+    const text = mutationFailureRemediation("cae-mutation-disabled");
+    if (text) lines.push(text);
+  }
+  const registryStore = String(health.registryStore ?? "");
+  if (registryStore === "json") {
+    const text = mutationFailureRemediation("cae-mutation-json-store");
+    if (text) lines.push(text);
+  }
+  const denial = String(readiness.denialReason ?? "");
+  if (health.caeEnabled !== false && registryStore === "sqlite" && denial.includes("adminMutations")) {
+    const text = mutationFailureRemediation("cae-mutation-admin-off");
+    if (text) lines.push(text);
+  }
+  return lines;
+}
+
+export function renderGuidanceLibraryEmptyStateRow(data: UnknownRecord, colspan = 7): string {
+  const remediations = guidanceLibraryBrowseRemediationLines(data);
+  const remedHtml = remediations.length
+    ? `<ul class="gp-library-remediation">${remediations
+        .map((line) => `<li>${escapeHtml(line)}</li>`)
+        .join("")}</ul>`
+    : "";
+  return `<tr class="gp-library-empty-row"><td colspan="${colspan}">
+  <section class="gp-library-empty">
+    <p>${escapeHtml(GUIDANCE_LIBRARY_INTRO)}</p>
+    <p class="gp-muted">${escapeHtml(GUIDANCE_LIBRARY_FOLDER_HINT)}</p>
+    ${remedHtml}
+    <div class="gp-action-row">
+      <button type="button" class="wc-btn wc-btn-md wc-btn-secondary" data-gp-library-action="reveal-folder">Reveal folder</button>
+    </div>
+  </section>
+</td></tr>`;
+}
+
+export const GUIDANCE_LIBRARY_CLIENT_SCRIPT = `<script>
+(function(){
+  var panel=document.querySelector('[data-gp-panel="library"]');
+  if(!panel)return;
+  function vscodeApi(){return window.__wfcVscode||(typeof acquireVsCodeApi==='function'?(window.__wfcVscode=acquireVsCodeApi()):null);}
+  function activeTypeFilter(){return panel.getAttribute('data-gp-library-active-type')||'';}
+  function applyLibraryTypeFilter(){
+    var type=activeTypeFilter();
+    panel.querySelectorAll('[data-gp-library-type]').forEach(function(chip){
+      var t=chip.getAttribute('data-gp-library-type')||'';
+      chip.classList.toggle('is-active',!!type&&t===type);
+      chip.setAttribute('aria-pressed',type&&t===type?'true':'false');
+    });
+    var shown=0;
+    panel.querySelectorAll('[data-gp-artifact-row]').forEach(function(row){
+      var rowType=row.getAttribute('data-gp-artifact-type')||'';
+      var ok=!type||rowType===type;
+      row.style.display=ok?'':'none';
+      if(ok)shown++;
+    });
+    var c=panel.querySelector('#gp-artifact-count');
+    if(c)c.textContent=shown+' sources';
+  }
+  panel.querySelectorAll('[data-gp-library-type]').forEach(function(chip){
+    chip.addEventListener('click',function(){
+      var t=chip.getAttribute('data-gp-library-type')||'';
+      var cur=activeTypeFilter();
+      panel.setAttribute('data-gp-library-active-type',cur===t?'':t);
+      applyLibraryTypeFilter();
+    });
+  });
+  panel.addEventListener('click',function(ev){
+    var btn=ev.target&&ev.target.closest?ev.target.closest('[data-gp-library-action]'):null;
+    if(!btn||btn.disabled)return;
+    var api=vscodeApi();
+    if(!api)return;
+    var action=btn.getAttribute('data-gp-library-action')||'';
+    var ctx=panel.querySelector('[data-gp-library-mutation-context]');
+    var concurrency={};
+    if(ctx){
+      var v=ctx.getAttribute('data-gp-active-version');if(v)concurrency.expectedActiveVersionId=v;
+      var d=ctx.getAttribute('data-gp-registry-digest');if(d)concurrency.expectedRegistryDigest=d;
+    }
+    if(action==='create'){
+      api.postMessage({type:'artifactAction',action:'library-create',concurrency:concurrency});
+      return;
+    }
+    if(action==='duplicate'){
+      api.postMessage({type:'artifactAction',action:'library-duplicate',artifactId:btn.getAttribute('data-gp-artifact-id')||'',artifactTitle:btn.getAttribute('data-gp-artifact-title')||'',artifactType:btn.getAttribute('data-gp-artifact-type')||'',artifactPath:btn.getAttribute('data-gp-artifact-path')||'',concurrency:concurrency});
+      return;
+    }
+    if(action==='reveal'){
+      api.postMessage({type:'artifactAction',action:'artifact-reveal',artifactPath:btn.getAttribute('data-gp-artifact-path')||''});
+      return;
+    }
+    if(action==='reveal-folder'){
+      api.postMessage({type:'artifactAction',action:'library-reveal-folder',artifactType:activeTypeFilter()||undefined});
+    }
+  });
+  applyLibraryTypeFilter();
+})();
+</script>`;
+
 function libraryNumberText(value: unknown): string {
   const n = Number(value ?? 0);
   return Number.isFinite(n) ? String(n) : "0";
@@ -870,8 +992,9 @@ function renderGuidanceLibraryRowActions(row: UnknownRecord): string {
   const hasPath = typeof row.path === "string" && row.path.trim().length > 0;
   const path = String(row.path ?? "");
   const artifactId = String(row.artifactId ?? "");
-  const enabled = hasPath && row.fileExists !== false;
-  return `<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-gp-action="artifact-open" data-gp-artifact-id="${escapeHtmlAttr(artifactId)}" data-gp-artifact-path="${escapeHtmlAttr(path)}"${enabled ? "" : " disabled"}>Open</button>`;
+  const canOpen = hasPath && row.fileExists !== false;
+  const canReveal = hasPath;
+  return `<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-gp-action="artifact-open" data-gp-artifact-id="${escapeHtmlAttr(artifactId)}" data-gp-artifact-path="${escapeHtmlAttr(path)}"${canOpen ? "" : " disabled"}>Open</button><button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-gp-library-action="reveal" data-gp-artifact-path="${escapeHtmlAttr(path)}"${canReveal ? "" : " disabled"}>Reveal</button>`;
 }
 
 /**
@@ -919,17 +1042,25 @@ export function renderGuidanceLibraryInnerHtml(data: UnknownRecord): string {
 </tr>`;
         })
         .join("")
-    : '<tr><td colspan="7">No library sources found for <code>cae.*</code> or <code>workspace.*</code>.</td></tr>';
+    : renderGuidanceLibraryEmptyStateRow(data);
+  const remediations = guidanceLibraryBrowseRemediationLines(data);
+  const remedHtml = remediations.length
+    ? `<ul class="gp-library-remediation">${remediations.map((line) => `<li>${escapeHtml(line)}</li>`).join("")}</ul>`
+    : "";
   return `<section class="gp-tab-panel" id="gp-tab-library" data-gp-panel="library">
   <div class="gp-band"><h2>Library</h2><span id="gp-artifact-count" class="gp-muted">${libraryNumberText(rows.length)} sources</span></div>
-  <p class="gp-muted">File-first CAE and workspace sources. Use <b>Open</b> to edit on disk — inline markdown authoring is not shown here.</p>
+  <p class="gp-muted">${escapeHtml(GUIDANCE_LIBRARY_INTRO)}</p>
+  ${remedHtml}
   <div class="gp-pill-row gp-library-type-chips" aria-label="Artifact types">${typeChips}</div>
   <div class="gp-table-tools">
     <input id="gp-artifact-search" type="search" placeholder="Search library" />
     <select id="gp-artifact-source"><option value="">All sources</option><option value="cae">cae</option><option value="workspace">workspace</option></select>
     <select id="gp-artifact-status"><option value="">All statuses</option><option value="active">Active</option><option value="hidden">Hidden</option><option value="retired">Retired</option><option value="missing-file">Missing file</option></select>
+    <button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-gp-library-action="reveal-folder">Reveal folder</button>
   </div>
+  <p class="gp-muted gp-library-folder-hint">${escapeHtml(GUIDANCE_LIBRARY_FOLDER_HINT)}</p>
   <table><thead><tr><th>Source</th><th>Type</th><th>Namespace</th><th>Path</th><th>Status</th><th>Changed</th><th>Actions</th></tr></thead><tbody>${body}</tbody></table>
+  ${GUIDANCE_LIBRARY_CLIENT_SCRIPT}
 </section>`;
 }
 

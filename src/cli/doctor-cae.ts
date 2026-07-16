@@ -18,6 +18,7 @@ export async function collectCaeDoctorSummaryLines(cwd: string): Promise<string[
   const e = effective as Record<string, unknown>;
   const enabled = getAtPath(e, "kit.cae.enabled") === true;
   const persistence = getAtPath(e, "kit.cae.persistence") === true;
+  const adminMutations = getAtPath(e, "kit.cae.adminMutations") === true;
   const shadow = getAtPath(e, "kit.cae.runtime.shadowPreflight") === true;
   const persistShadow = getAtPath(e, "kit.cae.runtime.persistShadowPreflight") === true;
   const enforce = getAtPath(e, "kit.cae.enforcement.enabled") === true;
@@ -26,6 +27,11 @@ export async function collectCaeDoctorSummaryLines(cwd: string): Promise<string[
   const lines = [
     `CAE: enabled=${enabled} persistence=${persistence} shadowPreflight=${shadow} persistShadowPreflight=${persistShadow} enforcement=${enforce}`
   ];
+  if (!adminMutations) {
+    lines.push(
+      "CAE admin mutations: disabled (informational — set kit.cae.adminMutations=true to enable dashboard authoring mutations)"
+    );
+  }
   const db = openKitSqliteReadWrite(cwd, e);
   if (db) {
     try {
