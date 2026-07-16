@@ -839,6 +839,100 @@ ${renderRecoveryCards(health, validation, recent)}
 ${renderRawDetails("Debug details JSON", data, 12000)}`;
 }
 
+/** Mirrors `CAE_WORKSPACE_ARTIFACT_TYPES` for library UI (extension does not import kit core). */
+export const GUIDANCE_LIBRARY_ARTIFACT_TYPES = [
+  "playbook",
+  "runbook",
+  "checklist",
+  "review-template",
+  "reasoning-template",
+  "policy-doc"
+] as const;
+
+export type GuidanceLibraryArtifactType = (typeof GUIDANCE_LIBRARY_ARTIFACT_TYPES)[number];
+
+function libraryNumberText(value: unknown): string {
+  const n = Number(value ?? 0);
+  return Number.isFinite(n) ? String(n) : "0";
+}
+
+/** Library rows are keyed by `cae.*` or `workspace.*` artifact ids. */
+export function isGuidanceLibraryArtifactId(artifactId: string): boolean {
+  const id = artifactId.trim();
+  return id.startsWith("cae.") || id.startsWith("workspace.");
+}
+
+export function guidanceLibrarySourceChip(artifactId: string): "cae" | "workspace" {
+  return artifactId.trim().startsWith("workspace.") ? "workspace" : "cae";
+}
+
+function renderGuidanceLibraryRowActions(row: UnknownRecord): string {
+  const hasPath = typeof row.path === "string" && row.path.trim().length > 0;
+  const path = String(row.path ?? "");
+  const artifactId = String(row.artifactId ?? "");
+  const enabled = hasPath && row.fileExists !== false;
+  return `<button type="button" class="wc-btn wc-btn-sm wc-btn-secondary" data-gp-action="artifact-open" data-gp-artifact-id="${escapeHtmlAttr(artifactId)}" data-gp-artifact-path="${escapeHtmlAttr(path)}"${enabled ? "" : " disabled"}>Open</button>`;
+}
+
+/**
+ * File-first CAE Library list — hosted by the Dashboard CAE tab only.
+ * Lists `cae.*` and `workspace.*` sources with type and source chips; Open uses `openArtifact`.
+ */
+export function renderGuidanceLibraryInnerHtml(data: UnknownRecord): string {
+  const rows = asArray(asRecord(data.artifacts).rows)
+    .map(asRecord)
+    .filter((row) => isGuidanceLibraryArtifactId(String(row.artifactId ?? "")))
+    .slice(0, 120);
+  const typeCounts = new Map<GuidanceLibraryArtifactType, number>();
+  for (const artifactType of GUIDANCE_LIBRARY_ARTIFACT_TYPES) {
+    typeCounts.set(artifactType, 0);
+  }
+  for (const row of rows) {
+    const artifactType = String(row.artifactType ?? "") as GuidanceLibraryArtifactType;
+    if (typeCounts.has(artifactType)) {
+      typeCounts.set(artifactType, (typeCounts.get(artifactType) ?? 0) + 1);
+    }
+  }
+  const typeChips = GUIDANCE_LIBRARY_ARTIFACT_TYPES.map((artifactType) => {
+    const count = typeCounts.get(artifactType) ?? 0;
+    return `<span class="gp-pill gp-type-chip" data-gp-library-type="${escapeHtmlAttr(artifactType)}"><span>${escapeHtml(artifactType)}</span><b>${libraryNumberText(count)}</b></span>`;
+  }).join("");
+  const body = rows.length
+    ? rows
+        .map((row) => {
+          const artifactId = String(row.artifactId ?? "");
+          const artifactType = String(row.artifactType ?? "");
+          const sourceChip = guidanceLibrarySourceChip(artifactId);
+          const status = String(row.status ?? row.lifecycleStatus ?? "");
+          const changed = String(row.updatedAt ?? row.lastChangedAt ?? row.changedAt ?? "n/a");
+          const searchable = [artifactId, row.title, artifactType, row.path, sourceChip, status]
+            .map((value) => String(value ?? "").toLowerCase())
+            .join(" ");
+          return `<tr data-gp-artifact-row data-gp-search="${escapeHtmlAttr(searchable)}" data-gp-source="${escapeHtmlAttr(sourceChip)}" data-gp-status="${escapeHtmlAttr(status)}" data-gp-artifact-id="${escapeHtmlAttr(artifactId)}" data-gp-artifact-title="${escapeHtmlAttr(String(row.title ?? ""))}" data-gp-artifact-type="${escapeHtmlAttr(artifactType)}" data-gp-artifact-path="${escapeHtmlAttr(String(row.path ?? ""))}">
+  <td><code>${escapeHtml(artifactId)}</code><small>${escapeHtml(String(row.title ?? "Untitled source"))}</small></td>
+  <td><span class="gp-pill gp-type-chip gp-type-${escapeHtmlAttr(artifactType || "unknown")}">${escapeHtml(artifactType || "unknown")}</span></td>
+  <td><span class="gp-source gp-source-${escapeHtmlAttr(sourceChip)}">${escapeHtml(sourceChip)}</span></td>
+  <td><code>${escapeHtml(String(row.path ?? ""))}</code></td>
+  <td>${escapeHtml(status || "unknown")}${row.fileExists === false ? '<small class="gp-bad-text">missing file</small>' : ""}</td>
+  <td>${escapeHtml(changed)}</td>
+  <td><div class="gp-row-actions">${renderGuidanceLibraryRowActions(row)}</div></td>
+</tr>`;
+        })
+        .join("")
+    : '<tr><td colspan="7">No library sources found for <code>cae.*</code> or <code>workspace.*</code>.</td></tr>';
+  return `<section class="gp-tab-panel" id="gp-tab-library" data-gp-panel="library">
+  <div class="gp-band"><h2>Library</h2><span id="gp-artifact-count" class="gp-muted">${libraryNumberText(rows.length)} sources</span></div>
+  <p class="gp-muted">File-first CAE and workspace sources. Use <b>Open</b> to edit on disk — inline markdown authoring is not shown here.</p>
+  <div class="gp-pill-row gp-library-type-chips" aria-label="Artifact types">${typeChips}</div>
+  <div class="gp-table-tools">
+    <input id="gp-artifact-search" type="search" placeholder="Search library" />
+    <select id="gp-artifact-source"><option value="">All sources</option><option value="cae">cae</option><option value="workspace">workspace</option></select>
+    <select id="gp-artifact-status"><option value="">All statuses</option><option value="active">Active</option><option value="hidden">Hidden</option><option value="retired">Retired</option><option value="missing-file">Missing file</option></select>
+  </div>
+  <table><thead><tr><th>Source</th><th>Type</th><th>Namespace</th><th>Path</th><th>Status</th><th>Changed</th><th>Actions</th></tr></thead><tbody>${body}</tbody></table>
+</section>`;
+}
+
 /** History tab — recent check rows with grouped display. */
 export function renderHistoryTabHtml(payload: unknown): string {
   const root = asRecord(payload);

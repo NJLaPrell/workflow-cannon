@@ -1,4 +1,12 @@
 import { escapeHtml, escapeHtmlAttr } from "../dashboard/render-dashboard.js";
+import { renderGuidanceLibraryInnerHtml } from "./render-guidance.js";
+
+export type GuidanceAuthoringPanelHost = "dashboard" | "standalone";
+
+export type GuidanceAuthoringPanelRenderOptions = {
+  /** Dashboard CAE tab hosts the file-first Library; standalone keeps the legacy Artifacts editor. */
+  host?: GuidanceAuthoringPanelHost;
+};
 
 const WC_BTN_MD_PRI = "wc-btn wc-btn-md wc-btn-primary";
 const WC_BTN_MD_SEC = "wc-btn wc-btn-md wc-btn-secondary";
@@ -145,7 +153,9 @@ function renderStateCallout(data: UnknownRecord, result: UnknownRecord): string 
   return callout("ok", "Guidance authoring is ready", "Active set, validation, and SQLite authoring surface are available.");
 }
 
-function renderOverview(data: UnknownRecord): string {
+function renderOverview(data: UnknownRecord, host: GuidanceAuthoringPanelHost): string {
+  const sourcesTab = host === "dashboard" ? "library" : "artifacts";
+  const sourcesTabLabel = host === "dashboard" ? "Library" : "Artifacts";
   const active = asRecord(data.activeVersion);
   const health = asRecord(data.health);
   const counts = asRecord(data.counts);
@@ -161,7 +171,7 @@ function renderOverview(data: UnknownRecord): string {
   const wsActiveArtifacts = countWorkspaceActiveArtifacts(data);
   const showOnboarding = wsActiveArtifacts === 0 && canMutateAuthoring(data);
   const onboarding = showOnboarding
-    ? `<section class="gp-callout gp-warn"><b>First workspace Guidance</b><span>You have no active workspace-owned artifacts yet. Pick a starter template (Artifacts tab), duplicate a default row, then bind a draft activation and run Preview before publishing.</span><div class="gp-action-row"><button type="button" class="${WC_BTN_MD_PRI}" data-gp-tab-target="artifacts" data-gp-action="new-artifact">Open Artifact editor</button><button type="button" class="${WC_BTN_MD_SEC}" data-gp-tab-target="activations" data-gp-action="new-activation">Open Activation editor</button></div></section>`
+    ? `<section class="gp-callout gp-warn"><b>First workspace Guidance</b><span>You have no active workspace-owned artifacts yet. Pick a starter from the ${sourcesTabLabel} tab, duplicate a default row, then bind a draft activation and run Preview before publishing.</span><div class="gp-action-row"><button type="button" class="${WC_BTN_MD_PRI}" data-gp-tab-target="${escapeHtmlAttr(sourcesTab)}" data-gp-action="new-artifact">Open ${escapeHtml(sourcesTabLabel)}</button><button type="button" class="${WC_BTN_MD_SEC}" data-gp-tab-target="activations" data-gp-action="new-activation">Open Activation editor</button></div></section>`
     : "";
   const warningRows = warnings.length
     ? `<div class="gp-warning-list">${warnings
@@ -183,7 +193,7 @@ function renderOverview(data: UnknownRecord): string {
     </div>
   </div>
   <div class="gp-action-row">
-    <button type="button" class="${WC_BTN_MD_PRI}" data-gp-tab-target="artifacts" data-gp-action="new-artifact">New Artifact</button>
+    <button type="button" class="${WC_BTN_MD_PRI}" data-gp-tab-target="${escapeHtmlAttr(sourcesTab)}" data-gp-action="new-artifact">${host === "dashboard" ? "Open Library" : "New Artifact"}</button>
     <button type="button" class="${WC_BTN_MD_PRI}" data-gp-tab-target="activations" data-gp-action="new-activation">New Activation</button>
     <button type="button" class="${WC_BTN_MD_SEC}" data-gp-tab-target="preview" data-gp-action="preview-guidance">Preview Guidance</button>
     <button type="button" class="${WC_BTN_MD_SEC}" data-gp-action="validate-registry">Validate Registry</button>
@@ -524,11 +534,18 @@ function renderAudit(data: UnknownRecord): string {
   return `<section class="gp-tab-panel" id="gp-tab-audit" data-gp-panel="audit"><h2>Audit</h2><table><thead><tr><th>Recorded</th><th>Command</th><th>Actor</th><th>Note</th></tr></thead><tbody>${body}</tbody></table></section>`;
 }
 
-export function renderGuidanceAuthoringPanelInnerHtml(result: unknown): string {
+export function renderGuidanceAuthoringPanelInnerHtml(
+  result: unknown,
+  options?: GuidanceAuthoringPanelRenderOptions
+): string {
   const envelope = asRecord(result);
   const data = asRecord(envelope.data);
   const title = String(asRecord(data.product).productName ?? "Guidance");
   const canMutate = canMutateAuthoring(data);
+  const host = options?.host ?? "standalone";
+  const sourcesPanel = host === "dashboard" ? renderGuidanceLibraryInnerHtml(data) : renderArtifacts(data);
+  const sourcesTab = host === "dashboard" ? "library" : "artifacts";
+  const sourcesTabLabel = host === "dashboard" ? "Library" : "Artifacts";
   return `<main class="gp-shell">
   <header class="gp-head">
     <div><p class="gp-kicker">Workflow Cannon</p><h1>${escapeHtml(title)}</h1></div>
@@ -537,15 +554,15 @@ export function renderGuidanceAuthoringPanelInnerHtml(result: unknown): string {
   ${renderStateCallout(data, envelope)}
   <nav class="gp-tabs" aria-label="Guidance authoring sections">
     <button type="button" class="is-active" data-gp-tab="overview">Overview</button>
-    <button type="button" data-gp-tab="artifacts">Artifacts</button>
+    <button type="button" data-gp-tab="${escapeHtmlAttr(sourcesTab)}">${escapeHtml(sourcesTabLabel)}</button>
     <button type="button" data-gp-tab="activations">Activations</button>
     <button type="button" data-gp-tab="versions">Versions</button>
     <button type="button" data-gp-tab="preview">Preview</button>
     <button type="button" data-gp-tab="portability">Portability</button>
     <button type="button" data-gp-tab="audit">Audit</button>
   </nav>
-  ${renderOverview(data)}
-  ${renderArtifacts(data)}
+  ${renderOverview(data, host)}
+  ${sourcesPanel}
   ${renderActivations(data)}
   ${renderVersions(data)}
   ${renderPreview(data)}

@@ -3,9 +3,11 @@ import assert from "node:assert/strict";
 
 import {
   renderGuidanceActionResultInnerHtml,
+  renderGuidanceLibraryInnerHtml,
   renderGuidancePreviewInnerHtml,
   renderGuidanceSummaryInnerHtml,
-  renderGuidanceTraceDetailInnerHtml
+  renderGuidanceTraceDetailInnerHtml,
+  GUIDANCE_LIBRARY_ARTIFACT_TYPES
 } from "../dist/views/guidance/render-guidance.js";
 import { renderGuidanceAuthoringPanelInnerHtml } from "../dist/views/guidance/render-guidance-panel.js";
 
@@ -234,6 +236,99 @@ test("renderGuidancePreviewInnerHtml renders enforcement readiness when present"
   });
   assert.match(html, /Enforcement readiness/);
   assert.match(html, /cae-enforce-governance-evidence-incomplete/);
+});
+
+test("renderGuidanceLibraryInnerHtml lists cae and workspace sources with type chips", () => {
+  const html = renderGuidanceLibraryInnerHtml({
+    artifacts: {
+      rows: [
+        {
+          artifactId: "cae.playbook.one",
+          title: "Default playbook",
+          artifactType: "playbook",
+          source: "default",
+          path: ".ai/playbooks/one.md",
+          status: "active",
+          fileExists: true
+        },
+        {
+          artifactId: "workspace.runbook.ops",
+          title: "Ops runbook",
+          artifactType: "runbook",
+          source: "workspace",
+          path: ".ai/runbooks/ops.md",
+          status: "active",
+          fileExists: true,
+          updatedAt: "2026-05-07T00:00:00.000Z"
+        },
+        {
+          artifactId: "override.ignored",
+          title: "Not in library",
+          artifactType: "policy-doc",
+          source: "override",
+          status: "active",
+          fileExists: true
+        }
+      ]
+    }
+  });
+  assert.match(html, /<h2>Library<\/h2>/);
+  assert.match(html, /data-gp-panel="library"/);
+  assert.match(html, /cae\.playbook\.one/);
+  assert.match(html, /workspace\.runbook\.ops/);
+  assert.doesNotMatch(html, /override\.ignored/);
+  assert.match(html, /data-gp-action="artifact-open"/);
+  assert.doesNotMatch(html, /gp-artifact-content/);
+  assert.doesNotMatch(html, /Hide Default/);
+  assert.doesNotMatch(html, /Remove Override/);
+  for (const artifactType of GUIDANCE_LIBRARY_ARTIFACT_TYPES) {
+    assert.match(html, new RegExp(artifactType.replace("-", "\\-")));
+  }
+  assert.match(html, /gp-source-cae/);
+  assert.match(html, /gp-source-workspace/);
+  assert.match(html, /2026-05-07T00:00:00.000Z/);
+});
+
+test("renderGuidanceAuthoringPanelInnerHtml dashboard host renders Library instead of Artifacts editor", () => {
+  const html = renderGuidanceAuthoringPanelInnerHtml(
+    {
+      ok: true,
+      data: {
+        product: { productName: "Guidance" },
+        health: { caeEnabled: true, registryStatus: "ok", registryStore: "sqlite" },
+        activeVersion: { versionId: "cae.reg.active", isActive: true, registryDigest: "abcd" },
+        readiness: { canMutate: true },
+        validation: { ok: true, registryContentHash: "abcd" },
+        counts: {},
+        artifacts: {
+          rows: [
+            {
+              artifactId: "cae.doc.one",
+              title: "One",
+              artifactType: "policy-doc",
+              source: "default",
+              path: ".ai/policy.md",
+              status: "active",
+              fileExists: true
+            }
+          ]
+        },
+        activations: { rows: [] },
+        recentMutations: { available: true, rows: [] },
+        workspaceArtifactMarkdownTemplates: []
+      }
+    },
+    { host: "dashboard" }
+  );
+  assert.match(html, /data-gp-tab="library"/);
+  assert.match(html, />Library</);
+  assert.match(html, /data-gp-panel="library"/);
+  assert.match(html, /Search library/);
+  assert.doesNotMatch(html, /Artifact Editor/);
+  assert.doesNotMatch(html, /gp-artifact-content/);
+  assert.doesNotMatch(html, /Hide Default/);
+  assert.doesNotMatch(html, /Remove Override/);
+  assert.match(html, /data-gp-action="artifact-open"/);
 });
 
 test("renderGuidanceAuthoringPanelInnerHtml renders the tabbed authoring shell", () => {
