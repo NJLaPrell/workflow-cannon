@@ -4,8 +4,11 @@ import path from "node:path";
 import type { CommandClient } from "../../runtime/command-client.js";
 import {
   buildGuidanceCaeMutationDrawerSpec,
+  buildGuidanceLibraryIdentityDrawerSpec,
   renderDrawerFormHtml,
-  validateGuidanceCaeMutationSubmit
+  validateGuidanceCaeMutationSubmit,
+  validateGuidanceLibraryIdentitySubmit,
+  type GuidanceLibraryIdentityDrawerMode
 } from "../dashboard/dashboard-input-drawer.js";
 import { buildGuidanceMutationActionResultMessage } from "./guidance-panel-messages.js";
 
@@ -27,6 +30,15 @@ export class GuidanceAuthoringExtensionSide {
     | { resolve: (v: { actor: string; note: string } | null) => void; actor: string }
     | undefined;
 
+  private libraryIdentitySession:
+    | {
+        mode: GuidanceLibraryIdentityDrawerMode;
+        sourceArtifactId?: string;
+        expectedActiveVersionId?: string;
+        expectedRegistryDigest?: string;
+      }
+    | undefined;
+
   constructor(private readonly opts: GuidanceAuthoringExtensionSideOptions) {}
 
   cancelMutationApproval(): void {
@@ -35,10 +47,14 @@ export class GuidanceAuthoringExtensionSide {
       this.guidanceMutationApproval = undefined;
       stuck.resolve(null);
     }
+    this.libraryIdentitySession = undefined;
   }
 
-  /** @returns true when a CAE mutation drawer was open and this submit consumed it */
+  /** @returns true when a guidance drawer was open and this submit consumed it */
   async handleCaeDrawerSubmitIfActive(values: unknown): Promise<boolean> {
+    if (this.libraryIdentitySession) {
+      return await this.handleLibraryIdentityDrawerSubmit(values);
+    }
     const pending = this.guidanceMutationApproval;
     if (!pending) {
       return false;
@@ -59,8 +75,14 @@ export class GuidanceAuthoringExtensionSide {
     return true;
   }
 
-  /** @returns true when a CAE mutation drawer was open and this cancel consumed it */
+  /** @returns true when a guidance drawer was open and this cancel consumed it */
   async handleCaeDrawerCancelIfActive(): Promise<boolean> {
+    if (this.libraryIdentitySession) {
+      this.libraryIdentitySession = undefined;
+      await this.opts.getWebview()?.postMessage({ type: "wcDrawerClose" });
+      await this.opts.getWebview()?.postMessage({ type: "actionResult", ok: false, text: "Library mutation cancelled." });
+      return true;
+    }
     const pending = this.guidanceMutationApproval;
     if (!pending) {
       return false;
@@ -75,7 +97,14 @@ export class GuidanceAuthoringExtensionSide {
     const m = msg as { type?: string; [key: string]: unknown };
     if (m.type === "validateRegistry") void this.runValidation();
     if (m.type === "openArtifact") void this.openArtifact(String(m.path ?? ""));
-    if (m.type === "artifactAction") void this.reportAction(String(m.action ?? ""), String(m.artifactId ?? ""));
+    if (m.type === "artifactAction") {
+      const action = String(m.action ?? "");
+      if (action === "library-create" || action === "library-duplicate") {
+        void this.openLibraryIdentityDrawer(action, m);
+        return;
+      }
+      void this.reportAction(action, String(m.artifactId ?? ""));
+    }
     if (m.type === "activationAction")
       void this.runActivationAction(String(m.action ?? ""), String(m.activationId ?? ""), m.previewEvidence);
     if (m.type === "artifactMutation") void this.runArtifactMutation(String(m.command ?? ""), m.payload);
@@ -148,18 +177,164 @@ export class GuidanceAuthoringExtensionSide {
   private async postMutationResult(
     command: string,
     result: Awaited<ReturnType<CommandClient["run"]>>,
-    options: { openPath?: string } = {}
+    options: { openPath?: string; autoOpenFile?: boolean } = {}
   ): Promise<void> {
     const wv = this.opts.getWebview();
     const message = buildGuidanceMutationActionResultMessage(command, result);
     await wv?.postMessage(message);
     if (!message.ok) return;
-    const actions = options.openPath ? ["Open File", "Refresh", "View Audit", "Preview"] : ["Refresh", "View Audit", "Preview"];
+    const openPath = options.openPath?.trim();
+    if (options.autoOpenFile && openPath) {
+      await this.openArtifact(openPath);
+      await this.opts.reloadAfterMutations();
+      return;
+    }
+    const actions = openPath ? ["Open File", "Refresh", "View Audit", "Preview"] : ["Refresh", "View Audit", "Preview"];
     const choice = await vscode.window.showInformationMessage(message.text, ...actions);
-    if (choice === "Open File" && options.openPath) await this.openArtifact(options.openPath);
+    if (choice === "Open File" && openPath) await this.openArtifact(openPath);
     if (choice === "Refresh") await this.opts.reloadAfterMutations();
     if (choice === "View Audit") await wv?.postMessage({ type: "selectTab", tab: "audit" });
     if (choice === "Preview") await wv?.postMessage({ type: "selectTab", tab: "preview" });
+  }
+
+  private concurrencyFromMessage(msg: Record<string, unknown>): {
+    expectedActiveVersionId?: string;
+    expectedRegistryDigest?: string;
+  } {
+    const raw = msg.concurrency;
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+      return {};
+    }
+    const rec = raw as Record<string, unknown>;
+    const out: { expectedActiveVersionId?: string; expectedRegistryDigest?: string } = {};
+    const versionId = String(rec.expectedActiveVersionId ?? "").trim();
+    const digest = String(rec.expectedRegistryDigest ?? "").trim();
+    if (versionId) out.expectedActiveVersionId = versionId;
+    if (digest) out.expectedRegistryDigest = digest;
+    return out;
+  }
+
+  private suggestWorkspaceCopyArtifactId(sourceArtifactId: string): string {
+    return `workspace.${sourceArtifactId.replace(/^cae\./, "").replace(/[^a-z0-9_.-]+/gi, ".")}.copy`;
+  }
+
+  private pathStemSlug(path: string): string {
+    const stem = path.split("/").pop() ?? "";
+    return stem.replace(/\.md$/i, "");
+  }
+
+  private async openLibraryIdentityDrawer(action: string, msg: Record<string, unknown>): Promise<void> {
+    const webview = this.opts.getWebview();
+    if (!webview) {
+      return;
+    }
+    const concurrency = this.concurrencyFromMessage(msg);
+    const mode: GuidanceLibraryIdentityDrawerMode = action === "library-duplicate" ? "duplicate" : "create";
+    if (mode === "duplicate") {
+      const sourceArtifactId = String(msg.artifactId ?? "").trim();
+      if (!sourceArtifactId) {
+        await webview.postMessage({ type: "actionResult", ok: false, text: "Source artifact id is missing." });
+        return;
+      }
+      const title = String(msg.artifactTitle ?? "").trim();
+      const artifactPath = String(msg.artifactPath ?? "").trim();
+      this.libraryIdentitySession = {
+        mode,
+        sourceArtifactId,
+        ...concurrency
+      };
+      const html = renderDrawerFormHtml(
+        buildGuidanceLibraryIdentityDrawerSpec({
+          mode,
+          sourceArtifactId,
+          defaultArtifactId: this.suggestWorkspaceCopyArtifactId(sourceArtifactId),
+          defaultTitle: title ? `${title} Copy` : "Artifact Copy",
+          defaultSlug: this.pathStemSlug(artifactPath)
+        })
+      );
+      await webview.postMessage({ type: "wcDrawerOpen", html });
+      return;
+    }
+    this.libraryIdentitySession = { mode, ...concurrency };
+    const html = renderDrawerFormHtml(
+      buildGuidanceLibraryIdentityDrawerSpec({
+        mode,
+        defaultArtifactType: "playbook"
+      })
+    );
+    await webview.postMessage({ type: "wcDrawerOpen", html });
+  }
+
+  private async handleLibraryIdentityDrawerSubmit(values: unknown): Promise<boolean> {
+    const session = this.libraryIdentitySession;
+    if (!session) {
+      return false;
+    }
+    const rec = values && typeof values === "object" && !Array.isArray(values) ? (values as Record<string, unknown>) : {};
+    const strVals: Record<string, string> = {};
+    for (const k of Object.keys(rec)) {
+      strVals[k] = String(rec[k] ?? "");
+    }
+    const validated = validateGuidanceLibraryIdentitySubmit(session.mode, strVals);
+    if (!validated.ok) {
+      await this.opts.getWebview()?.postMessage({ type: "wcDrawerValidation", message: validated.error });
+      return true;
+    }
+    const identity = validated.values;
+    const command =
+      session.mode === "create"
+        ? "cae-create-workspace-artifact"
+        : session.sourceArtifactId?.startsWith("workspace.")
+          ? "cae-duplicate-artifact-to-workspace"
+          : "cae-duplicate-default-artifact";
+    const payload: Record<string, unknown> = {
+      artifactId: identity.artifactId
+    };
+    if (session.mode === "create") {
+      payload.artifactType = identity.artifactType;
+      payload.title = identity.title;
+    } else {
+      payload.sourceArtifactId = session.sourceArtifactId;
+      if (identity.title) payload.title = identity.title;
+    }
+    if (identity.slug) payload.slug = identity.slug;
+    if (session.expectedActiveVersionId) payload.expectedActiveVersionId = session.expectedActiveVersionId;
+    if (session.expectedRegistryDigest) payload.expectedRegistryDigest = session.expectedRegistryDigest;
+    this.libraryIdentitySession = undefined;
+    await this.opts.getWebview()?.postMessage({ type: "wcDrawerClose" });
+    const approval = await this.collectMutationApproval(
+      command,
+      session.mode === "duplicate" ? String(session.sourceArtifactId ?? identity.artifactId) : identity.artifactId,
+      session.mode === "duplicate" ? "Guidance library duplicate" : "Guidance library create"
+    );
+    if (!approval) {
+      await this.opts.getWebview()?.postMessage({ type: "actionResult", ok: false, text: "Library mutation cancelled." });
+      return true;
+    }
+    await this.runApprovedLibraryMutation({ command, payload }, approval);
+    return true;
+  }
+
+  private async runApprovedLibraryMutation(
+    mutation: { command: string; payload: Record<string, unknown> },
+    approval: { actor: string; note: string }
+  ): Promise<void> {
+    const wv = this.opts.getWebview();
+    const payload = { ...mutation.payload };
+    payload.schemaVersion = 1;
+    payload.actor = approval.actor;
+    payload.note = approval.note;
+    payload.caeMutationApproval = { confirmed: true, rationale: approval.note };
+    try {
+      const result = await this.opts.client.run(mutation.command, payload);
+      await this.postMutationResult(mutation.command, result, {
+        openPath: this.resultArtifactPath(result),
+        autoOpenFile: true
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      await wv?.postMessage({ type: "actionResult", ok: false, text: message });
+    }
   }
 
   private resultArtifactPath(result: Awaited<ReturnType<CommandClient["run"]>>): string | undefined {

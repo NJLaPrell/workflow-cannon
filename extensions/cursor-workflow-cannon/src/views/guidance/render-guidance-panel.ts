@@ -1,5 +1,9 @@
 import { escapeHtml, escapeHtmlAttr } from "../dashboard/render-dashboard.js";
-import { renderGuidanceLibraryInnerHtml } from "./render-guidance.js";
+import {
+  GUIDANCE_LIBRARY_ARTIFACT_TYPES,
+  guidanceLibrarySourceChip,
+  isGuidanceLibraryArtifactId
+} from "./render-guidance.js";
 
 export type GuidanceAuthoringPanelHost = "dashboard" | "standalone";
 
@@ -521,6 +525,109 @@ function renderVersions(data: UnknownRecord): string {
 </section>`;
 }
 
+const GUIDANCE_LIBRARY_CLIENT_SCRIPT = `<script>
+(function(){
+  var panel=document.querySelector('[data-gp-panel="library"]');
+  if(!panel)return;
+  function vscodeApi(){return window.__wfcVscode||(typeof acquireVsCodeApi==='function'?(window.__wfcVscode=acquireVsCodeApi()):null);}
+  panel.addEventListener('click',function(ev){
+    var btn=ev.target&&ev.target.closest?ev.target.closest('[data-gp-library-action]'):null;
+    if(!btn||btn.disabled)return;
+    var api=vscodeApi();
+    if(!api)return;
+    var action=btn.getAttribute('data-gp-library-action')||'';
+    var ctx=panel.querySelector('[data-gp-library-mutation-context]');
+    var concurrency={};
+    if(ctx){
+      var v=ctx.getAttribute('data-gp-active-version');if(v)concurrency.expectedActiveVersionId=v;
+      var d=ctx.getAttribute('data-gp-registry-digest');if(d)concurrency.expectedRegistryDigest=d;
+    }
+    if(action==='create'){
+      api.postMessage({type:'artifactAction',action:'library-create',concurrency:concurrency});
+      return;
+    }
+    if(action==='duplicate'){
+      api.postMessage({type:'artifactAction',action:'library-duplicate',artifactId:btn.getAttribute('data-gp-artifact-id')||'',artifactTitle:btn.getAttribute('data-gp-artifact-title')||'',artifactType:btn.getAttribute('data-gp-artifact-type')||'',artifactPath:btn.getAttribute('data-gp-artifact-path')||'',concurrency:concurrency});
+    }
+  });
+})();
+</script>`;
+
+function libraryNumberText(value: unknown): string {
+  const n = Number(value ?? 0);
+  return Number.isFinite(n) ? String(n) : "0";
+}
+
+
+function renderDashboardGuidanceLibraryPanel(data: UnknownRecord, canMutate: boolean): string {
+  const active = asRecord(data.activeVersion);
+  const registryDigest = String(active.registryDigest ?? asRecord(data.validation).registryContentHash ?? "");
+  const activeVersionId = String(active.versionId ?? "");
+  const rows = asArray(asRecord(data.artifacts).rows)
+    .map(asRecord)
+    .filter((row) => isGuidanceLibraryArtifactId(String(row.artifactId ?? "")))
+    .slice(0, 120);
+  const typeCounts = new Map<string, number>();
+  for (const artifactType of GUIDANCE_LIBRARY_ARTIFACT_TYPES) {
+    typeCounts.set(artifactType, 0);
+  }
+  for (const row of rows) {
+    const artifactType = String(row.artifactType ?? "");
+    if (typeCounts.has(artifactType)) {
+      typeCounts.set(artifactType, (typeCounts.get(artifactType) ?? 0) + 1);
+    }
+  }
+  const typeChips = GUIDANCE_LIBRARY_ARTIFACT_TYPES.map((artifactType) => {
+    const count = typeCounts.get(artifactType) ?? 0;
+    return `<span class="gp-pill gp-type-chip" data-gp-library-type="${escapeHtmlAttr(artifactType)}"><span>${escapeHtml(artifactType)}</span><b>${libraryNumberText(count)}</b></span>`;
+  }).join("");
+  const body = rows.length
+    ? rows
+        .map((row) => {
+          const artifactId = String(row.artifactId ?? "");
+          const artifactType = String(row.artifactType ?? "");
+          const sourceChip = guidanceLibrarySourceChip(artifactId);
+          const status = String(row.status ?? row.lifecycleStatus ?? "");
+          const changed = String(row.updatedAt ?? row.lastChangedAt ?? row.changedAt ?? "n/a");
+          const path = String(row.path ?? "");
+          const title = String(row.title ?? "");
+          const activeRow = status === "active";
+          const canDuplicate = canMutate && activeRow && (artifactId.startsWith("cae.") || artifactId.startsWith("workspace."));
+          const searchable = [artifactId, title, artifactType, path, sourceChip, status]
+            .map((value) => String(value ?? "").toLowerCase())
+            .join(" ");
+          const hasPath = path.trim().length > 0;
+          const canOpen = hasPath && row.fileExists !== false;
+          return `<tr data-gp-artifact-row data-gp-search="${escapeHtmlAttr(searchable)}" data-gp-source="${escapeHtmlAttr(sourceChip)}" data-gp-status="${escapeHtmlAttr(status)}" data-gp-artifact-id="${escapeHtmlAttr(artifactId)}" data-gp-artifact-title="${escapeHtmlAttr(title)}" data-gp-artifact-type="${escapeHtmlAttr(artifactType)}" data-gp-artifact-path="${escapeHtmlAttr(path)}">
+  <td><code>${escapeHtml(artifactId)}</code><small>${escapeHtml(title || "Untitled source")}</small></td>
+  <td><span class="gp-pill gp-type-chip gp-type-${escapeHtmlAttr(artifactType || "unknown")}">${escapeHtml(artifactType || "unknown")}</span></td>
+  <td><span class="gp-source gp-source-${escapeHtmlAttr(sourceChip)}">${escapeHtml(sourceChip)}</span></td>
+  <td><code>${escapeHtml(path)}</code></td>
+  <td>${escapeHtml(status || "unknown")}${row.fileExists === false ? '<small class="gp-bad-text">missing file</small>' : ""}</td>
+  <td>${escapeHtml(changed)}</td>
+  <td><div class="gp-row-actions"><button type="button" class="${WC_BTN_SM_SEC}" data-gp-action="artifact-open" data-gp-artifact-id="${escapeHtmlAttr(artifactId)}" data-gp-artifact-path="${escapeHtmlAttr(path)}"${canOpen ? "" : " disabled"}>Open</button><button type="button" class="${WC_BTN_SM_SEC}" data-gp-library-action="duplicate" data-gp-artifact-id="${escapeHtmlAttr(artifactId)}" data-gp-artifact-title="${escapeHtmlAttr(title)}" data-gp-artifact-type="${escapeHtmlAttr(artifactType)}" data-gp-artifact-path="${escapeHtmlAttr(path)}"${canDuplicate ? "" : " disabled"}>Duplicate</button></div></td>
+</tr>`;
+        })
+        .join("")
+    : '<tr><td colspan="7">No library sources found for <code>cae.*</code> or <code>workspace.*</code>.</td></tr>';
+  return `<section class="gp-tab-panel" id="gp-tab-library" data-gp-panel="library">
+  <div class="gp-band"><h2>Library</h2><span id="gp-artifact-count" class="gp-muted">${libraryNumberText(rows.length)} sources</span></div>
+  <p class="gp-muted">File-first CAE and workspace sources. <b>Create</b> or <b>Duplicate</b> collects identity fields only, then opens the artifact file in the editor — no inline markdown body.</p>
+  <div class="gp-library-mutation-context" data-gp-library-mutation-context data-gp-active-version="${escapeHtmlAttr(activeVersionId)}" data-gp-registry-digest="${escapeHtmlAttr(registryDigest)}"></div>
+  <div class="gp-action-row">
+    <button type="button" class="${WC_BTN_MD_PRI}" data-gp-library-action="create"${canMutate ? "" : " disabled"}>Create workspace artifact</button>
+  </div>
+  <div class="gp-pill-row gp-library-type-chips" aria-label="Artifact types">${typeChips}</div>
+  <div class="gp-table-tools">
+    <input id="gp-artifact-search" type="search" placeholder="Search library" />
+    <select id="gp-artifact-source"><option value="">All sources</option><option value="cae">cae</option><option value="workspace">workspace</option></select>
+    <select id="gp-artifact-status"><option value="">All statuses</option><option value="active">Active</option><option value="hidden">Hidden</option><option value="retired">Retired</option><option value="missing-file">Missing file</option></select>
+  </div>
+  <table><thead><tr><th>Source</th><th>Type</th><th>Namespace</th><th>Path</th><th>Status</th><th>Changed</th><th>Actions</th></tr></thead><tbody>${body}</tbody></table>
+  ${GUIDANCE_LIBRARY_CLIENT_SCRIPT}
+</section>`;
+}
+
 function renderAudit(data: UnknownRecord): string {
   const rows = asArray(asRecord(data.recentMutations).rows).slice(0, 20);
   const body = rows.length
@@ -543,7 +650,7 @@ export function renderGuidanceAuthoringPanelInnerHtml(
   const title = String(asRecord(data.product).productName ?? "Guidance");
   const canMutate = canMutateAuthoring(data);
   const host = options?.host ?? "standalone";
-  const sourcesPanel = host === "dashboard" ? renderGuidanceLibraryInnerHtml(data) : renderArtifacts(data);
+  const sourcesPanel = host === "dashboard" ? renderDashboardGuidanceLibraryPanel(data, canMutate) : renderArtifacts(data);
   const sourcesTab = host === "dashboard" ? "library" : "artifacts";
   const sourcesTabLabel = host === "dashboard" ? "Library" : "Artifacts";
   return `<main class="gp-shell">

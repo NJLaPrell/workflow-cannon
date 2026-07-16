@@ -231,6 +231,46 @@ test("drawer: guidance CAE mutation spec + validation", async () => {
   if (good.ok) assert.equal(good.values.rationale, "Because QA asked");
 });
 
+test("drawer: guidance library identity create + duplicate specs", async () => {
+  const mod = await import("../dist/views/dashboard/dashboard-input-drawer.js");
+  const createSpec = mod.buildGuidanceLibraryIdentityDrawerSpec({ mode: "create" });
+  assert.equal(createSpec.workflowId, "guidance-library-create");
+  const createHtml = mod.renderDrawerFormHtml(createSpec);
+  assert.match(createHtml, /data-wc-drawer-field="artifactType"/);
+  assert.match(createHtml, /data-wc-drawer-field="artifactId"/);
+  assert.match(createHtml, /data-wc-drawer-field="title"/);
+  assert.doesNotMatch(createHtml, /contentMarkdown/);
+  const badCreate = mod.validateGuidanceLibraryIdentitySubmit("create", {
+    artifactType: "playbook",
+    artifactId: "cae.bad",
+    title: "x"
+  });
+  assert.equal(badCreate.ok, false);
+  const goodCreate = mod.validateGuidanceLibraryIdentitySubmit("create", {
+    artifactType: "playbook",
+    artifactId: "workspace.example.playbook",
+    title: "Example",
+    slug: "example"
+  });
+  assert.equal(goodCreate.ok, true);
+
+  const dupSpec = mod.buildGuidanceLibraryIdentityDrawerSpec({
+    mode: "duplicate",
+    sourceArtifactId: "cae.playbook.one",
+    defaultArtifactId: "workspace.playbook.one.copy"
+  });
+  assert.equal(dupSpec.workflowId, "guidance-library-duplicate");
+  const dupHtml = mod.renderDrawerFormHtml(dupSpec);
+  assert.match(dupHtml, /cae\.playbook\.one/);
+  assert.doesNotMatch(dupHtml, /data-wc-drawer-field="artifactType"/);
+  const goodDup = mod.validateGuidanceLibraryIdentitySubmit("duplicate", {
+    artifactId: "workspace.playbook.one.copy",
+    title: "",
+    slug: ""
+  });
+  assert.equal(goodDup.ok, true);
+});
+
 test("drawer: guidance sidebar ack + registry version specs", async () => {
   const mod = await import("../dist/views/dashboard/dashboard-input-drawer.js");
   const ack = mod.buildGuidanceAckDrawerSpec({
