@@ -329,6 +329,9 @@ test("renderGuidanceAuthoringPanelInnerHtml dashboard host renders Library inste
   assert.doesNotMatch(html, /Hide Default/);
   assert.doesNotMatch(html, /Remove Override/);
   assert.match(html, /data-gp-action="artifact-open"/);
+  assert.match(html, /data-gp-library-action="create"/);
+  assert.match(html, /data-gp-library-action="duplicate"/);
+  assert.doesNotMatch(html, /gp-artifact-content/);
 });
 
 test("renderGuidanceAuthoringPanelInnerHtml renders the tabbed authoring shell", () => {
