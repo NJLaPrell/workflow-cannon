@@ -71,7 +71,7 @@ Full checklist: **`.ai/playbooks/planner-chat.md`**.
 
 ## Brainstorm session (Ideas → scored synthesis)
 
-Use **`brainstorm-session`** when an operator should run the agent-led scoring session on a unified IdeaPlan document in `brainstorming` state. The schema `agentDirective` is machine-authoritative; the playbook adds human tone and score-summary guidance only.
+Use **`brainstorm-session`** when an operator should run an interactive feature/function brainstorm on a unified IdeaPlan document in `brainstorming` state. The schema `agentDirective` is machine-authoritative for field shapes and scoring formulas; the playbook owns pacing (operator participation, propose→ask→persist, optional scoring, hard session/planning gates).
 
 Full checklist: **`.ai/playbooks/brainstorm-session.md`**.
 

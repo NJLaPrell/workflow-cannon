@@ -17,8 +17,8 @@ test("brainstorm-session companion defers to schema agentDirective as authoritat
 
   assert.match(playbook, /agentDirective.*authoritative/is);
   assert.match(playbook, /brainstorming\.schema\.json/);
-  assert.match(playbook, /Do not.*invent a different question sequence/i);
-  assert.match(playbook, /human companion only/i);
+  assert.match(playbook, /do not.*invent a different scoring question sequence/i);
+  assert.match(playbook, /human companion/i);
 
   for (const command of ["start-brainstorm-session", "update-brainstorm-session", "complete-brainstorm"]) {
     assert.match(playbook, new RegExp(command), `missing command reference: ${command}`);
@@ -27,5 +27,13 @@ test("brainstorm-session companion defers to schema agentDirective as authoritat
   assert.match(playbook, /T-shirt size.*complexity/is);
   assert.match(playbook, /high-complexity.*M/i);
   assert.match(playbook, /brainstorm-score-colors\.ts/);
+  assert.match(playbook, /Feature And Function Clarification/i);
+  assert.match(playbook, /Propose → ask → persist/i);
+  assert.match(playbook, /never one-shot the session/i);
+  assert.match(playbook, /optional.*secondary/i);
+  assert.match(playbook, /Session Completion And Planning Gates/i);
+  assert.match(playbook, /continue this session/i);
+  assert.match(playbook, /start a new brainstorm session/i);
+  assert.match(playbook, /operatorConfirmedBrainstormComplete/);
   assert.doesNotMatch(playbook, /valueScore = \(valueImpact/);
 });
