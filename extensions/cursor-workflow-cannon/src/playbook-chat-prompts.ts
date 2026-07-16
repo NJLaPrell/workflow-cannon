@@ -167,7 +167,7 @@ export type BrainstormSessionPromptInput = {
   planRef?: string;
 };
 
-/** Dashboard Ideas **Brainstorm** — agent-led scoring session on a unified IdeaPlan document. */
+/** Dashboard Ideas **Brainstorm** — interactive feature/function facilitator on a unified IdeaPlan document. */
 export function buildBrainstormSessionPrompt(input: BrainstormSessionPromptInput): string {
   const ideaId = input.ideaId?.trim();
   const title = input.title?.trim();
@@ -176,7 +176,8 @@ export function buildBrainstormSessionPrompt(input: BrainstormSessionPromptInput
   const sessionIndex = input.sessionIndex;
 
   const lines = [
-    "Run an **agent-led brainstorm session** for this Workflow Cannon Ideas row.",
+    "Facilitate an **interactive brainstorm session** with the operator for this Workflow Cannon Ideas row.",
+    "The operator must participate — do **not** invent a finished session alone.",
     "",
     ideaId ? `Source idea id: **${ideaId}**` : undefined,
     title ? `Idea title: **${title}**` : undefined,
@@ -184,12 +185,33 @@ export function buildBrainstormSessionPrompt(input: BrainstormSessionPromptInput
     planRef ? `Unified document: **${planRef}**` : undefined,
     Number.isFinite(sessionIndex) ? `Brainstorm session index: **${sessionIndex}**` : undefined,
     "",
-    "Load **`schemas/ideas/states/brainstorming.schema.json`** and follow its **`agentDirective`** for scoring inputs, computed scores, and session completion.",
+    "Attach and follow **`.ai/playbooks/brainstorm-session.md`**.",
+    "Load **`schemas/ideas/states/brainstorming.schema.json`** for field shapes, ideation persistence, and (when used) scoring inputs — schema is the machine contract; the playbook governs pacing and tone.",
     "",
-    "Use **`update-brainstorm-session`** to fill session inputs progressively, including `completedAt` when the session record is complete.",
-    "Stop after the session update: summarize the brainstorm scores and ask whether the operator wants another brainstorm session or wants to start planning. Do not transition the IdeaPlan lifecycle from this prompt.",
+    "## Goal",
+    "Clarify **features and functions** from the operator's perspective until there is enough shared understanding to plan.",
+    "Ask clarifying questions. Make recommendations as options. Stay in product language (who, what, outcomes).",
+    "Out of bounds until planning: implementation details, tech stack, APIs, file paths, WBS, task breakdown, delivery sequencing.",
     "",
-    "Use **`.ai/AGENT-CLI-MAP.md`** and **`.ai/POLICY-APPROVAL.md`** for gated `workspace-kit run` commands. Keep normal user-facing chat focused on brainstorm decisions, not raw CLI choreography."
+    "## Hard rules (non-negotiable)",
+    "1. **Never one-shot the session.** Do not fill all inputs or set `completedAt` in the first turn (or any single turn).",
+    "2. **One move per turn, then wait.** Ask one clarifying question **or** present one short recommendation set, then **stop and wait** for the operator's reply before the next move or further persistence of their choices.",
+    "3. **Propose → ask → persist.** When recommending features, functions, perspectives, or expectations, present options and wait for the operator to pick or adjust **before** calling `update-brainstorm-session` with those choices.",
+    "4. **User-facing chat stays clean.** Plain language only. No CLI commands, schema field names, JSON shapes, or policyApproval jargon unless the operator asks for power-user detail.",
+    "5. **Numeric scoring is optional and secondary.** Prioritize feature/function clarification. Enter value/risk/effort/confidence scoring only when the operator is ready or asks. When scoring, follow schema `agentDirective` order and let `update-brainstorm-session` compute — never hand-calculate or invent scores.",
+    "6. **Session completion gate.** Set `completedAt` only after the operator explicitly confirms this brainstorm round is finished. Until then, save progress with `update-brainstorm-session` **without** `completedAt`.",
+    "7. **Planning gate.** Offer to start planning only after this session has `completedAt` **and** the operator explicitly says yes to start planning. Only then run `complete-brainstorm` with `operatorConfirmedBrainstormComplete:true`. Never transition the IdeaPlan lifecycle without that confirmation.",
+    "8. **Until planning starts.** If a round feels complete but planning is not confirmed, offer **(a) continue this session** or **(b) start a new brainstorm session** (`start-brainstorm-session`).",
+    "",
+    "## First turn",
+    "1. Recap the idea title/note in plain language.",
+    "2. Persist only what is already clear from title/note via `update-brainstorm-session` (no `completedAt`, no invented scores).",
+    "3. Ask the first clarifying question about features/functions — or offer a short recommendation set and ask which to keep — then **stop and wait**.",
+    "",
+    "## Later turns",
+    "After each operator reply: briefly reflect their words, persist only confirmed choices, then ask or recommend the next thing and stop again. Do not batch the whole session.",
+    "",
+    "Machine ops (behind the scenes only): **`.ai/AGENT-CLI-MAP.md`**, **`.ai/POLICY-APPROVAL.md`**."
   ].filter((line): line is string => line !== undefined);
 
   return lines.join("\n");

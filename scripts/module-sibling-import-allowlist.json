@@ -267,6 +267,24 @@
       "rationale": "T100862: idea-row CRUD publishes canonical events through task store."
     },
     {
+      "file": "src/modules/planning/idea-row/idea-crud-commands.ts",
+      "line": "13",
+      "importLine": "import { TASK_STATE_GIT_BRANCH } from \"../../task-engine/task-state-git/constants.js\";",
+      "rationale": "T100862: idea-row CRUD resolves git-canonical ideas branch via task-state-git constants."
+    },
+    {
+      "file": "src/modules/planning/idea-row/idea-crud-commands.ts",
+      "line": "14",
+      "importLine": "import { resolveTaskStateGitRef } from \"../../task-engine/task-state-git/git-io.js\";",
+      "rationale": "T100862: idea-row CRUD resolves task-state git refs for ideas sync reads."
+    },
+    {
+      "file": "src/modules/planning/idea-row/idea-crud-commands.ts",
+      "line": "18",
+      "importLine": "} from \"../../task-engine/task-state-git/read-branch-layout.js\";",
+      "rationale": "T100862: idea-row CRUD reads task-state branch layout/event segments for ideas sync."
+    },
+    {
       "file": "src/modules/planning/idea-row/migrate-ideas-to-unified-document-handler.ts",
       "line": "3",
       "importLine": "import { attachPolicyMeta } from \"../../task-engine/attach-planning-response-meta.js\";",
