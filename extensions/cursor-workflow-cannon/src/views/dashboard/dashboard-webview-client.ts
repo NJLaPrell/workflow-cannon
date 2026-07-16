@@ -1564,6 +1564,26 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
       else if (op === 'brainstorm') showIdeasToast(typeof m.message === 'string' && m.message ? m.message : 'Brainstorm prompt opened.', false);
       return;
     }
+    if (m && m.type === 'wcPlanArtifactMutationResult') {
+      var planMutId = typeof m.planId === 'string' ? m.planId.trim() : '';
+      var planMutOp = typeof m.operation === 'string' ? m.operation : '';
+      var planAction =
+        planMutOp === 'finalize'
+          ? 'plan-artifact-finalize'
+          : planMutOp === 'accept'
+            ? 'plan-artifact-accept'
+            : planMutOp === 'review'
+              ? 'plan-artifact-review'
+              : '';
+      if (planAction) {
+        document.querySelectorAll('[data-wc-action="' + planAction + '"]').forEach(function(btn) {
+          if (!planMutId || btn.getAttribute('data-plan-id') === planMutId) {
+            setButtonBusy(btn, false);
+          }
+        });
+      }
+      return;
+    }
     if (m && m.type === 'wcPhaseDeliverablesSaved') {
       var savedPk = typeof m.phaseKey === 'string' ? m.phaseKey.trim() : '';
       if (savedPk) {
@@ -2029,8 +2049,8 @@ export function buildDashboardWebviewBootstrapScript(embeddedCaeBootstrapSource:
     if (act === 'planning-wizard-submit') { var ta = document.getElementById('wc-planning-answer'); var txt = ta && typeof ta.value === 'string' ? ta.value.trim() : ''; vscode.postMessage({type:'planningWizardSubmit',answer:txt}); return; }
     if (act === 'planning-wizard-cancel') { vscode.postMessage({type:'planningWizardCancel'}); return; }
     if (act === 'plan-artifact-review') { var revPlanId=(t.getAttribute('data-plan-id')||'').trim(); var revPlanVersion=(t.getAttribute('data-plan-version')||'').trim(); if(revPlanId&&revPlanVersion){setButtonBusy(t,true,'Reviewing...');vscode.postMessage({type:'reviewPlanArtifact',planId:revPlanId,version:revPlanVersion});}else{vscode.postMessage({type:'invalidPlanArtifactAction',action:'review',reason:'missing-plan-identity'});} return; }
-    if (act === 'plan-artifact-accept') { var planId=(t.getAttribute('data-plan-id')||'').trim(); var planRef=(t.getAttribute('data-plan-ref')||'').trim(); var planVersion=(t.getAttribute('data-plan-version')||'').trim(); if(planId&&planRef&&planVersion)vscode.postMessage({type:'acceptPlanArtifact',planId:planId,planRef:planRef,version:planVersion}); return; }
-    if (act === 'plan-artifact-finalize') { var finPlanId=(t.getAttribute('data-plan-id')||'').trim(); var finPlanVersion=(t.getAttribute('data-plan-version')||'').trim(); if(finPlanId&&finPlanVersion)vscode.postMessage({type:'finalizePlanArtifact',planId:finPlanId,version:finPlanVersion}); return; }
+    if (act === 'plan-artifact-accept') { var planId=(t.getAttribute('data-plan-id')||'').trim(); var planRef=(t.getAttribute('data-plan-ref')||'').trim(); var planVersion=(t.getAttribute('data-plan-version')||'').trim(); if(planId&&planRef&&planVersion){setButtonBusy(t,true,'Accepting...');vscode.postMessage({type:'acceptPlanArtifact',planId:planId,planRef:planRef,version:planVersion});} return; }
+    if (act === 'plan-artifact-finalize') { var finPlanId=(t.getAttribute('data-plan-id')||'').trim(); var finPlanVersion=(t.getAttribute('data-plan-version')||'').trim(); if(finPlanId&&finPlanVersion){setButtonBusy(t,true,'Finalizing…');vscode.postMessage({type:'finalizePlanArtifact',planId:finPlanId,version:finPlanVersion});} return; }
     if (act === 'idea-view-plan') { var viewPlanId=(t.getAttribute('data-plan-id')||'').trim(); var viewPlanVersion=(t.getAttribute('data-plan-version')||'').trim(); if(viewPlanId&&viewPlanVersion)vscode.postMessage({type:'viewPlanArtifact',planId:viewPlanId,version:viewPlanVersion}); return; }
     if (act === 'plan-artifact-resume') { var resumeIdeaId=(t.getAttribute('data-idea-id')||'').trim(); if(resumeIdeaId)vscode.postMessage({type:'prefillIdeaPlanningChat',ideaId:resumeIdeaId,title:'',note:''}); return; }
     if (act === 'plan-artifact-cancel') {
