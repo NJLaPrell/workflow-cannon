@@ -74,6 +74,8 @@ test("PlanArtifact invalid action messages surface a dashboard warning", () => {
 test("PlanArtifact finalize previews then persists and opens the phase queue", () => {
   assert.match(webviewClientSrc, /act === 'plan-artifact-finalize'/);
   assert.match(webviewClientSrc, /type:'finalizePlanArtifact'/);
+  assert.match(webviewClientSrc, /setButtonBusy\(t,true,'Finalizing…'\)/);
+  assert.match(webviewClientSrc, /wcPlanArtifactMutationResult/);
   assert.match(webviewClientSrc, /wcOpenQueueForPhase/);
   const block = providerSrc.slice(
     providerSrc.indexOf('if (msg?.type === "finalizePlanArtifact")'),
@@ -87,10 +89,16 @@ test("PlanArtifact finalize previews then persists and opens the phase queue", (
   assert.match(providerSrc, /action: "finalize"/);
   const hostBlock = providerSrc.slice(
     providerSrc.indexOf("private async onFinalizePlanArtifact"),
-    providerSrc.indexOf("private async onViewPlanArtifact")
+    providerSrc.indexOf("private async recoverFinalizeAfterLostCliOutput")
   );
+  assert.match(hostBlock, /beginDashboardMutationRefreshHold/);
+  assert.match(hostBlock, /endDashboardMutationRefreshHold/);
+  assert.match(hostBlock, /isLostKitCliOutput/);
+  assert.match(hostBlock, /recoverFinalizeAfterLostCliOutput/);
+  assert.match(hostBlock, /wcPlanArtifactMutationResult/);
   assert.match(hostBlock, /applyDashboardMutationInvalidation\("plan-artifact"\)/);
   assert.doesNotMatch(hostBlock, /inferPhaseKeyForKitPhaseNoteFromDashboard/);
   assert.doesNotMatch(hostBlock, /targetPhaseKey/);
   assert.match(providerSrc, /wcOpenQueueForPhase/);
+  assert.match(providerSrc, /\.wc-plan-card-actions \.wc-btn:hover:not\(:disabled\)/);
 });

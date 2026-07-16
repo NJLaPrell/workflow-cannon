@@ -23,7 +23,12 @@ export const KIT_MUTATION_RUN_COMMANDS = new Set([
   "create-idea",
   "update-idea",
   "delete-idea",
-  "reorder-ideas"
+  "reorder-ideas",
+  "accept-plan-artifact",
+  "review-plan-artifact",
+  "finalize-plan-to-phase",
+  "cancel-plan-artifact",
+  "delete-plan-artifact"
 ]);
 
 /** Default exec timeout for dashboard refresh reads (ms). */
@@ -86,6 +91,23 @@ export function kitRefreshPausedResult(message?: string): {
   };
 }
 
+/**
+ * Empty-stdout `extension-json-parse` after exit 1 — common when a kit child is killed
+ * mid-flight (refresh preempt) or the process exits after writing state but before JSON lands.
+ * Callers that already mutated should verify durable state before treating this as failure.
+ */
+export function isLostKitCliOutput(result: {
+  ok?: boolean;
+  code?: string;
+  message?: string;
+}): boolean {
+  if (result.ok === false && result.code === "extension-json-parse") {
+    const msg = String(result.message ?? "");
+    return /exit 1;/.test(msg) && /stdout:\s*(?:;|$)/.test(msg);
+  }
+  return false;
+}
+
 /** Refresh reads aborted by pause/preempt — callers should keep the last good dashboard paint. */
 export function isKitRefreshRunAborted(result: {
   ok?: boolean;
@@ -95,9 +117,5 @@ export function isKitRefreshRunAborted(result: {
   if (result.code === KIT_REFRESH_PAUSED_CODE) {
     return true;
   }
-  if (result.ok === false && result.code === "extension-json-parse") {
-    const msg = String(result.message ?? "");
-    return /exit 1;/.test(msg) && /stdout:\s*(?:;|$)/.test(msg);
-  }
-  return false;
+  return isLostKitCliOutput(result);
 }

@@ -27,7 +27,7 @@ import {
 import { buildPhaseCompleteReleaseChatPrompt } from "../../phase-complete-release-prompt.js";
 import { confirmAndRunTransition } from "../../run-transition-with-approval.js";
 import { isWcTraceVerbose, logWc, logWcDrawerSubmitStep } from "../../runtime/workflow-cannon-log.js";
-import { isKitRefreshRunAborted } from "../../runtime/kit-refresh-run-commands.js";
+import { isKitRefreshRunAborted, isLostKitCliOutput } from "../../runtime/kit-refresh-run-commands.js";
 import {
   DashboardRefreshController,
   type DashboardRefreshMode
@@ -4358,118 +4358,243 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
   }
 
   private async onAcceptPlanArtifact(planId: string, planRef: string, version: number): Promise<void> {
-    await this.ingestPlanningGenFromDashboard();
-    const approvedBy =
-      process.env.GIT_AUTHOR_EMAIL || process.env.USER || process.env.USERNAME || "dashboard-operator";
-    const r = await this.runMutationWithGenerationRetry("accept-plan-artifact", {
-      planId,
-      approvalRecord: {
-        schemaVersion: 1,
-        confirmed: true,
-        approvedVersion: version,
-        approvedAt: new Date().toISOString(),
-        approvedBy,
-        planRef
-      },
-      policyApproval: dashboardPolicyApproval(
-        { workflowId: "plan-artifact", action: "accept", command: "accept-plan-artifact" },
-        { humanRationale: "Accept reviewed PlanArtifact from Dashboard", phaseKey: null, taskId: null }
-      )
-    });
-    if (!r.ok) {
-      await vscode.window.showErrorMessage(
-        `Plan accept failed: ${(r.message ?? r.code ?? JSON.stringify(r)).slice(0, 520)}`
-      );
-      return;
+    const postAcceptResult = async (ok: boolean, message?: string): Promise<void> => {
+      await this.view?.webview.postMessage({
+        type: "wcPlanArtifactMutationResult",
+        operation: "accept",
+        planId,
+        ok,
+        message
+      });
+    };
+    this.beginDashboardMutationRefreshHold();
+    try {
+      await this.ingestPlanningGenFromDashboard();
+      const approvedBy =
+        process.env.GIT_AUTHOR_EMAIL || process.env.USER || process.env.USERNAME || "dashboard-operator";
+      const r = await this.runMutationWithGenerationRetry("accept-plan-artifact", {
+        planId,
+        approvalRecord: {
+          schemaVersion: 1,
+          confirmed: true,
+          approvedVersion: version,
+          approvedAt: new Date().toISOString(),
+          approvedBy,
+          planRef
+        },
+        policyApproval: dashboardPolicyApproval(
+          { workflowId: "plan-artifact", action: "accept", command: "accept-plan-artifact" },
+          { humanRationale: "Accept reviewed PlanArtifact from Dashboard", phaseKey: null, taskId: null }
+        )
+      });
+      if (!r.ok) {
+        const message = `Plan accept failed: ${(r.message ?? r.code ?? JSON.stringify(r)).slice(0, 520)}`;
+        await vscode.window.showErrorMessage(message);
+        await postAcceptResult(false, message);
+        return;
+      }
+      ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
+      await vscode.window.showInformationMessage(`Accepted plan ${planId}.`);
+      await this.applyDashboardMutationInvalidation("plan-artifact");
+      await postAcceptResult(true, "Accepted.");
+    } finally {
+      this.endDashboardMutationRefreshHold();
     }
-    ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
-    await vscode.window.showInformationMessage(`Accepted plan ${planId}.`);
-    await this.applyDashboardMutationInvalidation("plan-artifact");
   }
 
   private async onReviewPlanArtifact(planId: string, version: number): Promise<void> {
-    await this.ingestPlanningGenFromDashboard();
-    const r = await this.runMutationWithGenerationRetry("review-plan-artifact", {
-      planId,
-      version,
-      recordReview: true,
-      policyApproval: dashboardPolicyApproval(
-        { workflowId: "plan-artifact", action: "review", command: "review-plan-artifact" },
-        { humanRationale: "Record PlanArtifact review from Dashboard", phaseKey: null, taskId: null }
-      )
-    });
-    if (!r.ok) {
-      await vscode.window.showErrorMessage(
-        `Plan review failed: ${(r.message ?? r.code ?? JSON.stringify(r)).slice(0, 520)}`
+    const postReviewResult = async (ok: boolean, message?: string): Promise<void> => {
+      await this.view?.webview.postMessage({
+        type: "wcPlanArtifactMutationResult",
+        operation: "review",
+        planId,
+        ok,
+        message
+      });
+    };
+    this.beginDashboardMutationRefreshHold();
+    try {
+      await this.ingestPlanningGenFromDashboard();
+      const r = await this.runMutationWithGenerationRetry("review-plan-artifact", {
+        planId,
+        version,
+        recordReview: true,
+        policyApproval: dashboardPolicyApproval(
+          { workflowId: "plan-artifact", action: "review", command: "review-plan-artifact" },
+          { humanRationale: "Record PlanArtifact review from Dashboard", phaseKey: null, taskId: null }
+        )
+      });
+      if (!r.ok) {
+        const message = `Plan review failed: ${(r.message ?? r.code ?? JSON.stringify(r)).slice(0, 520)}`;
+        await vscode.window.showErrorMessage(message);
+        await postReviewResult(false, message);
+        return;
+      }
+      ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
+      const data = r.data && typeof r.data === "object" ? (r.data as Record<string, unknown>) : {};
+      const passed = data.passed === true;
+      const blockers = Array.isArray(data.blockers) ? data.blockers.length : Number(data.blockerCount ?? 0);
+      const warnings = Array.isArray(data.warnings) ? data.warnings.length : Number(data.warningCount ?? 0);
+      const reviewSummary =
+        typeof data.reviewSummary === "string" && data.reviewSummary.trim()
+          ? data.reviewSummary.trim()
+          : undefined;
+      const detail =
+        passed && blockers === 0 && warnings === 0
+          ? "no blockers or warnings"
+          : `${blockers} blocker(s), ${warnings} warning(s)`;
+      await vscode.window.showInformationMessage(
+        passed
+          ? `Reviewed plan ${planId}: passed (${detail})${reviewSummary ? ` — ${reviewSummary.slice(0, 120)}` : ""}`
+          : `Reviewed plan ${planId}: findings need attention (${detail})`
       );
-      return;
+      await this.applyDashboardMutationInvalidation("plan-artifact");
+      await postReviewResult(true, detail);
+    } finally {
+      this.endDashboardMutationRefreshHold();
     }
-    ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
-    const data = r.data && typeof r.data === "object" ? (r.data as Record<string, unknown>) : {};
-    const passed = data.passed === true;
-    const blockers = Array.isArray(data.blockers) ? data.blockers.length : Number(data.blockerCount ?? 0);
-    const warnings = Array.isArray(data.warnings) ? data.warnings.length : Number(data.warningCount ?? 0);
-    const reviewSummary =
-      typeof data.reviewSummary === "string" && data.reviewSummary.trim()
-        ? data.reviewSummary.trim()
-        : undefined;
-    const detail =
-      passed && blockers === 0 && warnings === 0
-        ? "no blockers or warnings"
-        : `${blockers} blocker(s), ${warnings} warning(s)`;
-    await vscode.window.showInformationMessage(
-      passed
-        ? `Reviewed plan ${planId}: passed (${detail})${reviewSummary ? ` — ${reviewSummary.slice(0, 120)}` : ""}`
-        : `Reviewed plan ${planId}: findings need attention (${detail})`
-    );
-    await this.applyDashboardMutationInvalidation("plan-artifact");
   }
 
   private async onFinalizePlanArtifact(planId: string, version: number): Promise<void> {
-    await this.ingestPlanningGenFromDashboard();
-    // Phase rosters are resolved at finalize time (auto-empty / workspace nextKitPhase).
-    // Do not pin to the workspace *current* phase — that collides with active queue work.
-    const commonArgs = {
+    const postFinalizeResult = async (payload: {
+      ok: boolean;
+      message?: string;
+      phaseKey?: string;
+    }): Promise<void> => {
+      await this.view?.webview.postMessage({
+        type: "wcPlanArtifactMutationResult",
+        operation: "finalize",
+        planId,
+        ...payload
+      });
+    };
+
+    this.beginDashboardMutationRefreshHold();
+    try {
+      await this.ingestPlanningGenFromDashboard();
+      // Phase rosters are resolved at finalize time (auto-empty / workspace nextKitPhase).
+      // Do not pin to the workspace *current* phase — that collides with active queue work.
+      const clientMutationId = `dashboard-finalize-${planId}-v${version}-${Date.now()}`;
+      const commonArgs = {
+        planId,
+        version,
+        desiredStatus: "ready",
+        clientMutationId
+      };
+      const preview = await this.runMutationWithGenerationRetry("finalize-plan-to-phase", {
+        ...commonArgs,
+        dryRun: true
+      });
+      if (!preview.ok) {
+        const message = `Plan finalize preview failed: ${(preview.message ?? preview.code ?? JSON.stringify(preview)).slice(0, 520)}`;
+        await vscode.window.showErrorMessage(message);
+        await postFinalizeResult({ ok: false, message });
+        return;
+      }
+      ingestPlanningMetaFromData(preview.data as Record<string, unknown> | undefined);
+      const r = await this.runMutationWithGenerationRetry("finalize-plan-to-phase", {
+        ...commonArgs,
+        dryRun: false,
+        policyApproval: dashboardPolicyApproval(
+          { workflowId: "plan-artifact", action: "finalize", command: "finalize-plan-to-phase" },
+          { humanRationale: "Finalize accepted PlanArtifact from Dashboard", phaseKey: null, taskId: null }
+        )
+      });
+      let data = r.data && typeof r.data === "object" ? (r.data as Record<string, unknown>) : {};
+      if (!r.ok) {
+        // Persist can succeed on disk then lose stdout (preempt / crash). Verify before scaring the operator.
+        if (isLostKitCliOutput(r)) {
+          const recovered = await this.recoverFinalizeAfterLostCliOutput(planId, version);
+          if (recovered) {
+            data = recovered;
+          } else {
+            const message = `Plan finalize failed: ${(r.message ?? r.code ?? JSON.stringify(r)).slice(0, 520)}`;
+            await vscode.window.showErrorMessage(message);
+            await postFinalizeResult({ ok: false, message });
+            return;
+          }
+        } else {
+          const message = `Plan finalize failed: ${(r.message ?? r.code ?? JSON.stringify(r)).slice(0, 520)}`;
+          await vscode.window.showErrorMessage(message);
+          await postFinalizeResult({ ok: false, message });
+          return;
+        }
+      } else {
+        ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
+      }
+      const delivery =
+        data.delivery && typeof data.delivery === "object"
+          ? (data.delivery as Record<string, unknown>)
+          : undefined;
+      const phaseKey =
+        (typeof data.phaseKey === "string" && data.phaseKey.trim()) ||
+        (typeof delivery?.phaseKey === "string" && delivery.phaseKey.trim()) ||
+        "";
+      const count =
+        typeof data.count === "number"
+          ? data.count
+          : typeof delivery?.taskCount === "number"
+            ? delivery.taskCount
+            : Number(data.count ?? delivery?.taskCount ?? 0);
+      await vscode.window.showInformationMessage(
+        `Finalized plan ${planId}${Number.isFinite(count) && count > 0 ? ` into ${count} task(s)` : ""}.`
+      );
+      await this.applyDashboardMutationInvalidation("plan-artifact");
+      await postFinalizeResult({
+        ok: true,
+        message: Number.isFinite(count) && count > 0 ? `Finalized into ${count} task(s).` : "Finalized.",
+        phaseKey: phaseKey || undefined
+      });
+      if (phaseKey.length > 0) {
+        await this.view?.webview.postMessage({ type: "wcOpenQueueForPhase", phaseKey });
+      }
+    } finally {
+      this.endDashboardMutationRefreshHold();
+    }
+  }
+
+  /**
+   * When finalize persist returns empty-stdout parse failure, check whether delivery already landed.
+   */
+  private async recoverFinalizeAfterLostCliOutput(
+    planId: string,
+    version: number
+  ): Promise<Record<string, unknown> | null> {
+    const probe = await this.client.run("get-plan-artifact", {
       planId,
       version,
-      desiredStatus: "ready"
+      includeArtifact: true
+    });
+    if (!probe.ok || !probe.data || typeof probe.data !== "object") {
+      return null;
+    }
+    const data = probe.data as Record<string, unknown>;
+    const artifact =
+      data.artifact && typeof data.artifact === "object"
+        ? (data.artifact as Record<string, unknown>)
+        : data;
+    const delivery =
+      artifact.delivery && typeof artifact.delivery === "object"
+        ? (artifact.delivery as Record<string, unknown>)
+        : undefined;
+    const taskCount =
+      typeof delivery?.taskCount === "number"
+        ? delivery.taskCount
+        : Array.isArray(delivery?.taskRefs)
+          ? delivery.taskRefs.length
+          : 0;
+    const status = typeof artifact.status === "string" ? artifact.status.trim() : "";
+    const tasksGenerated = data.tasksGenerated === true || taskCount > 0 || status === "finalized";
+    if (!tasksGenerated) {
+      return null;
+    }
+    return {
+      phaseKey: typeof delivery?.phaseKey === "string" ? delivery.phaseKey : "",
+      count: taskCount,
+      delivery,
+      status,
+      recoveredFromLostCliOutput: true
     };
-    const preview = await this.runMutationWithGenerationRetry("finalize-plan-to-phase", {
-      ...commonArgs,
-      dryRun: true
-    });
-    if (!preview.ok) {
-      await vscode.window.showErrorMessage(
-        `Plan finalize preview failed: ${(preview.message ?? preview.code ?? JSON.stringify(preview)).slice(0, 520)}`
-      );
-      return;
-    }
-    ingestPlanningMetaFromData(preview.data as Record<string, unknown> | undefined);
-    const r = await this.runMutationWithGenerationRetry("finalize-plan-to-phase", {
-      ...commonArgs,
-      dryRun: false,
-      policyApproval: dashboardPolicyApproval(
-        { workflowId: "plan-artifact", action: "finalize", command: "finalize-plan-to-phase" },
-        { humanRationale: "Finalize accepted PlanArtifact from Dashboard", phaseKey: null, taskId: null }
-      )
-    });
-    if (!r.ok) {
-      await vscode.window.showErrorMessage(
-        `Plan finalize failed: ${(r.message ?? r.code ?? JSON.stringify(r)).slice(0, 520)}`
-      );
-      return;
-    }
-    ingestPlanningMetaFromData(r.data as Record<string, unknown> | undefined);
-    const data = r.data && typeof r.data === "object" ? (r.data as Record<string, unknown>) : {};
-    const phaseKey = typeof data.phaseKey === "string" ? data.phaseKey.trim() : "";
-    const count = typeof data.count === "number" ? data.count : Number(data.count ?? 0);
-    await vscode.window.showInformationMessage(
-      `Finalized plan ${planId}${Number.isFinite(count) && count > 0 ? ` into ${count} task(s)` : ""}.`
-    );
-    await this.applyDashboardMutationInvalidation("plan-artifact");
-    if (phaseKey.length > 0) {
-      await this.view?.webview.postMessage({ type: "wcOpenQueueForPhase", phaseKey });
-    }
   }
 
   private async onCheckIdeaDelivery(planRef: string): Promise<void> {
@@ -7406,6 +7531,16 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
     .wc-plan-card-chip-pass { color: var(--vscode-testing-iconPassed, #4ec9b0); border-color: var(--vscode-testing-iconPassed, #4ec9b0); }
     .wc-plan-card-chip-muted { color: var(--vscode-descriptionForeground, var(--vscode-foreground)); }
     .wc-plan-card-actions { display: flex; justify-content: flex-end; gap: 6px; margin-top: 2px; }
+    .wc-plan-card-actions .wc-btn {
+      transition: background-color 0.12s ease, filter 0.12s ease, box-shadow 0.12s ease;
+    }
+    .wc-plan-card-actions .wc-btn:hover:not(:disabled) {
+      filter: brightness(1.12);
+      box-shadow: inset 0 0 0 1px var(--vscode-focusBorder, rgba(127, 127, 127, 0.45));
+    }
+    .wc-plan-card-actions .wc-btn:active:not(:disabled) {
+      filter: brightness(0.96);
+    }
     .wc-plan-card-wbs,
     .wc-plan-card-risks,
     .wc-plan-card-open-questions,

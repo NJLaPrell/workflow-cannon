@@ -665,7 +665,17 @@ test("CommandClient treats preempted in-flight refresh as paused", async () => {
 });
 
 test("isKitRefreshRunAborted treats empty stdout json-parse as refresh abort", async () => {
-  const { isKitRefreshRunAborted } = await import("../dist/runtime/kit-refresh-run-commands.js");
+  const { isKitRefreshRunAborted, isLostKitCliOutput } = await import(
+    "../dist/runtime/kit-refresh-run-commands.js"
+  );
+  assert.equal(
+    isLostKitCliOutput({
+      ok: false,
+      code: "extension-json-parse",
+      message: "exit 1; capture full stdout and JSON.parse the whole value; stdout: "
+    }),
+    true
+  );
   assert.equal(
     isKitRefreshRunAborted({
       ok: false,
@@ -677,6 +687,14 @@ test("isKitRefreshRunAborted treats empty stdout json-parse as refresh abort", a
   assert.equal(isKitRefreshRunAborted({ ok: false, code: "extension-refresh-paused" }), true);
   assert.equal(
     isKitRefreshRunAborted({
+      ok: false,
+      code: "extension-json-parse",
+      message: "exit 1; stdout: not json"
+    }),
+    false
+  );
+  assert.equal(
+    isLostKitCliOutput({
       ok: false,
       code: "extension-json-parse",
       message: "exit 1; stdout: not json"
