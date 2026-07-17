@@ -7,9 +7,60 @@ import {
   renderGuidancePreviewInnerHtml,
   renderGuidanceSummaryInnerHtml,
   renderGuidanceTraceDetailInnerHtml,
-  GUIDANCE_LIBRARY_ARTIFACT_TYPES
+  GUIDANCE_LIBRARY_ARTIFACT_TYPES,
+  GUIDANCE_LIBRARY_ARTIFACTS_ROOT,
+  GUIDANCE_LIBRARY_CLIENT_SCRIPT,
+  GUIDANCE_LIBRARY_FOLDER_HINT,
+  GUIDANCE_LIBRARY_INTRO,
+  GUIDANCE_LIBRARY_POST_V1_OUT_OF_SCOPE
 } from "../dist/views/guidance/render-guidance.js";
 import { renderGuidanceAuthoringPanelInnerHtml } from "../dist/views/guidance/render-guidance-panel.js";
+import {
+  buildGuidanceLibraryIdentityDrawerSpec,
+  validateGuidanceLibraryIdentitySubmit
+} from "../dist/views/dashboard/dashboard-input-drawer.js";
+
+const LIBRARY_EMPTY_FIXTURE = {
+  artifacts: { rows: [] },
+  health: { caeEnabled: true, registryStatus: "ok", registryStore: "sqlite" },
+  readiness: { canMutate: true }
+};
+
+const LIBRARY_DASHBOARD_AUTHORING_FIXTURE = {
+  ok: true,
+  data: {
+    product: { productName: "Guidance" },
+    health: { caeEnabled: true, registryStatus: "ok", registryStore: "sqlite" },
+    activeVersion: { versionId: "cae.reg.active", isActive: true, registryDigest: "abcd" },
+    readiness: { canMutate: true },
+    validation: { ok: true, registryContentHash: "abcd" },
+    counts: {},
+    artifacts: { rows: [] },
+    activations: { rows: [] },
+    recentMutations: { available: true, rows: [] },
+    workspaceArtifactMarkdownTemplates: []
+  }
+};
+
+function assertLibraryNoLegacyEditorStubs(html) {
+  assert.doesNotMatch(html, /gp-artifact-content/);
+  assert.doesNotMatch(html, /Artifact Editor/);
+  assert.doesNotMatch(html, /Hide Default/);
+  assert.doesNotMatch(html, /Remove Override/);
+  assert.doesNotMatch(html, /artifact-hide-default/);
+  assert.doesNotMatch(html, /artifact-remove-override/);
+  assert.doesNotMatch(html, /<textarea[^>]*id="gp-artifact-content"/);
+}
+
+function assertLockedLibraryOperatorCopy(html) {
+  assert.match(html, new RegExp(GUIDANCE_LIBRARY_INTRO.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  assert.match(html, new RegExp(GUIDANCE_LIBRARY_FOLDER_HINT.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  assert.match(html, /Open/);
+  assert.match(html, /Reveal/);
+  assert.match(html, /Create/);
+  assert.match(html, /Copy/);
+  assert.match(html, new RegExp(GUIDANCE_LIBRARY_ARTIFACTS_ROOT.replace(/\./g, "\\.")));
+}
 
 test("renderGuidanceSummaryInnerHtml renders health and escapes issue details", () => {
   const html = renderGuidanceSummaryInnerHtml({
@@ -256,7 +307,7 @@ test("renderGuidanceLibraryInnerHtml lists cae and workspace sources with type c
           title: "Ops runbook",
           artifactType: "runbook",
           source: "workspace",
-          path: ".ai/runbooks/ops.md",
+          path: ".ai/cae/artifacts/runbooks/ops.md",
           status: "active",
           fileExists: true,
           updatedAt: "2026-05-07T00:00:00.000Z"
@@ -278,15 +329,72 @@ test("renderGuidanceLibraryInnerHtml lists cae and workspace sources with type c
   assert.match(html, /workspace\.runbook\.ops/);
   assert.doesNotMatch(html, /override\.ignored/);
   assert.match(html, /data-gp-action="artifact-open"/);
-  assert.doesNotMatch(html, /gp-artifact-content/);
-  assert.doesNotMatch(html, /Hide Default/);
-  assert.doesNotMatch(html, /Remove Override/);
+  assert.match(html, /data-gp-library-action="reveal"/);
+  assert.match(html, /data-gp-library-action="reveal-folder"/);
+  assertLibraryNoLegacyEditorStubs(html);
+  assertLockedLibraryOperatorCopy(html);
   for (const artifactType of GUIDANCE_LIBRARY_ARTIFACT_TYPES) {
     assert.match(html, new RegExp(artifactType.replace("-", "\\-")));
   }
   assert.match(html, /gp-source-cae/);
   assert.match(html, /gp-source-workspace/);
   assert.match(html, /2026-05-07T00:00:00.000Z/);
+});
+
+test("renderGuidanceLibraryInnerHtml empty state uses locked WBS-3 operator copy", () => {
+  const html = renderGuidanceLibraryInnerHtml(LIBRARY_EMPTY_FIXTURE);
+  assert.match(html, /gp-library-empty/);
+  assertLockedLibraryOperatorCopy(html);
+  assertLibraryNoLegacyEditorStubs(html);
+  assert.doesNotMatch(html, /rebind/i);
+  for (const item of GUIDANCE_LIBRARY_POST_V1_OUT_OF_SCOPE) {
+    assert.doesNotMatch(html, new RegExp(item.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i"));
+  }
+});
+
+test("GUIDANCE_LIBRARY_CLIENT_SCRIPT routes create reveal and reveal-folder intents", () => {
+  assert.match(GUIDANCE_LIBRARY_CLIENT_SCRIPT, /action==='create'/);
+  assert.match(GUIDANCE_LIBRARY_CLIENT_SCRIPT, /action:'library-create'/);
+  assert.match(GUIDANCE_LIBRARY_CLIENT_SCRIPT, /action==='reveal'/);
+  assert.match(GUIDANCE_LIBRARY_CLIENT_SCRIPT, /action:'artifact-reveal'/);
+  assert.match(GUIDANCE_LIBRARY_CLIENT_SCRIPT, /action==='reveal-folder'/);
+  assert.match(GUIDANCE_LIBRARY_CLIENT_SCRIPT, /action:'library-reveal-folder'/);
+  assert.match(GUIDANCE_LIBRARY_CLIENT_SCRIPT, /action==='duplicate'/);
+  assert.match(GUIDANCE_LIBRARY_CLIENT_SCRIPT, /action:'library-duplicate'/);
+});
+
+test("dashboard guidance library identity drawer uses create/duplicate field set without body textarea", () => {
+  const createSpec = buildGuidanceLibraryIdentityDrawerSpec({ mode: "create" });
+  assert.equal(createSpec.workflowId, "guidance-library-create");
+  assert.ok(createSpec.fields.some((field) => field.id === "artifactType"));
+  assert.ok(createSpec.fields.some((field) => field.id === "artifactId"));
+  assert.ok(createSpec.fields.some((field) => field.id === "title"));
+  assert.ok(createSpec.fields.some((field) => field.id === "slug"));
+  assert.ok(!createSpec.fields.some((field) => field.kind === "textarea"));
+  assert.match(createSpec.descriptionHtml ?? "", /no webview body field/i);
+  const goodCreate = validateGuidanceLibraryIdentitySubmit("create", {
+    artifactType: "playbook",
+    artifactId: "workspace.example.playbook",
+    title: "Example",
+    slug: "example"
+  });
+  assert.equal(goodCreate.ok, true);
+
+  const dupSpec = buildGuidanceLibraryIdentityDrawerSpec({
+    mode: "duplicate",
+    sourceArtifactId: "cae.playbook.one",
+    defaultArtifactId: "workspace.playbook.one.copy"
+  });
+  assert.equal(dupSpec.workflowId, "guidance-library-duplicate");
+  assert.ok(!dupSpec.fields.some((field) => field.id === "artifactType"));
+  assert.ok(dupSpec.fields.some((field) => field.id === "artifactId"));
+  assert.ok(!dupSpec.fields.some((field) => field.kind === "textarea"));
+  const goodDup = validateGuidanceLibraryIdentitySubmit("duplicate", {
+    artifactId: "workspace.playbook.one.copy",
+    title: "",
+    slug: ""
+  });
+  assert.equal(goodDup.ok, true);
 });
 
 test("renderGuidanceAuthoringPanelInnerHtml dashboard host renders Library instead of Artifacts editor", () => {
@@ -324,14 +432,27 @@ test("renderGuidanceAuthoringPanelInnerHtml dashboard host renders Library inste
   assert.match(html, />Library</);
   assert.match(html, /data-gp-panel="library"/);
   assert.match(html, /Search library/);
-  assert.doesNotMatch(html, /Artifact Editor/);
-  assert.doesNotMatch(html, /gp-artifact-content/);
-  assert.doesNotMatch(html, /Hide Default/);
-  assert.doesNotMatch(html, /Remove Override/);
+  assertLibraryNoLegacyEditorStubs(html);
+  assertLockedLibraryOperatorCopy(html);
   assert.match(html, /data-gp-action="artifact-open"/);
   assert.match(html, /data-gp-library-action="create"/);
   assert.match(html, /data-gp-library-action="duplicate"/);
-  assert.doesNotMatch(html, /gp-artifact-content/);
+  assert.match(html, /data-gp-library-action="reveal"/);
+  assert.match(html, /data-gp-library-action="reveal-folder"/);
+  assert.match(html, /data-gp-library-mutation-context/);
+  assert.doesNotMatch(html, /rebind/i);
+});
+
+test("renderGuidanceAuthoringPanelInnerHtml dashboard library empty state keeps locked operator notes", () => {
+  const html = renderGuidanceAuthoringPanelInnerHtml(LIBRARY_DASHBOARD_AUTHORING_FIXTURE, { host: "dashboard" });
+  assert.match(html, /gp-library-empty/);
+  assertLockedLibraryOperatorCopy(html);
+  assertLibraryNoLegacyEditorStubs(html);
+  assert.match(html, /data-gp-library-action="create"/);
+  assert.match(html, /data-gp-library-action="reveal-folder"/);
+  for (const item of GUIDANCE_LIBRARY_POST_V1_OUT_OF_SCOPE) {
+    assert.doesNotMatch(html, new RegExp(item.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i"));
+  }
 });
 
 test("renderGuidanceAuthoringPanelInnerHtml renders the tabbed authoring shell", () => {

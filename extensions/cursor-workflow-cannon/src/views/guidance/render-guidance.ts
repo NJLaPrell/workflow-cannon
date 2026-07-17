@@ -858,6 +858,16 @@ export const GUIDANCE_LIBRARY_INTRO =
 export const GUIDANCE_LIBRARY_FOLDER_HINT =
   "Workspace copies live under .ai/cae/artifacts/. Reveal folder opens that tree (created on first Create/Copy).";
 
+/**
+ * Post-v1 Library follow-ups — out of scope for Dashboard CAE Library v1 (Phase 151).
+ * Keep in code/tests only; do not surface as operator acceptance or empty-state copy.
+ */
+export const GUIDANCE_LIBRARY_POST_V1_OUT_OF_SCOPE = [
+  "activation rebind from Library row actions",
+  "hide-default for shipped defaults",
+  "remove-override for override sources"
+] as const;
+
 export const GUIDANCE_LIBRARY_ARTIFACTS_ROOT = ".ai/cae/artifacts";
 
 export const GUIDANCE_LIBRARY_ARTIFACT_TYPE_DIRS: Record<GuidanceLibraryArtifactType, string> = {
