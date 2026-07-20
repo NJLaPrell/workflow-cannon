@@ -8,6 +8,21 @@ All notable changes to `@workflow-cannon/workspace-kit` are documented in this f
 
 ## [Unreleased]
 
+## [1.0.12] - 2026-07-20
+
+Patch — **Phase 151 Dashboard CAE Library** (file-first Library on the Dashboard CAE tab: browse/open/create/duplicate/reveal without webview body editing).
+
+### Changed
+
+- **Library list reshape** — Dashboard CAE Artifacts band reframed as Library listing `cae.*` + `workspace.*` with type chips; Open-in-editor only; no primary markdown textarea or Hide Default / Remove Override stubs (T100871, PR #803).
+- **Identity-only Create/Duplicate** — Library create/duplicate use a minimal identity drawer (type/id/title/slug) and auto-open the workspace artifact file on success; no activation side effects (T100872, PR #804).
+- **Reveal + soft empty-state** — Row Reveal highlights the artifact file; folder Reveal targets `.ai/cae/artifacts/` (type subfolder when filtered and present); locked browse copy plus remediation hints; doctor adds an informational line when `adminMutations` is off (T100873, PR #805).
+- **Library regression coverage** — Tests lock Library framing, absent stubs/textarea, Create/Reveal intents, and locked empty-state strings; post-v1 rebind/hide/override named only as out-of-scope markers (T100874, PR #806).
+
+### Migration
+
+- No CLI, package API, or MCP tool-name changes. Operators edit guidance bodies in the editor under `.ai/cae/artifacts/`, not in the Dashboard CAE webview.
+
 ## [1.0.11] - 2026-07-13
 
 Patch — **Phase 149 Hard-merge Ideas into Planning** (Planning is the sole registered module owning Ideas capture and the full IdeaPlan lifecycle; frozen command names / `ideas.persist` / sync domain `ideas` / MCP tool names).
