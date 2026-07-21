@@ -1,4 +1,21 @@
 import { escapeHtml, escapeHtmlAttr } from "../dashboard/render-dashboard.js";
+import {
+  GUIDANCE_LIBRARY_ARTIFACT_TYPES,
+  GUIDANCE_LIBRARY_CLIENT_SCRIPT,
+  GUIDANCE_LIBRARY_FOLDER_HINT,
+  GUIDANCE_LIBRARY_INTRO,
+  guidanceLibraryBrowseRemediationLines,
+  guidanceLibrarySourceChip,
+  isGuidanceLibraryArtifactId,
+  renderGuidanceLibraryEmptyStateRow
+} from "./render-guidance.js";
+
+export type GuidanceAuthoringPanelHost = "dashboard" | "standalone";
+
+export type GuidanceAuthoringPanelRenderOptions = {
+  /** Dashboard CAE tab hosts the file-first Library; standalone keeps the legacy Artifacts editor. */
+  host?: GuidanceAuthoringPanelHost;
+};
 
 const WC_BTN_MD_PRI = "wc-btn wc-btn-md wc-btn-primary";
 const WC_BTN_MD_SEC = "wc-btn wc-btn-md wc-btn-secondary";
@@ -145,7 +162,9 @@ function renderStateCallout(data: UnknownRecord, result: UnknownRecord): string 
   return callout("ok", "Guidance authoring is ready", "Active set, validation, and SQLite authoring surface are available.");
 }
 
-function renderOverview(data: UnknownRecord): string {
+function renderOverview(data: UnknownRecord, host: GuidanceAuthoringPanelHost): string {
+  const sourcesTab = host === "dashboard" ? "library" : "artifacts";
+  const sourcesTabLabel = host === "dashboard" ? "Library" : "Artifacts";
   const active = asRecord(data.activeVersion);
   const health = asRecord(data.health);
   const counts = asRecord(data.counts);
@@ -161,7 +180,7 @@ function renderOverview(data: UnknownRecord): string {
   const wsActiveArtifacts = countWorkspaceActiveArtifacts(data);
   const showOnboarding = wsActiveArtifacts === 0 && canMutateAuthoring(data);
   const onboarding = showOnboarding
-    ? `<section class="gp-callout gp-warn"><b>First workspace Guidance</b><span>You have no active workspace-owned artifacts yet. Pick a starter template (Artifacts tab), duplicate a default row, then bind a draft activation and run Preview before publishing.</span><div class="gp-action-row"><button type="button" class="${WC_BTN_MD_PRI}" data-gp-tab-target="artifacts" data-gp-action="new-artifact">Open Artifact editor</button><button type="button" class="${WC_BTN_MD_SEC}" data-gp-tab-target="activations" data-gp-action="new-activation">Open Activation editor</button></div></section>`
+    ? `<section class="gp-callout gp-warn"><b>First workspace Guidance</b><span>You have no active workspace-owned artifacts yet. Pick a starter from the ${sourcesTabLabel} tab, duplicate a default row, then bind a draft activation and run Preview before publishing.</span><div class="gp-action-row"><button type="button" class="${WC_BTN_MD_PRI}" data-gp-tab-target="${escapeHtmlAttr(sourcesTab)}" data-gp-action="new-artifact">Open ${escapeHtml(sourcesTabLabel)}</button><button type="button" class="${WC_BTN_MD_SEC}" data-gp-tab-target="activations" data-gp-action="new-activation">Open Activation editor</button></div></section>`
     : "";
   const warningRows = warnings.length
     ? `<div class="gp-warning-list">${warnings
@@ -183,7 +202,7 @@ function renderOverview(data: UnknownRecord): string {
     </div>
   </div>
   <div class="gp-action-row">
-    <button type="button" class="${WC_BTN_MD_PRI}" data-gp-tab-target="artifacts" data-gp-action="new-artifact">New Artifact</button>
+    <button type="button" class="${WC_BTN_MD_PRI}" data-gp-tab-target="${escapeHtmlAttr(sourcesTab)}" data-gp-action="new-artifact">${host === "dashboard" ? "Open Library" : "New Artifact"}</button>
     <button type="button" class="${WC_BTN_MD_PRI}" data-gp-tab-target="activations" data-gp-action="new-activation">New Activation</button>
     <button type="button" class="${WC_BTN_MD_SEC}" data-gp-tab-target="preview" data-gp-action="preview-guidance">Preview Guidance</button>
     <button type="button" class="${WC_BTN_MD_SEC}" data-gp-action="validate-registry">Validate Registry</button>
@@ -511,6 +530,88 @@ function renderVersions(data: UnknownRecord): string {
 </section>`;
 }
 
+function libraryNumberText(value: unknown): string {
+  const n = Number(value ?? 0);
+  return Number.isFinite(n) ? String(n) : "0";
+}
+
+
+function renderDashboardGuidanceLibraryPanel(data: UnknownRecord, canMutate: boolean): string {
+  const active = asRecord(data.activeVersion);
+  const registryDigest = String(active.registryDigest ?? asRecord(data.validation).registryContentHash ?? "");
+  const activeVersionId = String(active.versionId ?? "");
+  const rows = asArray(asRecord(data.artifacts).rows)
+    .map(asRecord)
+    .filter((row) => isGuidanceLibraryArtifactId(String(row.artifactId ?? "")))
+    .slice(0, 120);
+  const typeCounts = new Map<string, number>();
+  for (const artifactType of GUIDANCE_LIBRARY_ARTIFACT_TYPES) {
+    typeCounts.set(artifactType, 0);
+  }
+  for (const row of rows) {
+    const artifactType = String(row.artifactType ?? "");
+    if (typeCounts.has(artifactType)) {
+      typeCounts.set(artifactType, (typeCounts.get(artifactType) ?? 0) + 1);
+    }
+  }
+  const typeChips = GUIDANCE_LIBRARY_ARTIFACT_TYPES.map((artifactType) => {
+    const count = typeCounts.get(artifactType) ?? 0;
+    return `<span class="gp-pill gp-type-chip" data-gp-library-type="${escapeHtmlAttr(artifactType)}"><span>${escapeHtml(artifactType)}</span><b>${libraryNumberText(count)}</b></span>`;
+  }).join("");
+  const body = rows.length
+    ? rows
+        .map((row) => {
+          const artifactId = String(row.artifactId ?? "");
+          const artifactType = String(row.artifactType ?? "");
+          const sourceChip = guidanceLibrarySourceChip(artifactId);
+          const status = String(row.status ?? row.lifecycleStatus ?? "");
+          const changed = String(row.updatedAt ?? row.lastChangedAt ?? row.changedAt ?? "n/a");
+          const path = String(row.path ?? "");
+          const title = String(row.title ?? "");
+          const activeRow = status === "active";
+          const canDuplicate = canMutate && activeRow && (artifactId.startsWith("cae.") || artifactId.startsWith("workspace."));
+          const searchable = [artifactId, title, artifactType, path, sourceChip, status]
+            .map((value) => String(value ?? "").toLowerCase())
+            .join(" ");
+          const hasPath = path.trim().length > 0;
+          const canOpen = hasPath && row.fileExists !== false;
+          return `<tr data-gp-artifact-row data-gp-search="${escapeHtmlAttr(searchable)}" data-gp-source="${escapeHtmlAttr(sourceChip)}" data-gp-status="${escapeHtmlAttr(status)}" data-gp-artifact-id="${escapeHtmlAttr(artifactId)}" data-gp-artifact-title="${escapeHtmlAttr(title)}" data-gp-artifact-type="${escapeHtmlAttr(artifactType)}" data-gp-artifact-path="${escapeHtmlAttr(path)}">
+  <td><code>${escapeHtml(artifactId)}</code><small>${escapeHtml(title || "Untitled source")}</small></td>
+  <td><span class="gp-pill gp-type-chip gp-type-${escapeHtmlAttr(artifactType || "unknown")}">${escapeHtml(artifactType || "unknown")}</span></td>
+  <td><span class="gp-source gp-source-${escapeHtmlAttr(sourceChip)}">${escapeHtml(sourceChip)}</span></td>
+  <td><code>${escapeHtml(path)}</code></td>
+  <td>${escapeHtml(status || "unknown")}${row.fileExists === false ? '<small class="gp-bad-text">missing file</small>' : ""}</td>
+  <td>${escapeHtml(changed)}</td>
+  <td><div class="gp-row-actions"><button type="button" class="${WC_BTN_SM_SEC}" data-gp-action="artifact-open" data-gp-artifact-id="${escapeHtmlAttr(artifactId)}" data-gp-artifact-path="${escapeHtmlAttr(path)}"${canOpen ? "" : " disabled"}>Open</button><button type="button" class="${WC_BTN_SM_SEC}" data-gp-library-action="reveal" data-gp-artifact-path="${escapeHtmlAttr(path)}"${hasPath ? "" : " disabled"}>Reveal</button><button type="button" class="${WC_BTN_SM_SEC}" data-gp-library-action="duplicate" data-gp-artifact-id="${escapeHtmlAttr(artifactId)}" data-gp-artifact-title="${escapeHtmlAttr(title)}" data-gp-artifact-type="${escapeHtmlAttr(artifactType)}" data-gp-artifact-path="${escapeHtmlAttr(path)}"${canDuplicate ? "" : " disabled"}>Duplicate</button></div></td>
+</tr>`;
+        })
+        .join("")
+    : renderGuidanceLibraryEmptyStateRow(data);
+  const remediations = guidanceLibraryBrowseRemediationLines(data);
+  const remedHtml = remediations.length
+    ? `<ul class="gp-library-remediation">${remediations.map((line) => `<li>${escapeHtml(line)}</li>`).join("")}</ul>`
+    : "";
+  return `<section class="gp-tab-panel" id="gp-tab-library" data-gp-panel="library">
+  <div class="gp-band"><h2>Library</h2><span id="gp-artifact-count" class="gp-muted">${libraryNumberText(rows.length)} sources</span></div>
+  <p class="gp-muted">${escapeHtml(GUIDANCE_LIBRARY_INTRO)}</p>
+  <div class="gp-library-mutation-context" data-gp-library-mutation-context data-gp-active-version="${escapeHtmlAttr(activeVersionId)}" data-gp-registry-digest="${escapeHtmlAttr(registryDigest)}"></div>
+  <div class="gp-action-row">
+    <button type="button" class="${WC_BTN_MD_PRI}" data-gp-library-action="create"${canMutate ? "" : " disabled"}>Create workspace artifact</button>
+    <button type="button" class="${WC_BTN_MD_SEC}" data-gp-library-action="reveal-folder">Reveal folder</button>
+  </div>
+  ${remedHtml}
+  <div class="gp-pill-row gp-library-type-chips" aria-label="Artifact types">${typeChips}</div>
+  <div class="gp-table-tools">
+    <input id="gp-artifact-search" type="search" placeholder="Search library" />
+    <select id="gp-artifact-source"><option value="">All sources</option><option value="cae">cae</option><option value="workspace">workspace</option></select>
+    <select id="gp-artifact-status"><option value="">All statuses</option><option value="active">Active</option><option value="hidden">Hidden</option><option value="retired">Retired</option><option value="missing-file">Missing file</option></select>
+  </div>
+  <p class="gp-muted gp-library-folder-hint">${escapeHtml(GUIDANCE_LIBRARY_FOLDER_HINT)}</p>
+  <table><thead><tr><th>Source</th><th>Type</th><th>Namespace</th><th>Path</th><th>Status</th><th>Changed</th><th>Actions</th></tr></thead><tbody>${body}</tbody></table>
+  ${GUIDANCE_LIBRARY_CLIENT_SCRIPT}
+</section>`;
+}
+
 function renderAudit(data: UnknownRecord): string {
   const rows = asArray(asRecord(data.recentMutations).rows).slice(0, 20);
   const body = rows.length
@@ -524,11 +625,18 @@ function renderAudit(data: UnknownRecord): string {
   return `<section class="gp-tab-panel" id="gp-tab-audit" data-gp-panel="audit"><h2>Audit</h2><table><thead><tr><th>Recorded</th><th>Command</th><th>Actor</th><th>Note</th></tr></thead><tbody>${body}</tbody></table></section>`;
 }
 
-export function renderGuidanceAuthoringPanelInnerHtml(result: unknown): string {
+export function renderGuidanceAuthoringPanelInnerHtml(
+  result: unknown,
+  options?: GuidanceAuthoringPanelRenderOptions
+): string {
   const envelope = asRecord(result);
   const data = asRecord(envelope.data);
   const title = String(asRecord(data.product).productName ?? "Guidance");
   const canMutate = canMutateAuthoring(data);
+  const host = options?.host ?? "standalone";
+  const sourcesPanel = host === "dashboard" ? renderDashboardGuidanceLibraryPanel(data, canMutate) : renderArtifacts(data);
+  const sourcesTab = host === "dashboard" ? "library" : "artifacts";
+  const sourcesTabLabel = host === "dashboard" ? "Library" : "Artifacts";
   return `<main class="gp-shell">
   <header class="gp-head">
     <div><p class="gp-kicker">Workflow Cannon</p><h1>${escapeHtml(title)}</h1></div>
@@ -537,15 +645,15 @@ export function renderGuidanceAuthoringPanelInnerHtml(result: unknown): string {
   ${renderStateCallout(data, envelope)}
   <nav class="gp-tabs" aria-label="Guidance authoring sections">
     <button type="button" class="is-active" data-gp-tab="overview">Overview</button>
-    <button type="button" data-gp-tab="artifacts">Artifacts</button>
+    <button type="button" data-gp-tab="${escapeHtmlAttr(sourcesTab)}">${escapeHtml(sourcesTabLabel)}</button>
     <button type="button" data-gp-tab="activations">Activations</button>
     <button type="button" data-gp-tab="versions">Versions</button>
     <button type="button" data-gp-tab="preview">Preview</button>
     <button type="button" data-gp-tab="portability">Portability</button>
     <button type="button" data-gp-tab="audit">Audit</button>
   </nav>
-  ${renderOverview(data)}
-  ${renderArtifacts(data)}
+  ${renderOverview(data, host)}
+  ${sourcesPanel}
   ${renderActivations(data)}
   ${renderVersions(data)}
   ${renderPreview(data)}

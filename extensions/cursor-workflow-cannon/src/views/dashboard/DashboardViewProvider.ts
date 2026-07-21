@@ -2324,7 +2324,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         if (isKitRefreshRunAborted(caeSummary as Record<string, unknown>)) {
           return;
         }
-        const panel = renderGuidanceAuthoringPanelInnerHtml(caeSummary);
+        const panel = renderGuidanceAuthoringPanelInnerHtml(caeSummary, { host: "dashboard" });
         this.lastEmbeddedCaePanelHtml = panel;
         html = renderDashboardCaeSectionInnerHtml(panel);
       } else if (sectionId === "phase-journal") {
@@ -2646,7 +2646,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
         if (needsCae) {
           const caeSummary = await this.client.run("cae-authoring-summary", { schemaVersion: 1 });
           if (!isKitRefreshRunAborted(caeSummary as Record<string, unknown>)) {
-            embeddedCaePanelHtml = renderGuidanceAuthoringPanelInnerHtml(caeSummary);
+            embeddedCaePanelHtml = renderGuidanceAuthoringPanelInnerHtml(caeSummary, { host: "dashboard" });
             this.lastEmbeddedCaePanelHtml = embeddedCaePanelHtml;
           }
         }
@@ -6001,7 +6001,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
           }
           ingestPlanningMetaFromData(lp.data as Record<string, unknown> | undefined);
           ingestPlanningMetaFromData(gpc.data as Record<string, unknown> | undefined);
-          embeddedCaePanelHtml = renderGuidanceAuthoringPanelInnerHtml(caeSummary);
+          embeddedCaePanelHtml = renderGuidanceAuthoringPanelInnerHtml(caeSummary, { host: "dashboard" });
           this.lastEmbeddedCaePanelHtml = embeddedCaePanelHtml;
 
           const pastFromSummary = (raw.data as Record<string, unknown>).pastPhaseNotes;
@@ -6048,7 +6048,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider {
             logWc("dashboard", "pushUpdate aborted during CAE fetch (no workspace phase)");
             return;
           }
-          embeddedCaePanelHtml = renderGuidanceAuthoringPanelInnerHtml(caeSummary);
+          embeddedCaePanelHtml = renderGuidanceAuthoringPanelInnerHtml(caeSummary, { host: "dashboard" });
           this.lastEmbeddedCaePanelHtml = embeddedCaePanelHtml;
         }
       } catch (e) {

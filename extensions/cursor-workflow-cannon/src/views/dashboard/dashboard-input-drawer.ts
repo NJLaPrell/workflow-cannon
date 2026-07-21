@@ -924,6 +924,118 @@ export function validateGuidanceCaeMutationSubmit(values: Record<string, string>
   return { ok: true, values: { rationale } };
 }
 
+export type GuidanceLibraryIdentityDrawerMode = "create" | "duplicate";
+
+const GUIDANCE_LIBRARY_ARTIFACT_TYPE_OPTIONS = [
+  "playbook",
+  "runbook",
+  "checklist",
+  "review-template",
+  "reasoning-template",
+  "policy-doc"
+] as const;
+
+export type GuidanceLibraryIdentityDrawerParams = {
+  mode: GuidanceLibraryIdentityDrawerMode;
+  sourceArtifactId?: string;
+  defaultArtifactType?: string;
+  defaultArtifactId?: string;
+  defaultTitle?: string;
+  defaultSlug?: string;
+};
+
+/** Dashboard CAE Library — identity-only create/duplicate (no markdown body field). */
+export function buildGuidanceLibraryIdentityDrawerSpec(p: GuidanceLibraryIdentityDrawerParams): DrawerFormSpec {
+  const isDuplicate = p.mode === "duplicate";
+  const fields: DrawerFormField[] = [];
+  if (isDuplicate && p.sourceArtifactId) {
+    fields.push({
+      id: "sourceArtifactId",
+      kind: "summary",
+      label: "Source",
+      body: `<code>${escapeDrawerHtml(p.sourceArtifactId)}</code>`
+    });
+  }
+  if (!isDuplicate) {
+    fields.push({
+      id: "artifactType",
+      kind: "select",
+      label: "Type",
+      required: true,
+      value: p.defaultArtifactType ?? "playbook",
+      options: GUIDANCE_LIBRARY_ARTIFACT_TYPE_OPTIONS.map((artifactType) => ({
+        value: artifactType,
+        label: artifactType
+      }))
+    });
+  }
+  fields.push(
+    {
+      id: "artifactId",
+      kind: "text",
+      label: "Artifact ID",
+      required: true,
+      placeholder: "workspace.example.playbook",
+      value: p.defaultArtifactId ?? ""
+    },
+    {
+      id: "title",
+      kind: "text",
+      label: isDuplicate ? "Title (optional)" : "Title",
+      required: !isDuplicate,
+      placeholder: "Example Playbook",
+      value: p.defaultTitle ?? ""
+    },
+    {
+      id: "slug",
+      kind: "text",
+      label: "Path slug (optional)",
+      placeholder: "example-playbook",
+      value: p.defaultSlug ?? ""
+    }
+  );
+  return {
+    workflowId: isDuplicate ? "guidance-library-duplicate" : "guidance-library-create",
+    title: isDuplicate ? "Duplicate to workspace" : "Create workspace artifact",
+    descriptionHtml: isDuplicate
+      ? "Copy the source body into a new <code>workspace.*</code> artifact. Markdown editing stays on disk after create — no webview body field."
+      : "Create a new <code>workspace.*</code> artifact with a default <code># title</code> body. Edit markdown in the editor after create — no webview body field.",
+    fields,
+    primaryLabel: "Continue",
+    cancelLabel: "Cancel"
+  };
+}
+
+export function validateGuidanceLibraryIdentitySubmit(
+  mode: GuidanceLibraryIdentityDrawerMode,
+  values: Record<string, string>
+): DrawerValidationResult {
+  const artifactId = (values.artifactId ?? "").trim();
+  if (!artifactId) {
+    return { ok: false, error: "Artifact ID is required." };
+  }
+  if (!artifactId.startsWith("workspace.")) {
+    return { ok: false, error: "Artifact ID must start with workspace." };
+  }
+  const slug = (values.slug ?? "").trim();
+  if (mode === "create") {
+    const artifactType = (values.artifactType ?? "").trim();
+    if (!artifactType) {
+      return { ok: false, error: "Artifact type is required." };
+    }
+    if (!GUIDANCE_LIBRARY_ARTIFACT_TYPE_OPTIONS.includes(artifactType as (typeof GUIDANCE_LIBRARY_ARTIFACT_TYPE_OPTIONS)[number])) {
+      return { ok: false, error: "Choose a supported workspace artifact type." };
+    }
+    const title = (values.title ?? "").trim();
+    if (!title) {
+      return { ok: false, error: "Title is required." };
+    }
+    return { ok: true, values: { artifactId, artifactType, title, slug } };
+  }
+  const title = (values.title ?? "").trim();
+  return { ok: true, values: { artifactId, title, slug } };
+}
+
 /** Guidance acknowledge trace read (drawer spec; optional host surfaces). */
 export function buildGuidanceAckDrawerSpec(p: {
   traceId: string;
